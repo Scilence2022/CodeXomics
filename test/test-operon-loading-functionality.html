@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operon Loading Functionality Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .test-file {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .test-file h4 {
+            margin: 0 0 10px 0;
+            color: #007bff;
+        }
+        .test-file pre {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 5px 0;
+        }
+        .instructions {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .file-format {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 Operon Loading Functionality Test</h1>
+        
+        <div class="instructions">
+            <h3>📋 Test Instructions</h3>
+            <p>This test verifies the new operon loading functionality in GenomeExplorer. Follow these steps:</p>
+            <ol>
+                <li>Open GenomeExplorer application</li>
+                <li>Click on the "Load File" dropdown in the top-right corner</li>
+                <li>Select "Operon File (JSON, CSV, TXT)" from the dropdown</li>
+                <li>Try loading each of the test files below</li>
+                <li>Verify that operons are displayed correctly in the genome view and operon panel</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Test Files</h3>
+            
+            <div class="test-file">
+                <h4>1. JSON Format Test (operons.json)</h4>
+                <div class="file-format">
+                    <strong>Format:</strong> JSON array of operons
+                </div>
+                <pre>[
+  {
+    "name": "lac_operon",
+    "start": 1000,
+    "end": 5000,
+    "strand": 1,
+    "genes": ["lacZ", "lacY", "lacA"],
+    "chromosome": "chr1",
+    "description": "Lactose operon",
+    "confidence": 0.95
+  },
+  {
+    "name": "trp_operon",
+    "start": 8000,
+    "end": 12000,
+    "strand": -1,
+    "genes": ["trpE", "trpD", "trpC", "trpB", "trpA"],
+    "chromosome": "chr1",
+    "description": "Tryptophan operon",
+    "confidence": 0.98
+  }
+]</pre>
+            </div>
+
+            <div class="test-file">
+                <h4>2. CSV Format Test (operons.csv)</h4>
+                <div class="file-format">
+                    <strong>Format:</strong> Comma-separated values with header
+                </div>
+                <pre>operon_name,start,end,strand,genes,chromosome
+lac_operon,1000,5000,+,lacZ;lacY;lacA,chr1
+trp_operon,8000,12000,-,trpE;trpD;trpC;trpB;trpA,chr1
+ara_operon,15000,18000,+,araB;araA;araD,chr1</pre>
+            </div>
+
+            <div class="test-file">
+                <h4>3. TXT Format Test (operons.txt)</h4>
+                <div class="file-format">
+                    <strong>Format:</strong> Tab-separated or space-separated values
+                </div>
+                <pre># Operon data file
+# Format: name start end strand genes chromosome
+lac_operon	1000	5000	+	lacZ,lacY,lacA	chr1
+trp_operon	8000	12000	-	trpE,trpD,trpC,trpB,trpA	chr1
+ara_operon	15000	18000	+	araB,araA,araD	chr1</pre>
+            </div>
+
+            <div class="test-file">
+                <h4>4. Alternative JSON Format Test (operons_alt.json)</h4>
+                <div class="file-format">
+                    <strong>Format:</strong> JSON object with operons property
+                </div>
+                <pre>{
+  "operons": [
+    {
+      "name": "lac_operon",
+      "start": 1000,
+      "end": 5000,
+      "strand": 1,
+      "genes": ["lacZ", "lacY", "lacA"]
+    },
+    {
+      "name": "trp_operon", 
+      "start": 8000,
+      "end": 12000,
+      "strand": -1,
+      "genes": ["trpE", "trpD", "trpC", "trpB", "trpA"]
+    }
+  ],
+  "metadata": {
+    "source": "test_data",
+    "version": "1.0"
+  }
+}</pre>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>✅ Expected Results</h3>
+            <ul>
+                <li><span class="success">✓</span> Operon File option appears in Load File dropdown</li>
+                <li><span class="success">✓</span> File dialog opens with correct filters (.json, .csv, .txt, .operon)</li>
+                <li><span class="success">✓</span> Files are parsed correctly based on extension</li>
+                <li><span class="success">✓</span> Operons are displayed in the genome view with proper colors</li>
+                <li><span class="success">✓</span> Operon panel shows loaded operons with correct information</li>
+                <li><span class="success">✓</span> Success notification appears after loading</li>
+                <li><span class="success">✓</span> Status bar shows number of loaded operons</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test Scenarios</h3>
+            
+            <h4>Scenario 1: Basic Loading</h4>
+            <ol>
+                <li>Load a JSON operon file</li>
+                <li>Verify operons appear in the genome view</li>
+                <li>Check that operon panel shows the loaded operons</li>
+            </ol>
+
+            <h4>Scenario 2: Format Validation</h4>
+            <ol>
+                <li>Try loading each format (JSON, CSV, TXT)</li>
+                <li>Verify all formats are parsed correctly</li>
+                <li>Check error handling for invalid files</li>
+            </ol>
+
+            <h4>Scenario 3: Integration with Genome Data</h4>
+            <ol>
+                <li>Load a genome file first (FASTA/GenBank)</li>
+                <li>Then load an operon file</li>
+                <li>Verify operons are displayed on the genome</li>
+                <li>Check that gene mapping works correctly</li>
+            </ol>
+
+            <h4>Scenario 4: Data Clearing</h4>
+            <ol>
+                <li>Load operon data</li>
+                <li>Load a new genome file</li>
+                <li>Verify operon data is cleared</li>
+                <li>Check that auto-detection resumes</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🐛 Error Handling Tests</h3>
+            
+            <h4>Invalid File Formats</h4>
+            <ul>
+                <li>Try loading a .txt file with invalid format</li>
+                <li>Try loading a .json file with malformed JSON</li>
+                <li>Try loading a .csv file with insufficient columns</li>
+            </ul>
+
+            <h4>Missing Data</h4>
+            <ul>
+                <li>Test files with missing required fields</li>
+                <li>Test files with invalid coordinate values</li>
+                <li>Test empty files</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Performance Tests</h4>
+            
+            <h4>Large Files</h4>
+            <ul>
+                <li>Test with files containing 100+ operons</li>
+                <li>Verify loading performance</li>
+                <li>Check memory usage</li>
+            </ul>
+
+            <h4>Complex Data</h4>
+            <ul>
+                <li>Test with operons containing many genes</li>
+                <li>Test with overlapping operons</li>
+                <li>Test with operons on different strands</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Success Criteria</h3>
+            <ul>
+                <li><span class="info">ℹ️</span> All file formats are supported and parsed correctly</li>
+                <li><span class="info">ℹ️</span> Operons are visually displayed in the genome view</li>
+                <li><span class="info">ℹ️</span> Operon panel shows accurate information</li>
+                <li><span class="info">ℹ️</span> Error handling works for invalid files</li>
+                <li><span class="info">ℹ️</span> Integration with existing genome data works</li>
+                <li><span class="info">ℹ️</span> Data clearing works when loading new genomes</li>
+                <li><span class="info">ℹ️</span> Performance is acceptable for typical file sizes</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Test Notes</h3>
+            <p><strong>Implementation Details:</strong></p>
+            <ul>
+                <li>Operon loading is implemented in FileManager.js</li>
+                <li>Supports JSON, CSV, and TXT formats</li>
+                <li>Integrates with existing operon detection system</li>
+                <li>Uses loaded operons instead of auto-detection when available</li>
+                <li>Clears loaded operons when new genome files are loaded</li>
+            </ul>
+            
+            <p><strong>File Locations:</strong></p>
+            <ul>
+                <li>UI: src/renderer/index.html (dropdown menu)</li>
+                <li>Event handling: src/renderer/renderer-modular.js</li>
+                <li>File loading: src/renderer/modules/FileManager.js</li>
+                <li>Operon detection: src/renderer/renderer-modular.js</li>
+                <li>Rendering: src/renderer/modules/TrackRenderer.js</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

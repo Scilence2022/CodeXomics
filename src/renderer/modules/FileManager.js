@@ -44,9 +44,12 @@ class FileManager {
                 input.accept = '.wig';
                 input.multiple = true; // Allow multiple WIG file selection
                 break;
+            case 'operon':
+                input.accept = '.json,.csv,.txt,.operon';
+                break;
             case 'any':
             default:
-                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig';
+                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig,.json,.csv,.txt,.operon';
                 break;
         }
         
@@ -55,6 +58,9 @@ class FileManager {
                 if (fileType === 'tracks' && e.target.files.length > 1) {
                     // Handle multiple WIG files
                     this.loadMultipleWIGFiles(Array.from(e.target.files).map(file => file.path));
+                } else if (fileType === 'operon') {
+                    // Handle operon file
+                    this.loadOperonFile(e.target.files[0].path);
                 } else {
                     // Handle single file
                     this.loadFile(e.target.files[0].path);
@@ -64,12 +70,212 @@ class FileManager {
         input.click();
     }
 
+    async loadOperonFile(filePath) {
+        console.log('🔬 FileManager.loadOperonFile() called with path:', filePath);
+        this.genomeBrowser.showLoading(true);
+        this.genomeBrowser.updateStatus('Loading operon file...');
+
+        try {
+            // Get file info
+            const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
+            if (!fileInfo.success) {
+                throw new Error(fileInfo.error);
+            }
+
+            // Read file content
+            const fileContent = await ipcRenderer.invoke('read-file', filePath);
+            if (!fileContent.success) {
+                throw new Error(fileContent.error);
+            }
+
+            // Parse operon data based on file extension
+            const extension = fileInfo.info.extension.toLowerCase();
+            let operonData;
+            
+            switch (extension) {
+                case '.json':
+                    operonData = this.parseOperonJSON(fileContent.content);
+                    break;
+                case '.csv':
+                    operonData = this.parseOperonCSV(fileContent.content);
+                    break;
+                case '.txt':
+                case '.operon':
+                    operonData = this.parseOperonTXT(fileContent.content);
+                    break;
+                default:
+                    throw new Error(`Unsupported operon file format: ${extension}`);
+            }
+
+            // Store operon data in genome browser
+            this.genomeBrowser.loadedOperons = operonData;
+            this.genomeBrowser.currentFile = {
+                path: filePath,
+                info: fileInfo.info,
+                type: 'operon',
+                data: operonData
+            };
+
+            // Update UI
+            this.genomeBrowser.updateStatus(`Loaded ${operonData.length} operons from ${fileInfo.info.name}`);
+            this.genomeBrowser.showNotification(`Successfully loaded ${operonData.length} operons`, 'success');
+
+            // Refresh genome view to show operons
+            if (this.genomeBrowser.currentChromosome) {
+                this.genomeBrowser.displayGenomeView();
+            } else {
+                // If no chromosome is selected, just update the operon panel
+                this.updateOperonPanel();
+            }
+
+        } catch (error) {
+            console.error('Error loading operon file:', error);
+            this.genomeBrowser.updateStatus('Error loading operon file');
+            this.genomeBrowser.showNotification(`Error loading operon file: ${error.message}`, 'error');
+        } finally {
+            this.genomeBrowser.showLoading(false);
+        }
+    }
+
+    parseOperonJSON(content) {
+        try {
+            const data = JSON.parse(content);
+            
+            // Handle different JSON formats
+            if (Array.isArray(data)) {
+                return data.map(operon => this.normalizeOperonData(operon));
+            } else if (data.operons && Array.isArray(data.operons)) {
+                return data.operons.map(operon => this.normalizeOperonData(operon));
+            } else if (data.operon && Array.isArray(data.operon)) {
+                return data.operon.map(operon => this.normalizeOperonData(operon));
+            } else {
+                throw new Error('Invalid JSON format: expected array of operons or object with operons property');
+            }
+        } catch (error) {
+            throw new Error(`JSON parsing error: ${error.message}`);
+        }
+    }
+
+    parseOperonCSV(content) {
+        const lines = content.split('\n').filter(line => line.trim());
+        const operons = [];
+        
+        // Skip header if present
+        let startIndex = 0;
+        if (lines.length > 0 && lines[0].toLowerCase().includes('operon')) {
+            startIndex = 1;
+        }
+
+        for (let i = startIndex; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            const columns = line.split(',').map(col => col.trim().replace(/^["']|["']$/g, ''));
+            
+            if (columns.length < 4) {
+                console.warn(`Skipping invalid operon line ${i + 1}: insufficient columns`);
+                continue;
+            }
+
+            const operon = {
+                name: columns[0] || `operon_${i}`,
+                start: parseInt(columns[1]) || 0,
+                end: parseInt(columns[2]) || 0,
+                strand: columns[3] === '-' ? -1 : 1,
+                genes: columns[4] ? columns[4].split(';').map(gene => gene.trim()) : [],
+                chromosome: columns[5] || this.genomeBrowser.currentChromosome || 'unknown'
+            };
+
+            operons.push(this.normalizeOperonData(operon));
+        }
+
+        return operons;
+    }
+
+    parseOperonTXT(content) {
+        const lines = content.split('\n').filter(line => line.trim());
+        const operons = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line || line.startsWith('#')) continue;
+
+            // Try different text formats
+            let operon;
+            
+            // Format: operon_name start end strand genes
+            const spaceSeparated = line.split(/\s+/);
+            if (spaceSeparated.length >= 4) {
+                operon = {
+                    name: spaceSeparated[0],
+                    start: parseInt(spaceSeparated[1]) || 0,
+                    end: parseInt(spaceSeparated[2]) || 0,
+                    strand: spaceSeparated[3] === '-' ? -1 : 1,
+                    genes: spaceSeparated.slice(4),
+                    chromosome: this.genomeBrowser.currentChromosome || 'unknown'
+                };
+            }
+            // Format: operon_name\tstart\tend\tstrand\tgenes
+            else {
+                const tabSeparated = line.split('\t');
+                if (tabSeparated.length >= 4) {
+                    operon = {
+                        name: tabSeparated[0],
+                        start: parseInt(tabSeparated[1]) || 0,
+                        end: parseInt(tabSeparated[2]) || 0,
+                        strand: tabSeparated[3] === '-' ? -1 : 1,
+                        genes: tabSeparated[4] ? tabSeparated[4].split(',').map(g => g.trim()) : [],
+                        chromosome: tabSeparated[5] || this.genomeBrowser.currentChromosome || 'unknown'
+                    };
+                }
+            }
+
+            if (operon) {
+                operons.push(this.normalizeOperonData(operon));
+            }
+        }
+
+        return operons;
+    }
+
+    normalizeOperonData(operon) {
+        // Ensure all required fields are present and properly formatted
+        return {
+            name: operon.name || `operon_${Date.now()}`,
+            start: parseInt(operon.start) || 0,
+            end: parseInt(operon.end) || 0,
+            strand: operon.strand === '-' || operon.strand === -1 ? -1 : 1,
+            genes: Array.isArray(operon.genes) ? operon.genes : (operon.genes ? operon.genes.split(',').map(g => g.trim()) : []),
+            chromosome: operon.chromosome || this.genomeBrowser.currentChromosome || 'unknown',
+            description: operon.description || operon.desc || '',
+            confidence: operon.confidence || operon.score || 1.0,
+            source: operon.source || 'user_loaded'
+        };
+    }
+
+    updateOperonPanel() {
+        // Update the operon panel to show loaded operons
+        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.loadedOperons) {
+            const visibleOperons = new Set();
+            this.genomeBrowser.loadedOperons.forEach(operon => {
+                visibleOperons.add(operon.name);
+            });
+            this.genomeBrowser.trackRenderer.updateOperonsPanel(this.genomeBrowser.loadedOperons, visibleOperons);
+        }
+    }
+
     async loadFile(filePath) {
         console.log('🔍 FileManager.loadFile() called with path:', filePath);
         this.genomeBrowser.showLoading(true);
         this.genomeBrowser.updateStatus('Loading file...');
 
         try {
+            // Clear loaded operons when loading a new genome file
+            if (this.genomeBrowser.loadedOperons) {
+                this.genomeBrowser.loadedOperons = [];
+                console.log('🧬 Cleared loaded operons for new genome file');
+            }
+
             // Get file info
             console.log('📋 Getting file info for:', filePath);
             const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);

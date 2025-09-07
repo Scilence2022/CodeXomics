@@ -219,6 +219,7 @@ class GenomeBrowser {
         this.loadedFiles = [];
         this.sequenceLength = 0;
         this.operons = [];
+        this.loadedOperons = []; // User-loaded operon data
         this.selectedGene = null;
         this.userDefinedFeatures = {};
         this.nextFeatureId = 1;
@@ -585,6 +586,7 @@ class GenomeBrowser {
         document.getElementById('openVariantBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('variant'));
         document.getElementById('openReadsBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('reads'));
         document.getElementById('openWIGBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('tracks'));
+        document.getElementById('openOperonBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('operon'));
         document.getElementById('openAnyBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('any'));
 
         // Export operations - dropdown menu
@@ -3208,7 +3210,16 @@ class GenomeBrowser {
 
     // Operon detection and color assignment methods
     detectOperons(annotations) {
-        // Simple operon detection based on gene proximity and strand
+        // If user-loaded operons exist, use them instead of auto-detection
+        if (this.loadedOperons && this.loadedOperons.length > 0) {
+            console.log(`Using ${this.loadedOperons.length} loaded operons instead of auto-detection`);
+            return this.loadedOperons.map(operon => ({
+                ...operon,
+                genes: this.mapOperonGenesToAnnotations(operon, annotations)
+            }));
+        }
+
+        // Fall back to simple operon detection based on gene proximity and strand
         const operons = [];
         const genes = annotations.filter(feature => 
             ['CDS', 'mRNA', 'tRNA', 'rRNA'].includes(feature.type)
@@ -3256,6 +3267,39 @@ class GenomeBrowser {
         }
 
         return operons;
+    }
+
+    mapOperonGenesToAnnotations(operon, annotations) {
+        // Map operon gene names to actual annotation features
+        const mappedGenes = [];
+        
+        for (const geneName of operon.genes) {
+            // Try to find matching annotation by gene name or locus tag
+            const matchingFeature = annotations.find(feature => {
+                const featureGeneName = feature.qualifiers?.gene || feature.qualifiers?.locus_tag || '';
+                return featureGeneName === geneName || 
+                       featureGeneName.includes(geneName) || 
+                       geneName.includes(featureGeneName);
+            });
+            
+            if (matchingFeature) {
+                mappedGenes.push(matchingFeature);
+            } else {
+                // Create a placeholder feature if no match found
+                mappedGenes.push({
+                    type: 'CDS',
+                    start: operon.start,
+                    end: operon.end,
+                    strand: operon.strand,
+                    qualifiers: {
+                        gene: geneName,
+                        locus_tag: geneName
+                    }
+                });
+            }
+        }
+        
+        return mappedGenes;
     }
 
     generateOperonName(genes) {
