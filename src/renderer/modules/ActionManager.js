@@ -124,8 +124,7 @@ class ActionManager {
             }
         }, 1000);
         
-        // Action List modal listeners
-        document.getElementById('executeAllActionsBtn')?.addEventListener('click', () => this.executeAllActions());
+        // Action List modal listeners (executeAllActionsBtn is already handled in setupEventListeners)
         document.getElementById('clearAllActionsBtn')?.addEventListener('click', () => this.clearAllActions());
         document.getElementById('exportActionsBtn')?.addEventListener('click', () => this.exportActions());
         document.getElementById('importActionsBtn')?.addEventListener('click', () => this.importActions());
@@ -1490,6 +1489,16 @@ class ActionManager {
             
             console.log(`✅ [ActionManager] Execution completed successfully`);
             
+            // Step 6: Cleanup and restore original state AFTER successful completion
+            this.restoreGenomeDataFromBackup(originalGenomeData);
+            this.isExecuting = false;
+            this.hideExecutionProgress();
+            this.updateActionListUI();
+            this.updateStats();
+            this.notifyActionsTrackUpdate();
+            
+            console.log(`🔒 [ActionManager] Execution cleanup completed`);
+            
             return {
                 success: true,
                 message: `Executed ${pendingActionsCopy.length} actions successfully`,
@@ -1504,6 +1513,16 @@ class ActionManager {
             console.error('❌ [ActionManager] Error during action execution:', error);
             this.genomeBrowser.showNotification(`Error executing actions: ${error.message}`, 'error');
             
+            // Step 6: Cleanup and restore original state on error
+            this.restoreGenomeDataFromBackup(originalGenomeData);
+            this.isExecuting = false;
+            this.hideExecutionProgress();
+            this.updateActionListUI();
+            this.updateStats();
+            this.notifyActionsTrackUpdate();
+            
+            console.log(`🔒 [ActionManager] Execution cleanup completed after error`);
+            
             return {
                 success: false,
                 message: `Execution failed: ${error.message}`,
@@ -1513,17 +1532,6 @@ class ActionManager {
                 error: error.message,
                 executionId
             };
-            
-        } finally {
-            // Step 6: Cleanup and restore original state
-            this.restoreGenomeDataFromBackup(originalGenomeData);
-            this.isExecuting = false;
-            this.hideExecutionProgress();
-            this.updateActionListUI();
-            this.updateStats();
-            this.notifyActionsTrackUpdate();
-            
-            console.log(`🔒 [ActionManager] Execution cleanup completed`);
         }
     }
     
@@ -1808,13 +1816,12 @@ class ActionManager {
                 return;
             }
             
-            const chromosomes = Object.keys(this.genomeBrowser.currentSequence || {});
+            const chromosomes = Object.keys(executionGenomeData?.sequence || this.genomeBrowser.currentSequence || {});
             let genbankContent = '';
             
             for (const chr of chromosomes) {
-                // Apply sequence modifications
-                const modifiedSequence = this.applySequenceModifications(chr, this.genomeBrowser.currentSequence[chr]);
-                const sequence = modifiedSequence;
+                // Use execution genome data for sequence (already modified)
+                const sequence = executionGenomeData?.sequence?.[chr] || this.genomeBrowser.currentSequence?.[chr] || '';
                 
                 // Use execution genome data for features
                 const featuresSource = executionGenomeData?.annotations?.[chr] || this.genomeBrowser.currentAnnotations?.[chr] || [];
@@ -2208,42 +2215,50 @@ class ActionManager {
         try {
             console.log(`🔄 [ActionManager] Auto-opening generated GBK file in new window: ${filename}`);
             
-            // Create a temporary file object for the generated GBK content
-            const tempFile = {
-                name: filename,
-                data: genbankContent,
-                type: 'text/plain',
-                size: genbankContent.length,
-                lastModified: new Date()
-            };
-            
             // Check if we can open a new window
             if (typeof window !== 'undefined' && window.open) {
                 // Create a new window with the same URL
                 const newWindow = window.open(window.location.href, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
                 
                 if (newWindow) {
-                    // Wait for the new window to load
-                    newWindow.addEventListener('load', async () => {
+                    // Store the data to send after window loads
+                    const gbkData = {
+                        filename: filename,
+                        content: genbankContent
+                    };
+                    
+                    // Function to send data to new window
+                    const sendDataToNewWindow = () => {
                         try {
-                            // Wait a bit for the new window to fully initialize
-                            await new Promise(resolve => setTimeout(resolve, 2000));
-                            
-                            // Send the GBK data to the new window
                             newWindow.postMessage({
                                 type: 'LOAD_GBK_DATA',
-                                data: {
-                                    filename: filename,
-                                    content: genbankContent
-                                }
+                                data: gbkData
                             }, '*');
-                            
                             console.log(`✅ [ActionManager] Sent GBK data to new window: ${filename}`);
-                            
                         } catch (error) {
                             console.error('❌ [ActionManager] Error sending data to new window:', error);
                         }
+                    };
+                    
+                    // Wait for the new window to load
+                    newWindow.addEventListener('load', async () => {
+                        try {
+                            // Wait for the new window to fully initialize
+                            await new Promise(resolve => setTimeout(resolve, 3000));
+                            sendDataToNewWindow();
+                        } catch (error) {
+                            console.error('❌ [ActionManager] Error in new window load handler:', error);
+                        }
                     });
+                    
+                    // Also try to send data after a delay as backup
+                    setTimeout(() => {
+                        try {
+                            sendDataToNewWindow();
+                        } catch (error) {
+                            console.error('❌ [ActionManager] Error in delayed send:', error);
+                        }
+                    }, 5000);
                     
                     // Fallback: if new window fails, load in current window
                     newWindow.addEventListener('error', () => {
