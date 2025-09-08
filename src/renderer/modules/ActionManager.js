@@ -85,9 +85,6 @@ class ActionManager {
             const deleteBtn = document.getElementById('deleteSequenceBtn');
             const showListBtn = document.getElementById('showActionListBtn');
             const executeBtn = document.getElementById('executeActionsBtn');
-            const checkpointBtn = document.getElementById('createCheckpointBtn');
-            const rollbackBtn = document.getElementById('rollbackBtn');
-            
             if (copyBtn) {
                 copyBtn.addEventListener('click', () => this.handleCopySequence());
                 console.log('✅ Copy sequence listener added');
@@ -111,14 +108,6 @@ class ActionManager {
             if (executeBtn) {
                 executeBtn.addEventListener('click', () => this.executeAllActions());
                 console.log('✅ Execute actions listener added');
-            }
-            if (checkpointBtn) {
-                checkpointBtn.addEventListener('click', () => this.createCheckpoint());
-                console.log('✅ Create checkpoint listener added');
-            }
-            if (rollbackBtn) {
-                rollbackBtn.addEventListener('click', () => this.rollback());
-                console.log('✅ Rollback listener added');
             }
         };
         
@@ -1452,17 +1441,8 @@ class ActionManager {
             }
         }
         
-        // Step 2: Create comprehensive backup checkpoint
-        const checkpointId = await this.createExecutionCheckpoint(pendingActions);
-        if (!checkpointId) {
-            this.genomeBrowser.showNotification('Failed to create execution checkpoint', 'error');
-            return {
-                success: false,
-                message: 'Failed to create execution checkpoint',
-                executedActions: 0,
-                totalActions: this.actions.length
-            };
-        }
+        // Step 2: Create execution timestamp for tracking
+        const executionId = `execution_${Date.now()}`;
         
         // Step 3: Create execution copies
         const executionActionsCopy = JSON.parse(JSON.stringify(this.actions));
@@ -1471,7 +1451,7 @@ class ActionManager {
         const executionGenomeData = this.createGenomeDataCopy(originalGenomeData);
         
         console.log(`🧬 [ActionManager] Created execution environment:`, {
-            checkpointId,
+            executionId,
             actions: executionActionsCopy.length,
             pending: pendingActionsCopy.length,
             chromosomes: Object.keys(executionGenomeData.annotations || {}).length,
@@ -1504,7 +1484,7 @@ class ActionManager {
             }
             
             // Step 5: Generate comprehensive GBK file with full history
-            await this.generateComprehensiveGBK(executionActionsCopy, executionGenomeData, checkpointId);
+            await this.generateComprehensiveGBK(executionActionsCopy, executionGenomeData, executionId);
             
             this.genomeBrowser.showNotification(`All ${pendingActionsCopy.length} actions executed successfully`, 'success');
             
@@ -1516,16 +1496,13 @@ class ActionManager {
                 executedActions: pendingActionsCopy.length,
                 failedActions: 0,
                 totalActions: this.actions.length,
-                checkpointId,
+                executionId,
                 conflicts: conflictAnalysis.conflicts || []
             };
             
         } catch (error) {
             console.error('❌ [ActionManager] Error during action execution:', error);
             this.genomeBrowser.showNotification(`Error executing actions: ${error.message}`, 'error');
-            
-            // Attempt to restore from checkpoint
-            await this.restoreFromCheckpoint(checkpointId);
             
             return {
                 success: false,
@@ -1534,7 +1511,7 @@ class ActionManager {
                 failedActions: pendingActionsCopy.length,
                 totalActions: this.actions.length,
                 error: error.message,
-                checkpointId
+                executionId
             };
             
         } finally {
@@ -1775,45 +1752,6 @@ class ActionManager {
         });
     }
     
-    /**
-     * Create execution checkpoint
-     */
-    async createExecutionCheckpoint(pendingActions) {
-        try {
-            const checkpointId = `execution_${Date.now()}`;
-            
-            // Create comprehensive checkpoint data
-            const checkpointData = {
-                id: checkpointId,
-                timestamp: new Date().toISOString(),
-                type: 'execution_checkpoint',
-                actions: JSON.parse(JSON.stringify(this.actions)),
-                genomeData: this.createGenomeDataBackup(),
-                pendingActions: pendingActions.map(a => a.id),
-                metadata: {
-                    totalActions: this.actions.length,
-                    pendingCount: pendingActions.length,
-                    chromosomes: Object.keys(this.genomeBrowser.currentAnnotations || {}),
-                    totalFeatures: Object.values(this.genomeBrowser.currentAnnotations || {}).reduce((sum, features) => sum + features.length, 0)
-                }
-            };
-            
-            // Store checkpoint
-            if (window.checkpointManager) {
-                await window.checkpointManager.createCheckpoint(checkpointData);
-            } else {
-                // Fallback: store in localStorage
-                localStorage.setItem(`checkpoint_${checkpointId}`, JSON.stringify(checkpointData));
-            }
-            
-            console.log(`✅ [ActionManager] Created execution checkpoint: ${checkpointId}`);
-            return checkpointId;
-            
-        } catch (error) {
-            console.error('❌ [ActionManager] Failed to create execution checkpoint:', error);
-            return null;
-        }
-    }
     
     /**
      * Update all features after action execution
@@ -1860,7 +1798,7 @@ class ActionManager {
     /**
      * Generate comprehensive GBK file with full action history
      */
-    async generateComprehensiveGBK(executionActionsCopy, executionGenomeData, checkpointId) {
+    async generateComprehensiveGBK(executionActionsCopy, executionGenomeData, executionId) {
         try {
             console.log(`📄 [ActionManager] Generating comprehensive GBK file with action history`);
             
@@ -1895,14 +1833,14 @@ class ActionManager {
                     sequence, 
                     features, 
                     executedActions, 
-                    checkpointId
+                    executionId
                 );
                 
                 genbankContent += chrContent + '\n';
             }
             
             // Save the comprehensive GBK file
-            const filename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${checkpointId}.gbk`;
+            const filename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
             this.downloadTextFile(genbankContent, filename);
             
             // Auto-open the generated GBK file in a new Genome AI Studio window
@@ -1920,7 +1858,7 @@ class ActionManager {
     /**
      * Generate GBK content for a single chromosome using original GenBank format
      */
-    generateChromosomeGBKContentOriginal(chromosome, sequence, features, executedActions, checkpointId) {
+    generateChromosomeGBKContentOriginal(chromosome, sequence, features, executedActions, executionId) {
         let content = '';
         
         // Get original source features if available
@@ -1953,7 +1891,7 @@ class ActionManager {
             content += `COMMENT     ========================================================================\n`;
             content += `COMMENT     Genome AI Studio Action Manager - Execution Report\n`;
             content += `COMMENT     ========================================================================\n`;
-            content += `COMMENT     Checkpoint ID: ${checkpointId}\n`;
+            content += `COMMENT     Execution ID: ${executionId}\n`;
             content += `COMMENT     Total Actions Executed: ${executedActions.length}\n`;
             content += `COMMENT     Execution Date: ${new Date().toISOString()}\n`;
             content += `COMMENT     \n`;
@@ -2158,7 +2096,7 @@ class ActionManager {
     /**
      * Generate GBK content for a single chromosome (legacy method)
      */
-    generateChromosomeGBKContent(chromosome, sequence, features, executedActions, checkpointId) {
+    generateChromosomeGBKContent(chromosome, sequence, features, executedActions, executionId) {
         let content = '';
         
         // GenBank header
@@ -2175,7 +2113,7 @@ class ActionManager {
             content += `COMMENT     ========================================================================\n`;
             content += `COMMENT     MODIFICATION HISTORY - Genome AI Studio Action Manager\n`;
             content += `COMMENT     ========================================================================\n`;
-            content += `COMMENT     Checkpoint ID: ${checkpointId}\n`;
+            content += `COMMENT     Execution ID: ${executionId}\n`;
             content += `COMMENT     Total modifications: ${executedActions.length}\n`;
             content += `COMMENT     Export timestamp: ${new Date().toISOString()}\n`;
             content += `COMMENT     \n`;
@@ -2247,30 +2185,6 @@ class ActionManager {
         return content;
     }
     
-    /**
-     * Restore from checkpoint
-     */
-    async restoreFromCheckpoint(checkpointId) {
-        try {
-            console.log(`🔄 [ActionManager] Attempting to restore from checkpoint: ${checkpointId}`);
-            
-            if (window.checkpointManager) {
-                await window.checkpointManager.restoreCheckpoint(checkpointId);
-            } else {
-                // Fallback: restore from localStorage
-                const checkpointData = localStorage.getItem(`checkpoint_${checkpointId}`);
-                if (checkpointData) {
-                    const data = JSON.parse(checkpointData);
-                    this.restoreState(data);
-                }
-            }
-            
-            console.log(`✅ [ActionManager] Successfully restored from checkpoint`);
-            
-        } catch (error) {
-            console.error('❌ [ActionManager] Failed to restore from checkpoint:', error);
-        }
-    }
     
     /**
      * Download text file
@@ -4228,30 +4142,9 @@ class ActionManager {
         }
     }
     
-    /**
-     * Create checkpoint
-     */
-    createCheckpoint() {
-        if (window.checkpointManager) {
-            window.checkpointManager.createManualCheckpoint();
-        } else {
-            this.genomeBrowser.showNotification('Checkpoint system not available', 'warning');
-        }
-    }
     
     /**
-     * Rollback to checkpoint
-     */
-    rollback() {
-        if (window.checkpointManager) {
-            window.checkpointManager.showCheckpointList();
-        } else {
-            this.genomeBrowser.showNotification('Rollback system not available', 'warning');
-        }
-    }
-    
-    /**
-     * Get current state for checkpointing
+     * Get current state for backup purposes
      */
     getState() {
         return {
@@ -4741,7 +4634,7 @@ class ActionManager {
     }
 
     /**
-     * Restore state from checkpoint
+     * Restore state from backup
      */
     restoreState(state) {
         this.actions = state.actions || [];
