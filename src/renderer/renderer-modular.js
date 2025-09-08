@@ -626,10 +626,11 @@ class GenomeBrowser {
         });
 
         // Search functionality
-        document.getElementById('searchBtn').addEventListener('click', () => this.navigationManager.showSearchModal());
+        document.getElementById('searchBtn').addEventListener('click', () => this.navigationManager.quickSearch());
         document.getElementById('searchInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.navigationManager.quickSearch();
         });
+        document.getElementById('searchSettingsBtn').addEventListener('click', () => this.navigationManager.showSearchSettingsModal());
 
         // Position navigation
         document.getElementById('goToBtn').addEventListener('click', () => this.navigationManager.goToPosition());

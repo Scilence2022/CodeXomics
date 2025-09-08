@@ -1606,4 +1606,114 @@ class ConfigManager {
         await this.saveConfig();
         console.log('Tab settings updated');
     }
+
+    /**
+     * Get search settings
+     */
+    getSearchSettings() {
+        const defaultSettings = {
+            caseSensitive: false,
+            reverseComplement: false,
+            partialMatches: true,
+            searchGeneNames: true,
+            searchSequence: true,
+            searchFeatures: true,
+            searchProtein: false,
+            minLength: 3,
+            maxResults: 100,
+            timeout: 30,
+            highlightMatches: true,
+            showContext: true,
+            contextLength: 50,
+            saveHistory: true,
+            historyLimit: 50
+        };
+
+        return this.config?.search?.settings || defaultSettings;
+    }
+
+    /**
+     * Set search settings
+     */
+    setSearchSettings(settings) {
+        if (!this.config.search) {
+            this.config.search = { settings: {}, history: [] };
+        }
+
+        this.config.search.settings = {
+            ...this.config.search.settings,
+            ...settings
+        };
+
+        this.debouncedSave();
+        console.log('Search settings updated');
+    }
+
+    /**
+     * Get search history
+     */
+    getSearchHistory() {
+        return this.config?.search?.history || [];
+    }
+
+    /**
+     * Add search to history
+     */
+    addSearchToHistory(searchTerm, settings = {}) {
+        if (!this.config.search) {
+            this.config.search = { settings: {}, history: [] };
+        }
+
+        const historyItem = {
+            term: searchTerm,
+            timestamp: new Date().toISOString(),
+            settings: settings
+        };
+
+        // Add to beginning of history
+        this.config.search.history.unshift(historyItem);
+
+        // Limit history size
+        const maxHistory = this.config.search.settings?.historyLimit || 50;
+        if (this.config.search.history.length > maxHistory) {
+            this.config.search.history = this.config.search.history.slice(0, maxHistory);
+        }
+
+        this.debouncedSave();
+    }
+
+    /**
+     * Clear search history
+     */
+    clearSearchHistory() {
+        if (this.config.search) {
+            this.config.search.history = [];
+            this.debouncedSave();
+            console.log('Search history cleared');
+        }
+    }
+
+    /**
+     * Get modal settings
+     */
+    getModalSettings() {
+        return this.config?.modalSettings || {};
+    }
+
+    /**
+     * Set modal settings
+     */
+    setModalSettings(settings) {
+        if (!this.config.modalSettings) {
+            this.config.modalSettings = {};
+        }
+
+        this.config.modalSettings = {
+            ...this.config.modalSettings,
+            ...settings
+        };
+
+        this.debouncedSave();
+        console.log('Modal settings updated');
+    }
 } 

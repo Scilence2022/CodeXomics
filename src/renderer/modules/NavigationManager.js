@@ -637,7 +637,7 @@ class NavigationManager {
     }
 
     performSearch(query = null) {
-        const searchQuery = query || document.getElementById('modalSearchInput').value.trim();
+        const searchQuery = query || document.getElementById('searchInput').value.trim();
         if (!searchQuery) return;
         
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -646,22 +646,26 @@ class NavigationManager {
             return;
         }
         
+        // Get search settings
+        const searchSettings = this.getCurrentSearchSettings();
+        
         // Clear previous search results before starting new search
         this.clearSearchResults();
         this.clearSearchHighlights();
         
         const sequence = this.genomeBrowser.currentSequence[currentChr];
-        const caseSensitive = document.getElementById('caseSensitive')?.checked || false;
-        const includeReverseComplement = document.getElementById('reverseComplement')?.checked || false;
+        const caseSensitive = searchSettings.caseSensitive;
+        const includeReverseComplement = searchSettings.reverseComplement;
         
         // Prepare search query based on case sensitivity
         const searchTerm = caseSensitive ? searchQuery : searchQuery.toUpperCase();
         const sequenceToSearch = caseSensitive ? sequence : sequence.toUpperCase();
         
         const results = [];
+        const startTime = Date.now();
         
         // 1. Search for gene names in annotations
-        if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[currentChr]) {
+        if (searchSettings.searchGeneNames && this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[currentChr]) {
             const annotations = this.genomeBrowser.currentAnnotations[currentChr];
             
             // Parse search terms - support OR operator
@@ -699,36 +703,46 @@ class NavigationManager {
         }
         
         // 2. Search for exact sequence matches
-        if (searchTerm.match(/^[ATGCN]+$/i)) { // Only search if it looks like a DNA sequence
-            let index = sequenceToSearch.indexOf(searchTerm);
-            while (index !== -1) {
-                results.push({
-                    type: 'sequence',
-                    position: index,
-                    end: index + searchTerm.length,
-                    name: `Sequence match`,
-                    details: `Found "${searchQuery}" at position ${index + 1}`
-                });
-                index = sequenceToSearch.indexOf(searchTerm, index + 1);
-            }
-            
-            // 3. Search for reverse complement if requested
-            if (includeReverseComplement && searchTerm.match(/^[ATGC]+$/i)) {
-                const reverseComplement = this.getReverseComplement(searchTerm);
-                const rcToSearch = caseSensitive ? reverseComplement : reverseComplement.toUpperCase();
-                
-                let rcIndex = sequenceToSearch.indexOf(rcToSearch);
-                while (rcIndex !== -1) {
+        if (searchSettings.searchSequence && searchTerm.match(/^[ATGCN]+$/i)) { // Only search if it looks like a DNA sequence
+            // Check minimum length requirement
+            if (searchTerm.length >= searchSettings.minLength) {
+                let index = sequenceToSearch.indexOf(searchTerm);
+                while (index !== -1 && results.length < searchSettings.maxResults) {
                     results.push({
                         type: 'sequence',
-                        position: rcIndex,
-                        end: rcIndex + rcToSearch.length,
-                        name: `Reverse complement match`,
-                        details: `Found reverse complement "${reverseComplement}" at position ${rcIndex + 1}`
+                        position: index,
+                        end: index + searchTerm.length,
+                        name: `Sequence match`,
+                        details: `Found "${searchQuery}" at position ${index + 1}`
                     });
-                    rcIndex = sequenceToSearch.indexOf(rcToSearch, rcIndex + 1);
+                    index = sequenceToSearch.indexOf(searchTerm, index + 1);
+                }
+                
+                // 3. Search for reverse complement if requested
+                if (includeReverseComplement && searchTerm.match(/^[ATGC]+$/i)) {
+                    const reverseComplement = this.getReverseComplement(searchTerm);
+                    const rcToSearch = caseSensitive ? reverseComplement : reverseComplement.toUpperCase();
+                    
+                    let rcIndex = sequenceToSearch.indexOf(rcToSearch);
+                    while (rcIndex !== -1 && results.length < searchSettings.maxResults) {
+                        results.push({
+                            type: 'sequence',
+                            position: rcIndex,
+                            end: rcIndex + rcToSearch.length,
+                            name: `Reverse complement match`,
+                            details: `Found reverse complement "${reverseComplement}" at position ${rcIndex + 1}`
+                        });
+                        rcIndex = sequenceToSearch.indexOf(rcToSearch, rcIndex + 1);
+                    }
                 }
             }
+        }
+        
+        // Check for timeout
+        const elapsedTime = Date.now() - startTime;
+        if (elapsedTime > searchSettings.timeout * 1000) {
+            this.genomeBrowser.updateStatus(`Search timed out after ${searchSettings.timeout} seconds`);
+            return;
         }
         
         // Sort results by position
@@ -738,6 +752,14 @@ class NavigationManager {
         this.searchResults = results;
         this.currentSearchIndex = 0;
         
+        // Add to search history if enabled
+        if (searchSettings.saveHistory) {
+            const configManager = this.genomeBrowser.configManager;
+            if (configManager) {
+                configManager.addSearchToHistory(searchQuery, searchSettings);
+            }
+        }
+        
         // Populate search results panel
         this.populateSearchResults(results, searchQuery);
         
@@ -745,8 +767,10 @@ class NavigationManager {
             // Navigate to first result automatically
             this.navigateToSearchResult(0);
             
-            // Highlight all search matches in the current view
-            this.highlightSearchMatches(results);
+            // Highlight all search matches in the current view if enabled
+            if (searchSettings.highlightMatches) {
+                this.highlightSearchMatches(results);
+            }
             
             // Show brief success message
             const searchTerms = this.parseSearchQuery(searchQuery);
@@ -763,12 +787,6 @@ class NavigationManager {
                 searchInfo += ` (also searched for reverse complement: "${rc}")`;
             }
             this.genomeBrowser.updateStatus(searchInfo);
-        }
-        
-        // Close modal if it was opened
-        const modal = document.getElementById('searchModal');
-        if (modal) {
-            modal.classList.remove('show');
         }
     }
 
@@ -1981,6 +1999,362 @@ class NavigationManager {
     setGlobalDragging(enabled) {
         this.globalDraggingEnabled = enabled;
         console.log(`🎯 NavigationManager: Global dragging ${enabled ? 'enabled' : 'disabled'}`);
+    }
+
+    /**
+     * Show search settings modal
+     */
+    showSearchSettingsModal() {
+        const modal = document.getElementById('searchSettingsModal');
+        const modalContent = modal?.querySelector('.modal-content');
+        
+        if (modal && modalContent) {
+            // Load current settings
+            this.loadSearchSettings();
+            
+            // Load saved position and size
+            this.loadModalPosition(modalContent);
+            
+            // Add draggable and resizable classes
+            modalContent.classList.add('draggable', 'resizable');
+            
+            // Initialize drag and resize functionality
+            this.initializeModalDragResize(modal, modalContent);
+            
+            modal.classList.add('show');
+        }
+    }
+
+    /**
+     * Load search settings from ConfigManager
+     */
+    loadSearchSettings() {
+        const configManager = this.genomeBrowser.configManager;
+        if (!configManager) return;
+
+        const searchSettings = configManager.getSearchSettings();
+        
+        // Load basic options
+        document.getElementById('searchCaseSensitive').checked = searchSettings.caseSensitive;
+        document.getElementById('searchReverseComplement').checked = searchSettings.reverseComplement;
+        document.getElementById('searchPartialMatches').checked = searchSettings.partialMatches;
+        
+        // Load search scope
+        document.getElementById('searchGeneNames').checked = searchSettings.searchGeneNames;
+        document.getElementById('searchSequence').checked = searchSettings.searchSequence;
+        document.getElementById('searchFeatures').checked = searchSettings.searchFeatures;
+        document.getElementById('searchProtein').checked = searchSettings.searchProtein;
+        
+        // Load advanced options
+        document.getElementById('searchMinLength').value = searchSettings.minLength;
+        document.getElementById('searchMaxResults').value = searchSettings.maxResults;
+        document.getElementById('searchTimeout').value = searchSettings.timeout;
+        
+        // Load display options
+        document.getElementById('searchHighlightMatches').checked = searchSettings.highlightMatches;
+        document.getElementById('searchShowContext').checked = searchSettings.showContext;
+        document.getElementById('searchContextLength').value = searchSettings.contextLength;
+        
+        // Load history options
+        document.getElementById('searchSaveHistory').checked = searchSettings.saveHistory;
+        document.getElementById('searchHistoryLimit').value = searchSettings.historyLimit;
+    }
+
+    /**
+     * Save search settings to ConfigManager
+     */
+    saveSearchSettings() {
+        const configManager = this.genomeBrowser.configManager;
+        if (!configManager) return;
+
+        const searchSettings = {
+            caseSensitive: document.getElementById('searchCaseSensitive').checked,
+            reverseComplement: document.getElementById('searchReverseComplement').checked,
+            partialMatches: document.getElementById('searchPartialMatches').checked,
+            searchGeneNames: document.getElementById('searchGeneNames').checked,
+            searchSequence: document.getElementById('searchSequence').checked,
+            searchFeatures: document.getElementById('searchFeatures').checked,
+            searchProtein: document.getElementById('searchProtein').checked,
+            minLength: parseInt(document.getElementById('searchMinLength').value),
+            maxResults: parseInt(document.getElementById('searchMaxResults').value),
+            timeout: parseInt(document.getElementById('searchTimeout').value),
+            highlightMatches: document.getElementById('searchHighlightMatches').checked,
+            showContext: document.getElementById('searchShowContext').checked,
+            contextLength: parseInt(document.getElementById('searchContextLength').value),
+            saveHistory: document.getElementById('searchSaveHistory').checked,
+            historyLimit: parseInt(document.getElementById('searchHistoryLimit').value)
+        };
+
+        configManager.setSearchSettings(searchSettings);
+        console.log('Search settings saved:', searchSettings);
+    }
+
+    /**
+     * Reset search settings to defaults
+     */
+    resetSearchSettings() {
+        const defaultSettings = this.getDefaultSearchSettings();
+        
+        // Reset basic options
+        document.getElementById('searchCaseSensitive').checked = defaultSettings.caseSensitive;
+        document.getElementById('searchReverseComplement').checked = defaultSettings.reverseComplement;
+        document.getElementById('searchPartialMatches').checked = defaultSettings.partialMatches;
+        
+        // Reset search scope
+        document.getElementById('searchGeneNames').checked = defaultSettings.searchGeneNames;
+        document.getElementById('searchSequence').checked = defaultSettings.searchSequence;
+        document.getElementById('searchFeatures').checked = defaultSettings.searchFeatures;
+        document.getElementById('searchProtein').checked = defaultSettings.searchProtein;
+        
+        // Reset advanced options
+        document.getElementById('searchMinLength').value = defaultSettings.minLength;
+        document.getElementById('searchMaxResults').value = defaultSettings.maxResults;
+        document.getElementById('searchTimeout').value = defaultSettings.timeout;
+        
+        // Reset display options
+        document.getElementById('searchHighlightMatches').checked = defaultSettings.highlightMatches;
+        document.getElementById('searchShowContext').checked = defaultSettings.showContext;
+        document.getElementById('searchContextLength').value = defaultSettings.contextLength;
+        
+        // Reset history options
+        document.getElementById('searchSaveHistory').checked = defaultSettings.saveHistory;
+        document.getElementById('searchHistoryLimit').value = defaultSettings.historyLimit;
+    }
+
+    /**
+     * Get default search settings
+     */
+    getDefaultSearchSettings() {
+        return {
+            caseSensitive: false,
+            reverseComplement: false,
+            partialMatches: true,
+            searchGeneNames: true,
+            searchSequence: true,
+            searchFeatures: true,
+            searchProtein: false,
+            minLength: 3,
+            maxResults: 100,
+            timeout: 30,
+            highlightMatches: true,
+            showContext: true,
+            contextLength: 50,
+            saveHistory: true,
+            historyLimit: 50
+        };
+    }
+
+    /**
+     * Get current search settings
+     */
+    getCurrentSearchSettings() {
+        const configManager = this.genomeBrowser.configManager;
+        if (!configManager) return this.getDefaultSearchSettings();
+        
+        return configManager.getSearchSettings();
+    }
+
+    /**
+     * Initialize modal drag and resize functionality
+     */
+    initializeModalDragResize(modal, modalContent) {
+        let isDragging = false;
+        let isResizing = false;
+        let startX, startY, startWidth, startHeight, startLeft, startTop;
+
+        // Drag functionality
+        const header = modalContent.querySelector('.modal-header');
+        if (header) {
+            header.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('modal-close')) return;
+                
+                isDragging = true;
+                modalContent.classList.add('dragging');
+                
+                const rect = modalContent.getBoundingClientRect();
+                startX = e.clientX - rect.left;
+                startY = e.clientY - rect.top;
+                
+                e.preventDefault();
+            });
+        }
+
+        // Resize functionality
+        const resizeHandleRight = modalContent.querySelector('.resize-handle-right');
+        const resizeHandleBottom = modalContent.querySelector('.resize-handle-bottom');
+        
+        // Handle right edge resize
+        if (resizeHandleRight) {
+            resizeHandleRight.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                modalContent.classList.add('resizing');
+                
+                const rect = modalContent.getBoundingClientRect();
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = rect.width;
+                startHeight = rect.height;
+                
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        }
+        
+        // Handle bottom edge resize
+        if (resizeHandleBottom) {
+            resizeHandleBottom.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                modalContent.classList.add('resizing');
+                
+                const rect = modalContent.getBoundingClientRect();
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = rect.width;
+                startHeight = rect.height;
+                
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        }
+        
+        // Handle corner resize
+        modalContent.addEventListener('mousedown', (e) => {
+            const rect = modalContent.getBoundingClientRect();
+            const handleSize = 24;
+            const isInResizeArea = (
+                e.clientX >= rect.right - handleSize &&
+                e.clientY >= rect.bottom - handleSize
+            );
+
+            if (isInResizeArea) {
+                isResizing = true;
+                modalContent.classList.add('resizing');
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = rect.width;
+                startHeight = rect.height;
+                
+                e.preventDefault();
+            }
+        });
+
+        // Mouse move handler
+        const handleMouseMove = (e) => {
+            if (isDragging) {
+                const newX = e.clientX - startX;
+                const newY = e.clientY - startY;
+                
+                // Constrain to viewport
+                const maxX = window.innerWidth - modalContent.offsetWidth;
+                const maxY = window.innerHeight - modalContent.offsetHeight;
+                
+                const constrainedX = Math.max(0, Math.min(newX, maxX));
+                const constrainedY = Math.max(0, Math.min(newY, maxY));
+                
+                modalContent.style.position = 'fixed';
+                modalContent.style.left = constrainedX + 'px';
+                modalContent.style.top = constrainedY + 'px';
+                modalContent.style.margin = '0';
+                modalContent.style.transform = 'none';
+            } else if (isResizing) {
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+                
+                // Apply constraints
+                const minWidth = 800;
+                const minHeight = 500;
+                const maxWidth = window.innerWidth * 0.95;
+                const maxHeight = window.innerHeight * 0.9;
+                
+                let newWidth = startWidth + deltaX;
+                let newHeight = startHeight + deltaY;
+                
+                // Constrain dimensions
+                newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+                newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+                
+                modalContent.style.width = newWidth + 'px';
+                modalContent.style.height = newHeight + 'px';
+            }
+        };
+
+        // Mouse up handler
+        const handleMouseUp = () => {
+            if (isDragging || isResizing) {
+                isDragging = false;
+                isResizing = false;
+                modalContent.classList.remove('dragging', 'resizing');
+                
+                // Save position and size
+                this.saveModalPosition(modalContent);
+            }
+        };
+
+        // Add event listeners
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        // Clean up on modal close
+        const cleanup = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            modal.removeEventListener('click', cleanup);
+        };
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-close')) {
+                cleanup();
+            }
+        });
+    }
+
+    /**
+     * Load modal position and size from ConfigManager
+     */
+    loadModalPosition(modalContent) {
+        const configManager = this.genomeBrowser.configManager;
+        if (!configManager) return;
+
+        const modalSettings = configManager.getModalSettings();
+        const searchModalSettings = modalSettings.searchSettings || {};
+
+        if (searchModalSettings.position) {
+            modalContent.style.position = 'fixed';
+            modalContent.style.left = searchModalSettings.position.x + 'px';
+            modalContent.style.top = searchModalSettings.position.y + 'px';
+            modalContent.style.margin = '0';
+            modalContent.style.transform = 'none';
+        }
+
+        if (searchModalSettings.size) {
+            modalContent.style.width = searchModalSettings.size.width + 'px';
+            modalContent.style.height = searchModalSettings.size.height + 'px';
+        }
+    }
+
+    /**
+     * Save modal position and size to ConfigManager
+     */
+    saveModalPosition(modalContent) {
+        const configManager = this.genomeBrowser.configManager;
+        if (!configManager) return;
+
+        const rect = modalContent.getBoundingClientRect();
+        const modalSettings = configManager.getModalSettings();
+        
+        modalSettings.searchSettings = {
+            position: {
+                x: rect.left,
+                y: rect.top
+            },
+            size: {
+                width: rect.width,
+                height: rect.height
+            }
+        };
+
+        configManager.setModalSettings(modalSettings);
     }
     
     /**

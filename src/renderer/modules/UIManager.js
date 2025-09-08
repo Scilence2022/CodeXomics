@@ -428,13 +428,30 @@ class UIManager {
             this.genomeBrowser.navigationManager.performGoto();
         });
 
-        // Close modals only on close button click, not background
-        [searchModal, gotoModal].forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal-close')) {
-                    modal.classList.remove('show');
-                }
+        // Search settings modal
+        const searchSettingsModal = document.getElementById('searchSettingsModal');
+        if (searchSettingsModal) {
+            // Save search settings
+            document.getElementById('searchSettingsSave').addEventListener('click', () => {
+                this.genomeBrowser.navigationManager.saveSearchSettings();
+                searchSettingsModal.classList.remove('show');
             });
+
+            // Reset search settings
+            document.getElementById('searchSettingsReset').addEventListener('click', () => {
+                this.genomeBrowser.navigationManager.resetSearchSettings();
+            });
+        }
+
+        // Close modals only on close button click, not background
+        [searchModal, gotoModal, searchSettingsModal].forEach(modal => {
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('modal-close')) {
+                        modal.classList.remove('show');
+                    }
+                });
+            }
         });
     }
 
