@@ -7120,6 +7120,75 @@ class GenomeBrowser {
 // Initialize the Genome AI Studio when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.genomeBrowser = new GenomeBrowser();
+    
+    // Add message listener for auto-opening GBK files from ActionManager
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'LOAD_GBK_DATA') {
+            console.log('🔄 [MainWindow] Received GBK data from ActionManager:', event.data.data.filename);
+            
+            // Load the GBK data in the current window
+            if (window.genomeBrowser && window.genomeBrowser.fileManager) {
+                const { filename, content } = event.data.data;
+                
+                // Set the current file in FileManager
+                window.genomeBrowser.fileManager.currentFile = {
+                    info: {
+                        name: filename,
+                        extension: '.gbk',
+                        size: content.length,
+                        type: 'text/plain'
+                    },
+                    data: content,
+                    path: filename
+                };
+                
+                // Parse the GenBank content
+                window.genomeBrowser.fileManager.parseGenBank().then(() => {
+                    console.log('✅ [MainWindow] Successfully loaded GBK data in new window');
+                    
+                    // Update UI to show the new genome data
+                    if (window.genomeBrowser.tabManager) {
+                        window.genomeBrowser.tabManager.onGenomeLoaded(
+                            window.genomeBrowser.currentSequence, 
+                            filename
+                        );
+                    }
+                    
+                    // Update chromosome selector
+                    if (window.genomeBrowser.populateChromosomeSelect) {
+                        window.genomeBrowser.populateChromosomeSelect();
+                    }
+                    
+                    // Select first chromosome by default
+                    const firstChr = Object.keys(window.genomeBrowser.currentSequence || {})[0];
+                    if (firstChr) {
+                        window.genomeBrowser.selectChromosome(firstChr);
+                    }
+                    
+                    // Update export menu state
+                    if (window.genomeBrowser.exportManager) {
+                        window.genomeBrowser.exportManager.updateExportMenuState();
+                    }
+                    
+                    // Refresh the genome view
+                    if (window.genomeBrowser.displayGenomeView) {
+                        window.genomeBrowser.displayGenomeView();
+                    }
+                    
+                    // Show success notification
+                    if (window.genomeBrowser.showNotification) {
+                        window.genomeBrowser.showNotification(`Successfully loaded generated GBK file: ${filename}`, 'success');
+                    }
+                    
+                }).catch(error => {
+                    console.error('❌ [MainWindow] Error loading GBK data:', error);
+                    if (window.genomeBrowser.showNotification) {
+                        window.genomeBrowser.showNotification('Error loading generated GBK file', 'error');
+                    }
+                });
+            }
+        }
+    });
 }); 
 
 /**

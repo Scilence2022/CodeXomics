@@ -2206,7 +2206,7 @@ class ActionManager {
      */
     async autoOpenGeneratedGBK(genbankContent, filename) {
         try {
-            console.log(`🔄 [ActionManager] Auto-opening generated GBK file: ${filename}`);
+            console.log(`🔄 [ActionManager] Auto-opening generated GBK file in new window: ${filename}`);
             
             // Create a temporary file object for the generated GBK content
             const tempFile = {
@@ -2217,9 +2217,65 @@ class ActionManager {
                 lastModified: new Date()
             };
             
+            // Check if we can open a new window
+            if (typeof window !== 'undefined' && window.open) {
+                // Create a new window with the same URL
+                const newWindow = window.open(window.location.href, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+                
+                if (newWindow) {
+                    // Wait for the new window to load
+                    newWindow.addEventListener('load', async () => {
+                        try {
+                            // Wait a bit for the new window to fully initialize
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            
+                            // Send the GBK data to the new window
+                            newWindow.postMessage({
+                                type: 'LOAD_GBK_DATA',
+                                data: {
+                                    filename: filename,
+                                    content: genbankContent
+                                }
+                            }, '*');
+                            
+                            console.log(`✅ [ActionManager] Sent GBK data to new window: ${filename}`);
+                            
+                        } catch (error) {
+                            console.error('❌ [ActionManager] Error sending data to new window:', error);
+                        }
+                    });
+                    
+                    // Fallback: if new window fails, load in current window
+                    newWindow.addEventListener('error', () => {
+                        console.warn('⚠️ [ActionManager] New window failed, loading in current window');
+                        this.loadGBKInCurrentWindow(genbankContent, filename);
+                    });
+                    
+                } else {
+                    // Popup blocked or new window failed, load in current window
+                    console.warn('⚠️ [ActionManager] Could not open new window (popup blocked?), loading in current window');
+                    this.loadGBKInCurrentWindow(genbankContent, filename);
+                }
+            } else {
+                // Fallback: load in current window
+                console.warn('⚠️ [ActionManager] window.open not available, loading in current window');
+                this.loadGBKInCurrentWindow(genbankContent, filename);
+            }
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error auto-opening generated GBK file:', error);
+            this.genomeBrowser.showNotification('Generated GBK file saved but could not be opened automatically', 'warning');
+        }
+    }
+    
+    /**
+     * Load GBK data in current window (fallback method)
+     */
+    async loadGBKInCurrentWindow(genbankContent, filename) {
+        try {
             // Check if FileManager is available
             if (!this.genomeBrowser.fileManager) {
-                console.warn('⚠️ [ActionManager] FileManager not available, cannot auto-open GBK file');
+                console.warn('⚠️ [ActionManager] FileManager not available, cannot load GBK file');
                 return;
             }
             
@@ -2267,11 +2323,11 @@ class ActionManager {
                 this.genomeBrowser.displayGenomeView();
             }
             
-            console.log(`✅ [ActionManager] Successfully opened generated GBK file: ${filename}`);
+            console.log(`✅ [ActionManager] Successfully loaded GBK file in current window: ${filename}`);
             
         } catch (error) {
-            console.error('❌ [ActionManager] Error auto-opening generated GBK file:', error);
-            this.genomeBrowser.showNotification('Generated GBK file saved but could not be opened automatically', 'warning');
+            console.error('❌ [ActionManager] Error loading GBK in current window:', error);
+            this.genomeBrowser.showNotification('Error loading generated GBK file', 'error');
         }
     }
 
