@@ -1905,8 +1905,11 @@ class ActionManager {
             const filename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${checkpointId}.gbk`;
             this.downloadTextFile(genbankContent, filename);
             
-            this.genomeBrowser.showNotification(`Comprehensive GBK file generated: ${filename}`, 'success');
-            console.log(`✅ [ActionManager] Comprehensive GBK file generated successfully`);
+            // Auto-open the generated GBK file in a new Genome AI Studio window
+            await this.autoOpenGeneratedGBK(genbankContent, filename);
+            
+            this.genomeBrowser.showNotification(`Comprehensive GBK file generated and opened: ${filename}`, 'success');
+            console.log(`✅ [ActionManager] Comprehensive GBK file generated and opened successfully`);
             
         } catch (error) {
             console.error('❌ [ActionManager] Error generating comprehensive GBK:', error);
@@ -1945,16 +1948,65 @@ class ActionManager {
         const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '-');
         content += `LOCUS       ${locusName} ${sequence.length} bp    DNA     ${topology}   UNK ${dateStr}\n`;
         
-        // Add minimal modification note (actions already executed, no need for detailed history)
+        // Add comprehensive action history as COMMENT section
         if (executedActions.length > 0) {
-            content += `COMMENT     Modified by Genome AI Studio Action Manager\n`;
-            content += `COMMENT     ${executedActions.length} sequence modifications applied\n`;
+            content += `COMMENT     ========================================================================\n`;
+            content += `COMMENT     Genome AI Studio Action Manager - Execution Report\n`;
+            content += `COMMENT     ========================================================================\n`;
+            content += `COMMENT     Checkpoint ID: ${checkpointId}\n`;
+            content += `COMMENT     Total Actions Executed: ${executedActions.length}\n`;
+            content += `COMMENT     Execution Date: ${new Date().toISOString()}\n`;
+            content += `COMMENT     \n`;
+            
+            executedActions.forEach((action, index) => {
+                content += `COMMENT     ------------------------------------------------------------------------\n`;
+                content += `COMMENT     Action ${index + 1}: ${action.type.replace(/_/g, ' ').toUpperCase()}\n`;
+                content += `COMMENT       Action ID: ${action.id}\n`;
+                content += `COMMENT       Target: ${action.target}\n`;
+                content += `COMMENT       Description: ${action.details || 'N/A'}\n`;
+                
+                if (action.metadata) {
+                    if (action.metadata.start && action.metadata.end) {
+                        content += `COMMENT       Position: ${action.metadata.start}-${action.metadata.end}\n`;
+                        content += `COMMENT       Length: ${action.metadata.end - action.metadata.start + 1} bp\n`;
+                    }
+                    if (action.metadata.strand) {
+                        content += `COMMENT       Strand: ${action.metadata.strand}\n`;
+                    }
+                    if (action.metadata.chromosome) {
+                        content += `COMMENT       Chromosome: ${action.metadata.chromosome}\n`;
+                    }
+                }
+                
+                if (action.executionStart) {
+                    content += `COMMENT       Executed: ${new Date(action.executionStart).toISOString()}\n`;
+                }
+                if (action.actualTime) {
+                    content += `COMMENT       Duration: ${action.actualTime}ms\n`;
+                }
+                
+                if (action.result) {
+                    if (action.result.sequenceLength) {
+                        content += `COMMENT       Result Sequence Length: ${action.result.sequenceLength} bp\n`;
+                    }
+                    if (action.result.featuresCount !== undefined) {
+                        content += `COMMENT       Affected Features: ${action.result.featuresCount}\n`;
+                    }
+                    if (action.result.operation) {
+                        content += `COMMENT       Operation: ${action.result.operation}\n`;
+                    }
+                }
+                
+                content += `COMMENT     \n`;
+            });
+            
+            content += `COMMENT     ========================================================================\n`;
         }
         
         // DEFINITION line
         const definition = sourceFeatures.note || 
                           originalAnnotations.find(f => f.type === 'source')?.qualifiers?.note ||
-                          `${chromosome} - Modified with ${executedActions.length} sequence actions`;
+                          `${chromosome} - Modified by Genome AI Studio Action Manager`;
         content += `DEFINITION  ${definition}\n`;
         
         // ACCESSION line
@@ -2233,6 +2285,80 @@ class ActionManager {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+    
+    /**
+     * Auto-open generated GBK file in a new Genome AI Studio window
+     */
+    async autoOpenGeneratedGBK(genbankContent, filename) {
+        try {
+            console.log(`🔄 [ActionManager] Auto-opening generated GBK file: ${filename}`);
+            
+            // Create a temporary file object for the generated GBK content
+            const tempFile = {
+                name: filename,
+                data: genbankContent,
+                type: 'text/plain',
+                size: genbankContent.length,
+                lastModified: new Date()
+            };
+            
+            // Check if FileManager is available
+            if (!this.genomeBrowser.fileManager) {
+                console.warn('⚠️ [ActionManager] FileManager not available, cannot auto-open GBK file');
+                return;
+            }
+            
+            // Set the current file in FileManager
+            this.genomeBrowser.fileManager.currentFile = {
+                info: {
+                    name: filename,
+                    extension: '.gbk',
+                    size: genbankContent.length,
+                    type: 'text/plain'
+                },
+                data: genbankContent,
+                path: filename
+            };
+            
+            // Parse the GenBank content
+            await this.genomeBrowser.fileManager.parseGenBank();
+            
+            // Update UI to show the new genome data
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.onGenomeLoaded(
+                    this.genomeBrowser.currentSequence, 
+                    filename
+                );
+            }
+            
+            // Update chromosome selector
+            if (this.genomeBrowser.populateChromosomeSelect) {
+                this.genomeBrowser.populateChromosomeSelect();
+            }
+            
+            // Select first chromosome by default
+            const firstChr = Object.keys(this.genomeBrowser.currentSequence || {})[0];
+            if (firstChr) {
+                this.genomeBrowser.selectChromosome(firstChr);
+            }
+            
+            // Update export menu state
+            if (this.genomeBrowser.exportManager) {
+                this.genomeBrowser.exportManager.updateExportMenuState();
+            }
+            
+            // Refresh the genome view
+            if (this.genomeBrowser.displayGenomeView) {
+                this.genomeBrowser.displayGenomeView();
+            }
+            
+            console.log(`✅ [ActionManager] Successfully opened generated GBK file: ${filename}`);
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error auto-opening generated GBK file:', error);
+            this.genomeBrowser.showNotification('Generated GBK file saved but could not be opened automatically', 'warning');
+        }
     }
 
     /**
