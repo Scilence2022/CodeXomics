@@ -124,7 +124,8 @@ class ActionManager {
             }
         }, 1000);
         
-        // Action List modal listeners (executeAllActionsBtn is already handled in setupEventListeners)
+        // Action List modal listeners
+        document.getElementById('executeAllActionsBtn')?.addEventListener('click', () => this.executeAllActions());
         document.getElementById('clearAllActionsBtn')?.addEventListener('click', () => this.clearAllActions());
         document.getElementById('exportActionsBtn')?.addEventListener('click', () => this.exportActions());
         document.getElementById('importActionsBtn')?.addEventListener('click', () => this.importActions());
@@ -1489,16 +1490,6 @@ class ActionManager {
             
             console.log(`✅ [ActionManager] Execution completed successfully`);
             
-            // Step 6: Cleanup and restore original state AFTER successful completion
-            this.restoreGenomeDataFromBackup(originalGenomeData);
-            this.isExecuting = false;
-            this.hideExecutionProgress();
-            this.updateActionListUI();
-            this.updateStats();
-            this.notifyActionsTrackUpdate();
-            
-            console.log(`🔒 [ActionManager] Execution cleanup completed`);
-            
             return {
                 success: true,
                 message: `Executed ${pendingActionsCopy.length} actions successfully`,
@@ -1513,16 +1504,6 @@ class ActionManager {
             console.error('❌ [ActionManager] Error during action execution:', error);
             this.genomeBrowser.showNotification(`Error executing actions: ${error.message}`, 'error');
             
-            // Step 6: Cleanup and restore original state on error
-            this.restoreGenomeDataFromBackup(originalGenomeData);
-            this.isExecuting = false;
-            this.hideExecutionProgress();
-            this.updateActionListUI();
-            this.updateStats();
-            this.notifyActionsTrackUpdate();
-            
-            console.log(`🔒 [ActionManager] Execution cleanup completed after error`);
-            
             return {
                 success: false,
                 message: `Execution failed: ${error.message}`,
@@ -1532,6 +1513,17 @@ class ActionManager {
                 error: error.message,
                 executionId
             };
+            
+        } finally {
+            // Step 6: Cleanup and restore original state
+            this.restoreGenomeDataFromBackup(originalGenomeData);
+            this.isExecuting = false;
+            this.hideExecutionProgress();
+            this.updateActionListUI();
+            this.updateStats();
+            this.notifyActionsTrackUpdate();
+            
+            console.log(`🔒 [ActionManager] Execution cleanup completed`);
         }
     }
     
@@ -1591,8 +1583,8 @@ class ActionManager {
                 }
             }
         }
-        
-        return {
+            
+            return {
             hasConflicts: conflicts.length > 0,
             conflicts,
             totalActions: pendingActions.length,
@@ -1816,12 +1808,13 @@ class ActionManager {
                 return;
             }
             
-            const chromosomes = Object.keys(executionGenomeData?.sequence || this.genomeBrowser.currentSequence || {});
+            const chromosomes = Object.keys(this.genomeBrowser.currentSequence || {});
             let genbankContent = '';
             
             for (const chr of chromosomes) {
-                // Use execution genome data for sequence (already modified)
-                const sequence = executionGenomeData?.sequence?.[chr] || this.genomeBrowser.currentSequence?.[chr] || '';
+                // Apply sequence modifications
+                const modifiedSequence = this.applySequenceModifications(chr, this.genomeBrowser.currentSequence[chr]);
+                const sequence = modifiedSequence;
                 
                 // Use execution genome data for features
                 const featuresSource = executionGenomeData?.annotations?.[chr] || this.genomeBrowser.currentAnnotations?.[chr] || [];
@@ -1850,7 +1843,10 @@ class ActionManager {
             const filename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
             this.downloadTextFile(genbankContent, filename);
             
-            this.genomeBrowser.showNotification(`Comprehensive GBK file generated and saved: ${filename}`, 'success');
+            // Auto-open the generated GBK file in a new Genome AI Studio window
+            await this.autoOpenGeneratedGBK(genbankContent, filename);
+            
+            this.genomeBrowser.showNotification(`Comprehensive GBK file generated and opened: ${filename}`, 'success');
             console.log(`✅ [ActionManager] Comprehensive GBK file generated and opened successfully`);
             
         } catch (error) {
@@ -2205,6 +2201,79 @@ class ActionManager {
         URL.revokeObjectURL(url);
     }
     
+    /**
+     * Auto-open generated GBK file in a new Genome AI Studio window
+     */
+    async autoOpenGeneratedGBK(genbankContent, filename) {
+        try {
+            console.log(`🔄 [ActionManager] Auto-opening generated GBK file: ${filename}`);
+            
+            // Create a temporary file object for the generated GBK content
+            const tempFile = {
+                name: filename,
+                data: genbankContent,
+                type: 'text/plain',
+                size: genbankContent.length,
+                lastModified: new Date()
+            };
+            
+            // Check if FileManager is available
+            if (!this.genomeBrowser.fileManager) {
+                console.warn('⚠️ [ActionManager] FileManager not available, cannot auto-open GBK file');
+                return;
+            }
+            
+            // Set the current file in FileManager
+            this.genomeBrowser.fileManager.currentFile = {
+                info: {
+                    name: filename,
+                    extension: '.gbk',
+                    size: genbankContent.length,
+                    type: 'text/plain'
+                },
+                data: genbankContent,
+                path: filename
+            };
+            
+            // Parse the GenBank content
+            await this.genomeBrowser.fileManager.parseGenBank();
+            
+            // Update UI to show the new genome data
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.onGenomeLoaded(
+                    this.genomeBrowser.currentSequence, 
+                    filename
+                );
+            }
+            
+            // Update chromosome selector
+            if (this.genomeBrowser.populateChromosomeSelect) {
+                this.genomeBrowser.populateChromosomeSelect();
+            }
+            
+            // Select first chromosome by default
+            const firstChr = Object.keys(this.genomeBrowser.currentSequence || {})[0];
+            if (firstChr) {
+                this.genomeBrowser.selectChromosome(firstChr);
+            }
+            
+            // Update export menu state
+            if (this.genomeBrowser.exportManager) {
+                this.genomeBrowser.exportManager.updateExportMenuState();
+            }
+            
+            // Refresh the genome view
+            if (this.genomeBrowser.displayGenomeView) {
+                this.genomeBrowser.displayGenomeView();
+            }
+            
+            console.log(`✅ [ActionManager] Successfully opened generated GBK file: ${filename}`);
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error auto-opening generated GBK file:', error);
+            this.genomeBrowser.showNotification('Generated GBK file saved but could not be opened automatically', 'warning');
+        }
+    }
     
     /**
      * Execute a single action
