@@ -1850,10 +1850,7 @@ class ActionManager {
             const filename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
             this.downloadTextFile(genbankContent, filename);
             
-            // Auto-open the generated GBK file in a new Genome AI Studio window
-            await this.autoOpenGeneratedGBK(genbankContent, filename);
-            
-            this.genomeBrowser.showNotification(`Comprehensive GBK file generated and opened: ${filename}`, 'success');
+            this.genomeBrowser.showNotification(`Comprehensive GBK file generated and saved: ${filename}`, 'success');
             console.log(`✅ [ActionManager] Comprehensive GBK file generated and opened successfully`);
             
         } catch (error) {
@@ -2208,144 +2205,7 @@ class ActionManager {
         URL.revokeObjectURL(url);
     }
     
-    /**
-     * Auto-open generated GBK file in a new Genome AI Studio window
-     */
-    async autoOpenGeneratedGBK(genbankContent, filename) {
-        try {
-            console.log(`🔄 [ActionManager] Auto-opening generated GBK file in new window: ${filename}`);
-            
-            // Check if we can open a new window
-            if (typeof window !== 'undefined' && window.open) {
-                // Create a new window with the same URL
-                const newWindow = window.open(window.location.href, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-                
-                if (newWindow) {
-                    // Store the data to send after window loads
-                    const gbkData = {
-                        filename: filename,
-                        content: genbankContent
-                    };
-                    
-                    // Function to send data to new window
-                    const sendDataToNewWindow = () => {
-                        try {
-                            newWindow.postMessage({
-                                type: 'LOAD_GBK_DATA',
-                                data: gbkData
-                            }, '*');
-                            console.log(`✅ [ActionManager] Sent GBK data to new window: ${filename}`);
-                        } catch (error) {
-                            console.error('❌ [ActionManager] Error sending data to new window:', error);
-                        }
-                    };
-                    
-                    // Wait for the new window to load
-                    newWindow.addEventListener('load', async () => {
-                        try {
-                            // Wait for the new window to fully initialize
-                            await new Promise(resolve => setTimeout(resolve, 3000));
-                            sendDataToNewWindow();
-                        } catch (error) {
-                            console.error('❌ [ActionManager] Error in new window load handler:', error);
-                        }
-                    });
-                    
-                    // Also try to send data after a delay as backup
-                    setTimeout(() => {
-                        try {
-                            sendDataToNewWindow();
-                        } catch (error) {
-                            console.error('❌ [ActionManager] Error in delayed send:', error);
-                        }
-                    }, 5000);
-                    
-                    // Fallback: if new window fails, load in current window
-                    newWindow.addEventListener('error', () => {
-                        console.warn('⚠️ [ActionManager] New window failed, loading in current window');
-                        this.loadGBKInCurrentWindow(genbankContent, filename);
-                    });
-                    
-                } else {
-                    // Popup blocked or new window failed, load in current window
-                    console.warn('⚠️ [ActionManager] Could not open new window (popup blocked?), loading in current window');
-                    this.loadGBKInCurrentWindow(genbankContent, filename);
-                }
-            } else {
-                // Fallback: load in current window
-                console.warn('⚠️ [ActionManager] window.open not available, loading in current window');
-                this.loadGBKInCurrentWindow(genbankContent, filename);
-            }
-            
-        } catch (error) {
-            console.error('❌ [ActionManager] Error auto-opening generated GBK file:', error);
-            this.genomeBrowser.showNotification('Generated GBK file saved but could not be opened automatically', 'warning');
-        }
-    }
     
-    /**
-     * Load GBK data in current window (fallback method)
-     */
-    async loadGBKInCurrentWindow(genbankContent, filename) {
-        try {
-            // Check if FileManager is available
-            if (!this.genomeBrowser.fileManager) {
-                console.warn('⚠️ [ActionManager] FileManager not available, cannot load GBK file');
-                return;
-            }
-            
-            // Set the current file in FileManager
-            this.genomeBrowser.fileManager.currentFile = {
-                info: {
-                    name: filename,
-                    extension: '.gbk',
-                    size: genbankContent.length,
-                    type: 'text/plain'
-                },
-                data: genbankContent,
-                path: filename
-            };
-            
-            // Parse the GenBank content
-            await this.genomeBrowser.fileManager.parseGenBank();
-            
-            // Update UI to show the new genome data
-            if (this.genomeBrowser.tabManager) {
-                this.genomeBrowser.tabManager.onGenomeLoaded(
-                    this.genomeBrowser.currentSequence, 
-                    filename
-                );
-            }
-            
-            // Update chromosome selector
-            if (this.genomeBrowser.populateChromosomeSelect) {
-                this.genomeBrowser.populateChromosomeSelect();
-            }
-            
-            // Select first chromosome by default
-            const firstChr = Object.keys(this.genomeBrowser.currentSequence || {})[0];
-            if (firstChr) {
-                this.genomeBrowser.selectChromosome(firstChr);
-            }
-            
-            // Update export menu state
-            if (this.genomeBrowser.exportManager) {
-                this.genomeBrowser.exportManager.updateExportMenuState();
-            }
-            
-            // Refresh the genome view
-            if (this.genomeBrowser.displayGenomeView) {
-                this.genomeBrowser.displayGenomeView();
-            }
-            
-            console.log(`✅ [ActionManager] Successfully loaded GBK file in current window: ${filename}`);
-            
-        } catch (error) {
-            console.error('❌ [ActionManager] Error loading GBK in current window:', error);
-            this.genomeBrowser.showNotification('Error loading generated GBK file', 'error');
-        }
-    }
-
     /**
      * Execute a single action
      */
