@@ -1406,7 +1406,7 @@ class ActionManager {
     }
     
     /**
-     * Execute all pending actions
+     * Execute all pending actions with comprehensive conflict detection and resolution
      */
     async executeAllActions() {
         if (this.isExecuting) {
@@ -1431,85 +1431,824 @@ class ActionManager {
             };
         }
         
-        // Create a deep copy of the entire action list for execution
+        console.log(`🔄 [ActionManager] Starting execution of ${pendingActions.length} pending actions`);
+        
+        // Step 1: Check for action conflicts before execution
+        const conflictAnalysis = this.checkActionConflicts(pendingActions);
+        if (conflictAnalysis.hasConflicts) {
+            console.warn(`⚠️ [ActionManager] Found ${conflictAnalysis.conflicts.length} action conflicts`);
+            this.highlightConflictingActions(conflictAnalysis.conflicts);
+            
+            const shouldProceed = await this.showConflictResolutionDialog(conflictAnalysis);
+            if (!shouldProceed) {
+                this.genomeBrowser.showNotification('Action execution cancelled due to conflicts', 'warning');
+                return {
+                    success: false,
+                    message: 'Execution cancelled due to action conflicts',
+                    executedActions: 0,
+                    totalActions: this.actions.length,
+                    conflicts: conflictAnalysis.conflicts
+                };
+            }
+        }
+        
+        // Step 2: Create comprehensive backup checkpoint
+        const checkpointId = await this.createExecutionCheckpoint(pendingActions);
+        if (!checkpointId) {
+            this.genomeBrowser.showNotification('Failed to create execution checkpoint', 'error');
+            return {
+                success: false,
+                message: 'Failed to create execution checkpoint',
+                executedActions: 0,
+                totalActions: this.actions.length
+            };
+        }
+        
+        // Step 3: Create execution copies
         const executionActionsCopy = JSON.parse(JSON.stringify(this.actions));
         const pendingActionsCopy = executionActionsCopy.filter(action => action.status === this.STATUS.PENDING);
-        
-        console.log(`🔄 [ActionManager] Created execution copy with ${executionActionsCopy.length} actions (${pendingActionsCopy.length} pending)`);
-        
-        // 🔧 CRITICAL FIX: Create deep copies of genome data to prevent modification of original data
         const originalGenomeData = this.createGenomeDataBackup();
         const executionGenomeData = this.createGenomeDataCopy(originalGenomeData);
         
-        console.log(`🧬 [ActionManager] Created genome data execution copy:`, {
+        console.log(`🧬 [ActionManager] Created execution environment:`, {
+            checkpointId,
+            actions: executionActionsCopy.length,
+            pending: pendingActionsCopy.length,
             chromosomes: Object.keys(executionGenomeData.annotations || {}).length,
-            totalFeatures: Object.values(executionGenomeData.annotations || {}).reduce((sum, features) => sum + features.length, 0),
-            hasVariants: !!(executionGenomeData.variants && Object.keys(executionGenomeData.variants).length > 0),
-            hasReads: !!(executionGenomeData.reads && Object.keys(executionGenomeData.reads).length > 0)
+            totalFeatures: Object.values(executionGenomeData.annotations || {}).reduce((sum, features) => sum + features.length, 0)
         });
         
         this.isExecuting = true;
         this.showExecutionProgress(0, pendingActionsCopy.length);
         
         try {
+            // Step 4: Execute actions with comprehensive feature updates
             for (let i = 0; i < pendingActionsCopy.length; i++) {
                 const action = pendingActionsCopy[i];
+                
+                console.log(`🔄 [ActionManager] Executing action ${i + 1}/${pendingActionsCopy.length}: ${action.type} at ${action.target}`);
+                
+                // Execute the action
                 await this.executeActionOnCopy(action, executionActionsCopy, executionGenomeData);
                 
-                // After executing this action, adjust positions of all remaining pending actions in the copy
+                // Update all features after each action execution
+                await this.updateAllFeaturesAfterAction(action, executionGenomeData);
+                
+                // Adjust positions of remaining pending actions
                 this.adjustPendingActionPositionsOnCopy(action, i + 1, executionActionsCopy);
                 
                 this.showExecutionProgress(i + 1, pendingActionsCopy.length);
-                // Don't update UI during execution to avoid showing intermediate states
                 
-                // Small delay between actions
+                // Small delay between actions for stability
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
             
-            this.genomeBrowser.showNotification('All actions executed successfully', 'success');
+            // Step 5: Generate comprehensive GBK file with full history
+            await this.generateComprehensiveGBK(executionActionsCopy, executionGenomeData, checkpointId);
             
-            // Generate and prompt to save GBK file after successful action execution
-            // Use the execution copy for GBK generation to include executed action details
-            await this.generateAndSaveGBKFromCopy(executionActionsCopy, executionGenomeData);
+            this.genomeBrowser.showNotification(`All ${pendingActionsCopy.length} actions executed successfully`, 'success');
             
-            console.log(`✅ [ActionManager] Execution successful, original genome data and action list unchanged`);
+            console.log(`✅ [ActionManager] Execution completed successfully`);
+            
+            return {
+                success: true,
+                message: `Executed ${pendingActionsCopy.length} actions successfully`,
+                executedActions: pendingActionsCopy.length,
+                failedActions: 0,
+                totalActions: this.actions.length,
+                checkpointId,
+                conflicts: conflictAnalysis.conflicts || []
+            };
             
         } catch (error) {
-            console.error('Error executing actions:', error);
-            this.genomeBrowser.showNotification('Error executing actions', 'error');
+            console.error('❌ [ActionManager] Error during action execution:', error);
+            this.genomeBrowser.showNotification(`Error executing actions: ${error.message}`, 'error');
             
-            console.log(`❌ [ActionManager] Execution failed, original genome data and action list unchanged`);
+            // Attempt to restore from checkpoint
+            await this.restoreFromCheckpoint(checkpointId);
+            
+            return {
+                success: false,
+                message: `Execution failed: ${error.message}`,
+                executedActions: 0,
+                failedActions: pendingActionsCopy.length,
+                totalActions: this.actions.length,
+                error: error.message,
+                checkpointId
+            };
             
         } finally {
-            // 🔧 CRITICAL FIX: Ensure original genome data is intact (defensive programming)
+            // Step 6: Cleanup and restore original state
             this.restoreGenomeDataFromBackup(originalGenomeData);
-            console.log(`🔒 [ActionManager] Original genome data integrity verified and restored if needed`);
-            
-            // Original actions are never modified during execution
-            
             this.isExecuting = false;
             this.hideExecutionProgress();
             this.updateActionListUI();
             this.updateStats();
-            
-            // Notify actions track to update
             this.notifyActionsTrackUpdate();
             
-            // Return execution summary
-            const successfulActions = executionActionsCopy.filter(action => action.status === this.STATUS.COMPLETED);
-            const failedActions = executionActionsCopy.filter(action => action.status === this.STATUS.FAILED);
-            
-            return {
-                success: failedActions.length === 0,
-                message: `Executed ${successfulActions.length} actions successfully${failedActions.length > 0 ? `, ${failedActions.length} failed` : ''}`,
-                executedActions: successfulActions.length,
-                failedActions: failedActions.length,
-                totalActions: this.actions.length,
-                pendingActions: pendingActionsCopy.length
-            };
+            console.log(`🔒 [ActionManager] Execution cleanup completed`);
         }
     }
     
+    /**
+     * Check for conflicts between pending actions
+     */
+    checkActionConflicts(pendingActions) {
+        console.log(`🔍 [ActionManager] Checking for conflicts in ${pendingActions.length} pending actions`);
+        
+        const conflicts = [];
+        const actionPositions = new Map(); // chromosome -> array of {action, start, end}
+        
+        // Parse action positions and group by chromosome
+        for (const action of pendingActions) {
+            const position = this.parseActionPosition(action);
+            if (!position) continue;
+            
+            const { chromosome, start, end } = position;
+            if (!actionPositions.has(chromosome)) {
+                actionPositions.set(chromosome, []);
+            }
+            
+            actionPositions.get(chromosome).push({
+                action,
+                start,
+                end,
+                type: action.type
+            });
+        }
+        
+        // Check for overlaps within each chromosome
+        for (const [chromosome, actions] of actionPositions) {
+            // Sort by start position
+            actions.sort((a, b) => a.start - b.start);
+            
+            for (let i = 0; i < actions.length; i++) {
+                for (let j = i + 1; j < actions.length; j++) {
+                    const action1 = actions[i];
+                    const action2 = actions[j];
+                    
+                    // Check if actions overlap
+                    if (this.actionsOverlap(action1, action2)) {
+                        const conflict = {
+                            type: 'position_overlap',
+                            chromosome,
+                            action1: action1.action,
+                            action2: action2.action,
+                            overlapStart: Math.max(action1.start, action2.start),
+                            overlapEnd: Math.min(action1.end, action2.end),
+                            severity: this.calculateConflictSeverity(action1, action2),
+                            description: this.generateConflictDescription(action1, action2)
+                        };
+                        
+                        conflicts.push(conflict);
+                        console.warn(`⚠️ [ActionManager] Conflict detected: ${action1.action.type} vs ${action2.action.type} at ${chromosome}:${conflict.overlapStart}-${conflict.overlapEnd}`);
+                    }
+                }
+            }
+        }
+        
+        return {
+            hasConflicts: conflicts.length > 0,
+            conflicts,
+            totalActions: pendingActions.length,
+            affectedChromosomes: Array.from(actionPositions.keys())
+        };
+    }
+    
+    /**
+     * Parse action position from target string
+     */
+    parseActionPosition(action) {
+        if (!action.target) return null;
+        
+        const match = action.target.match(/([^:]+):(\d+)-(\d+)(?:\(([+-])\))?/);
+        if (!match) return null;
+        
+        return {
+            chromosome: match[1],
+            start: parseInt(match[2]),
+            end: parseInt(match[3]),
+            strand: match[4] || '+'
+        };
+    }
+    
+    /**
+     * Check if two actions overlap in position
+     */
+    actionsOverlap(action1, action2) {
+        // Actions overlap if one starts before the other ends
+        return action1.start < action2.end && action2.start < action1.end;
+    }
+    
+    /**
+     * Calculate conflict severity
+     */
+    calculateConflictSeverity(action1, action2) {
+        const types = [action1.type, action2.type];
+        
+        // High severity: delete vs any other operation
+        if (types.includes(this.ACTION_TYPES.DELETE_SEQUENCE) || types.includes(this.ACTION_TYPES.CUT_SEQUENCE)) {
+            return 'high';
+        }
+        
+        // Medium severity: replace vs insert/paste
+        if (types.includes(this.ACTION_TYPES.REPLACE_SEQUENCE) && 
+            (types.includes(this.ACTION_TYPES.INSERT_SEQUENCE) || types.includes(this.ACTION_TYPES.PASTE_SEQUENCE))) {
+            return 'medium';
+        }
+        
+        // Low severity: insert/paste operations
+        if (types.includes(this.ACTION_TYPES.INSERT_SEQUENCE) || types.includes(this.ACTION_TYPES.PASTE_SEQUENCE)) {
+            return 'low';
+        }
+        
+        return 'medium';
+    }
+    
+    /**
+     * Generate human-readable conflict description
+     */
+    generateConflictDescription(action1, action2) {
+        const type1 = action1.type.replace('_', ' ').toLowerCase();
+        const type2 = action2.type.replace('_', ' ').toLowerCase();
+        const overlap = action1.end - action2.start + 1;
+        
+        return `${type1} action overlaps with ${type2} action by ${overlap} base pairs`;
+    }
+    
+    /**
+     * Highlight conflicting actions in the UI
+     */
+    highlightConflictingActions(conflicts) {
+        console.log(`🎨 [ActionManager] Highlighting ${conflicts.length} conflicting actions`);
+        
+        // Remove existing conflict highlights
+        document.querySelectorAll('.action-item.conflict-highlight').forEach(el => {
+            el.classList.remove('conflict-highlight');
+        });
+        
+        // Highlight conflicting actions
+        const conflictingActionIds = new Set();
+        conflicts.forEach(conflict => {
+            conflictingActionIds.add(conflict.action1.id);
+            conflictingActionIds.add(conflict.action2.id);
+        });
+        
+        conflictingActionIds.forEach(actionId => {
+            const actionElement = document.querySelector(`[data-action-id="${actionId}"]`);
+            if (actionElement) {
+                actionElement.classList.add('conflict-highlight');
+            }
+        });
+    }
+    
+    /**
+     * Show conflict resolution dialog
+     */
+    async showConflictResolutionDialog(conflictAnalysis) {
+        return new Promise((resolve) => {
+            const dialog = document.createElement('div');
+            dialog.className = 'modal fade show';
+            dialog.style.display = 'block';
+            dialog.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Action Conflicts Detected
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <strong>Warning:</strong> ${conflictAnalysis.conflicts.length} conflicts detected between actions that have overlapping positions.
+                            </div>
+                            
+                            <div class="conflict-list">
+                                ${conflictAnalysis.conflicts.map((conflict, index) => `
+                                    <div class="conflict-item border rounded p-3 mb-2">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">Conflict ${index + 1}</h6>
+                                                <p class="mb-1 text-muted">${conflict.description}</p>
+                                                <small class="text-muted">
+                                                    Chromosome: ${conflict.chromosome} | 
+                                                    Overlap: ${conflict.overlapStart}-${conflict.overlapEnd} | 
+                                                    Severity: <span class="badge bg-${conflict.severity === 'high' ? 'danger' : conflict.severity === 'medium' ? 'warning' : 'info'}">${conflict.severity}</span>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            
+                            <div class="mt-3">
+                                <h6>Resolution Options:</h6>
+                                <ul>
+                                    <li><strong>Proceed anyway:</strong> Execute actions in order, some may fail or produce unexpected results</li>
+                                    <li><strong>Cancel:</strong> Stop execution and manually resolve conflicts</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="this.closest('.modal').remove(); resolve(false);">
+                                <i class="fas fa-times"></i> Cancel Execution
+                            </button>
+                            <button type="button" class="btn btn-warning" data-bs-dismiss="modal" onclick="this.closest('.modal').remove(); resolve(true);">
+                                <i class="fas fa-play"></i> Proceed Anyway
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+            
+            // Auto-remove after 30 seconds if no response
+            setTimeout(() => {
+                if (dialog.parentNode) {
+                    dialog.remove();
+                    resolve(false);
+                }
+            }, 30000);
+        });
+    }
+    
+    /**
+     * Create execution checkpoint
+     */
+    async createExecutionCheckpoint(pendingActions) {
+        try {
+            const checkpointId = `execution_${Date.now()}`;
+            
+            // Create comprehensive checkpoint data
+            const checkpointData = {
+                id: checkpointId,
+                timestamp: new Date().toISOString(),
+                type: 'execution_checkpoint',
+                actions: JSON.parse(JSON.stringify(this.actions)),
+                genomeData: this.createGenomeDataBackup(),
+                pendingActions: pendingActions.map(a => a.id),
+                metadata: {
+                    totalActions: this.actions.length,
+                    pendingCount: pendingActions.length,
+                    chromosomes: Object.keys(this.genomeBrowser.currentAnnotations || {}),
+                    totalFeatures: Object.values(this.genomeBrowser.currentAnnotations || {}).reduce((sum, features) => sum + features.length, 0)
+                }
+            };
+            
+            // Store checkpoint
+            if (window.checkpointManager) {
+                await window.checkpointManager.createCheckpoint(checkpointData);
+            } else {
+                // Fallback: store in localStorage
+                localStorage.setItem(`checkpoint_${checkpointId}`, JSON.stringify(checkpointData));
+            }
+            
+            console.log(`✅ [ActionManager] Created execution checkpoint: ${checkpointId}`);
+            return checkpointId;
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Failed to create execution checkpoint:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Update all features after action execution
+     */
+    async updateAllFeaturesAfterAction(executedAction, executionGenomeData) {
+        console.log(`🔄 [ActionManager] Updating features after ${executedAction.type} action`);
+        
+        try {
+            // Update feature positions based on sequence modifications
+            const affectedChromosome = executedAction.metadata?.chromosome;
+            if (!affectedChromosome || !executionGenomeData.annotations?.[affectedChromosome]) {
+                return;
+            }
+            
+            const features = executionGenomeData.annotations[affectedChromosome];
+            const modifications = this.sequenceModifications.get(affectedChromosome) || [];
+            
+            // Apply position adjustments to all features
+            for (const feature of features) {
+                const adjustedPositions = this.adjustFeaturePositionsForModifications(
+                    feature, 
+                    modifications, 
+                    affectedChromosome
+                );
+                
+                if (adjustedPositions) {
+                    feature.start = adjustedPositions.start;
+                    feature.end = adjustedPositions.end;
+                }
+            }
+            
+            // Remove features that are no longer valid
+            executionGenomeData.annotations[affectedChromosome] = features.filter(feature => 
+                feature.start > 0 && feature.end > feature.start
+            );
+            
+            console.log(`✅ [ActionManager] Updated ${features.length} features for chromosome ${affectedChromosome}`);
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error updating features:', error);
+        }
+    }
+    
+    /**
+     * Generate comprehensive GBK file with full action history
+     */
+    async generateComprehensiveGBK(executionActionsCopy, executionGenomeData, checkpointId) {
+        try {
+            console.log(`📄 [ActionManager] Generating comprehensive GBK file with action history`);
+            
+            // Check if ExportManager is available
+            if (!this.genomeBrowser.exportManager) {
+                this.genomeBrowser.showNotification('Export functionality not available', 'error');
+                return;
+            }
+            
+            const chromosomes = Object.keys(this.genomeBrowser.currentSequence || {});
+            let genbankContent = '';
+            
+            for (const chr of chromosomes) {
+                // Apply sequence modifications
+                const modifiedSequence = this.applySequenceModifications(chr, this.genomeBrowser.currentSequence[chr]);
+                const sequence = modifiedSequence;
+                
+                // Use execution genome data for features
+                const featuresSource = executionGenomeData?.annotations?.[chr] || this.genomeBrowser.currentAnnotations?.[chr] || [];
+                const adjustedFeatures = this.adjustFeaturePositions(chr, featuresSource);
+                const features = adjustedFeatures;
+                
+                // Get executed actions for this chromosome
+                const executedActions = executionActionsCopy.filter(action => 
+                    action.status === this.STATUS.COMPLETED && 
+                    action.metadata?.chromosome === chr
+                );
+                
+                // Generate GenBank content for this chromosome using original format
+                const chrContent = this.generateChromosomeGBKContentOriginal(
+                    chr, 
+                    sequence, 
+                    features, 
+                    executedActions, 
+                    checkpointId
+                );
+                
+                genbankContent += chrContent + '\n';
+            }
+            
+            // Save the comprehensive GBK file
+            const filename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${checkpointId}.gbk`;
+            this.downloadTextFile(genbankContent, filename);
+            
+            this.genomeBrowser.showNotification(`Comprehensive GBK file generated: ${filename}`, 'success');
+            console.log(`✅ [ActionManager] Comprehensive GBK file generated successfully`);
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error generating comprehensive GBK:', error);
+            this.genomeBrowser.showNotification('Error generating GBK file', 'error');
+        }
+    }
+    
+    /**
+     * Generate GBK content for a single chromosome using original GenBank format
+     */
+    generateChromosomeGBKContentOriginal(chromosome, sequence, features, executedActions, checkpointId) {
+        let content = '';
+        
+        // Get original source features if available
+        const sourceFeatures = this.genomeBrowser.sourceFeatures?.[chromosome] || {};
+        const originalAnnotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+        
+        // Determine sequence type and topology
+        const isCircular = sourceFeatures.mol_type?.includes('circular') || 
+                          (originalAnnotations.find(f => f.type === 'source' && f.qualifiers?.mol_type?.includes('circular'))) ||
+                          false;
+        const topology = isCircular ? 'circular' : 'linear';
+        
+        // Get organism information
+        const organism = sourceFeatures.organism || 
+                        originalAnnotations.find(f => f.type === 'source')?.qualifiers?.organism ||
+                        'Unknown organism';
+        
+        // Get strain information
+        const strain = sourceFeatures.strain || 
+                      originalAnnotations.find(f => f.type === 'source')?.qualifiers?.strain ||
+                      '';
+        
+        // GenBank LOCUS line (exactly as original format)
+        const locusName = chromosome.length > 16 ? chromosome.substring(0, 16) : chromosome.padEnd(16);
+        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '-');
+        content += `LOCUS       ${locusName} ${sequence.length} bp    DNA     ${topology}   UNK ${dateStr}\n`;
+        
+        // Add modification history as COMMENT section (before DEFINITION)
+        if (executedActions.length > 0) {
+            content += `COMMENT     Generated by Genome AI Studio Action Manager\n`;
+            content += `COMMENT     Checkpoint ID: ${checkpointId}\n`;
+            content += `COMMENT     Total modifications: ${executedActions.length}\n`;
+            content += `COMMENT     Export timestamp: ${new Date().toISOString()}\n`;
+            content += `COMMENT     \n`;
+            
+            executedActions.forEach((action, index) => {
+                content += `COMMENT     Modification ${index + 1}: ${action.type} at ${action.target}\n`;
+                if (action.details) {
+                    content += `COMMENT       Description: ${action.details}\n`;
+                }
+                if (action.metadata?.start && action.metadata?.end) {
+                    content += `COMMENT       Position: ${action.metadata.start}-${action.metadata.end}\n`;
+                }
+                content += `COMMENT     \n`;
+            });
+        }
+        
+        // DEFINITION line
+        const definition = sourceFeatures.note || 
+                          originalAnnotations.find(f => f.type === 'source')?.qualifiers?.note ||
+                          `${chromosome} - Modified with ${executedActions.length} sequence actions`;
+        content += `DEFINITION  ${definition}\n`;
+        
+        // ACCESSION line
+        const accession = sourceFeatures.db_xref?.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
+                         originalAnnotations.find(f => f.type === 'source')?.qualifiers?.db_xref?.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
+                         chromosome;
+        content += `ACCESSION   ${accession}\n`;
+        
+        // VERSION line
+        content += `VERSION     ${accession}\n`;
+        
+        // KEYWORDS line
+        const keywords = sourceFeatures.serotype || sourceFeatures.serovar || 
+                        originalAnnotations.find(f => f.type === 'source')?.qualifiers?.serotype ||
+                        originalAnnotations.find(f => f.type === 'source')?.qualifiers?.serovar ||
+                        'genome editing, sequence modification';
+        content += `KEYWORDS    ${keywords}\n`;
+        
+        // SOURCE line
+        content += `SOURCE      .\n`;
+        
+        // ORGANISM line
+        content += `  ORGANISM  ${organism}\n`;
+        
+        // Add organism qualifiers if available
+        if (strain) {
+            content += `            strain=${strain}\n`;
+        }
+        if (sourceFeatures.host) {
+            content += `            host=${sourceFeatures.host}\n`;
+        }
+        if (sourceFeatures.country) {
+            content += `            country=${sourceFeatures.country}\n`;
+        }
+        if (sourceFeatures.collection_date) {
+            content += `            collection_date=${sourceFeatures.collection_date}\n`;
+        }
+        
+        // FEATURES section
+        content += `FEATURES             Location/Qualifiers\n`;
+        
+        // Add source feature first
+        content += `     source          1..${sequence.length}\n`;
+        content += `                     /organism="${organism}"\n`;
+        content += `                     /mol_type="genomic DNA"\n`;
+        if (strain) {
+            content += `                     /strain="${strain}"\n`;
+        }
+        if (sourceFeatures.host) {
+            content += `                     /host="${sourceFeatures.host}"\n`;
+        }
+        if (sourceFeatures.country) {
+            content += `                     /country="${sourceFeatures.country}"\n`;
+        }
+        if (sourceFeatures.collection_date) {
+            content += `                     /collection_date="${sourceFeatures.collection_date}"\n`;
+        }
+        if (sourceFeatures.isolation_source) {
+            content += `                     /isolation_source="${sourceFeatures.isolation_source}"\n`;
+        }
+        
+        // Add all other features with original qualifiers
+        features.forEach(feature => {
+            if (feature.type === 'source') return; // Already added above
+            
+            const location = this.formatGenBankLocation(feature);
+            content += `     ${feature.type.padEnd(16)} ${location}\n`;
+            
+            // Add all qualifiers from the original feature
+            if (feature.qualifiers) {
+                Object.entries(feature.qualifiers).forEach(([key, value]) => {
+                    if (value === true) {
+                        content += `                     /${key}\n`;
+                    } else if (value && value !== '') {
+                        // Handle multi-line qualifiers
+                        const valueStr = String(value);
+                        if (valueStr.length > 60) {
+                            // Split long qualifiers
+                            const lines = this.wrapQualifierValue(valueStr, 60);
+                            lines.forEach((line, index) => {
+                                if (index === 0) {
+                                    content += `                     /${key}="${line}"\n`;
+                                } else {
+                                    content += `                     "${line}"\n`;
+                                }
+                            });
+                        } else {
+                            content += `                     /${key}="${valueStr}"\n`;
+                        }
+                    }
+                });
+            }
+        });
+        
+        // ORIGIN section
+        content += `ORIGIN\n`;
+        
+        // Add sequence in GenBank format (60 chars per line, numbered)
+        for (let i = 0; i < sequence.length; i += 60) {
+            const lineNum = (i + 1).toString().padStart(9);
+            const seqLine = sequence.substring(i, i + 60).toLowerCase();
+            const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
+            content += `${lineNum} ${formattedSeq}\n`;
+        }
+        
+        // End of record
+        content += `//\n`;
+        
+        return content;
+    }
+    
+    /**
+     * Format GenBank location string
+     */
+    formatGenBankLocation(feature) {
+        if (feature.strand === -1) {
+            return `complement(${feature.start}..${feature.end})`;
+        } else {
+            return `${feature.start}..${feature.end}`;
+        }
+    }
+    
+    /**
+     * Wrap long qualifier values
+     */
+    wrapQualifierValue(value, maxLength) {
+        const lines = [];
+        let currentLine = '';
+        
+        const words = value.split(' ');
+        for (const word of words) {
+            if (currentLine.length + word.length + 1 <= maxLength) {
+                currentLine += (currentLine ? ' ' : '') + word;
+            } else {
+                if (currentLine) {
+                    lines.push(currentLine);
+                }
+                currentLine = word;
+            }
+        }
+        
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+        
+        return lines;
+    }
+
+    /**
+     * Generate GBK content for a single chromosome (legacy method)
+     */
+    generateChromosomeGBKContent(chromosome, sequence, features, executedActions, checkpointId) {
+        let content = '';
+        
+        // GenBank header
+        content += `LOCUS       ${chromosome.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10).replace(/-/g, '-')}\n`;
+        content += `DEFINITION  ${chromosome} - Modified with ${executedActions.length} sequence actions\n`;
+        content += `ACCESSION   ${chromosome}\n`;
+        content += `VERSION     ${chromosome}\n`;
+        content += `KEYWORDS    genome editing, sequence modification, action execution\n`;
+        content += `SOURCE      .\n`;
+        content += `  ORGANISM  .\n`;
+        
+        // Add comprehensive modification history
+        if (executedActions.length > 0) {
+            content += `COMMENT     ========================================================================\n`;
+            content += `COMMENT     MODIFICATION HISTORY - Genome AI Studio Action Manager\n`;
+            content += `COMMENT     ========================================================================\n`;
+            content += `COMMENT     Checkpoint ID: ${checkpointId}\n`;
+            content += `COMMENT     Total modifications: ${executedActions.length}\n`;
+            content += `COMMENT     Export timestamp: ${new Date().toISOString()}\n`;
+            content += `COMMENT     \n`;
+            
+            executedActions.forEach((action, index) => {
+                content += `COMMENT     ------------------------------------------------------------------------\n`;
+                content += `COMMENT     Modification ${index + 1}:\n`;
+                content += `COMMENT       Action ID: ${action.id}\n`;
+                content += `COMMENT       Type: ${action.type}\n`;
+                content += `COMMENT       Target: ${action.target}\n`;
+                content += `COMMENT       Description: ${action.details || 'N/A'}\n`;
+                content += `COMMENT       Executed: ${action.executionEnd ? new Date(action.executionEnd).toISOString() : 'N/A'}\n`;
+                content += `COMMENT       Duration: ${action.actualTime ? action.actualTime + 'ms' : 'N/A'}\n`;
+                
+                if (action.metadata) {
+                    if (action.metadata.start && action.metadata.end) {
+                        content += `COMMENT       Position: ${action.metadata.start}-${action.metadata.end}\n`;
+                        content += `COMMENT       Length: ${action.metadata.end - action.metadata.start + 1} bp\n`;
+                    }
+                    if (action.metadata.strand) {
+                        content += `COMMENT       Strand: ${action.metadata.strand}\n`;
+                    }
+                }
+                
+                if (action.result) {
+                    if (action.result.sequenceLength) {
+                        content += `COMMENT       Sequence length: ${action.result.sequenceLength} bp\n`;
+                    }
+                    if (action.result.featuresCount !== undefined) {
+                        content += `COMMENT       Affected features: ${action.result.featuresCount}\n`;
+                    }
+                }
+                
+                content += `COMMENT     \n`;
+            });
+            
+            content += `COMMENT     ========================================================================\n`;
+        }
+        
+        content += `FEATURES             Location/Qualifiers\n`;
+        content += `     source          1..${sequence.length}\n`;
+        
+        // Add features
+        features.forEach(feature => {
+            const location = feature.strand === '-' ? 
+                `complement(${feature.start}..${feature.end})` : 
+                `${feature.start}..${feature.end}`;
+            
+            content += `     ${feature.type.padEnd(16)} ${location}\n`;
+            
+            // Add qualifiers
+            if (feature.name) content += `                     /label="${feature.name}"\n`;
+            if (feature.locus_tag) content += `                     /locus_tag="${feature.locus_tag}"\n`;
+            if (feature.gene) content += `                     /gene="${feature.gene}"\n`;
+            if (feature.product) content += `                     /product="${feature.product}"\n`;
+            if (feature.note) content += `                     /note="${feature.note}"\n`;
+        });
+        
+        // Add sequence
+        content += `ORIGIN\n`;
+        for (let i = 0; i < sequence.length; i += 60) {
+            const lineNumber = (i + 1).toString().padStart(9);
+            const lineSequence = sequence.slice(i, i + 60);
+            const formattedSequence = lineSequence.match(/.{1,10}/g)?.join(' ') || lineSequence;
+            content += `${lineNumber} ${formattedSequence}\n`;
+        }
+        content += `//\n`;
+        
+        return content;
+    }
+    
+    /**
+     * Restore from checkpoint
+     */
+    async restoreFromCheckpoint(checkpointId) {
+        try {
+            console.log(`🔄 [ActionManager] Attempting to restore from checkpoint: ${checkpointId}`);
+            
+            if (window.checkpointManager) {
+                await window.checkpointManager.restoreCheckpoint(checkpointId);
+            } else {
+                // Fallback: restore from localStorage
+                const checkpointData = localStorage.getItem(`checkpoint_${checkpointId}`);
+                if (checkpointData) {
+                    const data = JSON.parse(checkpointData);
+                    this.restoreState(data);
+                }
+            }
+            
+            console.log(`✅ [ActionManager] Successfully restored from checkpoint`);
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Failed to restore from checkpoint:', error);
+        }
+    }
+    
+    /**
+     * Download text file
+     */
+    downloadTextFile(content, filename) {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
     /**
      * Execute a single action
      */

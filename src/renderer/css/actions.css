@@ -98,6 +98,37 @@
     transition: background-color 0.2s ease;
 }
 
+/* Conflict highlighting styles */
+.action-item.conflict-highlight {
+    background-color: #fff3cd !important;
+    border-left: 4px solid #ffc107 !important;
+    animation: conflictPulse 2s infinite;
+}
+
+@keyframes conflictPulse {
+    0% { background-color: #fff3cd; }
+    50% { background-color: #ffeaa7; }
+    100% { background-color: #fff3cd; }
+}
+
+.conflict-item {
+    border-left: 4px solid #ffc107 !important;
+    background-color: #fff3cd !important;
+}
+
+.conflict-item .badge.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.conflict-item .badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+.conflict-item .badge.bg-info {
+    background-color: #17a2b8 !important;
+}
+
 .action-item:hover {
     background: var(--bg-secondary);
 }
