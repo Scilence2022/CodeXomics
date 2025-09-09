@@ -3720,12 +3720,18 @@ class GenomeBrowser {
             return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>${citationNumber}</sup></a>`;
         });
         
-        // Pattern for CITS format: |CITS: [PMID1 PMID2]| -> unified numbering (remove |CITS: prefix)
-        const citsPattern = /\|CITS:\s*(\[[\d\s]+\])\|/gi;
-        processedText = processedText.replace(citsPattern, (match, bracketContent) => {
-            const pmids = bracketContent.replace(/[\[\]]/g, '').split(/\s+/).filter(p => p.trim());
-            const citationNumbers = pmids.map(pmid => {
-                return this.addUnifiedCitation('PMID', pmid);
+        // Pattern for CITS format: |CITS: [PMID1 PMID2]| or |CITS: 1 2 3| -> unified numbering (remove |CITS: prefix)
+        const citsPattern = /\|CITS:\s*(\[[\d\s]+\]|[\d\s]+)\|/gi;
+        processedText = processedText.replace(citsPattern, (match, content) => {
+            // Remove brackets if present and split by spaces
+            const numbers = content.replace(/[\[\]]/g, '').split(/\s+/).filter(p => p.trim());
+            const citationNumbers = numbers.map(num => {
+                // If it's already a citation number, use it directly
+                if (/^\d+$/.test(num)) {
+                    return this.addUnifiedCitation('PMID', num);
+                }
+                // Otherwise treat as PMID
+                return this.addUnifiedCitation('PMID', num);
             });
             return `<sup>${citationNumbers.join(', ')}</sup>`;
         });
