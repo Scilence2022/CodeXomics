@@ -3855,8 +3855,8 @@ class GenomeBrowser {
                 <button class="btn gene-zoom-btn gene-action-btn" onclick="window.genomeBrowser.zoomToGene()">
                     <i class="fas fa-search-plus"></i> Zoom to Gene
                 </button>
-                <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneSequence()">
-                    <i class="fas fa-copy"></i> Copy DNA Sequence
+                <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyCDSSequence()">
+                    <i class="fas fa-copy"></i> Copy CDS Sequence
                 </button>
         `;
         
@@ -5143,6 +5143,123 @@ class GenomeBrowser {
                 }
             }
         });
+    }
+
+    copyCDSSequence() {
+        if (!this.selectedGene) return;
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
+            const errorMessage = 'No sequence available to copy';
+            if (this.uiManager) {
+                this.uiManager.updateStatus(errorMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                }
+            }
+            return;
+        }
+        
+        const gene = this.selectedGene.gene;
+        const sequence = this.currentSequence[currentChr];
+        let geneSequence = sequence.substring(gene.start - 1, gene.end); // Convert to 0-based indexing
+        
+        // Apply reverse complement for reverse strand genes
+        if (gene.strand === -1) {
+            geneSequence = this.getReverseComplement(geneSequence);
+        }
+        
+        const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
+        const strandInfo = gene.strand === -1 ? 'reverse strand (reverse complemented)' : 'forward strand';
+        const fastaHeader = `>${geneName} CDS ${currentChr}:${gene.start}-${gene.end} (${strandInfo})`;
+        const fastaContent = `${fastaHeader}\n${geneSequence}`;
+        
+        navigator.clipboard.writeText(fastaContent).then(() => {
+            const successMessage = `✅ Copied ${geneName} CDS sequence (${geneSequence.length} bp) to clipboard`;
+            if (this.uiManager) {
+                this.uiManager.updateStatus(successMessage, { 
+                    highlight: true, 
+                    color: '#4CAF50', 
+                    duration: 4000 
+                });
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = successMessage;
+                    statusElement.style.color = '#4CAF50';
+                    statusElement.style.fontWeight = 'bold';
+                    setTimeout(() => {
+                        statusElement.style.color = '';
+                        statusElement.style.fontWeight = '';
+                    }, 4000);
+                }
+            }
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            const errorMessage = '❌ Failed to copy to clipboard';
+            if (this.uiManager) {
+                this.uiManager.updateStatus(errorMessage, { 
+                    highlight: true, 
+                    color: '#f44336', 
+                    duration: 4000 
+                });
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                    statusElement.style.color = '#f44336';
+                    statusElement.style.fontWeight = 'bold';
+                    setTimeout(() => {
+                        statusElement.style.color = '';
+                        statusElement.style.fontWeight = '';
+                    }, 4000);
+                }
+            }
+        });
+    }
+
+    /**
+     * Get reverse complement of DNA sequence
+     * Uses available reverse complement functions from the codebase
+     */
+    getReverseComplement(sequence) {
+        // Try to use UnifiedSequenceProcessing if available
+        if (window.UnifiedSequenceProcessing && window.UnifiedSequenceProcessing.reverseComplement) {
+            const result = window.UnifiedSequenceProcessing.reverseComplement(sequence);
+            return result.success ? result.sequence : this.fallbackReverseComplement(sequence);
+        }
+        
+        // Try to use UnifiedDNATranslation if available
+        if (window.UnifiedDNATranslation && window.UnifiedDNATranslation.reverseComplement) {
+            return window.UnifiedDNATranslation.reverseComplement(sequence);
+        }
+        
+        // Try to use MicrobeGenomicsFunctions if available
+        if (window.MicrobeGenomicsFunctions && window.MicrobeGenomicsFunctions.reverseComplement) {
+            return window.MicrobeGenomicsFunctions.reverseComplement(sequence);
+        }
+        
+        // Fallback to simple implementation
+        return this.fallbackReverseComplement(sequence);
+    }
+
+    /**
+     * Fallback reverse complement implementation
+     */
+    fallbackReverseComplement(sequence) {
+        const complement = {
+            'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G',
+            'a': 't', 't': 'a', 'g': 'c', 'c': 'g',
+            'N': 'N', 'n': 'n'
+        };
+        
+        return sequence
+            .split('')
+            .reverse()
+            .map(base => complement[base] || base)
+            .join('');
     }
 
     // Search PDB experimental structures for the selected gene
