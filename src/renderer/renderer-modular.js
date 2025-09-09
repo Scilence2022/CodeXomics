@@ -3614,6 +3614,165 @@ class GenomeBrowser {
         }
     }
 
+    /**
+     * Unified Citation System for Gene Details
+     * Collects and numbers all citations across all sections
+     */
+    
+    /**
+     * Add a citation to the unified citation collector
+     * @param {string} citationType - Type of citation (PMID, DOI, etc.)
+     * @param {string} citationId - The citation identifier
+     * @param {string} citationText - Display text for the citation
+     * @returns {number} The unified citation number
+     */
+    addUnifiedCitation(citationType, citationId, citationText = null) {
+        const citationKey = `${citationType}:${citationId}`;
+        
+        if (!this.citationCollector.has(citationKey)) {
+            this.citationCounter++;
+            this.citationCollector.set(citationKey, {
+                number: this.citationCounter,
+                type: citationType,
+                id: citationId,
+                text: citationText || `${citationType}:${citationId}`,
+                url: this.getCitationUrl(citationType, citationId)
+            });
+        }
+        
+        return this.citationCollector.get(citationKey).number;
+    }
+    
+    /**
+     * Get URL for a citation based on its type
+     */
+    getCitationUrl(citationType, citationId) {
+        switch (citationType.toLowerCase()) {
+            case 'pmid':
+                return `https://pubmed.ncbi.nlm.nih.gov/${citationId}/`;
+            case 'doi':
+                return `https://doi.org/${citationId}`;
+            case 'arxiv':
+                return `https://arxiv.org/abs/${citationId}`;
+            case 'biorxiv':
+                return `https://www.biorxiv.org/content/10.1101/${citationId}`;
+            case 'isbn':
+                return `https://www.worldcat.org/isbn/${citationId}`;
+            default:
+                return null;
+        }
+    }
+    
+    /**
+     * Process text and replace citations with unified numbered references
+     * @param {string} text - The text to process
+     * @returns {string} Text with unified citation numbers
+     */
+    processUnifiedCitations(text) {
+        if (!text || typeof text !== 'string') return text;
+        
+        let processedText = text;
+        
+        // Pattern for PMID references: PMID:1234567 or PMID 1234567
+        const pmidPattern = /\b(PMID:?\s*(\d{7,8}))/gi;
+        processedText = processedText.replace(pmidPattern, (match, fullMatch, pmidId) => {
+            const citationNumber = this.addUnifiedCitation('PMID', pmidId);
+            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}/" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>[${citationNumber}]</sup></a>`;
+        });
+        
+        // Pattern for DOI references: doi:10.xxxx/xxxx or DOI:10.xxxx/xxxx
+        const doiPattern = /\b(DOI|doi):\s*(10\.\d{4,}\/[^\s]+)/gi;
+        processedText = processedText.replace(doiPattern, (match, prefix, doiId) => {
+            const citationNumber = this.addUnifiedCitation('DOI', doiId);
+            return `<a href="https://doi.org/${doiId}" target="_blank" class="pmid-link" title="View DOI publication"><sup>[${citationNumber}]</sup></a>`;
+        });
+        
+        // Pattern for ArXiv references: arXiv:1234.5678
+        const arxivPattern = /\barXiv:(\d{4}\.\d{4,5}(v\d+)?)\b/gi;
+        processedText = processedText.replace(arxivPattern, (match, arxivId) => {
+            const citationNumber = this.addUnifiedCitation('arXiv', arxivId);
+            return `<a href="https://arxiv.org/abs/${arxivId}" target="_blank" class="pmid-link" title="View on ArXiv"><sup>[${citationNumber}]</sup></a>`;
+        });
+        
+        // Pattern for bioRxiv references: bioRxiv:1234.5678
+        const biorxivPattern = /\bbioRxiv[:\s]+(\d{4}\.\d{2}\.\d{2}\.\d+)\b/gi;
+        processedText = processedText.replace(biorxivPattern, (match, biorxivId) => {
+            const citationNumber = this.addUnifiedCitation('bioRxiv', biorxivId);
+            return `<a href="https://www.biorxiv.org/content/10.1101/${biorxivId}" target="_blank" class="pmid-link" title="View bioRxiv preprint"><sup>[${citationNumber}]</sup></a>`;
+        });
+        
+        // Pattern for ISBN references: ISBN-13 or ISBN-10
+        const isbnPattern = /\bISBN[:\s-]*(97[89][\d\s-]{10,17}|\d[\d\s-]{8,13}[0-9X])\b/gi;
+        processedText = processedText.replace(isbnPattern, (match) => {
+            const cleanIsbn = match.replace(/[^\d]/g, '');
+            const citationNumber = this.addUnifiedCitation('ISBN', cleanIsbn);
+            return `<a href="https://www.worldcat.org/isbn/${cleanIsbn}" target="_blank" class="pmid-link" title="Search book in WorldCat"><sup>[${citationNumber}]</sup></a>`;
+        });
+        
+        // Pattern for generic numeric references in brackets: [1234567]
+        const genericPmidPattern = /\[(\d{7,8})\]/g;
+        processedText = processedText.replace(genericPmidPattern, (match, pmidId) => {
+            // Skip if it's already part of a link
+            if (processedText.includes(`href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}"`)) {
+                return match;
+            }
+            const citationNumber = this.addUnifiedCitation('PMID', pmidId);
+            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>[${citationNumber}]</sup></a>`;
+        });
+        
+        // Pattern for CITS format: |CITS: [PMID1 PMID2]| -> unified numbering
+        const citsPattern = /\|CITS:\s*(\[[\d\s]+\])\|/gi;
+        processedText = processedText.replace(citsPattern, (match, bracketContent) => {
+            const pmids = bracketContent.replace(/[\[\]]/g, '').split(/\s+/).filter(p => p.trim());
+            const citationNumbers = pmids.map(pmid => {
+                return this.addUnifiedCitation('PMID', pmid);
+            });
+            return `|CITS: <sup>[${citationNumbers.join(', ')}]</sup>|`;
+        });
+        
+        return processedText;
+    }
+    
+    /**
+     * Generate unified citation list HTML
+     * @returns {string} HTML for the citation list
+     */
+    generateUnifiedCitationList() {
+        if (!this.citationCollector || this.citationCollector.size === 0) {
+            return '';
+        }
+        
+        // Sort citations by number
+        const sortedCitations = Array.from(this.citationCollector.values())
+            .sort((a, b) => a.number - b.number);
+        
+        let html = `
+            <div class="gene-citations">
+                <h4>References</h4>
+                <div class="citation-list">
+        `;
+        
+        sortedCitations.forEach(citation => {
+            const linkText = citation.url ? 
+                `<a href="${citation.url}" target="_blank" class="citation-link">${citation.text}</a>` : 
+                citation.text;
+            
+            html += `
+                <div class="citation-item">
+                    <span class="citation-number">[${citation.number}]</span>
+                    <span class="citation-content">${linkText}</span>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+
     populateGeneDetails(gene, operonInfo = null) {
         const geneDetailsContent = document.getElementById('geneDetailsContent');
         if (!geneDetailsContent) return;
@@ -3628,6 +3787,10 @@ class GenomeBrowser {
         // Get current chromosome and sequence for sequence extraction
         const currentChr = document.getElementById('chromosomeSelect').value;
         const fullSequence = this.currentSequence ? this.currentSequence[currentChr] : null;
+        
+        // Initialize unified citation system
+        this.citationCollector = new Map(); // Will store all citations with their unified numbers
+        this.citationCounter = 0;
         
         // Create the gene details HTML
         let html = `
@@ -3671,7 +3834,7 @@ class GenomeBrowser {
                     html += `
                         <div class="gene-attribute">
                             <div class="gene-attribute-label">${key.replace(/_/g, ' ')}</div>
-                            <div class="gene-attribute-value">${this.enhanceGeneAttributeWithLinks(stringValue)}</div>
+                            <div class="gene-attribute-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(stringValue))}</div>
                         </div>
                     `;
                 }
@@ -3718,6 +3881,12 @@ class GenomeBrowser {
                     <i class="fas fa-edit"></i> Edit Annotation
                 </button>
         `;
+        
+        // Add unified citation list if there are any citations
+        const citationList = this.generateUnifiedCitationList();
+        if (citationList) {
+            html += citationList;
+        }
         
         html += `</div></div>`;
         

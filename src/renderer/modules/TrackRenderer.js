@@ -587,6 +587,9 @@ class TrackRenderer {
         // Create SVG-based gene visualization
         this.renderGeneElementsSVG(unifiedContainer, geneRows, viewport, operons, layout, settings);
         
+        // Add statistics and update operons panel
+        this.addGeneTrackStatistics(trackContent, visibleGenes, operons, settings, layout);
+        
         // Add the unified container to trackContent
         trackContent.appendChild(unifiedContainer);
     }
@@ -10409,7 +10412,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         
         const sequence = this.genomeBrowser.currentSequence[currentChr];
         const annotations = this.genomeBrowser.currentAnnotations[currentChr] || [];
-        const operons = this.genomeBrowser.operons || [];
+        const operons = this.genomeBrowser.detectOperons(annotations);
         
         console.log('🔄 Updating all SVG tracks for chromosome:', currentChr);
         
@@ -10453,6 +10456,13 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             // Update text elements for proper sizing after changes
             this.updateSVGTextForResize(svgContainer, containerWidth);
             console.log('🧬 Gene track SVG updated with container width:', containerWidth);
+        }
+        
+        // Update operons panel when gene track is updated
+        const viewport = this.getCurrentViewport();
+        const visibleGenes = this.filterGeneAnnotations(annotations, viewport);
+        if (visibleGenes.length > 0) {
+            this.addGeneTrackStatistics(trackContent, visibleGenes, operons, this.getTrackSettings('genes'));
         }
     }
     

@@ -2187,6 +2187,86 @@
   line-height: 1.4;
 }
 
+/* Unified Citation System Styles */
+.gene-citations {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-top: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.gene-citations h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 4px;
+}
+
+.citation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.citation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.citation-item:last-child {
+  border-bottom: none;
+}
+
+.citation-number {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-color);
+  background: rgba(59, 130, 246, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  min-width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.citation-content {
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.citation-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.citation-link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Superscript citation numbers in text */
+sup {
+  font-size: 0.75em;
+  vertical-align: super;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* CITS format styling */
+.cits-format {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
 .go-term-link {
   display: inline-block;
   padding: 2px 6px;
