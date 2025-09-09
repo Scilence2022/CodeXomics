@@ -1443,11 +1443,17 @@ function createMenu() {
             sendToCurrentMainWindow('configure-llms');
           }
         },
-        { type: 'separator' },
         {
           label: 'Multi-Agent Settings',
           click: () => {
             sendToCurrentMainWindow('multi-agent-settings');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Configure Search',
+          click: () => {
+            sendToCurrentMainWindow('configure-search');
           }
         },
         { type: 'separator' },

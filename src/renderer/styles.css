@@ -13559,43 +13559,6 @@ to {
 }
 
 /* Search Settings Modal Styles */
-.search-settings-btn {
-    background: #007bff;
-    border: none;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 0 4px 4px 0;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 40px;
-    height: 36px;
-    position: relative;
-    overflow: hidden;
-}
-
-.search-settings-btn:hover {
-    background: #0056b3;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
-}
-
-.search-settings-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 123, 255, 0.2);
-}
-
-.search-settings-btn i {
-    font-size: 11px;
-    transition: transform 0.2s ease;
-}
-
-.search-settings-btn:hover i {
-    transform: rotate(90deg);
-}
 
 .large-modal .modal-content {
     max-width: 1200px;
@@ -13878,8 +13841,4 @@ to {
     border-right: none;
 }
 
-.search-settings-btn {
-    border-radius: 0 4px 4px 0;
-    border-left: none;
-}
 }
