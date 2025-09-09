@@ -2018,10 +2018,38 @@ class NavigationManager {
             // Add draggable and resizable classes
             modalContent.classList.add('draggable', 'resizable');
             
+            // Ensure resize handles exist
+            this.ensureResizeHandles(modalContent);
+            
             // Initialize drag and resize functionality
             this.initializeModalDragResize(modal, modalContent);
             
             modal.classList.add('show');
+        }
+    }
+
+    /**
+     * Ensure resize handles exist in the modal
+     */
+    ensureResizeHandles(modalContent) {
+        // Check if resize handles already exist
+        let rightHandle = modalContent.querySelector('.resize-handle-right');
+        let bottomHandle = modalContent.querySelector('.resize-handle-bottom');
+        
+        // Create right handle if it doesn't exist
+        if (!rightHandle) {
+            rightHandle = document.createElement('div');
+            rightHandle.className = 'resize-handle-right';
+            modalContent.appendChild(rightHandle);
+            console.log('Created right resize handle');
+        }
+        
+        // Create bottom handle if it doesn't exist
+        if (!bottomHandle) {
+            bottomHandle = document.createElement('div');
+            bottomHandle.className = 'resize-handle-bottom';
+            modalContent.appendChild(bottomHandle);
+            console.log('Created bottom resize handle');
         }
     }
 
@@ -2179,42 +2207,31 @@ class NavigationManager {
             });
         }
 
-        // Resize functionality
+        // Resize functionality - use a more robust approach
+        const handleResizeStart = (e) => {
+            isResizing = true;
+            modalContent.classList.add('resizing');
+            
+            const rect = modalContent.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = rect.width;
+            startHeight = rect.height;
+            
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
+        // Add resize handles with proper event listeners
         const resizeHandleRight = modalContent.querySelector('.resize-handle-right');
         const resizeHandleBottom = modalContent.querySelector('.resize-handle-bottom');
         
-        // Handle right edge resize
         if (resizeHandleRight) {
-            resizeHandleRight.addEventListener('mousedown', (e) => {
-                isResizing = true;
-                modalContent.classList.add('resizing');
-                
-                const rect = modalContent.getBoundingClientRect();
-                startX = e.clientX;
-                startY = e.clientY;
-                startWidth = rect.width;
-                startHeight = rect.height;
-                
-                e.preventDefault();
-                e.stopPropagation();
-            });
+            resizeHandleRight.addEventListener('mousedown', handleResizeStart);
         }
         
-        // Handle bottom edge resize
         if (resizeHandleBottom) {
-            resizeHandleBottom.addEventListener('mousedown', (e) => {
-                isResizing = true;
-                modalContent.classList.add('resizing');
-                
-                const rect = modalContent.getBoundingClientRect();
-                startX = e.clientX;
-                startY = e.clientY;
-                startWidth = rect.width;
-                startHeight = rect.height;
-                
-                e.preventDefault();
-                e.stopPropagation();
-            });
+            resizeHandleBottom.addEventListener('mousedown', handleResizeStart);
         }
         
         // Handle corner resize
@@ -2227,15 +2244,7 @@ class NavigationManager {
             );
 
             if (isInResizeArea) {
-                isResizing = true;
-                modalContent.classList.add('resizing');
-                
-                startX = e.clientX;
-                startY = e.clientY;
-                startWidth = rect.width;
-                startHeight = rect.height;
-                
-                e.preventDefault();
+                handleResizeStart(e);
             }
         });
 

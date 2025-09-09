@@ -13689,11 +13689,16 @@ to {
     position: absolute;
     top: 0;
     right: 0;
-    width: 4px;
+    width: 8px;
     height: 100%;
     cursor: e-resize;
-    background: transparent;
+    background: rgba(0, 123, 255, 0.1);
     z-index: 1000;
+    transition: background 0.2s ease;
+}
+
+.modal-content.resizable .resize-handle-right:hover {
+    background: rgba(0, 123, 255, 0.3);
 }
 
 .modal-content.resizable .resize-handle-bottom {
@@ -13701,10 +13706,15 @@ to {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 4px;
+    height: 8px;
     cursor: s-resize;
-    background: transparent;
+    background: rgba(0, 123, 255, 0.1);
     z-index: 1000;
+    transition: background 0.2s ease;
+}
+
+.modal-content.resizable .resize-handle-bottom:hover {
+    background: rgba(0, 123, 255, 0.3);
 }
 
 /* Drag indicator */
