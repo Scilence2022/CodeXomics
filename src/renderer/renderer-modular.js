@@ -3886,15 +3886,16 @@ class GenomeBrowser {
                 <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
                     <i class="fas fa-edit"></i> Edit Annotation
                 </button>
+            </div>
         `;
         
-        // Add unified citation list if there are any citations
+        // Add unified citation list if there are any citations (in separate container)
         const citationList = this.generateUnifiedCitationList();
         if (citationList) {
             html += citationList;
         }
         
-        html += `</div></div>`;
+        html += `</div>`;
         
         geneDetailsContent.innerHTML = html;
         
