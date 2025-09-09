@@ -2231,7 +2231,7 @@ class NavigationManager {
         
         console.log('Resize handles found:', { 
             rightHandle: !!resizeHandleRight, 
-            bottomHandle: !!bottomHandle 
+            bottomHandle: !!resizeHandleBottom 
         });
         
         if (resizeHandleRight) {
