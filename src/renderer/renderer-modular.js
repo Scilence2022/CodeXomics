@@ -3720,14 +3720,14 @@ class GenomeBrowser {
             return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>[${citationNumber}]</sup></a>`;
         });
         
-        // Pattern for CITS format: |CITS: [PMID1 PMID2]| -> unified numbering
+        // Pattern for CITS format: |CITS: [PMID1 PMID2]| -> unified numbering (remove |CITS: prefix)
         const citsPattern = /\|CITS:\s*(\[[\d\s]+\])\|/gi;
         processedText = processedText.replace(citsPattern, (match, bracketContent) => {
             const pmids = bracketContent.replace(/[\[\]]/g, '').split(/\s+/).filter(p => p.trim());
             const citationNumbers = pmids.map(pmid => {
                 return this.addUnifiedCitation('PMID', pmid);
             });
-            return `|CITS: <sup>[${citationNumbers.join(', ')}]</sup>|`;
+            return `<sup>[${citationNumbers.join(', ')}]</sup>`;
         });
         
         return processedText;
@@ -4216,11 +4216,7 @@ class GenomeBrowser {
             return `<a href="https://amigo.geneontology.org/amigo/term/${goId}" target="_blank" class="go-term-link" title="View in Gene Ontology database">${goId}</a>`;
         });
         
-        // Pattern for PubMed IDs: PMID:XXXXXXX or PMID XXXXXXX
-        const pmidPattern = /\b(PMID:?\s*(\d+))\b/gi;
-        enhancedValue = enhancedValue.replace(pmidPattern, (match, fullMatch, pmidNumber) => {
-            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidNumber}/" target="_blank" class="pmid-link" title="View in PubMed">PMID:${pmidNumber}</a>`;
-        });
+        // PMID references are now handled by the unified citation system in processUnifiedCitations()
         
         // Pattern for evidence codes in brackets: [evidence XXX]
         const evidencePattern = /\[evidence\s+([A-Z]{2,4})\]/gi;
@@ -4444,32 +4440,7 @@ class GenomeBrowser {
             return `<a href="https://enzyme.expasy.org/EC/${match}" target="_blank" class="db-xref-link" title="View in ENZYME database">${match}</a>`;
         });
 
-        // Pattern for CITS format: [PMID1 PMID2][PMID3] -> superscript numbered links
-        const citsPattern = /CITS:\s*(\[[\d\s]+\])+/gi;
-        enhancedValue = enhancedValue.replace(citsPattern, (match) => {
-            // Extract all PMID numbers from the brackets
-            const pmidMatches = match.match(/\[[\d\s]+\]/g);
-            if (!pmidMatches) return match;
-            
-            // Collect all unique PMIDs and sort them
-            const allPmids = [];
-            pmidMatches.forEach(bracket => {
-                const pmids = bracket.replace(/[\[\]]/g, '').split(/\s+/).filter(p => p.trim());
-                allPmids.push(...pmids);
-            });
-            
-            // Create unique sorted list
-            const uniquePmids = [...new Set(allPmids)].sort((a, b) => parseInt(a) - parseInt(b));
-            
-            // Create numbered superscript links
-            let result = 'CITS: ';
-            uniquePmids.forEach((pmid, index) => {
-                if (index > 0) result += ', ';
-                result += `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}" target="_blank" class="pmid-link" title="View PubMed article ${pmid}"><sup>${index + 1}</sup></a>`;
-            });
-            
-            return result;
-        });
+        // CITS format is now handled by the unified citation system in processUnifiedCitations()
 
         // Pattern for GenBank/RefSeq accessions: Various formats
         const accessionPattern = /\b([A-Z]{1,2}_?[0-9]{6,9}(\.[0-9]+)?|[A-Z]{2}[0-9]{6}(\.[0-9]+)?|[A-Z]{4}[0-9]{8}(\.[0-9]+)?|NC_[0-9]{6}(\.[0-9]+)?|NP_[0-9]{6}(\.[0-9]+)?|XP_[0-9]{6}(\.[0-9]+)?|YP_[0-9]{6}(\.[0-9]+)?|WP_[0-9]{6}(\.[0-9]+)?)\b/gi;
@@ -4563,21 +4534,9 @@ class GenomeBrowser {
             return `<a href="https://www.worldcat.org/isbn/${cleanIsbn}" target="_blank" class="pmid-link" title="Search book in WorldCat">${match}</a>`;
         });
 
-        // Pattern for generic numeric PMID references in brackets: [1234567]
-        const genericPmidPattern = /\[(\d{7,8})\]/g;
-        enhancedValue = enhancedValue.replace(genericPmidPattern, (match, pmidId) => {
-            // Skip if it's already part of a CITS: pattern or other enhanced content
-            if (enhancedValue.includes(`href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}"`)) {
-                return match;
-            }
-            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}">[${pmidId}]</a>`;
-        });
+        // Generic PMID references are now handled by the unified citation system in processUnifiedCitations()
 
-        // Pattern for DOI references: doi:10.xxxx/xxxx or DOI:10.xxxx/xxxx
-        const doiPattern = /\b(DOI|doi):\s*(10\.\d{4,}\/[^\s]+)/gi;
-        enhancedValue = enhancedValue.replace(doiPattern, (match, prefix, doiId) => {
-            return `<a href="https://doi.org/${doiId}" target="_blank" class="pmid-link" title="View DOI publication">${prefix}:${doiId}</a>`;
-        });
+        // DOI references are now handled by the unified citation system in processUnifiedCitations()
 
         // Pattern for enzyme class numbers: EC N.N.N.-
         const ecClassPattern = /\bEC\s+(\d{1,2}\.\d{1,3}\.\d{1,3}\.-)(?!\d)/gi;
