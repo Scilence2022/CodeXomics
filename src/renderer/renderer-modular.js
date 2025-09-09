@@ -3677,28 +3677,28 @@ class GenomeBrowser {
         const pmidPattern = /\b(PMID:?\s*(\d{7,8}))/gi;
         processedText = processedText.replace(pmidPattern, (match, fullMatch, pmidId) => {
             const citationNumber = this.addUnifiedCitation('PMID', pmidId);
-            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}/" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>[${citationNumber}]</sup></a>`;
+            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}/" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>${citationNumber}</sup></a>`;
         });
         
         // Pattern for DOI references: doi:10.xxxx/xxxx or DOI:10.xxxx/xxxx
         const doiPattern = /\b(DOI|doi):\s*(10\.\d{4,}\/[^\s]+)/gi;
         processedText = processedText.replace(doiPattern, (match, prefix, doiId) => {
             const citationNumber = this.addUnifiedCitation('DOI', doiId);
-            return `<a href="https://doi.org/${doiId}" target="_blank" class="pmid-link" title="View DOI publication"><sup>[${citationNumber}]</sup></a>`;
+            return `<a href="https://doi.org/${doiId}" target="_blank" class="pmid-link" title="View DOI publication"><sup>${citationNumber}</sup></a>`;
         });
         
         // Pattern for ArXiv references: arXiv:1234.5678
         const arxivPattern = /\barXiv:(\d{4}\.\d{4,5}(v\d+)?)\b/gi;
         processedText = processedText.replace(arxivPattern, (match, arxivId) => {
             const citationNumber = this.addUnifiedCitation('arXiv', arxivId);
-            return `<a href="https://arxiv.org/abs/${arxivId}" target="_blank" class="pmid-link" title="View on ArXiv"><sup>[${citationNumber}]</sup></a>`;
+            return `<a href="https://arxiv.org/abs/${arxivId}" target="_blank" class="pmid-link" title="View on ArXiv"><sup>${citationNumber}</sup></a>`;
         });
         
         // Pattern for bioRxiv references: bioRxiv:1234.5678
         const biorxivPattern = /\bbioRxiv[:\s]+(\d{4}\.\d{2}\.\d{2}\.\d+)\b/gi;
         processedText = processedText.replace(biorxivPattern, (match, biorxivId) => {
             const citationNumber = this.addUnifiedCitation('bioRxiv', biorxivId);
-            return `<a href="https://www.biorxiv.org/content/10.1101/${biorxivId}" target="_blank" class="pmid-link" title="View bioRxiv preprint"><sup>[${citationNumber}]</sup></a>`;
+            return `<a href="https://www.biorxiv.org/content/10.1101/${biorxivId}" target="_blank" class="pmid-link" title="View bioRxiv preprint"><sup>${citationNumber}</sup></a>`;
         });
         
         // Pattern for ISBN references: ISBN-13 or ISBN-10
@@ -3706,7 +3706,7 @@ class GenomeBrowser {
         processedText = processedText.replace(isbnPattern, (match) => {
             const cleanIsbn = match.replace(/[^\d]/g, '');
             const citationNumber = this.addUnifiedCitation('ISBN', cleanIsbn);
-            return `<a href="https://www.worldcat.org/isbn/${cleanIsbn}" target="_blank" class="pmid-link" title="Search book in WorldCat"><sup>[${citationNumber}]</sup></a>`;
+            return `<a href="https://www.worldcat.org/isbn/${cleanIsbn}" target="_blank" class="pmid-link" title="Search book in WorldCat"><sup>${citationNumber}</sup></a>`;
         });
         
         // Pattern for generic numeric references in brackets: [1234567]
@@ -3717,7 +3717,7 @@ class GenomeBrowser {
                 return match;
             }
             const citationNumber = this.addUnifiedCitation('PMID', pmidId);
-            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>[${citationNumber}]</sup></a>`;
+            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>${citationNumber}</sup></a>`;
         });
         
         // Pattern for CITS format: |CITS: [PMID1 PMID2]| -> unified numbering (remove |CITS: prefix)
@@ -3727,7 +3727,7 @@ class GenomeBrowser {
             const citationNumbers = pmids.map(pmid => {
                 return this.addUnifiedCitation('PMID', pmid);
             });
-            return `<sup>[${citationNumbers.join(', ')}]</sup>`;
+            return `<sup>${citationNumbers.join(', ')}</sup>`;
         });
         
         return processedText;
@@ -3759,7 +3759,7 @@ class GenomeBrowser {
             
             html += `
                 <div class="citation-item">
-                    <span class="citation-number">[${citation.number}]</span>
+                    <span class="citation-number">${citation.number}</span>
                     <span class="citation-content">${linkText}</span>
                 </div>
             `;
