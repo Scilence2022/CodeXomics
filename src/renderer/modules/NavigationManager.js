@@ -2209,6 +2209,7 @@ class NavigationManager {
 
         // Resize functionality - use a more robust approach
         const handleResizeStart = (e) => {
+            console.log('Resize started on element:', e.target);
             isResizing = true;
             modalContent.classList.add('resizing');
             
@@ -2218,6 +2219,8 @@ class NavigationManager {
             startWidth = rect.width;
             startHeight = rect.height;
             
+            console.log('Resize start values:', { startX, startY, startWidth, startHeight });
+            
             e.preventDefault();
             e.stopPropagation();
         };
@@ -2226,12 +2229,19 @@ class NavigationManager {
         const resizeHandleRight = modalContent.querySelector('.resize-handle-right');
         const resizeHandleBottom = modalContent.querySelector('.resize-handle-bottom');
         
+        console.log('Resize handles found:', { 
+            rightHandle: !!resizeHandleRight, 
+            bottomHandle: !!bottomHandle 
+        });
+        
         if (resizeHandleRight) {
             resizeHandleRight.addEventListener('mousedown', handleResizeStart);
+            console.log('Right handle event listener added');
         }
         
         if (resizeHandleBottom) {
             resizeHandleBottom.addEventListener('mousedown', handleResizeStart);
+            console.log('Bottom handle event listener added');
         }
         
         // Handle corner resize
