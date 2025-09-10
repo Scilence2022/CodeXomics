@@ -9785,6 +9785,11 @@ to {
   color: #212529;
 }
 
+.badge-error {
+  background-color: #dc3545;
+  color: white;
+}
+
 .error-info {
   margin: 15px 0;
 }

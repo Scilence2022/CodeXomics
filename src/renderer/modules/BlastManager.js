@@ -3383,16 +3383,31 @@ class BlastManager {
                 return this.executeNCBIBlast(params, retryCount + 1);
             }
             
-            // Show warning that we're using mock results
-            this.showNotification('NCBI BLAST failed. Using simulated results for demonstration. Error: ' + error.message, 'warning');
+            // Show error directly instead of simulated results
+            this.showNotification(`NCBI BLAST failed: ${error.message}`, 'error');
             
-            // Generate enhanced mock results with clear indication
-            const mockResults = this.generateEnhancedMockResults(params);
-            mockResults.isRealResults = false;
-            mockResults.errorMessage = error.message;
-            mockResults.rawOutput = 'Mock results - no raw output available';
-            
-            return mockResults;
+            // Return error result instead of mock results
+            return {
+                searchId: `NCBI_ERROR_${Date.now()}`,
+                source: 'NCBI',
+                isRealResults: false,
+                isError: true,
+                errorMessage: error.message,
+                errorType: 'NCBI_BLAST_ERROR',
+                timestamp: new Date().toISOString(),
+                queryInfo: {
+                    length: params.sequence.length,
+                    type: this.detectSequenceType(params.sequence)
+                },
+                hits: [],
+                statistics: {
+                    searchTime: '0 seconds',
+                    databaseSize: '0 sequences',
+                    effectiveSearchSpace: '0'
+                },
+                rawOutput: `Error: ${error.message}`,
+                rawText: `Error: ${error.message}`
+            };
         }
     }
     
@@ -3979,16 +3994,32 @@ class BlastManager {
         } catch (error) {
             console.error('Local BLAST search error:', error);
             
-            // Show detailed error information
-            this.showNotification(`Local BLAST failed: ${error.message}. Using simulated results for demonstration.`, 'warning');
+            // Show error directly instead of simulated results
+            this.showNotification(`Local BLAST failed: ${error.message}`, 'error');
             
-            // Generate enhanced mock results with clear indication
-            const mockResults = this.generateEnhancedMockResults(params);
-            mockResults.isRealResults = false;
-            mockResults.errorMessage = error.message;
-            mockResults.rawOutput = 'Mock results - no raw output available';
-            
-            return mockResults;
+            // Return error result instead of mock results
+            return {
+                searchId: `LOCAL_ERROR_${Date.now()}`,
+                source: 'Local',
+                isRealResults: false,
+                isError: true,
+                errorMessage: error.message,
+                errorType: 'LOCAL_BLAST_ERROR',
+                timestamp: new Date().toISOString(),
+                queryInfo: {
+                    length: params.sequence.length,
+                    type: this.detectSequenceType(params.sequence)
+                },
+                hits: [],
+                statistics: {
+                    searchTime: '0 seconds',
+                    databaseSize: '0 sequences',
+                    effectiveSearchSpace: '0'
+                },
+                rawOutput: `Error: ${error.message}`,
+                rawText: `Error: ${error.message}`,
+                blastCommand: 'Command failed'
+            };
         }
     }
 
@@ -4353,6 +4384,16 @@ class BlastManager {
         this.currentResults = results;
         this.filteredHits = [...results.hits];
 
+        // Handle error cases - show only header and error message
+        if (results.isError) {
+            container.innerHTML = `
+                <div class="blast-results-modern">
+                    ${this.renderResultsHeader(results)}
+                </div>
+            `;
+            return;
+        }
+
         container.innerHTML = `
             <div class="blast-results-modern">
                 ${this.renderResultsHeader(results)}
@@ -4371,6 +4412,52 @@ class BlastManager {
     }
 
     renderResultsHeader(results) {
+        // Handle error cases
+        if (results.isError) {
+            return `
+                <div class="blast-results-header">
+                    <div class="header-title">
+                        <h3><i class="fas fa-exclamation-triangle"></i> BLAST Search Error</h3>
+                        <div class="header-badges">
+                            <span class="badge badge-source">
+                                <i class="${results.source === 'NCBI' ? 'fas fa-cloud' : 'fas fa-desktop'}"></i> ${results.source || 'Unknown'}
+                            </span>
+                            <span class="badge badge-error">
+                                <i class="fas fa-times-circle"></i> Error
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="error-info">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>BLAST Search Failed:</strong> ${results.errorMessage}
+                        </div>
+                    </div>
+                    
+                    <div class="query-summary">
+                        <div class="query-info">
+                            <h4><i class="fas fa-dna"></i> Query Information</h4>
+                            <div class="query-details">
+                                <div class="query-detail">
+                                    <span class="label">Length:</span>
+                                    <span class="value">${results.queryInfo.length.toLocaleString()} ${results.queryInfo.type === 'Protein' ? 'aa' : 'bp'}</span>
+                                </div>
+                                <div class="query-detail">
+                                    <span class="label">Type:</span>
+                                    <span class="value">${results.queryInfo.type}</span>
+                                </div>
+                                <div class="query-detail">
+                                    <span class="label">Error Time:</span>
+                                    <span class="value">${results.timestamp ? new Date(results.timestamp).toLocaleString() : new Date().toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         const sourceIcon = results.source === 'NCBI' ? 'fas fa-cloud' : 
                           results.source === 'Local' ? 'fas fa-desktop' : 'fas fa-flask';
         
