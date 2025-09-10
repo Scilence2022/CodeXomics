@@ -200,6 +200,13 @@ class GenomeBrowser {
         this.blastManager = new BlastManager(this); // Initialize BLAST manager
         this.multiFileManager = new MultiFileManager(this); // Initialize multi-file manager
         
+        // Initialize citation system
+        this.citationCollector = new Map();
+        this.citationCounter = 0;
+        
+        // Initialize enhanced citation display (will be set up after DOM is ready)
+        this.enhancedCitationDisplay = null;
+        
         // Initialize Tab Management System (for multi-genome analysis) - delayed to ensure DOM is ready
         this.initializeTabManager();
         
@@ -3751,7 +3758,21 @@ class GenomeBrowser {
             return '';
         }
         
-        // Sort citations by number
+        console.log('Generating citation list...');
+        console.log('Enhanced citation display available:', !!this.enhancedCitationDisplay);
+        console.log('Citation count:', this.citationCollector.size);
+        
+        // Use enhanced citation display if available
+        if (this.enhancedCitationDisplay) {
+            console.log('Using enhanced citation display');
+            const citations = Array.from(this.citationCollector.values());
+            const result = this.enhancedCitationDisplay.generateEnhancedCitationList(citations);
+            console.log('Enhanced citation display result length:', result.length);
+            return result;
+        }
+        
+        console.log('Using fallback citation display');
+        // Fallback to original simple citation list
         const sortedCitations = Array.from(this.citationCollector.values())
             .sort((a, b) => a.number - b.number);
         
@@ -3800,6 +3821,19 @@ class GenomeBrowser {
         // Initialize unified citation system
         this.citationCollector = new Map(); // Will store all citations with their unified numbers
         this.citationCounter = 0;
+        
+        // Ensure enhanced citation display is available
+        if (!this.enhancedCitationDisplay && window.EnhancedCitationDisplay && window.LiteratureAPIService) {
+            console.log('Initializing enhanced citation display on demand...');
+            try {
+                this.enhancedCitationDisplay = new EnhancedCitationDisplay(this);
+                this.enhancedCitationDisplay.init();
+                window.enhancedCitationDisplay = this.enhancedCitationDisplay;
+                console.log('Enhanced citation display initialized on demand');
+            } catch (error) {
+                console.error('Error initializing enhanced citation display on demand:', error);
+            }
+        }
         
         // Create the gene details HTML
         let html = `
@@ -3904,6 +3938,16 @@ class GenomeBrowser {
         
         // Add event listeners for expandable sections
         this.setupExpandableSequences();
+        
+        // Load literature data if enhanced citation display is available
+        if (this.enhancedCitationDisplay && this.citationCollector.size > 0) {
+            console.log('Loading literature data for citations...');
+            this.enhancedCitationDisplay.loadLiteratureDataIfNeeded();
+        } else {
+            console.log('Enhanced citation display not available or no citations');
+            console.log('Enhanced citation display available:', !!this.enhancedCitationDisplay);
+            console.log('Citation count:', this.citationCollector.size);
+        }
         
         // Update tab manager about gene details content change
         if (this.tabManager) {
@@ -7376,6 +7420,54 @@ class GenomeBrowser {
 // Initialize the Genome AI Studio when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.genomeBrowser = new GenomeBrowser();
+    
+    // Initialize enhanced citation display after DOM is ready
+    const initializeEnhancedCitationDisplay = () => {
+        console.log('Checking for Enhanced Citation Display modules...');
+        console.log('EnhancedCitationDisplay available:', typeof window.EnhancedCitationDisplay);
+        console.log('LiteratureAPIService available:', typeof window.LiteratureAPIService);
+        
+        if (window.EnhancedCitationDisplay && window.LiteratureAPIService) {
+            try {
+                window.genomeBrowser.enhancedCitationDisplay = new EnhancedCitationDisplay(window.genomeBrowser);
+                window.genomeBrowser.enhancedCitationDisplay.init();
+                window.enhancedCitationDisplay = window.genomeBrowser.enhancedCitationDisplay;
+                console.log('Enhanced Citation Display initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('Error initializing Enhanced Citation Display:', error);
+                return false;
+            }
+        } else {
+            console.warn('Enhanced Citation Display modules not loaded yet');
+            return false;
+        }
+    };
+
+    // Try to initialize immediately
+    if (!initializeEnhancedCitationDisplay()) {
+        // If not available, wait for modules to load
+        let retryCount = 0;
+        const maxRetries = 20; // Increased retries
+        const retryInterval = 200; // Reduced interval
+        
+        const retryInitialization = () => {
+            retryCount++;
+            console.log(`Retrying Enhanced Citation Display initialization (attempt ${retryCount}/${maxRetries})...`);
+            
+            if (initializeEnhancedCitationDisplay()) {
+                console.log('Enhanced Citation Display initialized successfully after retry');
+            } else if (retryCount < maxRetries) {
+                setTimeout(retryInitialization, retryInterval);
+            } else {
+                console.error('Enhanced Citation Display modules not available after maximum retries');
+                console.log('Final check - EnhancedCitationDisplay:', typeof window.EnhancedCitationDisplay);
+                console.log('Final check - LiteratureAPIService:', typeof window.LiteratureAPIService);
+            }
+        };
+        
+        setTimeout(retryInitialization, retryInterval);
+    }
 }); 
 
 /**
