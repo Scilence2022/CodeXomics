@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citation Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 10px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #e9ecef;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .result {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Citation Debug Test</h1>
+        
+        <div>
+            <button class="btn btn-primary" onclick="debugCitation()">Debug Citation Display</button>
+            <button class="btn" onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div>
+            <h3>Debug Log</h3>
+            <div id="log" class="log"></div>
+        </div>
+        
+        <div>
+            <h3>Result</h3>
+            <div id="result" class="result">
+                <p>Result will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the modules -->
+    <script src="../../src/renderer/modules/LiteratureAPIService.js"></script>
+    <script src="../../src/renderer/modules/EnhancedCitationDisplay.js"></script>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function debugCitation() {
+            log('=== DEBUGGING CITATION DISPLAY ===');
+            
+            // Check if modules are loaded
+            log('1. Checking module availability...');
+            log('   LiteratureAPIService: ' + (typeof window.LiteratureAPIService === 'function'));
+            log('   EnhancedCitationDisplay: ' + (typeof window.EnhancedCitationDisplay === 'function'));
+            
+            if (typeof window.EnhancedCitationDisplay !== 'function') {
+                log('ERROR: EnhancedCitationDisplay not available');
+                return;
+            }
+            
+            log('2. Creating mock genome browser...');
+            const mockGenomeBrowser = {
+                citationCollector: new Map(),
+                citationCounter: 0
+            };
+            
+            // Add test citations
+            const testCitations = [
+                { number: 1, type: 'PMID', id: '11830594', text: 'PMID:11830594', url: 'https://pubmed.ncbi.nlm.nih.gov/11830594/' },
+                { number: 2, type: 'PMID', id: '10092655', text: 'PMID:10092655', url: 'https://pubmed.ncbi.nlm.nih.gov/10092655/' }
+            ];
+            
+            testCitations.forEach(citation => {
+                mockGenomeBrowser.citationCollector.set(`PMID:${citation.id}`, citation);
+            });
+            
+            log('   Created ' + testCitations.length + ' test citations');
+            
+            try {
+                log('3. Creating EnhancedCitationDisplay instance...');
+                const enhancedDisplay = new window.EnhancedCitationDisplay(mockGenomeBrowser);
+                log('   EnhancedCitationDisplay instance created successfully');
+                
+                log('4. Initializing EnhancedCitationDisplay...');
+                enhancedDisplay.init();
+                log('   EnhancedCitationDisplay initialized successfully');
+                
+                log('5. Testing different display modes...');
+                const modes = ['pmid', 'summary', 'detailed'];
+                modes.forEach(mode => {
+                    log('   Testing mode: ' + mode);
+                    enhancedDisplay.setDisplayMode(mode);
+                    const html = enhancedDisplay.generateEnhancedCitationList(testCitations);
+                    log('   Generated HTML for ' + mode + ': ' + html.length + ' characters');
+                });
+                
+                log('6. Displaying result...');
+                enhancedDisplay.setDisplayMode('pmid');
+                const html = enhancedDisplay.generateEnhancedCitationList(testCitations);
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = html;
+                
+                log('SUCCESS: All tests passed!');
+                log('Final HTML length: ' + html.length);
+                log('Final HTML preview: ' + html.substring(0, 100) + '...');
+                
+            } catch (error) {
+                log('ERROR: ' + error.message);
+                log('Stack trace: ' + error.stack);
+                console.error('Full error:', error);
+            }
+        }
+
+        // Auto-run test when page loads
+        window.addEventListener('load', function() {
+            log('Page loaded, starting debug...');
+            debugCitation();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citation Display Debug Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .test-header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .test-content {
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f9fafb;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #f3f4f6;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 8px;
+            background: #f8fafc;
+            border-left: 3px solid #3b82f6;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+        }
+        .log-error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        .log-success {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        .log-warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        .citation-display {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>Citation Display Debug Test</h1>
+            <p>Testing enhanced citation display functionality</p>
+        </div>
+        
+        <div class="test-content">
+            <div class="test-section">
+                <h3>Test Controls</h3>
+                <button class="btn btn-primary" onclick="testModuleLoading()">Test Module Loading</button>
+                <button class="btn btn-primary" onclick="testCitationDisplay()">Test Citation Display</button>
+                <button class="btn" onclick="clearLog()">Clear Log</button>
+            </div>
+
+            <div class="test-section">
+                <h3>Test Log</h3>
+                <div id="testLog"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>Citation Display</h3>
+                <div id="citationDisplay" class="citation-display">
+                    <p>Citation display will appear here...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load required modules -->
+    <script src="../../src/renderer/modules/LiteratureAPIService.js"></script>
+    <script src="../../src/renderer/modules/EnhancedCitationDisplay.js"></script>
+
+    <script>
+        let testLog = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = {
+                timestamp,
+                message,
+                type
+            };
+            testLog.push(logEntry);
+            updateTestLog();
+        }
+
+        function updateTestLog() {
+            const logDiv = document.getElementById('testLog');
+            logDiv.innerHTML = testLog.map(entry => 
+                `<div class="log-entry log-${entry.type}">
+                    [${entry.timestamp}] ${entry.message}
+                </div>`
+            ).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            testLog = [];
+            updateTestLog();
+        }
+
+        function testModuleLoading() {
+            log('Testing module loading...', 'info');
+            
+            log(`LiteratureAPIService available: ${typeof window.LiteratureAPIService}`, 
+                typeof window.LiteratureAPIService === 'function' ? 'success' : 'error');
+            
+            log(`EnhancedCitationDisplay available: ${typeof window.EnhancedCitationDisplay}`, 
+                typeof window.EnhancedCitationDisplay === 'function' ? 'success' : 'error');
+            
+            if (typeof window.LiteratureAPIService === 'function') {
+                try {
+                    const api = new window.LiteratureAPIService();
+                    log('LiteratureAPIService instantiated successfully', 'success');
+                } catch (error) {
+                    log(`Error instantiating LiteratureAPIService: ${error.message}`, 'error');
+                }
+            }
+            
+            if (typeof window.EnhancedCitationDisplay === 'function') {
+                try {
+                    const mockGenomeBrowser = {
+                        citationCollector: new Map(),
+                        citationCounter: 0
+                    };
+                    const display = new window.EnhancedCitationDisplay(mockGenomeBrowser);
+                    log('EnhancedCitationDisplay instantiated successfully', 'success');
+                } catch (error) {
+                    log(`Error instantiating EnhancedCitationDisplay: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function testCitationDisplay() {
+            log('Testing citation display...', 'info');
+            
+            if (typeof window.EnhancedCitationDisplay !== 'function') {
+                log('EnhancedCitationDisplay not available', 'error');
+                return;
+            }
+            
+            try {
+                // Create mock genome browser
+                const mockGenomeBrowser = {
+                    citationCollector: new Map(),
+                    citationCounter: 0
+                };
+                
+                // Add some test citations
+                const testCitations = [
+                    { number: 1, type: 'PMID', id: '11830594', text: 'PMID:11830594', url: 'https://pubmed.ncbi.nlm.nih.gov/11830594/' },
+                    { number: 2, type: 'PMID', id: '10092655', text: 'PMID:10092655', url: 'https://pubmed.ncbi.nlm.nih.gov/10092655/' },
+                    { number: 3, type: 'PMID', id: '11830595', text: 'PMID:11830595', url: 'https://pubmed.ncbi.nlm.nih.gov/11830595/' }
+                ];
+                
+                testCitations.forEach(citation => {
+                    mockGenomeBrowser.citationCollector.set(`PMID:${citation.id}`, citation);
+                });
+                
+                // Create enhanced citation display
+                const enhancedDisplay = new window.EnhancedCitationDisplay(mockGenomeBrowser);
+                enhancedDisplay.init();
+                
+                log('Enhanced citation display created and initialized', 'success');
+                
+                // Test different display modes
+                const modes = ['pmid', 'summary', 'detailed'];
+                modes.forEach(mode => {
+                    log(`Testing display mode: ${mode}`, 'info');
+                    enhancedDisplay.setDisplayMode(mode);
+                    const html = enhancedDisplay.generateEnhancedCitationList(testCitations);
+                    log(`Generated HTML for ${mode} mode: ${html.length} characters`, 'success');
+                });
+                
+                // Display the citation list
+                const displayDiv = document.getElementById('citationDisplay');
+                const html = enhancedDisplay.generateEnhancedCitationList(testCitations);
+                displayDiv.innerHTML = html;
+                
+                log('Citation display test completed successfully', 'success');
+                
+            } catch (error) {
+                log(`Error testing citation display: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Page loaded, testing module availability...', 'info');
+            testModuleLoading();
+        });
+    </script>
+</body>
+</html>

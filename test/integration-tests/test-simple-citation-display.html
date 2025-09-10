@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Citation Display Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 10px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #e9ecef;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Citation Display Test</h1>
+        
+        <div class="test-section">
+            <h3>Test Controls</h3>
+            <button class="btn btn-primary" onclick="testBasicFunctionality()">Test Basic Functionality</button>
+            <button class="btn btn-primary" onclick="testWithRealData()">Test with Real Data</button>
+            <button class="btn" onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test Log</h3>
+            <div id="log" class="log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Citation Display</h3>
+            <div id="citationDisplay"></div>
+        </div>
+    </div>
+
+    <!-- Load the modules -->
+    <script src="../../src/renderer/modules/LiteratureAPIService.js"></script>
+    <script src="../../src/renderer/modules/EnhancedCitationDisplay.js"></script>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function testBasicFunctionality() {
+            log('Testing basic functionality...');
+            
+            // Check if modules are loaded
+            log('LiteratureAPIService available: ' + (typeof window.LiteratureAPIService === 'function'));
+            log('EnhancedCitationDisplay available: ' + (typeof window.EnhancedCitationDisplay === 'function'));
+            
+            if (typeof window.EnhancedCitationDisplay !== 'function') {
+                log('ERROR: EnhancedCitationDisplay not available');
+                return;
+            }
+            
+            // Create mock genome browser
+            const mockGenomeBrowser = {
+                citationCollector: new Map(),
+                citationCounter: 0
+            };
+            
+            // Add test citations
+            const testCitations = [
+                { number: 1, type: 'PMID', id: '11830594', text: 'PMID:11830594', url: 'https://pubmed.ncbi.nlm.nih.gov/11830594/' },
+                { number: 2, type: 'PMID', id: '10092655', text: 'PMID:10092655', url: 'https://pubmed.ncbi.nlm.nih.gov/10092655/' },
+                { number: 3, type: 'PMID', id: '11830595', text: 'PMID:11830595', url: 'https://pubmed.ncbi.nlm.nih.gov/11830595/' }
+            ];
+            
+            testCitations.forEach(citation => {
+                mockGenomeBrowser.citationCollector.set(`PMID:${citation.id}`, citation);
+            });
+            
+            log('Created mock genome browser with ' + testCitations.length + ' citations');
+            
+            try {
+                // Create enhanced citation display
+                const enhancedDisplay = new window.EnhancedCitationDisplay(mockGenomeBrowser);
+                log('Created EnhancedCitationDisplay instance');
+                
+                // Initialize
+                enhancedDisplay.init();
+                log('Initialized EnhancedCitationDisplay');
+                
+                // Test PMID mode
+                enhancedDisplay.setDisplayMode('pmid');
+                const pmidHtml = enhancedDisplay.generateEnhancedCitationList(testCitations);
+                log('Generated PMID mode HTML: ' + pmidHtml.length + ' characters');
+                
+                // Display the result
+                const displayDiv = document.getElementById('citationDisplay');
+                displayDiv.innerHTML = pmidHtml;
+                
+                log('SUCCESS: Basic functionality test completed');
+                
+            } catch (error) {
+                log('ERROR: ' + error.message);
+                console.error('Full error:', error);
+            }
+        }
+
+        function testWithRealData() {
+            log('Testing with real data...');
+            
+            if (typeof window.EnhancedCitationDisplay !== 'function') {
+                log('ERROR: EnhancedCitationDisplay not available');
+                return;
+            }
+            
+            // Create mock genome browser
+            const mockGenomeBrowser = {
+                citationCollector: new Map(),
+                citationCounter: 0
+            };
+            
+            // Add more test citations
+            const testCitations = [
+                { number: 1, type: 'PMID', id: '11830594', text: 'PMID:11830594', url: 'https://pubmed.ncbi.nlm.nih.gov/11830594/' },
+                { number: 2, type: 'PMID', id: '10092655', text: 'PMID:10092655', url: 'https://pubmed.ncbi.nlm.nih.gov/10092655/' },
+                { number: 3, type: 'PMID', id: '11830595', text: 'PMID:11830595', url: 'https://pubmed.ncbi.nlm.nih.gov/11830595/' },
+                { number: 4, type: 'PMID', id: '19346244', text: 'PMID:19346244', url: 'https://pubmed.ncbi.nlm.nih.gov/19346244/' },
+                { number: 5, type: 'PMID', id: '12045108', text: 'PMID:12045108', url: 'https://pubmed.ncbi.nlm.nih.gov/12045108/' }
+            ];
+            
+            testCitations.forEach(citation => {
+                mockGenomeBrowser.citationCollector.set(`PMID:${citation.id}`, citation);
+            });
+            
+            log('Created mock genome browser with ' + testCitations.length + ' citations');
+            
+            try {
+                // Create enhanced citation display
+                const enhancedDisplay = new window.EnhancedCitationDisplay(mockGenomeBrowser);
+                log('Created EnhancedCitationDisplay instance');
+                
+                // Initialize
+                enhancedDisplay.init();
+                log('Initialized EnhancedCitationDisplay');
+                
+                // Test all modes
+                const modes = ['pmid', 'summary', 'detailed'];
+                modes.forEach(mode => {
+                    log('Testing mode: ' + mode);
+                    enhancedDisplay.setDisplayMode(mode);
+                    const html = enhancedDisplay.generateEnhancedCitationList(testCitations);
+                    log('Generated HTML for ' + mode + ' mode: ' + html.length + ' characters');
+                });
+                
+                // Display the result in detailed mode
+                enhancedDisplay.setDisplayMode('detailed');
+                const displayDiv = document.getElementById('citationDisplay');
+                const html = enhancedDisplay.generateEnhancedCitationList(testCitations);
+                displayDiv.innerHTML = html;
+                
+                log('SUCCESS: Real data test completed');
+                
+            } catch (error) {
+                log('ERROR: ' + error.message);
+                console.error('Full error:', error);
+            }
+        }
+
+        // Auto-run test when page loads
+        window.addEventListener('load', function() {
+            log('Page loaded, running basic test...');
+            testBasicFunctionality();
+        });
+    </script>
+</body>
+</html>

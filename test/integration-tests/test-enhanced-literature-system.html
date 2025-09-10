@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Literature System Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .test-header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .test-content {
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f9fafb;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #374151;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 8px;
+        }
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            background: #f3f4f6;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+            border-color: #f59e0b;
+        }
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background: #10b981; }
+        .status-error { background: #ef4444; }
+        .status-warning { background: #f59e0b; }
+        .status-info { background: #3b82f6; }
+        .log-entry {
+            margin: 5px 0;
+            padding: 8px;
+            background: #f8fafc;
+            border-left: 3px solid #3b82f6;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+        }
+        .log-error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        .log-success {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        .log-warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        .pmid-input {
+            width: 200px;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .demo-gene {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .demo-gene:hover {
+            border-color: #2563eb;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .demo-gene h4 {
+            margin: 0 0 8px 0;
+            color: #2563eb;
+        }
+        .demo-gene p {
+            margin: 4px 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .citation-display {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>Enhanced Literature System Test</h1>
+            <p>Comprehensive testing of PMID-based literature information fetching and display</p>
+        </div>
+        
+        <div class="test-content">
+            <!-- Test Controls -->
+            <div class="test-section">
+                <h3>Test Controls</h3>
+                <div class="test-controls">
+                    <button class="btn btn-primary" onclick="testLiteratureAPI()">Test Literature API</button>
+                    <button class="btn btn-success" onclick="testCitationDisplay()">Test Citation Display</button>
+                    <button class="btn btn-warning" onclick="testCaching()">Test Caching</button>
+                    <button class="btn" onclick="clearResults()">Clear Results</button>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <input type="text" id="pmidInput" class="pmid-input" placeholder="Enter PMID (e.g., 11830594)" value="11830594">
+                    <button class="btn btn-primary" onclick="testSinglePMID()">Test Single PMID</button>
+                    <button class="btn btn-success" onclick="testMultiplePMIDs()">Test Multiple PMIDs</button>
+                </div>
+            </div>
+
+            <!-- Demo Genes with Citations -->
+            <div class="test-section">
+                <h3>Demo Genes with Citations</h3>
+                <p>Click on a gene to test the enhanced citation display system:</p>
+                
+                <div class="demo-gene" onclick="loadDemoGene('thrA')">
+                    <h4>thrA (Threonine synthase)</h4>
+                    <p>Contains PMIDs: 11830594, 10092655, 11830595, 19346244, 12045108, 15052329</p>
+                    <p>Position: 337-2799 | Strand: Forward</p>
+                </div>
+                
+                <div class="demo-gene" onclick="loadDemoGene('araA')">
+                    <h4>araA (L-arabinose isomerase)</h4>
+                    <p>Contains PMIDs: 4148765, 6316258, 11830594</p>
+                    <p>Position: 1407-2723 | Strand: Forward</p>
+                </div>
+                
+                <div class="demo-gene" onclick="loadDemoGene('lacZ')">
+                    <h4>lacZ (Beta-galactosidase)</h4>
+                    <p>Contains PMIDs: 11830594, 10092655, 19346244</p>
+                    <p>Position: 3661-5022 | Strand: Forward</p>
+                </div>
+            </div>
+
+            <!-- Test Results -->
+            <div class="test-section">
+                <h3>Test Results</h3>
+                <div id="testResults" class="test-results">
+                    <p>Click a test button above to begin testing...</p>
+                </div>
+            </div>
+
+            <!-- Citation Display Demo -->
+            <div class="test-section">
+                <h3>Citation Display Demo</h3>
+                <div id="citationDisplay" class="citation-display">
+                    <p>Citation display will appear here after testing...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load required modules -->
+    <script src="../src/renderer/modules/LiteratureAPIService.js"></script>
+    <script src="../src/renderer/modules/EnhancedCitationDisplay.js"></script>
+
+    <script>
+        // Test data
+        const demoGenes = {
+            thrA: {
+                name: 'thrA',
+                type: 'CDS',
+                start: 337,
+                end: 2799,
+                strand: 1,
+                qualifiers: {
+                    gene: 'thrA',
+                    product: 'threonine synthase',
+                    note: 'Threonine synthase carries out the final step |CITS: [PMID:11830594]| in threonine biosynthesis. This enzyme catalyzes the conversion of O-phospho-L-homoserine to threonine [PMID:10092655]. The reaction requires pyridoxal phosphate as a cofactor [PMID:11830595]. This gene is essential for threonine production in E. coli [PMID:19346244]. The enzyme has been extensively studied for its regulatory properties [PMID:12045108] and structural characteristics [PMID:15052329].'
+                }
+            },
+            araA: {
+                name: 'araA',
+                type: 'CDS',
+                start: 1407,
+                end: 2723,
+                strand: 1,
+                qualifiers: {
+                    gene: 'araA',
+                    product: 'L-arabinose isomerase',
+                    note: 'L-arabinose isomerase catalyzes the conversion of L-arabinose to L-ribulose [PMID:4148765]. This enzyme is part of the arabinose operon and is essential for arabinose metabolism [PMID:6316258]. The enzyme has been characterized for its kinetic properties and substrate specificity [PMID:11830594].'
+                }
+            },
+            lacZ: {
+                name: 'lacZ',
+                type: 'CDS',
+                start: 3661,
+                end: 5022,
+                strand: 1,
+                qualifiers: {
+                    gene: 'lacZ',
+                    product: 'beta-galactosidase',
+                    note: 'Beta-galactosidase is a key enzyme in lactose metabolism [PMID:11830594]. It catalyzes the hydrolysis of lactose to glucose and galactose [PMID:10092655]. This enzyme is widely used as a reporter gene in molecular biology [PMID:19346244].'
+                }
+            }
+        };
+
+        // Initialize test environment
+        let literatureAPI = null;
+        let enhancedCitationDisplay = null;
+        let testLog = [];
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTestEnvironment();
+        });
+
+        function initializeTestEnvironment() {
+            try {
+                // Initialize Literature API Service
+                literatureAPI = new LiteratureAPIService();
+                log('Literature API Service initialized', 'success');
+
+                // Initialize Enhanced Citation Display (mock genome browser)
+                const mockGenomeBrowser = {
+                    citationCollector: new Map(),
+                    citationCounter: 0
+                };
+                enhancedCitationDisplay = new EnhancedCitationDisplay(mockGenomeBrowser);
+                enhancedCitationDisplay.init();
+                log('Enhanced Citation Display initialized', 'success');
+
+                log('Test environment ready', 'info');
+            } catch (error) {
+                log('Error initializing test environment: ' + error.message, 'error');
+            }
+        }
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = {
+                timestamp,
+                message,
+                type
+            };
+            testLog.push(logEntry);
+            updateTestResults();
+        }
+
+        function updateTestResults() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = testLog.map(entry => 
+                `<div class="log-entry log-${entry.type}">
+                    <span class="status-indicator status-${entry.type}"></span>
+                    [${entry.timestamp}] ${entry.message}
+                </div>`
+            ).join('');
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            testLog = [];
+            updateTestResults();
+            document.getElementById('citationDisplay').innerHTML = '<p>Citation display cleared...</p>';
+        }
+
+        async function testLiteratureAPI() {
+            log('Starting Literature API test...', 'info');
+            
+            try {
+                // Test single PMID
+                const pmid = '11830594';
+                log(`Testing single PMID: ${pmid}`, 'info');
+                
+                const startTime = Date.now();
+                const result = await literatureAPI.fetchLiteratureInfo(pmid);
+                const endTime = Date.now();
+                
+                log(`Single PMID test completed in ${endTime - startTime}ms`, 'success');
+                log(`Title: ${result.title}`, 'info');
+                log(`Authors: ${result.authors.length} authors found`, 'info');
+                log(`Journal: ${result.journal.citation}`, 'info');
+                log(`Abstract length: ${result.abstract.length} characters`, 'info');
+                
+                // Test cache
+                const cachedResult = await literatureAPI.fetchLiteratureInfo(pmid);
+                log(`Cache test: ${cachedResult === result ? 'PASS' : 'FAIL'}`, cachedResult === result ? 'success' : 'error');
+                
+            } catch (error) {
+                log(`Literature API test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCitationDisplay() {
+            log('Starting Citation Display test...', 'info');
+            
+            try {
+                // Create mock citations
+                const mockCitations = [
+                    { number: 1, type: 'PMID', id: '11830594', text: 'PMID:11830594', url: 'https://pubmed.ncbi.nlm.nih.gov/11830594/' },
+                    { number: 2, type: 'PMID', id: '10092655', text: 'PMID:10092655', url: 'https://pubmed.ncbi.nlm.nih.gov/10092655/' },
+                    { number: 3, type: 'PMID', id: '11830595', text: 'PMID:11830595', url: 'https://pubmed.ncbi.nlm.nih.gov/11830595/' }
+                ];
+
+                // Test different display modes
+                const modes = ['pmid', 'summary', 'detailed'];
+                for (const mode of modes) {
+                    log(`Testing display mode: ${mode}`, 'info');
+                    enhancedCitationDisplay.setDisplayMode(mode);
+                    const html = enhancedCitationDisplay.generateEnhancedCitationList(mockCitations);
+                    log(`Generated HTML for ${mode} mode: ${html.length} characters`, 'success');
+                }
+
+                // Display the citation list
+                displayCitationList(mockCitations);
+                log('Citation Display test completed', 'success');
+                
+            } catch (error) {
+                log(`Citation Display test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCaching() {
+            log('Starting Caching test...', 'info');
+            
+            try {
+                const pmids = ['11830594', '10092655', '11830595'];
+                
+                // First fetch (should hit API)
+                log('First fetch (API call)...', 'info');
+                const startTime1 = Date.now();
+                const results1 = await literatureAPI.fetchMultipleLiteratureInfo(pmids);
+                const endTime1 = Date.now();
+                log(`First fetch completed in ${endTime1 - startTime1}ms`, 'success');
+                
+                // Second fetch (should hit cache)
+                log('Second fetch (cache hit)...', 'info');
+                const startTime2 = Date.now();
+                const results2 = await literatureAPI.fetchMultipleLiteratureInfo(pmids);
+                const endTime2 = Date.now();
+                log(`Second fetch completed in ${endTime2 - startTime2}ms`, 'success');
+                
+                // Compare results
+                const cacheWorked = results1.length === results2.length && 
+                                  results1.every((r1, i) => r1.pmid === results2[i].pmid);
+                log(`Cache test: ${cacheWorked ? 'PASS' : 'FAIL'}`, cacheWorked ? 'success' : 'error');
+                
+                // Show cache stats
+                const stats = literatureAPI.getCacheStats();
+                log(`Cache stats: ${stats.size} entries`, 'info');
+                
+            } catch (error) {
+                log(`Caching test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSinglePMID() {
+            const pmid = document.getElementById('pmidInput').value.trim();
+            if (!pmid) {
+                log('Please enter a PMID', 'warning');
+                return;
+            }
+            
+            log(`Testing single PMID: ${pmid}`, 'info');
+            
+            try {
+                const result = await literatureAPI.fetchLiteratureInfo(pmid);
+                log(`Successfully fetched data for PMID ${pmid}`, 'success');
+                log(`Title: ${result.title}`, 'info');
+                log(`Authors: ${result.authors.map(a => a.fullName).join(', ')}`, 'info');
+                log(`Journal: ${result.journal.citation}`, 'info');
+                
+                // Display in citation format
+                const mockCitation = {
+                    number: 1,
+                    type: 'PMID',
+                    id: pmid,
+                    text: `PMID:${pmid}`,
+                    url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`
+                };
+                displayCitationList([mockCitation]);
+                
+            } catch (error) {
+                log(`Error fetching PMID ${pmid}: ${error.message}`, 'error');
+            }
+        }
+
+        async function testMultiplePMIDs() {
+            const pmidInput = document.getElementById('pmidInput').value.trim();
+            const pmids = pmidInput.split(',').map(p => p.trim()).filter(p => p);
+            
+            if (pmids.length === 0) {
+                log('Please enter one or more PMIDs (comma-separated)', 'warning');
+                return;
+            }
+            
+            log(`Testing multiple PMIDs: ${pmids.join(', ')}`, 'info');
+            
+            try {
+                const results = await literatureAPI.fetchMultipleLiteratureInfo(pmids);
+                log(`Successfully fetched data for ${results.length} PMIDs`, 'success');
+                
+                // Create mock citations
+                const mockCitations = results.map((result, index) => ({
+                    number: index + 1,
+                    type: 'PMID',
+                    id: result.pmid,
+                    text: `PMID:${result.pmid}`,
+                    url: `https://pubmed.ncbi.nlm.nih.gov/${result.pmid}/`
+                }));
+                
+                // Store literature data for display
+                results.forEach(result => {
+                    enhancedCitationDisplay.literatureData.set(result.pmid, result);
+                });
+                
+                displayCitationList(mockCitations);
+                
+            } catch (error) {
+                log(`Error fetching multiple PMIDs: ${error.message}`, 'error');
+            }
+        }
+
+        function displayCitationList(citations) {
+            const displayDiv = document.getElementById('citationDisplay');
+            const html = enhancedCitationDisplay.generateEnhancedCitationList(citations);
+            displayDiv.innerHTML = html;
+            log(`Displayed ${citations.length} citations`, 'success');
+        }
+
+        function loadDemoGene(geneName) {
+            const gene = demoGenes[geneName];
+            if (!gene) {
+                log(`Demo gene ${geneName} not found`, 'error');
+                return;
+            }
+            
+            log(`Loading demo gene: ${geneName}`, 'info');
+            
+            // Simulate gene details population
+            const mockGenomeBrowser = {
+                citationCollector: new Map(),
+                citationCounter: 0
+            };
+            
+            // Process the note field to extract citations
+            const note = gene.qualifiers.note || '';
+            const pmidPattern = /\bPMID:?\s*(\d{7,8})/gi;
+            let match;
+            const pmids = [];
+            
+            while ((match = pmidPattern.exec(note)) !== null) {
+                const pmid = match[1];
+                if (!pmids.includes(pmid)) {
+                    pmids.push(pmid);
+                    mockGenomeBrowser.citationCounter++;
+                    mockGenomeBrowser.citationCollector.set(`PMID:${pmid}`, {
+                        number: mockGenomeBrowser.citationCounter,
+                        type: 'PMID',
+                        id: pmid,
+                        text: `PMID:${pmid}`,
+                        url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`
+                    });
+                }
+            }
+            
+            log(`Found ${pmids.length} PMIDs in ${geneName}: ${pmids.join(', ')}`, 'info');
+            
+            // Update enhanced citation display
+            enhancedCitationDisplay.genomeBrowser = mockGenomeBrowser;
+            
+            // Display citations
+            const citations = Array.from(mockGenomeBrowser.citationCollector.values());
+            displayCitationList(citations);
+            
+            // Load literature data
+            if (pmids.length > 0) {
+                literatureAPI.fetchMultipleLiteratureInfo(pmids).then(results => {
+                    results.forEach(result => {
+                        enhancedCitationDisplay.literatureData.set(result.pmid, result);
+                    });
+                    // Refresh display with literature data
+                    displayCitationList(citations);
+                    log(`Loaded literature data for ${results.length} PMIDs`, 'success');
+                }).catch(error => {
+                    log(`Error loading literature data: ${error.message}`, 'error');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

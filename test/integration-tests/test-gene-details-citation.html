@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gene Details Citation Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .test-header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .test-content {
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f9fafb;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #f3f4f6;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        .gene-details-content {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 8px;
+            background: #f8fafc;
+            border-left: 3px solid #3b82f6;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+        }
+        .log-error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        .log-success {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        .log-warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>Gene Details Citation Test</h1>
+            <p>Testing enhanced citation display in gene details</p>
+        </div>
+        
+        <div class="test-content">
+            <div class="test-section">
+                <h3>Test Controls</h3>
+                <button class="btn btn-primary" onclick="testGeneDetails()">Test Gene Details with Citations</button>
+                <button class="btn" onclick="clearLog()">Clear Log</button>
+            </div>
+
+            <div class="test-section">
+                <h3>Test Log</h3>
+                <div id="testLog"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>Gene Details Display</h3>
+                <div id="geneDetailsContent" class="gene-details-content">
+                    <p>Gene details will appear here...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load required modules -->
+    <script src="../../src/renderer/modules/LiteratureAPIService.js"></script>
+    <script src="../../src/renderer/modules/EnhancedCitationDisplay.js"></script>
+
+    <script>
+        let testLog = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = {
+                timestamp,
+                message,
+                type
+            };
+            testLog.push(logEntry);
+            updateTestLog();
+        }
+
+        function updateTestLog() {
+            const logDiv = document.getElementById('testLog');
+            logDiv.innerHTML = testLog.map(entry => 
+                `<div class="log-entry log-${entry.type}">
+                    [${entry.timestamp}] ${entry.message}
+                </div>`
+            ).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            testLog = [];
+            updateTestLog();
+        }
+
+        // Mock GenomeBrowser class for testing
+        class MockGenomeBrowser {
+            constructor() {
+                this.citationCollector = new Map();
+                this.citationCounter = 0;
+                this.enhancedCitationDisplay = null;
+            }
+
+            addUnifiedCitation(citationType, citationId, citationText = null) {
+                const citationKey = `${citationType}:${citationId}`;
+                
+                if (!this.citationCollector.has(citationKey)) {
+                    this.citationCounter++;
+                    this.citationCollector.set(citationKey, {
+                        number: this.citationCounter,
+                        type: citationType,
+                        id: citationId,
+                        text: citationText || `${citationType}:${citationId}`,
+                        url: this.getCitationUrl(citationType, citationId)
+                    });
+                }
+                
+                return this.citationCollector.get(citationKey).number;
+            }
+
+            getCitationUrl(citationType, citationId) {
+                switch (citationType) {
+                    case 'PMID':
+                        return `https://pubmed.ncbi.nlm.nih.gov/${citationId}/`;
+                    case 'DOI':
+                        return `https://doi.org/${citationId}`;
+                    default:
+                        return '';
+                }
+            }
+
+            processUnifiedCitations(text) {
+                if (!text || typeof text !== 'string') return text;
+                
+                let processedText = text;
+                
+                // Pattern for PMID references: PMID:1234567 or PMID 1234567
+                const pmidPattern = /\b(PMID:?\s*(\d{7,8}))/gi;
+                processedText = processedText.replace(pmidPattern, (match, fullMatch, pmidId) => {
+                    const citationNumber = this.addUnifiedCitation('PMID', pmidId);
+                    return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}/" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>${citationNumber}</sup></a>`;
+                });
+                
+                return processedText;
+            }
+
+            generateUnifiedCitationList() {
+                if (!this.citationCollector || this.citationCollector.size === 0) {
+                    return '';
+                }
+                
+                log('Generating citation list...', 'info');
+                log('Enhanced citation display available: ' + !!this.enhancedCitationDisplay, 'info');
+                log('Citation count: ' + this.citationCollector.size, 'info');
+                
+                // Use enhanced citation display if available
+                if (this.enhancedCitationDisplay) {
+                    log('Using enhanced citation display', 'success');
+                    const citations = Array.from(this.citationCollector.values());
+                    return this.enhancedCitationDisplay.generateEnhancedCitationList(citations);
+                }
+                
+                log('Using fallback citation display', 'warning');
+                // Fallback to original simple citation list
+                const sortedCitations = Array.from(this.citationCollector.values())
+                    .sort((a, b) => a.number - b.number);
+                
+                let html = `
+                    <div class="gene-citations">
+                        <h4>References</h4>
+                        <div class="citation-list">
+                `;
+                
+                sortedCitations.forEach(citation => {
+                    const linkText = citation.url ? 
+                        `<a href="${citation.url}" target="_blank" class="citation-link">${citation.text}</a>` : 
+                        citation.text;
+                    
+                    html += `
+                        <div class="citation-item">
+                            <span class="citation-number">${citation.number}</span>
+                            <span class="citation-content">${linkText}</span>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+                
+                return html;
+            }
+
+            populateGeneDetails(gene) {
+                const geneDetailsContent = document.getElementById('geneDetailsContent');
+                if (!geneDetailsContent) return;
+                
+                // Initialize unified citation system
+                this.citationCollector = new Map();
+                this.citationCounter = 0;
+                
+                // Create the gene details HTML
+                let html = `
+                    <div class="gene-details-info">
+                        <div class="gene-basic-info">
+                            <div class="gene-name">${gene.name}</div>
+                            <div class="gene-type-badge">${gene.type}</div>
+                            <div class="gene-position">Position: ${gene.start}-${gene.end}</div>
+                            <div class="gene-strand">Strand: ${gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}</div>
+                        </div>
+                        
+                        <div class="gene-attributes">
+                            <div class="gene-attribute">
+                                <div class="gene-attribute-label">Note</div>
+                                <div class="gene-attribute-value">${this.processUnifiedCitations(gene.note)}</div>
+                            </div>
+                        </div>
+                `;
+                
+                // Add unified citation list if there are any citations
+                const citationList = this.generateUnifiedCitationList();
+                if (citationList) {
+                    html += citationList;
+                }
+                
+                html += `</div>`;
+                
+                geneDetailsContent.innerHTML = html;
+                
+                // Load literature data if enhanced citation display is available
+                if (this.enhancedCitationDisplay && this.citationCollector.size > 0) {
+                    log('Loading literature data for citations...', 'info');
+                    this.enhancedCitationDisplay.loadLiteratureDataIfNeeded();
+                } else {
+                    log('Enhanced citation display not available or no citations', 'warning');
+                    log('Enhanced citation display available: ' + !!this.enhancedCitationDisplay, 'info');
+                    log('Citation count: ' + this.citationCollector.size, 'info');
+                }
+            }
+        }
+
+        function testGeneDetails() {
+            log('Testing gene details with citations...', 'info');
+            
+            // Create mock genome browser
+            const genomeBrowser = new MockGenomeBrowser();
+            
+            // Initialize enhanced citation display
+            if (typeof window.EnhancedCitationDisplay === 'function') {
+                try {
+                    genomeBrowser.enhancedCitationDisplay = new window.EnhancedCitationDisplay(genomeBrowser);
+                    genomeBrowser.enhancedCitationDisplay.init();
+                    log('Enhanced citation display initialized', 'success');
+                } catch (error) {
+                    log('Error initializing enhanced citation display: ' + error.message, 'error');
+                }
+            } else {
+                log('EnhancedCitationDisplay not available', 'error');
+                return;
+            }
+            
+            // Create test gene with citations
+            const testGene = {
+                name: 'thrA',
+                type: 'CDS',
+                start: 337,
+                end: 2799,
+                strand: 1,
+                note: 'Threonine synthase carries out the final step |CITS: [PMID:11830594]| in threonine biosynthesis. This enzyme catalyzes the conversion of O-phospho-L-homoserine to threonine [PMID:10092655]. The reaction requires pyridoxal phosphate as a cofactor [PMID:11830595]. This gene is essential for threonine production in E. coli [PMID:19346244]. The enzyme has been extensively studied for its regulatory properties [PMID:12045108] and structural characteristics [PMID:15052329].'
+            };
+            
+            // Populate gene details
+            genomeBrowser.populateGeneDetails(testGene);
+            
+            log('Gene details populated with citations', 'success');
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Page loaded, testing module availability...', 'info');
+            log('EnhancedCitationDisplay available: ' + (typeof window.EnhancedCitationDisplay === 'function'), 'info');
+            log('LiteratureAPIService available: ' + (typeof window.LiteratureAPIService === 'function'), 'info');
+        });
+    </script>
+</body>
+</html>
