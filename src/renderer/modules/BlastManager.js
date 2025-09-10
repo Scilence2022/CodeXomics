@@ -3031,6 +3031,8 @@ class BlastManager {
         const modal = document.getElementById('blastResultsModal');
         if (modal) {
             modal.classList.add('show');
+            // Initialize resizable functionality
+            this.initializeResizableModal();
         }
     }
 
@@ -3039,6 +3041,115 @@ class BlastManager {
         if (modal) {
             modal.classList.remove('show');
         }
+    }
+
+    initializeResizableModal() {
+        const modal = document.getElementById('blastResultsModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        if (!modalContent) return;
+
+        // Add resize indicator
+        this.addResizeIndicator(modalContent);
+        
+        // Add resize event listeners
+        this.addResizeListeners(modalContent);
+        
+        // Store original dimensions for reset functionality
+        if (!modalContent.dataset.originalWidth) {
+            modalContent.dataset.originalWidth = modalContent.style.width || '95vw';
+            modalContent.dataset.originalHeight = modalContent.style.height || '90vh';
+        }
+    }
+
+    addResizeIndicator(modalContent) {
+        // Remove existing indicator if any
+        const existingIndicator = modalContent.querySelector('.resize-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+
+        // Create resize indicator
+        const indicator = document.createElement('div');
+        indicator.className = 'resize-indicator';
+        indicator.innerHTML = '<i class="fas fa-expand-arrows-alt"></i>';
+        indicator.style.cssText = `
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #666;
+            cursor: se-resize;
+            z-index: 1001;
+            transition: all 0.2s ease;
+        `;
+        
+        modalContent.appendChild(indicator);
+        
+        // Add hover effect
+        indicator.addEventListener('mouseenter', () => {
+            indicator.style.background = 'rgba(0, 0, 0, 0.2)';
+            indicator.style.color = '#333';
+        });
+        
+        indicator.addEventListener('mouseleave', () => {
+            indicator.style.background = 'rgba(0, 0, 0, 0.1)';
+            indicator.style.color = '#666';
+        });
+    }
+
+    addResizeListeners(modalContent) {
+        let isResizing = false;
+        let startX, startY, startWidth, startHeight;
+
+        const handleMouseDown = (e) => {
+            if (e.target.classList.contains('resize-indicator') || 
+                (e.target === modalContent && e.offsetX > modalContent.offsetWidth - 20 && e.offsetY > modalContent.offsetHeight - 20)) {
+                isResizing = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = parseInt(window.getComputedStyle(modalContent).width, 10);
+                startHeight = parseInt(window.getComputedStyle(modalContent).height, 10);
+                
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+                e.preventDefault();
+            }
+        };
+
+        const handleMouseMove = (e) => {
+            if (!isResizing) return;
+            
+            const newWidth = startWidth + e.clientX - startX;
+            const newHeight = startHeight + e.clientY - startY;
+            
+            // Apply constraints
+            const minWidth = 600;
+            const minHeight = 400;
+            const maxWidth = window.innerWidth * 0.95;
+            const maxHeight = window.innerHeight * 0.95;
+            
+            const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+            const constrainedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+            
+            modalContent.style.width = constrainedWidth + 'px';
+            modalContent.style.height = constrainedHeight + 'px';
+        };
+
+        const handleMouseUp = () => {
+            isResizing = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        modalContent.addEventListener('mousedown', handleMouseDown);
     }
 
     selectBlastType(blastType) {

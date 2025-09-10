@@ -9654,11 +9654,61 @@ to {
   max-width: 1200px;
   width: 95vw;
   max-height: 90vh;
+  min-width: 600px;
+  min-height: 400px;
+  position: relative;
+  resize: both;
+  overflow: auto;
 }
 
 .blast-results-body {
   padding: 0;
   overflow: hidden;
+  height: calc(100% - 60px); /* Account for header height */
+}
+
+/* Resize handle styling */
+.blast-results-content::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(-45deg, transparent 30%, #ccc 30%, #ccc 40%, transparent 40%, transparent 60%, #ccc 60%, #ccc 70%, transparent 70%);
+  cursor: se-resize;
+  z-index: 1000;
+}
+
+.blast-results-content:hover::after {
+  background: linear-gradient(-45deg, transparent 30%, #999 30%, #999 40%, transparent 40%, transparent 60%, #999 60%, #999 70%, transparent 70%);
+}
+
+/* Make modal resizable */
+#blastResultsModal .modal-content {
+  resize: both;
+  overflow: auto;
+  min-width: 600px;
+  min-height: 400px;
+  max-width: 95vw;
+  max-height: 95vh;
+}
+
+/* Resize handle for modal */
+#blastResultsModal .modal-content::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(-45deg, transparent 30%, #ccc 30%, #ccc 40%, transparent 40%, transparent 60%, #ccc 60%, #ccc 70%, transparent 70%);
+  cursor: se-resize;
+  z-index: 1000;
+}
+
+#blastResultsModal .modal-content:hover::after {
+  background: linear-gradient(-45deg, transparent 30%, #999 30%, #999 40%, transparent 40%, transparent 60%, #999 60%, #999 70%, transparent 70%);
 }
 
 .results-controls {
