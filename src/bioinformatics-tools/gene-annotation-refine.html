@@ -713,6 +713,55 @@
             color: #ffc107;
             font-weight: 500;
         }
+        
+        /* Debug Information Styles */
+        .debug-info {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        
+        .debug-info h5 {
+            margin: 0 0 10px 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .debug-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .debug-entry {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 3px;
+        }
+        
+        .debug-entry h6 {
+            margin: 0 0 8px 0;
+            color: #495057;
+            font-size: 12px;
+        }
+        
+        .debug-json {
+            margin: 0;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #495057;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -2732,10 +2781,39 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
         function extractSourcesFromReport(report) {
             const sources = [];
             
+            console.log('Extracting sources from report:', report);
+            
+            // Check direct sources array
             if (report.sources && Array.isArray(report.sources)) {
-                sources.push(...report.sources.map(s => s.url || s));
+                console.log('Found direct sources:', report.sources);
+                sources.push(...report.sources.map(s => {
+                    if (typeof s === 'string') {
+                        return s;
+                    } else if (s.url) {
+                        return s.url;
+                    } else if (s.title) {
+                        return s.title;
+                    }
+                    return s;
+                }));
             }
             
+            // Check nested sources in result
+            if (report.result && report.result.sources && Array.isArray(report.result.sources)) {
+                console.log('Found nested sources in result:', report.result.sources);
+                sources.push(...report.result.sources.map(s => {
+                    if (typeof s === 'string') {
+                        return s;
+                    } else if (s.url) {
+                        return s.url;
+                    } else if (s.title) {
+                        return s.title;
+                    }
+                    return s;
+                }));
+            }
+            
+            // Check tasks for sources
             if (report.tasks && Array.isArray(report.tasks)) {
                 report.tasks.forEach(task => {
                     if (task.sources && Array.isArray(task.sources)) {
@@ -2744,6 +2822,16 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 });
             }
             
+            // Check searchData for sources
+            if (report.searchData && Array.isArray(report.searchData)) {
+                report.searchData.forEach(data => {
+                    if (data.sources && Array.isArray(data.sources)) {
+                        sources.push(...data.sources.map(s => s.url || s));
+                    }
+                });
+            }
+            
+            console.log('Extracted sources:', sources);
             return [...new Set(sources)];
         }
         
@@ -2753,14 +2841,43 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
         function extractCitationsFromReport(report) {
             const citations = [];
             
+            console.log('Extracting citations from report:', report);
+            
+            // Check direct citations array
             if (report.citations && Array.isArray(report.citations)) {
+                console.log('Found direct citations:', report.citations);
                 citations.push(...report.citations);
             }
             
+            // Check nested citations in result
+            if (report.result && report.result.citations && Array.isArray(report.result.citations)) {
+                console.log('Found nested citations in result:', report.result.citations);
+                citations.push(...report.result.citations);
+            }
+            
+            // Check references
             if (report.references && Array.isArray(report.references)) {
+                console.log('Found references:', report.references);
                 citations.push(...report.references);
             }
             
+            // Check nested references in result
+            if (report.result && report.result.references && Array.isArray(report.result.references)) {
+                console.log('Found nested references in result:', report.result.references);
+                citations.push(...report.result.references);
+            }
+            
+            // Extract citations from content text (look for [1], [2], etc.)
+            const content = report.content || report.finalReport || report.report || report.text || '';
+            if (typeof content === 'string') {
+                const citationMatches = content.match(/\[\d+\]/g);
+                if (citationMatches) {
+                    console.log('Found citation markers in content:', citationMatches);
+                    citations.push(...citationMatches);
+                }
+            }
+            
+            console.log('Extracted citations:', citations);
             return [...new Set(citations)];
         }
         
@@ -2862,6 +2979,12 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                             <span class="log-message">Initializing Deep Research...</span>
                         </div>
                     </div>
+                    <div id="debugInfo" class="debug-info" style="display: none;">
+                        <h5><i class="fas fa-bug"></i> Debug Information</h5>
+                        <div id="debugContent" class="debug-content">
+                            <p>Debug information will appear here...</p>
+                        </div>
+                    </div>
                 </div>
             `;
             
@@ -2912,6 +3035,29 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 
                 // Auto-scroll to bottom
                 logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        }
+        
+        /**
+         * Update debug information display
+         */
+        function updateDebugInfo(title, data) {
+            const debugInfo = document.getElementById('debugInfo');
+            const debugContent = document.getElementById('debugContent');
+            
+            if (debugInfo && debugContent) {
+                debugInfo.style.display = 'block';
+                
+                const debugEntry = document.createElement('div');
+                debugEntry.className = 'debug-entry';
+                debugEntry.innerHTML = `
+                    <h6><i class="fas fa-info-circle"></i> ${title}</h6>
+                    <pre class="debug-json">${JSON.stringify(data, null, 2)}</pre>
+                `;
+                debugContent.appendChild(debugEntry);
+                
+                // Auto-scroll to bottom
+                debugContent.scrollTop = debugContent.scrollHeight;
             }
         }
         
@@ -3148,13 +3294,25 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 if (researchResult.success) {
                     console.log('Deep Research completed successfully:', researchResult);
                     
-                    // Show completion message with metadata
-                    const executionTime = researchResult.metadata?.executionTime || 0;
-                    const sources = researchResult.metadata?.sources || 0;
-                    const citations = researchResult.metadata?.citations || 0;
+                    // Extract actual sources and citations from the result
+                    const actualSources = extractSourcesFromReport(researchResult.result);
+                    const actualCitations = extractCitationsFromReport(researchResult.result);
                     
-                    updateProgressDisplay(`Deep Research completed! Found ${sources} sources and ${citations} citations`, 100);
-                    showStatus(`Deep Research completed! Found ${sources} sources and ${citations} citations`, 'success');
+                    console.log('Actual sources found:', actualSources);
+                    console.log('Actual citations found:', actualCitations);
+                    
+                    // Show completion message with actual counts
+                    updateProgressDisplay(`Deep Research completed! Found ${actualSources.length} sources and ${actualCitations.length} citations`, 100);
+                    showStatus(`Deep Research completed! Found ${actualSources.length} sources and ${actualCitations.length} citations`, 'success');
+                    
+                    // Add detailed debug information to progress
+                    updateProgressDisplay(`Sources: ${actualSources.length} | Citations: ${actualCitations.length} | Content length: ${researchResult.result.content?.length || 0}`, 100, 'info');
+                    
+                    // Show debug information
+                    updateDebugInfo('Complete Research Result', researchResult);
+                    updateDebugInfo('Extracted Sources', actualSources);
+                    updateDebugInfo('Extracted Citations', actualCitations);
+                    updateDebugInfo('Raw MCP Response', researchResult.result);
                     
                     // Populate the report text with research results
                     populateReportTextWithResearchResult(researchResult);
@@ -3252,17 +3410,25 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 reportText += `\n`;
             }
             
-            if (result.sources && result.sources.length > 0) {
-                reportText += `## Sources\n\n`;
-                result.sources.forEach((source, index) => {
-                    reportText += `${index + 1}. ${source}\n`;
+            // Extract and display sources
+            const sources = extractSourcesFromReport(result);
+            if (sources && sources.length > 0) {
+                reportText += `## Sources (${sources.length})\n\n`;
+                sources.forEach((source, index) => {
+                    if (typeof source === 'string' && source.startsWith('http')) {
+                        reportText += `${index + 1}. [${source}](${source})\n`;
+                    } else {
+                        reportText += `${index + 1}. ${source}\n`;
+                    }
                 });
                 reportText += `\n`;
             }
             
-            if (result.citations && result.citations.length > 0) {
-                reportText += `## References\n\n`;
-                result.citations.forEach((citation, index) => {
+            // Extract and display citations
+            const citations = extractCitationsFromReport(result);
+            if (citations && citations.length > 0) {
+                reportText += `## References (${citations.length})\n\n`;
+                citations.forEach((citation, index) => {
                     reportText += `${index + 1}. ${citation}\n`;
                 });
                 reportText += `\n`;
