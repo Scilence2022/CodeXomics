@@ -191,6 +191,13 @@ class MCPServerManager {
 
             // Determine connection method based on protocol/transport type
             const transportType = server.protocol || server.transportType || 'websocket';
+            console.log(`🔍 Connecting to server ${serverId}:`, {
+                name: server.name,
+                url: server.url,
+                protocol: server.protocol,
+                transportType: server.transportType,
+                resolvedTransportType: transportType
+            });
             
             if (transportType === 'claude-mcp') {
                 await this.connectToClaudeMCPServer(serverId, server);
