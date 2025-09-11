@@ -519,6 +519,95 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Research Method Selection Styles */
+        .research-method-selection {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background: white;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .radio-option:hover {
+            border-color: var(--secondary-color);
+            background: #f8f9fa;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 0.5rem;
+            margin: 0;
+        }
+
+        .radio-option input[type="radio"]:checked + .radio-label {
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        .radio-option:has(input[type="radio"]:checked) {
+            border-color: var(--secondary-color);
+            background: #e3f2fd;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .radio-label i {
+            font-size: 1.1rem;
+        }
+
+        .research-section {
+            margin-top: 1rem;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+
+        .checkbox-option input[type="checkbox"] {
+            margin-right: 0.5rem;
+            margin: 0;
+        }
+
+        .checkbox-option span {
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .checkbox-option:hover span {
+            color: var(--secondary-color);
+        }
+
+        @media (max-width: 768px) {
+            .research-method-selection {
+                flex-direction: column;
+            }
+            
+            .radio-option {
+                min-width: auto;
+            }
+        }
     </style>
 </head>
 <body>
@@ -569,27 +658,102 @@
                 <h3>Deep Research Report</h3>
             </div>
             
-            <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('fileInput').click()">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <h4>Upload Research Report</h4>
-                <p>Click to select or drag and drop your Deep Research Report</p>
-                <p class="text-muted">Supported formats: PDF, TXT, DOC, DOCX</p>
-                <input type="file" id="fileInput" accept=".pdf,.txt,.doc,.docx" style="display: none;">
-            </div>
-
-            <div id="fileInfo" class="hidden">
-                <div class="status-message status-info">
-                    <i class="fas fa-file"></i>
-                    <span id="fileName"></span> - <span id="fileSize"></span>
+            <!-- Research Method Selection -->
+            <div class="form-group">
+                <label>Research Method</label>
+                <div class="research-method-selection">
+                    <label class="radio-option">
+                        <input type="radio" name="researchMethod" value="upload" checked>
+                        <span class="radio-label">
+                            <i class="fas fa-file-upload"></i>
+                            Upload Report
+                        </span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="researchMethod" value="deep-research">
+                        <span class="radio-label">
+                            <i class="fas fa-search-plus"></i>
+                            Deep Research Agent
+                        </span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="researchMethod" value="paste">
+                        <span class="radio-label">
+                            <i class="fas fa-paste"></i>
+                            Paste Text
+                        </span>
+                    </label>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="reportText">Or Paste Report Text</label>
-                <textarea id="reportText" placeholder="Paste your Deep Research Report text here..."></textarea>
-                <button class="btn btn-sm" onclick="loadSampleReport()" style="margin-top: 0.5rem;">
-                    <i class="fas fa-flask"></i> Load Sample Report
+            <!-- Upload Section -->
+            <div id="uploadSection" class="research-section">
+                <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h4>Upload Research Report</h4>
+                    <p>Click to select or drag and drop your Deep Research Report</p>
+                    <p class="text-muted">Supported formats: PDF, TXT, DOC, DOCX</p>
+                    <input type="file" id="fileInput" accept=".pdf,.txt,.doc,.docx" style="display: none;">
+                </div>
+
+                <div id="fileInfo" class="hidden">
+                    <div class="status-message status-info">
+                        <i class="fas fa-file"></i>
+                        <span id="fileName"></span> - <span id="fileSize"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deep Research Section -->
+            <div id="deepResearchSection" class="research-section hidden">
+                <div class="form-group">
+                    <label for="deepResearchQuery">Research Query</label>
+                    <textarea id="deepResearchQuery" placeholder="Enter your research query for the selected gene..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="researchLanguage">Language</label>
+                    <select id="researchLanguage">
+                        <option value="English">English</option>
+                        <option value="Chinese">Chinese</option>
+                        <option value="Spanish">Spanish</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="maxResults">Max Results</label>
+                    <input type="number" id="maxResults" value="5" min="1" max="20">
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="enableCitations" checked>
+                        <span>Include Citations</span>
+                    </label>
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="enableReferences" checked>
+                        <span>Include References</span>
+                    </label>
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="enableImages">
+                        <span>Include Images</span>
+                    </label>
+                </div>
+                
+                <button class="btn btn-lg" onclick="performDeepResearch()" id="deepResearchBtn">
+                    <i class="fas fa-search-plus"></i> Perform Deep Research
                 </button>
+            </div>
+
+            <!-- Paste Text Section -->
+            <div id="pasteSection" class="research-section hidden">
+                <div class="form-group">
+                    <label for="reportText">Paste Report Text</label>
+                    <textarea id="reportText" placeholder="Paste your Deep Research Report text here..."></textarea>
+                    <button class="btn btn-sm" onclick="loadSampleReport()" style="margin-top: 0.5rem;">
+                        <i class="fas fa-flask"></i> Load Sample Report
+                    </button>
+                </div>
             </div>
 
             <button class="btn btn-lg" onclick="processReport()" id="processBtn">
@@ -705,6 +869,8 @@
         let extractedInfo = null;
         let refinedAnnotation = null;
         let langExtractIntegration = null;
+        let deepResearchAgent = null;
+        let multiAgentSystem = null;
 
         // Initialize the tool
         document.addEventListener('DOMContentLoaded', async function() {
@@ -718,6 +884,9 @@
             // Initialize LangExtract integration
             langExtractIntegration = new LangExtractIntegration();
             await langExtractIntegration.initialize();
+            
+            // Initialize Deep Research Agent integration
+            await initializeDeepResearchIntegration();
             
             // Check if we have a gene passed from the main window
             const urlParams = new URLSearchParams(window.location.search);
@@ -744,6 +913,12 @@
                 if (e.key === 'Enter') {
                     searchGene();
                 }
+            });
+
+            // Research method selection
+            const researchMethodRadios = document.querySelectorAll('input[name="researchMethod"]');
+            researchMethodRadios.forEach(radio => {
+                radio.addEventListener('change', handleResearchMethodChange);
             });
 
             // Add click event listener to Process Report button
@@ -1412,6 +1587,12 @@ GO Terms: ${geneInfo.go || 'N/A'}`;
             
             document.getElementById('currentAnnotation').value = annotation;
             currentAnnotations = geneInfo;
+            
+            // Auto-generate Deep Research query if Deep Research method is selected
+            const deepResearchRadio = document.querySelector('input[name="researchMethod"][value="deep-research"]');
+            if (deepResearchRadio && deepResearchRadio.checked) {
+                generateDeepResearchQuery();
+            }
         }
 
         async function processReport() {
@@ -1819,6 +2000,278 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
         function testButtonClick() {
             console.log('Test button click function called');
             alert('Button click is working!');
+        }
+
+        // Deep Research Integration Functions
+        
+        /**
+         * Initialize Deep Research Agent integration
+         */
+        async function initializeDeepResearchIntegration() {
+            try {
+                console.log('Initializing Deep Research Agent integration...');
+                
+                // Check if we're in the main application context
+                if (typeof window !== 'undefined' && window.parent && window.parent.multiAgentSystem) {
+                    multiAgentSystem = window.parent.multiAgentSystem;
+                    deepResearchAgent = multiAgentSystem.agents.get('DeepResearchAgent');
+                    
+                    if (deepResearchAgent) {
+                        console.log('✅ Deep Research Agent found in parent window');
+                        return true;
+                    }
+                }
+                
+                // Try to access from global scope
+                if (typeof window !== 'undefined' && window.multiAgentSystem) {
+                    multiAgentSystem = window.multiAgentSystem;
+                    deepResearchAgent = multiAgentSystem.agents.get('DeepResearchAgent');
+                    
+                    if (deepResearchAgent) {
+                        console.log('✅ Deep Research Agent found in global scope');
+                        return true;
+                    }
+                }
+                
+                // Fallback: Create mock integration for testing
+                console.log('⚠️ Deep Research Agent not found, using mock integration');
+                deepResearchAgent = createMockDeepResearchAgent();
+                multiAgentSystem = createMockMultiAgentSystem();
+                
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize Deep Research Agent integration:', error);
+                return false;
+            }
+        }
+        
+        /**
+         * Create mock Deep Research Agent for testing
+         */
+        function createMockDeepResearchAgent() {
+            return {
+                name: 'DeepResearchAgent',
+                performDeepResearch: async (parameters) => {
+                    console.log('Mock Deep Research Agent performing research:', parameters);
+                    
+                    // Simulate research delay
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // Generate mock research result
+                    const mockResult = {
+                        success: true,
+                        researchId: `research_${Date.now()}`,
+                        query: parameters.query,
+                        result: {
+                            summary: `Mock research summary for gene: ${parameters.query}`,
+                            content: `This is a mock research result generated for testing purposes. The query was: "${parameters.query}". This demonstrates the Deep Research Agent's ability to process research requests and return structured results. The gene appears to be involved in important biological processes based on the research findings.`,
+                            sources: [
+                                'https://example.com/research1',
+                                'https://example.com/research2',
+                                'https://example.com/research3'
+                            ],
+                            citations: [
+                                'Smith, J. (2024). Gene function analysis. Nature.',
+                                'Johnson, A. (2024). Molecular biology insights. Science.'
+                            ],
+                            images: [],
+                            metadata: {
+                                language: parameters.language || 'English',
+                                maxResults: parameters.maxResults || 5,
+                                processedAt: Date.now()
+                            }
+                        },
+                        metadata: {
+                            executionTime: 2000,
+                            sources: 3,
+                            citations: 2
+                        }
+                    };
+                    
+                    return mockResult;
+                }
+            };
+        }
+        
+        /**
+         * Create mock Multi-Agent System for testing
+         */
+        function createMockMultiAgentSystem() {
+            return {
+                agents: new Map([
+                    ['DeepResearchAgent', createMockDeepResearchAgent()]
+                ])
+            };
+        }
+        
+        /**
+         * Handle research method selection change
+         */
+        function handleResearchMethodChange(e) {
+            const method = e.target.value;
+            console.log('Research method changed to:', method);
+            
+            // Hide all sections
+            document.getElementById('uploadSection').classList.add('hidden');
+            document.getElementById('deepResearchSection').classList.add('hidden');
+            document.getElementById('pasteSection').classList.add('hidden');
+            
+            // Show selected section
+            switch (method) {
+                case 'upload':
+                    document.getElementById('uploadSection').classList.remove('hidden');
+                    break;
+                case 'deep-research':
+                    document.getElementById('deepResearchSection').classList.remove('hidden');
+                    // Auto-generate query if gene is selected
+                    if (selectedGene) {
+                        generateDeepResearchQuery();
+                    }
+                    break;
+                case 'paste':
+                    document.getElementById('pasteSection').classList.remove('hidden');
+                    break;
+            }
+        }
+        
+        /**
+         * Generate Deep Research query based on selected gene
+         */
+        function generateDeepResearchQuery() {
+            if (!selectedGene) return;
+            
+            const geneName = selectedGene.name || selectedGene.locusTag;
+            const query = `What is the function, structure, and biological role of the gene ${geneName}? Include information about its pathway, regulation, cofactors, substrates, products, and any recent research findings.`;
+            
+            document.getElementById('deepResearchQuery').value = query;
+        }
+        
+        /**
+         * Perform Deep Research using Deep Research Agent
+         */
+        async function performDeepResearch() {
+            try {
+                if (!selectedGene) {
+                    showStatus('Please select a gene first', 'warning');
+                    return;
+                }
+                
+                if (!deepResearchAgent) {
+                    showStatus('Deep Research Agent not available', 'error');
+                    return;
+                }
+                
+                const query = document.getElementById('deepResearchQuery').value.trim();
+                if (!query) {
+                    showStatus('Please enter a research query', 'warning');
+                    return;
+                }
+                
+                console.log('Starting Deep Research...');
+                showStatus('Performing Deep Research...', 'info');
+                
+                // Disable the button during research
+                const researchBtn = document.getElementById('deepResearchBtn');
+                const originalText = researchBtn.innerHTML;
+                researchBtn.disabled = true;
+                researchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Researching...';
+                
+                // Get research parameters
+                const parameters = {
+                    query: query,
+                    language: document.getElementById('researchLanguage').value,
+                    maxResults: parseInt(document.getElementById('maxResults').value),
+                    enableCitations: document.getElementById('enableCitations').checked,
+                    enableReferences: document.getElementById('enableReferences').checked,
+                    enableImages: document.getElementById('enableImages').checked
+                };
+                
+                console.log('Deep Research parameters:', parameters);
+                
+                // Perform the research
+                const researchResult = await deepResearchAgent.performDeepResearch(parameters, {});
+                
+                if (researchResult.success) {
+                    console.log('Deep Research completed successfully:', researchResult);
+                    
+                    // Populate the report text with research results
+                    populateReportTextWithResearchResult(researchResult);
+                    
+                    showStatus('Deep Research completed successfully', 'success');
+                } else {
+                    throw new Error(researchResult.error || 'Deep Research failed');
+                }
+                
+            } catch (error) {
+                console.error('Deep Research failed:', error);
+                showStatus('Deep Research failed: ' + error.message, 'error');
+            } finally {
+                // Re-enable the button
+                const researchBtn = document.getElementById('deepResearchBtn');
+                researchBtn.disabled = false;
+                researchBtn.innerHTML = '<i class="fas fa-search-plus"></i> Perform Deep Research';
+            }
+        }
+        
+        /**
+         * Populate report text with Deep Research results
+         */
+        function populateReportTextWithResearchResult(researchResult) {
+            const reportTextArea = document.getElementById('reportText');
+            if (!reportTextArea) return;
+            
+            const result = researchResult.result;
+            const geneName = selectedGene.name || selectedGene.locusTag;
+            
+            // Format the research result as a comprehensive report
+            let reportText = `# Deep Research Report: ${geneName}\n\n`;
+            reportText += `**Research Query:** ${researchResult.query}\n\n`;
+            reportText += `**Research ID:** ${researchResult.researchId}\n`;
+            reportText += `**Language:** ${result.metadata.language}\n`;
+            reportText += `**Generated:** ${new Date(result.metadata.processedAt).toLocaleString()}\n\n`;
+            
+            reportText += `## Executive Summary\n\n`;
+            reportText += `${result.summary}\n\n`;
+            
+            reportText += `## Detailed Analysis\n\n`;
+            reportText += `${result.content}\n\n`;
+            
+            if (result.sources && result.sources.length > 0) {
+                reportText += `## Sources\n\n`;
+                result.sources.forEach((source, index) => {
+                    reportText += `${index + 1}. ${source}\n`;
+                });
+                reportText += `\n`;
+            }
+            
+            if (result.citations && result.citations.length > 0) {
+                reportText += `## References\n\n`;
+                result.citations.forEach((citation, index) => {
+                    reportText += `${index + 1}. ${citation}\n`;
+                });
+                reportText += `\n`;
+            }
+            
+            if (result.images && result.images.length > 0) {
+                reportText += `## Images\n\n`;
+                result.images.forEach((image, index) => {
+                    reportText += `${index + 1}. ${image}\n`;
+                });
+                reportText += `\n`;
+            }
+            
+            reportText += `---\n`;
+            reportText += `*This report was generated by the Deep Research Agent on ${new Date().toLocaleString()}*\n`;
+            
+            // Set the report text
+            reportTextArea.value = reportText;
+            
+            // Switch to paste section to show the result
+            document.querySelector('input[name="researchMethod"][value="paste"]').checked = true;
+            handleResearchMethodChange({ target: { value: 'paste' } });
+            
+            console.log('Report text populated with Deep Research results');
         }
 
         function showProcessingStatus(show) {
