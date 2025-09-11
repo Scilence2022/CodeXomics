@@ -195,6 +195,14 @@ class MCPServerManager {
 
         try {
             console.log(`Connecting to MCP server: ${server.name} (${server.url})`);
+            console.log(`🔍 Server configuration for ${serverId}:`, {
+                name: server.name,
+                url: server.url,
+                protocol: server.protocol,
+                transportType: server.transportType,
+                enabled: server.enabled,
+                autoConnect: server.autoConnect
+            });
             this.emit('serverConnecting', { serverId, server });
 
             // Determine connection method based on protocol/transport type

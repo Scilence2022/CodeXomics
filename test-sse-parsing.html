@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE Parsing Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .result {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 SSE Parsing Test</h1>
+        <p>Testing SSE response parsing for Deep Research MCP server</p>
+        
+        <button onclick="testSSEParsing()">Test SSE Parsing</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function testSSEParsing() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h3>Testing SSE Parsing...</h3>';
+            
+            // Simulate the SSE response from Deep Research server
+            const sseResponse = `event: message
+data: {"result":{"tools":[{"name":"deep-research","description":"Start deep research on any question, obtain and organize information through search engines, and generate research report.","inputSchema":{"type":"object","properties":{"query":{"type":"string","description":"The topic for deep research."},"language":{"type":"string","description":"The final report text language.","default":"English"},"maxResult":{"type":"number","description":"Maximum number of search results.","default":5},"enableCitationImage":{"type":"boolean","description":"Whether to include content-related images in the final report.","default":true},"enableReferences":{"type":"boolean","description":"Whether to include citation links in search results and final reports.","default":true}},"required":["query"]}}]}}`;
+            
+            console.log('Testing SSE response:', sseResponse);
+            
+            try {
+                // Parse SSE format to extract tools
+                const lines = sseResponse.split('\n');
+                let jsonData = null;
+                
+                console.log('Lines:', lines);
+                
+                for (const line of lines) {
+                    console.log('Processing line:', line);
+                    if (line.startsWith('data: ')) {
+                        const jsonStr = line.substring(6); // Remove 'data: ' prefix
+                        console.log('JSON string:', jsonStr);
+                        try {
+                            jsonData = JSON.parse(jsonStr);
+                            console.log('Parsed JSON:', jsonData);
+                            break;
+                        } catch (e) {
+                            console.log(`⚠️ Failed to parse SSE data line: ${jsonStr}`, e);
+                        }
+                    }
+                }
+                
+                if (jsonData) {
+                    console.log(`📋 Parsed SSE JSON data:`, jsonData);
+                    
+                    let tools = [];
+                    let foundTools = false;
+                    
+                    if (jsonData.result && jsonData.result.tools) {
+                        tools = jsonData.result.tools;
+                        foundTools = true;
+                        console.log(`📋 SSE tools found (result.tools):`, tools);
+                    } else if (jsonData.tools && Array.isArray(jsonData.tools)) {
+                        tools = jsonData.tools;
+                        foundTools = true;
+                        console.log(`📋 SSE tools found (direct tools):`, tools);
+                    } else if (jsonData.result && Array.isArray(jsonData.result)) {
+                        tools = jsonData.result;
+                        foundTools = true;
+                        console.log(`📋 SSE tools found (result array):`, tools);
+                    } else {
+                        console.log(`⚠️ SSE response doesn't contain tools in expected format`);
+                        console.log(`📋 Available data:`, JSON.stringify(jsonData, null, 2));
+                    }
+                    
+                    if (foundTools) {
+                        resultsDiv.innerHTML = `
+                            <div class="result">
+                                <h3>✅ Success!</h3>
+                                <p>Found ${tools.length} tools:</p>
+                                <div class="code-block">${JSON.stringify(tools, null, 2)}</div>
+                            </div>
+                        `;
+                    } else {
+                        resultsDiv.innerHTML = `
+                            <div class="error">
+                                <h3>❌ No tools found</h3>
+                                <p>Available data:</p>
+                                <div class="code-block">${JSON.stringify(jsonData, null, 2)}</div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Failed to parse SSE response</h3>
+                            <p>No valid JSON data found in SSE response</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
