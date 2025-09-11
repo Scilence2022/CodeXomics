@@ -608,6 +608,111 @@
                 min-width: auto;
             }
         }
+        /* Deep Research Progress Styles */
+        .deep-research-progress {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #007bff;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .progress-header h4 {
+            margin: 0;
+            color: #007bff;
+            font-size: 16px;
+        }
+        
+        .progress-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .progress-bar {
+            flex: 1;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+        
+        .progress-text {
+            font-weight: 500;
+            color: #495057;
+            min-width: 200px;
+        }
+        
+        .progress-details {
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+        }
+        
+        .progress-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .log-entry {
+            display: flex;
+            gap: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-time {
+            font-family: monospace;
+            font-size: 12px;
+            color: #6c757d;
+            min-width: 80px;
+        }
+        
+        .log-message {
+            flex: 1;
+            font-size: 13px;
+        }
+        
+        .log-entry.info .log-message {
+            color: #495057;
+        }
+        
+        .log-entry.success .log-message {
+            color: #28a745;
+            font-weight: 500;
+        }
+        
+        .log-entry.error .log-message {
+            color: #dc3545;
+            font-weight: 500;
+        }
+        
+        .log-entry.warning .log-message {
+            color: #ffc107;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -2724,6 +2829,272 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
         }
         
         /**
+         * Create detailed progress display for Deep Research
+         */
+        function createDetailedProgressDisplay() {
+            // Remove existing progress display if any
+            const existingProgress = document.getElementById('deepResearchProgress');
+            if (existingProgress) {
+                existingProgress.remove();
+            }
+            
+            // Create progress container
+            const progressContainer = document.createElement('div');
+            progressContainer.id = 'deepResearchProgress';
+            progressContainer.className = 'deep-research-progress';
+            progressContainer.innerHTML = `
+                <div class="progress-header">
+                    <h4><i class="fas fa-search"></i> Deep Research Progress</h4>
+                    <button id="toggleProgressDetails" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-chevron-down"></i> Show Details
+                    </button>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <span class="progress-text">Initializing...</span>
+                </div>
+                <div id="progressDetails" class="progress-details" style="display: none;">
+                    <div class="progress-log">
+                        <div class="log-entry">
+                            <span class="log-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="log-message">Initializing Deep Research...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Insert after deep research section
+            const deepResearchSection = document.getElementById('deepResearchSection');
+            deepResearchSection.appendChild(progressContainer);
+            
+            // Add toggle functionality
+            document.getElementById('toggleProgressDetails').addEventListener('click', function() {
+                const details = document.getElementById('progressDetails');
+                const icon = this.querySelector('i');
+                if (details.style.display === 'none') {
+                    details.style.display = 'block';
+                    icon.className = 'fas fa-chevron-up';
+                    this.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Details';
+                } else {
+                    details.style.display = 'none';
+                    icon.className = 'fas fa-chevron-down';
+                    this.innerHTML = '<i class="fas fa-chevron-down"></i> Show Details';
+                }
+            });
+        }
+        
+        /**
+         * Update progress display
+         */
+        function updateProgressDisplay(message, percentage, type = 'info') {
+            const progressText = document.querySelector('.progress-text');
+            const progressFill = document.querySelector('.progress-fill');
+            const logContainer = document.querySelector('.progress-log');
+            
+            if (progressText) {
+                progressText.textContent = message;
+            }
+            
+            if (progressFill) {
+                progressFill.style.width = `${percentage}%`;
+            }
+            
+            if (logContainer) {
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${type}`;
+                logEntry.innerHTML = `
+                    <span class="log-time">${new Date().toLocaleTimeString()}</span>
+                    <span class="log-message">${message}</span>
+                `;
+                logContainer.appendChild(logEntry);
+                
+                // Auto-scroll to bottom
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        }
+        
+        /**
+         * Perform Deep Research with detailed progress tracking
+         */
+        async function performDeepResearchWithProgress(parameters) {
+            try {
+                updateProgressDisplay('Connecting to Deep Research MCP Server...', 5);
+                
+                // Step 1: Try main deep-research tool
+                updateProgressDisplay('Step 1: Attempting main deep-research tool...', 10);
+                const mainResult = await callMCPToolWithProgress('deep-research', {
+                    query: parameters.query,
+                    language: parameters.language || 'English',
+                    maxResult: parameters.maxResults || 5,
+                    enableCitationImage: parameters.enableImages !== false,
+                    enableReferences: parameters.enableReferences !== false
+                }, 10, 40);
+                
+                if (mainResult.success) {
+                    updateProgressDisplay('Main deep-research tool succeeded!', 40);
+                    return processMainResearchResult(mainResult, parameters);
+                }
+                
+                // Step 2: Try 4-step process
+                updateProgressDisplay('Main tool failed, trying 4-step process...', 40);
+                
+                // Step 2.1: Generate research plan
+                updateProgressDisplay('Step 2.1: Generating research plan...', 45);
+                const planResult = await callMCPToolWithProgress('write-research-plan', {
+                    query: parameters.query,
+                    language: parameters.language || 'English'
+                }, 45, 60);
+                
+                if (!planResult.success) {
+                    throw new Error(`Research plan generation failed: ${planResult.error}`);
+                }
+                
+                updateProgressDisplay('Research plan generated successfully', 60);
+                const researchPlan = planResult.result;
+                
+                // Step 2.2: Generate search queries
+                updateProgressDisplay('Step 2.2: Generating search queries...', 65);
+                const queryResult = await callMCPToolWithProgress('generate-SERP-query', {
+                    plan: researchPlan,
+                    language: parameters.language || 'English'
+                }, 65, 75);
+                
+                if (!queryResult.success) {
+                    throw new Error(`Search query generation failed: ${queryResult.error}`);
+                }
+                
+                updateProgressDisplay('Search queries generated successfully', 75);
+                const searchQueries = queryResult.result;
+                
+                // Step 2.3: Execute search tasks
+                updateProgressDisplay('Step 2.3: Executing search tasks...', 80);
+                const searchResult = await callMCPToolWithProgress('search-task', {
+                    tasks: searchQueries,
+                    language: parameters.language || 'English',
+                    maxResult: parameters.maxResults || 5,
+                    enableReferences: parameters.enableReferences !== false
+                }, 80, 90);
+                
+                if (!searchResult.success) {
+                    throw new Error(`Search task execution failed: ${searchResult.error}`);
+                }
+                
+                updateProgressDisplay('Search tasks completed successfully', 90);
+                const searchData = searchResult.result;
+                
+                // Step 2.4: Generate final report
+                updateProgressDisplay('Step 2.4: Generating final report...', 95);
+                const reportResult = await callMCPToolWithProgress('write-final-report', {
+                    plan: researchPlan,
+                    tasks: searchData,
+                    language: parameters.language || 'English',
+                    maxResult: parameters.maxResults || 5,
+                    enableCitationImage: parameters.enableImages !== false,
+                    enableReferences: parameters.enableReferences !== false
+                }, 95, 100);
+                
+                if (!reportResult.success) {
+                    throw new Error(`Final report generation failed: ${reportResult.error}`);
+                }
+                
+                updateProgressDisplay('Final report generated successfully', 100);
+                return processFinalReportResult(reportResult, parameters, researchPlan, searchQueries, searchData);
+                
+            } catch (error) {
+                updateProgressDisplay(`Error: ${error.message}`, 0, 'error');
+                throw error;
+            }
+        }
+        
+        /**
+         * Call MCP tool with progress tracking
+         */
+        async function callMCPToolWithProgress(toolName, parameters, startProgress, endProgress) {
+            updateProgressDisplay(`Calling MCP tool: ${toolName}...`, startProgress);
+            
+            const result = await callMCPTool(toolName, parameters);
+            
+            if (result.success) {
+                updateProgressDisplay(`MCP tool ${toolName} succeeded`, endProgress);
+            } else {
+                updateProgressDisplay(`MCP tool ${toolName} failed: ${result.error}`, startProgress, 'error');
+            }
+            
+            return result;
+        }
+        
+        /**
+         * Process main research result
+         */
+        function processMainResearchResult(mainResult, parameters) {
+            const processedResult = {
+                summary: mainResult.result.summary || 'Research completed successfully',
+                content: mainResult.result.content || mainResult.result.report || 'No detailed content available',
+                sources: extractSourcesFromReport(mainResult.result),
+                citations: extractCitationsFromReport(mainResult.result),
+                images: extractImagesFromReport(mainResult.result),
+                metadata: {
+                    language: parameters.language || 'English',
+                    maxResults: parameters.maxResults || 5,
+                    processedAt: Date.now(),
+                    method: 'main-deep-research'
+                }
+            };
+            
+            return {
+                success: true,
+                researchId: `research_${Date.now()}`,
+                query: parameters.query,
+                result: processedResult,
+                metadata: {
+                    executionTime: Date.now() - Date.now(),
+                    sources: processedResult.sources?.length || 0,
+                    citations: processedResult.citations?.length || 0,
+                    steps: ['main-deep-research']
+                }
+            };
+        }
+        
+        /**
+         * Process final report result
+         */
+        function processFinalReportResult(reportResult, parameters, researchPlan, searchQueries, searchData) {
+            const finalReport = reportResult.result;
+            
+            const processedResult = {
+                summary: finalReport.summary || 'Research completed successfully',
+                content: finalReport.content || finalReport.report || 'No detailed content available',
+                sources: extractSourcesFromReport(finalReport),
+                citations: extractCitationsFromReport(finalReport),
+                images: extractImagesFromReport(finalReport),
+                metadata: {
+                    language: parameters.language || 'English',
+                    maxResults: parameters.maxResults || 5,
+                    processedAt: Date.now(),
+                    researchPlan: researchPlan,
+                    searchQueries: searchQueries,
+                    searchData: searchData,
+                    method: '4-step-process'
+                }
+            };
+            
+            return {
+                success: true,
+                researchId: `research_${Date.now()}`,
+                query: parameters.query,
+                result: processedResult,
+                metadata: {
+                    executionTime: Date.now() - Date.now(),
+                    sources: processedResult.sources?.length || 0,
+                    citations: processedResult.citations?.length || 0,
+                    steps: ['plan', 'queries', 'search', 'report']
+                }
+            };
+        }
+        
+        /**
          * Perform Deep Research using Deep Research Agent
          */
         async function performDeepResearch() {
@@ -2765,28 +3136,14 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 
                 console.log('Deep Research parameters:', parameters);
                 
-                // Show progress updates
-                const progressUpdates = [
-                    { step: 1, message: 'Step 1: Generating research plan...', delay: 0 },
-                    { step: 2, message: 'Step 2: Creating search queries...', delay: 2000 },
-                    { step: 3, message: 'Step 3: Executing search tasks...', delay: 4000 },
-                    { step: 4, message: 'Step 4: Generating final report...', delay: 6000 }
-                ];
+                // Create detailed progress display
+                createDetailedProgressDisplay();
                 
-                // Start progress updates
-                const progressInterval = setInterval(() => {
-                    const nextUpdate = progressUpdates.shift();
-                    if (nextUpdate) {
-                        showStatus(nextUpdate.message, 'info');
-                        console.log(nextUpdate.message);
-                    }
-                }, 2000);
+                // Show initial progress
+                updateProgressDisplay('Initializing Deep Research...', 0);
                 
-                // Perform the research
-                const researchResult = await deepResearchAgent.performDeepResearch(parameters, {});
-                
-                // Clear progress updates
-                clearInterval(progressInterval);
+                // Perform the research with detailed progress tracking
+                const researchResult = await performDeepResearchWithProgress(parameters);
                 
                 if (researchResult.success) {
                     console.log('Deep Research completed successfully:', researchResult);
@@ -2796,6 +3153,7 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                     const sources = researchResult.metadata?.sources || 0;
                     const citations = researchResult.metadata?.citations || 0;
                     
+                    updateProgressDisplay(`Deep Research completed! Found ${sources} sources and ${citations} citations`, 100);
                     showStatus(`Deep Research completed! Found ${sources} sources and ${citations} citations`, 'success');
                     
                     // Populate the report text with research results
@@ -2807,7 +3165,8 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 
             } catch (error) {
                 console.error('Deep Research failed:', error);
-                showStatus('Deep Research failed: ' + error.message, 'error');
+                updateProgressDisplay(`Deep Research failed: ${error.message}`, 0, 'error');
+                showStatus(`Deep Research failed: ${error.message}`, 'error');
             } finally {
                 // Re-enable the button
                 const researchBtn = document.getElementById('deepResearchBtn');
@@ -2826,6 +3185,8 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
             const result = researchResult.result;
             const geneName = selectedGene.name || selectedGene.locusTag;
             
+            console.log('Processing research result for report:', result);
+            
             // Format the research result as a comprehensive report
             let reportText = `# Deep Research Report: ${geneName}\n\n`;
             reportText += `**Research Query:** ${researchResult.query}\n\n`;
@@ -2841,8 +3202,36 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
             reportText += `## Executive Summary\n\n`;
             reportText += `${result.summary || 'No summary available'}\n\n`;
             
+            // Handle different content formats from MCP Server
+            let mainContent = '';
+            if (result.content) {
+                mainContent = result.content;
+            } else if (result.finalReport) {
+                mainContent = result.finalReport;
+            } else if (result.report) {
+                mainContent = result.report;
+            } else if (result.text) {
+                mainContent = result.text;
+            }
+            
+            // If content is JSON string, try to parse it
+            if (typeof mainContent === 'string' && mainContent.startsWith('{')) {
+                try {
+                    const parsedContent = JSON.parse(mainContent);
+                    if (parsedContent.finalReport) {
+                        mainContent = parsedContent.finalReport;
+                    } else if (parsedContent.content) {
+                        mainContent = parsedContent.content;
+                    } else if (parsedContent.report) {
+                        mainContent = parsedContent.report;
+                    }
+                } catch (e) {
+                    console.log('Content is not JSON, using as-is');
+                }
+            }
+            
             reportText += `## Detailed Analysis\n\n`;
-            reportText += `${result.content || 'No detailed content available'}\n\n`;
+            reportText += `${mainContent || 'No detailed content available'}\n\n`;
             
             // Add research plan if available
             if (result.metadata?.researchPlan) {
