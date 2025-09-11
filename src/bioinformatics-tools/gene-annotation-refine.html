@@ -2284,77 +2284,19 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                     }
                 }
                 
-                // Try to create real Deep Research Agent with MCP Server access
-                console.log('🔍 Attempting to create real Deep Research Agent...');
-                try {
-                    deepResearchAgent = createRealDeepResearchAgent();
-                    multiAgentSystem = createMockMultiAgentSystem();
-                    console.log('✅ Real Deep Research Agent created with MCP Server access');
-                    return true;
-                } catch (mcpError) {
-                    console.log('⚠️ Real Deep Research Agent creation failed, falling back to mock:', mcpError.message);
-                }
-                
-                // Fallback: Create mock integration for testing
-                console.log('⚠️ Using mock Deep Research Agent for testing');
-                deepResearchAgent = createMockDeepResearchAgent();
-                multiAgentSystem = createMockMultiAgentSystem();
-                
+                // Create real Deep Research Agent with MCP Server access
+                console.log('🔍 Creating real Deep Research Agent with MCP Server access...');
+                deepResearchAgent = createRealDeepResearchAgent();
+                multiAgentSystem = null; // No mock system needed
+                console.log('✅ Real Deep Research Agent created with MCP Server access');
                 return true;
                 
             } catch (error) {
                 console.error('❌ Failed to initialize Deep Research Agent integration:', error);
-                return false;
+                throw new Error(`Deep Research Agent initialization failed: ${error.message}`);
             }
         }
         
-        /**
-         * Create mock Deep Research Agent for testing
-         */
-        function createMockDeepResearchAgent() {
-            return {
-                name: 'DeepResearchAgent',
-                performDeepResearch: async (parameters) => {
-                    console.log('Mock Deep Research Agent performing research:', parameters);
-                    
-                    // Simulate research delay
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    
-                    // Generate mock research result
-                    const mockResult = {
-                        success: true,
-                        researchId: `research_${Date.now()}`,
-                        query: parameters.query,
-                        result: {
-                            summary: `Mock research summary for gene: ${parameters.query}`,
-                            content: `This is a mock research result generated for testing purposes. The query was: "${parameters.query}". This demonstrates the Deep Research Agent's ability to process research requests and return structured results. The gene appears to be involved in important biological processes based on the research findings.`,
-                            sources: [
-                                'https://example.com/research1',
-                                'https://example.com/research2',
-                                'https://example.com/research3'
-                            ],
-                            citations: [
-                                'Smith, J. (2024). Gene function analysis. Nature.',
-                                'Johnson, A. (2024). Molecular biology insights. Science.'
-                            ],
-                            images: [],
-                            metadata: {
-                                language: parameters.language || 'English',
-                                maxResults: parameters.maxResults || 5,
-                                processedAt: Date.now()
-                            }
-                        },
-                        metadata: {
-                            executionTime: 2000,
-                            sources: 3,
-                            citations: 2
-                        }
-                    };
-                    
-                    return mockResult;
-                }
-            };
-        }
         
         /**
          * Create real Deep Research Agent that calls MCP Server
@@ -2507,87 +2449,13 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                     } catch (error) {
                         console.error('Real Deep Research failed:', error);
                         
-                        // If MCP Server fails, fall back to enhanced mock
-                        console.log('MCP Server failed, falling back to enhanced mock...');
-                        return await createEnhancedMockResearch(parameters);
+                        // Report the error directly without fallback
+                        throw new Error(`Deep Research MCP Server failed: ${error.message}`);
                     }
                 }
             };
         }
         
-        /**
-         * Create enhanced mock research when MCP Server is not available
-         */
-        async function createEnhancedMockResearch(parameters) {
-            console.log('Creating enhanced mock research...');
-            
-            // Simulate realistic research delay
-            await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000));
-            
-            const geneName = parameters.query.match(/\b\w+\b/)?.[0] || 'gene';
-            
-            return {
-                success: true,
-                researchId: `research_${Date.now()}`,
-                query: parameters.query,
-                result: {
-                    summary: `Enhanced mock research summary for ${geneName}. This gene appears to be involved in important biological processes based on simulated research findings.`,
-                    content: `# Enhanced Mock Research Report for ${geneName}
-
-## Overview
-This is an enhanced mock research result that simulates the output of a real Deep Research MCP Server. The gene ${geneName} appears to be involved in critical biological processes.
-
-## Function Analysis
-Based on simulated research findings, ${geneName} encodes a key enzyme involved in metabolic pathways. The protein demonstrates significant structural complexity with multiple functional domains.
-
-## Pathway Involvement
-- **Primary Pathway**: Metabolic pathway
-- **Secondary Pathways**: Regulatory networks
-- **Metabolic Network**: Central metabolism
-
-## Regulation
-- **Transcriptional Control**: Expression modulated by environmental conditions
-- **Post-translational**: Potential modification sites identified
-
-## Recent Research Findings
-Recent studies have revealed novel regulatory mechanisms and potential therapeutic applications.
-
-## Clinical Relevance
-Understanding this gene's function could lead to therapeutic interventions for related disorders.
-
-*Note: This is a simulated research result. In a real environment, this would be generated by the Deep Research MCP Server with actual web search results and citations.*`,
-                    sources: [
-                        'https://www.ncbi.nlm.nih.gov/gene/1234567',
-                        'https://www.uniprot.org/uniprot/P12345',
-                        'https://www.ebi.ac.uk/interpro/entry/IPR123456',
-                        'https://www.kegg.jp/entry/ec:2.7.2.4'
-                    ],
-                    citations: [
-                        'Smith, J. et al. (2024). "Gene function analysis." Nature.',
-                        'Johnson, A. et al. (2023). "Metabolic pathway insights." Science.',
-                        'Brown, C. et al. (2023). "Regulatory mechanisms." Cell.'
-                    ],
-                    images: [
-                        'https://example.com/images/gene-structure.png',
-                        'https://example.com/images/metabolic-pathway.png'
-                    ],
-                    metadata: {
-                        language: parameters.language || 'English',
-                        maxResults: parameters.maxResults || 5,
-                        processedAt: Date.now(),
-                        method: 'enhanced-mock',
-                        note: 'MCP Server unavailable - using enhanced mock data'
-                    }
-                },
-                metadata: {
-                    executionTime: 5000,
-                    sources: 4,
-                    citations: 3,
-                    images: 2,
-                    steps: ['enhanced-mock']
-                }
-            };
-        }
         
         /**
          * Call MCP Server tool
@@ -2634,10 +2502,6 @@ Understanding this gene's function could lead to therapeutic interventions for r
                 if (!mcpServerManager) {
                     console.log('🔄 MCP Server Manager not found, trying direct API call...');
                     return await callMCPToolDirect(toolName, parameters);
-                }
-                
-                if (!mcpServerManager) {
-                    throw new Error('MCP Server Manager not available in any scope');
                 }
                 
                 // Find Deep Research server
@@ -2727,11 +2591,16 @@ Understanding this gene's function could lead to therapeutic interventions for r
                         }
                     }
                     
-                    if (jsonData && jsonData.result) {
-                        result = jsonData.result;
-                    } else {
-                        throw new Error('Failed to parse SSE response');
+                if (jsonData && jsonData.result) {
+                    result = jsonData.result;
+                    
+                    // Check if the result contains an error
+                    if (result.isError) {
+                        throw new Error(`MCP Server error: ${result.content?.[0]?.text || 'Unknown error'}`);
                     }
+                } else {
+                    throw new Error('Failed to parse SSE response');
+                }
                 } else {
                     // Parse JSON response
                     result = JSON.parse(responseText);
@@ -2811,16 +2680,6 @@ Understanding this gene's function could lead to therapeutic interventions for r
             return [...new Set(images)];
         }
         
-        /**
-         * Create mock Multi-Agent System for testing
-         */
-        function createMockMultiAgentSystem() {
-            return {
-                agents: new Map([
-                    ['DeepResearchAgent', createMockDeepResearchAgent()]
-                ])
-            };
-        }
         
         /**
          * Handle research method selection change
