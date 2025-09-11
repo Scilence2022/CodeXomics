@@ -198,6 +198,8 @@ class MCPServerManager {
                 await this.connectToWebSocketServer(serverId, server);
             } else if (transportType === 'streamable-http' || transportType === 'http' || transportType === 'https') {
                 await this.connectToHttpServer(serverId, server);
+            } else if (transportType === 'sse' || transportType === 'server-sent-events') {
+                await this.connectToSSEServer(serverId, server);
             } else {
                 // Default to WebSocket for unknown protocols
                 console.warn(`Unknown transport type '${transportType}', defaulting to WebSocket`);
@@ -267,6 +269,46 @@ class MCPServerManager {
         };
     }
 
+    // Connect to SSE-based MCP server
+    async connectToSSEServer(serverId, server) {
+        console.log(`Connecting to SSE MCP server: ${server.name} (${server.url})`);
+        
+        try {
+            // For SSE servers, we need to establish an EventSource connection
+            // But since we're in a browser environment, we'll use a different approach
+            console.log(`📡 SSE MCP server detected - using HTTP fallback for tool discovery`);
+            
+            // Test the connection with a simple request
+            const response = await fetch(server.url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'text/event-stream, application/json',
+                    ...(server.headers || {})
+                },
+                mode: 'cors'
+            });
+            
+            if (response.ok || response.status === 404 || response.status === 405) {
+                console.log(`SSE MCP server is reachable: ${server.name} (${response.status})`);
+                
+                // Store the server as "connected" for SSE-based servers
+                this.connections.set(serverId, { type: 'sse', url: server.url, headers: server.headers });
+                this.activeServers.add(serverId);
+                this.emit('serverConnected', { serverId, server });
+                
+                // Try to discover tools from the SSE server
+                await this.requestSSEServerTools(serverId, server);
+                
+            } else {
+                throw new Error(`SSE server returned ${response.status} ${response.statusText}`);
+            }
+            
+        } catch (error) {
+            console.error(`Failed to connect to SSE server ${serverId}:`, error);
+            throw new Error(`SSE connection failed: ${error.message}`);
+        }
+    }
+
     // Connect to HTTP-based MCP server
     async connectToHttpServer(serverId, server) {
         console.log(`Connecting to HTTP MCP server: ${server.name} (${server.url})`);
@@ -324,6 +366,84 @@ class MCPServerManager {
         }
     }
     
+    // Request tools from SSE-based MCP server
+    async requestSSEServerTools(serverId, server) {
+        console.log(`🔍 Requesting tools from SSE server ${serverId}`);
+        
+        try {
+            // For SSE servers, we'll try to get tools through HTTP endpoints
+            // since SSE is primarily for real-time communication
+            const toolEndpoints = [
+                '/tools',
+                '/api/tools',
+                '/mcp/tools',
+                '/api/mcp/tools',
+                '/tools/list',
+                '/api/tools/list'
+            ];
+            
+            let tools = [];
+            let foundTools = false;
+            
+            for (const endpoint of toolEndpoints) {
+                try {
+                    const toolUrl = server.url.endsWith('/') ? 
+                        `${server.url}${endpoint.substring(1)}` : 
+                        `${server.url}${endpoint}`;
+                    
+                    console.log(`🔍 Trying SSE tool endpoint: ${toolUrl}`);
+                    
+                    const response = await fetch(toolUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json, text/event-stream',
+                            ...(server.headers || {})
+                        },
+                        mode: 'cors'
+                    });
+                    
+                    if (response.ok) {
+                        const responseText = await response.text();
+                        console.log(`📋 SSE tool endpoint response:`, responseText.substring(0, 200) + '...');
+                        
+                        // Try to parse as JSON
+                        try {
+                            const data = JSON.parse(responseText);
+                            if (data.tools && Array.isArray(data.tools)) {
+                                tools = data.tools;
+                                foundTools = true;
+                                break;
+                            } else if (Array.isArray(data)) {
+                                tools = data;
+                                foundTools = true;
+                                break;
+                            }
+                        } catch (jsonError) {
+                            console.log(`⚠️ SSE endpoint ${endpoint} response is not JSON`);
+                        }
+                    }
+                } catch (endpointError) {
+                    console.log(`⚠️ SSE endpoint ${endpoint} failed:`, endpointError.message);
+                    continue;
+                }
+            }
+            
+            // Store the discovered tools
+            this.serverTools.set(serverId, tools);
+            
+            if (tools.length > 0) {
+                console.log(`✅ Discovered ${tools.length} tools from SSE server ${serverId}:`, tools.map(t => t.name || t.tool_name || 'unnamed'));
+            } else {
+                console.log(`⚠️ No tools discovered from SSE server ${serverId} - server may not implement tool discovery via HTTP endpoints`);
+                console.log(`📡 SSE servers typically use real-time communication for tool discovery`);
+            }
+            
+        } catch (error) {
+            console.error(`❌ Failed to discover tools from SSE server ${serverId}:`, error);
+            this.serverTools.set(serverId, []);
+        }
+    }
+
     // Request tools from HTTP-based MCP server
     async requestHttpServerTools(serverId, server) {
         console.log(`🔍 Requesting tools from HTTP server ${serverId}`);
@@ -351,17 +471,44 @@ class MCPServerManager {
                 });
                 
                 if (mcpResponse.ok) {
-                    const mcpData = await mcpResponse.json();
-                    console.log(`📋 MCP JSON-RPC response:`, mcpData);
+                    const responseText = await mcpResponse.text();
+                    console.log(`📋 Raw response:`, responseText.substring(0, 200) + '...');
                     
-                    if (mcpData.result && mcpData.result.tools) {
-                        tools = mcpData.result.tools;
+                    // Check if response is SSE format
+                    if (responseText.startsWith('event:') || responseText.includes('data:')) {
+                        console.log(`📋 Server uses SSE format, not JSON-RPC`);
+                        console.log(`⚠️ SSE-based MCP servers need different handling - tools discovery not supported yet`);
+                        // For now, we'll mark as connected but with no tools
+                        tools = [];
                         foundTools = true;
-                        console.log(`📋 MCP JSON-RPC tools found:`, tools);
-                    } else if (mcpData.tools && Array.isArray(mcpData.tools)) {
-                        tools = mcpData.tools;
-                        foundTools = true;
-                        console.log(`📋 MCP JSON-RPC tools found (alternative format):`, tools);
+                    } else {
+                        // Try to parse as JSON
+                        try {
+                            const mcpData = JSON.parse(responseText);
+                            console.log(`📋 MCP JSON-RPC response:`, mcpData);
+                            console.log(`📋 Response type:`, typeof mcpData);
+                            console.log(`📋 Response keys:`, Object.keys(mcpData));
+                            
+                            if (mcpData.result && mcpData.result.tools) {
+                                tools = mcpData.result.tools;
+                                foundTools = true;
+                                console.log(`📋 MCP JSON-RPC tools found (result.tools):`, tools);
+                            } else if (mcpData.tools && Array.isArray(mcpData.tools)) {
+                                tools = mcpData.tools;
+                                foundTools = true;
+                                console.log(`📋 MCP JSON-RPC tools found (direct tools):`, tools);
+                            } else if (mcpData.result && Array.isArray(mcpData.result)) {
+                                tools = mcpData.result;
+                                foundTools = true;
+                                console.log(`📋 MCP JSON-RPC tools found (result array):`, tools);
+                            } else {
+                                console.log(`⚠️ MCP JSON-RPC response doesn't contain tools in expected format`);
+                                console.log(`📋 Available data:`, JSON.stringify(mcpData, null, 2));
+                            }
+                        } catch (jsonError) {
+                            console.log(`⚠️ Response is not valid JSON:`, jsonError.message);
+                            console.log(`📋 Raw response:`, responseText);
+                        }
                     }
                 } else {
                     console.log(`⚠️ MCP JSON-RPC request failed: ${mcpResponse.status} ${mcpResponse.statusText}`);
@@ -523,9 +670,9 @@ class MCPServerManager {
         const claudeWs = this.claudeMCPConnections.get(serverId);
         
         if (connection) {
-            if (connection.type === 'http') {
-                // For HTTP connections, just remove from active list
-                console.log(`Disconnecting from HTTP server: ${serverId}`);
+            if (connection.type === 'http' || connection.type === 'sse') {
+                // For HTTP/SSE connections, just remove from active list
+                console.log(`Disconnecting from ${connection.type.toUpperCase()} server: ${serverId}`);
             } else if (connection.close) {
                 // For WebSocket connections, close the connection
                 connection.close();
@@ -677,9 +824,90 @@ class MCPServerManager {
             return await this.executeWebSocketTool(serverId, toolName, parameters);
         } else if (transportType === 'streamable-http' || transportType === 'http' || transportType === 'https') {
             return await this.executeHttpTool(serverId, toolName, parameters);
+        } else if (transportType === 'sse' || transportType === 'server-sent-events') {
+            return await this.executeSSETool(serverId, toolName, parameters);
         } else {
             // Default to WebSocket for unknown protocols
             return await this.executeWebSocketTool(serverId, toolName, parameters);
+        }
+    }
+
+    // Execute tool on SSE-based MCP server
+    async executeSSETool(serverId, toolName, parameters) {
+        const connection = this.connections.get(serverId);
+        if (!connection || connection.type !== 'sse') {
+            throw new Error(`SSE server ${serverId} not connected`);
+        }
+
+        const server = this.servers.get(serverId);
+        
+        try {
+            console.log(`🔧 Executing tool ${toolName} on SSE server ${serverId}`);
+            
+            // For SSE servers, try different tool execution endpoints
+            const toolEndpoints = [
+                '/tools/call',
+                '/api/tools/call',
+                '/mcp/tools/call',
+                '/api/mcp/tools/call',
+                '/tools/execute',
+                '/api/tools/execute'
+            ];
+            
+            let response = null;
+            let foundEndpoint = false;
+            
+            for (const endpoint of toolEndpoints) {
+                try {
+                    const toolUrl = server.url.endsWith('/') ? 
+                        `${server.url}${endpoint.substring(1)}` : 
+                        `${server.url}${endpoint}`;
+                    
+                    console.log(`🔧 Trying SSE tool execution endpoint: ${toolUrl}`);
+                    
+                    response = await fetch(toolUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json, text/event-stream',
+                            ...(server.headers || {})
+                        },
+                        body: JSON.stringify({
+                            tool: toolName,
+                            parameters: parameters
+                        }),
+                        mode: 'cors'
+                    });
+                    
+                    if (response.ok) {
+                        foundEndpoint = true;
+                        break;
+                    }
+                } catch (endpointError) {
+                    console.log(`⚠️ SSE tool endpoint ${endpoint} failed:`, endpointError.message);
+                    continue;
+                }
+            }
+            
+            if (!foundEndpoint) {
+                throw new Error(`No working tool execution endpoint found for SSE server ${serverId}`);
+            }
+            
+            const responseText = await response.text();
+            console.log(`✅ Tool execution result from SSE server ${serverId}:`, responseText.substring(0, 200) + '...');
+            
+            // Try to parse as JSON
+            try {
+                const result = JSON.parse(responseText);
+                return result.result || result.data || result.response || result;
+            } catch (jsonError) {
+                // If not JSON, return the raw response
+                return { result: responseText, type: 'text' };
+            }
+            
+        } catch (error) {
+            console.error(`❌ Failed to execute tool ${toolName} on SSE server ${serverId}:`, error);
+            throw new Error(`SSE tool execution failed: ${error.message}`);
         }
     }
 
