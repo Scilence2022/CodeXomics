@@ -1603,7 +1603,7 @@ class GenomeBrowser {
         
         // Validate transportType if present
         if (server.transportType !== undefined) {
-            const validTransportTypes = ['websocket', 'streamable-http', 'http', 'https'];
+            const validTransportTypes = ['websocket', 'streamable-http', 'http', 'https', 'sse', 'server-sent-events'];
             if (!validTransportTypes.includes(server.transportType)) {
                 return { valid: false, error: `Invalid transportType. Must be one of: ${validTransportTypes.join(', ')}` };
             }
