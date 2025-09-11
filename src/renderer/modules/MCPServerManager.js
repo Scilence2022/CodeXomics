@@ -271,13 +271,6 @@ class MCPServerManager {
     async connectToHttpServer(serverId, server) {
         console.log(`Connecting to HTTP MCP server: ${server.name} (${server.url})`);
         
-        // For HTTP servers, we don't maintain a persistent connection
-        // Instead, we'll make HTTP requests when needed
-        // This is a placeholder implementation - in practice, you might want to:
-        // 1. Test the connection with a simple GET request
-        // 2. Store the server configuration for later use
-        // 3. Implement HTTP-based MCP protocol if needed
-        
         try {
             // Test the connection with a simple request
             const response = await fetch(server.url, {
@@ -299,9 +292,8 @@ class MCPServerManager {
                 this.activeServers.add(serverId);
                 this.emit('serverConnected', { serverId, server });
                 
-                // For HTTP servers, we might not have tools in the traditional sense
-                // But we can still register the server as available
-                this.serverTools.set(serverId, []);
+                // Try to discover tools from the HTTP server
+                await this.requestHttpServerTools(serverId, server);
                 
             } else {
                 throw new Error(`HTTP server returned ${response.status} ${response.statusText}`);
@@ -310,6 +302,117 @@ class MCPServerManager {
         } catch (error) {
             console.error(`Failed to connect to HTTP server ${serverId}:`, error);
             throw new Error(`HTTP connection failed: ${error.message}`);
+        }
+    }
+    
+    // Request tools from HTTP-based MCP server
+    async requestHttpServerTools(serverId, server) {
+        console.log(`🔍 Requesting tools from HTTP server ${serverId}`);
+        
+        try {
+            // Try different common MCP endpoints for tool discovery
+            const toolEndpoints = [
+                '/tools',
+                '/api/tools',
+                '/mcp/tools',
+                '/api/mcp/tools',
+                '/tools/list',
+                '/api/tools/list'
+            ];
+            
+            let tools = [];
+            let foundTools = false;
+            
+            for (const endpoint of toolEndpoints) {
+                try {
+                    const toolUrl = server.url.endsWith('/') ? 
+                        `${server.url}${endpoint.substring(1)}` : 
+                        `${server.url}${endpoint}`;
+                    
+                    console.log(`🔍 Trying tool endpoint: ${toolUrl}`);
+                    
+                    const response = await fetch(toolUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(server.headers || {})
+                        },
+                        mode: 'cors'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log(`📋 Tool endpoint response:`, data);
+                        
+                        // Handle different response formats
+                        if (data.tools && Array.isArray(data.tools)) {
+                            tools = data.tools;
+                            foundTools = true;
+                            break;
+                        } else if (Array.isArray(data)) {
+                            tools = data;
+                            foundTools = true;
+                            break;
+                        } else if (data.result && Array.isArray(data.result.tools)) {
+                            tools = data.result.tools;
+                            foundTools = true;
+                            break;
+                        }
+                    }
+                } catch (endpointError) {
+                    console.log(`⚠️ Endpoint ${endpoint} failed:`, endpointError.message);
+                    continue;
+                }
+            }
+            
+            if (!foundTools) {
+                // If no tools endpoint found, try a generic MCP JSON-RPC request
+                try {
+                    const mcpResponse = await fetch(server.url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(server.headers || {})
+                        },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'tools/list',
+                            id: this.generateRequestId()
+                        }),
+                        mode: 'cors'
+                    });
+                    
+                    if (mcpResponse.ok) {
+                        const mcpData = await mcpResponse.json();
+                        if (mcpData.result && mcpData.result.tools) {
+                            tools = mcpData.result.tools;
+                            foundTools = true;
+                            console.log(`📋 MCP JSON-RPC tools found:`, tools);
+                        }
+                    }
+                } catch (mcpError) {
+                    console.log(`⚠️ MCP JSON-RPC request failed:`, mcpError.message);
+                }
+            }
+            
+            // Store the discovered tools
+            this.serverTools.set(serverId, tools);
+            
+            if (tools.length > 0) {
+                console.log(`✅ Discovered ${tools.length} tools from HTTP server ${serverId}:`, tools.map(t => t.name || t.tool_name || 'unnamed'));
+            } else {
+                console.log(`⚠️ No tools discovered from HTTP server ${serverId} - server may not implement MCP tool discovery`);
+                // For servers that don't implement tool discovery, we'll still mark them as connected
+                // but with an empty tools list
+            }
+            
+        } catch (error) {
+            console.error(`❌ Failed to discover tools from HTTP server ${serverId}:`, error);
+            // Don't throw here - we still want to mark the server as connected
+            // even if tool discovery fails
+            this.serverTools.set(serverId, []);
         }
     }
 
@@ -519,10 +622,128 @@ class MCPServerManager {
             throw new Error(`Server ${serverId} not found`);
         }
 
-        if (server.protocol === 'claude-mcp') {
+        const transportType = server.protocol || server.transportType || 'websocket';
+        
+        if (transportType === 'claude-mcp') {
             return await this.executeClaudeMCPTool(serverId, toolName, parameters);
-        } else {
+        } else if (transportType === 'websocket') {
             return await this.executeWebSocketTool(serverId, toolName, parameters);
+        } else if (transportType === 'streamable-http' || transportType === 'http' || transportType === 'https') {
+            return await this.executeHttpTool(serverId, toolName, parameters);
+        } else {
+            // Default to WebSocket for unknown protocols
+            return await this.executeWebSocketTool(serverId, toolName, parameters);
+        }
+    }
+
+    // Execute tool on HTTP-based MCP server
+    async executeHttpTool(serverId, toolName, parameters) {
+        const connection = this.connections.get(serverId);
+        if (!connection || connection.type !== 'http') {
+            throw new Error(`HTTP server ${serverId} not connected`);
+        }
+
+        const server = this.servers.get(serverId);
+        
+        try {
+            console.log(`🔧 Executing tool ${toolName} on HTTP server ${serverId}`);
+            
+            // Try different common MCP tool execution endpoints
+            const toolEndpoints = [
+                '/tools/call',
+                '/api/tools/call',
+                '/mcp/tools/call',
+                '/api/mcp/tools/call',
+                '/tools/execute',
+                '/api/tools/execute'
+            ];
+            
+            let response = null;
+            let foundEndpoint = false;
+            
+            for (const endpoint of toolEndpoints) {
+                try {
+                    const toolUrl = server.url.endsWith('/') ? 
+                        `${server.url}${endpoint.substring(1)}` : 
+                        `${server.url}${endpoint}`;
+                    
+                    console.log(`🔧 Trying tool execution endpoint: ${toolUrl}`);
+                    
+                    response = await fetch(toolUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(server.headers || {})
+                        },
+                        body: JSON.stringify({
+                            tool: toolName,
+                            parameters: parameters
+                        }),
+                        mode: 'cors'
+                    });
+                    
+                    if (response.ok) {
+                        foundEndpoint = true;
+                        break;
+                    }
+                } catch (endpointError) {
+                    console.log(`⚠️ Tool endpoint ${endpoint} failed:`, endpointError.message);
+                    continue;
+                }
+            }
+            
+            if (!foundEndpoint) {
+                // If no specific tool endpoint found, try MCP JSON-RPC format
+                try {
+                    response = await fetch(server.url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(server.headers || {})
+                        },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'tools/call',
+                            params: {
+                                name: toolName,
+                                arguments: parameters
+                            },
+                            id: this.generateRequestId()
+                        }),
+                        mode: 'cors'
+                    });
+                    
+                    if (response.ok) {
+                        foundEndpoint = true;
+                    }
+                } catch (mcpError) {
+                    console.log(`⚠️ MCP JSON-RPC tool execution failed:`, mcpError.message);
+                }
+            }
+            
+            if (!foundEndpoint || !response.ok) {
+                throw new Error(`No working tool execution endpoint found for HTTP server ${serverId}`);
+            }
+            
+            const result = await response.json();
+            console.log(`✅ Tool execution result from HTTP server ${serverId}:`, result);
+            
+            // Handle different response formats
+            if (result.result) {
+                return result.result;
+            } else if (result.data) {
+                return result.data;
+            } else if (result.response) {
+                return result.response;
+            } else {
+                return result;
+            }
+            
+        } catch (error) {
+            console.error(`❌ Failed to execute tool ${toolName} on HTTP server ${serverId}:`, error);
+            throw new Error(`HTTP tool execution failed: ${error.message}`);
         }
     }
 
