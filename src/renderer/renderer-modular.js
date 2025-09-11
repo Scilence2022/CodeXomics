@@ -1163,6 +1163,31 @@ class GenomeBrowser {
             this.showAddServerModal();
         });
         
+        // JSON Import/Export buttons
+        document.getElementById('importJsonServersBtn')?.addEventListener('click', () => {
+            this.showJsonImportModal();
+        });
+        
+        document.getElementById('exportJsonServersBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleExportDropdown();
+        });
+        
+        // Export dropdown options
+        document.querySelectorAll('.export-option').forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const format = e.currentTarget.dataset.format;
+                this.exportJsonServers(format);
+                this.hideExportDropdown();
+            });
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            this.hideExportDropdown();
+        });
+        
         // Legacy connect/disconnect buttons
         document.getElementById('mcpConnectBtn')?.addEventListener('click', () => {
             if (this.chatManager) {
@@ -1191,6 +1216,29 @@ class GenomeBrowser {
             this.populateMCPToolsList();
         });
 
+        // JSON Import modal event listeners
+        const jsonImportModal = document.getElementById('jsonImportModal');
+        if (jsonImportModal) {
+            // Tab switching
+            document.getElementById('fileImportTab')?.addEventListener('click', () => {
+                this.switchJsonImportTab('file');
+            });
+            
+            document.getElementById('textImportTab')?.addEventListener('click', () => {
+                this.switchJsonImportTab('text');
+            });
+            
+            // File input change
+            document.getElementById('jsonFileInput')?.addEventListener('change', (e) => {
+                this.handleJsonFileSelect(e);
+            });
+            
+            // Process import button
+            document.getElementById('processImportBtn')?.addEventListener('click', () => {
+                this.processJsonImport();
+            });
+        }
+        
         // Add Server modal event listeners
         const addServerModal = document.getElementById('mcpServerEditModal');
         if (addServerModal) {
@@ -1306,6 +1354,630 @@ class GenomeBrowser {
         // If auto-connect is disabled and currently connected, disconnect
         if (!mcpSettings.autoConnect && this.chatManager && this.chatManager.isConnected) {
             this.chatManager.disconnectMCP();
+        }
+    }
+
+    // JSON Import/Export Methods
+    showJsonImportModal() {
+        const modal = document.getElementById('jsonImportModal');
+        if (!modal) return;
+
+        // Reset form
+        document.getElementById('jsonFileInput').value = '';
+        document.getElementById('jsonTextInput').value = '';
+        document.getElementById('overwriteExisting').checked = true;
+        document.getElementById('validateBeforeImport').checked = true;
+        
+        // Hide status and results
+        const statusDiv = document.getElementById('importStatus');
+        const resultsDiv = document.getElementById('importResults');
+        if (statusDiv) statusDiv.style.display = 'none';
+        if (resultsDiv) resultsDiv.style.display = 'none';
+        
+        // Reset to file tab
+        this.switchJsonImportTab('file');
+        
+        modal.classList.add('show');
+    }
+
+    switchJsonImportTab(tab) {
+        const fileTab = document.getElementById('fileImportTab');
+        const textTab = document.getElementById('textImportTab');
+        const fileContent = document.getElementById('fileImportContent');
+        const textContent = document.getElementById('textImportContent');
+
+        if (tab === 'file') {
+            fileTab?.classList.add('active');
+            textTab?.classList.remove('active');
+            fileContent?.classList.add('active');
+            textContent?.classList.remove('active');
+        } else {
+            fileTab?.classList.remove('active');
+            textTab?.classList.add('active');
+            fileContent?.classList.remove('active');
+            textContent?.classList.add('active');
+        }
+    }
+
+    handleJsonFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target.result;
+                const jsonData = JSON.parse(content);
+                
+                // Show preview
+                const previewDiv = document.getElementById('filePreview');
+                const previewContent = document.getElementById('filePreviewContent');
+                if (previewDiv && previewContent) {
+                    previewDiv.style.display = 'block';
+                    previewContent.textContent = JSON.stringify(jsonData, null, 2);
+                }
+            } catch (error) {
+                console.error('Error reading JSON file:', error);
+                this.showImportStatus('error', 'Invalid JSON file format');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    async processJsonImport() {
+        const fileInput = document.getElementById('jsonFileInput');
+        const textInput = document.getElementById('jsonTextInput');
+        const fileTab = document.getElementById('fileImportTab');
+        const isFileMode = fileTab?.classList.contains('active');
+        
+        let jsonData;
+        
+        try {
+            if (isFileMode) {
+                const file = fileInput.files[0];
+                if (!file) {
+                    this.showImportStatus('error', 'Please select a JSON file');
+                    return;
+                }
+                
+                const content = await this.readFileAsText(file);
+                jsonData = JSON.parse(content);
+            } else {
+                const text = textInput.value.trim();
+                if (!text) {
+                    this.showImportStatus('error', 'Please enter JSON configuration');
+                    return;
+                }
+                
+                jsonData = JSON.parse(text);
+            }
+            
+            // Validate JSON structure
+            const validationResult = this.validateJsonImport(jsonData);
+            if (!validationResult.valid) {
+                this.showImportStatus('error', `Validation failed: ${validationResult.error}`);
+                return;
+            }
+            
+            // Process import based on format
+            const importResult = await this.importJsonServers(jsonData, validationResult.format);
+            this.showImportResults(importResult);
+            
+        } catch (error) {
+            console.error('Error processing JSON import:', error);
+            this.showImportStatus('error', `Error processing JSON: ${error.message}`);
+        }
+    }
+
+    readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(e);
+            reader.readAsText(file);
+        });
+    }
+
+    validateJsonImport(jsonData) {
+        // Check if it's an object
+        if (typeof jsonData !== 'object' || jsonData === null) {
+            return { valid: false, error: 'JSON must be an object' };
+        }
+        
+        // Check for new format: mcpServers object
+        if (jsonData.mcpServers && typeof jsonData.mcpServers === 'object') {
+            const serverNames = Object.keys(jsonData.mcpServers);
+            if (serverNames.length === 0) {
+                return { valid: false, error: 'mcpServers object is empty' };
+            }
+            
+            // Validate each server in the object
+            for (let i = 0; i < serverNames.length; i++) {
+                const serverName = serverNames[i];
+                const server = jsonData.mcpServers[serverName];
+                const serverValidation = this.validateServerConfigV2(server, serverName, i);
+                if (!serverValidation.valid) {
+                    return { valid: false, error: `Server "${serverName}": ${serverValidation.error}` };
+                }
+            }
+            
+            return { valid: true, format: 'mcpServers' };
+        }
+        
+        // Check for legacy format: servers array
+        if (Array.isArray(jsonData.servers)) {
+            if (jsonData.servers.length === 0) {
+                return { valid: false, error: 'servers array is empty' };
+            }
+            
+            // Validate each server
+            for (let i = 0; i < jsonData.servers.length; i++) {
+                const server = jsonData.servers[i];
+                const serverValidation = this.validateServerConfig(server, i);
+                if (!serverValidation.valid) {
+                    return { valid: false, error: `Server ${i + 1}: ${serverValidation.error}` };
+                }
+            }
+            
+            return { valid: true, format: 'servers' };
+        }
+        
+        // Check for servers object format (similar to mcpServers but with "servers" key)
+        if (jsonData.servers && typeof jsonData.servers === 'object' && !Array.isArray(jsonData.servers)) {
+            const serverNames = Object.keys(jsonData.servers);
+            if (serverNames.length === 0) {
+                return { valid: false, error: 'servers object is empty' };
+            }
+            
+            // Validate each server in the object
+            for (let i = 0; i < serverNames.length; i++) {
+                const serverName = serverNames[i];
+                const server = jsonData.servers[serverName];
+                const serverValidation = this.validateServerConfigV2(server, serverName, i);
+                if (!serverValidation.valid) {
+                    return { valid: false, error: `Server "${serverName}": ${serverValidation.error}` };
+                }
+            }
+            
+            return { valid: true, format: 'serversObject' };
+        }
+        
+        return { valid: false, error: 'JSON must contain "mcpServers" object, "servers" array, or "servers" object' };
+    }
+
+    validateServerConfig(server, index) {
+        if (typeof server !== 'object' || server === null) {
+            return { valid: false, error: 'Server must be an object' };
+        }
+        
+        // Required fields
+        const requiredFields = ['name', 'url'];
+        for (const field of requiredFields) {
+            if (!server[field] || typeof server[field] !== 'string') {
+                return { valid: false, error: `Missing or invalid required field: ${field}` };
+            }
+        }
+        
+        // Validate URL format
+        if (!this.isValidUrl(server.url)) {
+            return { valid: false, error: 'Invalid URL format' };
+        }
+        
+        // Validate optional fields
+        if (server.enabled !== undefined && typeof server.enabled !== 'boolean') {
+            return { valid: false, error: 'enabled must be a boolean' };
+        }
+        
+        if (server.autoConnect !== undefined && typeof server.autoConnect !== 'boolean') {
+            return { valid: false, error: 'autoConnect must be a boolean' };
+        }
+        
+        if (server.reconnectDelay !== undefined && (typeof server.reconnectDelay !== 'number' || server.reconnectDelay < 1 || server.reconnectDelay > 60)) {
+            return { valid: false, error: 'reconnectDelay must be a number between 1 and 60' };
+        }
+        
+        if (server.capabilities !== undefined && !Array.isArray(server.capabilities)) {
+            return { valid: false, error: 'capabilities must be an array' };
+        }
+        
+        return { valid: true };
+    }
+
+    validateServerConfigV2(server, serverName, index) {
+        if (typeof server !== 'object' || server === null) {
+            return { valid: false, error: 'Server must be an object' };
+        }
+        
+        // Required fields for new format
+        const requiredFields = ['url'];
+        for (const field of requiredFields) {
+            if (!server[field] || typeof server[field] !== 'string') {
+                return { valid: false, error: `Missing or invalid required field: ${field}` };
+            }
+        }
+        
+        // Validate URL format
+        if (!this.isValidUrl(server.url)) {
+            return { valid: false, error: 'Invalid URL format' };
+        }
+        
+        // Validate transportType if present
+        if (server.transportType !== undefined) {
+            const validTransportTypes = ['websocket', 'streamable-http', 'http', 'https'];
+            if (!validTransportTypes.includes(server.transportType)) {
+                return { valid: false, error: `Invalid transportType. Must be one of: ${validTransportTypes.join(', ')}` };
+            }
+        }
+        
+        // Validate timeout if present
+        if (server.timeout !== undefined && (typeof server.timeout !== 'number' || server.timeout < 1 || server.timeout > 3600)) {
+            return { valid: false, error: 'timeout must be a number between 1 and 3600 seconds' };
+        }
+        
+        // Validate headers if present
+        if (server.headers !== undefined && (typeof server.headers !== 'object' || server.headers === null || Array.isArray(server.headers))) {
+            return { valid: false, error: 'headers must be an object' };
+        }
+        
+        // Validate other optional fields
+        if (server.enabled !== undefined && typeof server.enabled !== 'boolean') {
+            return { valid: false, error: 'enabled must be a boolean' };
+        }
+        
+        if (server.autoConnect !== undefined && typeof server.autoConnect !== 'boolean') {
+            return { valid: false, error: 'autoConnect must be a boolean' };
+        }
+        
+        if (server.reconnectDelay !== undefined && (typeof server.reconnectDelay !== 'number' || server.reconnectDelay < 1 || server.reconnectDelay > 60)) {
+            return { valid: false, error: 'reconnectDelay must be a number between 1 and 60' };
+        }
+        
+        if (server.capabilities !== undefined && !Array.isArray(server.capabilities)) {
+            return { valid: false, error: 'capabilities must be an array' };
+        }
+        
+        return { valid: true };
+    }
+
+    isValidUrl(url) {
+        try {
+            new URL(url);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    convertToWebSocketUrl(url) {
+        if (!url) return url;
+        
+        try {
+            const urlObj = new URL(url);
+            
+            // If it's already a WebSocket URL, return as is
+            if (urlObj.protocol === 'ws:' || urlObj.protocol === 'wss:') {
+                return url;
+            }
+            
+            // Convert HTTP/HTTPS to WebSocket
+            if (urlObj.protocol === 'http:') {
+                return `ws://${urlObj.host}${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
+            } else if (urlObj.protocol === 'https:') {
+                return `wss://${urlObj.host}${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
+            }
+            
+            // For other protocols, try to convert to WebSocket
+            // Common MCP server patterns
+            if (url.includes('/api/mcp')) {
+                // Convert http://localhost:3000/api/mcp to ws://localhost:3000/api/mcp
+                return url.replace(/^https?:\/\//, 'ws://');
+            }
+            
+            // Default: assume it should be WebSocket
+            return url.startsWith('ws') ? url : `ws://${url}`;
+            
+        } catch (error) {
+            console.warn('Failed to convert URL to WebSocket:', url, error);
+            // If conversion fails, try to make it a WebSocket URL
+            if (url.startsWith('http://')) {
+                return url.replace('http://', 'ws://');
+            } else if (url.startsWith('https://')) {
+                return url.replace('https://', 'wss://');
+            } else if (!url.startsWith('ws')) {
+                return `ws://${url}`;
+            }
+            return url;
+        }
+    }
+    
+    convertUrlBasedOnTransport(url, transportType) {
+        if (!url) return url;
+        
+        // If transport type is WebSocket, convert to WebSocket URL
+        if (transportType === 'websocket') {
+            return this.convertToWebSocketUrl(url);
+        }
+        
+        // For HTTP-based transports, ensure URL has correct protocol
+        if (transportType === 'streamable-http' || transportType === 'http') {
+            if (url.startsWith('ws://') || url.startsWith('wss://')) {
+                // Convert WebSocket URL to HTTP
+                if (url.startsWith('ws://')) {
+                    return url.replace('ws://', 'http://');
+                } else if (url.startsWith('wss://')) {
+                    return url.replace('wss://', 'https://');
+                }
+            } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                // Add http:// if no protocol specified
+                return `http://${url}`;
+            }
+            return url;
+        }
+        
+        if (transportType === 'https') {
+            if (url.startsWith('ws://') || url.startsWith('http://')) {
+                return url.replace(/^(ws|http):\/\//, 'https://');
+            } else if (!url.startsWith('https://')) {
+                return `https://${url}`;
+            }
+            return url;
+        }
+        
+        // For unknown transport types, return as is
+        return url;
+    }
+
+    async importJsonServers(jsonData, format = 'servers') {
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) {
+            return { success: false, error: 'MCP Server Manager not available' };
+        }
+        
+        const results = {
+            success: true,
+            imported: 0,
+            skipped: 0,
+            errors: 0,
+            details: []
+        };
+        
+        const overwriteExisting = document.getElementById('overwriteExisting').checked;
+        
+        let serversToImport = [];
+        
+        if (format === 'mcpServers') {
+            // Convert mcpServers object format to array
+            serversToImport = Object.entries(jsonData.mcpServers).map(([serverName, serverConfig]) => {
+                const transportType = serverConfig.transportType || 'websocket';
+                return {
+                    name: serverName,
+                    url: this.convertUrlBasedOnTransport(serverConfig.url, transportType),
+                    description: serverConfig.description || '',
+                    category: serverConfig.category || 'general',
+                    enabled: serverConfig.enabled !== false,
+                    autoConnect: serverConfig.autoConnect !== false,
+                    reconnectDelay: serverConfig.reconnectDelay || 5,
+                    capabilities: serverConfig.capabilities || [],
+                    protocol: transportType,
+                    headers: serverConfig.headers || {},
+                    timeout: serverConfig.timeout || 30
+                };
+            });
+        } else if (format === 'serversObject') {
+            // Convert servers object format to array
+            serversToImport = Object.entries(jsonData.servers).map(([serverName, serverConfig]) => {
+                const transportType = serverConfig.transportType || 'websocket';
+                return {
+                    name: serverName,
+                    url: this.convertUrlBasedOnTransport(serverConfig.url, transportType),
+                    description: serverConfig.description || '',
+                    category: serverConfig.category || 'general',
+                    enabled: serverConfig.enabled !== false,
+                    autoConnect: serverConfig.autoConnect !== false,
+                    reconnectDelay: serverConfig.reconnectDelay || 5,
+                    capabilities: serverConfig.capabilities || [],
+                    protocol: transportType,
+                    headers: serverConfig.headers || {},
+                    timeout: serverConfig.timeout || 30
+                };
+            });
+        } else {
+            // Use existing servers array format
+            serversToImport = jsonData.servers.map(server => ({
+                ...server,
+                url: this.convertUrlBasedOnTransport(server.url, server.protocol || 'websocket')
+            }));
+        }
+        
+        for (const serverConfig of serversToImport) {
+            try {
+                // Check if server with same name already exists
+                const existingServers = Array.from(mcpManager.servers.values());
+                const existingServer = existingServers.find(s => s.name === serverConfig.name);
+                
+                if (existingServer) {
+                    if (overwriteExisting) {
+                        // Remove existing server
+                        mcpManager.removeServer(existingServer.id);
+                        results.details.push({
+                            name: serverConfig.name,
+                            status: 'overwritten',
+                            message: 'Overwritten existing server'
+                        });
+                    } else {
+                        results.skipped++;
+                        results.details.push({
+                            name: serverConfig.name,
+                            status: 'skipped',
+                            message: 'Server with same name already exists'
+                        });
+                        continue;
+                    }
+                }
+                
+                // Add server
+                const serverId = mcpManager.addServer(serverConfig);
+                results.imported++;
+                
+                // Check if URL was converted
+                const originalUrl = jsonData.servers ? 
+                    (Array.isArray(jsonData.servers) ? 
+                        jsonData.servers.find(s => s.name === serverConfig.name)?.url :
+                        Object.values(jsonData.servers).find(s => s.name === serverConfig.name)?.url) :
+                    (jsonData.mcpServers ? 
+                        Object.values(jsonData.mcpServers).find(s => s.name === serverConfig.name)?.url : 
+                        null);
+                
+                const urlConverted = originalUrl && originalUrl !== serverConfig.url;
+                const message = urlConverted ? 
+                    `Successfully imported (URL converted: ${originalUrl} → ${serverConfig.url})` : 
+                    'Successfully imported';
+                
+                results.details.push({
+                    name: serverConfig.name,
+                    status: 'imported',
+                    message: message,
+                    serverId: serverId
+                });
+                
+            } catch (error) {
+                results.errors++;
+                results.success = false;
+                results.details.push({
+                    name: serverConfig.name || 'Unknown',
+                    status: 'error',
+                    message: error.message
+                });
+            }
+        }
+        
+        // Refresh the UI
+        this.populateMCPServersList();
+        
+        return results;
+    }
+
+    showImportStatus(type, message) {
+        const statusDiv = document.getElementById('importStatus');
+        const messageDiv = document.getElementById('importStatusMessage');
+        const resultsDiv = document.getElementById('importResults');
+        
+        if (statusDiv && messageDiv) {
+            statusDiv.className = `import-status ${type}`;
+            statusDiv.style.display = 'block';
+            messageDiv.textContent = message;
+        }
+        
+        if (resultsDiv) {
+            resultsDiv.style.display = 'none';
+        }
+    }
+
+    showImportResults(results) {
+        const statusDiv = document.getElementById('importStatus');
+        const messageDiv = document.getElementById('importStatusMessage');
+        const resultsDiv = document.getElementById('importResults');
+        const resultsContent = document.getElementById('importResultsContent');
+        
+        if (statusDiv && messageDiv) {
+            const statusType = results.success ? 'success' : 'warning';
+            const message = `Import completed: ${results.imported} imported, ${results.skipped} skipped, ${results.errors} errors`;
+            
+            statusDiv.className = `import-status ${statusType}`;
+            statusDiv.style.display = 'block';
+            messageDiv.textContent = message;
+        }
+        
+        if (resultsDiv && resultsContent) {
+            resultsDiv.style.display = 'block';
+            resultsContent.innerHTML = results.details.map(detail => {
+                const statusClass = `result-${detail.status}`;
+                return `<div class="result-item ${statusClass}">
+                    <strong>${detail.name}</strong>: ${detail.message}
+                </div>`;
+            }).join('');
+        }
+    }
+
+    exportJsonServers(format = 'mcpServers') {
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) {
+            alert('MCP Server Manager not available');
+            return;
+        }
+        
+        const servers = Array.from(mcpManager.servers.values());
+        let exportData;
+        
+        if (format === 'mcpServers') {
+            // New mcpServers object format
+            const mcpServers = {};
+            servers.forEach(server => {
+                mcpServers[server.name] = {
+                    url: server.url,
+                    transportType: server.protocol === 'websocket' ? 'websocket' : 
+                                  server.protocol === 'http' ? 'streamable-http' : 
+                                  server.protocol || 'websocket',
+                    timeout: server.timeout || 30,
+                    headers: server.headers || {},
+                    description: server.description || '',
+                    category: server.category || 'general',
+                    enabled: server.enabled,
+                    autoConnect: server.autoConnect,
+                    reconnectDelay: server.reconnectDelay,
+                    capabilities: server.capabilities || []
+                };
+            });
+            
+            exportData = {
+                mcpServers: mcpServers
+            };
+        } else {
+            // Legacy servers array format
+            exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                servers: servers.map(server => ({
+                    name: server.name,
+                    description: server.description,
+                    url: server.url,
+                    category: server.category,
+                    enabled: server.enabled,
+                    autoConnect: server.autoConnect,
+                    reconnectDelay: server.reconnectDelay,
+                    capabilities: server.capabilities,
+                    protocol: server.protocol,
+                    headers: server.headers
+                }))
+            };
+        }
+        
+        const jsonString = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const formatSuffix = format === 'mcpServers' ? 'mcpServers' : 'servers';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mcp-servers-export-${formatSuffix}-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    toggleExportDropdown() {
+        const dropdown = document.getElementById('exportDropdownMenu');
+        if (dropdown) {
+            const isVisible = dropdown.style.display !== 'none';
+            dropdown.style.display = isVisible ? 'none' : 'block';
+        }
+    }
+
+    hideExportDropdown() {
+        const dropdown = document.getElementById('exportDropdownMenu');
+        if (dropdown) {
+            dropdown.style.display = 'none';
         }
     }
 
@@ -1643,7 +2315,8 @@ class GenomeBrowser {
         const serverConfig = {
             name: document.getElementById('serverName').value.trim(),
             url: document.getElementById('serverUrl').value.trim(),
-            apiKey: document.getElementById('serverApiKey').value.trim()
+            apiKey: document.getElementById('serverApiKey').value.trim(),
+            transportType: document.getElementById('serverTransportType')?.value || 'websocket'
         };
 
         if (!serverConfig.url) {
@@ -1652,7 +2325,7 @@ class GenomeBrowser {
         }
 
         if (testStatus) {
-            testStatus.textContent = 'Testing connection...';
+            testStatus.textContent = `Testing ${serverConfig.transportType.toUpperCase()} connection...`;
             testStatus.className = 'test-status testing';
         }
 
@@ -1668,17 +2341,17 @@ class GenomeBrowser {
         mcpManager.testServerConnection(serverConfig)
             .then(result => {
                 if (testStatus) {
-                    testStatus.textContent = 'Connection successful!';
+                    testStatus.textContent = `${serverConfig.transportType.toUpperCase()} connection successful!`;
                     testStatus.className = 'test-status success';
                 }
-                this.updateStatus('Connection test successful');
+                this.updateStatus(`${serverConfig.transportType.toUpperCase()} connection test successful`);
             })
             .catch(error => {
                 if (testStatus) {
-                    testStatus.textContent = `Connection failed: ${error.message}`;
+                    testStatus.textContent = `${serverConfig.transportType.toUpperCase()} connection failed: ${error.message}`;
                     testStatus.className = 'test-status error';
                 }
-                this.updateStatus(`Connection test failed: ${error.message}`);
+                this.updateStatus(`${serverConfig.transportType.toUpperCase()} connection test failed: ${error.message}`);
             });
     }
 

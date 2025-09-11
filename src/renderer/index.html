@@ -1528,9 +1528,28 @@
                 <div class="mcp-servers-section">
                     <div class="section-header">
                         <h4><i class="fas fa-server"></i> MCP Servers</h4>
-                        <button id="addMcpServerBtn" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus"></i> Add Server
-                        </button>
+                        <div class="server-actions">
+                            <button id="addMcpServerBtn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Add Server
+                            </button>
+                            <button id="importJsonServersBtn" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-file-import"></i> Import JSON
+                            </button>
+                            <div class="export-dropdown">
+                                <button id="exportJsonServersBtn" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-file-export"></i> Export JSON
+                                    <i class="fas fa-chevron-down" style="margin-left: 5px;"></i>
+                                </button>
+                                <div class="export-dropdown-menu" id="exportDropdownMenu" style="display: none;">
+                                    <button class="export-option" data-format="mcpServers">
+                                        <i class="fas fa-server"></i> MCP Servers Format
+                                    </button>
+                                    <button class="export-option" data-format="servers">
+                                        <i class="fas fa-list"></i> Legacy Servers Format
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="servers-list" id="mcpServersList">
@@ -1739,6 +1758,128 @@
             </div>
             <div class="modal-footer">
                 <button id="saveServerBtn" class="btn btn-primary">Save Server</button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JSON Import Modal -->
+    <div id="jsonImportModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-import"></i> Import MCP Servers from JSON</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="import-tabs">
+                    <div class="tab-buttons">
+                        <button id="fileImportTab" class="tab-button active">
+                            <i class="fas fa-upload"></i> File Upload
+                        </button>
+                        <button id="textImportTab" class="tab-button">
+                            <i class="fas fa-edit"></i> Text Input
+                        </button>
+                    </div>
+                    
+                    <!-- File Upload Tab -->
+                    <div id="fileImportContent" class="tab-content active">
+                        <div class="form-group">
+                            <label for="jsonFileInput">Select JSON File:</label>
+                            <input type="file" id="jsonFileInput" accept=".json" class="input-full">
+                            <small class="help-text">Select a JSON file containing MCP server configurations.</small>
+                        </div>
+                        <div class="file-preview" id="filePreview" style="display: none;">
+                            <h4>File Preview:</h4>
+                            <pre id="filePreviewContent"></pre>
+                        </div>
+                    </div>
+                    
+                    <!-- Text Input Tab -->
+                    <div id="textImportContent" class="tab-content">
+                        <div class="form-group">
+                            <label for="jsonTextInput">JSON Configuration:</label>
+                            <textarea id="jsonTextInput" class="input-full" rows="15" 
+                                placeholder='Paste your JSON configuration here...
+
+Supported formats:
+
+1. MCP Servers Format:
+{
+  "mcpServers": {
+    "deep-research": {
+      "url": "http://localhost:3000/api/mcp",
+      "transportType": "streamable-http",
+      "timeout": 600,
+      "headers": {
+        "Authorization": "Bearer your-secure-password"
+      }
+    }
+  }
+}
+
+2. Servers Object Format:
+{
+  "servers": {
+    "deep-research": {
+      "url": "http://localhost:3000/api/mcp",
+      "transportType": "streamable-http",
+      "timeout": 600,
+      "headers": {
+        "Authorization": "Bearer your-secure-password"
+      }
+    }
+  }
+}
+
+3. Legacy Servers Array Format:
+{
+  "servers": [
+    {
+      "name": "My MCP Server",
+      "description": "Server description",
+      "url": "ws://localhost:3001",
+      "category": "genomics",
+      "enabled": true,
+      "autoConnect": false,
+      "capabilities": ["genome-analysis", "sequence-search"]
+    }
+  ]
+}'></textarea>
+                            <small class="help-text">Paste your JSON configuration directly into this text area.</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="import-options">
+                    <h4>Import Options:</h4>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="overwriteExisting" checked> 
+                            Overwrite existing servers with same name
+                        </label>
+                        <small class="help-text">If unchecked, duplicate server names will be skipped.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="validateBeforeImport" checked> 
+                            Validate configuration before importing
+                        </label>
+                        <small class="help-text">Check JSON format and required fields before importing.</small>
+                    </div>
+                </div>
+                
+                <div class="import-status" id="importStatus" style="display: none;">
+                    <div class="status-message" id="importStatusMessage"></div>
+                    <div class="import-results" id="importResults" style="display: none;">
+                        <h4>Import Results:</h4>
+                        <div id="importResultsContent"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="processImportBtn" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Import Servers
+                </button>
                 <button class="btn modal-close">Cancel</button>
             </div>
         </div>

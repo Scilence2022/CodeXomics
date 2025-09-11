@@ -48,56 +48,6 @@ class MCPServerManager {
                 capabilities: ['genome-navigation', 'sequence-analysis', 'annotation'],
                 isBuiltin: true,
                 protocol: 'websocket' // Legacy WebSocket protocol
-            }],
-            // Unified Claude MCP Server (disabled by default to prevent conflicts)
-            ['unified-claude-mcp', {
-                id: 'unified-claude-mcp',
-                name: 'Unified Claude MCP Server',
-                description: 'Unified Claude MCP server with direct RPC communication and integrated genomics tools',
-                url: 'ws://localhost:3003', // Fixed URL to prevent null errors
-                enabled: false, // Disabled by default
-                autoConnect: false, // No auto-connect to prevent multiple connections
-                reconnectDelay: 5,
-                category: 'genomics',
-                capabilities: ['genome-navigation', 'sequence-analysis', 'annotation', 'protein-structure', 'database-integration', 'mcp-protocol', 'direct-rpc'],
-                isBuiltin: true,
-                protocol: 'rpc',
-                mcpConfig: {
-                    stdio: false,
-                    serverPath: './src/mcp-server-claude-unified.js',
-                    communicationType: 'direct-rpc'
-                }
-            }],
-            // Claude MCP Server (disabled by default to prevent conflicts)
-            ['claude-mcp-genome', {
-                id: 'claude-mcp-genome',
-                name: 'Claude MCP Genome Server',
-                description: 'Claude MCP compliant genome analysis server',
-                url: 'ws://localhost:3003', // WebSocket URL for browser communication
-                enabled: false, // Disabled by default
-                autoConnect: false, // No auto-connect to prevent multiple connections
-                reconnectDelay: 5,
-                category: 'genomics',
-                capabilities: ['genome-navigation', 'sequence-analysis', 'annotation', 'protein-structure', 'database-integration'],
-                isBuiltin: true,
-                protocol: 'claude-mcp', // Claude MCP protocol
-                mcpConfig: {
-                    stdio: false, // Use WebSocket for browser integration
-                    serverPath: './src/mcp-server-claude.js'
-                }
-            }],
-            // Example local development server
-            ['dev-local', {
-                id: 'dev-local',
-                name: 'Local Development Tools',
-                url: 'ws://localhost:3003',
-                enabled: false,
-                autoConnect: false,
-                reconnectDelay: 5,
-                category: 'development',
-                capabilities: ['testing', 'debugging'],
-                isBuiltin: false,
-                protocol: 'websocket'
             }]
         ]);
 
@@ -113,12 +63,34 @@ class MCPServerManager {
             this.servers = new Map(Object.entries(savedServers));
         }
 
+        // Clean up duplicate/obsolete servers
+        this.cleanupObsoleteServers();
+        
         // Ensure default servers exist
         defaultServers.forEach((server, id) => {
             if (!this.servers.has(id)) {
                 this.servers.set(id, server);
-        }
+            }
         });
+    }
+
+    // Clean up obsolete/duplicate servers
+    cleanupObsoleteServers() {
+        const obsoleteServerIds = [
+            'unified-claude-mcp',
+            'claude-mcp-genome',
+            'dev-local'
+        ];
+        
+        obsoleteServerIds.forEach(serverId => {
+            if (this.servers.has(serverId)) {
+                console.log(`Removing obsolete server: ${serverId}`);
+                this.servers.delete(serverId);
+            }
+        });
+        
+        // Save the cleaned configuration
+        this.saveServerConfigurations();
     }
 
     // Save server configurations to storage
@@ -217,9 +189,18 @@ class MCPServerManager {
             console.log(`Connecting to MCP server: ${server.name} (${server.url})`);
             this.emit('serverConnecting', { serverId, server });
 
-            if (server.protocol === 'claude-mcp') {
+            // Determine connection method based on protocol/transport type
+            const transportType = server.protocol || server.transportType || 'websocket';
+            
+            if (transportType === 'claude-mcp') {
                 await this.connectToClaudeMCPServer(serverId, server);
+            } else if (transportType === 'websocket') {
+                await this.connectToWebSocketServer(serverId, server);
+            } else if (transportType === 'streamable-http' || transportType === 'http' || transportType === 'https') {
+                await this.connectToHttpServer(serverId, server);
             } else {
+                // Default to WebSocket for unknown protocols
+                console.warn(`Unknown transport type '${transportType}', defaulting to WebSocket`);
                 await this.connectToWebSocketServer(serverId, server);
             }
 
@@ -286,6 +267,52 @@ class MCPServerManager {
         };
     }
 
+    // Connect to HTTP-based MCP server
+    async connectToHttpServer(serverId, server) {
+        console.log(`Connecting to HTTP MCP server: ${server.name} (${server.url})`);
+        
+        // For HTTP servers, we don't maintain a persistent connection
+        // Instead, we'll make HTTP requests when needed
+        // This is a placeholder implementation - in practice, you might want to:
+        // 1. Test the connection with a simple GET request
+        // 2. Store the server configuration for later use
+        // 3. Implement HTTP-based MCP protocol if needed
+        
+        try {
+            // Test the connection with a simple request
+            const response = await fetch(server.url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...(server.headers || {})
+                },
+                mode: 'cors'
+            });
+            
+            if (response.ok || response.status === 404 || response.status === 405) {
+                // Server is responding (even if endpoint doesn't exist)
+                console.log(`HTTP MCP server is reachable: ${server.name}`);
+                
+                // Store the server as "connected" for HTTP-based servers
+                this.connections.set(serverId, { type: 'http', url: server.url, headers: server.headers });
+                this.activeServers.add(serverId);
+                this.emit('serverConnected', { serverId, server });
+                
+                // For HTTP servers, we might not have tools in the traditional sense
+                // But we can still register the server as available
+                this.serverTools.set(serverId, []);
+                
+            } else {
+                throw new Error(`HTTP server returned ${response.status} ${response.statusText}`);
+            }
+            
+        } catch (error) {
+            console.error(`Failed to connect to HTTP server ${serverId}:`, error);
+            throw new Error(`HTTP connection failed: ${error.message}`);
+        }
+    }
+
     // Connect to legacy WebSocket server
     async connectToWebSocketServer(serverId, server) {
             const ws = new WebSocket(server.url);
@@ -342,12 +369,18 @@ class MCPServerManager {
 
     // Disconnect from a server
     disconnectFromServer(serverId) {
-        const ws = this.connections.get(serverId);
+        const connection = this.connections.get(serverId);
         const claudeWs = this.claudeMCPConnections.get(serverId);
         
-        if (ws) {
-            ws.close();
-        this.connections.delete(serverId);
+        if (connection) {
+            if (connection.type === 'http') {
+                // For HTTP connections, just remove from active list
+                console.log(`Disconnecting from HTTP server: ${serverId}`);
+            } else if (connection.close) {
+                // For WebSocket connections, close the connection
+                connection.close();
+            }
+            this.connections.delete(serverId);
         }
         
         if (claudeWs) {
@@ -734,23 +767,99 @@ class MCPServerManager {
     // Test server connection
     async testServerConnection(serverConfig) {
         return new Promise((resolve, reject) => {
-            const testWs = new WebSocket(serverConfig.url);
+            // Validate URL first
+            if (!serverConfig.url || serverConfig.url === 'null') {
+                reject(new Error('Invalid server URL'));
+                return;
+            }
             
-            const timeout = setTimeout(() => {
-                testWs.close();
-                reject(new Error('Connection timeout'));
-            }, 5000);
+            // Determine transport type
+            const transportType = serverConfig.transportType || 'websocket';
             
-            testWs.onopen = () => {
-                clearTimeout(timeout);
-                testWs.close();
+            if (transportType === 'websocket') {
+                this.testWebSocketConnection(serverConfig, resolve, reject);
+            } else if (transportType === 'streamable-http' || transportType === 'http' || transportType === 'https') {
+                this.testHttpConnection(serverConfig, resolve, reject);
+            } else {
+                reject(new Error(`Unsupported transport type: ${transportType}`));
+            }
+        });
+    }
+    
+    // Test WebSocket connection
+    testWebSocketConnection(serverConfig, resolve, reject) {
+        const testWs = new WebSocket(serverConfig.url);
+        
+        const timeout = setTimeout(() => {
+            testWs.close();
+            reject(new Error('WebSocket connection timeout (5 seconds)'));
+        }, 5000);
+        
+        testWs.onopen = () => {
+            clearTimeout(timeout);
+            testWs.close();
+            resolve(true);
+        };
+        
+        testWs.onerror = (error) => {
+            clearTimeout(timeout);
+            // Provide more specific error messages
+            if (serverConfig.url.includes('localhost:3000')) {
+                reject(new Error('WebSocket connection failed: No MCP server running on localhost:3000. Please start the MCP server first.'));
+            } else if (serverConfig.url.includes('localhost:3003')) {
+                reject(new Error('WebSocket connection failed: No MCP server running on localhost:3003. Please start the Genome AI Studio MCP server first.'));
+            } else {
+                reject(new Error(`WebSocket connection failed: ${error.message || 'Connection refused'}`));
+            }
+        };
+        
+        testWs.onclose = (event) => {
+            clearTimeout(timeout);
+            if (event.code !== 1000) { // Not a normal closure
+                reject(new Error(`WebSocket connection closed unexpectedly (code: ${event.code})`));
+            }
+        };
+    }
+    
+    // Test HTTP/HTTPS connection
+    testHttpConnection(serverConfig, resolve, reject) {
+        const timeout = setTimeout(() => {
+            reject(new Error('HTTP connection timeout (5 seconds)'));
+        }, 5000);
+        
+        // Create a simple HTTP request to test the connection
+        const url = serverConfig.url;
+        const headers = serverConfig.headers || {};
+        
+        // Add default headers for MCP
+        const requestHeaders = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...headers
+        };
+        
+        // Use fetch for HTTP/HTTPS testing
+        fetch(url, {
+            method: 'GET',
+            headers: requestHeaders,
+            mode: 'cors'
+        })
+        .then(response => {
+            clearTimeout(timeout);
+            if (response.ok || response.status === 404 || response.status === 405) {
+                // Server is responding (even if endpoint doesn't exist)
                 resolve(true);
-            };
-            
-            testWs.onerror = (error) => {
-                clearTimeout(timeout);
-                reject(error);
-            };
+            } else {
+                reject(new Error(`HTTP connection failed: Server returned ${response.status} ${response.statusText}`));
+            }
+        })
+        .catch(error => {
+            clearTimeout(timeout);
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                reject(new Error(`HTTP connection failed: Cannot connect to ${url}. Please check if the server is running.`));
+            } else {
+                reject(new Error(`HTTP connection failed: ${error.message}`));
+            }
         });
     }
 

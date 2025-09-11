@@ -8108,7 +8108,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     refreshCurrentView() {
         // Refresh the current genome view to reflect changes (use full redraw for consistency with drag-end)
         console.log('refreshCurrentView called - using full redraw like drag-end');
-        const currentChr = document.getElementById('chromosomeSelect').value;
+        const currentChr = document.getElementById('chromosomeSelect')?.value;
         console.log('Current chromosome:', currentChr);
         
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
@@ -8116,6 +8116,11 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
         } else {
             console.warn('Cannot refresh view - missing chromosome or sequence data');
+            // Don't show error to user if no genome is loaded yet
+            if (!this.genomeBrowser.currentSequence) {
+                console.log('No genome data loaded yet, skipping refresh');
+                return;
+            }
         }
     }
 
