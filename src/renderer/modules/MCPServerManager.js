@@ -48,6 +48,24 @@ class MCPServerManager {
                 capabilities: ['genome-navigation', 'sequence-analysis', 'annotation'],
                 isBuiltin: true,
                 protocol: 'websocket' // Legacy WebSocket protocol
+            }],
+            ['deep-research', {
+                id: 'deep-research',
+                name: 'Deep Research',
+                description: 'Advanced research and analysis tools',
+                url: 'http://localhost:3000/api/mcp',
+                enabled: true,
+                autoConnect: false,
+                reconnectDelay: 5,
+                category: 'research',
+                capabilities: ['research', 'analysis', 'data-processing'],
+                isBuiltin: false,
+                protocol: 'streamable-http',
+                transportType: 'streamable-http',
+                timeout: 600,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             }]
         ]);
 
