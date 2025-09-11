@@ -38,6 +38,9 @@ class AgentBase {
         this.learningData = new Map();
         this.optimizationRules = new Map();
         
+        // Tool mapping for function execution
+        this.toolMapping = new Map();
+        
         console.log(`🤖 Agent ${name} initialized with ${capabilities.length} capabilities`);
     }
     
@@ -49,6 +52,16 @@ class AgentBase {
             this.isActive = true;
             this.setupEventHandlers();
             this.loadOptimizationRules();
+            
+            // Initialize tool mapping if method exists
+            if (typeof this.registerToolMapping === 'function') {
+                this.registerToolMapping();
+            }
+            
+            // Perform specific initialization if method exists
+            if (typeof this.performInitialization === 'function') {
+                await this.performInitialization();
+            }
             
             console.log(`✅ Agent ${this.name} initialized successfully`);
             this.emit('agent-initialized', { agent: this.name });
@@ -70,6 +83,22 @@ class AgentBase {
      * Check if agent can execute a function
      */
     canExecute(functionName, parameters) {
+        // Check if function is in tool mapping
+        if (this.toolMapping.has(functionName)) {
+            const resourceCheck = this.checkResourceAvailability(functionName, parameters);
+            if (!resourceCheck.available) {
+                return { canExecute: false, reason: `Insufficient resources: ${resourceCheck.reason}` };
+            }
+            
+            return { 
+                canExecute: true, 
+                capability: { functionName, type: 'tool_mapping' },
+                estimatedTime: 2000,
+                priority: 'normal'
+            };
+        }
+        
+        // Check capabilities
         const capability = this.capabilities.find(cap => 
             cap.functionName === functionName || 
             (cap.pattern && cap.pattern.test(functionName))
@@ -174,10 +203,21 @@ class AgentBase {
     }
     
     /**
-     * Perform the actual function execution (to be implemented by subclasses)
+     * Perform the actual function execution
      */
     async performExecution(functionName, parameters, context) {
-        throw new Error(`performExecution not implemented for agent ${this.name}`);
+        // Check if function is mapped to a tool
+        if (this.toolMapping.has(functionName)) {
+            const toolFunction = this.toolMapping.get(functionName);
+            return await toolFunction(parameters, context);
+        }
+        
+        // Fallback to subclass implementation
+        if (typeof this.executeFunction === 'function') {
+            return await this.executeFunction(functionName, parameters, context);
+        }
+        
+        throw new Error(`Function ${functionName} not implemented for agent ${this.name}`);
     }
     
     /**

@@ -73,6 +73,7 @@ class MultiAgentSystem {
             this.registerAgent('DataAgent', new DataAgent(this));
             this.registerAgent('ExternalAgent', new ExternalAgent(this));
             this.registerAgent('PluginAgent', new PluginAgent(this));
+            this.registerAgent('DeepResearchAgent', new DeepResearchAgent(this));
             
             // Coordination agents
             this.registerAgent('CoordinatorAgent', new CoordinatorAgent(this));
