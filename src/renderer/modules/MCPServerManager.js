@@ -273,7 +273,7 @@ class MCPServerManager {
         
         try {
             // Test the connection with a simple request
-            const response = await fetch(server.url, {
+            let response = await fetch(server.url, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -283,9 +283,28 @@ class MCPServerManager {
                 mode: 'cors'
             });
             
+            // If GET returns 405 (Method Not Allowed), try POST with MCP JSON-RPC
+            if (response.status === 405) {
+                console.log(`Server doesn't support GET, trying POST with MCP JSON-RPC`);
+                response = await fetch(server.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...(server.headers || {})
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'ping',
+                        id: this.generateRequestId()
+                    }),
+                    mode: 'cors'
+                });
+            }
+            
             if (response.ok || response.status === 404 || response.status === 405) {
                 // Server is responding (even if endpoint doesn't exist)
-                console.log(`HTTP MCP server is reachable: ${server.name}`);
+                console.log(`HTTP MCP server is reachable: ${server.name} (${response.status})`);
                 
                 // Store the server as "connected" for HTTP-based servers
                 this.connections.set(serverId, { type: 'http', url: server.url, headers: server.headers });
@@ -310,90 +329,118 @@ class MCPServerManager {
         console.log(`🔍 Requesting tools from HTTP server ${serverId}`);
         
         try {
-            // Try different common MCP endpoints for tool discovery
-            const toolEndpoints = [
-                '/tools',
-                '/api/tools',
-                '/mcp/tools',
-                '/api/mcp/tools',
-                '/tools/list',
-                '/api/tools/list'
-            ];
-            
             let tools = [];
             let foundTools = false;
             
-            for (const endpoint of toolEndpoints) {
-                try {
-                    const toolUrl = server.url.endsWith('/') ? 
-                        `${server.url}${endpoint.substring(1)}` : 
-                        `${server.url}${endpoint}`;
+            // First try MCP JSON-RPC request (most likely to work for MCP servers)
+            try {
+                console.log(`🔍 Trying MCP JSON-RPC tools/list on main endpoint`);
+                const mcpResponse = await fetch(server.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...(server.headers || {})
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'tools/list',
+                        id: this.generateRequestId()
+                    }),
+                    mode: 'cors'
+                });
+                
+                if (mcpResponse.ok) {
+                    const mcpData = await mcpResponse.json();
+                    console.log(`📋 MCP JSON-RPC response:`, mcpData);
                     
-                    console.log(`🔍 Trying tool endpoint: ${toolUrl}`);
-                    
-                    const response = await fetch(toolUrl, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            ...(server.headers || {})
-                        },
-                        mode: 'cors'
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        console.log(`📋 Tool endpoint response:`, data);
-                        
-                        // Handle different response formats
-                        if (data.tools && Array.isArray(data.tools)) {
-                            tools = data.tools;
-                            foundTools = true;
-                            break;
-                        } else if (Array.isArray(data)) {
-                            tools = data;
-                            foundTools = true;
-                            break;
-                        } else if (data.result && Array.isArray(data.result.tools)) {
-                            tools = data.result.tools;
-                            foundTools = true;
-                            break;
-                        }
+                    if (mcpData.result && mcpData.result.tools) {
+                        tools = mcpData.result.tools;
+                        foundTools = true;
+                        console.log(`📋 MCP JSON-RPC tools found:`, tools);
+                    } else if (mcpData.tools && Array.isArray(mcpData.tools)) {
+                        tools = mcpData.tools;
+                        foundTools = true;
+                        console.log(`📋 MCP JSON-RPC tools found (alternative format):`, tools);
                     }
-                } catch (endpointError) {
-                    console.log(`⚠️ Endpoint ${endpoint} failed:`, endpointError.message);
-                    continue;
+                } else {
+                    console.log(`⚠️ MCP JSON-RPC request failed: ${mcpResponse.status} ${mcpResponse.statusText}`);
                 }
+            } catch (mcpError) {
+                console.log(`⚠️ MCP JSON-RPC request failed:`, mcpError.message);
             }
             
+            // If MCP JSON-RPC didn't work, try different common MCP endpoints for tool discovery
             if (!foundTools) {
-                // If no tools endpoint found, try a generic MCP JSON-RPC request
-                try {
-                    const mcpResponse = await fetch(server.url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            ...(server.headers || {})
-                        },
-                        body: JSON.stringify({
-                            jsonrpc: '2.0',
-                            method: 'tools/list',
-                            id: this.generateRequestId()
-                        }),
-                        mode: 'cors'
-                    });
-                    
-                    if (mcpResponse.ok) {
-                        const mcpData = await mcpResponse.json();
-                        if (mcpData.result && mcpData.result.tools) {
-                            tools = mcpData.result.tools;
-                            foundTools = true;
-                            console.log(`📋 MCP JSON-RPC tools found:`, tools);
+                const toolEndpoints = [
+                    '/tools',
+                    '/api/tools',
+                    '/mcp/tools',
+                    '/api/mcp/tools',
+                    '/tools/list',
+                    '/api/tools/list'
+                ];
+                
+                for (const endpoint of toolEndpoints) {
+                    try {
+                        const toolUrl = server.url.endsWith('/') ? 
+                            `${server.url}${endpoint.substring(1)}` : 
+                            `${server.url}${endpoint}`;
+                        
+                        console.log(`🔍 Trying tool endpoint: ${toolUrl}`);
+                        
+                        // Try POST first (since server seems to prefer POST)
+                        let response = await fetch(toolUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                ...(server.headers || {})
+                            },
+                            body: JSON.stringify({
+                                jsonrpc: '2.0',
+                                method: 'tools/list',
+                                id: this.generateRequestId()
+                            }),
+                            mode: 'cors'
+                        });
+                        
+                        // If POST fails, try GET
+                        if (!response.ok && response.status !== 405) {
+                            response = await fetch(toolUrl, {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    ...(server.headers || {})
+                                },
+                                mode: 'cors'
+                            });
                         }
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log(`📋 Tool endpoint response:`, data);
+                            
+                            // Handle different response formats
+                            if (data.tools && Array.isArray(data.tools)) {
+                                tools = data.tools;
+                                foundTools = true;
+                                break;
+                            } else if (Array.isArray(data)) {
+                                tools = data;
+                                foundTools = true;
+                                break;
+                            } else if (data.result && Array.isArray(data.result.tools)) {
+                                tools = data.result.tools;
+                                foundTools = true;
+                                break;
+                            }
+                        }
+                    } catch (endpointError) {
+                        console.log(`⚠️ Endpoint ${endpoint} failed:`, endpointError.message);
+                        continue;
                     }
-                } catch (mcpError) {
-                    console.log(`⚠️ MCP JSON-RPC request failed:`, mcpError.message);
                 }
             }
             
