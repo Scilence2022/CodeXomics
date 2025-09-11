@@ -121,6 +121,14 @@ class MCPServerManager {
             mcpConfig: serverConfig.mcpConfig || null,
             headers: serverConfig.headers || {}
         };
+        
+        console.log(`🔧 Adding server ${serverId}:`, {
+            name: fullConfig.name,
+            url: fullConfig.url,
+            protocol: fullConfig.protocol,
+            originalProtocol: serverConfig.protocol,
+            originalTransportType: serverConfig.transportType
+        });
 
         this.servers.set(serverId, fullConfig);
         this.saveServerConfigurations();
@@ -484,10 +492,50 @@ class MCPServerManager {
                     // Check if response is SSE format
                     if (responseText.startsWith('event:') || responseText.includes('data:')) {
                         console.log(`📋 Server uses SSE format, not JSON-RPC`);
-                        console.log(`⚠️ SSE-based MCP servers need different handling - tools discovery not supported yet`);
-                        // For now, we'll mark as connected but with no tools
-                        tools = [];
-                        foundTools = true;
+                        console.log(`🔍 Parsing SSE response for tools...`);
+                        
+                        // Parse SSE format to extract tools
+                        try {
+                            const lines = responseText.split('\n');
+                            let jsonData = null;
+                            
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    const jsonStr = line.substring(6); // Remove 'data: ' prefix
+                                    try {
+                                        jsonData = JSON.parse(jsonStr);
+                                        break;
+                                    } catch (e) {
+                                        console.log(`⚠️ Failed to parse SSE data line: ${jsonStr}`);
+                                    }
+                                }
+                            }
+                            
+                            if (jsonData) {
+                                console.log(`📋 Parsed SSE JSON data:`, jsonData);
+                                
+                                if (jsonData.result && jsonData.result.tools) {
+                                    tools = jsonData.result.tools;
+                                    foundTools = true;
+                                    console.log(`📋 SSE tools found (result.tools):`, tools);
+                                } else if (jsonData.tools && Array.isArray(jsonData.tools)) {
+                                    tools = jsonData.tools;
+                                    foundTools = true;
+                                    console.log(`📋 SSE tools found (direct tools):`, tools);
+                                } else if (jsonData.result && Array.isArray(jsonData.result)) {
+                                    tools = jsonData.result;
+                                    foundTools = true;
+                                    console.log(`📋 SSE tools found (result array):`, tools);
+                                } else {
+                                    console.log(`⚠️ SSE response doesn't contain tools in expected format`);
+                                    console.log(`📋 Available data:`, JSON.stringify(jsonData, null, 2));
+                                }
+                            } else {
+                                console.log(`⚠️ No valid JSON data found in SSE response`);
+                            }
+                        } catch (sseError) {
+                            console.log(`⚠️ Failed to parse SSE response:`, sseError.message);
+                        }
                     } else {
                         // Try to parse as JSON
                         try {
