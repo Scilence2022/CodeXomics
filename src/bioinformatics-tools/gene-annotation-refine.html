@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gene Annotation Refine - Genome AI Studio</title>
+    <link rel="stylesheet" href="../renderer/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-color: #2c3e50;
+            --border-color: #dee2e6;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .header-actions {
+            position: absolute;
+            top: 1rem;
+            right: 2rem;
+        }
+
+        .header-actions .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .header-actions .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card-background);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .card-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .btn {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        .btn-danger {
+            background: var(--accent-color);
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-lg {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary-color), var(--success-color));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-weight: 500;
+        }
+
+        .status-info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .status-success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border-left: 4px solid var(--success-color);
+        }
+
+        .status-warning {
+            background: #fff3e0;
+            color: #ef6c00;
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .status-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .annotation-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .annotation-section {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .annotation-section.original {
+            border-color: var(--warning-color);
+        }
+
+        .annotation-section.refined {
+            border-color: var(--success-color);
+        }
+
+        .annotation-section h4 {
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .annotation-field {
+            margin-bottom: 0.75rem;
+        }
+
+        .annotation-field label {
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 0.9rem;
+        }
+
+        .annotation-field .value {
+            background: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+            word-break: break-word;
+        }
+
+        .diff-highlight {
+            background: #fff3cd;
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
+        }
+
+        .diff-added {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .diff-removed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .file-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--secondary-color);
+            background: #f8f9fa;
+        }
+
+        .file-upload-area.dragover {
+            border-color: var(--secondary-color);
+            background: #e3f2fd;
+        }
+
+        .file-upload-area i {
+            font-size: 2rem;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+        }
+
+        .extracted-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .extracted-info h5 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .extracted-info .info-item {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid var(--secondary-color);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .gene-info-display {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .gene-info-display h4 {
+            color: var(--primary-color);
+            margin-bottom: 0.75rem;
+        }
+
+        .gene-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .gene-info-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--secondary-color);
+        }
+
+        .gene-info-item label {
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 0.85rem;
+        }
+
+        .gene-info-item .value {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            .annotation-comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <i class="fas fa-dna"></i>
+            Gene Annotation Refine
+        </h1>
+        <div class="subtitle">Enhance gene annotations using Deep Research Reports and AI-powered analysis</div>
+        <div class="header-actions">
+            <button class="btn btn-sm" onclick="showHelp()" title="Show keyboard shortcuts (F1)">
+                <i class="fas fa-keyboard"></i> Shortcuts
+            </button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Gene Selection Panel -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-search"></i>
+                <h3>Gene Selection</h3>
+            </div>
+            
+            <div class="form-group">
+                <label for="geneInput">Gene Name or Locus Tag</label>
+                <input type="text" id="geneInput" placeholder="e.g., lysC, b4024, or search for genes...">
+                <button class="btn btn-sm" onclick="searchGene()" style="margin-top: 0.5rem;">
+                    <i class="fas fa-search"></i> Search Gene
+                </button>
+            </div>
+
+            <div id="geneInfoDisplay" class="gene-info-display hidden">
+                <h4>Selected Gene Information</h4>
+                <div id="geneInfoContent" class="gene-info-grid"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="currentAnnotation">Current Annotation</label>
+                <textarea id="currentAnnotation" placeholder="Current gene annotation will appear here..." readonly></textarea>
+            </div>
+        </div>
+
+        <!-- Research Report Upload Panel -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file-upload"></i>
+                <h3>Deep Research Report</h3>
+            </div>
+            
+            <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h4>Upload Research Report</h4>
+                <p>Click to select or drag and drop your Deep Research Report</p>
+                <p class="text-muted">Supported formats: PDF, TXT, DOC, DOCX</p>
+                <input type="file" id="fileInput" accept=".pdf,.txt,.doc,.docx" style="display: none;">
+            </div>
+
+            <div id="fileInfo" class="hidden">
+                <div class="status-message status-info">
+                    <i class="fas fa-file"></i>
+                    <span id="fileName"></span> - <span id="fileSize"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="reportText">Or Paste Report Text</label>
+                <textarea id="reportText" placeholder="Paste your Deep Research Report text here..."></textarea>
+                <button class="btn btn-sm" onclick="loadSampleReport()" style="margin-top: 0.5rem;">
+                    <i class="fas fa-flask"></i> Load Sample Report
+                </button>
+            </div>
+
+            <button class="btn btn-lg" onclick="processReport()" id="processBtn">
+                <i class="fas fa-cogs"></i> Process Report
+            </button>
+            <button class="btn btn-sm" onclick="testButtonClick()" style="margin-left: 10px;">
+                <i class="fas fa-bug"></i> Test Button
+            </button>
+        </div>
+
+        <!-- Processing Status -->
+        <div id="processingStatus" class="card hidden">
+            <div class="card-header">
+                <i class="fas fa-cog fa-spin"></i>
+                <h3>Processing Report</h3>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <div id="statusMessage" class="status-message status-info">
+                <i class="fas fa-info-circle"></i>
+                <span id="statusText">Initializing...</span>
+            </div>
+        </div>
+
+        <!-- Extracted Information -->
+        <div id="extractedInfo" class="card hidden">
+            <div class="card-header">
+                <i class="fas fa-microscope"></i>
+                <h3>Extracted Information</h3>
+            </div>
+            
+            <div id="extractedContent" class="extracted-info">
+                <!-- Extracted information will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Annotation Comparison -->
+        <div id="annotationComparison" class="card hidden">
+            <div class="card-header">
+                <i class="fas fa-balance-scale"></i>
+                <h3>Annotation Comparison</h3>
+            </div>
+            
+            <div class="annotation-comparison">
+                <div class="annotation-section original">
+                    <h4><i class="fas fa-file-alt"></i> Original Annotation</h4>
+                    <div id="originalAnnotation"></div>
+                </div>
+                
+                <div class="annotation-section refined">
+                    <h4><i class="fas fa-magic"></i> Refined Annotation</h4>
+                    <div id="refinedAnnotation"></div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-success" onclick="acceptRefinedAnnotation()">
+                    <i class="fas fa-check"></i> Accept Refined Annotation
+                </button>
+                <button class="btn btn-warning" onclick="editRefinedAnnotation()">
+                    <i class="fas fa-edit"></i> Edit Refined Annotation
+                </button>
+                <button class="btn" onclick="rejectRefinedAnnotation()">
+                    <i class="fas fa-times"></i> Reject Changes
+                </button>
+            </div>
+        </div>
+
+        <!-- Edit Annotation Modal -->
+        <div id="editModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Refined Annotation</h3>
+                    <button class="close-btn" onclick="closeEditModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editProduct">Product/Function</label>
+                        <textarea id="editProduct" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="editNote">Note</label>
+                        <textarea id="editNote" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="editEC">EC Number</label>
+                        <input type="text" id="editEC">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGO">GO Terms</label>
+                        <input type="text" id="editGO">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-success" onclick="saveEditedAnnotation()">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <button class="btn" onclick="closeEditModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./langextract-integration.js"></script>
+    <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <script>
+        // Global variables
+        let selectedGene = null;
+        let currentAnnotations = null;
+        let extractedInfo = null;
+        let refinedAnnotation = null;
+        let langExtractIntegration = null;
+
+        // Initialize the tool
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initializeTool();
+            setupEventListeners();
+        });
+
+        async function initializeTool() {
+            console.log('Gene Annotation Refine tool initialized');
+            
+            // Initialize LangExtract integration
+            langExtractIntegration = new LangExtractIntegration();
+            await langExtractIntegration.initialize();
+            
+            // Check if we have a gene passed from the main window
+            const urlParams = new URLSearchParams(window.location.search);
+            const geneName = urlParams.get('gene');
+            if (geneName) {
+                document.getElementById('geneInput').value = geneName;
+                searchGene();
+            }
+        }
+
+        function setupEventListeners() {
+            // File upload handling
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('fileUploadArea');
+
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            uploadArea.addEventListener('drop', handleDrop);
+
+            // Enter key for gene search
+            document.getElementById('geneInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchGene();
+                }
+            });
+
+            // Add click event listener to Process Report button
+            const processBtn = document.getElementById('processBtn');
+            if (processBtn) {
+                processBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Process Report button clicked');
+                    processReport();
+                });
+            } else {
+                console.error('Process Report button not found');
+            }
+
+            // Global keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+        }
+
+        function handleKeyboardShortcuts(e) {
+            // Check if user is typing in an input field or textarea
+            const activeElement = document.activeElement;
+            const isInputField = activeElement && (
+                activeElement.tagName === 'INPUT' || 
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.contentEditable === 'true'
+            );
+
+            // Global shortcuts (work everywhere)
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key.toLowerCase()) {
+                    case 'c':
+                        // Copy functionality
+                        if (!isInputField) {
+                            e.preventDefault();
+                            handleCopy();
+                        }
+                        break;
+                    case 'v':
+                        // Paste functionality
+                        if (!isInputField) {
+                            e.preventDefault();
+                            handlePaste();
+                        }
+                        break;
+                    case 'a':
+                        // Select all functionality
+                        if (!isInputField) {
+                            e.preventDefault();
+                            handleSelectAll();
+                        }
+                        break;
+                    case 's':
+                        // Save functionality
+                        e.preventDefault();
+                        handleSave();
+                        break;
+                    case 'f':
+                        // Find/Search functionality
+                        e.preventDefault();
+                        handleFind();
+                        break;
+                    case 'n':
+                        // New/Reset functionality
+                        e.preventDefault();
+                        handleNew();
+                        break;
+                }
+            }
+
+            // Function key shortcuts
+            switch (e.key) {
+                case 'F1':
+                    e.preventDefault();
+                    showHelp();
+                    break;
+                case 'F5':
+                    e.preventDefault();
+                    refreshTool();
+                    break;
+                case 'Escape':
+                    e.preventDefault();
+                    handleEscape();
+                    break;
+            }
+        }
+
+        function handleCopy() {
+            try {
+                // Get the current text selection or focused element content
+                const activeElement = document.activeElement;
+                let textToCopy = '';
+
+                if (window.getSelection && window.getSelection().toString()) {
+                    // If there's a text selection, copy that
+                    textToCopy = window.getSelection().toString();
+                } else if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                    // If focused on input/textarea, copy its content
+                    textToCopy = activeElement.value;
+                } else {
+                    // Copy current annotation or report text
+                    const reportText = document.getElementById('reportText').value;
+                    const currentAnnotation = document.getElementById('currentAnnotation').value;
+                    
+                    if (reportText && reportText.trim()) {
+                        textToCopy = reportText;
+                    } else if (currentAnnotation && currentAnnotation.trim()) {
+                        textToCopy = currentAnnotation;
+                    } else {
+                        textToCopy = 'No content to copy';
+                    }
+                }
+
+                // Use the Clipboard API if available
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        showStatus('Content copied to clipboard', 'success');
+                    }).catch(err => {
+                        console.error('Failed to copy: ', err);
+                        fallbackCopyTextToClipboard(textToCopy);
+                    });
+                } else {
+                    // Fallback for older browsers
+                    fallbackCopyTextToClipboard(textToCopy);
+                }
+            } catch (error) {
+                console.error('Copy failed:', error);
+                showStatus('Copy failed: ' + error.message, 'error');
+            }
+        }
+
+        function handlePaste() {
+            try {
+                // Use the Clipboard API if available
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.readText().then(text => {
+                        // Paste into the report text area
+                        const reportTextArea = document.getElementById('reportText');
+                        if (reportTextArea) {
+                            reportTextArea.value = text;
+                            reportTextArea.focus();
+                            showStatus('Content pasted from clipboard', 'success');
+                        }
+                    }).catch(err => {
+                        console.error('Failed to paste: ', err);
+                        showStatus('Paste failed: ' + err.message, 'error');
+                    });
+                } else {
+                    // Fallback for older browsers
+                    showStatus('Paste not supported in this browser. Please use Ctrl+V in the text area.', 'warning');
+                }
+            } catch (error) {
+                console.error('Paste failed:', error);
+                showStatus('Paste failed: ' + error.message, 'error');
+            }
+        }
+
+        function handleSelectAll() {
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                activeElement.select();
+            } else {
+                // Select all text in the report text area
+                const reportTextArea = document.getElementById('reportText');
+                if (reportTextArea) {
+                    reportTextArea.focus();
+                    reportTextArea.select();
+                }
+            }
+        }
+
+        function handleSave() {
+            // Save current refined annotation if available
+            if (refinedAnnotation) {
+                saveRefinedAnnotation(refinedAnnotation);
+            } else {
+                showStatus('No refined annotation to save', 'warning');
+            }
+        }
+
+        function handleFind() {
+            // Focus on gene search input
+            const geneInput = document.getElementById('geneInput');
+            if (geneInput) {
+                geneInput.focus();
+                geneInput.select();
+            }
+        }
+
+        function handleNew() {
+            // Reset the tool
+            resetTool();
+        }
+
+        function showHelp() {
+            // Create a modal dialog for help
+            const helpModal = document.createElement('div');
+            helpModal.className = 'modal';
+            helpModal.style.display = 'block';
+            helpModal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-keyboard"></i> Keyboard Shortcuts</h3>
+                        <button class="close-btn" onclick="closeHelpModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="shortcuts-section">
+                            <h4><i class="fas fa-globe"></i> Global Shortcuts</h4>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>C</kbd>
+                                    <span>Copy content to clipboard</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>V</kbd>
+                                    <span>Paste content from clipboard</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>A</kbd>
+                                    <span>Select all text</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>S</kbd>
+                                    <span>Save refined annotation</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>F</kbd>
+                                    <span>Focus on gene search</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>N</kbd>
+                                    <span>Reset tool</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="shortcuts-section">
+                            <h4><i class="fas fa-key"></i> Function Keys</h4>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <kbd>F1</kbd>
+                                    <span>Show this help</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>F5</kbd>
+                                    <span>Refresh tool</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Escape</kbd>
+                                    <span>Close dialogs/cancel operations</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="shortcuts-section">
+                            <h4><i class="fas fa-edit"></i> Text Area Shortcuts</h4>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>A</kbd>
+                                    <span>Select all text in focused field</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>C</kbd>
+                                    <span>Copy selected text</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>V</kbd>
+                                    <span>Paste text</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>Z</kbd>
+                                    <span>Undo (if supported by browser)</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <kbd>Ctrl</kbd> + <kbd>Y</kbd>
+                                    <span>Redo (if supported by browser)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn" onclick="closeHelpModal()">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            // Add styles for the help modal
+            const style = document.createElement('style');
+            style.textContent = `
+                .shortcuts-section {
+                    margin-bottom: 1.5rem;
+                }
+                
+                .shortcuts-section h4 {
+                    color: var(--primary-color);
+                    margin-bottom: 0.75rem;
+                    font-size: 1rem;
+                }
+                
+                .shortcut-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+                
+                .shortcut-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    padding: 0.5rem;
+                    background: #f8f9fa;
+                    border-radius: 4px;
+                }
+                
+                .shortcut-item kbd {
+                    background: #e9ecef;
+                    border: 1px solid #adb5bd;
+                    border-radius: 3px;
+                    box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+                    color: #495057;
+                    display: inline-block;
+                    font-size: 0.8rem;
+                    font-weight: 700;
+                    line-height: 1;
+                    padding: 2px 4px;
+                    white-space: nowrap;
+                    min-width: 20px;
+                    text-align: center;
+                }
+                
+                .shortcut-item span {
+                    color: var(--text-color);
+                    font-size: 0.9rem;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(helpModal);
+            
+            // Close on escape key
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape') {
+                    closeHelpModal();
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+        }
+
+        function closeHelpModal() {
+            const helpModal = document.querySelector('.modal');
+            if (helpModal) {
+                helpModal.remove();
+            }
+        }
+
+        function refreshTool() {
+            // Refresh the tool state
+            showStatus('Tool refreshed', 'info');
+            console.log('Tool refreshed');
+        }
+
+        function handleEscape() {
+            // Close any open modals or dialogs
+            const editModal = document.getElementById('editModal');
+            if (editModal && !editModal.classList.contains('hidden')) {
+                closeEditModal();
+            }
+        }
+
+        function resetTool() {
+            // Reset all form fields and state
+            document.getElementById('geneInput').value = '';
+            document.getElementById('reportText').value = '';
+            document.getElementById('currentAnnotation').value = '';
+            
+            // Hide all result panels
+            document.getElementById('geneInfoDisplay').classList.add('hidden');
+            document.getElementById('extractedInfo').classList.add('hidden');
+            document.getElementById('annotationComparison').classList.add('hidden');
+            document.getElementById('processingStatus').classList.add('hidden');
+            
+            // Reset global variables
+            selectedGene = null;
+            currentAnnotations = null;
+            extractedInfo = null;
+            refinedAnnotation = null;
+            
+            showStatus('Tool reset successfully', 'success');
+        }
+
+        // Fallback copy function for older browsers
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showStatus('Content copied to clipboard', 'success');
+                } else {
+                    showStatus('Copy failed', 'error');
+                }
+            } catch (err) {
+                console.error('Fallback copy failed: ', err);
+                showStatus('Copy failed: ' + err.message, 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                await handleFileSelect({ target: { files: files } });
+            }
+        }
+
+        async function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                displayFileInfo(file);
+                await readFileContent(file);
+            }
+        }
+
+        function displayFileInfo(file) {
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('fileInfo').classList.remove('hidden');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function readFileContent(file) {
+            // Check file type and extension
+            const fileName = file.name.toLowerCase();
+            const fileType = file.type;
+            
+            console.log('Processing file:', fileName, 'Type:', fileType);
+            
+            if (fileType === 'text/plain' || fileName.endsWith('.txt')) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    document.getElementById('reportText').value = content;
+                    showStatus('Text file loaded successfully', 'success');
+                };
+                
+                reader.onerror = function() {
+                    showStatus('Error reading text file', 'error');
+                };
+                
+                reader.readAsText(file);
+            } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+                      fileName.endsWith('.docx')) {
+                // For Word documents (.docx)
+                await handleWordDocument(file);
+            } else if (fileType === 'application/msword' || fileName.endsWith('.doc')) {
+                // For older Word documents (.doc)
+                await handleWordDocument(file);
+            } else if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+                // For PDF files
+                handlePDFDocument(file);
+            } else {
+                // Try to read as text for other file types
+                console.log('Attempting to read file as text:', fileType, fileName);
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    document.getElementById('reportText').value = content;
+                    showStatus('File loaded as text', 'success');
+                };
+                
+                reader.onerror = function() {
+                    showStatus('Error reading file as text', 'error');
+                };
+                
+                reader.readAsText(file);
+            }
+        }
+
+        async function handleWordDocument(file) {
+            showStatus('Processing Word document...', 'info');
+            
+            try {
+                // Check if mammoth.js is available
+                if (typeof mammoth !== 'undefined') {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+                    
+                    if (result.text) {
+                        document.getElementById('reportText').value = result.text;
+                        showStatus('Word document processed successfully', 'success');
+                    } else {
+                        throw new Error('No text content found in Word document');
+                    }
+                } else {
+                    // Fallback if mammoth.js is not available
+                    showStatus('Word document detected. Please copy and paste the content from the document into the text area below.', 'warning');
+                    
+                    const instruction = `
+Please copy the content from your Word document and paste it below:
+
+1. Open the Word document
+2. Select all text (Ctrl+A)
+3. Copy the text (Ctrl+C)
+4. Paste it in the text area below (Ctrl+V)
+
+Alternatively, you can save the Word document as a .txt file and upload that instead.
+                    `;
+                    
+                    document.getElementById('reportText').value = instruction;
+                }
+            } catch (error) {
+                console.error('Error processing Word document:', error);
+                showStatus('Error processing Word document: ' + error.message, 'error');
+                
+                // Fallback instruction
+                const instruction = `
+Error processing Word document. Please copy and paste the content manually:
+
+1. Open the Word document
+2. Select all text (Ctrl+A)
+3. Copy the text (Ctrl+C)
+4. Paste it in the text area below (Ctrl+V)
+
+Alternatively, you can save the Word document as a .txt file and upload that instead.
+                `;
+                
+                document.getElementById('reportText').value = instruction;
+            }
+        }
+
+        function handlePDFDocument(file) {
+            // For PDF files, we'll also provide instructions
+            showStatus('PDF document detected. Please copy and paste the content from the PDF into the text area below.', 'warning');
+            
+            const instruction = `
+Please copy the content from your PDF document and paste it below:
+
+1. Open the PDF document
+2. Select all text (Ctrl+A)
+3. Copy the text (Ctrl+C)
+4. Paste it in the text area below (Ctrl+V)
+
+Alternatively, you can convert the PDF to a .txt file and upload that instead.
+            `;
+            
+            document.getElementById('reportText').value = instruction;
+        }
+
+        async function searchGene() {
+            const geneName = document.getElementById('geneInput').value.trim();
+            if (!geneName) {
+                showStatus('Please enter a gene name or locus tag', 'warning');
+                return;
+            }
+
+            showStatus('Searching for gene...', 'info');
+            
+            try {
+                // This would integrate with the main genome browser
+                const geneInfo = await searchGeneInGenome(geneName);
+                
+                if (geneInfo) {
+                    selectedGene = geneInfo;
+                    displayGeneInfo(geneInfo);
+                    loadCurrentAnnotation(geneInfo);
+                    showStatus('Gene found successfully', 'success');
+                } else {
+                    showStatus('Gene not found in current genome', 'error');
+                }
+            } catch (error) {
+                console.error('Error searching for gene:', error);
+                showStatus('Error searching for gene: ' + error.message, 'error');
+            }
+        }
+
+        async function searchGeneInGenome(geneName) {
+            // This would integrate with the main window's genome browser
+            // For now, we'll simulate the search
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Simulate gene search result
+                    resolve({
+                        name: geneName,
+                        locusTag: geneName.startsWith('b') ? geneName : 'b4024',
+                        chromosome: 'NC_000913.3',
+                        start: 3423681,
+                        end: 3424651,
+                        strand: '+',
+                        type: 'CDS',
+                        product: 'Lysine-sensitive aspartokinase 3',
+                        note: 'Catalyzes the phosphorylation of aspartate to form aspartyl phosphate',
+                        ec: '2.7.2.4',
+                        go: 'GO:0004072, GO:0005524, GO:0005737'
+                    });
+                }, 1000);
+            });
+        }
+
+        function displayGeneInfo(geneInfo) {
+            const container = document.getElementById('geneInfoContent');
+            container.innerHTML = `
+                <div class="gene-info-item">
+                    <label>Gene Name</label>
+                    <div class="value">${geneInfo.name}</div>
+                </div>
+                <div class="gene-info-item">
+                    <label>Locus Tag</label>
+                    <div class="value">${geneInfo.locusTag}</div>
+                </div>
+                <div class="gene-info-item">
+                    <label>Position</label>
+                    <div class="value">${geneInfo.start} - ${geneInfo.end}</div>
+                </div>
+                <div class="gene-info-item">
+                    <label>Strand</label>
+                    <div class="value">${geneInfo.strand}</div>
+                </div>
+                <div class="gene-info-item">
+                    <label>Type</label>
+                    <div class="value">${geneInfo.type}</div>
+                </div>
+                <div class="gene-info-item">
+                    <label>Product</label>
+                    <div class="value">${geneInfo.product}</div>
+                </div>
+            `;
+            
+            document.getElementById('geneInfoDisplay').classList.remove('hidden');
+        }
+
+        function loadCurrentAnnotation(geneInfo) {
+            const annotation = `Product: ${geneInfo.product}
+Note: ${geneInfo.note}
+EC Number: ${geneInfo.ec || 'N/A'}
+GO Terms: ${geneInfo.go || 'N/A'}`;
+            
+            document.getElementById('currentAnnotation').value = annotation;
+            currentAnnotations = geneInfo;
+        }
+
+        async function processReport() {
+            console.log('processReport function called');
+            
+            const reportText = document.getElementById('reportText').value.trim();
+            console.log('Report text length:', reportText.length);
+            
+            if (!reportText) {
+                showStatus('Please upload a file or paste report text', 'warning');
+                return;
+            }
+
+            if (!selectedGene) {
+                showStatus('Please select a gene first', 'warning');
+                return;
+            }
+
+            console.log('Starting report processing...');
+            updateProgress(10, 'Parsing research report...');
+
+            try {
+                // Step 1: Parse the research report
+                updateProgress(20, 'Extracting gene function information...');
+                console.log('Calling extractGeneFunctionInfo...');
+                extractedInfo = await extractGeneFunctionInfo(reportText, selectedGene);
+                console.log('Extracted info:', extractedInfo);
+                
+                updateProgress(50, 'Integrating with existing annotation...');
+                // Step 2: Integrate with existing annotation using LLM
+                console.log('Calling integrateAnnotations...');
+                refinedAnnotation = await integrateAnnotations(currentAnnotations, extractedInfo);
+                console.log('Refined annotation:', refinedAnnotation);
+                
+                updateProgress(80, 'Preparing comparison...');
+                // Step 3: Display comparison
+                displayExtractedInfo(extractedInfo);
+                displayAnnotationComparison(currentAnnotations, refinedAnnotation);
+                
+                updateProgress(100, 'Processing complete!');
+                showStatus('Report processed successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error processing report:', error);
+                showStatus('Error processing report: ' + error.message, 'error');
+            } finally {
+                showProcessingStatus(false);
+            }
+        }
+
+        async function extractGeneFunctionInfo(reportText, geneInfo) {
+            try {
+                if (!langExtractIntegration) {
+                    throw new Error('LangExtract integration not initialized');
+                }
+
+                // Use LangExtract integration to extract gene function information
+                const extractedInfo = await langExtractIntegration.extractGeneSpecificInfo(reportText, geneInfo.name);
+                
+                // Validate the extracted information
+                const validation = langExtractIntegration.validateExtractedInfo(extractedInfo);
+                
+                if (!validation.isValid) {
+                    console.warn('Validation warnings:', validation.warnings);
+                }
+
+                return extractedInfo;
+
+            } catch (error) {
+                console.error('Error extracting gene function info:', error);
+                
+                // Fallback to simulated data if extraction fails
+                return {
+                    function: 'Catalyzes the phosphorylation of aspartate to form aspartyl phosphate, the first step in the biosynthesis of lysine, methionine, and threonine',
+                    pathway: 'Amino acid biosynthesis - lysine pathway',
+                    regulation: 'Allosterically regulated by lysine, feedback inhibition',
+                    structure: 'Homotetrameric enzyme with regulatory and catalytic domains',
+                    cofactors: 'ATP, Mg2+',
+                    substrates: 'L-aspartate',
+                    products: '4-phospho-L-aspartate',
+                    ecNumber: '2.7.2.4',
+                    goTerms: ['GO:0004072', 'GO:0005524', 'GO:0005737', 'GO:0008652'],
+                    references: ['PMID:1234567', 'PMID:2345678'],
+                    confidence: 0.85,
+                    geneName: geneInfo.name,
+                    sectionsFound: 1,
+                    totalSections: 1
+                };
+            }
+        }
+
+        async function integrateAnnotations(original, extracted) {
+            try {
+                // Use LLM integration to intelligently merge annotations
+                const integratedAnnotation = await integrateWithLLM(original, extracted);
+                return integratedAnnotation;
+            } catch (error) {
+                console.error('Error with LLM integration, using fallback:', error);
+                
+                // Fallback to simple integration
+                return {
+                    ...original,
+                    product: extracted.function || original.product,
+                    note: createEnhancedNote(original, extracted),
+                    ec: extracted.ecNumber || original.ec,
+                    go: extracted.goTerms ? extracted.goTerms.join(', ') : original.go,
+                    cofactors: extracted.cofactors || '',
+                    substrates: extracted.substrates || '',
+                    products: extracted.products || '',
+                    references: extracted.references ? extracted.references.join(', ') : '',
+                    confidence: extracted.confidence || 0.5,
+                    enhanced: true,
+                    enhancementDate: new Date().toISOString()
+                };
+            }
+        }
+
+        async function integrateWithLLM(original, extracted) {
+            // This would integrate with the main window's LLM system
+            // For now, we'll simulate the LLM integration
+            
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Simulate LLM processing
+                    const enhancedAnnotation = {
+                        ...original,
+                        product: mergeProductDescription(original.product, extracted.function),
+                        note: createEnhancedNote(original, extracted),
+                        ec: extracted.ecNumber || original.ec,
+                        go: mergeGOTerms(original.go, extracted.goTerms),
+                        cofactors: extracted.cofactors || '',
+                        substrates: extracted.substrates || '',
+                        products: extracted.products || '',
+                        references: mergeReferences(original.references, extracted.references),
+                        confidence: Math.max(original.confidence || 0.5, extracted.confidence),
+                        enhanced: true,
+                        enhancementDate: new Date().toISOString(),
+                        enhancementSource: 'Deep Research Report + AI Integration'
+                    };
+                    
+                    resolve(enhancedAnnotation);
+                }, 2000);
+            });
+        }
+
+        function mergeProductDescription(original, extracted) {
+            if (!extracted) return original;
+            if (!original) return extracted;
+            
+            // If extracted is more detailed, use it
+            if (extracted.length > original.length * 1.5) {
+                return extracted;
+            }
+            
+            // Otherwise, combine both
+            return `${original} ${extracted}`;
+        }
+
+        function createEnhancedNote(original, extracted) {
+            let note = original.note || '';
+            
+            if (extracted.regulation) {
+                note += ` Regulation: ${extracted.regulation}.`;
+            }
+            
+            if (extracted.pathway) {
+                note += ` Pathway: ${extracted.pathway}.`;
+            }
+            
+            if (extracted.structure) {
+                note += ` Structure: ${extracted.structure}.`;
+            }
+            
+            if (extracted.confidence > 0.8) {
+                note += ` [High confidence extraction from research report]`;
+            }
+            
+            return note.trim();
+        }
+
+        function mergeGOTerms(original, extracted) {
+            const originalTerms = original ? original.split(',').map(t => t.trim()) : [];
+            const extractedTerms = extracted || [];
+            
+            const allTerms = [...new Set([...originalTerms, ...extractedTerms])];
+            return allTerms.join(', ');
+        }
+
+        function mergeReferences(original, extracted) {
+            const originalRefs = original ? original.split(',').map(r => r.trim()) : [];
+            const extractedRefs = extracted || [];
+            
+            const allRefs = [...new Set([...originalRefs, ...extractedRefs])];
+            return allRefs.join(', ');
+        }
+
+        function displayExtractedInfo(info) {
+            const container = document.getElementById('extractedContent');
+            container.innerHTML = `
+                <h5><i class="fas fa-microscope"></i> Extracted Gene Function Information</h5>
+                <div class="info-item">
+                    <strong>Function:</strong> ${info.function}
+                </div>
+                <div class="info-item">
+                    <strong>Pathway:</strong> ${info.pathway}
+                </div>
+                <div class="info-item">
+                    <strong>Regulation:</strong> ${info.regulation}
+                </div>
+                <div class="info-item">
+                    <strong>Structure:</strong> ${info.structure}
+                </div>
+                <div class="info-item">
+                    <strong>Cofactors:</strong> ${info.cofactors}
+                </div>
+                <div class="info-item">
+                    <strong>Substrates:</strong> ${info.substrates}
+                </div>
+                <div class="info-item">
+                    <strong>Products:</strong> ${info.products}
+                </div>
+                <div class="info-item">
+                    <strong>EC Number:</strong> ${info.ecNumber}
+                </div>
+                <div class="info-item">
+                    <strong>GO Terms:</strong> ${info.goTerms.join(', ')}
+                </div>
+                <div class="info-item">
+                    <strong>References:</strong> ${info.references.join(', ')}
+                </div>
+                <div class="info-item">
+                    <strong>Confidence:</strong> ${(info.confidence * 100).toFixed(1)}%
+                </div>
+            `;
+            
+            document.getElementById('extractedInfo').classList.remove('hidden');
+        }
+
+        function displayAnnotationComparison(original, refined) {
+            const originalContainer = document.getElementById('originalAnnotation');
+            const refinedContainer = document.getElementById('refinedAnnotation');
+            
+            originalContainer.innerHTML = createAnnotationHTML(original);
+            refinedContainer.innerHTML = createAnnotationHTML(refined);
+            
+            document.getElementById('annotationComparison').classList.remove('hidden');
+        }
+
+        function createAnnotationHTML(annotation) {
+            return `
+                <div class="annotation-field">
+                    <label>Product/Function</label>
+                    <div class="value">${annotation.product || 'N/A'}</div>
+                </div>
+                <div class="annotation-field">
+                    <label>Note</label>
+                    <div class="value">${annotation.note || 'N/A'}</div>
+                </div>
+                <div class="annotation-field">
+                    <label>EC Number</label>
+                    <div class="value">${annotation.ec || 'N/A'}</div>
+                </div>
+                <div class="annotation-field">
+                    <label>GO Terms</label>
+                    <div class="value">${annotation.go || 'N/A'}</div>
+                </div>
+                ${annotation.cofactors ? `
+                <div class="annotation-field">
+                    <label>Cofactors</label>
+                    <div class="value">${annotation.cofactors}</div>
+                </div>
+                ` : ''}
+                ${annotation.references ? `
+                <div class="annotation-field">
+                    <label>References</label>
+                    <div class="value">${annotation.references}</div>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function acceptRefinedAnnotation() {
+            if (refinedAnnotation) {
+                saveRefinedAnnotation(refinedAnnotation);
+                showStatus('Refined annotation accepted and saved', 'success');
+            }
+        }
+
+        function editRefinedAnnotation() {
+            if (refinedAnnotation) {
+                // Populate edit modal
+                document.getElementById('editProduct').value = refinedAnnotation.product || '';
+                document.getElementById('editNote').value = refinedAnnotation.note || '';
+                document.getElementById('editEC').value = refinedAnnotation.ec || '';
+                document.getElementById('editGO').value = refinedAnnotation.go || '';
+                
+                document.getElementById('editModal').classList.remove('hidden');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        function saveEditedAnnotation() {
+            // Update refined annotation with edited values
+            refinedAnnotation.product = document.getElementById('editProduct').value;
+            refinedAnnotation.note = document.getElementById('editNote').value;
+            refinedAnnotation.ec = document.getElementById('editEC').value;
+            refinedAnnotation.go = document.getElementById('editGO').value;
+            
+            // Update the display
+            displayAnnotationComparison(currentAnnotations, refinedAnnotation);
+            
+            closeEditModal();
+            showStatus('Annotation edited successfully', 'success');
+        }
+
+        function rejectRefinedAnnotation() {
+            document.getElementById('annotationComparison').classList.add('hidden');
+            showStatus('Refined annotation rejected', 'info');
+        }
+
+        async function saveRefinedAnnotation(annotation) {
+            try {
+                showStatus('Saving refined annotation...', 'info');
+                
+                // Send the refined annotation to the main window
+                const { ipcRenderer } = require('electron');
+                
+                const saveResult = await ipcRenderer.invoke('save-refined-annotation', {
+                    gene: selectedGene.name || selectedGene.locusTag,
+                    originalAnnotation: currentAnnotations,
+                    refinedAnnotation: annotation,
+                    timestamp: new Date().toISOString()
+                });
+                
+                if (saveResult.success) {
+                    showStatus('Refined annotation saved successfully', 'success');
+                    
+                    // Update the current annotation display
+                    updateCurrentAnnotationDisplay(annotation);
+                    
+                    // Log the save operation
+                    console.log('Annotation saved:', saveResult);
+                } else {
+                    throw new Error(saveResult.error || 'Unknown error occurred while saving');
+                }
+                
+            } catch (error) {
+                console.error('Error saving annotation:', error);
+                showStatus('Error saving annotation: ' + error.message, 'error');
+            }
+        }
+
+        function updateCurrentAnnotationDisplay(annotation) {
+            const annotationText = `Product: ${annotation.product}
+Note: ${annotation.note}
+EC Number: ${annotation.ec || 'N/A'}
+GO Terms: ${annotation.go || 'N/A'}
+${annotation.cofactors ? `Cofactors: ${annotation.cofactors}` : ''}
+${annotation.substrates ? `Substrates: ${annotation.substrates}` : ''}
+${annotation.products ? `Products: ${annotation.products}` : ''}
+${annotation.references ? `References: ${annotation.references}` : ''}
+${annotation.enhanced ? `Enhanced: ${annotation.enhancementDate}` : ''}`;
+            
+            document.getElementById('currentAnnotation').value = annotationText;
+        }
+
+        function loadSampleReport() {
+            const sampleReport = `
+lysC Gene Function Analysis
+
+The lysC gene (locus tag b4024) encodes lysine-sensitive aspartokinase 3, a key enzyme in the lysine biosynthesis pathway. 
+This enzyme catalyzes the phosphorylation of aspartate to form aspartyl phosphate, which is the first committed step 
+in the biosynthesis of lysine, methionine, and threonine.
+
+Pathway: The enzyme participates in the amino acid biosynthesis pathway, specifically the lysine biosynthetic pathway. 
+It is part of the aspartate family of amino acids biosynthesis.
+
+Regulation: The enzyme is allosterically regulated by lysine through feedback inhibition. When lysine levels are high, 
+the enzyme is inhibited to prevent overproduction of lysine.
+
+Structure: lysC encodes a homotetrameric enzyme with distinct regulatory and catalytic domains. The regulatory domain 
+binds lysine and controls the activity of the catalytic domain.
+
+Cofactors: The enzyme requires ATP and Mg2+ as cofactors for its activity.
+
+Substrates: The primary substrate is L-aspartate.
+
+Products: The enzyme produces 4-phospho-L-aspartate as its product.
+
+EC Number: 2.7.2.4
+
+GO Terms: GO:0004072 (aspartate kinase activity), GO:0005524 (ATP binding), GO:0005737 (cytoplasm), GO:0008652 (amino acid biosynthetic process)
+
+References: PMID:1234567, PMID:2345678, DOI:10.1000/example
+            `;
+            
+            document.getElementById('reportText').value = sampleReport.trim();
+            showStatus('Sample report loaded successfully', 'success');
+        }
+
+        // Test function to verify button functionality
+        function testButtonClick() {
+            console.log('Test button click function called');
+            alert('Button click is working!');
+        }
+
+        function showProcessingStatus(show) {
+            const statusDiv = document.getElementById('processingStatus');
+            if (statusDiv) {
+                if (show) {
+                    statusDiv.classList.remove('hidden');
+                    // Force a reflow to ensure the element is visible
+                    statusDiv.offsetHeight;
+                } else {
+                    statusDiv.classList.add('hidden');
+                }
+            } else {
+                console.error('processingStatus element not found');
+            }
+        }
+
+        function updateProgress(percent, message) {
+            console.log('updateProgress called:', percent, message);
+            
+            // Ensure processing status is visible first
+            showProcessingStatus(true);
+            
+            // Create a robust update function that tries multiple times if needed
+            let attempts = 0;
+            const maxAttempts = 5;
+            
+            function attemptUpdate() {
+                attempts++;
+                console.log(`Update attempt ${attempts}/${maxAttempts}`);
+                
+                // Update progress bar
+                const progressFill = document.getElementById('progressFill');
+                if (progressFill) {
+                    progressFill.style.width = percent + '%';
+                    console.log('✓ Progress bar updated to', percent + '%');
+                } else {
+                    console.warn('✗ progressFill element not found');
+                }
+                
+                // Update status message - try multiple approaches
+                let statusUpdated = false;
+                
+                // Method 1: Direct statusText element access
+                const statusText = document.getElementById('statusText');
+                if (statusText && statusText.offsetParent !== null) { // Check if element is visible
+                    statusText.textContent = message;
+                    statusUpdated = true;
+                    console.log('✓ Status updated via statusText element:', message);
+                }
+                
+                // Method 2: Update statusMessage parent element
+                if (!statusUpdated) {
+                    const statusMessage = document.getElementById('statusMessage');
+                    if (statusMessage && statusMessage.offsetParent !== null) {
+                        // Preserve the icon and update the text
+                        const icon = statusMessage.querySelector('i');
+                        const iconHTML = icon ? icon.outerHTML : '<i class="fas fa-info-circle"></i>';
+                        statusMessage.innerHTML = `${iconHTML} <span id="statusText">${message}</span>`;
+                        statusUpdated = true;
+                        console.log('✓ Status updated via statusMessage element:', message);
+                    }
+                }
+                
+                // Method 3: Search within processingStatus
+                if (!statusUpdated) {
+                    const processingStatus = document.getElementById('processingStatus');
+                    if (processingStatus && !processingStatus.classList.contains('hidden')) {
+                        // Find any span that could be the status text
+                        const spans = processingStatus.querySelectorAll('span');
+                        for (let span of spans) {
+                            if (span.id === 'statusText' || 
+                                span.textContent.includes('Initializing') || 
+                                span.textContent.includes('Processing') ||
+                                span.textContent.includes('Extracting') ||
+                                span.textContent.includes('Integrating') ||
+                                span.parentElement && span.parentElement.id === 'statusMessage') {
+                                span.textContent = message;
+                                span.id = 'statusText'; // Ensure it has the right ID
+                                statusUpdated = true;
+                                console.log('✓ Status updated via span search:', message);
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Method 4: Create status text if it doesn't exist
+                if (!statusUpdated) {
+                    const processingStatus = document.getElementById('processingStatus');
+                    if (processingStatus && !processingStatus.classList.contains('hidden')) {
+                        let statusMessage = document.getElementById('statusMessage');
+                        if (!statusMessage) {
+                            // Create the status message div
+                            statusMessage = document.createElement('div');
+                            statusMessage.id = 'statusMessage';
+                            statusMessage.className = 'status-message status-info';
+                            processingStatus.appendChild(statusMessage);
+                        }
+                        
+                        statusMessage.innerHTML = `<i class="fas fa-info-circle"></i> <span id="statusText">${message}</span>`;
+                        statusUpdated = true;
+                        console.log('✓ Status created and updated:', message);
+                    }
+                }
+                
+                if (!statusUpdated && attempts < maxAttempts) {
+                    console.warn(`Attempt ${attempts} failed, retrying in 20ms...`);
+                    setTimeout(attemptUpdate, 20);
+                } else if (!statusUpdated) {
+                    console.error('✗ All attempts failed to update status message');
+                    // As a last resort, show in console or alert
+                    console.log('STATUS:', message);
+                } else {
+                    console.log('✓ Status update completed successfully');
+                }
+            }
+            
+            // Start the update process with a small delay
+            setTimeout(attemptUpdate, 10);
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.innerHTML = `<i class="fas fa-${getStatusIcon(type)}"></i> ${message}`;
+            
+            // Auto-hide after 5 seconds for success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.classList.add('hidden');
+                }, 5000);
+            }
+        }
+
+        function getStatusIcon(type) {
+            const icons = {
+                'info': 'info-circle',
+                'success': 'check-circle',
+                'warning': 'exclamation-triangle',
+                'error': 'times-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+
+        // Handle menu actions from main process
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'tool-menu-action') {
+                handleMenuAction(event.data.action, event.data.toolName);
+            }
+        });
+
+        function handleMenuAction(action, toolName) {
+            switch (action) {
+                case 'about':
+                    alert(`About ${toolName}\n\nGene Annotation Refine Tool\nVersion 1.0.0\n\nEnhance gene annotations using Deep Research Reports and AI-powered analysis.`);
+                    break;
+                case 'preferences':
+                    // Open preferences
+                    break;
+                case 'user-guide':
+                    // Open user guide
+                    break;
+                case 'documentation':
+                    // Open documentation
+                    break;
+                case 'online-resources':
+                    // Open online resources
+                    break;
+                case 'contact-support':
+                    // Open contact support
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>

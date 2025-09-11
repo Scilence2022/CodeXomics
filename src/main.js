@@ -1416,6 +1416,13 @@ function createMenu() {
             },
             { type: 'separator' },
             {
+              label: 'Gene Annotation Refine',
+              accelerator: 'CmdOrCtrl+Shift+G',
+              click: () => {
+                createGeneAnnotationRefineWindow();
+              }
+            },
+            {
               label: 'Evo2 Design',
               accelerator: 'CmdOrCtrl+Shift+E',
               click: () => {
@@ -3230,6 +3237,44 @@ function createEvo2Window() {
   }
 }
 
+// Create Gene Annotation Refine Window
+function createGeneAnnotationRefineWindow() {
+  try {
+    const geneAnnotationRefineWindow = new BrowserWindow({
+      width: 1600,
+      height: 1000,
+      minWidth: 1200,
+      minHeight: 800,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'Gene Annotation Refine - Genome AI Studio',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    geneAnnotationRefineWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/gene-annotation-refine.html'));
+
+    geneAnnotationRefineWindow.once('ready-to-show', () => {
+      geneAnnotationRefineWindow.show();
+      // Set specialized menu for Gene Annotation Refine tool window
+      createToolWindowMenu(geneAnnotationRefineWindow, 'Gene Annotation Refine');
+    });
+
+    geneAnnotationRefineWindow.webContents.openDevTools();
+
+    geneAnnotationRefineWindow.on('closed', () => {
+      console.log('Gene Annotation Refine window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open Gene Annotation Refine:', error);
+  }
+}
+
 // Create BLAST+ Installer Window
 function createBlastInstallerWindow() {
   try {
@@ -3345,6 +3390,11 @@ ipcMain.on('open-evo2-window', () => {
 ipcMain.on('open-blast-installer-window', () => {
   console.log('IPC: Opening BLAST+ Installer window...');
   createBlastInstallerWindow();
+});
+
+ipcMain.on('open-gene-annotation-refine', (event, data) => {
+  console.log('IPC: Opening Gene Annotation Refine window...', data);
+  createGeneAnnotationRefineWindow();
 });
 
 // Evo2 configuration IPC handlers
@@ -5588,6 +5638,51 @@ ipcMain.handle('saveProjectAs', async (event, defaultProjectName) => {
     
   } catch (error) {
     console.error('Error in save project as dialog:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});
+
+// Handle saving refined gene annotation
+ipcMain.handle('save-refined-annotation', async (event, data) => {
+  try {
+    const { gene, originalAnnotation, refinedAnnotation, timestamp } = data;
+    
+    console.log('Saving refined annotation for gene:', gene);
+    
+    // Get the main window to access the genome browser
+    const mainWindow = getCurrentMainWindow();
+    if (!mainWindow || !mainWindow.webContents) {
+      throw new Error('Main window not available');
+    }
+    
+    // Send the refined annotation to the main window for saving
+    const result = await mainWindow.webContents.executeJavaScript(`
+      (async function() {
+        if (window.genomeBrowser && window.genomeBrowser.updateGeneAnnotation) {
+          try {
+            await window.genomeBrowser.updateGeneAnnotation('${gene}', ${JSON.stringify(refinedAnnotation)});
+            return { success: true, message: 'Annotation updated successfully' };
+          } catch (error) {
+            return { success: false, error: error.message };
+          }
+        } else {
+          return { success: false, error: 'Genome browser not available' };
+        }
+      })()
+    `);
+    
+    if (result.success) {
+      console.log('Refined annotation saved successfully for gene:', gene);
+      return { success: true, message: result.message };
+    } else {
+      throw new Error(result.error || 'Failed to save annotation');
+    }
+    
+  } catch (error) {
+    console.error('Error saving refined annotation:', error);
     return { 
       success: false, 
       error: error.message 

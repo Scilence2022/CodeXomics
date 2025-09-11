@@ -3923,6 +3923,9 @@ class GenomeBrowser {
                 <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
                     <i class="fas fa-edit"></i> Edit Annotation
                 </button>
+                <button class="btn gene-refine-btn gene-action-btn" onclick="window.genomeBrowser.openGeneAnnotationRefine()" title="Refine annotation using Deep Research Reports and AI analysis">
+                    <i class="fas fa-magic"></i> Refine Annotation
+                </button>
             </div>
         `;
         
@@ -5368,6 +5371,169 @@ class GenomeBrowser {
         if (this.uiManager) {
             this.uiManager.updateStatus(`Searching AlphaFold structures for ${geneName} in ${organism}...`);
         }
+    }
+
+    // Open Gene Annotation Refine tool
+    openGeneAnnotationRefine() {
+        try {
+            // Get the currently selected gene information
+            const selectedGene = this.getSelectedGeneInfo();
+            
+            if (!selectedGene) {
+                console.warn('No gene selected for annotation refinement');
+                this.showNotification('Please select a gene first to refine its annotation', 'warning');
+                return;
+            }
+
+            // Open the Gene Annotation Refine tool window
+            const { ipcRenderer } = require('electron');
+            
+            // Send message to main process to open the tool window
+            ipcRenderer.send('open-gene-annotation-refine', {
+                gene: selectedGene.name || selectedGene.locusTag,
+                geneInfo: selectedGene
+            });
+
+            // Update status
+            if (this.uiManager) {
+                this.uiManager.updateStatus(`Opening Gene Annotation Refine tool for ${selectedGene.name || selectedGene.locusTag}...`);
+            }
+
+        } catch (error) {
+            console.error('Error opening Gene Annotation Refine tool:', error);
+            this.showNotification('Error opening Gene Annotation Refine tool: ' + error.message, 'error');
+        }
+    }
+
+    // Get currently selected gene information
+    getSelectedGeneInfo() {
+        // This method should return the currently selected gene's information
+        // For now, we'll try to get it from the current gene details
+        const geneDetailsContent = document.getElementById('geneDetailsContent');
+        if (!geneDetailsContent || geneDetailsContent.querySelector('.no-gene-selected')) {
+            return null;
+        }
+
+        // Try to extract gene information from the current display
+        // This is a simplified approach - in a real implementation, you'd want to store this more reliably
+        const geneNameElement = geneDetailsContent.querySelector('.gene-name');
+        const locusTagElement = geneDetailsContent.querySelector('.locus-tag');
+        
+        if (geneNameElement || locusTagElement) {
+            return {
+                name: geneNameElement ? geneNameElement.textContent : null,
+                locusTag: locusTagElement ? locusTagElement.textContent : null,
+                // Add other gene properties as needed
+            };
+        }
+
+        return null;
+    }
+
+    // Update gene annotation with refined information
+    async updateGeneAnnotation(geneName, refinedAnnotation) {
+        try {
+            console.log('Updating gene annotation for:', geneName, refinedAnnotation);
+            
+            // Find the gene in current annotations
+            const gene = this.findGeneInAnnotations(geneName);
+            if (!gene) {
+                throw new Error(`Gene ${geneName} not found in current annotations`);
+            }
+            
+            // Update the gene's qualifiers with refined information
+            if (!gene.qualifiers) {
+                gene.qualifiers = {};
+            }
+            
+            // Update product/function
+            if (refinedAnnotation.product) {
+                gene.qualifiers.product = refinedAnnotation.product;
+            }
+            
+            // Update note
+            if (refinedAnnotation.note) {
+                gene.qualifiers.note = refinedAnnotation.note;
+            }
+            
+            // Update EC number
+            if (refinedAnnotation.ec) {
+                gene.qualifiers.ec_number = refinedAnnotation.ec;
+            }
+            
+            // Update GO terms
+            if (refinedAnnotation.go) {
+                gene.qualifiers.go_terms = refinedAnnotation.go;
+            }
+            
+            // Add new qualifiers
+            if (refinedAnnotation.cofactors) {
+                gene.qualifiers.cofactors = refinedAnnotation.cofactors;
+            }
+            
+            if (refinedAnnotation.substrates) {
+                gene.qualifiers.substrates = refinedAnnotation.substrates;
+            }
+            
+            if (refinedAnnotation.products) {
+                gene.qualifiers.products = refinedAnnotation.products;
+            }
+            
+            if (refinedAnnotation.references) {
+                gene.qualifiers.references = refinedAnnotation.references;
+            }
+            
+            // Add enhancement metadata
+            gene.qualifiers.enhanced = 'true';
+            gene.qualifiers.enhancement_date = refinedAnnotation.enhancementDate || new Date().toISOString();
+            gene.qualifiers.enhancement_source = refinedAnnotation.enhancementSource || 'Gene Annotation Refine Tool';
+            
+            // Refresh the display
+            this.refreshTrackDisplay();
+            
+            // Update gene details if this gene is currently selected
+            const geneDetailsContent = document.getElementById('geneDetailsContent');
+            if (geneDetailsContent && !geneDetailsContent.querySelector('.no-gene-selected')) {
+                this.populateGeneDetails(gene);
+            }
+            
+            // Show success notification
+            this.showNotification(`Gene annotation updated for ${geneName}`, 'success');
+            
+            return { success: true, message: 'Annotation updated successfully' };
+            
+        } catch (error) {
+            console.error('Error updating gene annotation:', error);
+            throw error;
+        }
+    }
+
+    // Find gene in current annotations
+    findGeneInAnnotations(geneName) {
+        if (!this.currentAnnotations) {
+            return null;
+        }
+        
+        for (const [chromosome, annotations] of Object.entries(this.currentAnnotations)) {
+            if (annotations && annotations.length) {
+                const gene = annotations.find(g => 
+                    g.name === geneName || 
+                    g.gene === geneName || 
+                    g.locus_tag === geneName ||
+                    (g.qualifiers && (
+                        g.qualifiers.gene === geneName ||
+                        g.qualifiers.locus_tag === geneName ||
+                        g.qualifiers.name === geneName
+                    ))
+                );
+                
+                if (gene) {
+                    return gene;
+                }
+            }
+        }
+        
+        return null;
     }
 
     // Legacy method for backward compatibility - now searches both
