@@ -1428,6 +1428,14 @@ function createMenu() {
               click: () => {
                 createEvo2Window();
               }
+            },
+            { type: 'separator' },
+            {
+              label: 'Deep Gene Research',
+              accelerator: 'CmdOrCtrl+Shift+W',
+              click: () => {
+                openDeepGeneResearch();
+              }
             }
           ]
         },
@@ -3321,6 +3329,32 @@ function createBlastInstallerWindow() {
 
   } catch (error) {
     console.error('Failed to open BLAST+ Installer:', error);
+  }
+}
+
+// Open Deep Gene Research in external browser
+function openDeepGeneResearch() {
+  try {
+    // Get the URL from settings (default to localhost:3000)
+    const { shell } = require('electron');
+    
+    // For now, use the default URL. In a full implementation, you would:
+    // 1. Load the URL from the config manager
+    // 2. Validate the URL
+    // 3. Handle errors if the service is not available
+    const deepGeneResearchUrl = 'http://localhost:3000/';
+    
+    console.log('Opening Deep Gene Research:', deepGeneResearchUrl);
+    shell.openExternal(deepGeneResearchUrl);
+    
+  } catch (error) {
+    console.error('Error opening Deep Gene Research:', error);
+    
+    // Show error dialog
+    dialog.showErrorBox(
+      'Error Opening Deep Gene Research',
+      `Failed to open Deep Gene Research: ${error.message}\n\nPlease check if the service is running at http://localhost:3000/`
+    );
   }
 }
 

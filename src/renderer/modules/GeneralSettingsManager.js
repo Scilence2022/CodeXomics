@@ -53,7 +53,10 @@ class GeneralSettingsManager {
             compressionLevel: 'medium',
             autoBackup: true,
             backupInterval: 24,
-            maxBackups: 10
+            maxBackups: 10,
+            
+            // External Tools
+            deepGeneResearchUrl: 'http://localhost:3000/'
         };
     }
 
@@ -317,6 +320,14 @@ class GeneralSettingsManager {
                 const value = parseInt(e.target.value);
                 this.updateSetting('wheelZoomMaxRange', value);
                 this.applyFeatureSetting('wheelZoomMaxRange', value);
+            });
+        }
+
+        // External tools settings
+        const deepGeneResearchUrlInput = document.getElementById('deepGeneResearchUrl');
+        if (deepGeneResearchUrlInput) {
+            deepGeneResearchUrlInput.addEventListener('change', (e) => {
+                this.updateSetting('deepGeneResearchUrl', e.target.value);
             });
         }
 
@@ -615,6 +626,10 @@ class GeneralSettingsManager {
             const checkbox = document.getElementById(id);
             if (checkbox) checkbox.checked = this.settings[id];
         });
+
+        // External tools settings
+        const deepGeneResearchUrlInput = document.getElementById('deepGeneResearchUrl');
+        if (deepGeneResearchUrlInput) deepGeneResearchUrlInput.value = this.settings.deepGeneResearchUrl;
 
         // Update system info
         this.updateSystemInfo();
