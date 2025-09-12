@@ -2716,7 +2716,7 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 }
                 
                 const responseText = await response.text();
-                console.log(`📋 Raw response:`, responseText.substring(0, 200) + '...');
+                console.log(`📋 Raw response:`, responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
                 
                 // Parse SSE response if needed
                 let result;
@@ -2744,8 +2744,13 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                     if (result.isError) {
                         throw new Error(`MCP Server error: ${result.content?.[0]?.text || 'Unknown error'}`);
                     }
+                } else if (jsonData && jsonData.error) {
+                    // Handle MCP error responses
+                    const errorMsg = jsonData.error.message || 'Unknown MCP error';
+                    const errorCode = jsonData.error.code || 'Unknown code';
+                    throw new Error(`MCP Error ${errorCode}: ${errorMsg}`);
                 } else {
-                    throw new Error('Failed to parse SSE response');
+                    throw new Error('Failed to parse SSE response - no valid result or error found');
                 }
                 } else {
                     // Parse JSON response
@@ -2760,10 +2765,46 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 
             } catch (error) {
                 console.error(`❌ Direct MCP call failed (${toolName}):`, error);
+                console.error(`📋 Parameters sent:`, JSON.stringify(parameters, null, 2));
                 return {
                     success: false,
-                    error: error.message
+                    error: error.message,
+                    toolName: toolName,
+                    parameters: parameters
                 };
+            }
+        }
+        
+        /**
+         * Extract content from MCP result
+         */
+        function extractContentFromMCPResult(result) {
+            try {
+                // If result has content array, extract the text
+                if (result && result.content && Array.isArray(result.content) && result.content.length > 0) {
+                    const content = result.content[0];
+                    if (content.text) {
+                        return content.text;
+                    } else if (typeof content === 'string') {
+                        return content;
+                    }
+                }
+                
+                // If result is a string, return it directly
+                if (typeof result === 'string') {
+                    return result;
+                }
+                
+                // If result has a text property
+                if (result && result.text) {
+                    return result.text;
+                }
+                
+                // Fallback: stringify the result
+                return JSON.stringify(result);
+            } catch (error) {
+                console.error('Error extracting content from MCP result:', error);
+                return JSON.stringify(result);
             }
         }
         
@@ -2892,6 +2933,313 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
             }
             
             return [...new Set(images)];
+        }
+        
+        /**
+         * Extract sources from gene-research tool result
+         */
+        function extractSourcesFromGeneResearchResult(parsedContent, rawResult) {
+            const sources = [];
+            
+            console.log('Extracting sources from gene-research result:', { parsedContent, rawResult });
+            
+            // Check parsed content for sources
+            if (parsedContent) {
+                // Look for references in the workflow structure
+                if (parsedContent.workflow) {
+                    const workflow = parsedContent.workflow;
+                    
+                    // Check functional analysis references
+                    if (workflow.functionalAnalysis && workflow.functionalAnalysis.references) {
+                        sources.push(...workflow.functionalAnalysis.references);
+                    }
+                    
+                    // Check structural analysis references
+                    if (workflow.structuralAnalysis && workflow.structuralAnalysis.references) {
+                        sources.push(...workflow.structuralAnalysis.references);
+                    }
+                    
+                    // Check expression analysis references
+                    if (workflow.expressionAnalysis && workflow.expressionAnalysis.references) {
+                        sources.push(...workflow.expressionAnalysis.references);
+                    }
+                    
+                    // Check disease association references
+                    if (workflow.diseaseAssociation && workflow.diseaseAssociation.references) {
+                        sources.push(...workflow.diseaseAssociation.references);
+                    }
+                    
+                    // Check recent research references
+                    if (workflow.recentResearch && workflow.recentResearch.references) {
+                        sources.push(...workflow.recentResearch.references);
+                    }
+                }
+                
+                // Check for direct sources array
+                if (parsedContent.sources && Array.isArray(parsedContent.sources)) {
+                    sources.push(...parsedContent.sources);
+                }
+                
+                // Check for references array
+                if (parsedContent.references && Array.isArray(parsedContent.references)) {
+                    sources.push(...parsedContent.references);
+                }
+            }
+            
+            // Fallback to original extraction if no sources found
+            if (sources.length === 0) {
+                sources.push(...extractSourcesFromReport(rawResult));
+            }
+            
+            console.log('Extracted sources from gene-research:', sources);
+            return [...new Set(sources)];
+        }
+        
+        /**
+         * Extract citations from gene-research tool result
+         */
+        function extractCitationsFromGeneResearchResult(parsedContent, rawResult) {
+            const citations = [];
+            
+            console.log('Extracting citations from gene-research result:', { parsedContent, rawResult });
+            
+            // Check parsed content for citations
+            if (parsedContent) {
+                // Look for citations in the workflow structure
+                if (parsedContent.workflow) {
+                    const workflow = parsedContent.workflow;
+                    
+                    // Check functional analysis citations
+                    if (workflow.functionalAnalysis && workflow.functionalAnalysis.citations) {
+                        citations.push(...workflow.functionalAnalysis.citations);
+                    }
+                    
+                    // Check structural analysis citations
+                    if (workflow.structuralAnalysis && workflow.structuralAnalysis.citations) {
+                        citations.push(...workflow.structuralAnalysis.citations);
+                    }
+                    
+                    // Check expression analysis citations
+                    if (workflow.expressionAnalysis && workflow.expressionAnalysis.citations) {
+                        citations.push(...workflow.expressionAnalysis.citations);
+                    }
+                    
+                    // Check disease association citations
+                    if (workflow.diseaseAssociation && workflow.diseaseAssociation.citations) {
+                        citations.push(...workflow.diseaseAssociation.citations);
+                    }
+                    
+                    // Check recent research citations
+                    if (workflow.recentResearch && workflow.recentResearch.citations) {
+                        citations.push(...workflow.recentResearch.citations);
+                    }
+                }
+                
+                // Check for direct citations array
+                if (parsedContent.citations && Array.isArray(parsedContent.citations)) {
+                    citations.push(...parsedContent.citations);
+                }
+                
+                // Extract citations from text content
+                const textContent = JSON.stringify(parsedContent);
+                const citationMatches = textContent.match(/\[\d+\]/g);
+                if (citationMatches) {
+                    citations.push(...citationMatches);
+                }
+                
+                // Look for PMID patterns
+                const pmidMatches = textContent.match(/PMID:\s*\d+/g);
+                if (pmidMatches) {
+                    citations.push(...pmidMatches);
+                }
+                
+                // Look for DOI patterns
+                const doiMatches = textContent.match(/DOI:\s*10\.\d+\/[^\s]+/g);
+                if (doiMatches) {
+                    citations.push(...doiMatches);
+                }
+            }
+            
+            // Fallback to original extraction if no citations found
+            if (citations.length === 0) {
+                citations.push(...extractCitationsFromReport(rawResult));
+            }
+            
+            console.log('Extracted citations from gene-research:', citations);
+            return [...new Set(citations)];
+        }
+        
+        /**
+         * Extract images from gene-research tool result
+         */
+        function extractImagesFromGeneResearchResult(parsedContent, rawResult) {
+            const images = [];
+            
+            console.log('Extracting images from gene-research result:', { parsedContent, rawResult });
+            
+            // Check parsed content for images
+            if (parsedContent) {
+                // Look for images in the workflow structure
+                if (parsedContent.workflow) {
+                    const workflow = parsedContent.workflow;
+                    
+                    // Check structural analysis images
+                    if (workflow.structuralAnalysis && workflow.structuralAnalysis.images) {
+                        images.push(...workflow.structuralAnalysis.images);
+                    }
+                    
+                    // Check expression analysis images
+                    if (workflow.expressionAnalysis && workflow.expressionAnalysis.images) {
+                        images.push(...workflow.expressionAnalysis.images);
+                    }
+                }
+                
+                // Check for direct images array
+                if (parsedContent.images && Array.isArray(parsedContent.images)) {
+                    images.push(...parsedContent.images);
+                }
+            }
+            
+            // Fallback to original extraction if no images found
+            if (images.length === 0) {
+                images.push(...extractImagesFromReport(rawResult));
+            }
+            
+            console.log('Extracted images from gene-research:', images);
+            return [...new Set(images)];
+        }
+        
+        /**
+         * Format gene-research tool content for display
+         */
+        function formatGeneResearchContent(parsedContent) {
+            if (!parsedContent || !parsedContent.workflow) {
+                return JSON.stringify(parsedContent, null, 2);
+            }
+            
+            const workflow = parsedContent.workflow;
+            let formattedContent = '';
+            
+            // Gene Identification
+            if (workflow.geneIdentification) {
+                const gene = workflow.geneIdentification;
+                formattedContent += `## Gene Identification\n\n`;
+                formattedContent += `**Gene Symbol:** ${gene.geneSymbol || 'Unknown'}\n`;
+                formattedContent += `**Organism:** ${gene.organism || 'Unknown'}\n`;
+                formattedContent += `**Gene ID:** ${gene.geneID || 'Not specified'}\n`;
+                formattedContent += `**Gene Type:** ${gene.geneType || 'Not specified'}\n`;
+                if (gene.description) {
+                    formattedContent += `**Description:** ${gene.description}\n`;
+                }
+                if (gene.chromosomalLocation) {
+                    formattedContent += `**Location:** ${gene.chromosomalLocation}\n`;
+                }
+                formattedContent += `\n`;
+            }
+            
+            // Functional Analysis
+            if (workflow.functionalAnalysis) {
+                const func = workflow.functionalAnalysis;
+                formattedContent += `## Functional Analysis\n\n`;
+                
+                if (func.molecularFunction && func.molecularFunction.length > 0) {
+                    formattedContent += `**Molecular Function:**\n`;
+                    func.molecularFunction.forEach(f => formattedContent += `- ${f}\n`);
+                    formattedContent += `\n`;
+                }
+                
+                if (func.biologicalProcess && func.biologicalProcess.length > 0) {
+                    formattedContent += `**Biological Process:**\n`;
+                    func.biologicalProcess.forEach(p => formattedContent += `- ${p}\n`);
+                    formattedContent += `\n`;
+                }
+                
+                if (func.cellularComponent && func.cellularComponent.length > 0) {
+                    formattedContent += `**Cellular Component:**\n`;
+                    func.cellularComponent.forEach(c => formattedContent += `- ${c}\n`);
+                    formattedContent += `\n`;
+                }
+                
+                if (func.catalyticActivity) {
+                    formattedContent += `**Catalytic Activity:** ${func.catalyticActivity}\n\n`;
+                }
+            }
+            
+            // Structural Analysis
+            if (workflow.structuralAnalysis) {
+                const struct = workflow.structuralAnalysis;
+                formattedContent += `## Structural Analysis\n\n`;
+                
+                if (struct.proteinDomains && struct.proteinDomains.length > 0) {
+                    formattedContent += `**Protein Domains:**\n`;
+                    struct.proteinDomains.forEach(d => formattedContent += `- ${d}\n`);
+                    formattedContent += `\n`;
+                }
+                
+                if (struct.secondaryStructure) {
+                    formattedContent += `**Secondary Structure:** ${struct.secondaryStructure}\n\n`;
+                }
+                
+                if (struct.tertiaryStructure) {
+                    formattedContent += `**Tertiary Structure:** ${struct.tertiaryStructure}\n\n`;
+                }
+            }
+            
+            // Expression Analysis
+            if (workflow.expressionAnalysis) {
+                const expr = workflow.expressionAnalysis;
+                formattedContent += `## Expression Analysis\n\n`;
+                
+                if (expr.tissueExpression && expr.tissueExpression.length > 0) {
+                    formattedContent += `**Tissue Expression:**\n`;
+                    expr.tissueExpression.forEach(t => formattedContent += `- ${t}\n`);
+                    formattedContent += `\n`;
+                }
+                
+                if (expr.developmentalStage) {
+                    formattedContent += `**Developmental Stage:** ${expr.developmentalStage}\n\n`;
+                }
+                
+                if (expr.expressionLevel) {
+                    formattedContent += `**Expression Level:** ${expr.expressionLevel}\n\n`;
+                }
+            }
+            
+            // Disease Association
+            if (workflow.diseaseAssociation) {
+                const disease = workflow.diseaseAssociation;
+                formattedContent += `## Disease Association\n\n`;
+                
+                if (disease.associatedDiseases && disease.associatedDiseases.length > 0) {
+                    formattedContent += `**Associated Diseases:**\n`;
+                    disease.associatedDiseases.forEach(d => formattedContent += `- ${d}\n`);
+                    formattedContent += `\n`;
+                }
+                
+                if (disease.clinicalSignificance) {
+                    formattedContent += `**Clinical Significance:** ${disease.clinicalSignificance}\n\n`;
+                }
+            }
+            
+            // Recent Research
+            if (workflow.recentResearch) {
+                const recent = workflow.recentResearch;
+                formattedContent += `## Recent Research\n\n`;
+                
+                if (recent.keyFindings && recent.keyFindings.length > 0) {
+                    formattedContent += `**Key Findings:**\n`;
+                    recent.keyFindings.forEach(f => formattedContent += `- ${f}\n`);
+                    formattedContent += `\n`;
+                }
+                
+                if (recent.publications && recent.publications.length > 0) {
+                    formattedContent += `**Recent Publications:**\n`;
+                    recent.publications.forEach(p => formattedContent += `- ${p}\n`);
+                    formattedContent += `\n`;
+                }
+            }
+            
+            return formattedContent;
         }
         
         
@@ -3060,10 +3408,12 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
             try {
                 updateProgressDisplay('Connecting to Deep Research MCP Server...', 5);
                 
-                // Step 1: Try main deep-research tool
-                updateProgressDisplay('Step 1: Attempting main deep-research tool...', 10);
-                const mainResult = await callMCPToolWithProgress('deep-research', {
-                    query: parameters.query,
+                // Step 1: Try main gene-research tool
+                updateProgressDisplay('Step 1: Attempting main gene-research tool...', 10);
+                const mainResult = await callMCPToolWithProgress('gene-research', {
+                    geneSymbol: parameters.geneSymbol || 'unknown',
+                    organism: parameters.organism || 'unknown',
+                    userPrompt: parameters.query,
                     language: parameters.language || 'English',
                     maxResult: parameters.maxResults || 5,
                     enableCitationImage: parameters.enableImages !== false,
@@ -3090,7 +3440,7 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 }
                 
                 updateProgressDisplay('Research plan generated successfully', 60);
-                const researchPlan = planResult.result;
+                const researchPlan = extractContentFromMCPResult(planResult.result);
                 
                 // Step 2.2: Generate search queries
                 updateProgressDisplay('Step 2.2: Generating search queries...', 65);
@@ -3104,12 +3454,25 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 }
                 
                 updateProgressDisplay('Search queries generated successfully', 75);
-                const searchQueries = queryResult.result;
+                const searchQueries = extractContentFromMCPResult(queryResult.result);
                 
                 // Step 2.3: Execute search tasks
                 updateProgressDisplay('Step 2.3: Executing search tasks...', 80);
+                
+                // Parse search queries if they're JSON string
+                let tasksArray;
+                try {
+                    tasksArray = typeof searchQueries === 'string' ? JSON.parse(searchQueries) : searchQueries;
+                } catch (e) {
+                    // If parsing fails, create a simple task array
+                    tasksArray = [{
+                        query: searchQueries,
+                        researchGoal: 'Research the provided query'
+                    }];
+                }
+                
                 const searchResult = await callMCPToolWithProgress('search-task', {
-                    tasks: searchQueries,
+                    tasks: tasksArray,
                     language: parameters.language || 'English',
                     maxResult: parameters.maxResults || 5,
                     enableReferences: parameters.enableReferences !== false
@@ -3120,13 +3483,29 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
                 }
                 
                 updateProgressDisplay('Search tasks completed successfully', 90);
-                const searchData = searchResult.result;
+                const searchData = extractContentFromMCPResult(searchResult.result);
                 
                 // Step 2.4: Generate final report
                 updateProgressDisplay('Step 2.4: Generating final report...', 95);
+                
+                // Parse search data if it's JSON string
+                let searchDataArray;
+                try {
+                    searchDataArray = typeof searchData === 'string' ? JSON.parse(searchData) : searchData;
+                } catch (e) {
+                    // If parsing fails, create a simple data structure
+                    searchDataArray = [{
+                        query: parameters.query,
+                        researchGoal: 'Research the provided query',
+                        learning: searchData,
+                        sources: [],
+                        images: []
+                    }];
+                }
+                
                 const reportResult = await callMCPToolWithProgress('write-final-report', {
                     plan: researchPlan,
-                    tasks: searchData,
+                    tasks: searchDataArray,
                     language: parameters.language || 'English',
                     maxResult: parameters.maxResults || 5,
                     enableCitationImage: parameters.enableImages !== false,
@@ -3167,17 +3546,36 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
          * Process main research result
          */
         function processMainResearchResult(mainResult, parameters) {
+            // Extract and parse the JSON content from gene-research tool response
+            let parsedContent = null;
+            let rawContent = '';
+            
+            try {
+                if (mainResult.result && mainResult.result.content && Array.isArray(mainResult.result.content)) {
+                    const contentItem = mainResult.result.content[0];
+                    if (contentItem && contentItem.text) {
+                        rawContent = contentItem.text;
+                        parsedContent = JSON.parse(contentItem.text);
+                        console.log('Parsed gene-research content:', parsedContent);
+                    }
+                }
+            } catch (error) {
+                console.error('Error parsing gene-research content:', error);
+                parsedContent = null;
+            }
+            
             const processedResult = {
-                summary: mainResult.result.summary || 'Research completed successfully',
-                content: mainResult.result.content || mainResult.result.report || 'No detailed content available',
-                sources: extractSourcesFromReport(mainResult.result),
-                citations: extractCitationsFromReport(mainResult.result),
-                images: extractImagesFromReport(mainResult.result),
+                summary: parsedContent?.summary || mainResult.result.summary || 'Research completed successfully',
+                content: parsedContent || mainResult.result.content || mainResult.result.report || 'No detailed content available',
+                sources: extractSourcesFromGeneResearchResult(parsedContent, mainResult.result),
+                citations: extractCitationsFromGeneResearchResult(parsedContent, mainResult.result),
+                images: extractImagesFromGeneResearchResult(parsedContent, mainResult.result),
                 metadata: {
                     language: parameters.language || 'English',
                     maxResults: parameters.maxResults || 5,
                     processedAt: Date.now(),
-                    method: 'main-deep-research'
+                    method: 'main-deep-research',
+                    rawContent: rawContent
                 }
             };
             
@@ -3355,7 +3753,14 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
             // Handle different content formats from MCP Server
             let mainContent = '';
             if (result.content) {
-                mainContent = result.content;
+                // If content is a parsed object from gene-research tool, format it nicely
+                if (typeof result.content === 'object' && result.content.workflow) {
+                    mainContent = formatGeneResearchContent(result.content);
+                } else if (typeof result.content === 'string') {
+                    mainContent = result.content;
+                } else {
+                    mainContent = JSON.stringify(result.content, null, 2);
+                }
             } else if (result.finalReport) {
                 mainContent = result.finalReport;
             } else if (result.report) {
@@ -3368,7 +3773,9 @@ References: PMID:1234567, PMID:2345678, DOI:10.1000/example
             if (typeof mainContent === 'string' && mainContent.startsWith('{')) {
                 try {
                     const parsedContent = JSON.parse(mainContent);
-                    if (parsedContent.finalReport) {
+                    if (parsedContent.workflow) {
+                        mainContent = formatGeneResearchContent(parsedContent);
+                    } else if (parsedContent.finalReport) {
                         mainContent = parsedContent.finalReport;
                     } else if (parsedContent.content) {
                         mainContent = parsedContent.content;
