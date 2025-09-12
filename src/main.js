@@ -3331,6 +3331,303 @@ function createBlastInstallerWindow() {
   }
 }
 
+// Create specialized menu for Deep Gene Research window
+function createDeepGeneResearchMenu(deepGeneResearchWindow) {
+  const template = [
+    // macOS app menu
+    ...(process.platform === 'darwin' ? [{
+      label: 'Genome AI Studio',
+      submenu: [
+        {
+          label: 'About Deep Gene Research',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Preferences',
+          accelerator: 'Cmd+,',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'preferences');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: `Hide ${APP_NAME}`,
+          accelerator: 'Cmd+H',
+          role: 'hide'
+        },
+        {
+          label: 'Hide Others',
+          accelerator: 'Cmd+Shift+H',
+          role: 'hideothers'
+        },
+        {
+          label: 'Show All',
+          role: 'unhide'
+        },
+        { type: 'separator' },
+        {
+          label: `Quit ${APP_NAME}`,
+          accelerator: 'Cmd+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    }] : []),
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Analysis',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'new-analysis');
+          }
+        },
+        {
+          label: 'Open',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'open');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Save Results',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'save-results');
+          }
+        },
+        {
+          label: 'Export Data',
+          accelerator: 'CmdOrCtrl+E',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'export-data');
+          }
+        },
+        { type: 'separator' },
+        ...(process.platform !== 'darwin' ? [
+          {
+            label: 'Exit',
+            accelerator: 'Ctrl+Q',
+            click: () => {
+              app.quit();
+            }
+          }
+        ] : [
+          {
+            label: 'Close Window',
+            accelerator: 'Cmd+W',
+            click: () => {
+              deepGeneResearchWindow.close();
+            }
+          }
+        ])
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          label: 'Copy',
+          accelerator: 'CmdOrCtrl+C',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'copy');
+          }
+        },
+        {
+          label: 'Paste',
+          accelerator: 'CmdOrCtrl+V',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'paste');
+          }
+        },
+        {
+          label: 'Cut',
+          accelerator: 'CmdOrCtrl+X',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'cut');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Select All',
+          accelerator: 'CmdOrCtrl+A',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'select-all');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Find',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'find');
+          }
+        },
+        {
+          label: 'Find Next',
+          accelerator: 'F3',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'find-next');
+          }
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Reload',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'reload');
+          }
+        },
+        {
+          label: 'Force Reload',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'force-reload');
+          }
+        },
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'F12',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'toggle-dev-tools');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Reset Zoom',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'reset-zoom');
+          }
+        },
+        {
+          label: 'Zoom In',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'zoom-in');
+          }
+        },
+        {
+          label: 'Zoom Out',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'zoom-out');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle Fullscreen',
+          accelerator: 'F11',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'toggle-fullscreen');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Tools',
+      submenu: [
+        {
+          label: 'Back to Main Window',
+          accelerator: 'CmdOrCtrl+Shift+M',
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.focus();
+              mainWindow.show();
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Refresh Page',
+          accelerator: 'F5',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'reload');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        ...(process.platform !== 'darwin' ? [
+          {
+            label: 'About Deep Gene Research',
+            click: () => {
+              deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
+            }
+          },
+          { type: 'separator' }
+        ] : []),
+        {
+          label: 'User Guide',
+          accelerator: 'F1',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'user-guide');
+          }
+        },
+        {
+          label: 'Tool Documentation',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'documentation');
+          }
+        },
+        {
+          label: 'Online Resources',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'online-resources');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Report Issue',
+          click: () => {
+            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/issues');
+          }
+        },
+        {
+          label: 'Contact Support',
+          click: () => {
+            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'contact-support');
+          }
+        }
+      ]
+    }
+  ];
+
+  // Store menu template
+  toolMenuTemplates.set(deepGeneResearchWindow.id, { template, toolName: 'Deep Gene Research' });
+
+  // Create menu and set as application menu
+  const menu = Menu.buildFromTemplate(template);
+  
+  // Set window focus to switch menu
+  deepGeneResearchWindow.on('focus', () => {
+    currentActiveWindow = deepGeneResearchWindow;
+    Menu.setApplicationMenu(menu);
+    console.log('Switched to Deep Gene Research menu');
+  });
+
+  // Clean up when window closes
+  deepGeneResearchWindow.on('closed', () => {
+    toolMenuTemplates.delete(deepGeneResearchWindow.id);
+    if (currentActiveWindow === deepGeneResearchWindow) {
+      currentActiveWindow = null;
+      createMenu(); // Restore main window menu
+    }
+  });
+}
+
 // Create Deep Gene Research Window
 function createDeepGeneResearchWindow() {
   try {
@@ -3349,7 +3646,10 @@ function createDeepGeneResearchWindow() {
         contextIsolation: true,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
-        allowRunningInsecureContent: true
+        allowRunningInsecureContent: true,
+        // Enable clipboard and keyboard functionality
+        experimentalFeatures: true,
+        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
       },
       title: 'Deep Gene Research - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -3367,7 +3667,41 @@ function createDeepGeneResearchWindow() {
     deepGeneResearchWindow.once('ready-to-show', () => {
       deepGeneResearchWindow.show();
       // Set specialized menu for Deep Gene Research window
-      createToolWindowMenu(deepGeneResearchWindow, 'Deep Gene Research');
+      createDeepGeneResearchMenu(deepGeneResearchWindow);
+      
+      // Enable keyboard shortcuts for copy/paste
+      deepGeneResearchWindow.webContents.executeJavaScript(`
+        // Enable clipboard access
+        if (navigator.clipboard) {
+          console.log('Clipboard API available');
+        }
+        
+        // Add keyboard event listeners for copy/paste
+        document.addEventListener('keydown', function(e) {
+          // Ctrl+C or Cmd+C
+          if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+            console.log('Copy shortcut detected');
+            document.execCommand('copy');
+          }
+          // Ctrl+V or Cmd+V
+          if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+            console.log('Paste shortcut detected');
+            document.execCommand('paste');
+          }
+          // Ctrl+A or Cmd+A
+          if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+            console.log('Select All shortcut detected');
+            document.execCommand('selectAll');
+          }
+          // Ctrl+X or Cmd+X
+          if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+            console.log('Cut shortcut detected');
+            document.execCommand('cut');
+          }
+        });
+        
+        console.log('Deep Gene Research window keyboard shortcuts enabled');
+      `);
     });
 
     // Handle window closed
@@ -3497,6 +3831,65 @@ ipcMain.on('open-blast-installer-window', () => {
 ipcMain.on('open-gene-annotation-refine', (event, data) => {
   console.log('IPC: Opening Gene Annotation Refine window...', data);
   createGeneAnnotationRefineWindow();
+});
+
+ipcMain.on('open-deep-gene-research-window', () => {
+  console.log('IPC: Opening Deep Gene Research window...');
+  createDeepGeneResearchWindow();
+});
+
+// IPC handler for Deep Gene Research window menu actions
+ipcMain.on('deep-gene-research-menu-action', (event, action) => {
+  console.log('Deep Gene Research menu action:', action);
+  
+  const webContents = event.sender;
+  
+  switch (action) {
+    case 'copy':
+      webContents.copy();
+      break;
+    case 'paste':
+      webContents.paste();
+      break;
+    case 'cut':
+      webContents.cut();
+      break;
+    case 'select-all':
+      webContents.selectAll();
+      break;
+    case 'find':
+      webContents.findInPage('');
+      break;
+    case 'find-next':
+      webContents.findInPage('', { forward: true });
+      break;
+    case 'reload':
+      webContents.reload();
+      break;
+    case 'force-reload':
+      webContents.reloadIgnoringCache();
+      break;
+    case 'toggle-dev-tools':
+      webContents.toggleDevTools();
+      break;
+    case 'reset-zoom':
+      webContents.setZoomLevel(0);
+      break;
+    case 'zoom-in':
+      webContents.setZoomLevel(webContents.getZoomLevel() + 0.5);
+      break;
+    case 'zoom-out':
+      webContents.setZoomLevel(webContents.getZoomLevel() - 0.5);
+      break;
+    case 'toggle-fullscreen':
+      const window = BrowserWindow.fromWebContents(webContents);
+      if (window) {
+        window.setFullScreen(!window.isFullScreen());
+      }
+      break;
+    default:
+      console.log('Unknown Deep Gene Research menu action:', action);
+  }
 });
 
 // Evo2 configuration IPC handlers
