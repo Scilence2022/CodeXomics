@@ -1428,18 +1428,17 @@ function createMenu() {
               click: () => {
                 createEvo2Window();
               }
-            },
-            { type: 'separator' },
-            {
-              label: 'Deep Gene Research',
-              accelerator: 'CmdOrCtrl+Shift+W',
-              click: () => {
-                openDeepGeneResearch();
-              }
             }
           ]
         },
         { type: 'separator' },
+        {
+          label: 'Deep Gene Research',
+          accelerator: 'CmdOrCtrl+Shift+W',
+          click: () => {
+            createDeepGeneResearchWindow();
+          }
+        },
         {
           label: 'Install BLAST+ Tools',
           accelerator: 'CmdOrCtrl+Alt+B',
@@ -3332,28 +3331,97 @@ function createBlastInstallerWindow() {
   }
 }
 
-// Open Deep Gene Research in external browser
-function openDeepGeneResearch() {
+// Create Deep Gene Research Window
+function createDeepGeneResearchWindow() {
   try {
     // Get the URL from settings (default to localhost:3000)
-    const { shell } = require('electron');
-    
-    // For now, use the default URL. In a full implementation, you would:
-    // 1. Load the URL from the config manager
-    // 2. Validate the URL
-    // 3. Handle errors if the service is not available
     const deepGeneResearchUrl = 'http://localhost:3000/';
     
-    console.log('Opening Deep Gene Research:', deepGeneResearchUrl);
-    shell.openExternal(deepGeneResearchUrl);
+    console.log('Creating Deep Gene Research window:', deepGeneResearchUrl);
     
+    const deepGeneResearchWindow = new BrowserWindow({
+      width: 1600,
+      height: 1000,
+      minWidth: 1200,
+      minHeight: 800,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        webSecurity: false, // Allow loading external URLs
+        allowRunningInsecureContent: true
+      },
+      title: 'Deep Gene Research - Genome AI Studio',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false,
+      resizable: true,
+      minimizable: true,
+      maximizable: true,
+      autoHideMenuBar: false
+    });
+
+    // Load the Deep Gene Research URL
+    deepGeneResearchWindow.loadURL(deepGeneResearchUrl);
+
+    // Show window when ready
+    deepGeneResearchWindow.once('ready-to-show', () => {
+      deepGeneResearchWindow.show();
+      // Set specialized menu for Deep Gene Research window
+      createToolWindowMenu(deepGeneResearchWindow, 'Deep Gene Research');
+    });
+
+    // Handle window closed
+    deepGeneResearchWindow.on('closed', () => {
+      // Clean up menu template
+      toolMenuTemplates.delete(deepGeneResearchWindow.id);
+      
+      // If this was the current active window, restore main window menu
+      if (currentActiveWindow === deepGeneResearchWindow) {
+        currentActiveWindow = null;
+        createMenu(); // Restore main window menu
+      }
+      console.log('Deep Gene Research window closed');
+    });
+
+    // Handle navigation errors
+    deepGeneResearchWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('Failed to load Deep Gene Research:', errorDescription);
+      
+      // Show error page
+      deepGeneResearchWindow.loadURL(`data:text/html,
+        <html>
+          <head><title>Deep Gene Research - Connection Error</title></head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; text-align: center;">
+            <h1 style="color: #e74c3c;">🔗 Connection Error</h1>
+            <p>Unable to connect to Deep Gene Research service.</p>
+            <p><strong>URL:</strong> ${deepGeneResearchUrl}</p>
+            <p><strong>Error:</strong> ${errorDescription}</p>
+            <div style="margin-top: 30px;">
+              <button onclick="window.location.reload()" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">
+                🔄 Retry
+              </button>
+              <button onclick="window.close()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">
+                ❌ Close
+              </button>
+            </div>
+            <div style="margin-top: 20px; font-size: 14px; color: #7f8c8d;">
+              <p>Please check if the Deep Gene Research service is running at the configured URL.</p>
+              <p>You can configure the URL in General Settings → Features → External Tools.</p>
+            </div>
+          </body>
+        </html>
+      `);
+    });
+
+    console.log('Deep Gene Research window created successfully');
+
   } catch (error) {
-    console.error('Error opening Deep Gene Research:', error);
+    console.error('Error creating Deep Gene Research window:', error);
     
     // Show error dialog
     dialog.showErrorBox(
       'Error Opening Deep Gene Research',
-      `Failed to open Deep Gene Research: ${error.message}\n\nPlease check if the service is running at http://localhost:3000/`
+      `Failed to create Deep Gene Research window: ${error.message}\n\nPlease check if the service is running at http://localhost:3000/`
     );
   }
 }
