@@ -128,7 +128,7 @@ class MultiTrackGeneManager {
             
             // Map gene types to track categories
             let trackType = gene.type;
-            if (gene.type === 'CDS' || gene.type === 'mRNA') {
+            if (gene.type === 'protein_coding' || gene.type === 'CDS' || gene.type === 'mRNA') {
                 trackType = 'protein_coding';
             } else if (gene.type === 'tRNA') {
                 trackType = 'tRNA';
@@ -138,7 +138,7 @@ class MultiTrackGeneManager {
                 trackType = 'regulatory';
             } else if (gene.type === 'pseudogene') {
                 trackType = 'pseudogene';
-            } else if (['gene', 'ncRNA'].includes(gene.type)) {
+            } else if (['gene', 'ncRNA', 'misc_RNA'].includes(gene.type)) {
                 trackType = 'non_coding';
             } else {
                 trackType = 'other';
