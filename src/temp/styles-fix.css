@@ -5378,11 +5378,30 @@ path.svg-gene-element.selected {
 .chat-panel.minimized {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
+    /* Enhanced positioning for minimized state */
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    /* Ensure smooth position transitions */
+}
+
+/* Specific styles for minimized ChatBox positioning */
+.chat-panel.minimized {
+    /* These will be overridden by JavaScript for dynamic positioning */
+    cursor: pointer;
+}
+
+.chat-panel.minimized:hover {
+    background: rgba(255, 255, 255, 0.98);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
     .chat-panel.minimized {
         background: rgba(30, 41, 59, 0.95);
+    }
+
+    .chat-panel.minimized:hover {
+        background: rgba(30, 41, 59, 0.98);
     }
 }
 
@@ -11351,11 +11370,30 @@ path.svg-gene-element.selected {
 .chat-panel.minimized {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
+    /* Enhanced positioning for minimized state */
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    /* Ensure smooth position transitions */
+}
+
+/* Specific styles for minimized ChatBox positioning */
+.chat-panel.minimized {
+    /* These will be overridden by JavaScript for dynamic positioning */
+    cursor: pointer;
+}
+
+.chat-panel.minimized:hover {
+    background: rgba(255, 255, 255, 0.98);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
     .chat-panel.minimized {
         background: rgba(30, 41, 59, 0.95);
+    }
+
+    .chat-panel.minimized:hover {
+        background: rgba(30, 41, 59, 0.98);
     }
 }
 
@@ -14962,11 +15000,30 @@ path.svg-gene-element.selected {
 .chat-panel.minimized {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
+    /* Enhanced positioning for minimized state */
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    /* Ensure smooth position transitions */
+}
+
+/* Specific styles for minimized ChatBox positioning */
+.chat-panel.minimized {
+    /* These will be overridden by JavaScript for dynamic positioning */
+    cursor: pointer;
+}
+
+.chat-panel.minimized:hover {
+    background: rgba(255, 255, 255, 0.98);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
     .chat-panel.minimized {
         background: rgba(30, 41, 59, 0.95);
+    }
+
+    .chat-panel.minimized:hover {
+        background: rgba(30, 41, 59, 0.98);
     }
 }
 

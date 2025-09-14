@@ -2569,10 +2569,20 @@ to {
 /* Ensure minimized panel maintains background */
 .chat-panel.minimized {
     background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);}
+    backdrop-filter: blur(10px);
+    /* Enhanced positioning for minimized state */
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    /* Ensure smooth position transitions */
+    cursor: pointer;}
+.chat-panel.minimized:hover {
+    background: rgba(255, 255, 255, 0.98);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);}
 @media (prefers-color-scheme: dark) {
     .chat-panel.minimized {
         background: rgba(30, 41, 59, 0.95);}
+    .chat-panel.minimized:hover {
+        background: rgba(30, 41, 59, 0.98);}
 /* Chat Header */
 .chat-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

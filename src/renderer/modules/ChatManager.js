@@ -2793,7 +2793,37 @@ class ChatManager {
     toggleChatMinimize() {
         const chatPanel = document.getElementById('llmChatPanel');
         if (chatPanel) {
-            chatPanel.classList.toggle('minimized');
+            const isMinimized = chatPanel.classList.contains('minimized');
+            
+            if (!isMinimized) {
+                // Minimizing: move to bottom-left corner
+                chatPanel.classList.add('minimized');
+                
+                // Calculate proper bottom position dynamically
+                const statusBar = document.querySelector('.status-bar');
+                let statusBarHeight = 40; // Default fallback
+                
+                if (statusBar) {
+                    // Get actual status bar height
+                    const rect = statusBar.getBoundingClientRect();
+                    statusBarHeight = rect.height;
+                }
+                
+                // Add small margin between ChatBox and status bar
+                const margin = 10;
+                const bottomPosition = statusBarHeight + margin;
+                
+                chatPanel.style.bottom = `${bottomPosition}px`;
+                chatPanel.style.left = '20px';
+                chatPanel.style.right = 'auto';
+            } else {
+                // Expanding: restore to original position
+                chatPanel.classList.remove('minimized');
+                chatPanel.style.bottom = '20px';
+                chatPanel.style.left = 'auto';
+                chatPanel.style.right = '20px';
+            }
+            
             // When minimizing/expanding, don't save position to avoid conflicts
             // Only save the minimized state preference if needed
         }
