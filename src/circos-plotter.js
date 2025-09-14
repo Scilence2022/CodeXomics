@@ -1384,7 +1384,8 @@ class CircosPlotter {
     // Generate mock GC skew data
     generateMockGCSkew(chromosome) {
         const data = [];
-        const numPoints = Math.floor(chromosome.length / this.gcWindowSize);
+        const chrLength = chromosome.length || chromosome.size || 0;
+        const numPoints = Math.floor(chrLength / this.gcWindowSize);
         
         for (let i = 0; i < numPoints; i++) {
             const position = i * this.gcWindowSize + this.gcWindowSize / 2;
@@ -1402,7 +1403,8 @@ class CircosPlotter {
     // Generate mock WIG data
     generateMockWigData(chromosome) {
         const data = [];
-        const numPoints = Math.floor(chromosome.length / (this.gcWindowSize / 2));
+        const chrLength = chromosome.length || chromosome.size || 0;
+        const numPoints = Math.floor(chrLength / (this.gcWindowSize / 2));
         
         for (let i = 0; i < numPoints; i++) {
             const position = i * (this.gcWindowSize / 2) + this.gcWindowSize / 4;
@@ -1780,7 +1782,8 @@ class CircosPlotter {
         
         this.data.chromosomes.forEach(chr => {
             const skewData = this.generateMockGCSkew(chr);
-            console.log('GC Skew data for chromosome', chr.name, ':', skewData.length, 'points');
+            const chrName = chr.name || chr.label || chr.id || 'Unknown';
+            console.log('GC Skew data for chromosome', chrName, ':', skewData.length, 'points');
             
             // Validate chromosome data
             const chrLength = chr.length || chr.size || 1;
@@ -1843,7 +1846,8 @@ class CircosPlotter {
         
         this.data.chromosomes.forEach(chr => {
             const wigData = this.generateMockWigData(chr);
-            console.log('WIG data for chromosome', chr.name, ':', wigData.length, 'points');
+            const chrName = chr.name || chr.label || chr.id || 'Unknown';
+            console.log('WIG data for chromosome', chrName, ':', wigData.length, 'points');
             
             // Validate chromosome data
             const chrLength = chr.length || chr.size || 1;
