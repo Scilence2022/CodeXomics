@@ -1488,18 +1488,36 @@ class CircosPlotter {
         }
         
         // Draw data tracks
+        // Calculate track offset based on gene tracks
         let trackOffset = 0;
+        if (this.multiTrackManager) {
+            // Calculate total height of gene tracks
+            const enabledTracks = Object.values(this.multiTrackManager.geneTracks).filter(track => track.enabled);
+            const maxTrackNumber = Math.max(...enabledTracks.map(track => track.track), -1);
+            trackOffset = (maxTrackNumber + 1) * (this.geneHeight + 2) + 10;
+            
+            // Add CDS density tracks if enabled
+            if (this.multiTrackManager.geneTracks.protein_coding.enabled) {
+                const cdsGenes = this.multiTrackManager.groupGenesByType(this.data.genes).protein_coding || [];
+                if (cdsGenes.length > this.multiTrackManager.geneTracks.protein_coding.maxGenes) {
+                    trackOffset += this.multiTrackManager.cdsDensityTracks * (this.multiTrackManager.cdsTrackHeight + 1);
+                }
+            }
+        }
+        
         if (this.showGCContent) {
             this.drawGCContentTrack(g, trackOffset);
             trackOffset += this.wigTrackHeight + 5;
         }
         
         if (this.showGCSkew) {
+            console.log('Drawing GC Skew track at offset:', trackOffset);
             this.drawGCSkewTrack(g, trackOffset);
             trackOffset += this.wigTrackHeight + 5;
         }
         
         if (this.showWigData) {
+            console.log('Drawing WIG track at offset:', trackOffset);
             this.drawWigTrack(g, trackOffset);
             trackOffset += this.wigTrackHeight + 5;
         }
@@ -1758,8 +1776,11 @@ class CircosPlotter {
         const theme = this.getCurrentTheme();
         const trackRadius = this.innerRadius + this.chromosomeWidth + this.geneHeight + 10 + trackOffset;
         
+        console.log('GC Skew track radius:', trackRadius, 'offset:', trackOffset);
+        
         this.data.chromosomes.forEach(chr => {
             const skewData = this.generateMockGCSkew(chr);
+            console.log('GC Skew data for chromosome', chr.name, ':', skewData.length, 'points');
             
             // Validate chromosome data
             const chrLength = chr.length || chr.size || 1;
@@ -1818,8 +1839,11 @@ class CircosPlotter {
         const theme = this.getCurrentTheme();
         const trackRadius = this.innerRadius + this.chromosomeWidth + this.geneHeight + 10 + trackOffset;
         
+        console.log('WIG track radius:', trackRadius, 'offset:', trackOffset);
+        
         this.data.chromosomes.forEach(chr => {
             const wigData = this.generateMockWigData(chr);
+            console.log('WIG data for chromosome', chr.name, ':', wigData.length, 'points');
             
             // Validate chromosome data
             const chrLength = chr.length || chr.size || 1;
