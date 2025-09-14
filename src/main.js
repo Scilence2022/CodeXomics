@@ -2698,6 +2698,189 @@ ipcMain.handle('get-genome-data', async (event) => {
   }
 });
 
+// Handle genome data requests from Circos Plotter
+ipcMain.handle('get-circos-genome-data', async (event) => {
+  try {
+    // Get the sender window (Circos window)
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    
+    // Get main window data
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const result = await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.genomeBrowser) {
+            const genomeData = {
+              currentSequence: window.genomeBrowser.currentSequence || {},
+              currentAnnotations: window.genomeBrowser.currentAnnotations || {},
+              currentPosition: window.genomeBrowser.currentPosition || null,
+              currentChromosome: window.genomeBrowser.currentChromosome || null,
+              sequenceLength: window.genomeBrowser.sequenceLength || 0,
+              loadedFiles: window.genomeBrowser.loadedFiles || [],
+              visibleTracks: window.genomeBrowser.visibleTracks || [],
+              operons: window.genomeBrowser.operons || []
+            };
+            
+            // Convert sequence data to Circos format
+            const chromosomes = [];
+            const genes = [];
+            const links = [];
+            
+            // Process each chromosome/sequence
+            Object.keys(genomeData.currentSequence).forEach((chrName, index) => {
+              const sequence = genomeData.currentSequence[chrName];
+              const length = sequence.length;
+              
+              // Add chromosome data
+              chromosomes.push({
+                id: chrName,
+                label: chrName,
+                size: length,
+                start: 0,
+                end: length
+              });
+              
+              // Process annotations for this chromosome
+              if (genomeData.currentAnnotations[chrName]) {
+                const annotations = genomeData.currentAnnotations[chrName];
+                
+                // Add gene annotations
+                if (annotations.genes) {
+                  annotations.genes.forEach(gene => {
+                    genes.push({
+                      id: gene.locusTag || gene.geneName || \`gene_\${genes.length}\`,
+                      name: gene.geneName || gene.locusTag || 'Unknown',
+                      chromosome: chrName,
+                      start: gene.start || gene.position || 0,
+                      end: gene.end || (gene.start + (gene.length || 1000)) || 1000,
+                      strand: gene.strand || '+',
+                      type: gene.type || 'protein_coding',
+                      description: gene.description || gene.product || 'Unknown function'
+                    });
+                  });
+                }
+                
+                // Add other features
+                if (annotations.features) {
+                  annotations.features.forEach(feature => {
+                    genes.push({
+                      id: feature.locusTag || feature.name || \`feature_\${genes.length}\`,
+                      name: feature.name || feature.locusTag || 'Unknown',
+                      chromosome: chrName,
+                      start: feature.start || feature.position || 0,
+                      end: feature.end || (feature.start + (feature.length || 100)) || 100,
+                      strand: feature.strand || '+',
+                      type: feature.type || 'other',
+                      description: feature.description || feature.product || 'Unknown function'
+                    });
+                  });
+                }
+              }
+            });
+            
+            return {
+              success: true,
+              data: {
+                chromosomes: chromosomes,
+                genes: genes,
+                links: links,
+                metadata: {
+                  totalChromosomes: chromosomes.length,
+                  totalGenes: genes.length,
+                  totalLength: chromosomes.reduce((sum, chr) => sum + chr.size, 0),
+                  source: 'GenomeExplorer',
+                  timestamp: new Date().toISOString()
+                }
+              },
+              originalData: genomeData
+            };
+          }
+          return { success: false, error: 'No genome data loaded' };
+        })()
+      `);
+      return result;
+    }
+    return { success: false, error: 'Main window not available' };
+  } catch (error) {
+    console.error('Error getting Circos genome data:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle navigation requests from Circos Plotter
+ipcMain.handle('navigate-to-chromosome', async (event, chromosomeName) => {
+  try {
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.genomeBrowser && document.getElementById('chromosomeSelect')) {
+            const select = document.getElementById('chromosomeSelect');
+            const option = Array.from(select.options).find(opt => 
+              opt.value === '${chromosomeName}' || 
+              opt.text.includes('${chromosomeName}')
+            );
+            if (option) {
+              select.value = option.value;
+              select.dispatchEvent(new Event('change'));
+              return true;
+            }
+          }
+          return false;
+        })()
+      `);
+      return { success: true };
+    }
+    return { success: false, error: 'Main window not available' };
+  } catch (error) {
+    console.error('Error navigating to chromosome:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('navigate-to-gene', async (event, geneData) => {
+  try {
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.genomeBrowser) {
+            // First navigate to the chromosome
+            const select = document.getElementById('chromosomeSelect');
+            if (select) {
+              const option = Array.from(select.options).find(opt => 
+                opt.value === '${geneData.chromosome}' || 
+                opt.text.includes('${geneData.chromosome}')
+              );
+              if (option) {
+                select.value = option.value;
+                select.dispatchEvent(new Event('change'));
+              }
+            }
+            
+            // Then navigate to the gene position
+            setTimeout(() => {
+              if (window.genomeBrowser.navigateToPosition) {
+                window.genomeBrowser.navigateToPosition(${geneData.start}, ${geneData.end});
+              } else if (window.genomeBrowser.setPosition) {
+                window.genomeBrowser.setPosition(${geneData.start}, ${geneData.end});
+              }
+            }, 500);
+            
+            return true;
+          }
+          return false;
+        })()
+      `);
+      return { success: true };
+    }
+    return { success: false, error: 'Main window not available' };
+  } catch (error) {
+    console.error('Error navigating to gene:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle gene sequence requests
 ipcMain.handle('get-gene-sequence', async (event, geneName) => {
   try {
