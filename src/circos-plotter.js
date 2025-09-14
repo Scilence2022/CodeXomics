@@ -37,6 +37,9 @@ class CircosPlotter {
         this.gcWindowSize = 10000;
         this.wigTrackHeight = 30;
         
+        // Initialize multi-track gene manager
+        this.multiTrackManager = null;
+        
         // Legend properties
         this.showLegend = true;
         this.legendPosition = 'top-right';
@@ -1680,152 +1683,15 @@ class CircosPlotter {
         if (!this.data.genes) return;
         
         const theme = this.getCurrentTheme();
-        const geneRadius = this.innerRadius + this.chromosomeWidth + 5;
-        const geneHeight = Math.max(this.geneHeight, 3); // Ensure minimum visible height
+        const baseRadius = this.innerRadius + this.chromosomeWidth + 5;
         
-        // Limit genes for performance and prevent timeout violations
-        const maxGenesToProcess = Math.min(this.maxGenes, 1000); // Hard limit to prevent performance issues
-        const genesToProcess = this.data.genes.slice(0, maxGenesToProcess);
-        console.log(`Processing ${genesToProcess.length} genes for visualization`);
+        // Initialize multi-track manager if not already done
+        if (!this.multiTrackManager) {
+            this.multiTrackManager = new MultiTrackGeneManager(this);
+        }
         
-        let renderedGenes = 0;
-        let filteredGenes = 0;
-        genesToProcess.forEach(gene => {
-            // Skip source features and other large features that obscure genes
-            if (gene.type === 'source' || gene.type === 'other' || !gene.type) {
-                filteredGenes++;
-                if (filteredGenes <= 5) { // Log first 5 filtered genes for debugging
-                    console.log(`Filtered out gene type: ${gene.type}, name: ${gene.name}`);
-                }
-                return;
-            }
-            
-            const chr = this.data.chromosomes.find(c => 
-                (c.name === gene.chromosome) || 
-                (c.label === gene.chromosome) || 
-                (c.id === gene.chromosome)
-            );
-            if (!chr) return;
-            
-            const chrLength = chr.length || chr.size || 1;
-            
-            // Validate gene coordinates
-            if (!gene.start || !gene.end || isNaN(gene.start) || isNaN(gene.end)) {
-                console.warn('Invalid gene coordinates:', gene);
-                return;
-            }
-            
-            // Ensure gene coordinates are within chromosome bounds
-            const validStart = Math.max(0, Math.min(gene.start, chrLength - 1));
-            const validEnd = Math.max(validStart + 1, Math.min(gene.end, chrLength));
-            
-            // Calculate angles with validation
-            const startAngle = chr.startAngle + (validStart / chrLength) * (chr.endAngle - chr.startAngle);
-            const endAngle = chr.startAngle + (validEnd / chrLength) * (chr.endAngle - chr.startAngle);
-            
-            // Validate calculated angles
-            if (isNaN(startAngle) || isNaN(endAngle)) {
-                console.warn('Invalid calculated angles for gene:', gene, 'chr:', chr, 'startAngle:', startAngle, 'endAngle:', endAngle);
-                return;
-            }
-            
-            // Adjust height based on expression level if available
-            let adjustedHeight = Math.max(geneHeight, 4); // Ensure minimum visible height
-            let opacity = 0.9; // Increase opacity for better visibility
-            
-            if (gene.expression !== undefined) {
-                if (gene.expression >= 0.7) {
-                    adjustedHeight = geneHeight * 1.5;
-                    opacity = 0.9;
-                } else if (gene.expression >= 0.4) {
-                    adjustedHeight = geneHeight * 1.2;
-                    opacity = 0.85;
-                } else {
-                    adjustedHeight = geneHeight * 0.8;
-                    opacity = 0.6;
-                }
-            }
-            
-            // Ensure valid arc parameters
-            const innerRadius = Math.max(0, geneRadius);
-            const outerRadius = Math.max(innerRadius + 1, geneRadius + adjustedHeight);
-            const startRadians = startAngle * Math.PI / 180;
-            const endRadians = endAngle * Math.PI / 180;
-            
-            // Validate arc parameters
-            if (isNaN(innerRadius) || isNaN(outerRadius) || isNaN(startRadians) || isNaN(endRadians)) {
-                console.warn('Invalid arc parameters for gene:', gene);
-                return;
-            }
-            
-            const arc = d3.arc()
-                .innerRadius(innerRadius)
-                .outerRadius(outerRadius)
-                .startAngle(startRadians)
-                .endAngle(endRadians);
-            
-            // Get gene color from theme with expression-based modification
-            let geneColor = theme.genes.default;
-            if (gene.type === 'protein_coding') geneColor = theme.genes.protein_coding;
-            else if (gene.type === 'non_coding') geneColor = theme.genes.non_coding;
-            else if (gene.type === 'pseudogene') geneColor = theme.genes.pseudogene;
-            else if (gene.type === 'regulatory') geneColor = theme.genes.regulatory;
-            
-            // Apply expression-based color intensity
-            if (gene.expression !== undefined) {
-                if (gene.expression >= 0.7) {
-                    geneColor = theme.tracks.expression_high;
-                } else if (gene.expression >= 0.4) {
-                    geneColor = theme.tracks.expression_medium;
-                } else {
-                    geneColor = theme.tracks.expression_low;
-                }
-            }
-            
-            // Add pattern for special gene types
-            let strokeDasharray = 'none';
-            if (gene.type === 'pseudogene') {
-                strokeDasharray = '2,2';
-            } else if (gene.type === 'regulatory') {
-                strokeDasharray = '4,1';
-            }
-            
-            g.append('path')
-                .attr('d', arc)
-                .attr('fill', geneColor)
-                .attr('opacity', opacity)
-                .attr('stroke', theme.stroke)
-                .attr('stroke-width', 0.5)
-                .attr('stroke-dasharray', strokeDasharray)
-                .style('cursor', 'pointer')
-                .on('mouseover', (event) => {
-                    const expressionText = gene.expression !== undefined ? 
-                        `<br/>Expression: ${(gene.expression * 100).toFixed(1)}%` : '';
-                    const lengthKb = ((gene.end - gene.start) / 1000).toFixed(1);
-                    
-                    this.showTooltip(event, `
-                        <strong>${gene.name}</strong><br/>
-                        Type: ${gene.type}<br/>
-                        Length: ${lengthKb} kb<br/>
-                        Position: ${gene.start.toLocaleString()}-${gene.end.toLocaleString()}${expressionText}
-                    `);
-                })
-                .on('mouseout', () => {
-                    this.hideTooltip();
-                })
-                .on('click', (event) => {
-                    event.stopPropagation();
-                    console.log(`Clicked on gene: ${gene.name} (${gene.type})`);
-                    this.updateStatus(`Selected gene: ${gene.name} (${gene.type})`);
-                    
-                    // Navigate to this gene in the main window
-                    this.navigateToGene(gene);
-                });
-            
-            renderedGenes++;
-        });
-        
-        console.log(`Successfully rendered ${renderedGenes} genes (filtered out ${filteredGenes} source/other features)`);
+        // Use multi-track system for gene rendering
+        this.multiTrackManager.renderGeneTracks(g, this.data.genes, baseRadius, theme);
     }
 
     drawGCContentTrack(g, trackOffset) {

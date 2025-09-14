@@ -9,6 +9,9 @@
     <script src="../node_modules/d3/dist/d3.min.js" onerror="this.onerror=null; this.src='https://d3js.org/d3.v7.min.js'"></script>
     <script src="../node_modules/papaparse/papaparse.min.js" onerror="this.onerror=null; this.src='https://unpkg.com/papaparse@5/papaparse.min.js'"></script>
     
+    <!-- Multi-Track Gene Manager -->
+    <script src="circos-plotter-multi-track.js"></script>
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -394,6 +397,157 @@
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
+        }
+        /* Multi-Track Gene Controls */
+        .track-controls {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(248, 250, 252, 0.95);
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .track-controls h4 {
+            margin: 0 0 10px 0;
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .track-toggles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .track-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+        }
+        
+        .track-toggle:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+        
+        .track-toggle input[type="checkbox"] {
+            margin: 0;
+        }
+        
+        .track-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .gene-count {
+            margin-left: auto;
+            background: #e2e8f0;
+            color: #475569;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .track-settings {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .track-settings label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #475569;
+        }
+        
+        .track-settings input[type="number"] {
+            width: 60px;
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .track-settings button {
+            padding: 6px 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .track-settings button:hover {
+            background: #2563eb;
+        }
+        
+        .track-legend {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(248, 250, 252, 0.95);
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .track-legend h4 {
+            margin: 0 0 10px 0;
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .track-legend-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 6px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: white;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .legend-label {
+            flex: 1;
+            color: #475569;
+        }
+        
+        .legend-count {
+            background: #e2e8f0;
+            color: #475569;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 500;
         }
     </style>
 </head>
