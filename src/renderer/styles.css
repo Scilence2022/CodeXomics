@@ -2831,6 +2831,65 @@ sup {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 4px 16px rgba(59, 130, 246, 0.4);
 }
 
+/* Enhanced Deep Gene Research Button Styling */
+.gene-deep-research-btn {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 50%, #a93226 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 8px 16px;
+  min-width: auto;
+  width: auto;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  text-transform: none;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gene-deep-research-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.gene-deep-research-btn:hover {
+  background: linear-gradient(135deg, #c0392b 0%, #a93226 50%, #922b21 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(231, 76, 60, 0.4);
+}
+
+.gene-deep-research-btn:hover::before {
+  left: 100%;
+}
+
+.gene-deep-research-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
+
+.gene-deep-research-btn i {
+  font-size: 13px;
+  margin-right: 6px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.gene-deep-research-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.3), 0 4px 16px rgba(231, 76, 60, 0.4);
+}
+
 .gene-element.selected {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.8), 0 0 15px rgba(59, 130, 246, 0.4);
   z-index: 15 !important;
@@ -12629,7 +12688,8 @@ to {
 
 /* Mobile responsive styles for enhanced gene action buttons */
 .gene-refine-btn,
-.gene-edit-btn {
+.gene-edit-btn,
+.gene-deep-research-btn {
   min-width: auto;
   width: auto;
   max-width: 100%;
@@ -12641,7 +12701,8 @@ to {
 }
 
 .gene-refine-btn i,
-.gene-edit-btn i {
+.gene-edit-btn i,
+.gene-deep-research-btn i {
   font-size: 14px;
   margin-right: 8px;
 }
@@ -13818,6 +13879,7 @@ to {
 #actionListModal .modal-content {
     max-width: none !important;
     width: 700px;
+    min-width: 400px;
     height: auto;
 }
 
@@ -13830,6 +13892,8 @@ to {
 /* General Settings modal specific sizing */
 #generalSettingsModal .modal-content {
     width: 700px;
+    min-width: 400px;
+    max-width: none !important;
     min-height: 500px;
 }
 
