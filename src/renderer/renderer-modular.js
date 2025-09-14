@@ -4753,7 +4753,7 @@ class GenomeBrowser {
         
         // Add DNA sequence if available
         if (read.sequence && read.sequence.length > 0) {
-            const sequencePreview = this.formatSequencePreview(read.sequence, 60);
+            const sequencePreview = this.formatSequencePreview(read.sequence, 100);
             const sequenceFormatted = this.formatSequenceFull(read.sequence);
             
             html += `
@@ -4785,7 +4785,7 @@ class GenomeBrowser {
         
         // Add quality scores if available
         if (read.quality && read.quality.length > 0) {
-            const qualityPreview = this.formatQualityPreview(read.quality, 60);
+            const qualityPreview = this.formatQualityPreview(read.quality, 100);
             const qualityFormatted = this.formatQualityWithLineNumbers(read.quality, 1);
             
             html += `
@@ -5436,16 +5436,9 @@ class GenomeBrowser {
      * Format sequence for full display without line numbers (for read details)
      */
     formatSequenceFull(sequence) {
-        const lineLength = 80; // Longer lines for full display
-        let formatted = '';
-        
-        for (let i = 0; i < sequence.length; i += lineLength) {
-            const lineSequence = sequence.substring(i, i + lineLength);
-            const colorizedSequence = this.colorizeSequenceBases(lineSequence);
-            formatted += `<div class="sequence-full-line">${colorizedSequence}</div>`;
-        }
-        
-        return formatted;
+        // Display entire sequence as one continuous line without breaking
+        const colorizedSequence = this.colorizeSequenceBases(sequence);
+        return `<div class="sequence-full-line">${colorizedSequence}</div>`;
     }
     
     /**
