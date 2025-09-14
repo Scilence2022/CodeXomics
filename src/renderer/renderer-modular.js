@@ -4658,6 +4658,10 @@ class GenomeBrowser {
         const readDetailsContent = document.getElementById('readDetailsContent');
         if (!readDetailsContent) return;
         
+        // Ensure selectedRead is set for copy button functionality
+        this.selectedRead = { read: read, fileInfo: fileInfo };
+        console.log('populateReadDetails called with read:', read.id || read.qname, 'selectedRead set:', !!this.selectedRead);
+        
         // Get basic read information
         const readName = read.id || read.qname || 'Unknown Read';
         const position = `${read.start.toLocaleString()}-${read.end.toLocaleString()}`;
@@ -6983,15 +6987,26 @@ class GenomeBrowser {
     }
 
     copySpecificReadSequence(type, readName) {
-        console.log('Copy button clicked:', { type, readName, selectedRead: this.selectedRead });
+        // Use window.genomeBrowser to ensure we have the correct instance
+        const genomeBrowser = window.genomeBrowser || this;
         
-        if (!this.selectedRead) {
-            console.error('No selected read available');
-            this.showNotification('No read selected', 'warning');
+        console.log('Copy button clicked:', { 
+            type, 
+            readName, 
+            selectedRead: genomeBrowser.selectedRead,
+            genomeBrowserInstance: genomeBrowser,
+            windowGenomeBrowser: window.genomeBrowser,
+            isSameInstance: genomeBrowser === window.genomeBrowser
+        });
+        
+        if (!genomeBrowser.selectedRead) {
+            console.error('No selected read available. Current selectedRead:', genomeBrowser.selectedRead);
+            console.error('Available reads in current view:', genomeBrowser.reads ? genomeBrowser.reads.length : 'no reads loaded');
+            genomeBrowser.showNotification('No read selected', 'warning');
             return;
         }
         
-        const read = this.selectedRead.read;
+        const read = genomeBrowser.selectedRead.read;
         let content = '';
         let description = '';
         
@@ -7031,18 +7046,18 @@ class GenomeBrowser {
             // Try modern clipboard API first
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(content).then(() => {
-                    this.showNotification(`Read ${description} copied to clipboard`, 'success');
+                    genomeBrowser.showNotification(`Read ${description} copied to clipboard`, 'success');
                 }).catch(err => {
                     console.error(`Failed to copy read ${description}:`, err);
                     // Fallback to legacy method
-                    this.fallbackCopyToClipboard(content, description);
+                    genomeBrowser.fallbackCopyToClipboard(content, description);
                 });
             } else {
                 // Fallback for older browsers
-                this.fallbackCopyToClipboard(content, description);
+                genomeBrowser.fallbackCopyToClipboard(content, description);
             }
         } else {
-            this.showNotification(`No ${description} available for this read`, 'warning');
+            genomeBrowser.showNotification(`No ${description} available for this read`, 'warning');
         }
     }
 
