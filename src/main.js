@@ -3629,10 +3629,22 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
 }
 
 // Create Deep Gene Research Window
-function createDeepGeneResearchWindow() {
+function createDeepGeneResearchWindow(params = {}) {
   try {
     // Get the URL from settings (default to localhost:3000)
-    const deepGeneResearchUrl = 'http://localhost:3000/';
+    let deepGeneResearchUrl = 'http://localhost:3000/';
+    
+    // Add parameters to URL if provided
+    if (params.gene || params.organism) {
+      const urlParams = new URLSearchParams();
+      if (params.gene) {
+        urlParams.append('gene', params.gene);
+      }
+      if (params.organism) {
+        urlParams.append('organism', params.organism);
+      }
+      deepGeneResearchUrl += '?' + urlParams.toString();
+    }
     
     console.log('Creating Deep Gene Research window:', deepGeneResearchUrl);
     
@@ -3833,9 +3845,9 @@ ipcMain.on('open-gene-annotation-refine', (event, data) => {
   createGeneAnnotationRefineWindow();
 });
 
-ipcMain.on('open-deep-gene-research-window', () => {
-  console.log('IPC: Opening Deep Gene Research window...');
-  createDeepGeneResearchWindow();
+ipcMain.on('open-deep-gene-research-window', (event, params = {}) => {
+  console.log('IPC: Opening Deep Gene Research window with params:', params);
+  createDeepGeneResearchWindow(params);
 });
 
 // IPC handler for Deep Gene Research window menu actions

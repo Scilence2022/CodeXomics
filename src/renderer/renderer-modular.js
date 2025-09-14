@@ -4591,6 +4591,13 @@ class GenomeBrowser {
             `;
         }
         
+        // Add Deep Gene Research button for all gene types
+        html += `
+            <button class="btn gene-deep-research-btn gene-action-btn" onclick="window.genomeBrowser.openDeepGeneResearch('${geneName}')" title="Open Deep Gene Research for this gene">
+                <i class="fas fa-search-plus"></i> Deep Gene Research
+            </button>
+        `;
+        
         // Add edit button
         html += `
                 <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
@@ -6046,6 +6053,34 @@ class GenomeBrowser {
         }
     }
 
+    // Open Deep Gene Research for the selected gene
+    openDeepGeneResearch(geneName) {
+        if (!geneName) {
+            console.warn('No gene name provided for Deep Gene Research');
+            return;
+        }
+
+        // Get current organism/species information
+        const organism = this.getCurrentOrganismInfo();
+        
+        // Prepare parameters for Deep Gene Research
+        const params = {
+            gene: geneName,
+            organism: organism
+        };
+        
+        // Open Deep Gene Research window with parameters via IPC
+        const { ipcRenderer } = require('electron');
+        ipcRenderer.send('open-deep-gene-research-window', params);
+        
+        // Update status
+        if (this.uiManager) {
+            this.uiManager.updateStatus(`Opening Deep Gene Research for ${geneName} from ${organism}...`);
+        }
+        
+        console.log(`Opening Deep Gene Research with params:`, params);
+    }
+
     // Open Gene Annotation Refine tool
     openGeneAnnotationRefine() {
         try {
@@ -6343,17 +6378,39 @@ class GenomeBrowser {
 
     // Get current organism information for structure searches
     getCurrentOrganismInfo() {
-        // Try to get organism from loaded file metadata
+        // First priority: Check sourceFeatures (parsed from GenBank source features)
+        if (this.sourceFeatures && Object.keys(this.sourceFeatures).length > 0) {
+            const currentChr = document.getElementById('chromosomeSelect')?.value;
+            if (currentChr && this.sourceFeatures[currentChr]) {
+                const organism = this.sourceFeatures[currentChr].organism;
+                if (organism && organism !== 'Unknown') {
+                    console.log(`Found organism from sourceFeatures: ${organism}`);
+                    return this.standardizeOrganismName(organism);
+                }
+            }
+            
+            // If current chromosome not found, try any available chromosome
+            for (const [chr, sourceInfo] of Object.entries(this.sourceFeatures)) {
+                if (sourceInfo.organism && sourceInfo.organism !== 'Unknown') {
+                    console.log(`Found organism from sourceFeatures (${chr}): ${sourceInfo.organism}`);
+                    return this.standardizeOrganismName(sourceInfo.organism);
+                }
+            }
+        }
+        
+        // Second priority: Try to get organism from loaded file metadata
         if (this.fileManager && this.fileManager.currentFileInfo) {
             const fileInfo = this.fileManager.currentFileInfo;
             
             // Check GenBank ORGANISM field
             if (fileInfo.organism) {
+                console.log(`Found organism from fileInfo.organism: ${fileInfo.organism}`);
                 return this.standardizeOrganismName(fileInfo.organism);
             }
             
             // Check other common organism indicators
             if (fileInfo.source) {
+                console.log(`Found organism from fileInfo.source: ${fileInfo.source}`);
                 return this.standardizeOrganismName(fileInfo.source);
             }
             
@@ -6362,9 +6419,11 @@ class GenomeBrowser {
                 for (const feature of fileInfo.features) {
                     if (feature.qualifiers) {
                         if (feature.qualifiers.organism) {
+                            console.log(`Found organism from fileInfo.features: ${feature.qualifiers.organism}`);
                             return this.standardizeOrganismName(feature.qualifiers.organism);
                         }
                         if (feature.qualifiers.species) {
+                            console.log(`Found organism from fileInfo.features.species: ${feature.qualifiers.species}`);
                             return this.standardizeOrganismName(feature.qualifiers.species);
                         }
                     }
@@ -6372,8 +6431,8 @@ class GenomeBrowser {
             }
         }
         
-        // Try to infer from current chromosome name
-        const currentChr = document.getElementById('chromosomeSelect').value;
+        // Third priority: Try to infer from current chromosome name
+        const currentChr = document.getElementById('chromosomeSelect')?.value;
         if (currentChr) {
             // Common organism mappings based on chromosome names
             const organismMap = {
