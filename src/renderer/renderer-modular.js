@@ -4615,9 +4615,10 @@ class GenomeBrowser {
                 <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
                     <i class="fas fa-edit"></i> Edit Annotation
                 </button>
-                <button class="btn gene-refine-btn gene-action-btn" onclick="window.genomeBrowser.openGeneAnnotationRefine()" title="Refine annotation using Deep Research Reports and AI analysis">
+                <!-- Temporarily hidden: Refine Annotation button -->
+                <!-- <button class="btn gene-refine-btn gene-action-btn" onclick="window.genomeBrowser.openGeneAnnotationRefine()" title="Refine annotation using Deep Research Reports and AI analysis">
                     <i class="fas fa-magic"></i> Refine Annotation
-                </button>
+                </button> -->
             </div>
         `;
         
