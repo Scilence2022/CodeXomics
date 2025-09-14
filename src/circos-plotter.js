@@ -1689,7 +1689,17 @@ class CircosPlotter {
         console.log(`Processing ${genesToProcess.length} genes for visualization`);
         
         let renderedGenes = 0;
+        let filteredGenes = 0;
         genesToProcess.forEach(gene => {
+            // Skip source features and other large features that obscure genes
+            if (gene.type === 'source' || gene.type === 'other' || !gene.type) {
+                filteredGenes++;
+                if (filteredGenes <= 5) { // Log first 5 filtered genes for debugging
+                    console.log(`Filtered out gene type: ${gene.type}, name: ${gene.name}`);
+                }
+                return;
+            }
+            
             const chr = this.data.chromosomes.find(c => 
                 (c.name === gene.chromosome) || 
                 (c.label === gene.chromosome) || 
@@ -1815,7 +1825,7 @@ class CircosPlotter {
             renderedGenes++;
         });
         
-        console.log(`Successfully rendered ${renderedGenes} genes`);
+        console.log(`Successfully rendered ${renderedGenes} genes (filtered out ${filteredGenes} source/other features)`);
     }
 
     drawGCContentTrack(g, trackOffset) {

@@ -2752,6 +2752,12 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                 // Process all annotations (genes and other features are mixed in the array)
                 if (Array.isArray(annotations)) {
                   annotations.forEach(annotation => {
+                    // Skip source features as they cover the entire genome and obscure other genes
+                    if (annotation.type === 'source') {
+                      console.log('Skipping source feature:', annotation);
+                      return;
+                    }
+                    
                     // Extract gene information from qualifiers
                     const geneName = annotation.qualifiers?.gene || annotation.qualifiers?.locus_tag || 'Unknown';
                     const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || \`feature_\${genes.length}\`;
