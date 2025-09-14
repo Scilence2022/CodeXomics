@@ -6983,7 +6983,13 @@ class GenomeBrowser {
     }
 
     copySpecificReadSequence(type, readName) {
-        if (!this.selectedRead) return;
+        console.log('Copy button clicked:', { type, readName, selectedRead: this.selectedRead });
+        
+        if (!this.selectedRead) {
+            console.error('No selected read available');
+            this.showNotification('No read selected', 'warning');
+            return;
+        }
         
         const read = this.selectedRead.read;
         let content = '';
@@ -6994,31 +7000,79 @@ class GenomeBrowser {
                 if (read.sequence) {
                     content = read.sequence;
                     description = 'DNA sequence';
+                    console.log('DNA sequence content:', content.substring(0, 50) + '...');
+                } else {
+                    console.log('No DNA sequence available');
                 }
                 break;
             case 'quality':
                 if (read.quality) {
-                    content = read.quality;
+                    // Handle quality data format (array, string, or other)
+                    content = typeof read.quality === 'string' ? read.quality : 
+                             Array.isArray(read.quality) ? read.quality.join(' ') : String(read.quality);
                     description = 'quality scores';
+                    console.log('Quality content:', content.substring(0, 50) + '...', 'Type:', typeof read.quality);
+                } else {
+                    console.log('No quality data available');
                 }
                 break;
             case 'cigar':
                 if (read.cigar) {
                     content = read.cigar;
                     description = 'CIGAR string';
+                    console.log('CIGAR content:', content);
+                } else {
+                    console.log('No CIGAR data available');
                 }
                 break;
         }
         
         if (content) {
-            navigator.clipboard.writeText(content).then(() => {
-                this.showNotification(`Read ${description} copied to clipboard`, 'success');
-            }).catch(err => {
-                console.error(`Failed to copy read ${description}:`, err);
-                this.showNotification(`Failed to copy read ${description}`, 'error');
-            });
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(content).then(() => {
+                    this.showNotification(`Read ${description} copied to clipboard`, 'success');
+                }).catch(err => {
+                    console.error(`Failed to copy read ${description}:`, err);
+                    // Fallback to legacy method
+                    this.fallbackCopyToClipboard(content, description);
+                });
+            } else {
+                // Fallback for older browsers
+                this.fallbackCopyToClipboard(content, description);
+            }
         } else {
             this.showNotification(`No ${description} available for this read`, 'warning');
+        }
+    }
+
+    /**
+     * Fallback copy method for older browsers or when clipboard API fails
+     */
+    fallbackCopyToClipboard(text, description) {
+        try {
+            // Create a temporary textarea element
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            // Execute copy command
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                this.showNotification(`Read ${description} copied to clipboard`, 'success');
+            } else {
+                this.showNotification(`Failed to copy read ${description}`, 'error');
+            }
+        } catch (err) {
+            console.error(`Fallback copy failed for ${description}:`, err);
+            this.showNotification(`Failed to copy read ${description}`, 'error');
         }
     }
 
