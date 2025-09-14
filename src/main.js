@@ -2763,17 +2763,19 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                     const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || \`feature_\${genes.length}\`;
                     const product = annotation.qualifiers?.product || annotation.qualifiers?.note || 'Unknown function';
                     
-                    // Determine feature type
+                    // Determine feature type - keep original types for better classification
                     let featureType = annotation.type || 'other';
+                    // Only map general types, keep specific types like tRNA, rRNA as-is
                     if (featureType === 'gene' || featureType === 'CDS' || featureType === 'mRNA') {
                       featureType = 'protein_coding';
-                    } else if (featureType === 'tRNA' || featureType === 'rRNA' || featureType === 'ncRNA') {
+                    } else if (featureType === 'ncRNA') {
                       featureType = 'non_coding';
                     } else if (featureType === 'pseudogene') {
                       featureType = 'pseudogene';
                     } else if (featureType === 'regulatory' || featureType === 'promoter' || featureType === 'terminator') {
                       featureType = 'regulatory';
                     }
+                    // Keep tRNA, rRNA, and other specific types as-is for proper classification
                     
                     // Convert strand from -1/1 to +/- format
                     const strand = annotation.strand === -1 ? '-' : '+';

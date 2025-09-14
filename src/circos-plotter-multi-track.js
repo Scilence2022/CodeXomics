@@ -115,12 +115,16 @@ class MultiTrackGeneManager {
     
     groupGenesByType(genes) {
         const groups = {};
+        const typeCounts = {};
         
         genes.forEach(gene => {
             // Skip source features and other large features that obscure genes
             if (gene.type === 'source' || !gene.type) {
                 return;
             }
+            
+            // Count original types for debugging
+            typeCounts[gene.type] = (typeCounts[gene.type] || 0) + 1;
             
             // Map gene types to track categories
             let trackType = gene.type;
@@ -145,6 +149,13 @@ class MultiTrackGeneManager {
             }
             groups[trackType].push(gene);
         });
+        
+        // Debug: Log original type distribution
+        console.log('Original gene type distribution:', typeCounts);
+        console.log('Mapped gene type distribution:', Object.keys(groups).reduce((acc, key) => {
+            acc[key] = groups[key].length;
+            return acc;
+        }, {}));
         
         return groups;
     }
