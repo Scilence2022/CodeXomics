@@ -157,6 +157,15 @@ class MultiTrackGeneManager {
             return acc;
         }, {}));
         
+        // Debug: Show sample genes and their types
+        if (genes.length > 0) {
+            console.log('Sample genes (first 10):', genes.slice(0, 10).map(g => ({
+                name: g.name,
+                type: g.type,
+                chromosome: g.chromosome
+            })));
+        }
+        
         return groups;
     }
     

@@ -2765,6 +2765,12 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                     
                     // Determine feature type - keep original types for better classification
                     let featureType = annotation.type || 'other';
+                    
+                    // Debug: Log original annotation type
+                    if (genes.length < 20) { // Only log first 20 for debugging
+                      console.log('Annotation type:', annotation.type, '-> Feature type:', featureType);
+                    }
+                    
                     // Only map general types, keep specific types like tRNA, rRNA as-is
                     if (featureType === 'gene' || featureType === 'CDS' || featureType === 'mRNA') {
                       featureType = 'protein_coding';
