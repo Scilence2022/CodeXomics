@@ -2760,7 +2760,7 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                     
                     // Extract gene information from qualifiers
                     const geneName = annotation.qualifiers?.gene || annotation.qualifiers?.locus_tag || 'Unknown';
-                    const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || \`feature_\${genes.length}\`;
+                    const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || 'feature_' + genes.length;
                     const product = annotation.qualifiers?.product || annotation.qualifiers?.note || 'Unknown function';
                     
                     // Determine feature type - keep original type for better classification
@@ -2831,14 +2831,14 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                   // Validate test gene coordinates
                   if (start >= 0 && end > start && end <= chr.size) {
                     genes.push({
-                      id: \`test_gene_\${chrIndex}_\${i}\`,
-                      name: \`Test Gene \${i + 1}\`,
+                      id: 'test_gene_' + chrIndex + '_' + i,
+                      name: 'Test Gene ' + (i + 1),
                       chromosome: chr.id,
                       start: start,
                       end: end,
                       strand: Math.random() > 0.5 ? '+' : '-',
                       type: geneType,
-                      description: \`Test \${geneType} gene for visualization\`,
+                      description: 'Test ' + geneType + ' gene for visualization',
                       qualifiers: {}
                     });
                   }
