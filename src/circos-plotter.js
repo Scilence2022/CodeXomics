@@ -724,6 +724,9 @@ class CircosPlotter {
                 
                 if (result && result.success) {
                     console.log('Loaded genome data from main window:', result.data);
+                    console.log('Chromosomes:', result.data.chromosomes);
+                    console.log('Genes count:', result.data.genes.length);
+                    console.log('Sample genes:', result.data.genes.slice(0, 3));
                     this.data = result.data;
                     this.originalData = result.originalData;
                     
