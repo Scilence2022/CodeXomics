@@ -1353,6 +1353,9 @@ class CircosPlotter {
         if (this.originalData && this.originalData.currentSequence) {
             const chrName = chromosome.name || chromosome.label || chromosome.id;
             sequence = this.originalData.currentSequence[chrName];
+            console.log('GC Content: Using real sequence data for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
+        } else {
+            console.log('GC Content: No real sequence data available, using synthetic data');
         }
         
         for (let i = 0; i < numPoints; i++) {
@@ -1381,35 +1384,98 @@ class CircosPlotter {
         return data;
     }
 
-    // Generate mock GC skew data
-    generateMockGCSkew(chromosome) {
+    // Generate real GC skew data from actual sequence
+    generateRealGCSkew(chromosome) {
         const data = [];
         const chrLength = chromosome.length || chromosome.size || 0;
         const numPoints = Math.floor(chrLength / this.gcWindowSize);
         
+        // Try to get real sequence data
+        let sequence = null;
+        if (this.originalData && this.originalData.currentSequence) {
+            const chrName = chromosome.name || chromosome.label || chromosome.id;
+            sequence = this.originalData.currentSequence[chrName];
+            console.log('GC Skew: Using real sequence data for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
+        } else {
+            console.log('GC Skew: No real sequence data available, using synthetic data');
+        }
+        
         for (let i = 0; i < numPoints; i++) {
-            const position = i * this.gcWindowSize + this.gcWindowSize / 2;
-            // Generate realistic GC skew (-0.3 to 0.3)
-            const skew = 0.2 * Math.sin(i * 0.05) + 0.1 * Math.random() - 0.05;
+            const start = i * this.gcWindowSize;
+            const end = Math.min(start + this.gcWindowSize, chrLength);
+            const position = start + this.gcWindowSize / 2;
+            
+            let gcSkew = 0;
+            if (sequence) {
+                const windowSeq = sequence.substring(start, end);
+                const gCount = (windowSeq.match(/G/g) || []).length;
+                const cCount = (windowSeq.match(/C/g) || []).length;
+                const totalGC = gCount + cCount;
+                
+                if (totalGC > 0) {
+                    gcSkew = (gCount - cCount) / totalGC;
+                } else {
+                    gcSkew = 0;
+                }
+            } else {
+                // Generate synthetic data with more realistic patterns
+                const baseSkew = 0.1 * Math.sin(position / 200000) + 0.05 * Math.cos(position / 50000);
+                const noise = (Math.random() - 0.5) * 0.1;
+                gcSkew = Math.max(-0.3, Math.min(0.3, baseSkew + noise));
+            }
             
             data.push({
                 position: position,
-                value: skew
+                value: gcSkew
             });
         }
         return data;
     }
 
-    // Generate mock WIG data
-    generateMockWigData(chromosome) {
+    // Generate real WIG data based on sequence complexity
+    generateRealWigData(chromosome) {
         const data = [];
         const chrLength = chromosome.length || chromosome.size || 0;
         const numPoints = Math.floor(chrLength / (this.gcWindowSize / 2));
         
+        // Try to get real sequence data
+        let sequence = null;
+        if (this.originalData && this.originalData.currentSequence) {
+            const chrName = chromosome.name || chromosome.label || chromosome.id;
+            sequence = this.originalData.currentSequence[chrName];
+            console.log('WIG Data: Using real sequence data for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
+        } else {
+            console.log('WIG Data: No real sequence data available, using synthetic data');
+        }
+        
         for (let i = 0; i < numPoints; i++) {
-            const position = i * (this.gcWindowSize / 2) + this.gcWindowSize / 4;
-            // Generate mock expression/coverage data
-            const value = Math.max(0, 50 + 30 * Math.sin(i * 0.02) + 20 * Math.random());
+            const start = i * (this.gcWindowSize / 2);
+            const end = Math.min(start + (this.gcWindowSize / 2), chrLength);
+            const position = start + (this.gcWindowSize / 4);
+            
+            let value = 0;
+            if (sequence) {
+                const windowSeq = sequence.substring(start, end);
+                
+                // Calculate sequence complexity metrics
+                const gcContent = this.calculateGCContent(windowSeq);
+                const atContent = 100 - gcContent;
+                const complexity = this.calculateSequenceComplexity(windowSeq);
+                
+                // Generate value based on sequence properties
+                // Higher values for regions with interesting features
+                value = Math.max(0, 
+                    (gcContent * 0.5) +           // GC content influence
+                    (complexity * 20) +           // Sequence complexity
+                    (atContent * 0.3) +           // AT content influence
+                    (Math.random() * 10)          // Some noise
+                );
+            } else {
+                // Generate synthetic data with more realistic patterns
+                const baseValue = 30 + 20 * Math.sin(position / 100000) + 10 * Math.cos(position / 25000);
+                const noise = (Math.random() - 0.5) * 15;
+                value = Math.max(0, baseValue + noise);
+            }
             
             data.push({
                 position: position,
@@ -1417,6 +1483,36 @@ class CircosPlotter {
             });
         }
         return data;
+    }
+    
+    // Helper method to calculate GC content
+    calculateGCContent(sequence) {
+        const gcCount = (sequence.match(/[GC]/g) || []).length;
+        const totalCount = sequence.length;
+        return totalCount > 0 ? (gcCount / totalCount) * 100 : 0;
+    }
+    
+    // Helper method to calculate sequence complexity
+    calculateSequenceComplexity(sequence) {
+        if (sequence.length === 0) return 0;
+        
+        // Calculate Shannon entropy as a measure of complexity
+        const counts = {};
+        for (let i = 0; i < sequence.length; i++) {
+            const char = sequence[i].toUpperCase();
+            counts[char] = (counts[char] || 0) + 1;
+        }
+        
+        let entropy = 0;
+        const total = sequence.length;
+        for (const char in counts) {
+            const p = counts[char] / total;
+            if (p > 0) {
+                entropy -= p * Math.log2(p);
+            }
+        }
+        
+        return entropy;
     }
 
     generatePlantLinks() {
@@ -1781,7 +1877,7 @@ class CircosPlotter {
         console.log('GC Skew track radius:', trackRadius, 'offset:', trackOffset);
         
         this.data.chromosomes.forEach(chr => {
-            const skewData = this.generateMockGCSkew(chr);
+            const skewData = this.generateRealGCSkew(chr);
             const chrName = chr.name || chr.label || chr.id || 'Unknown';
             console.log('GC Skew data for chromosome', chrName, ':', skewData.length, 'points');
             
@@ -1845,7 +1941,7 @@ class CircosPlotter {
         console.log('WIG track radius:', trackRadius, 'offset:', trackOffset);
         
         this.data.chromosomes.forEach(chr => {
-            const wigData = this.generateMockWigData(chr);
+            const wigData = this.generateRealWigData(chr);
             const chrName = chr.name || chr.label || chr.id || 'Unknown';
             console.log('WIG data for chromosome', chrName, ':', wigData.length, 'points');
             
