@@ -2772,17 +2772,30 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                     // Convert strand from -1/1 to +/- format
                     const strand = annotation.strand === -1 ? '-' : '+';
                     
-                    genes.push({
-                      id: locusTag,
-                      name: geneName,
-                      chromosome: chrName,
-                      start: annotation.start || 0,
-                      end: annotation.end || annotation.start + 1000,
-                      strand: strand,
-                      type: featureType,
-                      description: product,
-                      qualifiers: annotation.qualifiers || {}
-                    });
+                    // Validate gene coordinates
+                    const start = parseInt(annotation.start) || 0;
+                    const end = parseInt(annotation.end) || start + 1000;
+                    
+                    if (start >= 0 && end > start) {
+                      genes.push({
+                        id: locusTag,
+                        name: geneName,
+                        chromosome: chrName,
+                        start: start,
+                        end: end,
+                        strand: strand,
+                        type: featureType,
+                        description: product,
+                        qualifiers: annotation.qualifiers || {}
+                      });
+                    } else {
+                      console.warn('Skipping gene with invalid coordinates:', {
+                        name: geneName,
+                        start: annotation.start,
+                        end: annotation.end,
+                        chromosome: chrName
+                      });
+                    }
                   });
                 }
               }
@@ -2799,17 +2812,20 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                   const geneTypes = ['protein_coding', 'non_coding', 'pseudogene', 'regulatory'];
                   const geneType = geneTypes[Math.floor(Math.random() * geneTypes.length)];
                   
-                  genes.push({
-                    id: \`test_gene_\${chrIndex}_\${i}\`,
-                    name: \`Test Gene \${i + 1}\`,
-                    chromosome: chr.id,
-                    start: start,
-                    end: end,
-                    strand: Math.random() > 0.5 ? '+' : '-',
-                    type: geneType,
-                    description: \`Test \${geneType} gene for visualization\`,
-                    qualifiers: {}
-                  });
+                  // Validate test gene coordinates
+                  if (start >= 0 && end > start && end <= chr.size) {
+                    genes.push({
+                      id: \`test_gene_\${chrIndex}_\${i}\`,
+                      name: \`Test Gene \${i + 1}\`,
+                      chromosome: chr.id,
+                      start: start,
+                      end: end,
+                      strand: Math.random() > 0.5 ? '+' : '-',
+                      type: geneType,
+                      description: \`Test \${geneType} gene for visualization\`,
+                      qualifiers: {}
+                    });
+                  }
                 }
               });
             }

@@ -1524,16 +1524,43 @@ class CircosPlotter {
 
     calculateChromosomeAngles() {
         const totalLength = this.data.chromosomes.reduce((sum, chr) => sum + (chr.length || chr.size || 0), 0);
+        
+        // Validate total length
+        if (totalLength <= 0) {
+            console.warn('Invalid total chromosome length:', totalLength);
+            return;
+        }
+        
         const totalGaps = this.data.chromosomes.length * this.chromosomeGap;
         const availableAngle = 360 - totalGaps;
         
         let currentAngle = 0;
-        this.data.chromosomes.forEach(chr => {
+        this.data.chromosomes.forEach((chr, index) => {
             const length = chr.length || chr.size || 0;
+            
+            // Validate chromosome length
+            if (length <= 0) {
+                console.warn(`Invalid length for chromosome ${index}:`, length);
+                chr.startAngle = currentAngle;
+                chr.endAngle = currentAngle + 1; // Minimal angle
+                chr.midAngle = currentAngle + 0.5;
+                currentAngle += 1 + this.chromosomeGap;
+                return;
+            }
+            
             chr.startAngle = currentAngle;
             chr.endAngle = currentAngle + (length / totalLength) * availableAngle;
             chr.midAngle = (chr.startAngle + chr.endAngle) / 2;
             currentAngle = chr.endAngle + this.chromosomeGap;
+            
+            // Validate calculated angles
+            if (isNaN(chr.startAngle) || isNaN(chr.endAngle) || isNaN(chr.midAngle)) {
+                console.warn(`Invalid angles for chromosome ${index}:`, chr);
+                chr.startAngle = currentAngle;
+                chr.endAngle = currentAngle + 1;
+                chr.midAngle = currentAngle + 0.5;
+                currentAngle += 1 + this.chromosomeGap;
+            }
         });
     }
 
@@ -1656,7 +1683,9 @@ class CircosPlotter {
         const geneRadius = this.innerRadius + this.chromosomeWidth + 5;
         const geneHeight = this.geneHeight;
         
-        this.data.genes.slice(0, this.maxGenes).forEach(gene => {
+        // Limit genes for performance and prevent timeout violations
+        const maxGenesToProcess = Math.min(this.maxGenes, 1000); // Hard limit to prevent performance issues
+        this.data.genes.slice(0, maxGenesToProcess).forEach(gene => {
             const chr = this.data.chromosomes.find(c => 
                 (c.name === gene.chromosome) || 
                 (c.label === gene.chromosome) || 
@@ -1665,8 +1694,26 @@ class CircosPlotter {
             if (!chr) return;
             
             const chrLength = chr.length || chr.size || 1;
-            const startAngle = chr.startAngle + (gene.start / chrLength) * (chr.endAngle - chr.startAngle);
-            const endAngle = chr.startAngle + (gene.end / chrLength) * (chr.endAngle - chr.startAngle);
+            
+            // Validate gene coordinates
+            if (!gene.start || !gene.end || isNaN(gene.start) || isNaN(gene.end)) {
+                console.warn('Invalid gene coordinates:', gene);
+                return;
+            }
+            
+            // Ensure gene coordinates are within chromosome bounds
+            const validStart = Math.max(0, Math.min(gene.start, chrLength - 1));
+            const validEnd = Math.max(validStart + 1, Math.min(gene.end, chrLength));
+            
+            // Calculate angles with validation
+            const startAngle = chr.startAngle + (validStart / chrLength) * (chr.endAngle - chr.startAngle);
+            const endAngle = chr.startAngle + (validEnd / chrLength) * (chr.endAngle - chr.startAngle);
+            
+            // Validate calculated angles
+            if (isNaN(startAngle) || isNaN(endAngle)) {
+                console.warn('Invalid calculated angles for gene:', gene, 'chr:', chr, 'startAngle:', startAngle, 'endAngle:', endAngle);
+                return;
+            }
             
             // Adjust height based on expression level if available
             let adjustedHeight = geneHeight;
@@ -1685,11 +1732,23 @@ class CircosPlotter {
                 }
             }
             
+            // Ensure valid arc parameters
+            const innerRadius = Math.max(0, geneRadius);
+            const outerRadius = Math.max(innerRadius + 1, geneRadius + adjustedHeight);
+            const startRadians = startAngle * Math.PI / 180;
+            const endRadians = endAngle * Math.PI / 180;
+            
+            // Validate arc parameters
+            if (isNaN(innerRadius) || isNaN(outerRadius) || isNaN(startRadians) || isNaN(endRadians)) {
+                console.warn('Invalid arc parameters for gene:', gene);
+                return;
+            }
+            
             const arc = d3.arc()
-                .innerRadius(geneRadius)
-                .outerRadius(geneRadius + adjustedHeight)
-                .startAngle(startAngle * Math.PI / 180)
-                .endAngle(endAngle * Math.PI / 180);
+                .innerRadius(innerRadius)
+                .outerRadius(outerRadius)
+                .startAngle(startRadians)
+                .endAngle(endRadians);
             
             // Get gene color from theme with expression-based modification
             let geneColor = theme.genes.default;
