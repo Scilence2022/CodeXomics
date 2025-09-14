@@ -414,17 +414,14 @@
             font-weight: 600;
         }
         
-        .track-toggles {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 8px;
+        .track-radio-group {
             margin-bottom: 15px;
         }
         
-        .track-toggle {
+        .radio-group {
             display: flex;
             align-items: center;
-            gap: 8px;
+            margin-bottom: 8px;
             padding: 8px 12px;
             background: white;
             border: 1px solid #e2e8f0;
@@ -434,13 +431,71 @@
             font-size: 13px;
         }
         
-        .track-toggle:hover {
+        .radio-group:hover {
             background: #f8fafc;
             border-color: #cbd5e1;
         }
         
-        .track-toggle input[type="checkbox"] {
+        .radio-group input[type="radio"] {
+            margin: 0 8px 0 0;
+        }
+        
+        .radio-group label {
+            cursor: pointer;
             margin: 0;
+            flex: 1;
+        }
+        
+        .custom-tracks {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(248, 250, 252, 0.95);
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .custom-tracks h5 {
+            margin: 0 0 10px 0;
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .track-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+        
+        .checkbox-group:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin: 0;
+        }
+        
+        .checkbox-group label {
+            cursor: pointer;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
         }
         
         .track-color {

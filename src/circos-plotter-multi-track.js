@@ -34,35 +34,84 @@ class MultiTrackGeneManager {
         const controlsContainer = document.getElementById('controls');
         if (!controlsContainer) return;
         
-        // Create track controls section
+        // Create track controls section similar to GC Content controls
         const trackControlsDiv = document.createElement('div');
         trackControlsDiv.className = 'track-controls';
         trackControlsDiv.innerHTML = `
             <h4>Gene Track Controls</h4>
-            <div class="track-toggles">
-                ${Object.keys(this.geneTracks).map(type => `
-                    <label class="track-toggle">
-                        <input type="checkbox" id="track-${type}" ${this.geneTracks[type].enabled ? 'checked' : ''}>
-                        <span class="track-color" style="background-color: ${this.geneTracks[type].color}"></span>
-                        ${this.geneTracks[type].name}
-                        <span class="gene-count" id="count-${type}">0</span>
-                    </label>
-                `).join('')}
+            <div class="track-radio-group">
+                <div class="radio-group">
+                    <input type="radio" id="track-all" name="geneTrackMode" value="all" checked>
+                    <label for="track-all">Show All Gene Types</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" id="track-protein" name="geneTrackMode" value="protein_coding">
+                    <label for="track-protein">Protein Coding (CDS/mRNA)</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" id="track-tRNA" name="geneTrackMode" value="tRNA">
+                    <label for="track-tRNA">tRNA Only</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" id="track-rRNA" name="geneTrackMode" value="rRNA">
+                    <label for="track-rRNA">rRNA Only</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" id="track-rna" name="geneTrackMode" value="rna">
+                    <label for="track-rna">All RNA Genes</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" id="track-regulatory" name="geneTrackMode" value="regulatory">
+                    <label for="track-regulatory">Regulatory Only</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" id="track-pseudogene" name="geneTrackMode" value="pseudogene">
+                    <label for="track-pseudogene">Pseudogene Only</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" id="track-custom" name="geneTrackMode" value="custom">
+                    <label for="track-custom">Custom Selection</label>
+                </div>
             </div>
+            
+            <div class="custom-tracks" id="customTracks" style="display: none;">
+                <h5>Select Gene Types:</h5>
+                <div class="track-checkboxes">
+                    ${Object.keys(this.geneTracks).map(type => `
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="custom-${type}" ${this.geneTracks[type].enabled ? 'checked' : ''}>
+                            <label for="custom-${type}">
+                                <span class="track-color" style="background-color: ${this.geneTracks[type].color}"></span>
+                                ${this.geneTracks[type].name}
+                                <span class="gene-count" id="count-${type}">0</span>
+                            </label>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
             <div class="track-settings">
                 <label>
                     CDS Density Tracks: 
                     <input type="number" id="cds-density-tracks" value="${this.cdsDensityTracks}" min="1" max="5">
                 </label>
-                <button id="optimize-tracks">Optimize Track Distribution</button>
+                <button id="optimize-tracks">Optimize Distribution</button>
             </div>
         `;
         
         controlsContainer.appendChild(trackControlsDiv);
         
-        // Add event listeners
+        // Add event listeners for radio buttons
+        const radioButtons = trackControlsDiv.querySelectorAll('input[name="geneTrackMode"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.handleTrackModeChange(e.target.value);
+            });
+        });
+        
+        // Add event listeners for custom checkboxes
         Object.keys(this.geneTracks).forEach(type => {
-            const checkbox = document.getElementById(`track-${type}`);
+            const checkbox = document.getElementById(`custom-${type}`);
             if (checkbox) {
                 checkbox.addEventListener('change', (e) => {
                     this.geneTracks[type].enabled = e.target.checked;
@@ -85,6 +134,83 @@ class MultiTrackGeneManager {
                 this.optimizeTrackDistribution();
             });
         }
+    }
+    
+    handleTrackModeChange(mode) {
+        const customTracks = document.getElementById('customTracks');
+        
+        switch (mode) {
+            case 'all':
+                // Enable all tracks
+                Object.keys(this.geneTracks).forEach(type => {
+                    this.geneTracks[type].enabled = true;
+                });
+                customTracks.style.display = 'none';
+                break;
+                
+            case 'protein_coding':
+                // Only protein coding
+                Object.keys(this.geneTracks).forEach(type => {
+                    this.geneTracks[type].enabled = (type === 'protein_coding');
+                });
+                customTracks.style.display = 'none';
+                break;
+                
+            case 'tRNA':
+                // Only tRNA
+                Object.keys(this.geneTracks).forEach(type => {
+                    this.geneTracks[type].enabled = (type === 'tRNA');
+                });
+                customTracks.style.display = 'none';
+                break;
+                
+            case 'rRNA':
+                // Only rRNA
+                Object.keys(this.geneTracks).forEach(type => {
+                    this.geneTracks[type].enabled = (type === 'rRNA');
+                });
+                customTracks.style.display = 'none';
+                break;
+                
+            case 'rna':
+                // All RNA genes (tRNA, rRNA, non_coding)
+                Object.keys(this.geneTracks).forEach(type => {
+                    this.geneTracks[type].enabled = (type === 'tRNA' || type === 'rRNA' || type === 'non_coding');
+                });
+                customTracks.style.display = 'none';
+                break;
+                
+            case 'regulatory':
+                // Only regulatory
+                Object.keys(this.geneTracks).forEach(type => {
+                    this.geneTracks[type].enabled = (type === 'regulatory');
+                });
+                customTracks.style.display = 'none';
+                break;
+                
+            case 'pseudogene':
+                // Only pseudogene
+                Object.keys(this.geneTracks).forEach(type => {
+                    this.geneTracks[type].enabled = (type === 'pseudogene');
+                });
+                customTracks.style.display = 'none';
+                break;
+                
+            case 'custom':
+                // Show custom selection
+                customTracks.style.display = 'block';
+                break;
+        }
+        
+        // Update custom checkboxes to reflect current state
+        Object.keys(this.geneTracks).forEach(type => {
+            const checkbox = document.getElementById(`custom-${type}`);
+            if (checkbox) {
+                checkbox.checked = this.geneTracks[type].enabled;
+            }
+        });
+        
+        this.circosPlotter.redrawPlot();
     }
     
     addTrackLegend() {
