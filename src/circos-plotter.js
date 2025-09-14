@@ -1681,11 +1681,15 @@ class CircosPlotter {
         
         const theme = this.getCurrentTheme();
         const geneRadius = this.innerRadius + this.chromosomeWidth + 5;
-        const geneHeight = this.geneHeight;
+        const geneHeight = Math.max(this.geneHeight, 3); // Ensure minimum visible height
         
         // Limit genes for performance and prevent timeout violations
         const maxGenesToProcess = Math.min(this.maxGenes, 1000); // Hard limit to prevent performance issues
-        this.data.genes.slice(0, maxGenesToProcess).forEach(gene => {
+        const genesToProcess = this.data.genes.slice(0, maxGenesToProcess);
+        console.log(`Processing ${genesToProcess.length} genes for visualization`);
+        
+        let renderedGenes = 0;
+        genesToProcess.forEach(gene => {
             const chr = this.data.chromosomes.find(c => 
                 (c.name === gene.chromosome) || 
                 (c.label === gene.chromosome) || 
@@ -1716,8 +1720,8 @@ class CircosPlotter {
             }
             
             // Adjust height based on expression level if available
-            let adjustedHeight = geneHeight;
-            let opacity = 0.8;
+            let adjustedHeight = Math.max(geneHeight, 4); // Ensure minimum visible height
+            let opacity = 0.9; // Increase opacity for better visibility
             
             if (gene.expression !== undefined) {
                 if (gene.expression >= 0.7) {
@@ -1807,7 +1811,11 @@ class CircosPlotter {
                     // Navigate to this gene in the main window
                     this.navigateToGene(gene);
                 });
+            
+            renderedGenes++;
         });
+        
+        console.log(`Successfully rendered ${renderedGenes} genes`);
     }
 
     drawGCContentTrack(g, trackOffset) {
@@ -1817,16 +1825,29 @@ class CircosPlotter {
         this.data.chromosomes.forEach(chr => {
             const gcData = this.generateRealGCData(chr);
             
-            // Create line generator
+            // Validate chromosome data
+            const chrLength = chr.length || chr.size || 1;
+            if (chrLength <= 0 || isNaN(chrLength)) {
+                console.warn('Invalid chromosome length for GC track:', chr);
+                return;
+            }
+            
+            // Create line generator with validation
             const line = d3.line()
                 .x(d => {
-                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    if (!d.position || isNaN(d.position) || !d.value || isNaN(d.value)) {
+                        return 0;
+                    }
+                    const angle = chr.startAngle + (d.position / chrLength) * (chr.endAngle - chr.startAngle);
                     const radians = angle * Math.PI / 180;
                     const radius = trackRadius + (d.value - 30) / 40 * this.wigTrackHeight; // Scale 30-70% to track height
                     return Math.cos(radians) * radius;
                 })
                 .y(d => {
-                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    if (!d.position || isNaN(d.position) || !d.value || isNaN(d.value)) {
+                        return 0;
+                    }
+                    const angle = chr.startAngle + (d.position / chrLength) * (chr.endAngle - chr.startAngle);
                     const radians = angle * Math.PI / 180;
                     const radius = trackRadius + (d.value - 30) / 40 * this.wigTrackHeight;
                     return Math.sin(radians) * radius;
@@ -1864,16 +1885,29 @@ class CircosPlotter {
         this.data.chromosomes.forEach(chr => {
             const skewData = this.generateMockGCSkew(chr);
             
-            // Create line generator
+            // Validate chromosome data
+            const chrLength = chr.length || chr.size || 1;
+            if (chrLength <= 0 || isNaN(chrLength)) {
+                console.warn('Invalid chromosome length for GC skew track:', chr);
+                return;
+            }
+            
+            // Create line generator with validation
             const line = d3.line()
                 .x(d => {
-                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    if (!d.position || isNaN(d.position) || !d.value || isNaN(d.value)) {
+                        return 0;
+                    }
+                    const angle = chr.startAngle + (d.position / chrLength) * (chr.endAngle - chr.startAngle);
                     const radians = angle * Math.PI / 180;
                     const radius = trackRadius + (d.value + 0.3) / 0.6 * this.wigTrackHeight; // Scale -0.3 to 0.3 to track height
                     return Math.cos(radians) * radius;
                 })
                 .y(d => {
-                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    if (!d.position || isNaN(d.position) || !d.value || isNaN(d.value)) {
+                        return 0;
+                    }
+                    const angle = chr.startAngle + (d.position / chrLength) * (chr.endAngle - chr.startAngle);
                     const radians = angle * Math.PI / 180;
                     const radius = trackRadius + (d.value + 0.3) / 0.6 * this.wigTrackHeight;
                     return Math.sin(radians) * radius;
@@ -1910,28 +1944,48 @@ class CircosPlotter {
         
         this.data.chromosomes.forEach(chr => {
             const wigData = this.generateMockWigData(chr);
-            const maxValue = Math.max(...wigData.map(d => d.value));
             
-            // Create area generator for filled track
+            // Validate chromosome data
+            const chrLength = chr.length || chr.size || 1;
+            if (chrLength <= 0 || isNaN(chrLength)) {
+                console.warn('Invalid chromosome length for WIG track:', chr);
+                return;
+            }
+            
+            const maxValue = Math.max(...wigData.map(d => d.value || 0));
+            
+            // Create area generator for filled track with validation
             const area = d3.area()
                 .x(d => {
-                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    if (!d.position || isNaN(d.position)) {
+                        return 0;
+                    }
+                    const angle = chr.startAngle + (d.position / chrLength) * (chr.endAngle - chr.startAngle);
                     const radians = angle * Math.PI / 180;
                     return Math.cos(radians) * trackRadius;
                 })
                 .y(d => {
-                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    if (!d.position || isNaN(d.position) || !d.value || isNaN(d.value)) {
+                        return trackRadius;
+                    }
+                    const angle = chr.startAngle + (d.position / chrLength) * (chr.endAngle - chr.startAngle);
                     const radians = angle * Math.PI / 180;
                     return Math.sin(radians) * trackRadius;
                 })
                 .x1(d => {
-                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    if (!d.position || isNaN(d.position) || !d.value || isNaN(d.value)) {
+                        return trackRadius;
+                    }
+                    const angle = chr.startAngle + (d.position / chrLength) * (chr.endAngle - chr.startAngle);
                     const radians = angle * Math.PI / 180;
                     const radius = trackRadius + (d.value / maxValue) * this.wigTrackHeight;
                     return Math.cos(radians) * radius;
                 })
                 .y1(d => {
-                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    if (!d.position || isNaN(d.position) || !d.value || isNaN(d.value)) {
+                        return trackRadius;
+                    }
+                    const angle = chr.startAngle + (d.position / chrLength) * (chr.endAngle - chr.startAngle);
                     const radians = angle * Math.PI / 180;
                     const radius = trackRadius + (d.value / maxValue) * this.wigTrackHeight;
                     return Math.sin(radians) * radius;
