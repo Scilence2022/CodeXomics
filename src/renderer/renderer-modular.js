@@ -4786,7 +4786,7 @@ class GenomeBrowser {
         // Add quality scores if available
         if (read.quality && read.quality.length > 0) {
             const qualityPreview = this.formatQualityPreview(read.quality, 100);
-            const qualityFormatted = this.formatQualityWithLineNumbers(read.quality, 1);
+            const qualityFormatted = this.formatQualityFull(read.quality);
             
             html += `
                 <div class="read-sequence-section">
@@ -4942,6 +4942,19 @@ class GenomeBrowser {
         }
         
         return lines.join('<br>');
+    }
+
+    /**
+     * Format quality scores for full display without line numbers (for read details)
+     */
+    formatQualityFull(quality) {
+        if (!quality || quality.length === 0) return 'No quality data';
+        
+        const qualityStr = typeof quality === 'string' ? quality : 
+                          Array.isArray(quality) ? quality.join(' ') : String(quality);
+        
+        // Display entire quality string as one continuous line without breaking
+        return `<div class="quality-full-line">${qualityStr}</div>`;
     }
 
     setupExpandableReadSequences() {
