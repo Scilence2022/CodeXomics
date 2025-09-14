@@ -4763,7 +4763,7 @@ class GenomeBrowser {
             html += `
                 <div class="read-sequence-section">
                     <div class="read-sequence-header">
-                        <span>DNA Sequence (${read.sequence.length} bp)</span>
+                        <span>DNA Sequence</span>
                         <div class="read-sequence-actions">
                             <button class="toggle-read-sequence-btn" onclick="window.genomeBrowser.toggleReadSequence('dna-${readName}')">
                                 <i class="fas fa-expand-alt"></i> Show Full
@@ -4795,7 +4795,7 @@ class GenomeBrowser {
             html += `
                 <div class="read-sequence-section">
                     <div class="read-sequence-header">
-                        <span>Quality Scores (${read.quality.length} values)</span>
+                        <span>Quality Scores</span>
                         <div class="read-sequence-actions">
                             <button class="toggle-read-sequence-btn" onclick="window.genomeBrowser.toggleReadSequence('quality-${readName}')">
                                 <i class="fas fa-expand-alt"></i> Show Full
