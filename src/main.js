@@ -2763,16 +2763,16 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                     const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || \`feature_\${genes.length}\`;
                     const product = annotation.qualifiers?.product || annotation.qualifiers?.note || 'Unknown function';
                     
-                    // Determine feature type
+                    // Determine feature type - keep original type for better classification
                     let featureType = annotation.type || 'other';
-                    if (featureType === 'gene' || featureType === 'CDS' || featureType === 'mRNA') {
-                      featureType = 'protein_coding';
-                    } else if (featureType === 'tRNA' || featureType === 'rRNA' || featureType === 'ncRNA') {
-                      featureType = 'non_coding';
-                    } else if (featureType === 'pseudogene') {
-                      featureType = 'pseudogene';
-                    } else if (featureType === 'regulatory' || featureType === 'promoter' || featureType === 'terminator') {
-                      featureType = 'regulatory';
+                    
+                    // Debug logging for feature types
+                    if (genes.length < 10) {
+                      console.log('Feature type mapping:', {
+                        original: annotation.type,
+                        mapped: featureType,
+                        qualifiers: annotation.qualifiers
+                      });
                     }
                     
                     // Convert strand from -1/1 to +/- format
@@ -2805,6 +2805,16 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                   });
                 }
               }
+            });
+            
+            // Debug: Log gene type distribution
+            console.log('Gene type distribution:');
+            const typeCounts = {};
+            genes.forEach(gene => {
+              typeCounts[gene.type] = (typeCounts[gene.type] || 0) + 1;
+            });
+            Object.keys(typeCounts).forEach(type => {
+              console.log(`  ${type}: ${typeCounts[type]} genes`);
             });
             
             // If no genes found, generate some test genes for visualization
