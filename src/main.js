@@ -2760,19 +2760,19 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                     
                     // Extract gene information from qualifiers
                     const geneName = annotation.qualifiers?.gene || annotation.qualifiers?.locus_tag || 'Unknown';
-                    const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || 'feature_' + genes.length;
+                    const locusTag = annotation.qualifiers?.locus_tag || annotation.qualifiers?.gene || \`feature_\${genes.length}\`;
                     const product = annotation.qualifiers?.product || annotation.qualifiers?.note || 'Unknown function';
                     
-                    // Determine feature type - keep original type for better classification
+                    // Determine feature type
                     let featureType = annotation.type || 'other';
-                    
-                    // Debug logging for feature types
-                    if (genes.length < 10) {
-                      console.log('Feature type mapping:', {
-                        original: annotation.type,
-                        mapped: featureType,
-                        qualifiers: annotation.qualifiers
-                      });
+                    if (featureType === 'gene' || featureType === 'CDS' || featureType === 'mRNA') {
+                      featureType = 'protein_coding';
+                    } else if (featureType === 'tRNA' || featureType === 'rRNA' || featureType === 'ncRNA') {
+                      featureType = 'non_coding';
+                    } else if (featureType === 'pseudogene') {
+                      featureType = 'pseudogene';
+                    } else if (featureType === 'regulatory' || featureType === 'promoter' || featureType === 'terminator') {
+                      featureType = 'regulatory';
                     }
                     
                     // Convert strand from -1/1 to +/- format
@@ -2807,16 +2807,6 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
               }
             });
             
-            // Debug: Log gene type distribution
-            console.log('Gene type distribution:');
-            const typeCounts = {};
-            genes.forEach(gene => {
-              typeCounts[gene.type] = (typeCounts[gene.type] || 0) + 1;
-            });
-            Object.keys(typeCounts).forEach(type => {
-              console.log(`  ${type}: ${typeCounts[type]} genes`);
-            });
-            
             // If no genes found, generate some test genes for visualization
             if (genes.length === 0 && chromosomes.length > 0) {
               console.log('No genes found in annotations, generating test genes for visualization');
@@ -2831,14 +2821,14 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
                   // Validate test gene coordinates
                   if (start >= 0 && end > start && end <= chr.size) {
                     genes.push({
-                      id: 'test_gene_' + chrIndex + '_' + i,
-                      name: 'Test Gene ' + (i + 1),
+                      id: \`test_gene_\${chrIndex}_\${i}\`,
+                      name: \`Test Gene \${i + 1}\`,
                       chromosome: chr.id,
                       start: start,
                       end: end,
                       strand: Math.random() > 0.5 ? '+' : '-',
                       type: geneType,
-                      description: 'Test ' + geneType + ' gene for visualization',
+                      description: \`Test \${geneType} gene for visualization\`,
                       qualifiers: {}
                     });
                   }

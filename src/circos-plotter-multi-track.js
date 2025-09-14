@@ -116,8 +116,6 @@ class MultiTrackGeneManager {
     groupGenesByType(genes) {
         const groups = {};
         
-        console.log('Grouping genes by type, total genes:', genes.length);
-        
         genes.forEach(gene => {
             // Skip source features and other large features that obscure genes
             if (gene.type === 'source' || !gene.type) {
@@ -146,12 +144,6 @@ class MultiTrackGeneManager {
                 groups[trackType] = [];
             }
             groups[trackType].push(gene);
-        });
-        
-        // Debug: Log grouped gene counts
-        console.log('Grouped gene counts:');
-        Object.keys(groups).forEach(type => {
-            console.log(`  ${type}: ${groups[type].length} genes`);
         });
         
         return groups;
