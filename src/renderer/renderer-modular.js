@@ -2859,6 +2859,18 @@ class GenomeBrowser {
                 });
             }
         });
+
+        // Handle notifications from main process
+        ipcRenderer.on('show-notification', (event, notificationData) => {
+            console.log('📢 Received notification from main process:', notificationData);
+            
+            if (notificationData && notificationData.title && notificationData.message) {
+                const { type = 'info', title, message, duration = 5000 } = notificationData;
+                
+                // Use the existing notification system
+                this.showNotification(`${title}: ${message}`, type);
+            }
+        });
     }
 
     // Refresh the current view (used by TabManager for state restoration)

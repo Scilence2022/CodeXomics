@@ -1435,8 +1435,8 @@ function createMenu() {
         {
           label: 'Deep Gene Research',
           accelerator: 'CmdOrCtrl+Shift+W',
-          click: () => {
-            createDeepGeneResearchWindow();
+          click: async () => {
+            await createDeepGeneResearchWindow();
           }
         },
         {
@@ -3629,10 +3629,43 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
 }
 
 // Create Deep Gene Research Window
-function createDeepGeneResearchWindow(params = {}) {
+async function createDeepGeneResearchWindow(params = {}) {
   try {
-    // Get the URL from settings (default to localhost:3000)
-    let deepGeneResearchUrl = 'http://localhost:3000/';
+    // Get the URL from General Settings
+    let deepGeneResearchUrl = 'http://localhost:3000/'; // Default fallback
+    
+    try {
+      // Get the main window to access GeneralSettingsManager directly
+      const mainWindow = getCurrentMainWindow();
+      if (mainWindow && mainWindow.webContents) {
+        const settings = await mainWindow.webContents.executeJavaScript(`
+          if (window.genomeBrowser && window.genomeBrowser.generalSettingsManager) {
+            window.genomeBrowser.generalSettingsManager.getSettings();
+          } else {
+            Promise.resolve({});
+          }
+        `);
+        
+        if (settings && settings.deepGeneResearchUrl) {
+          deepGeneResearchUrl = settings.deepGeneResearchUrl;
+          console.log('Using Deep Gene Research URL from settings:', deepGeneResearchUrl);
+        } else {
+          console.log('No Deep Gene Research URL found in settings, using default:', deepGeneResearchUrl);
+          // Show notification to user about using default URL
+          showSettingsWarning('Deep Gene Research URL not configured', 
+            'Using default URL (http://localhost:3000/). You can configure the URL in General Settings → Features → External Tools.');
+        }
+      } else {
+        console.log('Main window not available, using default URL:', deepGeneResearchUrl);
+        showSettingsWarning('Main window not available', 
+          'Using default URL (http://localhost:3000/). Please ensure the main window is open.');
+      }
+    } catch (error) {
+      console.warn('Failed to get Deep Gene Research URL from settings, using default:', error.message);
+      // Show error notification to user
+      showSettingsError('Failed to load Deep Gene Research settings', 
+        `Using default URL (http://localhost:3000/) due to error: ${error.message}. Please check your settings configuration.`);
+    }
     
     // Add parameters to URL if provided
     if (params.gene || params.organism) {
@@ -3845,9 +3878,9 @@ ipcMain.on('open-gene-annotation-refine', (event, data) => {
   createGeneAnnotationRefineWindow();
 });
 
-ipcMain.on('open-deep-gene-research-window', (event, params = {}) => {
+ipcMain.on('open-deep-gene-research-window', async (event, params = {}) => {
   console.log('IPC: Opening Deep Gene Research window with params:', params);
-  createDeepGeneResearchWindow(params);
+  await createDeepGeneResearchWindow(params);
 });
 
 // IPC handler for Deep Gene Research window menu actions
@@ -3901,6 +3934,53 @@ ipcMain.on('deep-gene-research-menu-action', (event, action) => {
       break;
     default:
       console.log('Unknown Deep Gene Research menu action:', action);
+  }
+});
+
+// Helper functions for user notifications
+function showSettingsWarning(title, message) {
+  const mainWindow = getCurrentMainWindow();
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('show-notification', {
+      type: 'warning',
+      title: title,
+      message: message,
+      duration: 5000
+    });
+  }
+}
+
+function showSettingsError(title, message) {
+  const mainWindow = getCurrentMainWindow();
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('show-notification', {
+      type: 'error',
+      title: title,
+      message: message,
+      duration: 8000
+    });
+  }
+}
+
+// General Settings IPC handlers
+ipcMain.handle('get-general-settings', async () => {
+  try {
+    // Get the main window to access GeneralSettingsManager
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && mainWindow.webContents) {
+      const settings = await mainWindow.webContents.executeJavaScript(`
+        if (window.genomeBrowser && window.genomeBrowser.generalSettingsManager) {
+          window.genomeBrowser.generalSettingsManager.getSettings();
+        } else {
+          Promise.resolve({});
+        }
+      `);
+      return settings;
+    }
+    return {};
+  } catch (error) {
+    console.error('Error getting general settings:', error);
+    return {};
   }
 });
 
