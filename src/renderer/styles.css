@@ -10995,6 +10995,16 @@ to {
   min-height: 18px !important;
 }
 
+/* Read sequence full display without line numbers */
+.sequence-full-line {
+  font-family: 'Courier New', monospace !important;
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+  margin-bottom: 4px !important;
+  padding: 2px 0 !important;
+  word-break: break-all !important;
+}
+
 .crispr-design-tabs {
   width: 100%;
 }
