@@ -4771,7 +4771,7 @@ class GenomeBrowser {
                     </div>
                     <div class="read-sequence-content">
                         <div class="read-sequence-preview" id="dna-${readName}-preview">
-                            ${this.colorizeSequenceBases(sequencePreview)}
+                            ${sequencePreview}
                         </div>
                         <div class="read-sequence-full" id="dna-${readName}-full">
                             <div class="read-sequence-formatted">
@@ -5385,10 +5385,13 @@ class GenomeBrowser {
      * Format sequence preview (first N characters with ellipsis)
      */
     formatSequencePreview(sequence, maxLength = 60) {
+        const previewSequence = sequence.length <= maxLength ? sequence : sequence.substring(0, maxLength);
+        const colorizedSequence = this.colorizeSequenceBases(previewSequence);
+        
         if (sequence.length <= maxLength) {
-            return `<span class="sequence-text">${sequence}</span>`;
+            return colorizedSequence;
         }
-        return `<span class="sequence-text">${sequence.substring(0, maxLength)}<span class="sequence-ellipsis">...</span></span>`;
+        return colorizedSequence + '<span class="sequence-ellipsis">...</span>';
     }
     
     /**
@@ -5417,10 +5420,11 @@ class GenomeBrowser {
         for (let i = 0; i < sequence.length; i += lineLength) {
             const lineNumber = startPosition + i;
             const lineSequence = sequence.substring(i, i + lineLength);
+            const colorizedSequence = this.colorizeSequenceBases(lineSequence);
             formatted += `
                 <div class="sequence-line">
                     <span class="sequence-position">${lineNumber.toLocaleString()}</span>
-                    <span class="sequence-bases">${this.colorizeSequenceBases(lineSequence)}</span>
+                    <span class="sequence-bases">${colorizedSequence}</span>
                 </div>
             `;
         }
