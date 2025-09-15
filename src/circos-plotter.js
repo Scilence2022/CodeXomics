@@ -38,9 +38,9 @@ class CircosPlotter {
         this.maxLinks = 50;
         
         // Data track properties
-        this.showGCContent = false;
-        this.showGCSkew = false;
-        this.showWigData = false;
+        this.showGCContent = true;  // Enable by default for better visualization
+        this.showGCSkew = true;     // Enable by default for better visualization
+        this.showWigData = true;    // Enable by default for better visualization
         this.gcWindowSize = 10000;
         this.wigTrackHeight = 30;
         
