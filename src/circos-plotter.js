@@ -1718,9 +1718,9 @@ class CircosPlotter {
         // Draw chromosomes
         this.drawCanvasChromosomes(processedChromosomes, centerX, centerY);
         
-        // Draw genes if enabled
-        if (this.showGenes && processedGenes.length > 0) {
-            this.drawCanvasGenes(processedGenes, centerX, centerY);
+        // Draw genes if enabled using multi-track system
+        if (this.showGenes && this.data.genes && this.data.genes.length > 0) {
+            this.drawCanvasGenesTrack(centerX, centerY, theme);
         }
         
         // Draw data tracks using unified interface
@@ -1805,6 +1805,20 @@ class CircosPlotter {
         });
         
         this.ctx.restore();
+    }
+    
+    drawCanvasGenesTrack(centerX, centerY, theme) {
+        if (!this.data.genes) return;
+        
+        const baseRadius = this.innerRadius + this.chromosomeWidth + 5;
+        
+        // Initialize multi-track manager if not exists
+        if (!this.multiTrackManager) {
+            this.multiTrackManager = new MultiTrackGeneManager(this);
+        }
+        
+        // Use multi-track system for gene rendering
+        this.multiTrackManager.renderCanvasGeneTracks(this.ctx, this.data.genes, baseRadius, theme, centerX, centerY);
     }
     
     drawCanvasGenes(processedGenes, centerX, centerY) {
