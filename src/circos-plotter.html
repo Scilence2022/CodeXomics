@@ -649,6 +649,15 @@
                     </div>
 
                     <div class="parameter-group">
+                        <label>Rendering Mode</label>
+                        <select class="select-input" id="renderingModeSelect">
+                            <option value="canvas">Canvas (High Performance)</option>
+                            <option value="svg">SVG (High Quality)</option>
+                        </select>
+                        <div class="parameter-description">Canvas mode offers better performance for large datasets</div>
+                    </div>
+
+                    <div class="parameter-group">
                         <label>Start Angle</label>
                         <input type="range" class="range-input" id="startAngleSlider" min="0" max="360" value="0" step="15">
                         <div class="range-value" id="startAngleValue">0°</div>
@@ -1093,6 +1102,16 @@
                 case 'ai-optimization':
                     if (window.circosPlotter) {
                         window.circosPlotter.optimizeParameters();
+                    }
+                    break;
+                    
+                case 'rendering-mode':
+                    if (window.circosPlotter) {
+                        // Toggle between canvas and SVG
+                        const currentMode = window.circosPlotter.renderingMode;
+                        window.circosPlotter.renderingMode = currentMode === 'canvas' ? 'svg' : 'canvas';
+                        window.circosPlotter.updateStatus(`Switched to ${window.circosPlotter.renderingMode.toUpperCase()} rendering mode`);
+                        window.circosPlotter.createPlot();
                     }
                     break;
                     

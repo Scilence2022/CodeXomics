@@ -9,9 +9,16 @@ class CircosPlotter {
         this.width = 800;
         this.height = 800;
         this.radius = 300;
-        this.innerRadiusRatio = 0.3;
+        this.innerRadiusRatio = 0.8;
         this.innerRadius = this.radius * this.innerRadiusRatio;
         this.startAngle = -90;
+        
+        // Rendering mode properties
+        this.renderingMode = 'canvas'; // 'svg' or 'canvas'
+        this.canvas = null;
+        this.ctx = null;
+        this.svg = null;
+        this.g = null;
         
         // Chromosome properties
         this.chromosomeWidth = 15;
@@ -562,6 +569,13 @@ class CircosPlotter {
         // Theme controls
         document.getElementById('themeSelect').addEventListener('change', (e) => {
             this.applyTheme(e.target.value);
+        });
+        
+        // Rendering mode controls
+        document.getElementById('renderingModeSelect').addEventListener('change', (e) => {
+            this.renderingMode = e.target.value;
+            this.updateStatus(`Switched to ${this.renderingMode.toUpperCase()} rendering mode`);
+            this.createPlot();
         });
         
         document.getElementById('backgroundColorPicker').addEventListener('input', (e) => {
@@ -1552,6 +1566,42 @@ class CircosPlotter {
         
         const theme = this.getCurrentTheme();
         
+        // Choose rendering mode
+        if (this.renderingMode === 'canvas') {
+            this.createCanvasPlot(theme);
+        } else {
+            this.createSVGPlot(theme);
+        }
+    }
+    
+    createCanvasPlot(theme) {
+        // Create Canvas element
+        this.canvas = d3.select('#circosContainer')
+            .append('canvas')
+            .attr('id', 'circos-canvas')
+            .attr('width', this.width)
+            .attr('height', this.height)
+            .style('background-color', theme.background)
+            .style('cursor', 'grab')
+            .node();
+        
+        this.ctx = this.canvas.getContext('2d');
+        
+        // Set up canvas properties
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
+        
+        // Calculate angles for chromosomes
+        this.calculateChromosomeAngles();
+        
+        // Draw on canvas
+        this.drawCanvasPlot(theme);
+        
+        // Add event listeners for canvas
+        this.setupCanvasEventListeners();
+    }
+    
+    createSVGPlot(theme) {
         // Create SVG with dynamic sizing and zoom support
         this.svg = d3.select('#circosContainer')
             .append('svg')
@@ -1639,6 +1689,355 @@ class CircosPlotter {
             statusText += `, ${this.data.links.length} links`;
         }
         this.updateStatus(statusText);
+    }
+    
+    drawCanvasPlot(theme) {
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        
+        // Set canvas center
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+        
+        // Draw chromosomes
+        this.drawCanvasChromosomes(theme, centerX, centerY);
+        
+        // Draw genes if enabled
+        if (this.showGenes && this.data.genes && this.data.genes.length > 0) {
+            this.drawCanvasGenes(theme, centerX, centerY);
+        }
+        
+        // Draw data tracks
+        let trackOffset = 0;
+        if (this.multiTrackManager) {
+            const enabledTracks = Object.values(this.multiTrackManager.geneTracks).filter(track => track.enabled);
+            const maxTrackNumber = Math.max(...enabledTracks.map(track => track.track), -1);
+            trackOffset = (maxTrackNumber + 1) * (this.geneHeight + 2) + 10;
+        }
+        
+        if (this.showGCContent) {
+            this.drawCanvasGCContent(theme, centerX, centerY, trackOffset);
+            trackOffset += this.wigTrackHeight + 5;
+        }
+        
+        if (this.showGCSkew) {
+            this.drawCanvasGCSkew(theme, centerX, centerY, trackOffset);
+            trackOffset += this.wigTrackHeight + 5;
+        }
+        
+        if (this.showWigData) {
+            this.drawCanvasWigData(theme, centerX, centerY, trackOffset);
+            trackOffset += this.wigTrackHeight + 5;
+        }
+        
+        // Draw links if enabled
+        if (this.showLinks && this.data.links && this.data.links.length > 0) {
+            this.drawCanvasLinks(theme, centerX, centerY);
+        }
+        
+        // Draw labels if enabled
+        if (this.showLabels) {
+            this.drawCanvasLabels(theme, centerX, centerY);
+        }
+        
+        // Update status
+        let statusText = `Canvas: ${this.data.chromosomes.length} chromosomes`;
+        if (this.data.genes) {
+            statusText += `, ${this.data.genes.length} genes`;
+        }
+        if (this.data.links) {
+            statusText += `, ${this.data.links.length} links`;
+        }
+        this.updateStatus(statusText);
+    }
+    
+    drawCanvasChromosomes(theme, centerX, centerY) {
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(this.startAngle * Math.PI / 180);
+        
+        this.data.chromosomes.forEach((chr, index) => {
+            const startAngle = chr.startAngle * Math.PI / 180;
+            const endAngle = chr.endAngle * Math.PI / 180;
+            const innerRadius = this.innerRadius;
+            const outerRadius = this.innerRadius + this.chromosomeWidth;
+            
+            // Draw chromosome arc
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, (innerRadius + outerRadius) / 2, startAngle, endAngle);
+            this.ctx.lineWidth = this.chromosomeWidth;
+            this.ctx.strokeStyle = chr.color || theme.chromosomeColors[index % theme.chromosomeColors.length];
+            this.ctx.stroke();
+            
+            // Draw chromosome border
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, innerRadius, startAngle, endAngle);
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeStyle = theme.border;
+            this.ctx.stroke();
+            
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, outerRadius, startAngle, endAngle);
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeStyle = theme.border;
+            this.ctx.stroke();
+        });
+        
+        this.ctx.restore();
+    }
+    
+    drawCanvasGenes(theme, centerX, centerY) {
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(this.startAngle * Math.PI / 180);
+        
+        // Limit genes for performance
+        const maxGenes = Math.min(this.data.genes.length, this.maxGenes);
+        const genesToDraw = this.data.genes.slice(0, maxGenes);
+        
+        genesToDraw.forEach(gene => {
+            const chr = this.data.chromosomes.find(c => c.name === gene.chromosome || c.label === gene.chromosome || c.id === gene.chromosome);
+            if (!chr) return;
+            
+            const chrLength = chr.length || chr.size || 1;
+            const geneStartAngle = chr.startAngle + (gene.start / chrLength) * (chr.endAngle - chr.startAngle);
+            const geneEndAngle = chr.startAngle + (gene.end / chrLength) * (chr.endAngle - chr.startAngle);
+            
+            const startRadians = geneStartAngle * Math.PI / 180;
+            const endRadians = geneEndAngle * Math.PI / 180;
+            const innerRadius = this.innerRadius + this.chromosomeWidth + 5;
+            const outerRadius = innerRadius + this.geneHeight;
+            
+            // Draw gene arc
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, (innerRadius + outerRadius) / 2, startRadians, endRadians);
+            this.ctx.lineWidth = this.geneHeight;
+            this.ctx.strokeStyle = this.getGeneColor(gene, theme);
+            this.ctx.stroke();
+        });
+        
+        this.ctx.restore();
+    }
+    
+    drawCanvasGCContent(theme, centerX, centerY, trackOffset) {
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(this.startAngle * Math.PI / 180);
+        
+        this.data.chromosomes.forEach(chr => {
+            const gcData = this.generateRealGCData(chr);
+            const innerRadius = this.innerRadius + this.chromosomeWidth + trackOffset;
+            const outerRadius = innerRadius + this.wigTrackHeight;
+            
+            gcData.forEach(d => {
+                const angle = chr.startAngle + (d.position / (chr.length || chr.size || 1)) * (chr.endAngle - chr.startAngle);
+                const radians = angle * Math.PI / 180;
+                const height = (d.value / 100) * this.wigTrackHeight;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(
+                    Math.cos(radians) * innerRadius,
+                    Math.sin(radians) * innerRadius
+                );
+                this.ctx.lineTo(
+                    Math.cos(radians) * (innerRadius + height),
+                    Math.sin(radians) * (innerRadius + height)
+                );
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeStyle = theme.gcContentColor || '#ff6b6b';
+                this.ctx.stroke();
+            });
+        });
+        
+        this.ctx.restore();
+    }
+    
+    drawCanvasGCSkew(theme, centerX, centerY, trackOffset) {
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(this.startAngle * Math.PI / 180);
+        
+        this.data.chromosomes.forEach(chr => {
+            const skewData = this.generateRealGCSkew(chr);
+            const innerRadius = this.innerRadius + this.chromosomeWidth + trackOffset;
+            const outerRadius = innerRadius + this.wigTrackHeight;
+            
+            skewData.forEach(d => {
+                const angle = chr.startAngle + (d.position / (chr.length || chr.size || 1)) * (chr.endAngle - chr.startAngle);
+                const radians = angle * Math.PI / 180;
+                const height = (d.value + 0.3) / 0.6 * this.wigTrackHeight; // Normalize -0.3 to 0.3
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(
+                    Math.cos(radians) * innerRadius,
+                    Math.sin(radians) * innerRadius
+                );
+                this.ctx.lineTo(
+                    Math.cos(radians) * (innerRadius + height),
+                    Math.sin(radians) * (innerRadius + height)
+                );
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeStyle = theme.gcSkewColor || '#4ecdc4';
+                this.ctx.stroke();
+            });
+        });
+        
+        this.ctx.restore();
+    }
+    
+    drawCanvasWigData(theme, centerX, centerY, trackOffset) {
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(this.startAngle * Math.PI / 180);
+        
+        this.data.chromosomes.forEach(chr => {
+            const wigData = this.generateRealWigData(chr);
+            const innerRadius = this.innerRadius + this.chromosomeWidth + trackOffset;
+            const outerRadius = innerRadius + this.wigTrackHeight;
+            
+            wigData.forEach(d => {
+                const angle = chr.startAngle + (d.position / (chr.length || chr.size || 1)) * (chr.endAngle - chr.startAngle);
+                const radians = angle * Math.PI / 180;
+                const height = Math.min(d.value / 100, 1) * this.wigTrackHeight; // Normalize to 0-100
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(
+                    Math.cos(radians) * innerRadius,
+                    Math.sin(radians) * innerRadius
+                );
+                this.ctx.lineTo(
+                    Math.cos(radians) * (innerRadius + height),
+                    Math.sin(radians) * (innerRadius + height)
+                );
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeStyle = theme.wigColor || '#45b7d1';
+                this.ctx.stroke();
+            });
+        });
+        
+        this.ctx.restore();
+    }
+    
+    drawCanvasLinks(theme, centerX, centerY) {
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(this.startAngle * Math.PI / 180);
+        
+        const maxLinks = Math.min(this.data.links.length, this.maxLinks);
+        this.data.links.slice(0, maxLinks).forEach(link => {
+            const sourceChr = this.data.chromosomes.find(c => c.name === link.source.chromosome);
+            const targetChr = this.data.chromosomes.find(c => c.name === link.target.chromosome);
+            
+            if (!sourceChr || !targetChr) return;
+            
+            const sourceAngle = sourceChr.startAngle + (link.source.position / (sourceChr.length || sourceChr.size || 1)) * (sourceChr.endAngle - sourceChr.startAngle);
+            const targetAngle = targetChr.startAngle + (link.target.position / (targetChr.length || targetChr.size || 1)) * (targetChr.endAngle - targetChr.startAngle);
+            
+            const sourceRadians = sourceAngle * Math.PI / 180;
+            const targetRadians = targetAngle * Math.PI / 180;
+            
+            const sourceX = Math.cos(sourceRadians) * this.innerRadius;
+            const sourceY = Math.sin(sourceRadians) * this.innerRadius;
+            const targetX = Math.cos(targetRadians) * this.innerRadius;
+            const targetY = Math.sin(targetRadians) * this.innerRadius;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(sourceX, sourceY);
+            this.ctx.quadraticCurveTo(0, 0, targetX, targetY);
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeStyle = theme.linkColor || '#95a5a6';
+            this.ctx.globalAlpha = this.linkOpacity;
+            this.ctx.stroke();
+            this.ctx.globalAlpha = 1;
+        });
+        
+        this.ctx.restore();
+    }
+    
+    drawCanvasLabels(theme, centerX, centerY) {
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(this.startAngle * Math.PI / 180);
+        
+        this.ctx.fillStyle = theme.textColor || '#2c3e50';
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        
+        this.data.chromosomes.forEach(chr => {
+            const midAngle = (chr.startAngle + chr.endAngle) / 2;
+            const radians = midAngle * Math.PI / 180;
+            const labelRadius = this.innerRadius + this.chromosomeWidth + this.labelDistance;
+            
+            const x = Math.cos(radians) * labelRadius;
+            const y = Math.sin(radians) * labelRadius;
+            
+            this.ctx.fillText(chr.name || chr.label || chr.id || 'Unknown', x, y);
+        });
+        
+        this.ctx.restore();
+    }
+    
+    setupCanvasEventListeners() {
+        if (!this.canvas) return;
+        
+        let isDragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        
+        this.canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            this.canvas.style.cursor = 'grabbing';
+        });
+        
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - lastX;
+                const deltaY = e.clientY - lastY;
+                
+                // Simple pan implementation
+                this.ctx.translate(deltaX, deltaY);
+                this.redrawCanvas();
+                
+                lastX = e.clientX;
+                lastY = e.clientY;
+            }
+        });
+        
+        this.canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            this.canvas.style.cursor = 'grab';
+        });
+        
+        this.canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const scale = e.deltaY > 0 ? 0.9 : 1.1;
+            this.ctx.scale(scale, scale);
+            this.redrawCanvas();
+        });
+    }
+    
+    redrawCanvas() {
+        if (this.renderingMode === 'canvas' && this.canvas) {
+            const theme = this.getCurrentTheme();
+            this.drawCanvasPlot(theme);
+        }
+    }
+    
+    getGeneColor(gene, theme) {
+        const geneType = gene.type || 'other';
+        const typeColors = {
+            'protein_coding': '#e74c3c',
+            'tRNA': '#3498db',
+            'rRNA': '#2ecc71',
+            'non_coding': '#f39c12',
+            'pseudogene': '#9b59b6',
+            'regulatory': '#e67e22',
+            'other': '#95a5a6'
+        };
+        return typeColors[geneType] || theme.geneColor || '#95a5a6';
     }
 
     calculateChromosomeAngles() {
@@ -2710,10 +3109,23 @@ class CircosPlotter {
             document.getElementById('maxGenesValue').textContent = this.maxGenes;
         }
         
+        // Update inner radius ratio slider
+        const innerRadiusSlider = document.getElementById('innerRadiusSlider');
+        if (innerRadiusSlider) {
+            innerRadiusSlider.value = this.innerRadiusRatio;
+            document.getElementById('innerRadiusValue').textContent = `${Math.round(this.innerRadiusRatio * 100)}%`;
+        }
+        
         // Update theme select
         const themeSelect = document.getElementById('themeSelect');
         if (themeSelect) {
             themeSelect.value = this.currentTheme;
+        }
+        
+        // Update rendering mode select
+        const renderingModeSelect = document.getElementById('renderingModeSelect');
+        if (renderingModeSelect) {
+            renderingModeSelect.value = this.renderingMode;
         }
     }
     
