@@ -1756,6 +1756,19 @@ class CircosPlotter {
         this.ctx.translate(centerX, centerY);
         this.ctx.rotate(this.startAngle * Math.PI / 180);
         
+        // Validate theme and data
+        if (!theme || !theme.chromosomes || !Array.isArray(theme.chromosomes)) {
+            console.error('Invalid theme or chromosomes array:', theme);
+            this.ctx.restore();
+            return;
+        }
+        
+        if (!this.data || !this.data.chromosomes || !Array.isArray(this.data.chromosomes)) {
+            console.error('Invalid data or chromosomes array:', this.data);
+            this.ctx.restore();
+            return;
+        }
+        
         this.data.chromosomes.forEach((chr, index) => {
             const startAngle = chr.startAngle * Math.PI / 180;
             const endAngle = chr.endAngle * Math.PI / 180;
@@ -1766,7 +1779,7 @@ class CircosPlotter {
             this.ctx.beginPath();
             this.ctx.arc(0, 0, (innerRadius + outerRadius) / 2, startAngle, endAngle);
             this.ctx.lineWidth = this.chromosomeWidth;
-            this.ctx.strokeStyle = chr.color || theme.chromosomeColors[index % theme.chromosomeColors.length];
+            this.ctx.strokeStyle = chr.color || theme.chromosomes[index % theme.chromosomes.length];
             this.ctx.stroke();
             
             // Draw chromosome border

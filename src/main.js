@@ -2881,6 +2881,16 @@ function createCircosWindow() {
       circosWindow.show();
       // 为 Circos Plotter 设置专门的菜单系统
       createCircosPlotterMenu(circosWindow);
+      currentActiveWindow = circosWindow;
+    });
+
+    // Circos窗口获得焦点时切换到Circos菜单
+    circosWindow.on('focus', () => {
+      if (currentActiveWindow !== circosWindow) {
+        currentActiveWindow = circosWindow;
+        createCircosPlotterMenu(circosWindow);
+        console.log('Switched to Circos Plotter menu');
+      }
     });
 
     // Open DevTools for debugging
@@ -2889,6 +2899,14 @@ function createCircosWindow() {
     // Handle window closed
     circosWindow.on('closed', () => {
       console.log('Circos Genome Plotter window closed');
+      if (currentActiveWindow === circosWindow) {
+        currentActiveWindow = null;
+        // 切换回主窗口菜单
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          createMenu();
+          console.log('Switched back to main window menu');
+        }
+      }
     });
 
   } catch (error) {
