@@ -699,7 +699,7 @@ class CircosPlotter {
         window.addEventListener('resize', () => {
             this.calculateOptimalSize();
             this.redrawPlot();
-        });
+        }, { passive: true });
     }
 
     updateParameterDisplays() {
@@ -1578,6 +1578,9 @@ class CircosPlotter {
     }
     
     createCanvasPlot(theme) {
+        // Remove existing canvas if it exists
+        d3.select('#circosContainer').select('#circos-canvas').remove();
+        
         // Create Canvas element
         this.canvas = d3.select('#circosContainer')
             .append('canvas')
@@ -2035,7 +2038,7 @@ class CircosPlotter {
             const scale = e.deltaY > 0 ? 0.9 : 1.1;
             this.ctx.scale(scale, scale);
             this.redrawCanvas();
-        });
+        }, { passive: false });
     }
     
     redrawCanvas() {
@@ -2067,6 +2070,9 @@ class CircosPlotter {
             console.warn('Invalid total chromosome length:', totalLength);
             return;
         }
+        
+        // Update radius based on current settings
+        this.innerRadius = this.radius * this.innerRadiusRatio;
         
         const totalGaps = this.data.chromosomes.length * this.chromosomeGap;
         const availableAngle = 360 - totalGaps;
@@ -2782,6 +2788,8 @@ class CircosPlotter {
 
     redrawPlot() {
         if (this.data) {
+            // Clear cache when redrawing to ensure fresh data
+            this.dataProcessor.clearCache();
             this.createPlot();
         }
     }
@@ -3445,7 +3453,7 @@ class CircosDataProcessor {
      * @returns {Array} Processed chromosome data
      */
     processChromosomes(chromosomes, theme) {
-        const cacheKey = `chromosomes_${JSON.stringify(chromosomes)}_${theme.name}`;
+        const cacheKey = `chromosomes_${JSON.stringify(chromosomes)}_${theme.name}_${this.plotter.innerRadius}_${this.plotter.chromosomeWidth}_${this.plotter.labelDistance}`;
         
         if (this.cache.has(cacheKey)) {
             return this.cache.get(cacheKey);
@@ -3490,7 +3498,7 @@ class CircosDataProcessor {
      * @returns {Array} Processed gene data
      */
     processGenes(genes, processedChromosomes, theme) {
-        const cacheKey = `genes_${genes?.length || 0}_${processedChromosomes?.length || 0}_${theme.name}`;
+        const cacheKey = `genes_${genes?.length || 0}_${processedChromosomes?.length || 0}_${theme.name}_${this.plotter.innerRadius}_${this.plotter.geneHeight}_${this.plotter.maxGenes}`;
         
         if (this.cache.has(cacheKey)) {
             return this.cache.get(cacheKey);
@@ -3548,7 +3556,7 @@ class CircosDataProcessor {
      * @returns {Object} Processed track data
      */
     processDataTrack(processedChromosomes, trackType, theme) {
-        const cacheKey = `track_${trackType}_${processedChromosomes?.length || 0}_${theme.name}`;
+        const cacheKey = `track_${trackType}_${processedChromosomes?.length || 0}_${theme.name}_${this.plotter.innerRadius}_${this.plotter.wigTrackHeight}`;
         
         if (this.cache.has(cacheKey)) {
             return this.cache.get(cacheKey);
@@ -3609,7 +3617,7 @@ class CircosDataProcessor {
      * @returns {Array} Processed links data
      */
     processLinks(links, processedChromosomes, theme) {
-        const cacheKey = `links_${links?.length || 0}_${processedChromosomes?.length || 0}_${theme.name}`;
+        const cacheKey = `links_${links?.length || 0}_${processedChromosomes?.length || 0}_${theme.name}_${this.plotter.innerRadius}_${this.plotter.maxLinks}`;
         
         if (this.cache.has(cacheKey)) {
             return this.cache.get(cacheKey);
