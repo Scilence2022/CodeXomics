@@ -747,8 +747,15 @@ class CircosPlotter {
                     console.log('Chromosomes:', result.data.chromosomes);
                     console.log('Genes count:', result.data.genes.length);
                     console.log('Sample genes:', result.data.genes.slice(0, 3));
+                    console.log('Original data structure:', result.originalData);
+                    console.log('Current sequence keys:', Object.keys(result.originalData?.currentSequence || {}));
+                    
                     this.data = result.data;
                     this.originalData = result.originalData;
+                    
+                    // Store sequence data in a more accessible format
+                    this.sequenceData = result.originalData?.currentSequence || {};
+                    console.log('Stored sequence data for chromosomes:', Object.keys(this.sequenceData));
                     
                     // Update status
                     this.updateStatus('Connected to main window', 'connected');
@@ -809,8 +816,42 @@ class CircosPlotter {
         const info = this.data.metadata;
         const statusText = document.getElementById('statusText');
         if (statusText) {
-            statusText.textContent = `${info.totalChromosomes} chromosomes, ${info.totalGenes} genes, ${(info.totalLength / 1000000).toFixed(1)}M bp`;
+            let statusMessage = `${info.totalChromosomes} chromosomes, ${info.totalGenes} genes, ${(info.totalLength / 1000000).toFixed(1)}M bp`;
+            
+            // Add real data indicator
+            if (this.sequenceData && Object.keys(this.sequenceData).length > 0) {
+                statusMessage += ' (Real sequence data available)';
+            } else {
+                statusMessage += ' (Using synthetic data)';
+            }
+            
+            statusText.textContent = statusMessage;
         }
+    }
+    
+    /**
+     * Validate that real sequence data is available for data tracks
+     * @returns {boolean} True if real data is available
+     */
+    validateRealDataAvailability() {
+        if (!this.sequenceData || Object.keys(this.sequenceData).length === 0) {
+            console.warn('No real sequence data available for data tracks');
+            return false;
+        }
+        
+        // Check if we have sequence data for current chromosomes
+        const hasSequenceData = this.data.chromosomes.some(chr => {
+            const chrName = chr.name || chr.label || chr.id;
+            return this.sequenceData[chrName] && this.sequenceData[chrName].length > 0;
+        });
+        
+        if (!hasSequenceData) {
+            console.warn('No sequence data available for current chromosomes');
+            console.log('Available sequence keys:', Object.keys(this.sequenceData));
+            console.log('Current chromosome names:', this.data.chromosomes.map(chr => chr.name || chr.label || chr.id));
+        }
+        
+        return hasSequenceData;
     }
     
     updateStatus(message, type) {
@@ -1365,14 +1406,23 @@ class CircosPlotter {
         const chrLength = chromosome.length || chromosome.size || 0;
         const numPoints = Math.floor(chrLength / this.gcWindowSize);
         
-        // Try to get real sequence data
+        // Try to get real sequence data from multiple sources
         let sequence = null;
-        if (this.originalData && this.originalData.currentSequence) {
-            const chrName = chromosome.name || chromosome.label || chromosome.id;
+        const chrName = chromosome.name || chromosome.label || chromosome.id;
+        
+        // First try the direct sequenceData property
+        if (this.sequenceData && this.sequenceData[chrName]) {
+            sequence = this.sequenceData[chrName];
+            console.log('GC Content: Using real sequence data from sequenceData for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
+        }
+        // Fallback to originalData structure
+        else if (this.originalData && this.originalData.currentSequence && this.originalData.currentSequence[chrName]) {
             sequence = this.originalData.currentSequence[chrName];
-            console.log('GC Content: Using real sequence data for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
+            console.log('GC Content: Using real sequence data from originalData for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
         } else {
-            console.log('GC Content: No real sequence data available, using synthetic data');
+            console.log('GC Content: No real sequence data available for chromosome', chrName, 'using synthetic data');
+            console.log('Available sequence keys:', Object.keys(this.sequenceData || {}));
+            console.log('Available originalData keys:', Object.keys(this.originalData?.currentSequence || {}));
         }
         
         for (let i = 0; i < numPoints; i++) {
@@ -1407,14 +1457,23 @@ class CircosPlotter {
         const chrLength = chromosome.length || chromosome.size || 0;
         const numPoints = Math.floor(chrLength / this.gcWindowSize);
         
-        // Try to get real sequence data
+        // Try to get real sequence data from multiple sources
         let sequence = null;
-        if (this.originalData && this.originalData.currentSequence) {
-            const chrName = chromosome.name || chromosome.label || chromosome.id;
+        const chrName = chromosome.name || chromosome.label || chromosome.id;
+        
+        // First try the direct sequenceData property
+        if (this.sequenceData && this.sequenceData[chrName]) {
+            sequence = this.sequenceData[chrName];
+            console.log('GC Skew: Using real sequence data from sequenceData for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
+        }
+        // Fallback to originalData structure
+        else if (this.originalData && this.originalData.currentSequence && this.originalData.currentSequence[chrName]) {
             sequence = this.originalData.currentSequence[chrName];
-            console.log('GC Skew: Using real sequence data for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
+            console.log('GC Skew: Using real sequence data from originalData for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
         } else {
-            console.log('GC Skew: No real sequence data available, using synthetic data');
+            console.log('GC Skew: No real sequence data available for chromosome', chrName, 'using synthetic data');
+            console.log('Available sequence keys:', Object.keys(this.sequenceData || {}));
+            console.log('Available originalData keys:', Object.keys(this.originalData?.currentSequence || {}));
         }
         
         for (let i = 0; i < numPoints; i++) {
@@ -1455,14 +1514,23 @@ class CircosPlotter {
         const chrLength = chromosome.length || chromosome.size || 0;
         const numPoints = Math.floor(chrLength / (this.gcWindowSize / 2));
         
-        // Try to get real sequence data
+        // Try to get real sequence data from multiple sources
         let sequence = null;
-        if (this.originalData && this.originalData.currentSequence) {
-            const chrName = chromosome.name || chromosome.label || chromosome.id;
+        const chrName = chromosome.name || chromosome.label || chromosome.id;
+        
+        // First try the direct sequenceData property
+        if (this.sequenceData && this.sequenceData[chrName]) {
+            sequence = this.sequenceData[chrName];
+            console.log('WIG Data: Using real sequence data from sequenceData for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
+        }
+        // Fallback to originalData structure
+        else if (this.originalData && this.originalData.currentSequence && this.originalData.currentSequence[chrName]) {
             sequence = this.originalData.currentSequence[chrName];
-            console.log('WIG Data: Using real sequence data for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
+            console.log('WIG Data: Using real sequence data from originalData for chromosome', chrName, 'Length:', sequence ? sequence.length : 'No sequence');
         } else {
-            console.log('WIG Data: No real sequence data available, using synthetic data');
+            console.log('WIG Data: No real sequence data available for chromosome', chrName, 'using synthetic data');
+            console.log('Available sequence keys:', Object.keys(this.sequenceData || {}));
+            console.log('Available originalData keys:', Object.keys(this.originalData?.currentSequence || {}));
         }
         
         for (let i = 0; i < numPoints; i++) {
@@ -1670,19 +1738,28 @@ class CircosPlotter {
         }
         
         if (this.showGCContent) {
-            this.drawGCContentTrack(g, trackOffset);
+            // Validate real data availability
+            this.validateRealDataAvailability();
+            const gcTrackData = this.dataProcessor.processDataTrack(processedChromosomes, 'gc_content', theme);
+            this.drawDataTrackSVG(g, gcTrackData, trackOffset);
             trackOffset += this.wigTrackHeight + 5;
         }
         
         if (this.showGCSkew) {
             console.log('Drawing GC Skew track at offset:', trackOffset);
-            this.drawGCSkewTrack(g, trackOffset);
+            // Validate real data availability
+            this.validateRealDataAvailability();
+            const skewTrackData = this.dataProcessor.processDataTrack(processedChromosomes, 'gc_skew', theme);
+            this.drawDataTrackSVG(g, skewTrackData, trackOffset);
             trackOffset += this.wigTrackHeight + 5;
         }
         
         if (this.showWigData) {
             console.log('Drawing WIG track at offset:', trackOffset);
-            this.drawWigTrack(g, trackOffset);
+            // Validate real data availability
+            this.validateRealDataAvailability();
+            const wigTrackData = this.dataProcessor.processDataTrack(processedChromosomes, 'wig', theme);
+            this.drawDataTrackSVG(g, wigTrackData, trackOffset);
             trackOffset += this.wigTrackHeight + 5;
         }
         
@@ -1737,18 +1814,24 @@ class CircosPlotter {
         }
         
         if (this.showGCContent) {
+            // Validate real data availability
+            this.validateRealDataAvailability();
             const gcTrackData = this.dataProcessor.processDataTrack(processedChromosomes, 'gc_content', theme);
             this.drawCanvasDataTrack(gcTrackData, centerX, centerY, trackOffset);
             trackOffset += this.wigTrackHeight + 5;
         }
         
         if (this.showGCSkew) {
+            // Validate real data availability
+            this.validateRealDataAvailability();
             const skewTrackData = this.dataProcessor.processDataTrack(processedChromosomes, 'gc_skew', theme);
             this.drawCanvasDataTrack(skewTrackData, centerX, centerY, trackOffset);
             trackOffset += this.wigTrackHeight + 5;
         }
         
         if (this.showWigData) {
+            // Validate real data availability
+            this.validateRealDataAvailability();
             const wigTrackData = this.dataProcessor.processDataTrack(processedChromosomes, 'wig', theme);
             this.drawCanvasDataTrack(wigTrackData, centerX, centerY, trackOffset);
             trackOffset += this.wigTrackHeight + 5;
@@ -2019,6 +2102,65 @@ class CircosPlotter {
         });
         
         this.ctx.restore();
+    }
+    
+    /**
+     * Draw data track using SVG (unified interface)
+     * @param {Object} g - D3 selection group
+     * @param {Object} trackData - Processed track data from CircosDataProcessor
+     * @param {number} trackOffset - Vertical offset for the track
+     */
+    drawDataTrackSVG(g, trackData, trackOffset) {
+        const trackRadius = this.innerRadius + this.chromosomeWidth + this.geneHeight + 10 + trackOffset;
+        const trackHeight = trackData.height || this.wigTrackHeight;
+        
+        console.log(`Drawing ${trackData.type} track at radius:`, trackRadius, 'offset:', trackOffset);
+        
+        // Create track group
+        const trackGroup = g.append('g')
+            .attr('class', `track ${trackData.type}-track`);
+        
+        trackData.data.forEach(chrData => {
+            const chr = chrData.chromosome;
+            const points = chrData.points;
+            
+            if (!points || points.length === 0) {
+                console.log(`${trackData.type} data for chromosome ${chr.name || chr.label || chr.id}: 0 points`);
+                return;
+            }
+            
+            console.log(`${trackData.type} data for chromosome ${chr.name || chr.label || chr.id}: ${points.length} points`);
+            
+            // Create line generator
+            const line = d3.line()
+                .x(d => d.x * trackRadius)
+                .y(d => d.y * trackRadius)
+                .curve(d3.curveLinear);
+            
+            // Create area generator for filled tracks
+            const area = d3.area()
+                .x(d => d.x * trackRadius)
+                .y0(d => d.y * trackRadius)
+                .y1(d => d.y * (trackRadius + trackHeight))
+                .curve(d3.curveLinear);
+            
+            // Draw track based on type
+            if (trackData.type === 'gc_content') {
+                // Draw as area chart
+                trackGroup.append('path')
+                    .attr('d', area(points))
+                    .attr('fill', trackData.color)
+                    .attr('opacity', 0.7);
+            } else {
+                // Draw as line chart
+                trackGroup.append('path')
+                    .attr('d', line(points))
+                    .attr('fill', 'none')
+                    .attr('stroke', trackData.color)
+                    .attr('stroke-width', 2)
+                    .attr('opacity', 0.8);
+            }
+        });
     }
     
     setupCanvasEventListeners() {
