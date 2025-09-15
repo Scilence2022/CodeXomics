@@ -1812,6 +1812,13 @@ class CircosPlotter {
         
         const baseRadius = this.innerRadius + this.chromosomeWidth + 5;
         
+        // Check if MultiTrackGeneManager is available
+        if (typeof MultiTrackGeneManager === 'undefined') {
+            console.error('MultiTrackGeneManager is not defined. Falling back to simple gene rendering.');
+            this.drawCanvasGenesSimple(centerX, centerY, theme);
+            return;
+        }
+        
         // Initialize multi-track manager if not exists
         if (!this.multiTrackManager) {
             this.multiTrackManager = new MultiTrackGeneManager(this);
@@ -1819,6 +1826,48 @@ class CircosPlotter {
         
         // Use multi-track system for gene rendering
         this.multiTrackManager.renderCanvasGeneTracks(this.ctx, this.data.genes, baseRadius, theme, centerX, centerY);
+    }
+    
+    drawCanvasGenesSimple(centerX, centerY, theme) {
+        // Fallback simple gene rendering when MultiTrackGeneManager is not available
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(this.startAngle * Math.PI / 180);
+        
+        const baseRadius = this.innerRadius + this.chromosomeWidth + 5;
+        const geneHeight = Math.max(this.geneHeight, 3);
+        
+        let renderedGenes = 0;
+        const maxGenes = Math.min(this.data.genes.length, this.maxGenes);
+        
+        this.data.genes.slice(0, maxGenes).forEach(gene => {
+            const chr = this.data.chromosomes.find(c => 
+                (c.name === gene.chromosome) || 
+                (c.label === gene.chromosome) || 
+                (c.id === gene.chromosome)
+            );
+            if (!chr) return;
+            
+            const chrLength = chr.length || chr.size || 1;
+            const startAngle = chr.startAngle + (gene.start / chrLength) * (chr.endAngle - chr.startAngle);
+            const endAngle = chr.startAngle + (gene.end / chrLength) * (chr.endAngle - chr.startAngle);
+            
+            const startRadians = startAngle * Math.PI / 180;
+            const endRadians = endAngle * Math.PI / 180;
+            const innerRadius = baseRadius;
+            const outerRadius = innerRadius + geneHeight;
+            
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, (innerRadius + outerRadius) / 2, startRadians, endRadians);
+            this.ctx.lineWidth = geneHeight;
+            this.ctx.strokeStyle = this.getGeneColor(gene, theme);
+            this.ctx.stroke();
+            
+            renderedGenes++;
+        });
+        
+        console.log(`Canvas: Rendered ${renderedGenes} genes (simple mode)`);
+        this.ctx.restore();
     }
     
     drawCanvasGenes(processedGenes, centerX, centerY) {
@@ -2242,6 +2291,13 @@ class CircosPlotter {
         const theme = this.getCurrentTheme();
         const baseRadius = this.innerRadius + this.chromosomeWidth + 5;
         
+        // Check if MultiTrackGeneManager is available
+        if (typeof MultiTrackGeneManager === 'undefined') {
+            console.error('MultiTrackGeneManager is not defined. Falling back to simple gene rendering.');
+            this.drawGenesSimple(g, baseRadius, theme);
+            return;
+        }
+        
         // Initialize multi-track manager if not already done
         if (!this.multiTrackManager) {
             this.multiTrackManager = new MultiTrackGeneManager(this);
@@ -2249,6 +2305,66 @@ class CircosPlotter {
         
         // Use multi-track system for gene rendering
         this.multiTrackManager.renderGeneTracks(g, this.data.genes, baseRadius, theme);
+    }
+    
+    drawGenesSimple(g, baseRadius, theme) {
+        // Fallback simple gene rendering when MultiTrackGeneManager is not available
+        const geneHeight = Math.max(this.geneHeight, 3);
+        const trackRadius = baseRadius;
+        
+        let renderedGenes = 0;
+        const maxGenes = Math.min(this.data.genes.length, this.maxGenes);
+        
+        this.data.genes.slice(0, maxGenes).forEach(gene => {
+            const chr = this.data.chromosomes.find(c => 
+                (c.name === gene.chromosome) || 
+                (c.label === gene.chromosome) || 
+                (c.id === gene.chromosome)
+            );
+            if (!chr) return;
+            
+            const chrLength = chr.length || chr.size || 1;
+            const startAngle = chr.startAngle + (gene.start / chrLength) * (chr.endAngle - chr.startAngle);
+            const endAngle = chr.startAngle + (gene.end / chrLength) * (chr.endAngle - chr.startAngle);
+            
+            const startRadians = startAngle * Math.PI / 180;
+            const endRadians = endAngle * Math.PI / 180;
+            const innerRadius = trackRadius;
+            const outerRadius = trackRadius + geneHeight;
+            
+            const arc = d3.arc()
+                .innerRadius(innerRadius)
+                .outerRadius(outerRadius)
+                .startAngle(startRadians)
+                .endAngle(endRadians);
+            
+            g.append('path')
+                .attr('d', arc)
+                .attr('fill', this.getGeneColor(gene, theme))
+                .attr('opacity', 0.8)
+                .attr('stroke', theme.stroke)
+                .attr('stroke-width', 0.5)
+                .style('cursor', 'pointer')
+                .on('mouseover', (event) => {
+                    const lengthKb = ((gene.end - gene.start) / 1000).toFixed(1);
+                    this.showTooltip(event, `
+                        <strong>${gene.name}</strong><br/>
+                        Type: ${gene.type}<br/>
+                        Length: ${lengthKb} kb<br/>
+                        Position: ${gene.start.toLocaleString()}-${gene.end.toLocaleString()}
+                    `);
+                })
+                .on('mouseout', () => {
+                    this.hideTooltip();
+                })
+                .on('click', (event) => {
+                    this.navigateToGene(gene);
+                });
+            
+            renderedGenes++;
+        });
+        
+        console.log(`SVG: Rendered ${renderedGenes} genes (simple mode)`);
     }
 
     drawGCContentTrack(g, trackOffset) {
