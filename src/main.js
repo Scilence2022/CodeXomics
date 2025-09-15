@@ -20,6 +20,556 @@ let unifiedServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopp
 let toolMenuTemplates = new Map();
 let currentActiveWindow = null;
 
+// 为 Circos Genome Plotter 创建专门的菜单系统
+function createCircosPlotterMenu(circosWindow) {
+  const template = [
+    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
+    ...(process.platform === 'darwin' ? [{
+      label: 'Genome AI Studio',
+      submenu: [
+        {
+          label: 'About Circos Genome Plotter',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'about');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Preferences',
+          accelerator: 'Cmd+,',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'preferences');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: `Hide ${APP_NAME}`,
+          accelerator: 'Cmd+H',
+          role: 'hide'
+        },
+        {
+          label: 'Hide Others',
+          accelerator: 'Cmd+Shift+H',
+          role: 'hideothers'
+        },
+        {
+          label: 'Show All',
+          role: 'unhide'
+        },
+        { type: 'separator' },
+        {
+          label: `Quit ${APP_NAME}`,
+          accelerator: 'Cmd+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    }] : []),
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Project',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'new-project');
+          }
+        },
+        {
+          label: 'Open Project...',
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(circosWindow, {
+              properties: ['openFile'],
+              filters: [
+                { name: 'Circos Project Files', extensions: ['prj.GAI', 'genomeproj'] },
+                { name: 'JSON Files', extensions: ['json'] },
+                { name: 'All Files', extensions: ['*'] }
+              ]
+            });
+            
+            if (!result.canceled && result.filePaths.length > 0) {
+              circosWindow.webContents.send('circos-menu-action', 'open-project', result.filePaths[0]);
+            }
+          }
+        },
+        {
+          label: 'Save Project',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'save-project');
+          }
+        },
+        {
+          label: 'Save Project As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'save-project-as');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Import Data...',
+          submenu: [
+            {
+              label: 'Genome Sequence (FASTA)',
+              click: async () => {
+                const result = await dialog.showOpenDialog(circosWindow, {
+                  properties: ['openFile'],
+                  filters: [
+                    { name: 'FASTA Files', extensions: ['fasta', 'fa', 'fas', 'fna'] },
+                    { name: 'All Files', extensions: ['*'] }
+                  ]
+                });
+                if (!result.canceled && result.filePaths.length > 0) {
+                  circosWindow.webContents.send('circos-menu-action', 'import-fasta', result.filePaths[0]);
+                }
+              }
+            },
+            {
+              label: 'Annotations (GFF/GFF3)',
+              click: async () => {
+                const result = await dialog.showOpenDialog(circosWindow, {
+                  properties: ['openFile'],
+                  filters: [
+                    { name: 'GFF Files', extensions: ['gff', 'gff3', 'gtf'] },
+                    { name: 'All Files', extensions: ['*'] }
+                  ]
+                });
+                if (!result.canceled && result.filePaths.length > 0) {
+                  circosWindow.webContents.send('circos-menu-action', 'import-gff', result.filePaths[0]);
+                }
+              }
+            },
+            {
+              label: 'GenBank File',
+              click: async () => {
+                const result = await dialog.showOpenDialog(circosWindow, {
+                  properties: ['openFile'],
+                  filters: [
+                    { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
+                    { name: 'All Files', extensions: ['*'] }
+                  ]
+                });
+                if (!result.canceled && result.filePaths.length > 0) {
+                  circosWindow.webContents.send('circos-menu-action', 'import-genbank', result.filePaths[0]);
+                }
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Export...',
+          submenu: [
+            {
+              label: 'SVG Image',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'export-svg');
+              }
+            },
+            {
+              label: 'PNG Image',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'export-png');
+              }
+            },
+            {
+              label: 'PDF Document',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'export-pdf');
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Data (JSON)',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'export-data');
+              }
+            }
+          ]
+        },
+        ...(process.platform !== 'darwin' ? [
+          { type: 'separator' },
+          {
+            label: 'Exit',
+            accelerator: 'Ctrl+Q',
+            click: () => {
+              app.quit();
+            }
+          }
+        ] : [])
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Zoom In',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'zoom-in');
+          }
+        },
+        {
+          label: 'Zoom Out',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'zoom-out');
+          }
+        },
+        {
+          label: 'Fit to Window',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'fit-to-window');
+          }
+        },
+        {
+          label: 'Reset View',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'reset-view');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle Genes',
+          accelerator: 'CmdOrCtrl+G',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'toggle-genes');
+          }
+        },
+        {
+          label: 'Data Tracks',
+          submenu: [
+            {
+              label: 'GC Content',
+              accelerator: 'CmdOrCtrl+1',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'toggle-gc-content');
+              }
+            },
+            {
+              label: 'GC Skew',
+              accelerator: 'CmdOrCtrl+2',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'toggle-gc-skew');
+              }
+            },
+            {
+              label: 'WIG Data',
+              accelerator: 'CmdOrCtrl+3',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'toggle-wig-data');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Refresh',
+          accelerator: 'F5',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'refresh');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Tools',
+      submenu: [
+        {
+          label: 'Gene Analysis',
+          submenu: [
+            {
+              label: 'Gene Density Analysis',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'gene-density-analysis');
+              }
+            },
+            {
+              label: 'Gene Type Distribution',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'gene-type-distribution');
+              }
+            },
+            {
+              label: 'Gene Expression Analysis',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'gene-expression-analysis');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Sequence Analysis',
+          submenu: [
+            {
+              label: 'GC Content Analysis',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'gc-content-analysis');
+              }
+            },
+            {
+              label: 'Sequence Complexity',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'sequence-complexity');
+              }
+            },
+            {
+              label: 'Repeat Analysis',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'repeat-analysis');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Comparative Genomics',
+          submenu: [
+            {
+              label: 'Synteny Analysis',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'synteny-analysis');
+              }
+            },
+            {
+              label: 'Ortholog Detection',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'ortholog-detection');
+              }
+            },
+            {
+              label: 'Evolutionary Analysis',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'evolutionary-analysis');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'AI Assistant',
+          submenu: [
+            {
+              label: 'Parameter Optimization',
+              accelerator: 'CmdOrCtrl+Shift+O',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'ai-optimization');
+              }
+            },
+            {
+              label: 'Pattern Recognition',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'pattern-recognition');
+              }
+            },
+            {
+              label: 'Automated Insights',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'automated-insights');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Custom Annotations',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'custom-annotations');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Data',
+      submenu: [
+        {
+          label: 'Track Management',
+          submenu: [
+            {
+              label: 'Add Track',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'add-track');
+              }
+            },
+            {
+              label: 'Remove Track',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'remove-track');
+              }
+            },
+            {
+              label: 'Reorder Tracks',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'reorder-tracks');
+              }
+            },
+            {
+              label: 'Track Settings',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'track-settings');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Gene Filtering',
+          submenu: [
+            {
+              label: 'By Type',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'filter-by-type');
+              }
+            },
+            {
+              label: 'By Expression',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'filter-by-expression');
+              }
+            },
+            {
+              label: 'By Location',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'filter-by-location');
+              }
+            },
+            {
+              label: 'Custom Filter',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'custom-filter');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Data Validation',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'data-validation');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Settings',
+      submenu: [
+        {
+          label: 'Appearance',
+          submenu: [
+            {
+              label: 'Color Themes',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'color-themes');
+              }
+            },
+            {
+              label: 'Track Heights',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'track-heights');
+              }
+            },
+            {
+              label: 'Font Settings',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'font-settings');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Performance',
+          submenu: [
+            {
+              label: 'Rendering Mode',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'rendering-mode');
+              }
+            },
+            {
+              label: 'Memory Usage',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'memory-usage');
+              }
+            },
+            {
+              label: 'Update Frequency',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'update-frequency');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Advanced',
+          submenu: [
+            {
+              label: 'Window Size',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'window-size');
+              }
+            },
+            {
+              label: 'Export Quality',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'export-quality');
+              }
+            },
+            {
+              label: 'Debug Mode',
+              click: () => {
+                circosWindow.webContents.send('circos-menu-action', 'debug-mode');
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Documentation',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'documentation');
+          }
+        },
+        {
+          label: 'Tutorials',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'tutorials');
+          }
+        },
+        {
+          label: 'Keyboard Shortcuts',
+          accelerator: 'CmdOrCtrl+?',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'keyboard-shortcuts');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'About Circos Plotter',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'about');
+          }
+        },
+        {
+          label: 'Report Issue',
+          click: () => {
+            circosWindow.webContents.send('circos-menu-action', 'report-issue');
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+  return menu;
+}
+
 function createToolWindowMenu(toolWindow, toolName) {
   const template = [
     // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
@@ -2329,6 +2879,8 @@ function createCircosWindow() {
     // Show window when ready
     circosWindow.once('ready-to-show', () => {
       circosWindow.show();
+      // 为 Circos Plotter 设置专门的菜单系统
+      createCircosPlotterMenu(circosWindow);
     });
 
     // Open DevTools for debugging

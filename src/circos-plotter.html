@@ -952,5 +952,182 @@
 
     <!-- Scripts -->
     <script src="circos-plotter.js"></script>
+    
+    <script>
+        // 菜单事件监听器
+        const { ipcRenderer } = require('electron');
+        
+        // 监听菜单动作
+        ipcRenderer.on('circos-menu-action', (event, action, ...args) => {
+            console.log('Menu action received:', action, args);
+            
+            switch (action) {
+                case 'new-project':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.resetPlot();
+                        window.circosPlotter.updateStatus('New project created');
+                    }
+                    break;
+                    
+                case 'open-project':
+                    if (window.circosPlotter && args[0]) {
+                        // 实现项目加载逻辑
+                        console.log('Opening project:', args[0]);
+                        window.circosPlotter.updateStatus('Opening project...');
+                    }
+                    break;
+                    
+                case 'save-project':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.exportData();
+                        window.circosPlotter.updateStatus('Project saved');
+                    }
+                    break;
+                    
+                case 'save-project-as':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.exportData();
+                        window.circosPlotter.updateStatus('Project saved as...');
+                    }
+                    break;
+                    
+                case 'import-fasta':
+                    if (window.circosPlotter && args[0]) {
+                        console.log('Importing FASTA:', args[0]);
+                        window.circosPlotter.updateStatus('Importing FASTA file...');
+                    }
+                    break;
+                    
+                case 'import-gff':
+                    if (window.circosPlotter && args[0]) {
+                        console.log('Importing GFF:', args[0]);
+                        window.circosPlotter.updateStatus('Importing GFF file...');
+                    }
+                    break;
+                    
+                case 'import-genbank':
+                    if (window.circosPlotter && args[0]) {
+                        console.log('Importing GenBank:', args[0]);
+                        window.circosPlotter.updateStatus('Importing GenBank file...');
+                    }
+                    break;
+                    
+                case 'export-svg':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.exportSVG();
+                    }
+                    break;
+                    
+                case 'export-png':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.exportPNG();
+                    }
+                    break;
+                    
+                case 'export-pdf':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.exportPDF();
+                    }
+                    break;
+                    
+                case 'export-data':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.exportData();
+                    }
+                    break;
+                    
+                case 'zoom-in':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.zoomIn();
+                    }
+                    break;
+                    
+                case 'zoom-out':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.zoomOut();
+                    }
+                    break;
+                    
+                case 'fit-to-window':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.fitToWindow();
+                    }
+                    break;
+                    
+                case 'reset-view':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.resetView();
+                    }
+                    break;
+                    
+                case 'toggle-genes':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.toggleGenes();
+                    }
+                    break;
+                    
+                case 'toggle-gc-content':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.toggleGCContent();
+                    }
+                    break;
+                    
+                case 'toggle-gc-skew':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.toggleGCSkew();
+                    }
+                    break;
+                    
+                case 'toggle-wig-data':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.toggleWigData();
+                    }
+                    break;
+                    
+                case 'refresh':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.refresh();
+                    }
+                    break;
+                    
+                case 'ai-optimization':
+                    if (window.circosPlotter) {
+                        window.circosPlotter.optimizeParameters();
+                    }
+                    break;
+                    
+                case 'about':
+                    alert('Circos Genome Plotter v1.0.0\nA comprehensive genome visualization tool\n\n© 2024 Genome AI Studio');
+                    break;
+                    
+                case 'documentation':
+                    window.open('https://github.com/your-repo/circos-plotter/docs', '_blank');
+                    break;
+                    
+                case 'tutorials':
+                    window.open('https://github.com/your-repo/circos-plotter/tutorials', '_blank');
+                    break;
+                    
+                case 'keyboard-shortcuts':
+                    window.circosPlotter?.updateStatus('Keyboard shortcuts: Ctrl+N (New), Ctrl+O (Open), Ctrl+S (Save), Ctrl+1/2/3 (Toggle tracks)');
+                    break;
+                    
+                case 'report-issue':
+                    window.open('https://github.com/your-repo/circos-plotter/issues', '_blank');
+                    break;
+                    
+                default:
+                    console.log('Unhandled menu action:', action);
+                    if (window.circosPlotter) {
+                        window.circosPlotter.updateStatus(`Menu action: ${action}`);
+                    }
+            }
+        });
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Circos Plotter menu system initialized');
+        });
+    </script>
 </body>
 </html> 

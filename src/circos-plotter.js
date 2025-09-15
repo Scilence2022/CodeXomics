@@ -2981,4 +2981,61 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
     }
+
+    // 菜单系统方法
+    toggleGenes() {
+        this.showGenes = !this.showGenes;
+        this.createPlot();
+        this.updateStatus(`Genes ${this.showGenes ? 'shown' : 'hidden'}`);
+    }
+
+    toggleGCContent() {
+        this.showGCContent = !this.showGCContent;
+        this.createPlot();
+        this.updateStatus(`GC Content ${this.showGCContent ? 'shown' : 'hidden'}`);
+    }
+
+    toggleGCSkew() {
+        this.showGCSkew = !this.showGCSkew;
+        this.createPlot();
+        this.updateStatus(`GC Skew ${this.showGCSkew ? 'shown' : 'hidden'}`);
+    }
+
+    toggleWigData() {
+        this.showWigData = !this.showWigData;
+        this.createPlot();
+        this.updateStatus(`WIG Data ${this.showWigData ? 'shown' : 'hidden'}`);
+    }
+
+    refresh() {
+        this.createPlot();
+        this.updateStatus('Plot refreshed');
+    }
+
+    zoomIn() {
+        if (this.zoom) {
+            this.svg.transition().call(this.zoom.scaleBy, 1.5);
+        }
+    }
+
+    zoomOut() {
+        if (this.zoom) {
+            this.svg.transition().call(this.zoom.scaleBy, 1 / 1.5);
+        }
+    }
+
+    fitToWindow() {
+        if (this.zoom) {
+            this.svg.transition().call(this.zoom.transform, d3.zoomIdentity);
+        }
+    }
+
+    resetView() {
+        this.resetZoom();
+    }
+
+    exportPDF() {
+        // 实现 PDF 导出功能
+        this.updateStatus('PDF export not yet implemented');
+    }
 }); 
