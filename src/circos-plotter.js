@@ -2935,52 +2935,6 @@ Export:
         alert(helpText);
         this.updateStatus('Help displayed');
     }
-}
-
-// Initialize the Circos plotter when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM Content Loaded');
-    
-    // Check if D3 is loaded
-    if (typeof d3 === 'undefined') {
-        console.error('D3.js is not loaded. Please ensure the D3.js library is properly included.');
-        const loadingEl = document.getElementById('loadingIndicator');
-        if (loadingEl) {
-            loadingEl.innerHTML = `
-                <div class="spinner"></div>
-                <span style="color: red;">Error: D3.js library not found</span>
-            `;
-        }
-        return;
-    }
-    
-    console.log('D3.js version:', d3.version);
-    console.log('D3.js schemes available:', {
-        category10: !!d3.schemeCategory10,
-        blues: !!d3.schemeBlues,
-        greens: !!d3.schemeGreens,
-        reds: !!d3.schemeReds,
-        viridis: !!d3.schemeViridis
-    });
-    
-    // Initialize CircosPlotter
-    try {
-        console.log('Initializing CircosPlotter...');
-        new CircosPlotter();
-        console.log('CircosPlotter initialized successfully');
-    } catch (error) {
-        console.error('Failed to initialize CircosPlotter:', error);
-        const loadingEl = document.getElementById('loadingIndicator');
-        if (loadingEl) {
-            loadingEl.innerHTML = `
-                <div style="color: red;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>Initialization Error: ${error.message}</span>
-                    <br><small>Check console for details</small>
-                </div>
-            `;
-        }
-    }
 
     // 菜单系统方法
     toggleGenes() {
@@ -3037,5 +2991,51 @@ document.addEventListener('DOMContentLoaded', () => {
     exportPDF() {
         // 实现 PDF 导出功能
         this.updateStatus('PDF export not yet implemented');
+    }
+}
+
+// Initialize the Circos plotter when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded');
+    
+    // Check if D3 is loaded
+    if (typeof d3 === 'undefined') {
+        console.error('D3.js is not loaded. Please ensure the D3.js library is properly included.');
+        const loadingEl = document.getElementById('loadingIndicator');
+        if (loadingEl) {
+            loadingEl.innerHTML = `
+                <div class="spinner"></div>
+                <span style="color: red;">Error: D3.js library not found</span>
+            `;
+        }
+        return;
+    }
+    
+    console.log('D3.js version:', d3.version);
+    console.log('D3.js schemes available:', {
+        category10: !!d3.schemeCategory10,
+        blues: !!d3.schemeBlues,
+        greens: !!d3.schemeGreens,
+        reds: !!d3.schemeReds,
+        viridis: !!d3.schemeViridis
+    });
+    
+    // Initialize CircosPlotter
+    try {
+        console.log('Initializing CircosPlotter...');
+        new CircosPlotter();
+        console.log('CircosPlotter initialized successfully');
+    } catch (error) {
+        console.error('Failed to initialize CircosPlotter:', error);
+        const loadingEl = document.getElementById('loadingIndicator');
+        if (loadingEl) {
+            loadingEl.innerHTML = `
+                <div style="color: red;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Initialization Error: ${error.message}</span>
+                    <br><small>Check console for details</small>
+                </div>
+            `;
+        }
     }
 }); 
