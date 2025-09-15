@@ -189,18 +189,21 @@ class MultiTrackGeneManager {
             
             this.renderGeneTypeTrack(g, limitedGenes, geneType, trackConfig, baseRadius, theme);
         });
+        
+        // Render CDS density tracks for protein coding genes
+        if (this.geneTracks.protein_coding.enabled) {
+            const cdsGenes = genesByType.protein_coding || [];
+            if (cdsGenes.length > this.geneTracks.protein_coding.maxGenes) {
+                this.renderCDSDensityTracks(g, cdsGenes, baseRadius, theme);
+            }
+        }
     }
     
-    renderCanvasGeneTracks(ctx, genes, baseRadius, theme, centerX, centerY) {
+    renderCanvasGeneTracks(ctx, genes, baseRadius, theme) {
         const genesByType = this.groupGenesByType(genes);
         
         // Update gene counts in UI
         this.updateGeneCounts(genesByType);
-        
-        // Save canvas state
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.rotate(this.circosPlotter.startAngle * Math.PI / 180);
         
         // Render each enabled gene type track
         Object.keys(this.geneTracks).forEach(geneType => {
@@ -217,77 +220,11 @@ class MultiTrackGeneManager {
             this.renderCanvasGeneTypeTrack(ctx, limitedGenes, geneType, trackConfig, baseRadius, theme);
         });
         
-        // Restore canvas state
-        ctx.restore();
-    }
-    
-    renderCanvasGeneTypeTrack(ctx, genes, geneType, trackConfig, baseRadius, theme) {
-        const trackRadius = baseRadius + (trackConfig.track * (this.circosPlotter.geneHeight + this.trackSpacing));
-        const geneHeight = Math.max(this.circosPlotter.geneHeight, 3);
-        
-        let renderedGenes = 0;
-        genes.forEach(gene => {
-            const chr = this.circosPlotter.data.chromosomes.find(c => 
-                (c.name === gene.chromosome) || 
-                (c.label === gene.chromosome) || 
-                (c.id === gene.chromosome)
-            );
-            if (!chr) return;
-            
-            const chrLength = chr.length || chr.size || 1;
-            
-            // Validate gene coordinates
-            if (!gene.start || !gene.end || isNaN(gene.start) || isNaN(gene.end)) {
-                return;
-            }
-            
-            // Ensure gene coordinates are within chromosome bounds
-            const validStart = Math.max(0, Math.min(gene.start, chrLength - 1));
-            const validEnd = Math.max(validStart + 1, Math.min(gene.end, chrLength));
-            
-            // Calculate angles with validation
-            const startAngle = chr.startAngle + (validStart / chrLength) * (chr.endAngle - chr.startAngle);
-            const endAngle = chr.startAngle + (validEnd / chrLength) * (chr.endAngle - chr.startAngle);
-            
-            // Validate calculated angles
-            if (isNaN(startAngle) || isNaN(endAngle)) {
-                return;
-            }
-            
-            // Calculate arc parameters
-            const innerRadius = Math.max(0, trackRadius);
-            const outerRadius = Math.max(innerRadius + 1, trackRadius + geneHeight);
-            const startRadians = startAngle * Math.PI / 180;
-            const endRadians = endAngle * Math.PI / 180;
-            
-            // Validate arc parameters
-            if (isNaN(innerRadius) || isNaN(outerRadius) || isNaN(startRadians) || isNaN(endRadians)) {
-                return;
-            }
-            
-            // Use track-specific color
-            const geneColor = trackConfig.color;
-            
-            // Draw gene arc on canvas
-            ctx.beginPath();
-            ctx.arc(0, 0, (innerRadius + outerRadius) / 2, startRadians, endRadians);
-            ctx.lineWidth = geneHeight;
-            ctx.strokeStyle = geneColor;
-            ctx.globalAlpha = 0.8;
-            ctx.stroke();
-            ctx.globalAlpha = 1.0;
-            
-            renderedGenes++;
-        });
-        
-        console.log(`Canvas: Rendered ${renderedGenes} ${geneType} genes on track ${trackConfig.track}`);
-    }
-        
         // Render CDS density tracks for protein coding genes
         if (this.geneTracks.protein_coding.enabled) {
             const cdsGenes = genesByType.protein_coding || [];
             if (cdsGenes.length > this.geneTracks.protein_coding.maxGenes) {
-                this.renderCDSDensityTracks(g, cdsGenes, baseRadius, theme);
+                this.renderCanvasCDSDensityTracks(ctx, cdsGenes, baseRadius, theme);
             }
         }
     }
@@ -385,6 +322,66 @@ class MultiTrackGeneManager {
         console.log(`Rendered ${renderedGenes} genes on ${geneType} track`);
     }
     
+    renderCanvasGeneTypeTrack(ctx, genes, geneType, trackConfig, baseRadius, theme) {
+        const trackRadius = baseRadius + (trackConfig.track * (this.circosPlotter.geneHeight + this.trackSpacing));
+        const geneHeight = Math.max(this.circosPlotter.geneHeight, 3);
+        
+        let renderedGenes = 0;
+        genes.forEach(gene => {
+            const chr = this.circosPlotter.data.chromosomes.find(c => 
+                (c.name === gene.chromosome) || 
+                (c.label === gene.chromosome) || 
+                (c.id === gene.chromosome)
+            );
+            if (!chr) return;
+            
+            const chrLength = chr.length || chr.size || 1;
+            
+            // Validate gene coordinates
+            if (!gene.start || !gene.end || isNaN(gene.start) || isNaN(gene.end)) {
+                return;
+            }
+            
+            // Calculate gene angles
+            const geneStartAngle = chr.startAngle + (gene.start / chrLength) * (chr.endAngle - chr.startAngle);
+            const geneEndAngle = chr.startAngle + (gene.end / chrLength) * (chr.endAngle - chr.startAngle);
+            
+            // Validate angles
+            if (isNaN(geneStartAngle) || isNaN(geneEndAngle)) {
+                return;
+            }
+            
+            const startRadians = geneStartAngle * Math.PI / 180;
+            const endRadians = geneEndAngle * Math.PI / 180;
+            
+            // Calculate gene arc coordinates
+            const innerRadius = trackRadius;
+            const outerRadius = trackRadius + geneHeight;
+            
+            // Draw gene arc on canvas
+            ctx.beginPath();
+            ctx.arc(0, 0, (innerRadius + outerRadius) / 2, startRadians, endRadians);
+            ctx.lineWidth = geneHeight;
+            ctx.strokeStyle = trackConfig.color;
+            ctx.globalAlpha = 0.8;
+            
+            // Set dash pattern for reverse strand
+            if (gene.strand === '-') {
+                ctx.setLineDash([2, 1]);
+            } else {
+                ctx.setLineDash([]);
+            }
+            
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            ctx.setLineDash([]);
+            
+            renderedGenes++;
+        });
+        
+        console.log(`Canvas: Rendered ${renderedGenes} ${geneType} genes on track ${trackConfig.track}`);
+    }
+    
     renderCDSDensityTracks(g, cdsGenes, baseRadius, theme) {
         // Distribute CDS genes across multiple density tracks
         const genesPerTrack = Math.ceil(cdsGenes.length / this.cdsDensityTracks);
@@ -440,6 +437,56 @@ class MultiTrackGeneManager {
                         event.stopPropagation();
                         this.circosPlotter.navigateToGene(gene);
                     });
+            });
+        }
+    }
+    
+    renderCanvasCDSDensityTracks(ctx, cdsGenes, baseRadius, theme) {
+        // Distribute CDS genes across multiple density tracks
+        const genesPerTrack = Math.ceil(cdsGenes.length / this.cdsDensityTracks);
+        
+        for (let trackIndex = 0; trackIndex < this.cdsDensityTracks; trackIndex++) {
+            const startIndex = trackIndex * genesPerTrack;
+            const endIndex = Math.min(startIndex + genesPerTrack, cdsGenes.length);
+            const trackGenes = cdsGenes.slice(startIndex, endIndex);
+            
+            if (trackGenes.length === 0) continue;
+            
+            const trackRadius = baseRadius + (this.geneTracks.protein_coding.track * (this.circosPlotter.geneHeight + this.trackSpacing)) + 
+                               (trackIndex * (this.cdsTrackHeight + 1));
+            
+            console.log(`Canvas: Rendering CDS density track ${trackIndex + 1}: ${trackGenes.length} genes`);
+            
+            trackGenes.forEach(gene => {
+                const chr = this.circosPlotter.data.chromosomes.find(c => 
+                    (c.name === gene.chromosome) || 
+                    (c.label === gene.chromosome) || 
+                    (c.id === gene.chromosome)
+                );
+                if (!chr) return;
+                
+                const chrLength = chr.length || chr.size || 1;
+                const validStart = Math.max(0, Math.min(gene.start, chrLength - 1));
+                const validEnd = Math.max(validStart + 1, Math.min(gene.end, chrLength));
+                
+                const startAngle = chr.startAngle + (validStart / chrLength) * (chr.endAngle - chr.startAngle);
+                const endAngle = chr.startAngle + (validEnd / chrLength) * (chr.endAngle - chr.startAngle);
+                
+                if (isNaN(startAngle) || isNaN(endAngle)) return;
+                
+                const innerRadius = Math.max(0, trackRadius);
+                const outerRadius = Math.max(innerRadius + 1, trackRadius + this.cdsTrackHeight);
+                const startRadians = startAngle * Math.PI / 180;
+                const endRadians = endAngle * Math.PI / 180;
+                
+                // Draw gene arc on canvas
+                ctx.beginPath();
+                ctx.arc(0, 0, (innerRadius + outerRadius) / 2, startRadians, endRadians);
+                ctx.lineWidth = this.cdsTrackHeight;
+                ctx.strokeStyle = this.geneTracks.protein_coding.color;
+                ctx.globalAlpha = 0.7;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
             });
         }
     }
