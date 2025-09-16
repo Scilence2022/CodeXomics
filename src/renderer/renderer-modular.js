@@ -4193,10 +4193,15 @@ class GenomeBrowser {
      * Uses multiple methods to identify and highlight the correct gene element
      */
     highlightSelectedGene(gene) {
+        // Get highlight effect setting from genes track settings
+        const genesSettings = this.trackRenderer?.getTrackSettings('genes') || {};
+        const highlightEffect = genesSettings.highlightEffect || 'pulse';
+        
         // Method 1: Find gene elements by data attributes (most reliable)
         const geneElementsByData = document.querySelectorAll(`[data-gene-start="${gene.start}"][data-gene-end="${gene.end}"]`);
         geneElementsByData.forEach(el => {
             el.classList.add('selected');
+            this.applyHighlightEffect(el, highlightEffect);
         });
 
         // Method 2: Find SVG gene elements
@@ -4209,6 +4214,7 @@ class GenomeBrowser {
             if ((geneStart && parseInt(geneStart) === gene.start) && 
                 (geneEnd && parseInt(geneEnd) === gene.end)) {
                 el.classList.add('selected');
+                this.applyHighlightEffect(el, highlightEffect);
             }
         });
 
@@ -4222,6 +4228,7 @@ class GenomeBrowser {
             // Check if title contains the gene position
             if (elementTitle.includes(genePosition)) {
                 el.classList.add('selected');
+                this.applyHighlightEffect(el, highlightEffect);
                 return;
             }
 
@@ -4233,6 +4240,7 @@ class GenomeBrowser {
                 parseInt(dataStart) === gene.start && 
                 parseInt(dataEnd) === gene.end) {
                 el.classList.add('selected');
+                this.applyHighlightEffect(el, highlightEffect);
             }
         });
 
@@ -4245,6 +4253,36 @@ class GenomeBrowser {
             this.refreshGeneTrackIfNeeded();
         } else {
             console.log(`Highlighted ${highlightedElements.length} gene element(s) for gene:`, gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type);
+        }
+        
+        // Auto-highlight sequence region if enabled
+        if (genesSettings.autoHighlightSequence) {
+            this.highlightGeneSequence(gene);
+        }
+    }
+    
+    /**
+     * Apply the appropriate highlight effect to a gene element
+     * @param {HTMLElement} element - The gene element to apply effect to
+     * @param {string} effect - The highlight effect ('pulse', 'border', 'both')
+     */
+    applyHighlightEffect(element, effect) {
+        // Remove existing highlight effect classes
+        element.classList.remove('border-highlight');
+        
+        // Apply the selected effect
+        switch (effect) {
+            case 'border':
+                element.classList.add('border-highlight');
+                break;
+            case 'both':
+                element.classList.add('border-highlight');
+                // Keep the default pulse animation (already applied by .selected class)
+                break;
+            case 'pulse':
+            default:
+                // Default pulse effect is already applied by .selected class
+                break;
         }
     }
 
@@ -6512,7 +6550,9 @@ class GenomeBrowser {
         
         // Remove selection styling from all gene elements (both regular and SVG)
         const selectedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
-        selectedElements.forEach(el => el.classList.remove('selected'));
+        selectedElements.forEach(el => {
+            el.classList.remove('selected', 'border-highlight');
+        });
         
         // Clear sequence highlights and selection
         this.clearSequenceHighlights();

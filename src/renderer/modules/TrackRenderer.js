@@ -9206,6 +9206,25 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 </div>
             </div>
             <div class="settings-section">
+                <h4>Gene Selection Highlight</h4>
+                <div class="form-group">
+                    <label for="genesHighlightEffect">Highlight Effect:</label>
+                    <select id="genesHighlightEffect">
+                        <option value="pulse" ${settings.highlightEffect === 'pulse' ? 'selected' : ''}>Breathing Pulse (Default)</option>
+                        <option value="border" ${settings.highlightEffect === 'border' ? 'selected' : ''}>Border Thickening</option>
+                        <option value="both" ${settings.highlightEffect === 'both' ? 'selected' : ''}>Both Effects</option>
+                    </select>
+                    <div class="help-text">Choose the visual effect when a gene is selected. "Breathing Pulse" creates a pulsing glow effect, "Border Thickening" creates a thick animated border, and "Both" combines both effects.</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="genesAutoHighlightSequence" ${settings.autoHighlightSequence ? 'checked' : ''}>
+                        Auto-highlight sequence region when gene is selected
+                    </label>
+                    <div class="help-text">When enabled, automatically highlights the corresponding sequence region in the reference sequence when a gene is selected.</div>
+                </div>
+            </div>
+            <div class="settings-section">
                 <h4>Interactive Features</h4>
                 <div class="form-group">
                     <label>
@@ -9656,10 +9675,14 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 showOperonsSameRow: false,
                 height: 120,
                 geneHeight: 12,
-            fontSize: 11,
+                fontSize: 11,
                 fontFamily: 'Arial, sans-serif',
                 layoutMode: 'compact', // 'compact' or 'groupByType'
-                enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false // Inherit from global setting, default to true
+                enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false, // Inherit from global setting, default to true
+                highlightEffect: 'pulse', // 'pulse', 'border', 'both'
+                autoHighlightSequence: false, // Auto-highlight sequence region when gene is selected
+                showSequence: false, // Show reference sequence
+                sequenceHeight: 25 // Height of reference sequence display
             },
             sequenceLine: {
                 fontSize: 14,
@@ -9811,6 +9834,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 const overrideGlobalZoomElement = modal.querySelector('#genesOverrideGlobalZoom');
                 const showSequenceElement = modal.querySelector('#genesShowSequence');
                 const sequenceHeightElement = modal.querySelector('#genesSequenceHeight');
+                const highlightEffectElement = modal.querySelector('#genesHighlightEffect');
+                const autoHighlightSequenceElement = modal.querySelector('#genesAutoHighlightSequence');
                 
                 console.log('Form elements found:', {
                     maxRowsElement: !!maxRowsElement,
@@ -9837,6 +9862,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 settings.overrideGlobalZoom = overrideGlobalZoomElement?.checked || false;
                 settings.showSequence = showSequenceElement?.checked || false; // Default to false (hidden)
                 settings.sequenceHeight = parseInt(sequenceHeightElement?.value) || 25;
+                settings.highlightEffect = highlightEffectElement?.value || 'pulse';
+                settings.autoHighlightSequence = autoHighlightSequenceElement?.checked || false;
                 
                 console.log('Collected gene settings from form:', settings);
                 break;
@@ -11670,6 +11697,22 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             showSequenceCheckbox.addEventListener('change', (e) => {
                 sequenceHeightInput.disabled = !e.target.checked;
                 console.log(`🔧 [setupGenesSettingsEventListeners] Show sequence changed to: ${e.target.checked} (will apply on Apply button)`);
+            });
+        }
+        
+        // Highlight effect selection - setting will be applied when Apply button is clicked
+        const highlightEffectSelect = bodyElement.querySelector('#genesHighlightEffect');
+        if (highlightEffectSelect) {
+            highlightEffectSelect.addEventListener('change', (e) => {
+                console.log(`🔧 [setupGenesSettingsEventListeners] Highlight effect changed to: ${e.target.value} (will apply on Apply button)`);
+            });
+        }
+        
+        // Auto-highlight sequence checkbox - setting will be applied when Apply button is clicked
+        const autoHighlightSequenceCheckbox = bodyElement.querySelector('#genesAutoHighlightSequence');
+        if (autoHighlightSequenceCheckbox) {
+            autoHighlightSequenceCheckbox.addEventListener('change', (e) => {
+                console.log(`🔧 [setupGenesSettingsEventListeners] Auto-highlight sequence changed to: ${e.target.checked} (will apply on Apply button)`);
             });
         }
     }

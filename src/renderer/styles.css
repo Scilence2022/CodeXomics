@@ -2900,6 +2900,29 @@ sup {
   outline-offset: 2px;
 }
 
+/* Border-thickening highlight effect for selected genes */
+.gene-element.selected.border-highlight {
+  animation: selectedBorderThick 2s infinite;
+  border-width: 6px !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.5);
+  outline: 3px solid rgba(59, 130, 246, 0.8);
+  outline-offset: 1px;
+}
+
+@keyframes selectedBorderThick {
+  0%, 100% {
+    border-width: 6px !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.5);
+    outline: 3px solid rgba(59, 130, 246, 0.8);
+  }
+  50% {
+    border-width: 8px !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.8), 0 0 25px rgba(59, 130, 246, 0.7);
+    outline: 4px solid rgba(59, 130, 246, 1);
+  }
+}
+
 .genome-viewer-section {
   flex: 1;
   flex-shrink: 0;
@@ -3006,6 +3029,18 @@ path.svg-gene-element.selected {
   opacity: 1 !important;
 }
 
+/* Border-thickening highlight effect for SVG gene elements */
+.svg-gene-element.selected.border-highlight,
+g.svg-gene-element.selected.border-highlight,
+rect.svg-gene-element.selected.border-highlight,
+path.svg-gene-element.selected.border-highlight {
+  filter: drop-shadow(0 0 12px rgba(59, 130, 246, 1)) brightness(1.2);
+  animation: svgSelectedBorderThick 2s infinite;
+  opacity: 1 !important;
+  stroke-width: 6 !important;
+  stroke: #3b82f6 !important;
+}
+
 @keyframes svgSelectedPulse {
   0%, 100% { 
         filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.9)) brightness(1.1);
@@ -3017,6 +3052,17 @@ path.svg-gene-element.selected {
   stroke-width: 4;
 }
 
+}
+
+@keyframes svgSelectedBorderThick {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(59, 130, 246, 1)) brightness(1.2);
+    stroke-width: 6;
+  }
+  50% {
+    filter: drop-shadow(0 0 18px rgba(59, 130, 246, 1.2)) brightness(1.3);
+    stroke-width: 8;
+  }
 }
 
 
