@@ -1177,12 +1177,23 @@ Original error: ${error.message}`;
     async parseBED() {
         const lines = this.currentFile.data.split('\n');
         const annotations = {};
+        let featureCount = 0;
+        let trackInfo = null;
         
         for (const line of lines) {
             const trimmed = line.trim();
             
-            // Skip header lines and empty lines
-            if (trimmed.startsWith('#') || trimmed.startsWith('track') || !trimmed) continue;
+            // Skip empty lines
+            if (!trimmed) continue;
+            
+            // Parse track header line
+            if (trimmed.startsWith('track')) {
+                trackInfo = this.parseBEDTrackHeader(trimmed);
+                continue;
+            }
+            
+            // Skip comment lines
+            if (trimmed.startsWith('#')) continue;
             
             const fields = trimmed.split('\t');
             if (fields.length < 3) continue;
@@ -1190,9 +1201,17 @@ Original error: ${error.message}`;
             const chrom = fields[0];
             const start = parseInt(fields[1]);
             const end = parseInt(fields[2]);
-            const name = fields[3] || 'BED_feature';
-            const score = fields[4] ? parseFloat(fields[4]) : null;
+            const name = fields[3] || `BED_feature_${featureCount + 1}`;
+            const score = fields[4] ? parseFloat(fields[4]) : 1000;
             const strand = fields[5] === '-' ? -1 : 1;
+            
+            // Parse additional BED fields if present
+            const thickStart = fields[6] ? parseInt(fields[6]) : start;
+            const thickEnd = fields[7] ? parseInt(fields[7]) : end;
+            const itemRgb = fields[8] ? fields[8] : null;
+            const blockCount = fields[9] ? parseInt(fields[9]) : 1;
+            const blockSizes = fields[10] ? fields[10].split(',').map(s => parseInt(s)) : [end - start];
+            const blockStarts = fields[11] ? fields[11].split(',').map(s => parseInt(s)) : [0];
             
             if (!annotations[chrom]) {
                 annotations[chrom] = [];
@@ -1206,21 +1225,45 @@ Original error: ${error.message}`;
                 score: score,
                 qualifiers: {
                     name: name,
-                    score: score
+                    score: score,
+                    thickStart: thickStart + 1, // Convert to 1-based
+                    thickEnd: thickEnd,
+                    itemRgb: itemRgb,
+                    blockCount: blockCount,
+                    blockSizes: blockSizes,
+                    blockStarts: blockStarts,
+                    source: trackInfo?.name || 'BED',
+                    description: trackInfo?.description || 'BED annotation'
                 }
             };
             
             annotations[chrom].push(annotation);
+            featureCount++;
         }
         
         this.genomeBrowser.currentAnnotations = annotations;
-        this.genomeBrowser.updateStatus(`Loaded BED file with features for ${Object.keys(annotations).length} chromosome(s)`);
+        this.genomeBrowser.updateStatus(`Loaded BED file with ${featureCount} features for ${Object.keys(annotations).length} chromosome(s)`);
         
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
         }
+    }
+    
+    parseBEDTrackHeader(headerLine) {
+        // Parse track header line: track name=CHOPCHOP description=lysC visibility="pack" itemRgb="On"
+        const trackInfo = {};
+        const matches = headerLine.match(/(\w+)="?([^"\s]+)"?/g);
+        
+        if (matches) {
+            matches.forEach(match => {
+                const [key, value] = match.split('=');
+                trackInfo[key] = value.replace(/"/g, '');
+            });
+        }
+        
+        return trackInfo;
     }
 
     async parseWIG() {
@@ -1499,12 +1542,14 @@ Original error: ${error.message}`;
             toolbar: {
                 variants: document.getElementById('trackVariants'),
                 reads: document.getElementById('trackReads'),
-                wigTracks: document.getElementById('trackWIG')
+                wigTracks: document.getElementById('trackWIG'),
+                genes: document.getElementById('trackGenes')
             },
             sidebar: {
                 variants: document.getElementById('sidebarTrackVariants'),
                 reads: document.getElementById('sidebarTrackReads'),
-                wigTracks: document.getElementById('sidebarTrackWIG')
+                wigTracks: document.getElementById('sidebarTrackWIG'),
+                genes: document.getElementById('sidebarTrackGenes')
             }
         };
 
@@ -1524,6 +1569,12 @@ Original error: ${error.message}`;
             case '.wig':
                 tracksToEnable = ['wigTracks'];
                 statusMessage = 'WIG track automatically enabled';
+                break;
+            case '.bed':
+            case '.gff':
+            case '.gtf':
+                tracksToEnable = ['genes'];
+                statusMessage = 'Gene/Annotation track automatically enabled for BED/GFF file';
                 break;
         }
 

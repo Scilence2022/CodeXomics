@@ -552,7 +552,7 @@ class TrackRenderer {
      */
     filterGeneAnnotations(annotations, viewport) {
         const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature', 
-                          'regulatory', 'promoter', 'terminator', 'repeat_region', 'comment', 'note'];
+                          'regulatory', 'promoter', 'terminator', 'repeat_region', 'comment', 'note', 'BED_feature'];
         
         return annotations.filter(feature => {
             return (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&

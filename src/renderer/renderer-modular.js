@@ -3897,7 +3897,8 @@ class GenomeBrowser {
             'note': 'other',
             'other': 'other',
             'misc_feature': 'other',
-            'repeat_region': 'other'
+            'repeat_region': 'other',
+            'BED_feature': 'other'  // BED features are treated as other features
         };
         
         const filterKey = typeMap[type] || 'other';
