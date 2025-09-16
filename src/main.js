@@ -4708,8 +4708,23 @@ async function createChopchopWindow() {
     chopchopWindow.once('ready-to-show', () => {
       console.log('🎉 CHOPCHOP window ready to show');
       chopchopWindow.show();
+      chopchopWindow.focus();
       console.log('✅ CHOPCHOP window opened successfully');
     });
+
+    // Also try to show immediately after load
+    console.log('🚀 Attempting immediate show...');
+    chopchopWindow.show();
+    chopchopWindow.focus();
+
+    // Fallback: Show window after a timeout if ready-to-show doesn't fire
+    setTimeout(() => {
+      if (!chopchopWindow.isDestroyed() && !chopchopWindow.isVisible()) {
+        console.log('⚠️ CHOPCHOP window ready-to-show timeout, forcing show');
+        chopchopWindow.show();
+        chopchopWindow.focus();
+      }
+    }, 3000);
 
     // Handle window closed
     chopchopWindow.on('closed', () => {
@@ -4737,6 +4752,33 @@ async function createChopchopWindow() {
     chopchopWindow.webContents.on('dom-ready', () => {
       console.log('📄 CHOPCHOP window DOM ready');
     });
+
+    // Track window visibility and focus
+    chopchopWindow.on('show', () => {
+      console.log('👁️ CHOPCHOP window shown');
+    });
+
+    chopchopWindow.on('hide', () => {
+      console.log('🙈 CHOPCHOP window hidden');
+    });
+
+    chopchopWindow.on('focus', () => {
+      console.log('🎯 CHOPCHOP window focused');
+    });
+
+    chopchopWindow.on('blur', () => {
+      console.log('😴 CHOPCHOP window blurred');
+    });
+
+    // Check window state after creation
+    setTimeout(() => {
+      console.log('🔍 CHOPCHOP window state check:');
+      console.log(`  - Destroyed: ${chopchopWindow.isDestroyed()}`);
+      console.log(`  - Visible: ${chopchopWindow.isVisible()}`);
+      console.log(`  - Focused: ${chopchopWindow.isFocused()}`);
+      console.log(`  - Minimized: ${chopchopWindow.isMinimized()}`);
+      console.log(`  - Maximized: ${chopchopWindow.isMaximized()}`);
+    }, 1000);
 
     console.log('🎯 CHOPCHOP window creation process completed');
 
