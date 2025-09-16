@@ -2026,14 +2026,20 @@ class NavigationManager {
         const modalContent = modal?.querySelector('.modal-content');
         
         if (modal && modalContent) {
+            console.log('Opening Search Settings modal...');
+            
             // Load current settings
             this.loadSearchSettings();
             
-            // Load saved position and size
-            this.loadModalPosition(modalContent);
-            
-            // Add draggable and resizable classes
+            // Add draggable and resizable classes first
             modalContent.classList.add('draggable', 'resizable');
+            console.log('Added classes:', modalContent.className);
+            
+            // Set default size if no saved size exists
+            this.ensureDefaultSize(modalContent);
+            
+            // Load saved position and size (this will override default if exists)
+            this.loadModalPosition(modalContent);
             
             // Ensure resize handles exist
             this.ensureResizeHandles(modalContent);
@@ -2041,8 +2047,47 @@ class NavigationManager {
             // Initialize drag and resize functionality
             this.initializeModalDragResize(modal, modalContent);
             
+            // Force apply CSS styles
+            this.forceApplyResizeStyles(modalContent);
+            
             modal.classList.add('show');
+            console.log('Modal opened with classes:', modalContent.className);
         }
+    }
+
+    /**
+     * Ensure default size is set for the modal
+     */
+    ensureDefaultSize(modalContent) {
+        // Set default size if no size is currently set
+        if (!modalContent.style.width || !modalContent.style.height) {
+            modalContent.style.width = '1000px';
+            modalContent.style.height = '600px';
+            console.log('Set default size for Search Settings modal');
+        }
+    }
+
+    /**
+     * Force apply resize styles to ensure they take effect
+     */
+    forceApplyResizeStyles(modalContent) {
+        // Force apply the resizable styles
+        modalContent.style.width = '1000px';
+        modalContent.style.height = '600px';
+        modalContent.style.minWidth = '800px';
+        modalContent.style.minHeight = '500px';
+        modalContent.style.maxWidth = '95vw';
+        modalContent.style.maxHeight = '90vh';
+        modalContent.style.overflow = 'visible';
+        modalContent.style.position = 'relative';
+        
+        console.log('Force applied resize styles:', {
+            width: modalContent.style.width,
+            height: modalContent.style.height,
+            minWidth: modalContent.style.minWidth,
+            minHeight: modalContent.style.minHeight,
+            overflow: modalContent.style.overflow
+        });
     }
 
     /**
@@ -2238,6 +2283,7 @@ class NavigationManager {
         // Resize functionality - use a more robust approach
         const handleResizeStart = (e) => {
             console.log('Resize started on element:', e.target);
+            console.log('Resize started at position:', { x: e.clientX, y: e.clientY });
             isResizing = true;
             modalContent.classList.add('resizing');
             
@@ -2248,6 +2294,11 @@ class NavigationManager {
             startHeight = rect.height;
             
             console.log('Resize start values:', { startX, startY, startWidth, startHeight });
+            console.log('Modal content current styles:', {
+                width: modalContent.style.width,
+                height: modalContent.style.height,
+                position: modalContent.style.position
+            });
             
             e.preventDefault();
             e.stopPropagation();
@@ -2256,10 +2307,12 @@ class NavigationManager {
         // Add resize handles with proper event listeners
         const resizeHandleRight = modalContent.querySelector('.resize-handle-right');
         const resizeHandleBottom = modalContent.querySelector('.resize-handle-bottom');
+        const resizeHandleCorner = modalContent.querySelector('.resize-handle-corner');
         
         console.log('Resize handles found:', { 
             rightHandle: !!resizeHandleRight, 
-            bottomHandle: !!resizeHandleBottom 
+            bottomHandle: !!resizeHandleBottom,
+            cornerHandle: !!resizeHandleCorner
         });
         
         if (resizeHandleRight) {
@@ -2272,16 +2325,40 @@ class NavigationManager {
             console.log('Bottom handle event listener added');
         }
         
-        // Handle corner resize
+        if (resizeHandleCorner) {
+            resizeHandleCorner.addEventListener('mousedown', handleResizeStart);
+            console.log('Corner handle event listener added');
+        }
+        
+        // Handle corner resize and edge detection
         modalContent.addEventListener('mousedown', (e) => {
             const rect = modalContent.getBoundingClientRect();
             const handleSize = 24;
-            const isInResizeArea = (
+            const edgeSize = 12;
+            
+            // Check if mouse is in corner resize area
+            const isInCornerArea = (
                 e.clientX >= rect.right - handleSize &&
                 e.clientY >= rect.bottom - handleSize
             );
+            
+            // Check if mouse is in right edge resize area
+            const isInRightEdge = (
+                e.clientX >= rect.right - edgeSize &&
+                e.clientX <= rect.right &&
+                e.clientY >= rect.top + edgeSize &&
+                e.clientY <= rect.bottom - edgeSize
+            );
+            
+            // Check if mouse is in bottom edge resize area
+            const isInBottomEdge = (
+                e.clientY >= rect.bottom - edgeSize &&
+                e.clientY <= rect.bottom &&
+                e.clientX >= rect.left + edgeSize &&
+                e.clientX <= rect.right - edgeSize
+            );
 
-            if (isInResizeArea) {
+            if (isInCornerArea || isInRightEdge || isInBottomEdge) {
                 handleResizeStart(e);
             }
         });
@@ -2321,8 +2398,21 @@ class NavigationManager {
                 newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
                 newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
                 
+                console.log('Resizing modal:', {
+                    deltaX, deltaY,
+                    startWidth, startHeight,
+                    newWidth, newHeight,
+                    minWidth, minHeight,
+                    maxWidth, maxHeight
+                });
+                
                 modalContent.style.width = newWidth + 'px';
                 modalContent.style.height = newHeight + 'px';
+                
+                console.log('Applied styles:', {
+                    width: modalContent.style.width,
+                    height: modalContent.style.height
+                });
             }
         };
 
@@ -2374,9 +2464,22 @@ class NavigationManager {
             modalContent.style.transform = 'none';
         }
 
-        if (searchModalSettings.size) {
-            modalContent.style.width = searchModalSettings.size.width + 'px';
-            modalContent.style.height = searchModalSettings.size.height + 'px';
+        if (searchModalSettings.size && searchModalSettings.size.width && searchModalSettings.size.height) {
+            // Only load saved size if it's valid and within constraints
+            const minWidth = 800;
+            const minHeight = 500;
+            const maxWidth = window.innerWidth * 0.95;
+            const maxHeight = window.innerHeight * 0.9;
+            
+            const savedWidth = Math.max(minWidth, Math.min(searchModalSettings.size.width, maxWidth));
+            const savedHeight = Math.max(minHeight, Math.min(searchModalSettings.size.height, maxHeight));
+            
+            modalContent.style.width = savedWidth + 'px';
+            modalContent.style.height = savedHeight + 'px';
+            
+            console.log('Loaded saved size:', { width: savedWidth, height: savedHeight });
+        } else {
+            console.log('No valid saved size found, using default');
         }
     }
 
