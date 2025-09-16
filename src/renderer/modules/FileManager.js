@@ -1124,7 +1124,8 @@ Original error: ${error.message}`;
 
     async parseGFF() {
         const lines = this.currentFile.data.split('\n');
-        const annotations = {};
+        const newAnnotations = {};
+        let featureCount = 0;
         
         for (const line of lines) {
             const trimmed = line.trim();
@@ -1137,8 +1138,8 @@ Original error: ${error.message}`;
             
             const [seqname, source, feature, start, end, score, strand, frame, attribute] = fields;
             
-            if (!annotations[seqname]) {
-                annotations[seqname] = [];
+            if (!newAnnotations[seqname]) {
+                newAnnotations[seqname] = [];
             }
             
             // Parse attributes
@@ -1161,11 +1162,14 @@ Original error: ${error.message}`;
                 qualifiers: qualifiers
             };
             
-            annotations[seqname].push(annotation);
+            newAnnotations[seqname].push(annotation);
+            featureCount++;
         }
         
-        this.genomeBrowser.currentAnnotations = annotations;
-        this.genomeBrowser.updateStatus(`Loaded GFF file with annotations for ${Object.keys(annotations).length} sequence(s)`);
+        // Merge with existing annotations instead of replacing
+        this.mergeAnnotations(newAnnotations);
+        
+        this.genomeBrowser.updateStatus(`Loaded GFF file with ${featureCount} features for ${Object.keys(newAnnotations).length} sequence(s). Merged with existing annotations.`);
         
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -1176,7 +1180,7 @@ Original error: ${error.message}`;
 
     async parseBED() {
         const lines = this.currentFile.data.split('\n');
-        const annotations = {};
+        const newAnnotations = {};
         let featureCount = 0;
         let trackInfo = null;
         
@@ -1213,8 +1217,8 @@ Original error: ${error.message}`;
             const blockSizes = fields[10] ? fields[10].split(',').map(s => parseInt(s)) : [end - start];
             const blockStarts = fields[11] ? fields[11].split(',').map(s => parseInt(s)) : [0];
             
-            if (!annotations[chrom]) {
-                annotations[chrom] = [];
+            if (!newAnnotations[chrom]) {
+                newAnnotations[chrom] = [];
             }
             
             const annotation = {
@@ -1237,12 +1241,14 @@ Original error: ${error.message}`;
                 }
             };
             
-            annotations[chrom].push(annotation);
+            newAnnotations[chrom].push(annotation);
             featureCount++;
         }
         
-        this.genomeBrowser.currentAnnotations = annotations;
-        this.genomeBrowser.updateStatus(`Loaded BED file with ${featureCount} features for ${Object.keys(annotations).length} chromosome(s)`);
+        // Merge with existing annotations instead of replacing
+        this.mergeAnnotations(newAnnotations);
+        
+        this.genomeBrowser.updateStatus(`Loaded BED file with ${featureCount} features for ${Object.keys(newAnnotations).length} chromosome(s). Merged with existing annotations.`);
         
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -1264,6 +1270,77 @@ Original error: ${error.message}`;
         }
         
         return trackInfo;
+    }
+    
+    /**
+     * Merge new annotations with existing annotations
+     * @param {Object} newAnnotations - New annotations to merge
+     */
+    mergeAnnotations(newAnnotations) {
+        // Initialize currentAnnotations if it doesn't exist
+        if (!this.genomeBrowser.currentAnnotations) {
+            this.genomeBrowser.currentAnnotations = {};
+        }
+        
+        // Merge annotations for each chromosome
+        Object.keys(newAnnotations).forEach(chromosome => {
+            if (!this.genomeBrowser.currentAnnotations[chromosome]) {
+                this.genomeBrowser.currentAnnotations[chromosome] = [];
+            }
+            
+            // Add new annotations to existing ones
+            const existingCount = this.genomeBrowser.currentAnnotations[chromosome].length;
+            this.genomeBrowser.currentAnnotations[chromosome].push(...newAnnotations[chromosome]);
+            const newCount = this.genomeBrowser.currentAnnotations[chromosome].length;
+            
+            console.log(`Merged ${newCount - existingCount} new annotations for chromosome ${chromosome} (total: ${newCount})`);
+        });
+        
+        // Update loaded files list
+        if (!this.genomeBrowser.loadedFiles) {
+            this.genomeBrowser.loadedFiles = [];
+        }
+        
+        // Add file to loaded files if not already present
+        const fileName = this.currentFile.info.name;
+        const fileExtension = this.currentFile.info.extension.toLowerCase();
+        const fileType = this.getFileTypeFromExtension(fileExtension);
+        
+        const existingFile = this.genomeBrowser.loadedFiles.find(file => file.name === fileName);
+        if (!existingFile) {
+            this.genomeBrowser.loadedFiles.push({
+                name: fileName,
+                type: fileType,
+                size: this.currentFile.info.size,
+                path: this.currentFile.info.path,
+                loadedAt: new Date().toISOString()
+            });
+        }
+    }
+    
+    /**
+     * Get file type from extension
+     * @param {string} extension - File extension
+     * @returns {string} File type
+     */
+    getFileTypeFromExtension(extension) {
+        const typeMap = {
+            '.bed': 'BED',
+            '.gff': 'GFF',
+            '.gff3': 'GFF',
+            '.gtf': 'GTF',
+            '.vcf': 'VCF',
+            '.sam': 'SAM',
+            '.bam': 'BAM',
+            '.wig': 'WIG',
+            '.fasta': 'FASTA',
+            '.fa': 'FASTA',
+            '.gb': 'GenBank',
+            '.gbk': 'GenBank',
+            '.gbff': 'GenBank'
+        };
+        
+        return typeMap[extension] || 'Unknown';
     }
 
     async parseWIG() {
