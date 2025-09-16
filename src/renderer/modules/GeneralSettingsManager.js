@@ -55,8 +55,9 @@ class GeneralSettingsManager {
             backupInterval: 24,
             maxBackups: 10,
             
-            // External Tools
-            deepGeneResearchUrl: 'http://localhost:3000/'
+        // External Tools
+        deepGeneResearchUrl: 'http://localhost:3000/',
+        chopchopUrl: 'https://chopchop.cbu.uib.no/'
         };
     }
 
@@ -328,6 +329,13 @@ class GeneralSettingsManager {
         if (deepGeneResearchUrlInput) {
             deepGeneResearchUrlInput.addEventListener('change', (e) => {
                 this.updateSetting('deepGeneResearchUrl', e.target.value);
+            });
+        }
+
+        const chopchopUrlInput = document.getElementById('chopchopUrl');
+        if (chopchopUrlInput) {
+            chopchopUrlInput.addEventListener('change', (e) => {
+                this.updateSetting('chopchopUrl', e.target.value);
             });
         }
 
