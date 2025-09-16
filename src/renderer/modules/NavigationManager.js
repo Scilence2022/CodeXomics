@@ -2194,9 +2194,20 @@ class NavigationManager {
      */
     getCurrentSearchSettings() {
         const configManager = this.genomeBrowser.configManager;
-        if (!configManager) return this.getDefaultSearchSettings();
+        if (!configManager) {
+            console.warn('⚠️ ConfigManager not available, using default search settings');
+            return this.getDefaultSearchSettings();
+        }
         
-        return configManager.getSearchSettings();
+        const settings = configManager.getSearchSettings();
+        console.log('🔧 Retrieved search settings:', settings);
+        
+        // Ensure all required settings have default values
+        const defaultSettings = this.getDefaultSearchSettings();
+        const mergedSettings = { ...defaultSettings, ...settings };
+        
+        console.log('🔧 Merged search settings:', mergedSettings);
+        return mergedSettings;
     }
 
     /**
