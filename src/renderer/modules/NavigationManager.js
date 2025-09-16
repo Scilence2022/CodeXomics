@@ -665,14 +665,26 @@ class NavigationManager {
         const startTime = Date.now();
         
         // 1. Search for gene names in annotations
+        console.log('🔍 Search debug info:');
+        console.log('  - searchSettings.searchGeneNames:', searchSettings.searchGeneNames);
+        console.log('  - currentAnnotations exists:', !!this.genomeBrowser.currentAnnotations);
+        console.log('  - currentChr:', currentChr);
+        console.log('  - annotations for currentChr:', !!this.genomeBrowser.currentAnnotations?.[currentChr]);
+        console.log('  - searchTerm:', searchTerm);
+        console.log('  - caseSensitive:', caseSensitive);
+        
         if (searchSettings.searchGeneNames && this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[currentChr]) {
             const annotations = this.genomeBrowser.currentAnnotations[currentChr];
+            console.log('  - Total annotations to search:', annotations.length);
             
             // Parse search terms - support OR operator
             const searchTerms = this.parseSearchQuery(searchTerm);
+            console.log('  - Parsed search terms:', searchTerms);
             
+            let checkedCount = 0;
             annotations.forEach(annotation => {
                 if (annotation.qualifiers) {
+                    checkedCount++;
                     // Search in gene names
                     const geneName = annotation.qualifiers.gene || '';
                     const locusTag = annotation.qualifiers.locus_tag || '';
@@ -686,6 +698,7 @@ class NavigationManager {
                     const isMatch = searchTerms.some(term => fieldToSearch.includes(term));
                     
                     if (isMatch) {
+                        console.log('  - Found match:', { geneName, locusTag, product, searchFields });
                         // Find which term(s) matched for highlighting
                         const matchedTerms = searchTerms.filter(term => fieldToSearch.includes(term));
                         results.push({
@@ -700,6 +713,10 @@ class NavigationManager {
                     }
                 }
             });
+            console.log('  - Checked annotations:', checkedCount);
+            console.log('  - Found results:', results.length);
+        } else {
+            console.log('  - Gene name search skipped due to settings or missing data');
         }
         
         // 2. Search for exact sequence matches
