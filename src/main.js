@@ -4634,12 +4634,14 @@ async function createDeepGeneResearchWindow(params = {}) {
 // Create CHOPCHOP CRISPR Toolbox window
 async function createChopchopWindow() {
   try {
+    console.log('🚀 Starting CHOPCHOP window creation...');
     let chopchopUrl = 'https://chopchop.cbu.uib.no/'; // Default fallback
     
     try {
       // Get the main window to access GeneralSettingsManager directly
       const mainWindow = getCurrentMainWindow();
       if (mainWindow && mainWindow.webContents) {
+        console.log('📋 Getting settings from main window...');
         const settings = await mainWindow.webContents.executeJavaScript(`
           if (window.genomeBrowser && window.genomeBrowser.generalSettingsManager) {
             window.genomeBrowser.generalSettingsManager.getSettings();
@@ -4648,26 +4650,28 @@ async function createChopchopWindow() {
           }
         `);
         
+        console.log('📋 Settings retrieved:', settings);
+        
         if (settings && settings.chopchopUrl) {
           chopchopUrl = settings.chopchopUrl;
-          console.log('Using CHOPCHOP URL from settings:', chopchopUrl);
+          console.log('✅ Using CHOPCHOP URL from settings:', chopchopUrl);
         } else {
-          console.log('No CHOPCHOP URL found in settings, using default:', chopchopUrl);
+          console.log('⚠️ No CHOPCHOP URL found in settings, using default:', chopchopUrl);
           showSettingsWarning('CHOPCHOP URL not configured', 
             'Using default URL (https://chopchop.cbu.uib.no/). You can configure the URL in General Settings → Features → External Tools.');
         }
       } else {
-        console.log('Main window not available, using default URL:', chopchopUrl);
+        console.log('⚠️ Main window not available, using default URL:', chopchopUrl);
         showSettingsWarning('Main window not available', 
           'Using default URL (https://chopchop.cbu.uib.no/). Please ensure the main window is open.');
       }
     } catch (error) {
-      console.warn('Failed to get CHOPCHOP URL from settings, using default:', error.message);
+      console.warn('❌ Failed to get CHOPCHOP URL from settings, using default:', error.message);
       showSettingsError('Failed to load CHOPCHOP settings', 
         `Using default URL (https://chopchop.cbu.uib.no/) due to error: ${error.message}. Please check your settings configuration.`);
     }
     
-    console.log('Creating CHOPCHOP window:', chopchopUrl);
+    console.log('🔧 Creating CHOPCHOP window with URL:', chopchopUrl);
     
     const chopchopWindow = new BrowserWindow({
       width: 1400,
@@ -4693,29 +4697,52 @@ async function createChopchopWindow() {
       closable: true
     });
 
+    console.log('✅ CHOPCHOP BrowserWindow created successfully');
+
     // Load the CHOPCHOP URL
+    console.log('🌐 Loading CHOPCHOP URL...');
     await chopchopWindow.loadURL(chopchopUrl);
+    console.log('✅ CHOPCHOP URL loaded successfully');
     
     // Show the window when ready
     chopchopWindow.once('ready-to-show', () => {
+      console.log('🎉 CHOPCHOP window ready to show');
       chopchopWindow.show();
-      console.log('CHOPCHOP window opened successfully');
+      console.log('✅ CHOPCHOP window opened successfully');
     });
 
     // Handle window closed
     chopchopWindow.on('closed', () => {
-      console.log('CHOPCHOP window closed');
+      console.log('🔒 CHOPCHOP window closed');
     });
 
     // Handle navigation errors
     chopchopWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-      console.error('CHOPCHOP window failed to load:', errorDescription);
+      console.error('❌ CHOPCHOP window failed to load:', errorDescription);
+      console.error('❌ Error code:', errorCode);
+      console.error('❌ Validated URL:', validatedURL);
       showSettingsError('Failed to load CHOPCHOP CRISPR Toolbox', 
         `Could not load ${validatedURL}. Please check the URL in General Settings → Features → External Tools.`);
     });
 
+    // Add additional event listeners for debugging
+    chopchopWindow.webContents.on('did-start-loading', () => {
+      console.log('🔄 CHOPCHOP window started loading...');
+    });
+
+    chopchopWindow.webContents.on('did-finish-load', () => {
+      console.log('✅ CHOPCHOP window finished loading');
+    });
+
+    chopchopWindow.webContents.on('dom-ready', () => {
+      console.log('📄 CHOPCHOP window DOM ready');
+    });
+
+    console.log('🎯 CHOPCHOP window creation process completed');
+
   } catch (error) {
-    console.error('Error creating CHOPCHOP window:', error);
+    console.error('❌ Error creating CHOPCHOP window:', error);
+    console.error('❌ Error stack:', error.stack);
     showSettingsError('Error opening CHOPCHOP CRISPR Toolbox', 
       `Failed to open CHOPCHOP window: ${error.message}`);
   }
