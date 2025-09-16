@@ -2900,7 +2900,7 @@ sup {
   outline-offset: 2px;
 }
 
-/* Border-thickening highlight effect for selected genes */
+/* Border-thickening highlight effect for selected genes - only apply to visual elements, not text */
 .gene-element.selected.border-highlight {
   animation: selectedBorderThick 2s infinite;
   border-width: 6px !important;
@@ -2908,6 +2908,12 @@ sup {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.5);
   outline: 3px solid rgba(59, 130, 246, 0.8);
   outline-offset: 1px;
+}
+
+/* Ensure text inside gene elements is not affected by border changes */
+.gene-element.selected.border-highlight * {
+  font-weight: normal !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
 }
 
 @keyframes selectedBorderThick {
@@ -3029,7 +3035,7 @@ path.svg-gene-element.selected {
   opacity: 1 !important;
 }
 
-/* Border-thickening highlight effect for SVG gene elements */
+/* Border-thickening highlight effect for SVG gene elements - only apply to visual elements */
 .svg-gene-element.selected.border-highlight,
 g.svg-gene-element.selected.border-highlight,
 rect.svg-gene-element.selected.border-highlight,
@@ -3039,6 +3045,16 @@ path.svg-gene-element.selected.border-highlight {
   opacity: 1 !important;
   stroke-width: 6 !important;
   stroke: #3b82f6 !important;
+}
+
+/* Ensure SVG text elements are not affected by stroke changes */
+.svg-gene-element.selected.border-highlight text,
+g.svg-gene-element.selected.border-highlight text,
+rect.svg-gene-element.selected.border-highlight text,
+path.svg-gene-element.selected.border-highlight text {
+  stroke-width: 0 !important;
+  stroke: none !important;
+  font-weight: normal !important;
 }
 
 @keyframes svgSelectedPulse {
