@@ -337,15 +337,11 @@ class ChatManager {
                 allSettings: this.agentSystemSettings
             });
             
-            if (this.useCrewAI && this.agentSystemSettings.useCrewAI) {
-                console.log('🚢 Initializing CrewAI System...');
-                // Initialize CrewAI System
-                await this.initializeCrewAISystem();
-            } else {
-                console.log('🤖 Initializing Legacy System...');
-                // Initialize Legacy Multi-Agent System
-                await this.initializeLegacyMultiAgentSystem();
-            }
+            // Temporarily force Legacy system until CrewAI issues are resolved
+            console.log('⚠️ Temporarily using Legacy Multi-Agent System due to CrewAI class loading issues');
+            console.log('🤖 Initializing Legacy System...');
+            // Initialize Legacy Multi-Agent System
+            await this.initializeLegacyMultiAgentSystem();
             
         } catch (error) {
             console.error('Failed to initialize Multi-Agent System:', error);

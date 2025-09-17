@@ -27,6 +27,8 @@ class CrewAIMultiAgentSystem {
         this.performanceMonitor = new PerformanceMonitor();
         
         console.log('🚢 CrewAI Multi-Agent System initializing...');
+        console.log('⚠️ Note: CrewAI system is currently experiencing class loading issues');
+        console.log('💡 To re-enable: modify ChatManager.js initializeMultiAgentSystem() method');
         
         // Delay initialization to ensure all scripts are loaded
         setTimeout(() => {
