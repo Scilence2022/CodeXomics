@@ -3,11 +3,13 @@
  * Provides structured agent roles, goals, and collaborative workflows
  */
 
-// Prevent duplicate script execution
+// Debug and prevent duplicate script execution
+console.log('🔍 CrewAIFramework.js executing, loaded flag:', window.CrewAIFrameworkLoaded);
 if (window.CrewAIFrameworkLoaded) {
     console.log('ℹ️ CrewAI Framework already loaded, skipping');
 } else {
-window.CrewAIFrameworkLoaded = true;
+    console.log('🚀 CrewAI Framework first load, defining classes...');
+    window.CrewAIFrameworkLoaded = true;
 
 /**
  * Base Agent class inspired by CrewAI
@@ -878,20 +880,20 @@ class Crew {
     }
 }
 
-} // End of CrewAIFrameworkLoaded check
-
-// Export classes
-if (typeof module !== 'undefined' && module.exports) {
-    // Node.js environment
-    module.exports = { CrewAgent, Crew };
-} else {
-    // Browser environment
-    console.log('🔧 Exporting CrewAI Framework classes to window object...');
-    try {
-        window.CrewAgent = CrewAgent;
-        window.Crew = Crew;
-        console.log('✅ CrewAI Framework classes exported successfully');
-    } catch (error) {
-        console.error('❌ Error exporting CrewAI Framework classes:', error);
+    // Export classes
+    if (typeof module !== 'undefined' && module.exports) {
+        // Node.js environment
+        module.exports = { CrewAgent, Crew };
+    } else {
+        // Browser environment
+        console.log('🔧 Exporting CrewAI Framework classes to window object...');
+        try {
+            window.CrewAgent = CrewAgent;
+            window.Crew = Crew;
+            console.log('✅ CrewAI Framework classes exported successfully');
+        } catch (error) {
+            console.error('❌ Error exporting CrewAI Framework classes:', error);
+        }
     }
-}
+
+} // End of CrewAIFrameworkLoaded check

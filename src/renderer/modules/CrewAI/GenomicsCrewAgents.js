@@ -3,11 +3,13 @@
  * Pre-configured agents with genomics-specific roles, goals, and tools
  */
 
-// Prevent duplicate script execution
+// Debug and prevent duplicate script execution
+console.log('🔍 GenomicsCrewAgents.js executing, loaded flag:', window.GenomicsCrewAgentsLoaded);
 if (window.GenomicsCrewAgentsLoaded) {
     console.log('ℹ️ GenomicsCrewAgents already loaded, skipping');
 } else {
-window.GenomicsCrewAgentsLoaded = true;
+    console.log('🚀 GenomicsCrewAgents first load, checking dependencies...');
+    window.GenomicsCrewAgentsLoaded = true;
 
 // Check if base class is available
 if (typeof CrewAgent === 'undefined') {
@@ -863,29 +865,29 @@ class ProjectCoordinator extends CrewAgent {
     }
 }
 
-} // End of GenomicsCrewAgentsLoaded check
-
-// Export all agent classes
-if (typeof module !== 'undefined' && module.exports) {
-    // Node.js environment
-    module.exports = {
-        GenomicsDataAnalyst,
-        BioinformaticsResearcher,
-        GenomeNavigator,
-        QualityController,
-        ProjectCoordinator
-    };
-} else {
-    // Browser environment
-    console.log('🔧 Exporting GenomicsCrewAgents classes to window object...');
-    try {
-        window.GenomicsDataAnalyst = GenomicsDataAnalyst;
-        window.BioinformaticsResearcher = BioinformaticsResearcher;
-        window.GenomeNavigator = GenomeNavigator;
-        window.QualityController = QualityController;
-        window.ProjectCoordinator = ProjectCoordinator;
-        console.log('✅ GenomicsCrewAgents classes exported successfully');
-    } catch (error) {
-        console.error('❌ Error exporting GenomicsCrewAgents classes:', error);
+    // Export all agent classes
+    if (typeof module !== 'undefined' && module.exports) {
+        // Node.js environment
+        module.exports = {
+            GenomicsDataAnalyst,
+            BioinformaticsResearcher,
+            GenomeNavigator,
+            QualityController,
+            ProjectCoordinator
+        };
+    } else {
+        // Browser environment
+        console.log('🔧 Exporting GenomicsCrewAgents classes to window object...');
+        try {
+            window.GenomicsDataAnalyst = GenomicsDataAnalyst;
+            window.BioinformaticsResearcher = BioinformaticsResearcher;
+            window.GenomeNavigator = GenomeNavigator;
+            window.QualityController = QualityController;
+            window.ProjectCoordinator = ProjectCoordinator;
+            console.log('✅ GenomicsCrewAgents classes exported successfully');
+        } catch (error) {
+            console.error('❌ Error exporting GenomicsCrewAgents classes:', error);
+        }
     }
-}
+
+} // End of GenomicsCrewAgentsLoaded check
