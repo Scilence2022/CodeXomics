@@ -1638,8 +1638,30 @@ function createMenu() {
       ]
     },
     {
-      label: 'Edit',
+      label: 'Search && Edit',
       submenu: [
+        {
+          label: 'Search Sequence',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => {
+            sendToCurrentMainWindow('show-search');
+          }
+        },
+        {
+          label: 'Go to Position',
+          accelerator: 'CmdOrCtrl+G',
+          click: () => {
+            sendToCurrentMainWindow('show-goto');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Configure Search',
+          click: () => {
+            sendToCurrentMainWindow('configure-search');
+          }
+        },
+        { type: 'separator' },
         {
           label: 'Copy',
           accelerator: 'CmdOrCtrl+C',
@@ -1803,21 +1825,6 @@ function createMenu() {
     {
       label: 'Tools',
       submenu: [
-        {
-          label: 'Search Sequence',
-          accelerator: 'CmdOrCtrl+F',
-          click: () => {
-            sendToCurrentMainWindow('show-search');
-          }
-        },
-        {
-          label: 'Go to Position',
-          accelerator: 'CmdOrCtrl+G',
-          click: () => {
-            sendToCurrentMainWindow('show-goto');
-          }
-        },
-        { type: 'separator' },
         {
           label: 'Circos Genome Plotter',
           accelerator: 'CmdOrCtrl+Shift+C',
@@ -2019,13 +2026,6 @@ function createMenu() {
           label: 'Multi-Agent Settings',
           click: () => {
             sendToCurrentMainWindow('multi-agent-settings');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Configure Search',
-          click: () => {
-            sendToCurrentMainWindow('configure-search');
           }
         },
         { type: 'separator' },
@@ -5472,10 +5472,25 @@ function createProjectManagerMenu(projectManagerWindow) {
       ]
     },
     
-    // Edit Menu
+    // Search && Edit Menu
     {
-      label: 'Edit',
+      label: 'Search && Edit',
       submenu: [
+        {
+          label: 'Find Files...',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-find-files');
+          }
+        },
+        {
+          label: 'Find and Replace...',
+          accelerator: 'CmdOrCtrl+H',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-find-replace');
+          }
+        },
+        { type: 'separator' },
         {
           label: 'Undo',
           accelerator: 'CmdOrCtrl+Z',
@@ -5525,21 +5540,6 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'Escape',
           click: () => {
             projectManagerWindow.webContents.send('menu-clear-selection');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Find Files...',
-          accelerator: 'CmdOrCtrl+F',
-          click: () => {
-            projectManagerWindow.webContents.send('menu-find-files');
-          }
-        },
-        {
-          label: 'Find and Replace...',
-          accelerator: 'CmdOrCtrl+H',
-          click: () => {
-            projectManagerWindow.webContents.send('menu-find-replace');
           }
         }
       ]
