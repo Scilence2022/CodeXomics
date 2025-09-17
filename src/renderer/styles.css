@@ -14140,106 +14140,10 @@ to {
 
 /* Search Settings Modal Styles */
 .search-settings-modal {
-    width: 700px;
-    max-width: 95vw;
-    max-height: 90vh;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
     overflow: hidden;
-    position: relative;
-    min-width: 500px;
-    min-height: 350px;
-}
-
-.search-settings-modal.draggable {
-    cursor: move;
-}
-
-.search-settings-modal.draggable .modal-header {
-    cursor: move;
-    user-select: none;
-}
-
-.search-settings-modal.resizable {
-    resize: none;
-    overflow: visible;
-}
-
-.search-settings-modal .modal-body {
-    background: var(--bg-primary);
-    overflow: hidden;
-}
-
-/* Search Settings Modal Resize Handles */
-.search-settings-modal .resize-handle-right {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 12px;
-    height: 100%;
-    cursor: ew-resize;
-    background: transparent;
-    z-index: 1000;
-    pointer-events: auto;
-}
-
-.search-settings-modal .resize-handle-bottom {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 12px;
-    cursor: ns-resize;
-    background: transparent;
-    z-index: 1000;
-    pointer-events: auto;
-}
-
-.search-settings-modal .resize-handle-corner {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 16px;
-    height: 16px;
-    cursor: nw-resize;
-    background: transparent;
-    z-index: 1001;
-    pointer-events: auto;
-}
-
-.search-settings-modal .resize-handle-right:hover,
-.search-settings-modal .resize-handle-bottom:hover,
-.search-settings-modal .resize-handle-corner:hover {
-    background: rgba(59, 130, 246, 0.3);
-}
-
-/* Make resize handles more visible */
-.search-settings-modal .resize-handle-corner::after {
-    content: '';
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 8px;
-    height: 8px;
-    background: rgba(59, 130, 246, 0.5);
-    border-radius: 2px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.search-settings-modal .resize-handle-corner:hover::after {
-    opacity: 1;
-}
-
-/* Ensure resize handles are always visible and clickable */
-.search-settings-modal .resize-handle-right,
-.search-settings-modal .resize-handle-bottom,
-.search-settings-modal .resize-handle-corner {
-    border: 1px solid transparent;
-}
-
-.search-settings-modal .resize-handle-right:hover,
-.search-settings-modal .resize-handle-bottom:hover,
-.search-settings-modal .resize-handle-corner:hover {
-    border-color: rgba(59, 130, 246, 0.5);
 }
 
 .search-settings-container {
@@ -14247,10 +14151,8 @@ to {
     flex-direction: column;
     gap: 24px;
     padding: 20px;
-    min-height: calc(100% - 120px);
+    max-height: 60vh;
     overflow-y: auto;
-    overflow-x: hidden;
-    background: var(--bg-primary);
 }
 
 .settings-group {

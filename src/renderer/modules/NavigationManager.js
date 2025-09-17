@@ -2067,31 +2067,9 @@ class NavigationManager {
      */
     showSearchSettingsModal() {
         const modal = document.getElementById('searchSettingsModal');
-        const modalContent = modal?.querySelector('.modal-content');
-        
-        if (modal && modalContent) {
+        if (modal) {
             this.loadSearchSettings();
-            
-            // Set default size if no saved size exists
-            this.ensureDefaultSize(modalContent);
-            
-            // Load saved position and size
-            this.loadModalPosition(modalContent);
-            
-            // Initialize drag and resize functionality
-            this.initializeModalDragResize(modal, modalContent);
-            
             modal.classList.add('show');
-        }
-    }
-
-    /**
-     * Ensure default size is set for the modal
-     */
-    ensureDefaultSize(modalContent) {
-        if (!modalContent.style.width || !modalContent.style.height) {
-            modalContent.style.width = '700px';
-            modalContent.style.height = '500px';
         }
     }
 
@@ -2292,41 +2270,25 @@ class NavigationManager {
         });
         
         if (resizeHandleRight) {
-            resizeHandleRight.addEventListener('mousedown', (e) => {
-                console.log('Right handle mousedown');
-                handleResizeStart(e);
-            });
+            resizeHandleRight.addEventListener('mousedown', handleResizeStart);
             console.log('Right handle event listener added');
         }
         
         if (resizeHandleBottom) {
-            resizeHandleBottom.addEventListener('mousedown', (e) => {
-                console.log('Bottom handle mousedown');
-                handleResizeStart(e);
-            });
+            resizeHandleBottom.addEventListener('mousedown', handleResizeStart);
             console.log('Bottom handle event listener added');
         }
         
         if (resizeHandleCorner) {
-            resizeHandleCorner.addEventListener('mousedown', (e) => {
-                console.log('Corner handle mousedown');
-                handleResizeStart(e);
-            });
+            resizeHandleCorner.addEventListener('mousedown', handleResizeStart);
             console.log('Corner handle event listener added');
         }
         
         // Handle corner resize and edge detection
         modalContent.addEventListener('mousedown', (e) => {
             const rect = modalContent.getBoundingClientRect();
-            const handleSize = 16;
+            const handleSize = 24;
             const edgeSize = 12;
-            
-            console.log('Modal mousedown event:', {
-                target: e.target,
-                clientX: e.clientX,
-                clientY: e.clientY,
-                rect: rect
-            });
             
             // Check if mouse is in corner resize area
             const isInCornerArea = (
@@ -2378,8 +2340,8 @@ class NavigationManager {
                 const deltaY = e.clientY - startY;
                 
                 // Apply constraints
-                const minWidth = 500;
-                const minHeight = 350;
+                const minWidth = 800;
+                const minHeight = 500;
                 const maxWidth = window.innerWidth * 0.95;
                 const maxHeight = window.innerHeight * 0.9;
                 
