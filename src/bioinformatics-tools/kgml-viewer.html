@@ -1348,7 +1348,9 @@
                     const node1 = this.nodes.get(relation.entry1);
                     const node2 = this.nodes.get(relation.entry2);
 
-                    if (!node1?.graphics || !node2?.graphics) return;
+                    if (!node1?.graphics || !node2?.graphics) {
+                        return;
+                    }
 
                     const relationType = relation.type || 'other';
                     if (relationGroups[relationType]) {
@@ -1370,7 +1372,7 @@
 
             renderRelationLine(container, relation, node1, node2) {
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    line.classList.add('relation-line');
+                line.classList.add('relation-line');
                 line.setAttribute('data-entry1', relation.entry1);
                 line.setAttribute('data-entry2', relation.entry2);
                 line.setAttribute('data-type', relation.type);
@@ -1379,13 +1381,13 @@
                 const path = this.calculateSmartPath(node1.graphics, node2.graphics, relation.type);
                 line.setAttribute('d', path);
 
-                    // Set line style based on relation type
+                // Set line style based on relation type
                 const style = this.getRelationStyle(relation.type);
                 Object.entries(style).forEach(([key, value]) => {
                     line.setAttribute(key, value);
                 });
 
-                    container.appendChild(line);
+                container.appendChild(line);
             }
 
             calculateSmartPath(graphics1, graphics2, relationType) {
@@ -1469,7 +1471,6 @@
                     'C00122': 'Fumarate',
                     'C00149': '(S)-Malate',
                     'C00074': 'Phosphoenolpyruvate',
-                    'C00022': 'Pyruvate',
                     'C00033': 'Acetate',
                     'C00068': 'Thiamine pyrophosphate',
                     'C00003': 'NAD+',
@@ -1478,7 +1479,6 @@
                     'C00006': 'NADPH',
                     'C00010': 'CoA',
                     'C00025': 'L-Glutamate',
-                    'C00026': '2-Oxoglutarate',
                     'C00037': 'Glycine',
                     'C00041': 'L-Alanine',
                     'C00049': 'L-Aspartate',
@@ -1552,19 +1552,34 @@
                     'C01401': 'Oxaloacetate'
                 };
 
-                // Try to get name from graphics first, then from compound mapping
+                // Try to get name from graphics first
                 const graphicsName = entryData.graphics?.name;
-                if (graphicsName && graphicsName !== entryData.id) {
+                if (graphicsName && graphicsName !== entryData.id && graphicsName.trim() !== '') {
                     return graphicsName;
                 }
 
-                // Extract compound ID from name attribute
+                // Extract compound ID from name attribute and look up in mapping
                 const nameAttr = entryData.name;
                 if (nameAttr) {
                     const compoundIds = nameAttr.split(' ');
                     for (const id of compoundIds) {
                         if (compoundNames[id]) {
                             return compoundNames[id];
+                        }
+                    }
+                    // If no mapping found, try to clean up the name
+                    const cleanName = nameAttr.replace(/^cpd:/, '').replace(/^C\d+/, '').trim();
+                    if (cleanName && cleanName !== entryData.id) {
+                        return cleanName;
+                    }
+                }
+
+                // Try to extract from graphics name if it contains useful info
+                if (graphicsName && graphicsName.includes(' ')) {
+                    const parts = graphicsName.split(' ');
+                    for (const part of parts) {
+                        if (compoundNames[part]) {
+                            return compoundNames[part];
                         }
                     }
                 }
