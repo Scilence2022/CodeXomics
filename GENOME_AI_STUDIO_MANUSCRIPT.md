@@ -103,7 +103,7 @@ Conversation Data Structure:
 ```
 
 **Multi-Agent System Integration:**
-Genome AI Studio incorporates a CrewAI-inspired multi-agent system that enables collaborative AI analysis through specialized agents:
+Genome AI Studio incorporates a multi-agent system that enables collaborative AI analysis through specialized agents:
 
 - **GenomicsDataAnalyst**: Data processing and analysis with sequence search, region analysis, and annotation lookup capabilities
 - **BioinformaticsResearcher**: External database searches including BLAST searches, protein structure analysis, and phylogenetic analysis

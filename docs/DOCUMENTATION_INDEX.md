@@ -71,7 +71,6 @@ This document serves as the central navigation hub for the **Genome AI Studio v0
 ### **3. 🤖 AI Integration & Advanced Features**
 
 #### **AI System Documentation**
-- **[CrewAI Integration](CrewAI-Integration.md)** - Multi-agent system documentation
 - **[AI Integration Guide](implementation-summaries/PLUGIN_FUNCTION_CALLING_INTEGRATION.md)** - AI system integration
 - **[Smart Execution System](SMART_EXECUTION_GUIDE.md)** - Intelligent function execution
 
@@ -228,7 +227,6 @@ Setup → Learning → Mastery → Innovation
 
 ### **AI Integration**
 - **[Smart Execution Guide](SMART_EXECUTION_GUIDE.md)** - AI-powered execution
-- **[CrewAI Integration](CrewAI-Integration.md)** - Multi-agent system
 - **[Function Calling Analysis](implementation-summaries/COMPREHENSIVE_FUNCTION_CALLING_ANALYSIS_REPORT.md)** - AI system architecture
 
 ---
