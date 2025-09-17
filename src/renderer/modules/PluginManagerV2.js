@@ -27,6 +27,7 @@ class PluginManagerV2 {
         this.api = null;
         this.resourceManager = null;
         this.marketplace = null;
+        this.promptProvider = null;
         this.eventBus = new EventTarget();
         
         // Plugin registries - separated by type for better organization
@@ -84,6 +85,11 @@ class PluginManagerV2 {
                 });
                 console.log('✅ PluginResourceManager initialized');
             }
+            
+            // 3. Initialize Plugin Prompt Provider
+            const { default: PluginPromptProvider } = await import('./PluginPromptProvider.js');
+            this.promptProvider = new PluginPromptProvider();
+            console.log('✅ PluginPromptProvider initialized');
             
             // 3. Initialize Plugin Marketplace
             if (this.options.enableMarketplace !== false) {
@@ -331,6 +337,92 @@ class PluginManagerV2 {
                         required: ['sequences']
                     },
                     executor: 'PluginExecutors.classifySequence'
+                }
+            }
+        });
+
+        // UniProt Database Search Plugin
+        const uniprotPlugin = new (await import('./Plugins/UniProtSearchPlugin.js')).default(this.app, this.configManager);
+        
+        // Get plugin metadata from the plugin itself
+        const uniprotMetadata = uniprotPlugin.constructor.getPluginMetadata();
+        
+        // Register plugin prompts
+        if (uniprotPlugin.getChatBoxPromptInfo) {
+            const promptInfo = uniprotPlugin.getChatBoxPromptInfo();
+            this.promptProvider.registerPluginPrompts('uniprot-search', promptInfo);
+        }
+        
+        await this.registerPlugin('uniprot-search', {
+            ...uniprotMetadata,
+            functions: {
+                searchUniProt: {
+                    description: 'Search UniProt database for proteins with comprehensive filtering options',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            query: { type: 'string', description: 'Search query (gene name, protein name, UniProt ID, or keywords)' },
+                            searchType: { type: 'string', enum: ['auto', 'gene_name', 'protein_name', 'uniprot_id', 'keyword', 'organism'], default: 'auto' },
+                            organism: { type: 'string', description: 'Organism filter (scientific name, common name, or taxonomy ID)' },
+                            reviewedOnly: { type: 'boolean', default: false, description: 'Only return reviewed (Swiss-Prot) entries' },
+                            maxResults: { type: 'integer', default: 25, maximum: 100, description: 'Maximum number of results to return' }
+                        },
+                        required: ['query']
+                    },
+                    executor: async (context) => { return await uniprotPlugin.searchUniProt(context.parameters); }
+                },
+                searchByGene: {
+                    description: 'Search proteins by gene name (optimized for gene queries)',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            geneName: { type: 'string', description: 'Gene name or symbol (e.g., TP53, INS, BRCA1)' },
+                            organism: { type: 'string', description: 'Organism filter (e.g., human, mouse, ecoli)' },
+                            reviewedOnly: { type: 'boolean', default: true, description: 'Only return reviewed entries' },
+                            maxResults: { type: 'integer', default: 10, description: 'Maximum number of results' }
+                        },
+                        required: ['geneName']
+                    },
+                    executor: async (context) => { return await uniprotPlugin.searchByGene(context.parameters); }
+                },
+                searchByProtein: {
+                    description: 'Search proteins by protein name (optimized for protein queries)',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            proteinName: { type: 'string', description: 'Protein name (e.g., insulin, p53, hemoglobin)' },
+                            organism: { type: 'string', description: 'Organism filter' },
+                            reviewedOnly: { type: 'boolean', default: true, description: 'Only return reviewed entries' },
+                            maxResults: { type: 'integer', default: 10, description: 'Maximum number of results' }
+                        },
+                        required: ['proteinName']
+                    },
+                    executor: async (context) => { return await uniprotPlugin.searchByProtein(context.parameters); }
+                },
+                getProteinById: {
+                    description: 'Get detailed protein information by UniProt ID',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            uniprotId: { type: 'string', description: 'UniProt accession ID (e.g., P04637, P01308)' },
+                            includeSequence: { type: 'boolean', default: true, description: 'Include protein sequence' }
+                        },
+                        required: ['uniprotId']
+                    },
+                    executor: async (context) => { return await uniprotPlugin.getProteinById(context.parameters); }
+                },
+                searchByFunction: {
+                    description: 'Search proteins by functional keywords or GO terms',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            keywords: { type: 'string', description: 'Functional keywords (e.g., kinase, transcription factor, membrane)' },
+                            organism: { type: 'string', description: 'Organism filter' },
+                            maxResults: { type: 'integer', default: 25, description: 'Maximum number of results' }
+                        },
+                        required: ['keywords']
+                    },
+                    executor: async (context) => { return await uniprotPlugin.searchByFunction(context.parameters); }
                 }
             }
         });
@@ -849,6 +941,39 @@ class PluginManagerV2 {
      */
     getTotalPluginCount() {
         return Object.values(this.pluginRegistry).reduce((total, registry) => total + registry.size, 0);
+    }
+
+    /**
+     * Get ChatBox system prompt section from all plugins
+     */
+    getPluginSystemPromptSection() {
+        if (!this.promptProvider) {
+            return '';
+        }
+        
+        return this.promptProvider.generateSystemPromptSection();
+    }
+
+    /**
+     * Get plugin tool categories for ChatBox
+     */
+    getPluginToolCategories() {
+        if (!this.promptProvider) {
+            return {};
+        }
+        
+        return this.promptProvider.getToolCategoriesForPrompt();
+    }
+
+    /**
+     * Get all plugin functions for tool listing
+     */
+    getAllPluginFunctions() {
+        if (!this.promptProvider) {
+            return [];
+        }
+        
+        return this.promptProvider.getAllPluginFunctions();
     }
 
     /**

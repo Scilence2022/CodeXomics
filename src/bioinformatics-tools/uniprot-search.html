@@ -384,11 +384,21 @@
                         <option value="9606">Homo sapiens (Human)</option>
                         <option value="10090">Mus musculus (Mouse)</option>
                         <option value="83333">Escherichia coli K-12</option>
+                        <option value="196627">Corynebacterium glutamicum</option>
                         <option value="559292">Saccharomyces cerevisiae</option>
                         <option value="7227">Drosophila melanogaster</option>
                         <option value="6239">Caenorhabditis elegans</option>
                         <option value="3702">Arabidopsis thaliana</option>
+                        <option value="custom">Custom organism...</option>
                     </select>
+                </div>
+
+                <div class="form-group" id="customOrganismGroup" style="display: none;">
+                    <label class="form-label">Custom Organism Name</label>
+                    <input type="text" class="form-control" id="customOrganism" placeholder="Enter organism name (e.g., Bacillus subtilis)">
+                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">
+                        Enter the scientific name of the organism you want to search for.
+                    </div>
                 </div>
 
                 <button class="btn btn-primary btn-block" id="searchBtn">
@@ -508,6 +518,18 @@
                 document.getElementById('searchQuery').addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') this.search();
                 });
+
+                // Custom organism toggle
+                document.getElementById('organismFilter').addEventListener('change', (e) => {
+                    const customGroup = document.getElementById('customOrganismGroup');
+                    if (e.target.value === 'custom') {
+                        customGroup.style.display = 'block';
+                        document.getElementById('customOrganism').focus();
+                    } else {
+                        customGroup.style.display = 'none';
+                        document.getElementById('customOrganism').value = '';
+                    }
+                });
             }
 
             loadExample() {
@@ -537,7 +559,19 @@
                 }
 
                 const searchType = document.getElementById('searchType').value;
-                const organism = document.getElementById('organismFilter').value;
+                let organism = document.getElementById('organismFilter').value;
+                
+                // Handle custom organism input
+                if (organism === 'custom') {
+                    const customOrganism = document.getElementById('customOrganism').value.trim();
+                    if (!customOrganism) {
+                        this.showStatus('Please enter a custom organism name.', 'error');
+                        this.showLoading(false);
+                        return;
+                    }
+                    organism = customOrganism;
+                }
+                
                 const reviewedOnly = document.getElementById('reviewedOnly').checked;
                 const minLength = parseInt(document.getElementById('minLength').value) || null;
                 const maxLength = parseInt(document.getElementById('maxLength').value) || null;
@@ -629,6 +663,7 @@
                         '9606': 'Homo sapiens',
                         '10090': 'Mus musculus',
                         '83333': 'Escherichia coli',
+                        '196627': 'Corynebacterium glutamicum',
                         '559292': 'Saccharomyces cerevisiae',
                         '7227': 'Drosophila melanogaster',
                         '6239': 'Caenorhabditis elegans',

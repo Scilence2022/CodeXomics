@@ -4096,9 +4096,29 @@ Data Management:
             ]
         };
 
-        return Object.entries(categories)
+        // Add plugin tool categories dynamically
+        const pluginCategories = this.getPluginToolCategories();
+        const allCategories = { ...categories, ...pluginCategories };
+        
+        return Object.entries(allCategories)
             .map(([category, tools]) => `${category}: ${tools.join(', ')}`)
             .join('\n');
+    }
+
+    /**
+     * Get plugin tool categories from plugin manager
+     */
+    getPluginToolCategories() {
+        if (!this.pluginManager || !this.pluginManager.getPluginToolCategories) {
+            return {};
+        }
+        
+        try {
+            return this.pluginManager.getPluginToolCategories();
+        } catch (error) {
+            console.error('Error getting plugin tool categories:', error);
+            return {};
+        }
     }
 
     /**
@@ -4934,9 +4954,11 @@ CORRECT format:
 
 Tool Selection Priority:
 1. First try MCP server tools (if available and connected)
-2. Use MicrobeGenomicsFunctions for specialized genomic analysis
-3. Fall back to built-in local tools
-4. Use the most appropriate tool for the task regardless of source
+2. Use Plugin System tools for database searches and advanced analysis
+3. Use MicrobeGenomicsFunctions for specialized genomic analysis
+4. Fall back to built-in local tools
+5. Use the most appropriate tool for the task regardless of source
+
 
 Basic Tool Examples:
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
@@ -5106,7 +5128,16 @@ ${this.getPluginSystemInfo()}`;
      * Get plugin system information for system message
      */
     getPluginSystemInfo() {
-        // Use the new integrator if available
+        // Use the new plugin prompt system (preferred)
+        if (this.pluginManager && this.pluginManager.getPluginSystemPromptSection) {
+            try {
+                return this.pluginManager.getPluginSystemPromptSection();
+            } catch (error) {
+                console.error('Error getting plugin system prompt section:', error);
+            }
+        }
+        
+        // Use the integrator if available (fallback)
         if (this.pluginFunctionCallsIntegrator) {
             try {
                 const systemInfo = this.pluginFunctionCallsIntegrator.getPluginFunctionsSystemInfo();
@@ -5121,7 +5152,6 @@ ${this.getPluginSystemInfo()}`;
                 return info;
             } catch (error) {
                 console.error('Error getting plugin system info from integrator:', error);
-                // Fall back to original method
             }
         }
         
@@ -5150,6 +5180,14 @@ ${this.getPluginSystemInfo()}`;
                 info += '- Build phylogenetic tree: {"tool_name": "phylogenetic-analysis.buildPhylogeneticTree", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGC", "name": "Sequence 1"}], "method": "nj"}}\\n';
                 info += '- Predict gene function: {"tool_name": "ml-analysis.predictGeneFunction", "parameters": {"sequence": "ATGCGCTATCG", "model": "cnn", "threshold": 0.7}}\\n';
                 info += '- Cluster sequences: {"tool_name": "ml-analysis.clusterSequences", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGC"}], "algorithm": "kmeans", "numClusters": 3}}\\n';
+                
+                // UniProt Database Search Functions
+                info += '\\nUNIPROT DATABASE SEARCH FUNCTIONS:\\n';
+                info += '- Search UniProt database: {"tool_name": "uniprot-search.searchUniProt", "parameters": {"query": "TP53", "organism": "human", "reviewedOnly": true, "maxResults": 10}}\\n';
+                info += '- Search by gene name: {"tool_name": "uniprot-search.searchByGene", "parameters": {"geneName": "INS", "organism": "human", "reviewedOnly": true}}\\n';
+                info += '- Search by protein name: {"tool_name": "uniprot-search.searchByProtein", "parameters": {"proteinName": "insulin", "organism": "human"}}\\n';
+                info += '- Get protein by ID: {"tool_name": "uniprot-search.getProteinById", "parameters": {"uniprotId": "P04637", "includeSequence": true}}\\n';
+                info += '- Search by function: {"tool_name": "uniprot-search.searchByFunction", "parameters": {"keywords": "kinase", "organism": "mouse", "maxResults": 15}}\\n';
             }
             
             if (visualizations.length > 0) {

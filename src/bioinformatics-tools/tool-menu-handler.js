@@ -195,7 +195,7 @@ class ToolMenuHandler {
             if (typeof require !== 'undefined') {
                 const { clipboard } = require('electron');
                 clipboard.writeText(selection.toString());
-                this.showToast('文本已复制到剪贴板');
+                this.showToast('Text copied to clipboard');
             }
         } else {
             // 如果没有选中文本，复制结果区域的内容
@@ -205,7 +205,7 @@ class ToolMenuHandler {
                 if (typeof require !== 'undefined') {
                     const { clipboard } = require('electron');
                     clipboard.writeText(textContent);
-                    this.showToast('分析结果已复制到剪贴板');
+                    this.showToast('Analysis results copied to clipboard');
                 }
             }
         }
@@ -221,7 +221,7 @@ class ToolMenuHandler {
             if (inputElement && document.activeElement !== inputElement) {
                 inputElement.value = clipboardText;
                 inputElement.focus();
-                this.showToast('数据已粘贴到输入框');
+                this.showToast('Data pasted to input field');
             }
         }
     }
@@ -237,7 +237,7 @@ class ToolMenuHandler {
                 if (document.activeElement.matches('input, textarea')) {
                     document.execCommand('delete');
                 }
-                this.showToast('文本已剪切到剪贴板');
+                this.showToast('Text cut to clipboard');
             }
         }
     }
@@ -261,7 +261,7 @@ class ToolMenuHandler {
     // === 查找功能 ===
     showFindDialog() {
         // 简单的查找对话框
-        const searchTerm = prompt('请输入要查找的文本:');
+        const searchTerm = prompt('Enter text to search for:');
         if (searchTerm) {
             this.currentSearchTerm = searchTerm;
             this.findTextInPage(searchTerm);
@@ -307,22 +307,22 @@ class ToolMenuHandler {
                 
                 dialog.showSaveDialog({
                     filters: [
-                        { name: '文本文件', extensions: ['txt'] },
-                        { name: 'CSV文件', extensions: ['csv'] },
-                        { name: 'JSON文件', extensions: ['json'] },
+                        { name: 'Text Files', extensions: ['txt'] },
+                        { name: 'CSV Files', extensions: ['csv'] },
+                        { name: 'JSON Files', extensions: ['json'] },
                         { name: '所有文件', extensions: ['*'] }
                     ]
                 }).then(result => {
                     if (!result.canceled) {
                         fs.writeFileSync(result.filePath, resultsContent);
-                        this.showToast('结果已保存');
+                        this.showToast('Results saved successfully');
                     }
                 });
             } catch (error) {
-                this.showToast('保存失败: ' + error.message);
+                this.showToast('Save failed: ' + error.message);
             }
         } else {
-            this.showToast('没有可保存的结果');
+            this.showToast('No results to save');
         }
     }
 
@@ -347,9 +347,9 @@ class ToolMenuHandler {
             a.download = `${this.toolName.toLowerCase().replace(/\s+/g, '-')}-results.json`;
             a.click();
             URL.revokeObjectURL(url);
-            this.showToast('数据已导出');
+            this.showToast('Data exported successfully');
         } else {
-            this.showToast('没有可导出的数据');
+            this.showToast('No data to export');
         }
     }
 
@@ -361,10 +361,10 @@ class ToolMenuHandler {
                 const inputElement = this.findMainInputElement();
                 if (inputElement) {
                     inputElement.value = content;
-                    this.showToast('文件已加载');
+                    this.showToast('File loaded successfully');
                 }
             } catch (error) {
-                this.showToast('文件加载失败: ' + error.message);
+                this.showToast('File loading failed: ' + error.message);
             }
         }
     }
@@ -374,7 +374,7 @@ class ToolMenuHandler {
         if (this.toolInstance && this.toolInstance.loadExample) {
             this.toolInstance.loadExample();
         } else {
-            this.showToast('该工具不支持示例数据');
+            this.showToast('This tool does not support sample data');
         }
     }
 
@@ -391,7 +391,7 @@ class ToolMenuHandler {
             if (analyzeButton) {
                 analyzeButton.click();
             } else {
-                this.showToast('找不到分析功能');
+                this.showToast('Analysis function not found');
             }
         }
     }
@@ -400,7 +400,7 @@ class ToolMenuHandler {
         if (this.toolInstance && this.toolInstance.stopAnalysis) {
             this.toolInstance.stopAnalysis();
         } else {
-            this.showToast('停止分析功能不可用');
+            this.showToast('Stop analysis function not available');
         }
     }
 
@@ -415,7 +415,7 @@ class ToolMenuHandler {
             } else {
                 const resultsContainer = this.findResultsContainer();
                 if (resultsContainer) {
-                    resultsContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">结果已清除</div>';
+                    resultsContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Results cleared</div>';
                 }
             }
         }
@@ -430,7 +430,7 @@ class ToolMenuHandler {
     }
 
     resetParameters() {
-        if (confirm('确定要重置所有参数吗？')) {
+        if (confirm('Are you sure you want to reset all parameters?')) {
             // 重置所有输入字段到默认值
             const inputs = document.querySelectorAll('input, select, textarea');
             inputs.forEach(input => {
@@ -444,62 +444,62 @@ class ToolMenuHandler {
                     input.value = input.defaultValue || input.min || 0;
                 }
             });
-            this.showToast('参数已重置');
+            this.showToast('Parameters reset successfully');
         }
     }
 
     // === 设置和帮助 ===
     showPreferences() {
-        alert(`${this.toolName} 偏好设置\n\n偏好设置功能正在开发中...\n\n您可以通过修改工具参数来自定义分析行为。`);
+        alert(`${this.toolName} Preferences\n\nPreferences functionality is under development...\n\nYou can customize analysis behavior by modifying tool parameters.`);
     }
 
     showAnalysisSettings() {
-        alert(`${this.toolName} 分析设置\n\n分析设置功能正在开发中...\n\n请使用工具界面上的参数控件来调整分析设置。`);
+        alert(`${this.toolName} Analysis Settings\n\nAnalysis settings functionality is under development...\n\nPlease use the parameter controls on the tool interface to adjust analysis settings.`);
     }
 
     showOutputFormat() {
-        alert(`${this.toolName} 输出格式\n\n支持的输出格式:\n- 文本文件 (.txt)\n- CSV文件 (.csv)\n- JSON文件 (.json)\n\n使用 "保存结果" 或 "导出数据" 来选择格式。`);
+        alert(`${this.toolName} Output Format\n\nSupported output formats:\n- Text files (.txt)\n- CSV files (.csv)\n- JSON files (.json)\n\nUse "Save Results" or "Export Data" to select format.`);
     }
 
     showAdvancedOptions() {
-        alert(`${this.toolName} 高级选项\n\n高级选项功能正在开发中...\n\n请使用工具界面上的高级参数控件。`);
+        alert(`${this.toolName} Advanced Options\n\nAdvanced options functionality is under development...\n\nPlease use the advanced parameter controls on the tool interface.`);
     }
 
     showAbout(toolName) {
         const name = toolName || this.toolName;
-        alert(`关于 ${name}\n\n这是Genome AI Studio生物信息学工具套件的一部分。\n\n版本: 0.2.0\n开发者: Genome AI Studio Team\n\n${name}提供专业的生物信息学分析功能，帮助研究人员进行基因组数据分析。`);
+        alert(`About ${name}\n\nThis is part of the Genome AI Studio bioinformatics toolkit.\n\nVersion: 0.2.0\nDeveloper: Genome AI Studio Team\n\n${name} provides professional bioinformatics analysis capabilities to help researchers analyze genomic data.`);
     }
 
     showUserGuide() {
-        const helpText = `${this.toolName} 用户指南
+        const helpText = `${this.toolName} User Guide
 
-基本操作:
-1. 输入或导入数据
-2. 设置分析参数
-3. 运行分析
-4. 查看结果
-5. 保存或导出数据
+Basic Operations:
+1. Input or import data
+2. Set analysis parameters
+3. Run analysis
+4. View results
+5. Save or export data
 
-快捷键:
-- Ctrl/Cmd+N: 新建分析
-- Ctrl/Cmd+O: 打开文件
-- Ctrl/Cmd+S: 保存结果
-- Ctrl/Cmd+E: 导出数据
-- Ctrl/Cmd+C: 复制
-- Ctrl/Cmd+V: 粘贴
-- Ctrl/Cmd+F: 查找
-- Ctrl/Cmd+L: 加载示例数据
-- Ctrl/Cmd+R: 运行分析
-- F1: 显示帮助
-- F5: 刷新
+Keyboard Shortcuts:
+- Ctrl/Cmd+N: New analysis
+- Ctrl/Cmd+O: Open file
+- Ctrl/Cmd+S: Save results
+- Ctrl/Cmd+E: Export data
+- Ctrl/Cmd+C: Copy
+- Ctrl/Cmd+V: Paste
+- Ctrl/Cmd+F: Find
+- Ctrl/Cmd+L: Load sample data
+- Ctrl/Cmd+R: Run analysis
+- F1: Show help
+- F5: Refresh
 
-需要更多帮助？请查看工具文档或联系技术支持。`;
+Need more help? Please check the tool documentation or contact technical support.`;
 
         alert(helpText);
     }
 
     showDocumentation() {
-        alert(`${this.toolName} 文档\n\n在线文档功能正在开发中...\n\n您可以:\n1. 使用F1键查看快速帮助\n2. 查看工具界面上的提示信息\n3. 联系技术支持获取详细说明`);
+        alert(`${this.toolName} Documentation\n\nOnline documentation functionality is under development...\n\nYou can:\n1. Use F1 key to view quick help\n2. Check tooltip information on the tool interface\n3. Contact technical support for detailed instructions`);
     }
 
     showOnlineResources() {
@@ -507,7 +507,7 @@ class ToolMenuHandler {
             const { shell } = require('electron');
             shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio');
         } else {
-            alert('在线资源:\n\n- GitHub项目页面\n- 用户手册\n- 示例数据\n- 视频教程\n\n请访问项目官网获取更多资源。');
+            alert('Online Resources:\n\n- GitHub project page\n- User manual\n- Sample data\n- Video tutorials\n\nPlease visit the project website for more resources.');
         }
     }
 
