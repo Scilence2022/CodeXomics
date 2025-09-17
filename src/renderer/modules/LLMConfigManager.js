@@ -87,6 +87,45 @@ class LLMConfigManager {
             }
         };
         
+        // Model type configurations
+        this.modelTypes = {
+            reasoning: {
+                provider: 'auto',
+                model: 'auto',
+                description: 'For complex reasoning and analysis tasks'
+            },
+            task: {
+                provider: 'auto',
+                model: 'auto',
+                description: 'For general task execution and completion'
+            },
+            code: {
+                provider: 'auto',
+                model: 'auto',
+                description: 'For code generation and programming tasks'
+            },
+            voiceTTS: {
+                provider: 'auto',
+                model: 'auto',
+                description: 'For text-to-speech conversion'
+            },
+            voiceSTT: {
+                provider: 'auto',
+                model: 'auto',
+                description: 'For speech-to-text conversion'
+            },
+            image: {
+                provider: 'auto',
+                model: 'auto',
+                description: 'For image analysis and generation'
+            },
+            multimodal: {
+                provider: 'auto',
+                model: 'auto',
+                description: 'For processing text, images, and other media'
+            }
+        };
+        
         // Initialize asynchronously to wait for ConfigManager
         this.initializeAsync();
     }
@@ -137,6 +176,179 @@ class LLMConfigManager {
         ];
         
         return requiredElements.some(id => document.getElementById(id) !== null);
+    }
+
+    setupModelSelectionEventListeners() {
+        // Provider change handlers for each model type
+        const modelTypes = ['reasoning', 'task', 'code', 'voiceTTS', 'voiceSTT', 'image', 'multimodal'];
+        
+        modelTypes.forEach(type => {
+            const providerSelect = document.getElementById(`${type}Provider`);
+            const modelSelect = document.getElementById(`${type}Model`);
+            
+            if (providerSelect) {
+                providerSelect.addEventListener('change', () => {
+                    this.updateModelTypeOptions(type);
+                });
+            }
+        });
+        
+        // Reset model selection button
+        const resetBtn = document.getElementById('resetModelSelection');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                this.resetModelTypeSelection();
+            });
+        }
+        
+        // Test all models button
+        const testBtn = document.getElementById('testModelSelection');
+        if (testBtn) {
+            testBtn.addEventListener('click', () => {
+                this.testAllModelTypes();
+            });
+        }
+    }
+
+    updateModelTypeOptions(type) {
+        const providerSelect = document.getElementById(`${type}Provider`);
+        const modelSelect = document.getElementById(`${type}Model`);
+        
+        if (!providerSelect || !modelSelect) return;
+        
+        const selectedProvider = providerSelect.value;
+        const provider = this.providers[selectedProvider];
+        
+        // Clear existing options
+        modelSelect.innerHTML = '<option value="auto">Auto (Use provider default)</option>';
+        
+        if (provider && provider.models) {
+            Object.entries(provider.models).forEach(([modelId, modelName]) => {
+                const option = document.createElement('option');
+                option.value = modelId;
+                option.textContent = modelName;
+                modelSelect.appendChild(option);
+            });
+        } else if (provider && provider.availableModels) {
+            provider.availableModels.forEach(modelId => {
+                const option = document.createElement('option');
+                option.value = modelId;
+                option.textContent = modelId;
+                modelSelect.appendChild(option);
+            });
+        }
+    }
+
+    resetModelTypeSelection() {
+        if (confirm('Are you sure you want to reset all model type selections to defaults?')) {
+            Object.keys(this.modelTypes).forEach(type => {
+                this.modelTypes[type].provider = 'auto';
+                this.modelTypes[type].model = 'auto';
+            });
+            
+            this.loadModelTypeSelectionToUI();
+            this.showNotification('Model type selections reset to defaults', 'success');
+        }
+    }
+
+    async testAllModelTypes() {
+        const testBtn = document.getElementById('testModelSelection');
+        if (!testBtn) return;
+        
+        // Update button state
+        testBtn.classList.add('testing');
+        testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+        
+        try {
+            const results = {};
+            const modelTypes = ['reasoning', 'task', 'code', 'voiceTTS', 'voiceSTT', 'image', 'multimodal'];
+            
+            for (const type of modelTypes) {
+                const providerSelect = document.getElementById(`${type}Provider`);
+                const modelSelect = document.getElementById(`${type}Model`);
+                
+                if (providerSelect && modelSelect) {
+                    const provider = providerSelect.value;
+                    const model = modelSelect.value;
+                    
+                    if (provider !== 'auto' && model !== 'auto') {
+                        try {
+                            const providerConfig = this.providers[provider];
+                            if (providerConfig && providerConfig.enabled) {
+                                // Test the specific model
+                                const result = await this.makeTestRequest(provider, providerConfig);
+                                results[type] = { success: true, provider, model };
+                            } else {
+                                results[type] = { success: false, error: 'Provider not enabled', provider, model };
+                            }
+                        } catch (error) {
+                            results[type] = { success: false, error: error.message, provider, model };
+                        }
+                    } else {
+                        results[type] = { success: true, provider: 'auto', model: 'auto', note: 'Using auto selection' };
+                    }
+                }
+            }
+            
+            // Show results
+            const successCount = Object.values(results).filter(r => r.success).length;
+            const totalCount = Object.keys(results).length;
+            
+            testBtn.classList.remove('testing');
+            testBtn.classList.add('success');
+            testBtn.innerHTML = `<i class="fas fa-check"></i> ${successCount}/${totalCount} Models OK`;
+            
+            this.showNotification(`Model testing completed: ${successCount}/${totalCount} models working`, 'success');
+            
+        } catch (error) {
+            testBtn.classList.remove('testing');
+            testBtn.classList.add('error');
+            testBtn.innerHTML = '<i class="fas fa-times"></i> Test Failed';
+            this.showNotification(`Model testing failed: ${error.message}`, 'error');
+        }
+        
+        // Reset button after 3 seconds
+        setTimeout(() => {
+            testBtn.classList.remove('testing', 'success', 'error');
+            testBtn.innerHTML = '<i class="fas fa-check"></i> Test All Models';
+        }, 3000);
+    }
+
+    loadModelTypeSelectionToUI() {
+        Object.keys(this.modelTypes).forEach(type => {
+            const providerSelect = document.getElementById(`${type}Provider`);
+            const modelSelect = document.getElementById(`${type}Model`);
+            
+            if (providerSelect) {
+                providerSelect.value = this.modelTypes[type].provider;
+                this.updateModelTypeOptions(type);
+            }
+            
+            if (modelSelect) {
+                modelSelect.value = this.modelTypes[type].model;
+            }
+        });
+    }
+
+    saveModelTypeSelection() {
+        const modelTypes = ['reasoning', 'task', 'code', 'voiceTTS', 'voiceSTT', 'image', 'multimodal'];
+        
+        modelTypes.forEach(type => {
+            const providerSelect = document.getElementById(`${type}Provider`);
+            const modelSelect = document.getElementById(`${type}Model`);
+            
+            if (providerSelect) {
+                this.modelTypes[type].provider = providerSelect.value;
+            }
+            
+            if (modelSelect) {
+                this.modelTypes[type].model = modelSelect.value;
+            }
+        });
+    }
+
+    getModelTypeConfiguration(type) {
+        return this.modelTypes[type] || { provider: 'auto', model: 'auto' };
     }
 
     setupEventListeners() {
@@ -238,6 +450,9 @@ class LLMConfigManager {
             { btnId: 'pasteOpenrouterApiKeyBtn', inputId: 'openrouterApiKey' },
             { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' }
         ];
+        
+        // Model Selection tab event listeners
+        this.setupModelSelectionEventListeners();
 
         pasteButtonConfigs.forEach(config => {
             const pasteBtn = document.getElementById(config.btnId);
@@ -323,6 +538,11 @@ class LLMConfigManager {
                 panel.focus();
             }
         });
+        
+        // Special handling for models tab
+        if (provider === 'models') {
+            this.loadModelTypeSelectionToUI();
+        }
     }
 
     loadConfiguration() {
@@ -341,6 +561,12 @@ class LLMConfigManager {
                     
                     this.providers = { ...this.providers, ...llmConfig.providers };
                     this.currentProvider = llmConfig.currentProvider;
+                    
+                    // Load model types if available
+                    if (llmConfig.modelTypes) {
+                        this.modelTypes = { ...this.modelTypes, ...llmConfig.modelTypes };
+                        console.log('Model types loaded:', this.modelTypes);
+                    }
                     
                     console.log('After merge - current provider:', this.currentProvider);
                     console.log('After merge - providers:', Object.keys(this.providers));
@@ -425,18 +651,23 @@ class LLMConfigManager {
             const systemPromptField = document.getElementById('systemPrompt');
             const systemPrompt = systemPromptField ? systemPromptField.value.trim() : '';
 
+            // Save model type selection
+            this.saveModelTypeSelection();
+
             if (this.configManager) {
                 // Use ConfigManager if available (now with async support)
                 await this.configManager.set('llm.providers', this.providers);
                 await this.configManager.set('llm.currentProvider', this.currentProvider);
                 await this.configManager.set('llm.systemPrompt', systemPrompt);
+                await this.configManager.set('llm.modelTypes', this.modelTypes);
                 await this.configManager.saveConfig();
                 console.log('Configuration saved via ConfigManager');
             } else {
                 // Fallback to localStorage
                 const config = {
                     providers: this.providers,
-                    currentProvider: this.currentProvider
+                    currentProvider: this.currentProvider,
+                    modelTypes: this.modelTypes
                 };
                 localStorage.setItem('llmConfiguration', JSON.stringify(config));
                 console.log('Configuration saved to localStorage');
@@ -523,6 +754,9 @@ class LLMConfigManager {
                 systemPromptField.value = systemPrompt;
             }
         }
+        
+        // Load model type selection
+        this.loadModelTypeSelectionToUI();
     }
 
     updateUI() {

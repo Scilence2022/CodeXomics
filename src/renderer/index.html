@@ -1051,6 +1051,7 @@
                     <button class="tab-button" data-provider="siliconflow">SiliconFlow</button>
                     <button class="tab-button" data-provider="openrouter">OpenRouter</button>
                     <button class="tab-button" data-provider="local">Local LLM</button>
+                    <button class="tab-button" data-provider="models">Model Selection</button>
                 </div>
                 
                 <div class="llm-provider-config">
@@ -1461,6 +1462,202 @@
                             <label>
                                 <input type="checkbox" id="localStreamingSupport"> Streaming Support
                             </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Model Selection Configuration -->
+                    <div id="models-config" class="provider-config">
+                        <div class="model-selection-header">
+                            <h4><i class="fas fa-brain"></i> Model Type Selection</h4>
+                            <p class="help-text">Configure different model types for various tasks. Each type can use different providers and models.</p>
+                        </div>
+                        
+                        <div class="model-type-grid">
+                            <!-- Reasoning Model -->
+                            <div class="model-type-card">
+                                <div class="model-type-header">
+                                    <h5><i class="fas fa-lightbulb"></i> Reasoning Model</h5>
+                                    <small>For complex reasoning and analysis tasks</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reasoningProvider">Provider:</label>
+                                    <select id="reasoningProvider" class="select">
+                                        <option value="auto">Auto (Use main LLM)</option>
+                                        <option value="openai">OpenAI</option>
+                                        <option value="anthropic">Anthropic (Claude)</option>
+                                        <option value="google">Google (Gemini)</option>
+                                        <option value="deepseek">DeepSeek</option>
+                                        <option value="siliconflow">SiliconFlow</option>
+                                        <option value="openrouter">OpenRouter</option>
+                                        <option value="local">Local LLM</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reasoningModel">Model:</label>
+                                    <select id="reasoningModel" class="select">
+                                        <option value="auto">Auto (Use provider default)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Task Model -->
+                            <div class="model-type-card">
+                                <div class="model-type-header">
+                                    <h5><i class="fas fa-tasks"></i> Task Model</h5>
+                                    <small>For general task execution and completion</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="taskProvider">Provider:</label>
+                                    <select id="taskProvider" class="select">
+                                        <option value="auto">Auto (Use main LLM)</option>
+                                        <option value="openai">OpenAI</option>
+                                        <option value="anthropic">Anthropic (Claude)</option>
+                                        <option value="google">Google (Gemini)</option>
+                                        <option value="deepseek">DeepSeek</option>
+                                        <option value="siliconflow">SiliconFlow</option>
+                                        <option value="openrouter">OpenRouter</option>
+                                        <option value="local">Local LLM</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="taskModel">Model:</label>
+                                    <select id="taskModel" class="select">
+                                        <option value="auto">Auto (Use provider default)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Code Model -->
+                            <div class="model-type-card">
+                                <div class="model-type-header">
+                                    <h5><i class="fas fa-code"></i> Code Model</h5>
+                                    <small>For code generation and programming tasks</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="codeProvider">Provider:</label>
+                                    <select id="codeProvider" class="select">
+                                        <option value="auto">Auto (Use main LLM)</option>
+                                        <option value="openai">OpenAI</option>
+                                        <option value="anthropic">Anthropic (Claude)</option>
+                                        <option value="google">Google (Gemini)</option>
+                                        <option value="deepseek">DeepSeek</option>
+                                        <option value="siliconflow">SiliconFlow</option>
+                                        <option value="openrouter">OpenRouter</option>
+                                        <option value="local">Local LLM</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="codeModel">Model:</label>
+                                    <select id="codeModel" class="select">
+                                        <option value="auto">Auto (Use provider default)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Voice Model - TTS -->
+                            <div class="model-type-card">
+                                <div class="model-type-header">
+                                    <h5><i class="fas fa-volume-up"></i> Voice Model - TTS</h5>
+                                    <small>For text-to-speech conversion</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="voiceTTSProvider">Provider:</label>
+                                    <select id="voiceTTSProvider" class="select">
+                                        <option value="auto">Auto (Use main LLM)</option>
+                                        <option value="openai">OpenAI</option>
+                                        <option value="google">Google (Gemini)</option>
+                                        <option value="anthropic">Anthropic (Claude)</option>
+                                        <option value="local">Local LLM</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="voiceTTSModel">Model:</label>
+                                    <select id="voiceTTSModel" class="select">
+                                        <option value="auto">Auto (Use provider default)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Voice Model - STT -->
+                            <div class="model-type-card">
+                                <div class="model-type-header">
+                                    <h5><i class="fas fa-microphone"></i> Voice Model - STT</h5>
+                                    <small>For speech-to-text conversion</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="voiceSTTProvider">Provider:</label>
+                                    <select id="voiceSTTProvider" class="select">
+                                        <option value="auto">Auto (Use main LLM)</option>
+                                        <option value="openai">OpenAI</option>
+                                        <option value="google">Google (Gemini)</option>
+                                        <option value="anthropic">Anthropic (Claude)</option>
+                                        <option value="local">Local LLM</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="voiceSTTModel">Model:</label>
+                                    <select id="voiceSTTModel" class="select">
+                                        <option value="auto">Auto (Use provider default)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Image Model -->
+                            <div class="model-type-card">
+                                <div class="model-type-header">
+                                    <h5><i class="fas fa-image"></i> Image Model</h5>
+                                    <small>For image analysis and generation</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="imageProvider">Provider:</label>
+                                    <select id="imageProvider" class="select">
+                                        <option value="auto">Auto (Use main LLM)</option>
+                                        <option value="openai">OpenAI</option>
+                                        <option value="google">Google (Gemini)</option>
+                                        <option value="anthropic">Anthropic (Claude)</option>
+                                        <option value="local">Local LLM</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="imageModel">Model:</label>
+                                    <select id="imageModel" class="select">
+                                        <option value="auto">Auto (Use provider default)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Multimodal Model -->
+                            <div class="model-type-card">
+                                <div class="model-type-header">
+                                    <h5><i class="fas fa-eye"></i> Multimodal Model</h5>
+                                    <small>For processing text, images, and other media</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="multimodalProvider">Provider:</label>
+                                    <select id="multimodalProvider" class="select">
+                                        <option value="auto">Auto (Use main LLM)</option>
+                                        <option value="openai">OpenAI</option>
+                                        <option value="google">Google (Gemini)</option>
+                                        <option value="anthropic">Anthropic (Claude)</option>
+                                        <option value="local">Local LLM</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="multimodalModel">Model:</label>
+                                    <select id="multimodalModel" class="select">
+                                        <option value="auto">Auto (Use provider default)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="model-selection-actions">
+                            <button type="button" id="resetModelSelection" class="btn btn-secondary">
+                                <i class="fas fa-undo"></i> Reset to Defaults
+                            </button>
+                            <button type="button" id="testModelSelection" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Test All Models
+                            </button>
                         </div>
                     </div>
                     
@@ -3475,29 +3672,15 @@ Supported formats:
                         <div class="form-section">
                             <h4>🧠 Agent LLM Configuration</h4>
                             <div class="form-group">
-                                <label for="multiAgentLLMProvider">LLM Provider:</label>
-                                <select id="multiAgentLLMProvider" class="input-full">
+                                <label for="multiAgentModelType">Model Type:</label>
+                                <select id="multiAgentModelType" class="input-full">
                                     <option value="auto">Auto (Use main LLM)</option>
-                                    <option value="openai">OpenAI</option>
-                                    <option value="anthropic">Anthropic (Claude)</option>
-                                    <option value="google">Google (Gemini)</option>
-                                    <option value="deepseek">DeepSeek</option>
-                                    <option value="siliconflow">SiliconFlow</option>
-                                    <option value="mistral">Mistral AI</option>
-                                    <option value="cohere">Cohere</option>
-                                    <option value="perplexity">Perplexity</option>
-                                    <option value="local">Local LLM</option>
-                                    <option value="custom">Custom Provider</option>
+                                    <option value="reasoning">Reasoning Model</option>
+                                    <option value="task">Task Model</option>
+                                    <option value="code">Code Model</option>
+                                    <option value="multimodal">Multimodal Model</option>
                                 </select>
-                                <small class="help-text">Choose LLM provider for agent decision making</small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="multiAgentLLMModel">LLM Model:</label>
-                                <select id="multiAgentLLMModel" class="input-full">
-                                    <option value="auto">Auto (Use provider default)</option>
-                                </select>
-                                <small class="help-text">Choose specific model for agent operations</small>
+                                <small class="help-text">Choose model type for agent decision making. Configure specific models in Options → Configure LLMs → Model Selection.</small>
                             </div>
                             
                             <div class="form-group">
@@ -3537,22 +3720,11 @@ Supported formats:
                         </div>
                         
                         <div class="form-section">
-                            <h4>🔑 API Configuration</h4>
-                            <div class="form-group">
-                                <label for="multiAgentApiKey">API Key:</label>
-                                <div class="input-with-button">
-                                    <input type="password" id="multiAgentApiKey" placeholder="Enter API key..." class="input-full">
-                                    <button type="button" class="btn btn-sm btn-paste" id="pasteMultiAgentApiKeyBtn" title="Paste API Key">
-                                        <i class="fas fa-paste"></i>
-                                    </button>
-                                </div>
-                                <small class="help-text">API key for the selected LLM provider</small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="multiAgentBaseUrl">Base URL (optional):</label>
-                                <input type="text" id="multiAgentBaseUrl" placeholder="https://api.provider.com/v1" class="input-full">
-                                <small class="help-text">Custom base URL for the LLM provider</small>
+                            <h4>ℹ️ Configuration Info</h4>
+                            <div class="info-box">
+                                <p><strong>Model Configuration:</strong> To configure specific models for each type, go to <strong>Options → Configure LLMs → Model Selection</strong>.</p>
+                                <p><strong>API Keys:</strong> API keys are configured in the main LLM configuration. The agent system will use the same API keys as the main LLM.</p>
+                                <p><strong>Inheritance:</strong> Agent settings inherit from ChatBox Settings. You can override specific parameters here if needed.</p>
                             </div>
                         </div>
                     </div>

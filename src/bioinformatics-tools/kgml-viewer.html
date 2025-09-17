@@ -526,6 +526,188 @@
 
     <script src="tool-menu-handler.js"></script>
     <script>
+        // KEGG API Service Class
+        class KEGGAPIService {
+            constructor() {
+                this.baseURL = 'https://rest.kegg.jp';
+                this.cache = new Map();
+                this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+            }
+
+            async makeRequest(endpoint) {
+                const url = `${this.baseURL}${endpoint}`;
+                
+                // Check cache first
+                if (this.cache.has(url)) {
+                    const cached = this.cache.get(url);
+                    if (Date.now() - cached.timestamp < this.cacheTimeout) {
+                        return cached.data;
+                    }
+                }
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.text();
+                    
+                    // Cache the result
+                    this.cache.set(url, {
+                        data: data,
+                        timestamp: Date.now()
+                    });
+                    
+                    return data;
+                } catch (error) {
+                    console.error('KEGG API request failed:', error);
+                    throw new Error(`Failed to fetch from KEGG API: ${error.message}`);
+                }
+            }
+
+            // Get list of organisms
+            async getOrganisms() {
+                try {
+                    const data = await this.makeRequest('/list/organism');
+                    return this.parseOrganismList(data);
+                } catch (error) {
+                    console.error('Failed to fetch organisms:', error);
+                    return [];
+                }
+            }
+
+            parseOrganismList(data) {
+                const lines = data.trim().split('\n');
+                return lines.map(line => {
+                    const parts = line.split('\t');
+                    return {
+                        code: parts[0],
+                        name: parts[1],
+                        description: parts[2] || ''
+                    };
+                });
+            }
+
+            // Search pathways by organism
+            async getPathwaysByOrganism(orgCode) {
+                try {
+                    const data = await this.makeRequest(`/list/pathway/${orgCode}`);
+                    return this.parsePathwayList(data);
+                } catch (error) {
+                    console.error(`Failed to fetch pathways for ${orgCode}:`, error);
+                    return [];
+                }
+            }
+
+            // Search pathways by keyword
+            async searchPathways(keyword) {
+                try {
+                    const data = await this.makeRequest(`/find/pathway/${encodeURIComponent(keyword)}`);
+                    return this.parsePathwayList(data);
+                } catch (error) {
+                    console.error(`Failed to search pathways for "${keyword}":`, error);
+                    return [];
+                }
+            }
+
+            parsePathwayList(data) {
+                const lines = data.trim().split('\n');
+                return lines.map(line => {
+                    const parts = line.split('\t');
+                    const pathwayId = parts[0];
+                    const name = parts[1] || '';
+                    
+                    return {
+                        id: pathwayId,
+                        name: name,
+                        org: pathwayId.split(':')[0],
+                        number: pathwayId.split(':')[1],
+                        displayName: name.replace(/^.*? - /, '') // Remove organism prefix
+                    };
+                });
+            }
+
+            // Get pathway information
+            async getPathwayInfo(pathwayId) {
+                try {
+                    const data = await this.makeRequest(`/get/${pathwayId}`);
+                    return this.parsePathwayInfo(data);
+                } catch (error) {
+                    console.error(`Failed to fetch pathway info for ${pathwayId}:`, error);
+                    return null;
+                }
+            }
+
+            parsePathwayInfo(data) {
+                const lines = data.trim().split('\n');
+                const info = {
+                    id: '',
+                    name: '',
+                    description: '',
+                    class: '',
+                    organism: '',
+                    genes: [],
+                    compounds: [],
+                    reactions: []
+                };
+
+                let currentSection = '';
+                for (const line of lines) {
+                    if (line.startsWith('ENTRY')) {
+                        const match = line.match(/ENTRY\s+(\S+)/);
+                        if (match) info.id = match[1];
+                    } else if (line.startsWith('NAME')) {
+                        info.name = line.replace('NAME', '').trim();
+                    } else if (line.startsWith('DESCRIPTION')) {
+                        info.description = line.replace('DESCRIPTION', '').trim();
+                        currentSection = 'description';
+                    } else if (line.startsWith('CLASS')) {
+                        info.class = line.replace('CLASS', '').trim();
+                    } else if (line.startsWith('ORGANISM')) {
+                        info.organism = line.replace('ORGANISM', '').trim();
+                    } else if (line.startsWith('GENE')) {
+                        currentSection = 'genes';
+                    } else if (line.startsWith('COMPOUND')) {
+                        currentSection = 'compounds';
+                    } else if (line.startsWith('REACTION')) {
+                        currentSection = 'reactions';
+                    } else if (line.startsWith('REFERENCE')) {
+                        currentSection = '';
+                    } else if (currentSection && line.startsWith(' ')) {
+                        // Continuation line
+                        const content = line.trim();
+                        if (content) {
+                            info[currentSection].push(content);
+                        }
+                    }
+                }
+
+                return info;
+            }
+
+            // Get KGML file
+            async getKGML(pathwayId) {
+                try {
+                    const data = await this.makeRequest(`/get/${pathwayId}/kgml`);
+                    return data;
+                } catch (error) {
+                    console.error(`Failed to fetch KGML for ${pathwayId}:`, error);
+                    throw error;
+                }
+            }
+
+            // Get pathway image URL
+            getPathwayImageURL(pathwayId) {
+                return `https://www.kegg.jp/kegg/pathway/${pathwayId}/${pathwayId}.png`;
+            }
+
+            // Get pathway web URL
+            getPathwayWebURL(pathwayId) {
+                return `https://www.kegg.jp/entry/${pathwayId}`;
+            }
+        }
+
         class KGMLViewer {
             constructor() {
                 this.pathwayData = null;

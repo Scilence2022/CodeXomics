@@ -305,16 +305,13 @@ class MultiAgentSettingsManager {
             multiAgentRetryAttempts: 3,
             
             // LLM settings
-            multiAgentLLMProvider: 'auto',
-            multiAgentLLMModel: 'auto',
+            multiAgentModelType: 'auto',
             multiAgentLLMTemperature: 0.7,
             multiAgentLLMMaxTokens: 4000,
             multiAgentLLMTimeout: 30,
             multiAgentLLMRetryAttempts: 3,
             multiAgentLLMUseSystemPrompt: true,
             multiAgentLLMEnableFunctionCalling: true,
-            multiAgentApiKey: '',
-            multiAgentBaseUrl: '',
             
             // Agent settings
             agentNavigationEnabled: true,
@@ -412,13 +409,6 @@ class MultiAgentSettingsManager {
             });
         });
         
-        // LLM provider change
-        const llmProviderSelect = document.getElementById('multiAgentLLMProvider');
-        if (llmProviderSelect) {
-            llmProviderSelect.addEventListener('change', () => {
-                this.updateModelOptions();
-            });
-        }
         
         // Temperature range slider
         const temperatureSlider = document.getElementById('multiAgentLLMTemperature');
@@ -650,16 +640,12 @@ class MultiAgentSettingsManager {
         this.setInputValue('multiAgentRetryAttempts', this.currentSettings.multiAgentRetryAttempts);
         
         // LLM settings
-        this.setSelectValue('multiAgentLLMProvider', this.currentSettings.multiAgentLLMProvider);
-        this.updateModelOptions();
-        this.setSelectValue('multiAgentLLMModel', this.currentSettings.multiAgentLLMModel);
+        this.setSelectValue('multiAgentModelType', this.currentSettings.multiAgentModelType);
         this.setRangeValue('multiAgentLLMTemperature', this.currentSettings.multiAgentLLMTemperature);
         this.setInputValue('multiAgentLLMMaxTokens', this.currentSettings.multiAgentLLMMaxTokens);
         this.setInputValue('multiAgentLLMTimeout', this.currentSettings.multiAgentLLMTimeout);
         this.setCheckboxValue('multiAgentLLMUseSystemPrompt', this.currentSettings.multiAgentLLMUseSystemPrompt);
         this.setCheckboxValue('multiAgentLLMEnableFunctionCalling', this.currentSettings.multiAgentLLMEnableFunctionCalling);
-        this.setInputValue('multiAgentApiKey', this.currentSettings.multiAgentApiKey);
-        this.setInputValue('multiAgentBaseUrl', this.currentSettings.multiAgentBaseUrl);
         
         // Agent settings
         this.setCheckboxValue('agentNavigationEnabled', this.currentSettings.agentNavigationEnabled);
@@ -691,33 +677,6 @@ class MultiAgentSettingsManager {
         this.setInputValue('multiAgentTaskQueueSize', this.currentSettings.multiAgentTaskQueueSize);
     }
     
-    updateModelOptions() {
-        const providerSelect = document.getElementById('multiAgentLLMProvider');
-        const modelSelect = document.getElementById('multiAgentLLMModel');
-        
-        if (!providerSelect || !modelSelect) return;
-        
-        const selectedProvider = providerSelect.value;
-        const provider = this.llmProviders[selectedProvider];
-        
-        // Clear existing options
-        modelSelect.innerHTML = '<option value="auto">Auto (Use provider default)</option>';
-        
-        if (provider && provider.models) {
-            Object.entries(provider.models).forEach(([modelId, modelName]) => {
-                const option = document.createElement('option');
-                option.value = modelId;
-                option.textContent = modelName;
-                modelSelect.appendChild(option);
-            });
-        }
-        
-        // Update base URL
-        const baseUrlInput = document.getElementById('multiAgentBaseUrl');
-        if (baseUrlInput && provider) {
-            baseUrlInput.value = provider.baseUrl || '';
-        }
-    }
     
     saveCurrentSettings() {
         // Collect all settings from UI
@@ -733,15 +692,12 @@ class MultiAgentSettingsManager {
             multiAgentRetryAttempts: parseInt(this.getInputValue('multiAgentRetryAttempts')),
             
             // LLM settings
-            multiAgentLLMProvider: this.getSelectValue('multiAgentLLMProvider'),
-            multiAgentLLMModel: this.getSelectValue('multiAgentLLMModel'),
+            multiAgentModelType: this.getSelectValue('multiAgentModelType'),
             multiAgentLLMTemperature: parseFloat(this.getRangeValue('multiAgentLLMTemperature')),
             multiAgentLLMMaxTokens: parseInt(this.getInputValue('multiAgentLLMMaxTokens')),
             multiAgentLLMTimeout: parseInt(this.getInputValue('multiAgentLLMTimeout')),
             multiAgentLLMUseSystemPrompt: this.getCheckboxValue('multiAgentLLMUseSystemPrompt'),
             multiAgentLLMEnableFunctionCalling: this.getCheckboxValue('multiAgentLLMEnableFunctionCalling'),
-            multiAgentApiKey: this.getInputValue('multiAgentApiKey'),
-            multiAgentBaseUrl: this.getInputValue('multiAgentBaseUrl'),
             
             // Agent settings
             agentNavigationEnabled: this.getCheckboxValue('agentNavigationEnabled'),
@@ -952,6 +908,49 @@ class MultiAgentSettingsManager {
         this.saveSettings();
     }
     
+    // Get inherited settings from ChatBox Settings
+    getInheritedSettings() {
+        if (window.chatManager && window.chatManager.chatBoxSettingsManager) {
+            const chatboxSettings = window.chatManager.chatBoxSettingsManager.getAllSettings();
+            return {
+                temperature: chatboxSettings.chatboxLLMTemperature || 0.7,
+                maxTokens: chatboxSettings.chatboxLLMMaxTokens || 4000,
+                timeout: (chatboxSettings.chatboxLLMTimeout || 30) * 1000, // Convert to ms
+                useSystemPrompt: chatboxSettings.chatboxLLMUseSystemPrompt !== false,
+                enableFunctionCalling: chatboxSettings.chatboxLLMEnableFunctionCalling !== false,
+                modelType: chatboxSettings.chatboxModelType || 'auto'
+            };
+        }
+        return {
+            temperature: 0.7,
+            maxTokens: 4000,
+            timeout: 30000,
+            useSystemPrompt: true,
+            enableFunctionCalling: true,
+            modelType: 'auto'
+        };
+    }
+
+    // Get effective settings (inherited + overrides)
+    getEffectiveSettings() {
+        const inherited = this.getInheritedSettings();
+        return {
+            // Use inherited values unless specifically overridden
+            multiAgentLLMTemperature: this.currentSettings.multiAgentLLMTemperature !== undefined ? 
+                this.currentSettings.multiAgentLLMTemperature : inherited.temperature,
+            multiAgentLLMMaxTokens: this.currentSettings.multiAgentLLMMaxTokens !== undefined ? 
+                this.currentSettings.multiAgentLLMMaxTokens : inherited.maxTokens,
+            multiAgentLLMTimeout: this.currentSettings.multiAgentLLMTimeout !== undefined ? 
+                this.currentSettings.multiAgentLLMTimeout : inherited.timeout,
+            multiAgentLLMUseSystemPrompt: this.currentSettings.multiAgentLLMUseSystemPrompt !== undefined ? 
+                this.currentSettings.multiAgentLLMUseSystemPrompt : inherited.useSystemPrompt,
+            multiAgentLLMEnableFunctionCalling: this.currentSettings.multiAgentLLMEnableFunctionCalling !== undefined ? 
+                this.currentSettings.multiAgentLLMEnableFunctionCalling : inherited.enableFunctionCalling,
+            multiAgentModelType: this.currentSettings.multiAgentModelType !== undefined ? 
+                this.currentSettings.multiAgentModelType : inherited.modelType
+        };
+    }
+
     // Reset settings to default values
     resetToDefaults() {
         if (confirm('Are you sure you want to reset all Multi-Agent System settings to their default values? This action cannot be undone.')) {

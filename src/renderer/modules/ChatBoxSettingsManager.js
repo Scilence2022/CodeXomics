@@ -73,7 +73,15 @@ class ChatBoxSettingsManager {
             // Function Call Settings
             functionCallRounds: 5,
             enableEarlyCompletion: true,
-            completionThreshold: 0.7
+            completionThreshold: 0.7,
+            
+            // Model Selection Settings
+            chatboxModelType: 'auto',
+            chatboxLLMTemperature: 0.7,
+            chatboxLLMMaxTokens: 4000,
+            chatboxLLMTimeout: 30,
+            chatboxLLMUseSystemPrompt: true,
+            chatboxLLMEnableFunctionCalling: true
         };
         
         this.loadSettings();
@@ -203,7 +211,15 @@ class ChatBoxSettingsManager {
             // Function Call Settings (duplicated in defaultSettings)
             functionCallRounds: 5,
             enableEarlyCompletion: true,
-            completionThreshold: 0.7
+            completionThreshold: 0.7,
+            
+            // Model Selection Settings
+            chatboxModelType: 'auto',
+            chatboxLLMTemperature: 0.7,
+            chatboxLLMMaxTokens: 4000,
+            chatboxLLMTimeout: 30,
+            chatboxLLMUseSystemPrompt: true,
+            chatboxLLMEnableFunctionCalling: true
         };
         
         this.settings = { ...defaultSettings };
@@ -364,6 +380,9 @@ class ChatBoxSettingsManager {
                             </button>
                             <button class="tab-btn" data-tab="behavior">
                                 <i class="fas fa-cogs"></i> Behavior
+                            </button>
+                            <button class="tab-btn" data-tab="models">
+                                <i class="fas fa-brain"></i> Models
                             </button>
                             <button class="tab-btn" data-tab="memory">
                                 <i class="fas fa-brain"></i> Memory
@@ -528,6 +547,74 @@ class ChatBoxSettingsManager {
                                         </div>
                                     </div>
                                     <small class="help-text">Minimum confidence level required for the AI to consider a task complete. Higher values reduce false positives but may miss valid completions.</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Models Tab -->
+                        <div id="models-tab" class="tab-content">
+                            <div class="form-section">
+                                <h4>🤖 Model Selection</h4>
+                                <div class="form-group">
+                                    <label for="chatboxModelType">Primary Model Type:</label>
+                                    <select id="chatboxModelType" class="select">
+                                        <option value="auto">Auto (Use main LLM)</option>
+                                        <option value="reasoning">Reasoning Model</option>
+                                        <option value="task">Task Model</option>
+                                        <option value="code">Code Model</option>
+                                        <option value="multimodal">Multimodal Model</option>
+                                    </select>
+                                    <small class="help-text">Choose the primary model type for ChatBox conversations. Configure specific models in Options → Configure LLMs → Model Selection.</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="chatboxLLMTemperature">Temperature:</label>
+                                    <div class="slider-container">
+                                        <input type="range" id="chatboxLLMTemperature" class="range-slider" min="0" max="2" step="0.1" value="0.7">
+                                        <div class="slider-labels">
+                                            <span class="slider-label-left">0 (Deterministic)</span>
+                                            <span class="slider-value" id="chatboxLLMTemperatureValue">0.7</span>
+                                            <span class="slider-label-right">2 (Creative)</span>
+                                        </div>
+                                    </div>
+                                    <small class="help-text">Control creativity vs consistency in responses</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="chatboxLLMMaxTokens">Max Tokens:</label>
+                                    <input type="number" id="chatboxLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
+                                    <small class="help-text">Maximum tokens for LLM responses</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="chatboxLLMTimeout">Timeout (seconds):</label>
+                                    <input type="number" id="chatboxLLMTimeout" class="input-full" min="5" max="300" step="5" value="30">
+                                    <small class="help-text">Timeout for LLM requests</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="chatboxLLMUseSystemPrompt" class="setting-checkbox" checked>
+                                        Use system prompt
+                                    </label>
+                                    <small class="help-text">Enable system prompts for better behavior</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="chatboxLLMEnableFunctionCalling" class="setting-checkbox" checked>
+                                        Enable function calling
+                                    </label>
+                                    <small class="help-text">Allow the AI to use function calling capabilities</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-section">
+                                <h4>ℹ️ Configuration Info</h4>
+                                <div class="info-box">
+                                    <p><strong>Model Configuration:</strong> To configure specific models for each type, go to <strong>Options → Configure LLMs → Model Selection</strong>.</p>
+                                    <p><strong>API Keys:</strong> API keys are configured in the main LLM configuration.</p>
+                                    <p><strong>Inheritance:</strong> These settings serve as defaults for Multi-Agent System. Agent-specific settings can override these defaults.</p>
                                 </div>
                             </div>
                         </div>
@@ -966,6 +1053,8 @@ class ChatBoxSettingsManager {
                     if (valueDisplay) {
                         if (key === 'completionThreshold') {
                             valueDisplay.textContent = Math.round(value * 100) + '%';
+                        } else if (key === 'chatboxLLMTemperature') {
+                            valueDisplay.textContent = value;
                         } else {
                             valueDisplay.textContent = value;
                         }
@@ -991,6 +1080,8 @@ class ChatBoxSettingsManager {
                 slider.addEventListener('input', () => {
                     if (slider.id === 'completionThreshold') {
                         valueDisplay.textContent = Math.round(slider.value * 100) + '%';
+                    } else if (slider.id === 'chatboxLLMTemperature') {
+                        valueDisplay.textContent = slider.value;
                     } else {
                         valueDisplay.textContent = slider.value;
                     }
@@ -1141,7 +1232,13 @@ class ChatBoxSettingsManager {
             'startMinimized': 'Start Minimized',
             'useOptimizedPrompt': 'Use Optimized Prompt',
             'debugMode': 'Debug Mode',
-            'logToolCalls': 'Log Tool Calls'
+            'logToolCalls': 'Log Tool Calls',
+            'chatboxModelType': 'Primary Model Type',
+            'chatboxLLMTemperature': 'LLM Temperature',
+            'chatboxLLMMaxTokens': 'LLM Max Tokens',
+            'chatboxLLMTimeout': 'LLM Timeout',
+            'chatboxLLMUseSystemPrompt': 'LLM System Prompt',
+            'chatboxLLMEnableFunctionCalling': 'LLM Function Calling'
         };
         
         return displayNames[key] || key;
