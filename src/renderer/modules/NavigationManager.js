@@ -2090,8 +2090,8 @@ class NavigationManager {
      */
     ensureDefaultSize(modalContent) {
         if (!modalContent.style.width || !modalContent.style.height) {
-            modalContent.style.width = '800px';
-            modalContent.style.height = '600px';
+            modalContent.style.width = '700px';
+            modalContent.style.height = '500px';
         }
     }
 
@@ -2312,6 +2312,13 @@ class NavigationManager {
             const handleSize = 24;
             const edgeSize = 12;
             
+            console.log('Modal mousedown event:', {
+                target: e.target,
+                clientX: e.clientX,
+                clientY: e.clientY,
+                rect: rect
+            });
+            
             // Check if mouse is in corner resize area
             const isInCornerArea = (
                 e.clientX >= rect.right - handleSize &&
@@ -2362,8 +2369,8 @@ class NavigationManager {
                 const deltaY = e.clientY - startY;
                 
                 // Apply constraints
-                const minWidth = 800;
-                const minHeight = 500;
+                const minWidth = 500;
+                const minHeight = 350;
                 const maxWidth = window.innerWidth * 0.95;
                 const maxHeight = window.innerHeight * 0.9;
                 
