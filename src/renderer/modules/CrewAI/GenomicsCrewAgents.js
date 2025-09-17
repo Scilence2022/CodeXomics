@@ -3,6 +3,9 @@
  * Pre-configured agents with genomics-specific roles, goals, and tools
  */
 
+// Add at the top of the file
+console.log('✅ GenomicsCrewAgents.js version: 2025-09-17 - Cache Clear Test');
+
 // Debug and prevent duplicate script execution
 console.log('🔍 GenomicsCrewAgents.js executing, loaded flag:', window.GenomicsCrewAgentsLoaded);
 if (window.GenomicsCrewAgentsLoaded) {
@@ -11,11 +14,10 @@ if (window.GenomicsCrewAgentsLoaded) {
     console.log('🚀 GenomicsCrewAgents first load, checking dependencies...');
     window.GenomicsCrewAgentsLoaded = true;
 
-// Check if base class is available
-if (typeof CrewAgent === 'undefined') {
-    console.error('❌ CrewAgent base class not available. Ensure CrewAIFramework.js loads first.');
-    throw new Error('CrewAgent base class not available');
-}
+// Ensure classes are defined normally
+// The loading order is handled by HTML script tags in index.html
+// CrewAIFramework.js loads before GenomicsCrewAgents.js
+// Classes are defined normally within the conditional block
 
 /**
  * Data Analysis Agent

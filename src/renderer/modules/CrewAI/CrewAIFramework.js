@@ -3,6 +3,9 @@
  * Provides structured agent roles, goals, and collaborative workflows
  */
 
+// Add at the top of the file
+console.log('✅ CrewAIFramework.js version: 2025-09-17 - Cache Clear Test');
+
 // Debug and prevent duplicate script execution
 console.log('🔍 CrewAIFramework.js executing, loaded flag:', window.CrewAIFrameworkLoaded);
 if (window.CrewAIFrameworkLoaded) {
