@@ -714,20 +714,28 @@
                 <div class="legend" id="legend">
                     <h4 style="margin-bottom: 0.75rem; font-size: 0.875rem;">Node Types</h4>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #bef264;"></div>
+                        <div class="legend-color" style="background: #4ade80;"></div>
                         <span>Gene</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #fbbf24;"></div>
+                        <div class="legend-color" style="background: #f59e0b;"></div>
                         <span>Compound</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #a78bfa;"></div>
+                        <div class="legend-color" style="background: #8b5cf6;"></div>
                         <span>Enzyme</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: #fb7185;"></div>
+                        <div class="legend-color" style="background: #ef4444;"></div>
                         <span>Pathway</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3b82f6;"></div>
+                        <span>Ortholog</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #6b7280;"></div>
+                        <span>Group</span>
                     </div>
                 </div>
             </div>
@@ -1321,6 +1329,8 @@
                     text.setAttribute('y', y);
                     text.classList.add('node-text');
                     text.setAttribute('fill', fgcolor || '#000000');
+                    
+                    
                     text.textContent = this.truncateText(entry.displayName || name || entry.name, width);
 
                     nodeGroup.appendChild(shape);
@@ -1552,24 +1562,27 @@
                     'C01401': 'Oxaloacetate'
                 };
 
-                // Try to get name from graphics first
+                // Try to get name from graphics first (most reliable)
                 const graphicsName = entryData.graphics?.name;
-                if (graphicsName && graphicsName !== entryData.id && graphicsName.trim() !== '') {
+                if (graphicsName && graphicsName.trim() !== '' && graphicsName !== entryData.id) {
                     return graphicsName;
                 }
 
                 // Extract compound ID from name attribute and look up in mapping
                 const nameAttr = entryData.name;
                 if (nameAttr) {
-                    const compoundIds = nameAttr.split(' ');
+                    // Handle different name formats: "cpd:C00022", "C00022", "cpd:C00022 C00024"
+                    const cleanName = nameAttr.replace(/^cpd:/, '').trim();
+                    const compoundIds = cleanName.split(' ');
+                    
                     for (const id of compoundIds) {
                         if (compoundNames[id]) {
                             return compoundNames[id];
                         }
                     }
-                    // If no mapping found, try to clean up the name
-                    const cleanName = nameAttr.replace(/^cpd:/, '').replace(/^C\d+/, '').trim();
-                    if (cleanName && cleanName !== entryData.id) {
+                    
+                    // If no mapping found, try to extract meaningful name
+                    if (cleanName !== entryData.id && cleanName.length > 0) {
                         return cleanName;
                     }
                 }
@@ -1584,7 +1597,7 @@
                     }
                 }
 
-                // Fallback to graphics name or ID
+                // Final fallback
                 return graphicsName || entryData.id;
             }
 
