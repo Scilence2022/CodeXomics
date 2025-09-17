@@ -861,9 +861,15 @@ if (typeof module !== 'undefined' && module.exports) {
         ProjectCoordinator
     };
 } else {
-    window.GenomicsDataAnalyst = GenomicsDataAnalyst;
-    window.BioinformaticsResearcher = BioinformaticsResearcher;
-    window.GenomeNavigator = GenomeNavigator;
-    window.QualityController = QualityController;
-    window.ProjectCoordinator = ProjectCoordinator;
+    console.log('🔧 Exporting GenomicsCrewAgents classes to window object...');
+    try {
+        window.GenomicsDataAnalyst = GenomicsDataAnalyst;
+        window.BioinformaticsResearcher = BioinformaticsResearcher;
+        window.GenomeNavigator = GenomeNavigator;
+        window.QualityController = QualityController;
+        window.ProjectCoordinator = ProjectCoordinator;
+        console.log('✅ GenomicsCrewAgents classes exported successfully');
+    } catch (error) {
+        console.error('❌ Error exporting GenomicsCrewAgents classes:', error);
+    }
 }

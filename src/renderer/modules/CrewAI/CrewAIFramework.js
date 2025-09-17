@@ -876,6 +876,12 @@ class Crew {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { CrewAgent, Crew };
 } else {
-    window.CrewAgent = CrewAgent;
-    window.Crew = Crew;
+    console.log('🔧 Exporting CrewAI Framework classes to window object...');
+    try {
+        window.CrewAgent = CrewAgent;
+        window.Crew = Crew;
+        console.log('✅ CrewAI Framework classes exported successfully');
+    } catch (error) {
+        console.error('❌ Error exporting CrewAI Framework classes:', error);
+    }
 }

@@ -71,7 +71,22 @@ class CrewAIMultiAgentSystem {
      */
     async initializeGenomicsAgents() {
         try {
-            // Wait for classes to be available
+            // Check if classes are available immediately
+            console.log('🔍 Immediate class check:');
+            console.log('- CrewAgent:', typeof window.CrewAgent, !!window.CrewAgent);
+            console.log('- GenomicsDataAnalyst:', typeof window.GenomicsDataAnalyst, !!window.GenomicsDataAnalyst);
+            console.log('- BioinformaticsResearcher:', typeof window.BioinformaticsResearcher, !!window.BioinformaticsResearcher);
+            console.log('- GenomeNavigator:', typeof window.GenomeNavigator, !!window.GenomeNavigator);
+            console.log('- QualityController:', typeof window.QualityController, !!window.QualityController);
+            console.log('- ProjectCoordinator:', typeof window.ProjectCoordinator, !!window.ProjectCoordinator);
+            
+            // Try to load scripts manually if classes aren't available
+            if (!window.CrewAgent || !window.GenomicsDataAnalyst) {
+                console.log('🔄 Classes not available, attempting manual script loading...');
+                await this.loadScriptsManually();
+            }
+            
+            // Wait for classes to be available (shorter timeout for debugging)
             await this.waitForClasses();
             
             // Load agent classes
@@ -110,27 +125,85 @@ class CrewAIMultiAgentSystem {
     }
     
     /**
+     * Manually load required scripts if they're not available
+     */
+    async loadScriptsManually() {
+        const scripts = [
+            'modules/CrewAI/CrewAIFramework.js',
+            'modules/CrewAI/GenomicsCrewAgents.js'
+        ];
+        
+        for (const scriptPath of scripts) {
+            try {
+                console.log(`📥 Loading script: ${scriptPath}`);
+                await this.loadScript(scriptPath);
+                console.log(`✅ Script loaded: ${scriptPath}`);
+            } catch (error) {
+                console.error(`❌ Failed to load script ${scriptPath}:`, error);
+            }
+        }
+        
+        // Wait a bit for scripts to execute
+        await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    /**
+     * Load a script dynamically
+     */
+    async loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+    
+    /**
      * Wait for agent classes to be available
      */
     async waitForClasses() {
-        const maxAttempts = 50; // 5 seconds max
+        const maxAttempts = 20; // 2 seconds max for faster debugging
         const delay = 100; // 100ms between attempts
         
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            if (typeof window !== 'undefined' && 
-                window.GenomicsDataAnalyst && 
-                window.BioinformaticsResearcher && 
-                window.GenomeNavigator && 
-                window.QualityController && 
-                window.ProjectCoordinator &&
-                window.CrewAgent) {
-                console.log(`✅ All agent classes available after ${attempt * delay}ms`);
-                return;
+            if (typeof window !== 'undefined') {
+                // Detailed debugging on every 10th attempt
+                if (attempt % 10 === 0 || attempt === maxAttempts - 1) {
+                    console.log(`🔍 Class availability check (attempt ${attempt + 1}/${maxAttempts}):`);
+                    console.log('- CrewAgent:', typeof window.CrewAgent, !!window.CrewAgent);
+                    console.log('- GenomicsDataAnalyst:', typeof window.GenomicsDataAnalyst, !!window.GenomicsDataAnalyst);
+                    console.log('- BioinformaticsResearcher:', typeof window.BioinformaticsResearcher, !!window.BioinformaticsResearcher);
+                    console.log('- GenomeNavigator:', typeof window.GenomeNavigator, !!window.GenomeNavigator);
+                    console.log('- QualityController:', typeof window.QualityController, !!window.QualityController);
+                    console.log('- ProjectCoordinator:', typeof window.ProjectCoordinator, !!window.ProjectCoordinator);
+                }
+                
+                if (window.GenomicsDataAnalyst && 
+                    window.BioinformaticsResearcher && 
+                    window.GenomeNavigator && 
+                    window.QualityController && 
+                    window.ProjectCoordinator &&
+                    window.CrewAgent) {
+                    console.log(`✅ All agent classes available after ${attempt * delay}ms`);
+                    return;
+                }
             }
             
-            console.log(`⏳ Waiting for agent classes... attempt ${attempt + 1}/${maxAttempts}`);
+            if (attempt % 10 !== 0 && attempt !== maxAttempts - 1) {
+                console.log(`⏳ Waiting for agent classes... attempt ${attempt + 1}/${maxAttempts}`);
+            }
             await new Promise(resolve => setTimeout(resolve, delay));
         }
+        
+        console.error('❌ Final state check:');
+        console.error('- CrewAgent:', typeof window.CrewAgent, window.CrewAgent);
+        console.error('- GenomicsDataAnalyst:', typeof window.GenomicsDataAnalyst, window.GenomicsDataAnalyst);
+        console.error('- BioinformaticsResearcher:', typeof window.BioinformaticsResearcher, window.BioinformaticsResearcher);
+        console.error('- GenomeNavigator:', typeof window.GenomeNavigator, window.GenomeNavigator);
+        console.error('- QualityController:', typeof window.QualityController, window.QualityController);
+        console.error('- ProjectCoordinator:', typeof window.ProjectCoordinator, window.ProjectCoordinator);
         
         throw new Error('Timeout waiting for agent classes to be available');
     }
