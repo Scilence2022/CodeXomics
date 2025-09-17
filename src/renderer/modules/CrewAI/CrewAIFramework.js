@@ -6,8 +6,7 @@
 // Prevent duplicate script execution
 if (window.CrewAIFrameworkLoaded) {
     console.log('ℹ️ CrewAI Framework already loaded, skipping');
-    return;
-}
+} else {
 window.CrewAIFrameworkLoaded = true;
 
 /**
@@ -878,6 +877,8 @@ class Crew {
         return `crew_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
     }
 }
+
+} // End of CrewAIFrameworkLoaded check
 
 // Export classes
 if (typeof module !== 'undefined' && module.exports) {

@@ -6,8 +6,7 @@
 // Prevent duplicate script execution
 if (window.GenomicsCrewAgentsLoaded) {
     console.log('ℹ️ GenomicsCrewAgents already loaded, skipping');
-    return;
-}
+} else {
 window.GenomicsCrewAgentsLoaded = true;
 
 // Check if base class is available
@@ -863,6 +862,8 @@ class ProjectCoordinator extends CrewAgent {
         return dependencies;
     }
 }
+
+} // End of GenomicsCrewAgentsLoaded check
 
 // Export all agent classes
 if (typeof module !== 'undefined' && module.exports) {
