@@ -9870,7 +9870,7 @@ ${this.getPluginSystemInfo()}`;
      */
     async searchProteinByGene(parameters) {
         // Handle both parameter naming conventions
-        const geneName = parameters.geneName || parameters.gene_name;
+        const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
         const organism = parameters.organism || 'Escherichia coli';
         const maxResults = parameters.maxResults || 10;
         
@@ -9945,14 +9945,16 @@ ${this.getPluginSystemInfo()}`;
      */
     async searchAlphaFoldByGene(parameters) {
         // Handle different parameter naming conventions
-        const geneName = parameters.geneName || parameters.gene_name;
+        const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
         const organism = parameters.organism || 'Escherichia coli';
         const maxResults = parameters.maxResults || 10;
         
         try {
             console.log(`Searching AlphaFold for gene: ${geneName}, organism: ${organism}`);
+            console.log('AlphaFold search parameters received:', JSON.stringify(parameters, null, 2));
             
             if (!geneName) {
+                console.error('Gene name not found in parameters:', parameters);
                 throw new Error('Gene name is required for AlphaFold search');
             }
             
@@ -9994,7 +9996,7 @@ ${this.getPluginSystemInfo()}`;
     async fetchAlphaFoldStructure(parameters) {
         // Handle both parameter naming conventions
         const uniprotId = parameters.uniprotId || parameters.uniprot_id;
-        const geneName = parameters.geneName || parameters.gene_name;
+        const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
         const format = parameters.format || 'pdb';
         
         try {

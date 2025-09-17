@@ -96,6 +96,10 @@ class InternalMCPServer {
             case 'getSequenceRegion':
                 return await this.getSequenceRegion(parameters);
 
+            // Protein structure analysis
+            case 'search_alphafold_by_gene':
+                return await this.searchAlphaFoldByGene(parameters);
+
             // Utility methods
             case 'ping':
                 return this.ping();
@@ -274,6 +278,28 @@ class InternalMCPServer {
             sequence: sequence || '',
             length: sequence ? sequence.length : 0
         };
+    }
+
+    // Protein structure analysis implementations
+    async searchAlphaFoldByGene(parameters) {
+        // Delegate to ChatManager's AlphaFold search implementation
+        if (!this.genomeStudio.chatManager) {
+            throw new Error('ChatManager not available');
+        }
+
+        try {
+            const result = await this.genomeStudio.chatManager.searchAlphaFoldByGene(parameters);
+            return result;
+        } catch (error) {
+            console.error('InternalMCPServer AlphaFold search error:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'search_alphafold_by_gene',
+                parameters: parameters,
+                timestamp: new Date().toISOString()
+            };
+        }
     }
 
     // Utility implementations
