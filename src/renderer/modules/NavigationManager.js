@@ -2067,9 +2067,31 @@ class NavigationManager {
      */
     showSearchSettingsModal() {
         const modal = document.getElementById('searchSettingsModal');
-        if (modal) {
+        const modalContent = modal?.querySelector('.modal-content');
+        
+        if (modal && modalContent) {
             this.loadSearchSettings();
+            
+            // Set default size if no saved size exists
+            this.ensureDefaultSize(modalContent);
+            
+            // Load saved position and size
+            this.loadModalPosition(modalContent);
+            
+            // Initialize drag and resize functionality
+            this.initializeModalDragResize(modal, modalContent);
+            
             modal.classList.add('show');
+        }
+    }
+
+    /**
+     * Ensure default size is set for the modal
+     */
+    ensureDefaultSize(modalContent) {
+        if (!modalContent.style.width || !modalContent.style.height) {
+            modalContent.style.width = '800px';
+            modalContent.style.height = '600px';
         }
     }
 

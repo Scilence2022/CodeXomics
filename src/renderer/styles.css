@@ -14144,6 +14144,63 @@ to {
     max-width: 800px;
     max-height: 85vh;
     overflow: hidden;
+    position: relative;
+    min-width: 600px;
+    min-height: 400px;
+}
+
+.search-settings-modal.draggable {
+    cursor: move;
+}
+
+.search-settings-modal.draggable .modal-header {
+    cursor: move;
+    user-select: none;
+}
+
+.search-settings-modal.resizable {
+    resize: none;
+    overflow: visible;
+}
+
+/* Search Settings Modal Resize Handles */
+.search-settings-modal .resize-handle-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    background: transparent;
+    z-index: 10;
+}
+
+.search-settings-modal .resize-handle-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    cursor: ns-resize;
+    background: transparent;
+    z-index: 10;
+}
+
+.search-settings-modal .resize-handle-corner {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    cursor: nw-resize;
+    background: transparent;
+    z-index: 11;
+}
+
+.search-settings-modal .resize-handle-right:hover,
+.search-settings-modal .resize-handle-bottom:hover,
+.search-settings-modal .resize-handle-corner:hover {
+    background: rgba(59, 130, 246, 0.1);
 }
 
 .search-settings-container {
