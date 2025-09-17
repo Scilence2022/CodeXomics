@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NCBI Database Browser - Professional Bioinformatics Tool</title>
+    <title>Search NCBI Database - Professional Bioinformatics Tool</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -472,7 +472,7 @@
             <div class="app-title">
                 <i class="fas fa-database"></i>
                 <div class="title-text">
-                    <h1>NCBI Database Browser</h1>
+                    <h1>Search NCBI Database</h1>
                     <p>Professional Bioinformatics Research Tool</p>
                 </div>
             </div>
@@ -613,7 +613,7 @@
             <div id="resultsContainer">
                 <div class="empty-state">
                     <i class="fas fa-database"></i>
-                    <h3>NCBI Database Browser</h3>
+                    <h3>Search NCBI Database</h3>
                     <p>Select a database and enter search terms to explore NCBI's comprehensive biological databases.</p>
                     <p style="font-size: 14px; margin-top: 15px; color: var(--text-muted);">
                         Access millions of sequences, structures, publications, and genomic data from the National Center for Biotechnology Information.
@@ -636,7 +636,7 @@
             }
 
             initMenuHandler() {
-                this.menuHandler = new ToolMenuHandler('NCBI Database Browser', this);
+                this.menuHandler = new ToolMenuHandler('Search NCBI Database', this);
             }
 
             init() {
@@ -1257,7 +1257,7 @@
                 document.getElementById('resultsContainer').innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-database"></i>
-                        <h3>NCBI Database Browser</h3>
+                        <h3>Search NCBI Database</h3>
                         <p>Select a database and enter search terms to explore NCBI's comprehensive biological databases.</p>
                     </div>
                 `;
@@ -1312,7 +1312,7 @@
 
             showHelp() {
                 const helpContent = `
-                    <h3>NCBI Database Browser Help</h3>
+                    <h3>Search NCBI Database Help</h3>
                     <p><strong>Search Tips:</strong></p>
                     <ul>
                         <li>Use specific terms for better results</li>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UniProt Database Search - Genome AI Studio</title>
+    <title>Search UniProt Database - Genome AI Studio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -335,7 +335,7 @@
             <div class="app-title">
                 <i class="fas fa-database"></i>
                 <div class="title-text">
-                    <h1>UniProt Database Search</h1>
+                    <h1>Search UniProt Database</h1>
                     <p>Universal Protein Resource Database Query Tool</p>
                 </div>
             </div>
@@ -471,63 +471,26 @@
         class UniProtSearcher {
             constructor() {
                 this.currentResults = [];
-                this.mcpClient = null;
-                this.isConnected = false;
+                this.apiBaseUrl = 'https://rest.uniprot.org';
                 this.init();
                 this.initMenuHandler();
-                this.initializeMCPConnection();
+                this.showStatus('UniProt Search Tool initialized. Ready to search protein database.', 'success');
             }
 
             initMenuHandler() {
                 // Initialize menu handler with tool-specific actions
-                this.menuHandler = new ToolMenuHandler('UniProt Database Search', this);
+                this.menuHandler = new ToolMenuHandler('Search UniProt Database', this);
             }
 
-            async initializeMCPConnection() {
+            async testUniProtAPI() {
                 try {
-                    this.showStatus('Connecting to MCP Server for UniProt API access...', 'success');
-                    
-                    // Connect to MCP WebSocket server
-                    this.mcpClient = new WebSocket('ws://localhost:3001');
-                    
-                    this.mcpClient.onopen = () => {
-                        this.isConnected = true;
-                        this.showStatus('Connected to MCP Server. Real UniProt API access enabled.', 'success');
-                    };
-                    
-                    this.mcpClient.onmessage = (event) => {
-                        const data = JSON.parse(event.data);
-                        if (data.type === 'tool-response') {
-                            this.handleMCPResponse(data);
-                        }
-                    };
-                    
-                    this.mcpClient.onclose = () => {
-                        this.isConnected = false;
-                        this.showStatus('Disconnected from MCP Server. Using offline mode.', 'warning');
-                    };
-                    
-                    this.mcpClient.onerror = (error) => {
-                        this.isConnected = false;
-                        this.showStatus('MCP Server connection failed. Using offline mode.', 'warning');
-                    };
-                    
+                    // Test basic connectivity to UniProt REST API
+                    const testUrl = `${this.apiBaseUrl}/uniprotkb/search?query=insulin&format=json&size=1`;
+                    const response = await fetch(testUrl);
+                    return response.ok;
                 } catch (error) {
-                    this.isConnected = false;
-                    this.showStatus('Failed to connect to MCP Server. Using offline mode.', 'warning');
+                    return false;
                 }
-            }
-
-            handleMCPResponse(data) {
-                if (data.success && data.result) {
-                    const results = data.result.results || [];
-                    this.currentResults = results;
-                    this.displayResults(results);
-                    this.showStatus(`Found ${results.length} protein(s) from UniProt database.`, 'success');
-                } else {
-                    this.showStatus(`Search failed: ${data.error || 'Unknown error'}`, 'error');
-                }
-                this.showLoading(false);
             }
 
             init() {
@@ -581,32 +544,86 @@
                 const limit = parseInt(document.getElementById('resultLimit').value);
 
                 this.showLoading(true);
-                this.showStatus('Searching UniProt database via MCP Server...', 'success');
+                this.showStatus('Searching UniProt database...', 'success');
 
                 try {
-                    if (this.isConnected && this.mcpClient) {
-                        // Use real MCP Server API
-                        await this.searchUniProtViaAPI(query, searchType, organism, reviewedOnly, minLength, maxLength, limit);
+                    // Use direct UniProt REST API
+                    const apiResults = await this.searchUniProtDirectAPI(query, searchType, organism, reviewedOnly, minLength, maxLength, limit);
+                    
+                    this.currentResults = apiResults;
+                    this.displayResults(apiResults);
+                    
+                    if (apiResults.length > 0) {
+                        this.showStatus(`Found ${apiResults.length} protein(s) from UniProt REST API.`, 'success');
                     } else {
-                        // Fallback to simulation
-                        await this.delay(2000);
-                        const results = await this.simulateUniProtSearch(query, searchType, organism, reviewedOnly, minLength, maxLength, limit);
-                        this.currentResults = results;
-                        this.displayResults(results);
-                        this.showStatus(`Found ${results.length} protein(s) (offline mode).`, 'warning');
-                        this.showLoading(false);
+                        this.showStatus('No proteins found matching your search criteria.', 'warning');
                     }
-                } catch (error) {
-                    this.showStatus(`Search failed: ${error.message}`, 'error');
+                    
                     this.showLoading(false);
+                } catch (error) {
+                    this.showStatus(`Search failed: ${error.message}. Please check your internet connection and try again.`, 'error');
+                    this.showLoading(false);
+                    this.currentResults = [];
+                    this.displayResults([]);
                 }
             }
 
-            async searchUniProtViaAPI(query, searchType, organism, reviewedOnly, minLength, maxLength, limit) {
-                const requestId = 'search_' + Date.now();
+            async searchUniProtDirectAPI(query, searchType, organism, reviewedOnly, minLength, maxLength, limit) {
+                try {
+                    // Build UniProt search query
+                    let searchQuery = this.buildUniProtQuery(query, searchType, organism, reviewedOnly, minLength, maxLength);
+                    
+                    // Construct API URL
+                    const apiUrl = `${this.apiBaseUrl}/uniprotkb/search?query=${encodeURIComponent(searchQuery)}&format=json&size=${limit}&fields=accession,id,gene_names,organism_name,protein_name,length,mass,reviewed,cc_function,ft_domain,sequence`;
+                    
+                    console.log('UniProt API URL:', apiUrl);
+                    
+                    const response = await fetch(apiUrl);
+                    
+                    if (!response.ok) {
+                        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Transform API response to our format
+                    return this.transformUniProtAPIResponse(data.results || []);
+                    
+                } catch (error) {
+                    console.warn('Direct UniProt API failed:', error);
+                    throw error;
+                }
+            }
+
+            buildUniProtQuery(query, searchType, organism, reviewedOnly, minLength, maxLength) {
+                let searchParts = [];
                 
-                // Build organism filter
-                let organismFilter = null;
+                // Add main query based on search type
+                switch (searchType) {
+                    case 'protein_name':
+                        searchParts.push(`protein_name:${query}`);
+                        break;
+                    case 'gene_name':
+                        searchParts.push(`gene:${query}`);
+                        break;
+                    case 'uniprot_id':
+                        searchParts.push(`accession:${query}`);
+                        break;
+                    case 'organism':
+                        searchParts.push(`organism_name:${query}`);
+                        break;
+                    case 'keyword':
+                        searchParts.push(`keyword:${query}`);
+                        break;
+                    case 'sequence':
+                        // For sequence searches, use a general search
+                        searchParts.push(query);
+                        break;
+                    default:
+                        searchParts.push(query);
+                }
+                
+                // Add organism filter
                 if (organism) {
                     const organismMap = {
                         '9606': 'Homo sapiens',
@@ -617,101 +634,74 @@
                         '6239': 'Caenorhabditis elegans',
                         '3702': 'Arabidopsis thaliana'
                     };
-                    organismFilter = organismMap[organism] || organism;
+                    const organismName = organismMap[organism] || organism;
+                    searchParts.push(`organism_name:"${organismName}"`);
                 }
-
-                const searchParams = {
-                    query: query,
-                    searchType: searchType,
-                    organism: organismFilter,
-                    reviewedOnly: reviewedOnly,
-                    minLength: minLength,
-                    maxLength: maxLength,
-                    limit: limit,
-                    includeSequence: true,
-                    includeFeatures: true
-                };
-
-                // Send search request to MCP Server
-                this.mcpClient.send(JSON.stringify({
-                    type: 'execute-tool',
-                    requestId: requestId,
-                    toolName: 'search_uniprot_database',
-                    parameters: searchParams
-                }));
+                
+                // Add reviewed filter
+                if (reviewedOnly) {
+                    searchParts.push('reviewed:true');
+                }
+                
+                // Add length filters
+                if (minLength) {
+                    searchParts.push(`length:[${minLength} TO *]`);
+                }
+                if (maxLength) {
+                    searchParts.push(`length:[* TO ${maxLength}]`);
+                }
+                
+                return searchParts.join(' AND ');
             }
 
-            async simulateUniProtSearch(query, searchType, organism, reviewedOnly, minLength, maxLength, limit) {
-                // Fallback simulation for when MCP Server is not available
-                const proteinDatabase = [
-                    {
-                        uniprotId: 'P04637',
-                        proteinName: 'Cellular tumor antigen p53',
-                        geneNames: [{ primary: 'TP53', synonyms: ['P53'] }],
-                        organism: 'Homo sapiens',
-                        length: 393,
-                        mass: 43653,
-                        reviewed: true,
-                        function: 'Acts as a tumor suppressor in many tumor types; induces growth arrest or apoptosis depending on the physiological circumstances and cell type.',
-                        sequence: 'MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAPTPAAPAPAPSWPLSSSVPSQKTYQGSYGFRLGFLHSGTAKSVTCTYSPALNKMFCQLAKTCPVQLWVDSTPPPGTRVRAMAIYKQSQHMTEVVRRCPHHERCSDSDGLAPPQHLIRVEGNLRVEYLDDRNTFRHSVVVPYEPPEVGSDCTTIHYNYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRNSFEVRVCACPGRDRRTEEENLRKKGEPHHELPPGSTKRALPNNTSSSPQPKKKPLDGEYFTLQIRGRERFEMFRELNEALELKDAQAGKEPGGSRAHSSHLKSKKGQSTSRHKKLMFKTEGPDSD',
-                        features: [
-                            { type: 'Domain', location: { start: 102, end: 292 }, description: 'DNA-binding domain' },
-                            { type: 'Region', location: { start: 293, end: 393 }, description: 'Oligomerization domain' }
-                        ],
-                        uniprotUrl: 'https://www.uniprot.org/uniprotkb/P04637'
-                    },
-                    {
-                        uniprotId: 'P01308',
-                        proteinName: 'Insulin',
-                        geneNames: [{ primary: 'INS', synonyms: [] }],
-                        organism: 'Homo sapiens',
-                        length: 110,
-                        mass: 11865,
-                        reviewed: true,
-                        function: 'Insulin decreases blood glucose concentration. It increases cell permeability to monosaccharides, amino acids and fatty acids.',
-                        sequence: 'MALWMRLLPLLALLALWGPDPAAAFVNQHLCGSHLVEALYLVCGERGFFYTPKTRREAEDLQVGQVELGGGPGAGSLQPLALEGSLQKRGIVEQCCTSICSLYQLENYCN',
-                        features: [
-                            { type: 'Signal', location: { start: 1, end: 24 }, description: 'Signal peptide' },
-                            { type: 'Chain', location: { start: 25, end: 54 }, description: 'Insulin B chain' },
-                            { type: 'Chain', location: { start: 90, end: 110 }, description: 'Insulin A chain' }
-                        ],
-                        uniprotUrl: 'https://www.uniprot.org/uniprotkb/P01308'
-                    }
-                ];
-
-                // Filter based on search criteria
-                let filteredResults = proteinDatabase.filter(protein => {
-                    const searchLower = query.toLowerCase();
-                    const matchesQuery = 
-                        protein.proteinName.toLowerCase().includes(searchLower) ||
-                        protein.geneNames.some(gene => gene.primary.toLowerCase().includes(searchLower)) ||
-                        protein.uniprotId.toLowerCase().includes(searchLower) ||
-                        protein.function.toLowerCase().includes(searchLower);
-
-                    if (!matchesQuery) return false;
-
-                    const organismMap = {
-                        '9606': 'Homo sapiens',
-                        '10090': 'Mus musculus',
-                        '83333': 'Escherichia coli'
-                    };
+            transformUniProtAPIResponse(apiResults) {
+                return apiResults.map(entry => {
+                    // Extract gene names
+                    const geneNames = entry.genes || [];
+                    const primaryGene = geneNames.length > 0 ? geneNames[0] : null;
+                    const geneName = primaryGene?.geneName?.value || primaryGene?.geneName || 'Unknown';
                     
-                    if (organism && !protein.organism.includes(organismMap[organism] || organism)) {
-                        return false;
+                    // Extract protein name
+                    let proteinName = 'Unknown protein';
+                    if (entry.proteinDescription?.recommendedName?.fullName?.value) {
+                        proteinName = entry.proteinDescription.recommendedName.fullName.value;
+                    } else if (entry.proteinDescription?.submissionNames?.[0]?.fullName?.value) {
+                        proteinName = entry.proteinDescription.submissionNames[0].fullName.value;
                     }
-
-                    if (reviewedOnly && !protein.reviewed) {
-                        return false;
+                    
+                    // Extract function
+                    let functionText = 'Function not available';
+                    const functionComment = entry.comments?.find(c => c.commentType === 'FUNCTION');
+                    if (functionComment?.texts?.[0]?.value) {
+                        functionText = functionComment.texts[0].value;
                     }
-
-                    if (minLength && protein.length < minLength) return false;
-                    if (maxLength && protein.length > maxLength) return false;
-
-                    return true;
+                    
+                    // Extract features
+                    const features = (entry.features || []).slice(0, 5).map(f => ({
+                        type: f.type,
+                        location: { 
+                            start: f.location?.start?.value || f.location?.start, 
+                            end: f.location?.end?.value || f.location?.end 
+                        },
+                        description: f.description || f.type
+                    }));
+                    
+                    return {
+                        uniprotId: entry.primaryAccession || entry.accession,
+                        proteinName: proteinName,
+                        geneNames: geneName ? [{ primary: geneName, synonyms: [] }] : [],
+                        organism: entry.organism?.scientificName || 'Unknown organism',
+                        length: entry.sequence?.length || 0,
+                        mass: entry.sequence?.molWeight || 0,
+                        reviewed: entry.entryType === 'UniProtKB reviewed (Swiss-Prot)' || entry.reviewed === true,
+                        function: functionText,
+                        sequence: entry.sequence?.value || '',
+                        features: features,
+                        uniprotUrl: `https://www.uniprot.org/uniprotkb/${entry.primaryAccession || entry.accession}`
+                    };
                 });
-
-                return filteredResults.slice(0, limit);
             }
+
 
             displayResults(results) {
                 const container = document.getElementById('searchResults');
@@ -902,10 +892,10 @@
             }
 
             showHelp() {
-                alert(`UniProt Database Search Help:
+                alert(`Search UniProt Database Help:
 
-REAL API ACCESS:
-This tool connects to the MCP Server which provides real UniProt API access.
+DIRECT API ACCESS:
+This tool connects directly to the UniProt REST API for real-time protein data.
 
 SEARCH TYPES:
 • Protein Name: Search by protein name
@@ -913,7 +903,6 @@ SEARCH TYPES:
 • UniProt ID: Search by accession ID (e.g., P04637)
 • Organism: Search by species name
 • Keyword: Search by functional keywords
-• Annotation: Search in functional annotations
 • Sequence: Search by protein sequence similarity
 
 FILTERS:
@@ -922,7 +911,7 @@ FILTERS:
 • Protein Length: Filter by sequence length
 
 FEATURES:
-• Real-time UniProt API integration
+• Direct UniProt REST API integration
 • Download FASTA sequences
 • Export results as CSV
 • Direct links to UniProt database
@@ -932,7 +921,7 @@ TIPS:
 • Use specific gene names for best results
 • Enable "Reviewed only" for high-quality data
 • Try different search types if no results found
-• MCP Server must be running for API access`);
+• Internet connection required for API access`);
             }
 
             delay(ms) {

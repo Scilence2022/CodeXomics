@@ -3692,7 +3692,7 @@ function createUniProtWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'UniProt Database Search - Genome AI Studio',
+      title: 'Search UniProt Database - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -3702,7 +3702,7 @@ function createUniProtWindow() {
     uniprotWindow.once('ready-to-show', () => {
       uniprotWindow.show();
       // 为UniProt工具窗口设置独立菜单
-      createToolWindowMenu(uniprotWindow, 'UniProt Database Search');
+      createToolWindowMenu(uniprotWindow, 'Search UniProt Database');
     });
 
     uniprotWindow.webContents.openDevTools();
@@ -3768,7 +3768,7 @@ function createNCBIWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'NCBI Database Browser - Genome AI Studio',
+      title: 'Search NCBI Database - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -3778,7 +3778,7 @@ function createNCBIWindow() {
     ncbiWindow.once('ready-to-show', () => {
       ncbiWindow.show();
       // 为NCBI工具窗口设置独立菜单
-      createToolWindowMenu(ncbiWindow, 'NCBI Database Browser');
+      createToolWindowMenu(ncbiWindow, 'Search NCBI Database');
     });
 
     ncbiWindow.webContents.openDevTools();
