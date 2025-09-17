@@ -1413,6 +1413,7 @@ function createWindow() {
     
     // Initialize RPC interface after window is ready
     genomeStudioRPC.setMainWindow(mainWindow);
+    genomeStudioRPC.initialize();
   });
 
   // Open DevTools for debugging (can be disabled in production)

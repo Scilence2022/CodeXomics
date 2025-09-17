@@ -14,7 +14,18 @@ class GenomeStudioRPC extends EventEmitter {
         super();
         this.mainWindow = null;
         this.pendingRequests = new Map(); // requestId -> { resolve, reject, timeout }
+        this.initialized = false;
+    }
+
+    // Initialize the RPC system
+    initialize() {
+        if (this.initialized) return;
+        if (!ipcMain) {
+            console.warn('ipcMain not available, RPC initialization deferred');
+            return;
+        }
         this.setupIPCHandlers();
+        this.initialized = true;
     }
 
     // Set the main window reference
