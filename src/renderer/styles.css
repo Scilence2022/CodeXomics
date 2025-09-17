@@ -14140,9 +14140,9 @@ to {
 
 /* Search Settings Modal Styles */
 .search-settings-modal {
-    width: 90%;
-    max-width: 800px;
-    max-height: 85vh;
+    width: 700px;
+    max-width: 95vw;
+    max-height: 90vh;
     overflow: hidden;
     position: relative;
     min-width: 500px;
@@ -14161,6 +14161,11 @@ to {
 .search-settings-modal.resizable {
     resize: none;
     overflow: visible;
+}
+
+.search-settings-modal .modal-body {
+    background: var(--bg-primary);
+    overflow: hidden;
 }
 
 /* Search Settings Modal Resize Handles */
@@ -14242,9 +14247,10 @@ to {
     flex-direction: column;
     gap: 24px;
     padding: 20px;
-    max-height: calc(100% - 120px);
+    min-height: calc(100% - 120px);
     overflow-y: auto;
     overflow-x: hidden;
+    background: var(--bg-primary);
 }
 
 .settings-group {

@@ -2318,7 +2318,7 @@ class NavigationManager {
         // Handle corner resize and edge detection
         modalContent.addEventListener('mousedown', (e) => {
             const rect = modalContent.getBoundingClientRect();
-            const handleSize = 24;
+            const handleSize = 16;
             const edgeSize = 12;
             
             console.log('Modal mousedown event:', {
