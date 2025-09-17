@@ -635,4 +635,9 @@ class AgentBase {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = AgentBase;
+}
+
+// Also make it globally available for browser usage
+if (typeof window !== 'undefined') {
+    window.AgentBase = AgentBase;
 } 

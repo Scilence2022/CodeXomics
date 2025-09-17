@@ -414,7 +414,7 @@ class ChatManager {
             await this.loadScript('modules/MultiAgentSystem.js');
             
             // Load all available agent classes
-            await this.loadScript('modules/Agents/AgentBase.js');
+            // AgentBase.js is already loaded via index.html
             await this.loadScript('modules/Agents/NavigationAgent.js');
             await this.loadScript('modules/Agents/AnalysisAgent.js');
             await this.loadScript('modules/Agents/DataAgent.js');

@@ -27,7 +27,11 @@ class CrewAIMultiAgentSystem {
         this.performanceMonitor = new PerformanceMonitor();
         
         console.log('🚢 CrewAI Multi-Agent System initializing...');
-        this.initialize();
+        
+        // Delay initialization to ensure all scripts are loaded
+        setTimeout(() => {
+            this.initialize();
+        }, 100);
     }
     
     /**
@@ -67,6 +71,9 @@ class CrewAIMultiAgentSystem {
      */
     async initializeGenomicsAgents() {
         try {
+            // Wait for classes to be available
+            await this.waitForClasses();
+            
             // Load agent classes
             const {
                 GenomicsDataAnalyst,
@@ -100,6 +107,32 @@ class CrewAIMultiAgentSystem {
             console.error('❌ Failed to initialize genomics agents:', error);
             throw error;
         }
+    }
+    
+    /**
+     * Wait for agent classes to be available
+     */
+    async waitForClasses() {
+        const maxAttempts = 50; // 5 seconds max
+        const delay = 100; // 100ms between attempts
+        
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            if (typeof window !== 'undefined' && 
+                window.GenomicsDataAnalyst && 
+                window.BioinformaticsResearcher && 
+                window.GenomeNavigator && 
+                window.QualityController && 
+                window.ProjectCoordinator &&
+                window.CrewAgent) {
+                console.log(`✅ All agent classes available after ${attempt * delay}ms`);
+                return;
+            }
+            
+            console.log(`⏳ Waiting for agent classes... attempt ${attempt + 1}/${maxAttempts}`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        throw new Error('Timeout waiting for agent classes to be available');
     }
     
     /**
