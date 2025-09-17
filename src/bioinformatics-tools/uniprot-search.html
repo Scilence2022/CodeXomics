@@ -807,9 +807,7 @@
                     `;
                 }).join('');
 
-                const sourceNote = this.isConnected 
-                    ? 'Results retrieved from UniProt database via MCP Server API'
-                    : 'Results from offline database (limited data)';
+                const sourceNote = 'Results retrieved from UniProt REST API';
 
                 container.innerHTML = `
                     <div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
