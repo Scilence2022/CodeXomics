@@ -1663,6 +1663,21 @@ function createMenu() {
         },
         { type: 'separator' },
         {
+          label: 'Search UniProt Database',
+          accelerator: 'CmdOrCtrl+Shift+U',
+          click: () => {
+            createUniProtWindow();
+          }
+        },
+        {
+          label: 'Search NCBI Database',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: () => {
+            createNCBIWindow();
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Copy',
           accelerator: 'CmdOrCtrl+C',
           click: () => {
@@ -1894,51 +1909,25 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Biological Databases',
-          submenu: [
-            {
-              label: 'KEGG Pathway Analysis',
-              accelerator: 'CmdOrCtrl+Shift+K',
-              click: () => {
-                createKEGGWindow();
-              }
-            },
-            {
-              label: 'Gene Ontology (GO) Analyzer',
-              accelerator: 'CmdOrCtrl+Alt+G',
-              click: () => {
-                createGOWindow();
-              }
-            },
-            {
-              label: 'UniProt Database Search',
-              accelerator: 'CmdOrCtrl+Shift+U',
-              click: () => {
-                createUniProtWindow();
-              }
-            },
-            {
-              label: 'InterPro Domain Analysis',
-              accelerator: 'CmdOrCtrl+Shift+I',
-              click: () => {
-                createInterProWindow();
-              }
-            },
-            {
-              label: 'NCBI Database Browser',
-              accelerator: 'CmdOrCtrl+Shift+N',
-              click: () => {
-                createNCBIWindow();
-              }
-            },
-            {
-              label: 'Ensembl Genome Browser',
-              accelerator: 'CmdOrCtrl+Shift+B',
-              click: () => {
-                createEnsemblWindow();
-              }
-            }
-          ]
+          label: 'KEGG Pathway Enrichment Analysis',
+          accelerator: 'CmdOrCtrl+Shift+K',
+          click: () => {
+            createKEGGWindow();
+          }
+        },
+        {
+          label: 'Gene Ontology (GO) Analyzer',
+          accelerator: 'CmdOrCtrl+Alt+G',
+          click: () => {
+            createGOWindow();
+          }
+        },
+        {
+          label: 'InterPro Domain Analysis',
+          accelerator: 'CmdOrCtrl+Shift+I',
+          click: () => {
+            createInterProWindow();
+          }
         },
         { type: 'separator' },
         {
@@ -3803,43 +3792,6 @@ function createNCBIWindow() {
   }
 }
 
-// Create Ensembl Genome Browser Window
-function createEnsemblWindow() {
-  try {
-    const ensemblWindow = new BrowserWindow({
-      width: 1400,
-      height: 900,
-      minWidth: 1000,
-      minHeight: 700,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: true,
-        webSecurity: false
-      },
-      title: 'Ensembl Genome Browser - Genome AI Studio',
-      icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
-    });
-
-    ensemblWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/ensembl-browser.html'));
-
-    ensemblWindow.once('ready-to-show', () => {
-      ensemblWindow.show();
-      // 为Ensembl工具窗口设置独立菜单
-      createToolWindowMenu(ensemblWindow, 'Ensembl Genome Browser');
-    });
-
-    ensemblWindow.webContents.openDevTools();
-
-    ensemblWindow.on('closed', () => {
-      console.log('Ensembl Browser window closed');
-    });
-
-  } catch (error) {
-    console.error('Failed to open Ensembl Browser:', error);
-  }
-}
 
 // ========== ANALYSIS TOOLS ==========
 
@@ -4819,10 +4771,6 @@ ipcMain.on('open-ncbi-window', () => {
   createNCBIWindow();
 });
 
-ipcMain.on('open-ensembl-window', () => {
-  console.log('IPC: Opening Ensembl window...');
-  createEnsemblWindow();
-});
 
 ipcMain.on('open-string-window', () => {
   console.log('IPC: Opening STRING window...');
