@@ -9,6 +9,12 @@
  */
 class CrewAIMultiAgentSystem {
     constructor(chatManager, configManager) {
+        // Prevent multiple instances
+        if (window.crewAISystemInstance) {
+            console.warn('⚠️ CrewAI Multi-Agent System instance already exists, skipping initialization');
+            return window.crewAISystemInstance;
+        }
+        
         this.chatManager = chatManager;
         this.configManager = configManager;
         this.app = chatManager.app;
@@ -29,6 +35,9 @@ class CrewAIMultiAgentSystem {
         console.log('🚢 CrewAI Multi-Agent System initializing...');
         console.log('⚠️ Note: CrewAI system is currently experiencing class loading issues');
         console.log('💡 To re-enable: modify ChatManager.js initializeMultiAgentSystem() method');
+        
+        // Store global instance
+        window.crewAISystemInstance = this;
         
         // Delay initialization to ensure all scripts are loaded
         setTimeout(() => {
@@ -82,11 +91,7 @@ class CrewAIMultiAgentSystem {
             console.log('- QualityController:', typeof window.QualityController, !!window.QualityController);
             console.log('- ProjectCoordinator:', typeof window.ProjectCoordinator, !!window.ProjectCoordinator);
             
-            // Try to load scripts manually if classes aren't available
-            if (!window.CrewAgent || !window.GenomicsDataAnalyst) {
-                console.log('🔄 Classes not available, attempting manual script loading...');
-                await this.loadScriptsManually();
-            }
+            // Scripts are loaded statically via index.html, no need for manual loading
             
             // Wait for classes to be available (shorter timeout for debugging)
             await this.waitForClasses();
@@ -126,41 +131,6 @@ class CrewAIMultiAgentSystem {
         }
     }
     
-    /**
-     * Manually load required scripts if they're not available
-     */
-    async loadScriptsManually() {
-        const scripts = [
-            'modules/CrewAI/CrewAIFramework.js',
-            'modules/CrewAI/GenomicsCrewAgents.js'
-        ];
-        
-        for (const scriptPath of scripts) {
-            try {
-                console.log(`📥 Loading script: ${scriptPath}`);
-                await this.loadScript(scriptPath);
-                console.log(`✅ Script loaded: ${scriptPath}`);
-            } catch (error) {
-                console.error(`❌ Failed to load script ${scriptPath}:`, error);
-            }
-        }
-        
-        // Wait a bit for scripts to execute
-        await new Promise(resolve => setTimeout(resolve, 200));
-    }
-    
-    /**
-     * Load a script dynamically
-     */
-    async loadScript(src) {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    }
     
     /**
      * Wait for agent classes to be available

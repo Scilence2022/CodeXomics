@@ -3,6 +3,9 @@
  * Pre-configured agents with genomics-specific roles, goals, and tools
  */
 
+// Prevent duplicate declarations
+if (typeof window.GenomicsDataAnalyst === 'undefined') {
+
 /**
  * Data Analysis Agent
  * Specializes in genomic data processing and analysis
@@ -851,24 +854,34 @@ class ProjectCoordinator extends CrewAgent {
     }
 }
 
+} // End of duplicate prevention conditional
+
 // Export all agent classes
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        GenomicsDataAnalyst,
-        BioinformaticsResearcher,
-        GenomeNavigator,
-        QualityController,
-        ProjectCoordinator
-    };
+    // Node.js environment
+    if (typeof GenomicsDataAnalyst !== 'undefined') {
+        module.exports = {
+            GenomicsDataAnalyst,
+            BioinformaticsResearcher,
+            GenomeNavigator,
+            QualityController,
+            ProjectCoordinator
+        };
+    }
 } else {
+    // Browser environment
     console.log('🔧 Exporting GenomicsCrewAgents classes to window object...');
     try {
-        window.GenomicsDataAnalyst = GenomicsDataAnalyst;
-        window.BioinformaticsResearcher = BioinformaticsResearcher;
-        window.GenomeNavigator = GenomeNavigator;
-        window.QualityController = QualityController;
-        window.ProjectCoordinator = ProjectCoordinator;
-        console.log('✅ GenomicsCrewAgents classes exported successfully');
+        if (typeof GenomicsDataAnalyst !== 'undefined') {
+            window.GenomicsDataAnalyst = GenomicsDataAnalyst;
+            window.BioinformaticsResearcher = BioinformaticsResearcher;
+            window.GenomeNavigator = GenomeNavigator;
+            window.QualityController = QualityController;
+            window.ProjectCoordinator = ProjectCoordinator;
+            console.log('✅ GenomicsCrewAgents classes exported successfully');
+        } else {
+            console.log('ℹ️ GenomicsCrewAgents classes already defined, skipping export');
+        }
     } catch (error) {
         console.error('❌ Error exporting GenomicsCrewAgents classes:', error);
     }

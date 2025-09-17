@@ -6,6 +6,7 @@
 /**
  * Base Agent class inspired by CrewAI
  */
+if (typeof window.CrewAgent === 'undefined') {
 class CrewAgent {
     constructor(config) {
         this.role = config.role;
@@ -587,10 +588,12 @@ Synthesize a comprehensive response based on your role and the tool results.
         };
     }
 }
+}
 
 /**
  * Crew class for managing multiple agents
  */
+if (typeof window.Crew === 'undefined') {
 class Crew {
     constructor(config) {
         this.agents = config.agents || [];
@@ -871,16 +874,25 @@ class Crew {
         return `crew_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
     }
 }
+}
 
 // Export classes
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { CrewAgent, Crew };
+    // Node.js environment
+    if (typeof CrewAgent !== 'undefined') {
+        module.exports = { CrewAgent, Crew };
+    }
 } else {
+    // Browser environment
     console.log('🔧 Exporting CrewAI Framework classes to window object...');
     try {
-        window.CrewAgent = CrewAgent;
-        window.Crew = Crew;
-        console.log('✅ CrewAI Framework classes exported successfully');
+        if (typeof CrewAgent !== 'undefined') {
+            window.CrewAgent = CrewAgent;
+            window.Crew = Crew;
+            console.log('✅ CrewAI Framework classes exported successfully');
+        } else {
+            console.log('ℹ️ CrewAI Framework classes already defined, skipping export');
+        }
     } catch (error) {
         console.error('❌ Error exporting CrewAI Framework classes:', error);
     }
