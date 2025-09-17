@@ -8466,55 +8466,60 @@ class GenomeBrowser {
 
 // Initialize the Genome AI Studio when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    window.genomeBrowser = new GenomeBrowser();
-    
-    // Initialize enhanced citation display after DOM is ready
-    const initializeEnhancedCitationDisplay = () => {
-        console.log('Checking for Enhanced Citation Display modules...');
-        console.log('EnhancedCitationDisplay available:', typeof window.EnhancedCitationDisplay);
-        console.log('LiteratureAPIService available:', typeof window.LiteratureAPIService);
-        
-        if (window.EnhancedCitationDisplay && window.LiteratureAPIService) {
-            try {
-                window.genomeBrowser.enhancedCitationDisplay = new EnhancedCitationDisplay(window.genomeBrowser);
-                window.genomeBrowser.enhancedCitationDisplay.init();
-                window.enhancedCitationDisplay = window.genomeBrowser.enhancedCitationDisplay;
-                console.log('Enhanced Citation Display initialized successfully');
-                return true;
-            } catch (error) {
-                console.error('Error initializing Enhanced Citation Display:', error);
-                return false;
-            }
-        } else {
-            console.warn('Enhanced Citation Display modules not loaded yet');
-            return false;
-        }
+    // Wait for all scripts to be loaded before initializing
+    const waitForScriptsToLoad = () => {
+        return new Promise((resolve) => {
+            const checkScriptsLoaded = () => {
+                // Check if all required classes are available
+                if (typeof GenomeBrowser !== 'undefined' && 
+                    typeof LiteratureAPIService !== 'undefined' && 
+                    typeof EnhancedCitationDisplay !== 'undefined') {
+                    resolve();
+                } else {
+                    setTimeout(checkScriptsLoaded, 50);
+                }
+            };
+            checkScriptsLoaded();
+        });
     };
 
-    // Try to initialize immediately
-    if (!initializeEnhancedCitationDisplay()) {
-        // If not available, wait for modules to load
-        let retryCount = 0;
-        const maxRetries = 20; // Increased retries
-        const retryInterval = 200; // Reduced interval
+    // Initialize after all scripts are loaded
+    waitForScriptsToLoad().then(() => {
+        console.log('✅ All required scripts loaded, initializing Genome AI Studio...');
+        window.genomeBrowser = new GenomeBrowser();
         
-        const retryInitialization = () => {
-            retryCount++;
-            console.log(`Retrying Enhanced Citation Display initialization (attempt ${retryCount}/${maxRetries})...`);
+        // Initialize enhanced citation display
+        const initializeEnhancedCitationDisplay = () => {
+            console.log('Initializing Enhanced Citation Display...');
+            console.log('EnhancedCitationDisplay available:', typeof window.EnhancedCitationDisplay);
+            console.log('LiteratureAPIService available:', typeof window.LiteratureAPIService);
             
-            if (initializeEnhancedCitationDisplay()) {
-                console.log('Enhanced Citation Display initialized successfully after retry');
-            } else if (retryCount < maxRetries) {
-                setTimeout(retryInitialization, retryInterval);
+            if (window.EnhancedCitationDisplay && window.LiteratureAPIService) {
+                try {
+                    window.genomeBrowser.enhancedCitationDisplay = new EnhancedCitationDisplay(window.genomeBrowser);
+                    window.genomeBrowser.enhancedCitationDisplay.init();
+                    window.enhancedCitationDisplay = window.genomeBrowser.enhancedCitationDisplay;
+                    console.log('✅ Enhanced Citation Display initialized successfully');
+                    return true;
+                } catch (error) {
+                    console.error('❌ Error initializing Enhanced Citation Display:', error);
+                    return false;
+                }
             } else {
-                console.error('Enhanced Citation Display modules not available after maximum retries');
-                console.log('Final check - EnhancedCitationDisplay:', typeof window.EnhancedCitationDisplay);
-                console.log('Final check - LiteratureAPIService:', typeof window.LiteratureAPIService);
+                console.warn('⚠️ Enhanced Citation Display modules not available');
+                return false;
             }
         };
-        
-        setTimeout(retryInitialization, retryInterval);
-    }
+
+        // Initialize Enhanced Citation Display
+        if (!initializeEnhancedCitationDisplay()) {
+            console.warn('⚠️ Enhanced Citation Display initialization failed, but continuing...');
+        }
+    }).catch(error => {
+        console.error('❌ Failed to wait for scripts to load:', error);
+        // Fallback: initialize anyway
+        window.genomeBrowser = new GenomeBrowser();
+    });
 }); 
 
 /**
