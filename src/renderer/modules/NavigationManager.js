@@ -2292,17 +2292,26 @@ class NavigationManager {
         });
         
         if (resizeHandleRight) {
-            resizeHandleRight.addEventListener('mousedown', handleResizeStart);
+            resizeHandleRight.addEventListener('mousedown', (e) => {
+                console.log('Right handle mousedown');
+                handleResizeStart(e);
+            });
             console.log('Right handle event listener added');
         }
         
         if (resizeHandleBottom) {
-            resizeHandleBottom.addEventListener('mousedown', handleResizeStart);
+            resizeHandleBottom.addEventListener('mousedown', (e) => {
+                console.log('Bottom handle mousedown');
+                handleResizeStart(e);
+            });
             console.log('Bottom handle event listener added');
         }
         
         if (resizeHandleCorner) {
-            resizeHandleCorner.addEventListener('mousedown', handleResizeStart);
+            resizeHandleCorner.addEventListener('mousedown', (e) => {
+                console.log('Corner handle mousedown');
+                handleResizeStart(e);
+            });
             console.log('Corner handle event listener added');
         }
         

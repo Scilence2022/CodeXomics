@@ -14172,7 +14172,8 @@ to {
     height: 100%;
     cursor: ew-resize;
     background: transparent;
-    z-index: 10;
+    z-index: 1000;
+    pointer-events: auto;
 }
 
 .search-settings-modal .resize-handle-bottom {
@@ -14183,7 +14184,8 @@ to {
     height: 12px;
     cursor: ns-resize;
     background: transparent;
-    z-index: 10;
+    z-index: 1000;
+    pointer-events: auto;
 }
 
 .search-settings-modal .resize-handle-corner {
@@ -14194,13 +14196,14 @@ to {
     height: 16px;
     cursor: nw-resize;
     background: transparent;
-    z-index: 11;
+    z-index: 1001;
+    pointer-events: auto;
 }
 
 .search-settings-modal .resize-handle-right:hover,
 .search-settings-modal .resize-handle-bottom:hover,
 .search-settings-modal .resize-handle-corner:hover {
-    background: rgba(59, 130, 246, 0.2);
+    background: rgba(59, 130, 246, 0.3);
 }
 
 /* Make resize handles more visible */
@@ -14211,14 +14214,27 @@ to {
     right: 2px;
     width: 8px;
     height: 8px;
-    background: rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.5);
     border-radius: 2px;
-    opacity: 0;
+    opacity: 0.7;
     transition: opacity 0.2s ease;
 }
 
 .search-settings-modal .resize-handle-corner:hover::after {
     opacity: 1;
+}
+
+/* Ensure resize handles are always visible and clickable */
+.search-settings-modal .resize-handle-right,
+.search-settings-modal .resize-handle-bottom,
+.search-settings-modal .resize-handle-corner {
+    border: 1px solid transparent;
+}
+
+.search-settings-modal .resize-handle-right:hover,
+.search-settings-modal .resize-handle-bottom:hover,
+.search-settings-modal .resize-handle-corner:hover {
+    border-color: rgba(59, 130, 246, 0.5);
 }
 
 .search-settings-container {
