@@ -172,38 +172,6 @@
   resize: none;
 }
 
-/* Override for search settings modal */
-.large-modal .modal-content.resizable {
-  resize: none;
-  min-width: 800px;
-  min-height: 500px;
-  width: 1000px !important;
-  height: 600px !important;
-  max-width: 95vw !important;
-  max-height: 90vh !important;
-  overflow: visible !important;
-}
-
-/* More specific rule for Search Settings modal */
-#searchSettingsModal .modal-content.resizable {
-  resize: none !important;
-  min-width: 800px !important;
-  min-height: 500px !important;
-  width: 1000px !important;
-  height: 600px !important;
-  max-width: 95vw !important;
-  max-height: 90vh !important;
-  overflow: visible !important;
-  position: relative !important;
-}
-
-/* Ensure modal body doesn't interfere with resize handles */
-.large-modal .modal-content.resizable .modal-body {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  max-height: calc(100% - 80px) !important;
-  padding: 20px !important;
-}
 
 .resize-handle {
   position: absolute;
@@ -14169,9 +14137,101 @@ to {
     line-height: 1.4;
 }
 
-/* Search Settings Modal Styles - removed to avoid conflicts with resizable rules */
 
-/* Ensure JavaScript resize works - removed conflicting rules */
+/* Search Settings Modal Styles */
+.search-settings-modal {
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow: hidden;
+}
+
+.search-settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.settings-group {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.settings-group h4 {
+    margin: 0 0 16px 0;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-group h4 i {
+    color: var(--primary-color);
+    width: 16px;
+}
+
+.settings-row {
+    margin-bottom: 16px;
+}
+
+.settings-row:last-child {
+    margin-bottom: 0;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.setting-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.setting-label {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.setting-description {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+    margin-left: 24px;
+}
+
+.setting-input {
+    width: 100px;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.setting-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.setting-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
 
 /* Draggable modal styles */
 .modal-content.draggable {

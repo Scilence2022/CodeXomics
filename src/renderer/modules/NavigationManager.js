@@ -2019,196 +2019,24 @@ class NavigationManager {
     }
 
     /**
-     * Show search settings modal
+     * Get current search settings
      */
-    showSearchSettingsModal() {
-        const modal = document.getElementById('searchSettingsModal');
-        const modalContent = modal?.querySelector('.modal-content');
-        
-        if (modal && modalContent) {
-            console.log('Opening Search Settings modal...');
-            
-            // Load current settings
-            this.loadSearchSettings();
-            
-            // Add draggable and resizable classes first
-            modalContent.classList.add('draggable', 'resizable');
-            console.log('Added classes:', modalContent.className);
-            
-            // Set default size if no saved size exists
-            this.ensureDefaultSize(modalContent);
-            
-            // Load saved position and size (this will override default if exists)
-            this.loadModalPosition(modalContent);
-            
-            // Ensure resize handles exist
-            this.ensureResizeHandles(modalContent);
-            
-            // Initialize drag and resize functionality
-            this.initializeModalDragResize(modal, modalContent);
-            
-            // Force apply CSS styles
-            this.forceApplyResizeStyles(modalContent);
-            
-            modal.classList.add('show');
-            console.log('Modal opened with classes:', modalContent.className);
-        }
-    }
-
-    /**
-     * Ensure default size is set for the modal
-     */
-    ensureDefaultSize(modalContent) {
-        // Set default size if no size is currently set
-        if (!modalContent.style.width || !modalContent.style.height) {
-            modalContent.style.width = '1000px';
-            modalContent.style.height = '600px';
-            console.log('Set default size for Search Settings modal');
-        }
-    }
-
-    /**
-     * Force apply resize styles to ensure they take effect
-     */
-    forceApplyResizeStyles(modalContent) {
-        // Force apply the resizable styles
-        modalContent.style.width = '1000px';
-        modalContent.style.height = '600px';
-        modalContent.style.minWidth = '800px';
-        modalContent.style.minHeight = '500px';
-        modalContent.style.maxWidth = '95vw';
-        modalContent.style.maxHeight = '90vh';
-        modalContent.style.overflow = 'visible';
-        modalContent.style.position = 'relative';
-        
-        console.log('Force applied resize styles:', {
-            width: modalContent.style.width,
-            height: modalContent.style.height,
-            minWidth: modalContent.style.minWidth,
-            minHeight: modalContent.style.minHeight,
-            overflow: modalContent.style.overflow
-        });
-    }
-
-    /**
-     * Ensure resize handles exist in the modal
-     */
-    ensureResizeHandles(modalContent) {
-        // Check if resize handles already exist
-        let rightHandle = modalContent.querySelector('.resize-handle-right');
-        let bottomHandle = modalContent.querySelector('.resize-handle-bottom');
-        
-        // Create right handle if it doesn't exist
-        if (!rightHandle) {
-            rightHandle = document.createElement('div');
-            rightHandle.className = 'resize-handle-right';
-            modalContent.appendChild(rightHandle);
-            console.log('Created right resize handle');
-        }
-        
-        // Create bottom handle if it doesn't exist
-        if (!bottomHandle) {
-            bottomHandle = document.createElement('div');
-            bottomHandle.className = 'resize-handle-bottom';
-            modalContent.appendChild(bottomHandle);
-            console.log('Created bottom resize handle');
-        }
-    }
-
-    /**
-     * Load search settings from ConfigManager
-     */
-    loadSearchSettings() {
+    getCurrentSearchSettings() {
         const configManager = this.genomeBrowser.configManager;
-        if (!configManager) return;
-
-        const searchSettings = configManager.getSearchSettings();
+        if (!configManager) {
+            console.warn('⚠️ ConfigManager not available, using default search settings');
+            return this.getDefaultSearchSettings();
+        }
         
-        // Load basic options
-        document.getElementById('searchCaseSensitive').checked = searchSettings.caseSensitive;
-        document.getElementById('searchReverseComplement').checked = searchSettings.reverseComplement;
-        document.getElementById('searchPartialMatches').checked = searchSettings.partialMatches;
+        const settings = configManager.getSearchSettings();
+        console.log('🔧 Retrieved search settings:', settings);
         
-        // Load search scope
-        document.getElementById('searchGeneNames').checked = searchSettings.searchGeneNames;
-        document.getElementById('searchSequence').checked = searchSettings.searchSequence;
-        document.getElementById('searchFeatures').checked = searchSettings.searchFeatures;
-        document.getElementById('searchProtein').checked = searchSettings.searchProtein;
-        
-        // Load advanced options
-        document.getElementById('searchMinLength').value = searchSettings.minLength;
-        document.getElementById('searchMaxResults').value = searchSettings.maxResults;
-        document.getElementById('searchTimeout').value = searchSettings.timeout;
-        
-        // Load display options
-        document.getElementById('searchHighlightMatches').checked = searchSettings.highlightMatches;
-        document.getElementById('searchShowContext').checked = searchSettings.showContext;
-        document.getElementById('searchContextLength').value = searchSettings.contextLength;
-        
-        // Load history options
-        document.getElementById('searchSaveHistory').checked = searchSettings.saveHistory;
-        document.getElementById('searchHistoryLimit').value = searchSettings.historyLimit;
-    }
-
-    /**
-     * Save search settings to ConfigManager
-     */
-    saveSearchSettings() {
-        const configManager = this.genomeBrowser.configManager;
-        if (!configManager) return;
-
-        const searchSettings = {
-            caseSensitive: document.getElementById('searchCaseSensitive').checked,
-            reverseComplement: document.getElementById('searchReverseComplement').checked,
-            partialMatches: document.getElementById('searchPartialMatches').checked,
-            searchGeneNames: document.getElementById('searchGeneNames').checked,
-            searchSequence: document.getElementById('searchSequence').checked,
-            searchFeatures: document.getElementById('searchFeatures').checked,
-            searchProtein: document.getElementById('searchProtein').checked,
-            minLength: parseInt(document.getElementById('searchMinLength').value),
-            maxResults: parseInt(document.getElementById('searchMaxResults').value),
-            timeout: parseInt(document.getElementById('searchTimeout').value),
-            highlightMatches: document.getElementById('searchHighlightMatches').checked,
-            showContext: document.getElementById('searchShowContext').checked,
-            contextLength: parseInt(document.getElementById('searchContextLength').value),
-            saveHistory: document.getElementById('searchSaveHistory').checked,
-            historyLimit: parseInt(document.getElementById('searchHistoryLimit').value)
-        };
-
-        configManager.setSearchSettings(searchSettings);
-        console.log('Search settings saved:', searchSettings);
-    }
-
-    /**
-     * Reset search settings to defaults
-     */
-    resetSearchSettings() {
+        // Ensure all required settings have default values
         const defaultSettings = this.getDefaultSearchSettings();
+        const mergedSettings = { ...defaultSettings, ...settings };
         
-        // Reset basic options
-        document.getElementById('searchCaseSensitive').checked = defaultSettings.caseSensitive;
-        document.getElementById('searchReverseComplement').checked = defaultSettings.reverseComplement;
-        document.getElementById('searchPartialMatches').checked = defaultSettings.partialMatches;
-        
-        // Reset search scope
-        document.getElementById('searchGeneNames').checked = defaultSettings.searchGeneNames;
-        document.getElementById('searchSequence').checked = defaultSettings.searchSequence;
-        document.getElementById('searchFeatures').checked = defaultSettings.searchFeatures;
-        document.getElementById('searchProtein').checked = defaultSettings.searchProtein;
-        
-        // Reset advanced options
-        document.getElementById('searchMinLength').value = defaultSettings.minLength;
-        document.getElementById('searchMaxResults').value = defaultSettings.maxResults;
-        document.getElementById('searchTimeout').value = defaultSettings.timeout;
-        
-        // Reset display options
-        document.getElementById('searchHighlightMatches').checked = defaultSettings.highlightMatches;
-        document.getElementById('searchShowContext').checked = defaultSettings.showContext;
-        document.getElementById('searchContextLength').value = defaultSettings.contextLength;
-        
-        // Reset history options
-        document.getElementById('searchSaveHistory').checked = defaultSettings.saveHistory;
-        document.getElementById('searchHistoryLimit').value = defaultSettings.historyLimit;
+        console.log('🔧 Merged search settings:', mergedSettings);
+        return mergedSettings;
     }
 
     /**
@@ -2235,24 +2063,150 @@ class NavigationManager {
     }
 
     /**
-     * Get current search settings
+     * Show search settings modal
      */
-    getCurrentSearchSettings() {
-        const configManager = this.genomeBrowser.configManager;
-        if (!configManager) {
-            console.warn('⚠️ ConfigManager not available, using default search settings');
-            return this.getDefaultSearchSettings();
+    showSearchSettingsModal() {
+        const modal = document.getElementById('searchSettingsModal');
+        if (modal) {
+            this.loadSearchSettings();
+            modal.classList.add('show');
         }
+    }
+
+    /**
+     * Load search settings from ConfigManager
+     */
+    loadSearchSettings() {
+        const configManager = this.genomeBrowser.configManager;
+        if (!configManager) return;
+
+        const searchSettings = configManager.getSearchSettings();
         
-        const settings = configManager.getSearchSettings();
-        console.log('🔧 Retrieved search settings:', settings);
+        // Load basic options
+        const caseSensitiveEl = document.getElementById('searchCaseSensitive');
+        const reverseComplementEl = document.getElementById('searchReverseComplement');
+        const partialMatchesEl = document.getElementById('searchPartialMatches');
         
-        // Ensure all required settings have default values
+        if (caseSensitiveEl) caseSensitiveEl.checked = searchSettings.caseSensitive;
+        if (reverseComplementEl) reverseComplementEl.checked = searchSettings.reverseComplement;
+        if (partialMatchesEl) partialMatchesEl.checked = searchSettings.partialMatches;
+        
+        // Load search scope
+        const geneNamesEl = document.getElementById('searchGeneNames');
+        const sequenceEl = document.getElementById('searchSequence');
+        const featuresEl = document.getElementById('searchFeatures');
+        const proteinEl = document.getElementById('searchProtein');
+        
+        if (geneNamesEl) geneNamesEl.checked = searchSettings.searchGeneNames;
+        if (sequenceEl) sequenceEl.checked = searchSettings.searchSequence;
+        if (featuresEl) featuresEl.checked = searchSettings.searchFeatures;
+        if (proteinEl) proteinEl.checked = searchSettings.searchProtein;
+        
+        // Load advanced options
+        const minLengthEl = document.getElementById('searchMinLength');
+        const maxResultsEl = document.getElementById('searchMaxResults');
+        const timeoutEl = document.getElementById('searchTimeout');
+        
+        if (minLengthEl) minLengthEl.value = searchSettings.minLength;
+        if (maxResultsEl) maxResultsEl.value = searchSettings.maxResults;
+        if (timeoutEl) timeoutEl.value = searchSettings.timeout;
+        
+        // Load display options
+        const highlightEl = document.getElementById('searchHighlightMatches');
+        const showContextEl = document.getElementById('searchShowContext');
+        const contextLengthEl = document.getElementById('searchContextLength');
+        
+        if (highlightEl) highlightEl.checked = searchSettings.highlightMatches;
+        if (showContextEl) showContextEl.checked = searchSettings.showContext;
+        if (contextLengthEl) contextLengthEl.value = searchSettings.contextLength;
+        
+        // Load history options
+        const saveHistoryEl = document.getElementById('searchSaveHistory');
+        const historyLimitEl = document.getElementById('searchHistoryLimit');
+        
+        if (saveHistoryEl) saveHistoryEl.checked = searchSettings.saveHistory;
+        if (historyLimitEl) historyLimitEl.value = searchSettings.historyLimit;
+    }
+
+    /**
+     * Save search settings to ConfigManager
+     */
+    saveSearchSettings() {
+        const configManager = this.genomeBrowser.configManager;
+        if (!configManager) return;
+
+        const searchSettings = {
+            caseSensitive: document.getElementById('searchCaseSensitive')?.checked || false,
+            reverseComplement: document.getElementById('searchReverseComplement')?.checked || false,
+            partialMatches: document.getElementById('searchPartialMatches')?.checked || false,
+            searchGeneNames: document.getElementById('searchGeneNames')?.checked || false,
+            searchSequence: document.getElementById('searchSequence')?.checked || false,
+            searchFeatures: document.getElementById('searchFeatures')?.checked || false,
+            searchProtein: document.getElementById('searchProtein')?.checked || false,
+            minLength: parseInt(document.getElementById('searchMinLength')?.value) || 3,
+            maxResults: parseInt(document.getElementById('searchMaxResults')?.value) || 100,
+            timeout: parseInt(document.getElementById('searchTimeout')?.value) || 30,
+            highlightMatches: document.getElementById('searchHighlightMatches')?.checked || false,
+            showContext: document.getElementById('searchShowContext')?.checked || false,
+            contextLength: parseInt(document.getElementById('searchContextLength')?.value) || 50,
+            saveHistory: document.getElementById('searchSaveHistory')?.checked || false,
+            historyLimit: parseInt(document.getElementById('searchHistoryLimit')?.value) || 50
+        };
+
+        configManager.setSearchSettings(searchSettings);
+        console.log('Search settings saved:', searchSettings);
+    }
+
+    /**
+     * Reset search settings to defaults
+     */
+    resetSearchSettings() {
         const defaultSettings = this.getDefaultSearchSettings();
-        const mergedSettings = { ...defaultSettings, ...settings };
         
-        console.log('🔧 Merged search settings:', mergedSettings);
-        return mergedSettings;
+        // Reset basic options
+        const caseSensitiveEl = document.getElementById('searchCaseSensitive');
+        const reverseComplementEl = document.getElementById('searchReverseComplement');
+        const partialMatchesEl = document.getElementById('searchPartialMatches');
+        
+        if (caseSensitiveEl) caseSensitiveEl.checked = defaultSettings.caseSensitive;
+        if (reverseComplementEl) reverseComplementEl.checked = defaultSettings.reverseComplement;
+        if (partialMatchesEl) partialMatchesEl.checked = defaultSettings.partialMatches;
+        
+        // Reset search scope
+        const geneNamesEl = document.getElementById('searchGeneNames');
+        const sequenceEl = document.getElementById('searchSequence');
+        const featuresEl = document.getElementById('searchFeatures');
+        const proteinEl = document.getElementById('searchProtein');
+        
+        if (geneNamesEl) geneNamesEl.checked = defaultSettings.searchGeneNames;
+        if (sequenceEl) sequenceEl.checked = defaultSettings.searchSequence;
+        if (featuresEl) featuresEl.checked = defaultSettings.searchFeatures;
+        if (proteinEl) proteinEl.checked = defaultSettings.searchProtein;
+        
+        // Reset advanced options
+        const minLengthEl = document.getElementById('searchMinLength');
+        const maxResultsEl = document.getElementById('searchMaxResults');
+        const timeoutEl = document.getElementById('searchTimeout');
+        
+        if (minLengthEl) minLengthEl.value = defaultSettings.minLength;
+        if (maxResultsEl) maxResultsEl.value = defaultSettings.maxResults;
+        if (timeoutEl) timeoutEl.value = defaultSettings.timeout;
+        
+        // Reset display options
+        const highlightEl = document.getElementById('searchHighlightMatches');
+        const showContextEl = document.getElementById('searchShowContext');
+        const contextLengthEl = document.getElementById('searchContextLength');
+        
+        if (highlightEl) highlightEl.checked = defaultSettings.highlightMatches;
+        if (showContextEl) showContextEl.checked = defaultSettings.showContext;
+        if (contextLengthEl) contextLengthEl.value = defaultSettings.contextLength;
+        
+        // Reset history options
+        const saveHistoryEl = document.getElementById('searchSaveHistory');
+        const historyLimitEl = document.getElementById('searchHistoryLimit');
+        
+        if (saveHistoryEl) saveHistoryEl.checked = defaultSettings.saveHistory;
+        if (historyLimitEl) historyLimitEl.value = defaultSettings.historyLimit;
     }
 
     /**
