@@ -214,28 +214,73 @@
 
         .node-rect {
             stroke: #374151;
-            stroke-width: 1;
+            stroke-width: 1.5;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
 
         .node-circle {
             stroke: #374151;
-            stroke-width: 1;
+            stroke-width: 1.5;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        .node[data-type="compound"] .node-rect,
+        .node[data-type="compound"] .node-circle {
+            stroke: #92400e;
+            stroke-width: 2;
+        }
+
+        .node[data-type="gene"] .node-rect,
+        .node[data-type="gene"] .node-circle {
+            stroke: #166534;
+            stroke-width: 2;
+        }
+
+        .node[data-type="enzyme"] .node-rect,
+        .node[data-type="enzyme"] .node-circle {
+            stroke: #6b21a8;
+            stroke-width: 2;
         }
 
         .node-text {
             font-family: 'Inter', sans-serif;
-            font-size: 10px;
-            font-weight: 500;
+            font-size: 9px;
+            font-weight: 600;
             text-anchor: middle;
             dominant-baseline: central;
             pointer-events: none;
+            fill: #1f2937;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .node[data-type="compound"] .node-text {
+            font-size: 8px;
+            font-weight: 700;
+            fill: #92400e;
+        }
+
+        .node[data-type="gene"] .node-text {
+            font-size: 8px;
+            font-weight: 600;
+            fill: #166534;
+        }
+
+        .node[data-type="enzyme"] .node-text {
+            font-size: 8px;
+            font-weight: 600;
+            fill: #6b21a8;
         }
 
         .relation-line {
-            stroke: #6b7280;
-            stroke-width: 2;
             fill: none;
             marker-end: url(#arrowhead);
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .relation-line:hover {
+            opacity: 1;
+            stroke-width: 3;
         }
 
         .node-tooltip {
@@ -366,6 +411,27 @@
 
         .highlighted {
             filter: drop-shadow(0 0 8px #fbbf24) !important;
+        }
+
+        .connected {
+            filter: drop-shadow(0 0 6px #3b82f6) !important;
+            opacity: 0.9;
+        }
+
+        .preview {
+            filter: drop-shadow(0 0 4px #10b981) !important;
+            opacity: 0.8;
+        }
+
+        .highlighted-line {
+            stroke-width: 4 !important;
+            opacity: 1 !important;
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+
+        .preview-line {
+            stroke-width: 3 !important;
+            opacity: 0.9 !important;
         }
 
         .minimap {
@@ -591,10 +657,10 @@
                     </div>
                     
                     <div class="tab-content" id="fileContent">
-                        <div class="file-input" id="fileInput">
-                            <i class="fas fa-upload"></i>
-                            <p>Click to select or drag KGML file here</p>
-                            <input type="file" accept=".xml,.kgml" style="display: none;" id="fileInputHidden">
+                <div class="file-input" id="fileInput">
+                    <i class="fas fa-upload"></i>
+                    <p>Click to select or drag KGML file here</p>
+                    <input type="file" accept=".xml,.kgml" style="display: none;" id="fileInputHidden">
                         </div>
                     </div>
                 </div>
@@ -1078,7 +1144,7 @@
                     reactions: []
                 };
 
-                // Parse entries
+                // Parse entries with enhanced compound name resolution
                 const entries = xmlDoc.getElementsByTagName('entry');
                 for (let entry of entries) {
                     const graphics = entry.getElementsByTagName('graphics')[0];
@@ -1099,6 +1165,14 @@
                             height: parseFloat(graphics.getAttribute('height'))
                         } : null
                     };
+
+                    // Enhanced compound name resolution
+                    if (entryData.type === 'compound') {
+                        entryData.displayName = this.resolveCompoundName(entryData);
+                    } else {
+                        entryData.displayName = entryData.graphics?.name || entryData.name || entryData.id;
+                    }
+
                     this.pathwayData.entries.push(entryData);
                     this.nodes.set(entryData.id, entryData);
                 }
@@ -1241,13 +1315,13 @@
                     shape.setAttribute('fill', nodeColor);
                     shape.setAttribute('stroke', fgcolor || '#374151');
 
-                    // Add text
+                    // Add text with improved display
                     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     text.setAttribute('x', x);
                     text.setAttribute('y', y);
                     text.classList.add('node-text');
                     text.setAttribute('fill', fgcolor || '#000000');
-                    text.textContent = this.truncateText(name || entry.name, width);
+                    text.textContent = this.truncateText(entry.displayName || name || entry.name, width);
 
                     nodeGroup.appendChild(shape);
                     nodeGroup.appendChild(text);
@@ -1260,38 +1334,253 @@
             }
 
             renderRelations(container) {
+                // Group relations by type for better organization
+                const relationGroups = {
+                    'ECrel': [],
+                    'maplink': [],
+                    'PPrel': [],
+                    'GErel': [],
+                    'PCrel': [],
+                    'other': []
+                };
+
                 this.relations.forEach(relation => {
                     const node1 = this.nodes.get(relation.entry1);
                     const node2 = this.nodes.get(relation.entry2);
 
                     if (!node1?.graphics || !node2?.graphics) return;
 
-                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    line.setAttribute('x1', node1.graphics.x);
-                    line.setAttribute('y1', node1.graphics.y);
-                    line.setAttribute('x2', node2.graphics.x);
-                    line.setAttribute('y2', node2.graphics.y);
+                    const relationType = relation.type || 'other';
+                    if (relationGroups[relationType]) {
+                        relationGroups[relationType].push({ relation, node1, node2 });
+                    } else {
+                        relationGroups.other.push({ relation, node1, node2 });
+                    }
+                });
+
+                // Render relations in order of importance
+                const renderOrder = ['ECrel', 'PPrel', 'GErel', 'PCrel', 'maplink', 'other'];
+                
+                renderOrder.forEach(type => {
+                    relationGroups[type].forEach(({ relation, node1, node2 }) => {
+                        this.renderRelationLine(container, relation, node1, node2);
+                    });
+                });
+            }
+
+            renderRelationLine(container, relation, node1, node2) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     line.classList.add('relation-line');
+                line.setAttribute('data-entry1', relation.entry1);
+                line.setAttribute('data-entry2', relation.entry2);
+                line.setAttribute('data-type', relation.type);
+
+                // Calculate smart path to avoid node overlap
+                const path = this.calculateSmartPath(node1.graphics, node2.graphics, relation.type);
+                line.setAttribute('d', path);
 
                     // Set line style based on relation type
-                    if (relation.type === 'ECrel') {
-                        line.setAttribute('stroke', '#059669');
-                    } else if (relation.type === 'maplink') {
-                        line.setAttribute('stroke', '#7c3aed');
-                        line.setAttribute('stroke-dasharray', '5,5');
-                    }
+                const style = this.getRelationStyle(relation.type);
+                Object.entries(style).forEach(([key, value]) => {
+                    line.setAttribute(key, value);
+                });
 
                     container.appendChild(line);
-                });
+            }
+
+            calculateSmartPath(graphics1, graphics2, relationType) {
+                const x1 = graphics1.x;
+                const y1 = graphics1.y;
+                const x2 = graphics2.x;
+                const y2 = graphics2.y;
+
+                // Calculate distance and angle
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // For very short distances, use straight line
+                if (distance < 50) {
+                    return `M ${x1} ${y1} L ${x2} ${y2}`;
+                }
+
+                // Calculate control points for smooth curves
+                const controlOffset = Math.min(distance * 0.3, 100);
+                const angle = Math.atan2(dy, dx);
+                const perpAngle = angle + Math.PI / 2;
+
+                // Add slight curve to avoid straight lines
+                const cp1x = x1 + Math.cos(angle) * (distance * 0.3) + Math.cos(perpAngle) * 10;
+                const cp1y = y1 + Math.sin(angle) * (distance * 0.3) + Math.sin(perpAngle) * 10;
+                const cp2x = x2 - Math.cos(angle) * (distance * 0.3) + Math.cos(perpAngle) * 10;
+                const cp2y = y2 - Math.sin(angle) * (distance * 0.3) + Math.sin(perpAngle) * 10;
+
+                return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
+            }
+
+            getRelationStyle(relationType) {
+                const styles = {
+                    'ECrel': {
+                        stroke: '#059669',
+                        'stroke-width': '2',
+                        'stroke-dasharray': 'none'
+                    },
+                    'maplink': {
+                        stroke: '#7c3aed',
+                        'stroke-width': '1.5',
+                        'stroke-dasharray': '8,4'
+                    },
+                    'PPrel': {
+                        stroke: '#dc2626',
+                        'stroke-width': '2',
+                        'stroke-dasharray': 'none'
+                    },
+                    'GErel': {
+                        stroke: '#2563eb',
+                        'stroke-width': '1.5',
+                        'stroke-dasharray': 'none'
+                    },
+                    'PCrel': {
+                        stroke: '#ea580c',
+                        'stroke-width': '1.5',
+                        'stroke-dasharray': 'none'
+                    },
+                    'other': {
+                        stroke: '#6b7280',
+                        'stroke-width': '1',
+                        'stroke-dasharray': 'none'
+                    }
+                };
+
+                return styles[relationType] || styles.other;
+            }
+
+            // Enhanced compound name resolution
+            resolveCompoundName(entryData) {
+                // Common compound name mappings
+                const compoundNames = {
+                    'C00022': 'Pyruvate',
+                    'C00024': 'Acetyl-CoA',
+                    'C00036': 'Oxaloacetate',
+                    'C00158': 'Citrate',
+                    'C00311': 'Isocitrate',
+                    'C00026': '2-Oxoglutarate',
+                    'C00042': 'Succinate',
+                    'C00122': 'Fumarate',
+                    'C00149': '(S)-Malate',
+                    'C00074': 'Phosphoenolpyruvate',
+                    'C00022': 'Pyruvate',
+                    'C00033': 'Acetate',
+                    'C00068': 'Thiamine pyrophosphate',
+                    'C00003': 'NAD+',
+                    'C00004': 'NADH',
+                    'C00005': 'NADP+',
+                    'C00006': 'NADPH',
+                    'C00010': 'CoA',
+                    'C00025': 'L-Glutamate',
+                    'C00026': '2-Oxoglutarate',
+                    'C00037': 'Glycine',
+                    'C00041': 'L-Alanine',
+                    'C00049': 'L-Aspartate',
+                    'C00051': 'Glutathione',
+                    'C00065': 'L-Serine',
+                    'C00078': 'L-Tryptophan',
+                    'C00079': 'L-Phenylalanine',
+                    'C00097': 'L-Cysteine',
+                    'C00123': 'L-Leucine',
+                    'C00183': 'L-Valine',
+                    'C00188': 'L-Threonine',
+                    'C00212': 'Adenine',
+                    'C00214': 'Thymine',
+                    'C00234': 'Uracil',
+                    'C00255': 'Riboflavin',
+                    'C00288': '4-Aminobutyrate',
+                    'C00319': 'Spermidine',
+                    'C00334': '4-Aminobenzoate',
+                    'C00387': 'Guanosine',
+                    'C00407': 'L-Isoleucine',
+                    'C00491': 'L-Cystine',
+                    'C00504': 'N-Acetylneuraminate',
+                    'C00534': 'Tetrahydrofolate',
+                    'C00555': 'Dihydrofolate',
+                    'C00624': 'N-Acetyl-D-glucosamine',
+                    'C00645': 'N-Acetyl-D-galactosamine',
+                    'C00668': 'alpha-D-Glucose',
+                    'C00689': 'alpha-D-Galactose',
+                    'C00695': 'D-Fructose',
+                    'C00740': 'D-Ribose',
+                    'C00794': 'D-Sorbitol',
+                    'C00857': 'D-Glucuronate',
+                    'C00873': 'D-Glucosamine',
+                    'C00880': 'D-Galactosamine',
+                    'C00919': 'Choline',
+                    'C00984': 'D-Galactose',
+                    'C01005': 'D-Mannose',
+                    'C01024': 'D-Glucose',
+                    'C01089': 'D-Fructose 6-phosphate',
+                    'C01172': 'beta-D-Glucose',
+                    'C01236': 'D-Glucosamine 6-phosphate',
+                    'C01268': 'D-Galactosamine 6-phosphate',
+                    'C01285': 'D-Glucuronate 6-phosphate',
+                    'C01330': 'D-Mannose 6-phosphate',
+                    'C01346': 'D-Fructose 1,6-bisphosphate',
+                    'C01352': 'D-Glucose 6-phosphate',
+                    'C01353': 'D-Glucose 1-phosphate',
+                    'C01378': 'D-Galactose 1-phosphate',
+                    'C01379': 'D-Mannose 1-phosphate',
+                    'C01380': 'D-Fructose 1-phosphate',
+                    'C01381': 'D-Ribose 5-phosphate',
+                    'C01382': 'D-Ribulose 5-phosphate',
+                    'C01383': 'D-Xylulose 5-phosphate',
+                    'C01384': 'D-Sedoheptulose 7-phosphate',
+                    'C01385': 'D-Erythrose 4-phosphate',
+                    'C01386': 'D-Glyceraldehyde 3-phosphate',
+                    'C01387': 'Dihydroxyacetone phosphate',
+                    'C01388': '3-Phospho-D-glycerate',
+                    'C01389': '2-Phospho-D-glycerate',
+                    'C01390': 'Phosphoenolpyruvate',
+                    'C01391': 'Pyruvate',
+                    'C01392': 'Lactate',
+                    'C01393': 'Acetyl-CoA',
+                    'C01394': 'Citrate',
+                    'C01395': 'Isocitrate',
+                    'C01396': '2-Oxoglutarate',
+                    'C01397': 'Succinyl-CoA',
+                    'C01398': 'Succinate',
+                    'C01399': 'Fumarate',
+                    'C01400': '(S)-Malate',
+                    'C01401': 'Oxaloacetate'
+                };
+
+                // Try to get name from graphics first, then from compound mapping
+                const graphicsName = entryData.graphics?.name;
+                if (graphicsName && graphicsName !== entryData.id) {
+                    return graphicsName;
+                }
+
+                // Extract compound ID from name attribute
+                const nameAttr = entryData.name;
+                if (nameAttr) {
+                    const compoundIds = nameAttr.split(' ');
+                    for (const id of compoundIds) {
+                        if (compoundNames[id]) {
+                            return compoundNames[id];
+                        }
+                    }
+                }
+
+                // Fallback to graphics name or ID
+                return graphicsName || entryData.id;
             }
 
             getNodeColor(type, defaultColor) {
                 const typeColors = {
-                    'gene': '#bef264',
-                    'compound': '#fbbf24',
-                    'enzyme': '#a78bfa',
-                    'ortholog': '#60a5fa',
-                    'map': '#fb7185'
+                    'gene': '#4ade80',      // Green for genes
+                    'compound': '#f59e0b',  // Amber for compounds
+                    'enzyme': '#8b5cf6',    // Purple for enzymes
+                    'ortholog': '#3b82f6',  // Blue for orthologs
+                    'map': '#ef4444',       // Red for maps
+                    'group': '#6b7280'      // Gray for groups
                 };
 
                 return typeColors[type] || defaultColor || '#e5e7eb';
@@ -1309,6 +1598,7 @@
                 nodeElement.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.selectNode(entryData.id);
+                    this.highlightConnectedNodes(entryData.id);
                     if (entryData.link) {
                         window.open(entryData.link, '_blank');
                     }
@@ -1317,10 +1607,101 @@
                 // Hover handlers
                 nodeElement.addEventListener('mouseenter', (e) => {
                     this.showTooltip(e, entryData);
+                    this.previewConnectedNodes(entryData.id);
                 });
 
                 nodeElement.addEventListener('mouseleave', () => {
                     this.hideTooltip();
+                    this.clearPreview();
+                });
+            }
+
+            highlightConnectedNodes(nodeId) {
+                // Clear previous highlights
+                this.clearHighlights();
+                
+                // Highlight selected node
+                const selectedNode = document.querySelector(`[data-id="${nodeId}"]`);
+                if (selectedNode) {
+                    selectedNode.classList.add('highlighted');
+                }
+
+                // Find and highlight connected nodes
+                const connectedNodes = new Set();
+                this.relations.forEach(relation => {
+                    if (relation.entry1 === nodeId) {
+                        connectedNodes.add(relation.entry2);
+                    } else if (relation.entry2 === nodeId) {
+                        connectedNodes.add(relation.entry1);
+                    }
+                });
+
+                connectedNodes.forEach(connectedId => {
+                    const connectedNode = document.querySelector(`[data-id="${connectedId}"]`);
+                    if (connectedNode) {
+                        connectedNode.classList.add('connected');
+                    }
+                });
+
+                // Highlight connecting lines
+                this.highlightConnectingLines(nodeId, connectedNodes);
+            }
+
+            previewConnectedNodes(nodeId) {
+                // Find connected nodes
+                const connectedNodes = new Set();
+                this.relations.forEach(relation => {
+                    if (relation.entry1 === nodeId) {
+                        connectedNodes.add(relation.entry2);
+                    } else if (relation.entry2 === nodeId) {
+                        connectedNodes.add(relation.entry1);
+                    }
+                });
+
+                // Add preview class to connected nodes
+                connectedNodes.forEach(connectedId => {
+                    const connectedNode = document.querySelector(`[data-id="${connectedId}"]`);
+                    if (connectedNode) {
+                        connectedNode.classList.add('preview');
+                    }
+                });
+
+                // Preview connecting lines
+                this.previewConnectingLines(nodeId, connectedNodes);
+            }
+
+            highlightConnectingLines(nodeId, connectedNodes) {
+                // Add highlight class to relevant lines
+                document.querySelectorAll('.relation-line').forEach(line => {
+                    const entry1 = line.getAttribute('data-entry1');
+                    const entry2 = line.getAttribute('data-entry2');
+                    
+                    if ((entry1 === nodeId && connectedNodes.has(entry2)) ||
+                        (entry2 === nodeId && connectedNodes.has(entry1))) {
+                        line.classList.add('highlighted-line');
+                    }
+                });
+            }
+
+            previewConnectingLines(nodeId, connectedNodes) {
+                // Add preview class to relevant lines
+                document.querySelectorAll('.relation-line').forEach(line => {
+                    const entry1 = line.getAttribute('data-entry1');
+                    const entry2 = line.getAttribute('data-entry2');
+                    
+                    if ((entry1 === nodeId && connectedNodes.has(entry2)) ||
+                        (entry2 === nodeId && connectedNodes.has(entry1))) {
+                        line.classList.add('preview-line');
+                    }
+                });
+            }
+
+            clearPreview() {
+                document.querySelectorAll('.preview').forEach(node => {
+                    node.classList.remove('preview');
+                });
+                document.querySelectorAll('.preview-line').forEach(line => {
+                    line.classList.remove('preview-line');
                 });
             }
 
@@ -1422,7 +1803,10 @@
 
             clearHighlights() {
                 document.querySelectorAll('.node').forEach(node => {
-                    node.classList.remove('highlighted');
+                    node.classList.remove('highlighted', 'connected', 'preview');
+                });
+                document.querySelectorAll('.relation-line').forEach(line => {
+                    line.classList.remove('highlighted-line', 'preview-line');
                 });
             }
 
