@@ -789,7 +789,8 @@ class MCPServerManager {
                 this.emit('toolResponse', { serverId, data });
             } else if (data.type === 'error') {
                 console.error(`Claude MCP server error (${serverId}):`, data.error);
-                this.emit('serverError', { serverId, error: data.error });
+                const server = this.servers.get(serverId);
+                this.emit('serverError', { serverId, server, error: data.error });
             }
         } catch (error) {
             console.error(`Error parsing Claude MCP message from ${serverId}:`, error);
@@ -821,7 +822,8 @@ class MCPServerManager {
                     });
                 } else if (data.error) {
                     console.error(`JSON-RPC error from server ${serverId}:`, data.error);
-                    this.emit('serverError', { serverId, error: data.error });
+                    const server = this.servers.get(serverId);
+                    this.emit('serverError', { serverId, server, error: data.error });
                     // Also emit as tool response error if it has an ID (could be tool execution error)
                     if (data.id) {
                         this.emit('toolResponse', { 
@@ -846,7 +848,8 @@ class MCPServerManager {
                 this.emit('toolResponse', { serverId, data });
             } else if (data.type === 'error') {
                 console.error(`Legacy server error (${serverId}):`, data.error);
-                this.emit('serverError', { serverId, error: data.error });
+                const server = this.servers.get(serverId);
+                this.emit('serverError', { serverId, server, error: data.error });
             } else if (data.type === 'connection') {
                 // Handle connection confirmation
                 console.log(`📡 Connection confirmed from server ${serverId}:`, data.status);

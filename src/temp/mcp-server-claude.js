@@ -755,7 +755,6 @@ class ClaudeMCPGenomeServer {
         const serverSideTools = [
             'fetch_protein_structure',
             'search_protein_by_gene',
-            'search_alphafold_by_gene',
             'fetch_alphafold_structure',
             'search_alphafold_by_sequence',
             'search_uniprot_database',
@@ -777,8 +776,8 @@ class ClaudeMCPGenomeServer {
 
     async executeServerSideTool(toolName, parameters) {
         // Import and use the original implementation for server-side tools
-        const OriginalMCPServer = require('./mcp-server.js');
-        const originalServer = new OriginalMCPServer();
+        const MCPGenomeBrowserServer = require('./mcp-server.js');
+        const originalServer = new MCPGenomeBrowserServer();
         
         // Execute the tool using the original implementation
         return await originalServer.executeTool(toolName, parameters, parameters.clientId);

@@ -739,7 +739,8 @@ class ChatManager {
         });
 
         this.mcpServerManager.on('serverError', (data) => {
-            console.error(`MCP Server error (${data.server.name}):`, data.error);
+            const serverName = data.server?.name || data.serverId || 'Unknown Server';
+            console.error(`MCP Server error (${serverName}):`, data.error);
         });
 
         this.mcpServerManager.on('toolsUpdated', (data) => {

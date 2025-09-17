@@ -92,15 +92,13 @@ class ToolsIntegrator {
                 }
             }
             
-            // Protein tools
-            if (this.proteinTools.getTools()[toolName]) {
+            // Protein tools (server-side only)
+            if (this.proteinTools.getTools()[toolName] && toolName !== 'search_alphafold_by_gene') {
                 switch (toolName) {
                     case 'fetch_protein_structure':
                         return await this.proteinTools.fetchProteinStructure(parameters);
                     case 'search_protein_by_gene':
                         return await this.proteinTools.searchProteinByGene(parameters);
-                    case 'search_alphafold_by_gene':
-                        return await this.proteinTools.searchAlphaFoldByGene(parameters);
                     case 'fetch_alphafold_structure':
                         return await this.proteinTools.fetchAlphaFoldStructure(parameters);
                     case 'search_alphafold_by_sequence':
@@ -215,6 +213,11 @@ class ToolsIntegrator {
                 }
             }
             
+            // Special client-side tools that need browser execution
+            if (toolName === 'search_alphafold_by_gene') {
+                return await this.executeClientSideTool(toolName, parameters, clientId);
+            }
+            
             throw new Error(`Tool execution handler not found for '${toolName}'`);
             
         } catch (error) {
@@ -279,7 +282,7 @@ class ToolsIntegrator {
                 ])
             ),
             serverSideTools: [
-                'fetch_protein_structure', 'search_protein_by_gene', 'search_alphafold_by_gene',
+                'fetch_protein_structure', 'search_protein_by_gene',
                 'fetch_alphafold_structure', 'search_alphafold_by_sequence', 'search_uniprot_database',
                 'advanced_uniprot_search', 'get_uniprot_entry', 'analyze_interpro_domains',
                 'search_interpro_entry', 'get_interpro_entry_details', 'evo2_generate_sequence',
@@ -287,7 +290,7 @@ class ToolsIntegrator {
                 'evo2_analyze_essentiality'
             ].length,
             clientSideTools: totalTools - [
-                'fetch_protein_structure', 'search_protein_by_gene', 'search_alphafold_by_gene',
+                'fetch_protein_structure', 'search_protein_by_gene',
                 'fetch_alphafold_structure', 'search_alphafold_by_sequence', 'search_uniprot_database',
                 'advanced_uniprot_search', 'get_uniprot_entry', 'analyze_interpro_domains',
                 'search_interpro_entry', 'get_interpro_entry_details', 'evo2_generate_sequence',
@@ -407,6 +410,19 @@ class ToolsIntegrator {
         };
 
         return examples[toolName] || { description: 'No examples available', example: {} };
+    }
+
+    // Execute client-side tools by delegating to the browser
+    async executeClientSideTool(toolName, parameters, clientId) {
+        // This method delegates tool execution to the browser client
+        // It's used for tools that need to run in the browser context (like UI updates)
+        
+        if (!this.server) {
+            throw new Error('Server instance not available for client-side tool execution');
+        }
+        
+        // Use the server's client tool execution method
+        return await this.server.executeToolOnClient(toolName, parameters, clientId);
     }
 }
 

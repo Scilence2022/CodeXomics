@@ -7,7 +7,7 @@
  * using the official Claude MCP TypeScript SDK for proper protocol compliance.
  */
 
-const ClaudeMCPGenomeServer = require('./src/mcp-server-claude.js');
+const ClaudeMCPGenomeServer = require('./src/temp/mcp-server-claude.js');
 
 // Use stderr for all output to avoid interfering with JSON-RPC on stdout
 process.stderr.write('🧬 Starting Genome AI Studio Claude MCP Server...\n');

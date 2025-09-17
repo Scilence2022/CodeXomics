@@ -7,7 +7,7 @@
  * that enables LLM integration with the Genome AI Studio.
  */
 
-const MCPGenomeBrowserServer = require('./src/mcp-server.js');
+const MCPGenomeBrowserServer = require('./src/temp/mcp-server.js');
 
 console.log('🧬 Starting Genome AI Studio MCP Server...');
 console.log('');

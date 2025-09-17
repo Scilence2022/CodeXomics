@@ -13,7 +13,7 @@
  * - Modular tool organization for better maintainability
  */
 
-const ClaudeDirectMCPServer = require('./src/mcp-server-claude-direct.js');
+const ClaudeDirectMCPServer = require('./src/temp/mcp-server-claude-direct.js');
 const net = require('net');
 
 // Function to find available port
