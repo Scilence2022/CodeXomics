@@ -379,32 +379,86 @@ class LLMBenchmarkFramework {
     extractFunctionCallsFromResponse(response) {
         const functionCalls = [];
         
-        // Look for patterns that indicate function calls were made
+        // Enhanced patterns to detect function calls from ChatManager responses
         const patterns = [
             // Direct JSON function calls (if any leaked through)
             /\{"tool_name":\s*"([^"]+)",\s*"parameters":\s*(\{[^}]*\})\}/g,
-            // Function execution indicators
-            /(?:executed|called|running)\s+(?:function|tool|command):\s*(\w+)/gi,
+            
+            // ChatManager execution success messages
+            /(?:Successfully\s+)?(?:executed|called|running|performed|completed)\s+(?:function|tool|command|action)?\s*:?\s*`?([a-zA-Z_][a-zA-Z0-9_]*)`?/gi,
+            
+            // Function execution with parameters
+            /(?:executed|called)\s+`?([a-zA-Z_][a-zA-Z0-9_]*)`?\s*with\s+(?:parameters?|args?)?\s*:?\s*(\{[^}]*\})/gi,
+            
             // Tool usage indicators  
-            /(?:using|with)\s+tool:\s*(\w+)/gi,
-            // Function name patterns
-            /(\w+)\s*\([^)]*\)/g
+            /(?:using|with|via)\s+(?:tool|function)?\s*:?\s*`?([a-zA-Z_][a-zA-Z0-9_]*)`?/gi,
+            
+            // Navigation/search result patterns (specific to genome browser)
+            /(?:navigated to|searched for|found|located)\s+.*(?:using|via)\s+([a-zA-Z_][a-zA-Z0-9_]*)/gi,
+            
+            // Function call results patterns
+            /([a-zA-Z_][a-zA-Z0-9_]*)\s+(?:function|tool)\s+(?:returned|completed|executed)/gi,
+            
+            // Genome browser specific patterns
+            /(?:searched|navigated|jumped|displayed|opened|loaded|analyzed)\s+.*?(?:via|using|with)\s+([a-zA-Z_][a-zA-Z0-9_]*)/gi,
+            
+            // Success confirmation patterns
+            /(?:successfully|completed)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+(?:operation|function|tool|search|navigation)/gi
+        ];
+
+        // Common genome browser function names to look for
+        const knownFunctions = [
+            'search_gene_by_name', 'search_features', 'search_by_position',
+            'navigate_to_position', 'jump_to_gene', 'get_gene_sequence',
+            'run_blast_search', 'zoom_in', 'zoom_out', 'set_zoom_level',
+            'show_gene_details', 'export_sequence', 'save_current_view',
+            'load_genome_file', 'switch_chromosome', 'toggle_track_visibility'
         ];
 
         for (const pattern of patterns) {
             let match;
+            pattern.lastIndex = 0; // Reset regex state
             while ((match = pattern.exec(response)) !== null) {
                 if (match[1]) {
-                    functionCalls.push({
-                        tool_name: match[1],
-                        parameters: match[2] ? this.safeParseJSON(match[2]) : {},
-                        evidence: match[0]
-                    });
+                    const toolName = match[1].toLowerCase();
+                    
+                    // Validate against known functions or common patterns
+                    if (knownFunctions.includes(toolName) || 
+                        toolName.includes('search') || 
+                        toolName.includes('navigate') || 
+                        toolName.includes('jump') ||
+                        toolName.includes('get_') ||
+                        toolName.includes('run_') ||
+                        toolName.includes('show_') ||
+                        toolName.includes('export_') ||
+                        toolName.includes('save_') ||
+                        toolName.includes('load_') ||
+                        toolName.includes('switch_') ||
+                        toolName.includes('toggle_') ||
+                        toolName.includes('zoom_') ||
+                        toolName.includes('set_')) {
+                        
+                        functionCalls.push({
+                            tool_name: toolName,
+                            parameters: match[2] ? this.safeParseJSON(match[2]) : {},
+                            evidence: match[0],
+                            confidence: this.calculateConfidence(match[0], toolName)
+                        });
+                    }
                 }
             }
         }
 
-        return functionCalls;
+        // Look for parameter patterns in the response
+        functionCalls.forEach(call => {
+            call.parameters = this.extractParametersFromResponse(response, call.tool_name);
+        });
+
+        // Remove duplicates and sort by confidence
+        const uniqueCalls = this.deduplicateFunctionCalls(functionCalls);
+        
+        console.log(`🔍 Extracted ${uniqueCalls.length} function calls from response:`, uniqueCalls);
+        return uniqueCalls;
     }
 
     /**
@@ -419,23 +473,123 @@ class LLMBenchmarkFramework {
     }
 
     /**
+     * Calculate confidence score for function call detection
+     */
+    calculateConfidence(evidence, toolName) {
+        let confidence = 50; // Base confidence
+        
+        // Higher confidence for explicit execution messages
+        if (evidence.includes('executed') || evidence.includes('successfully')) {
+            confidence += 30;
+        }
+        
+        // Higher confidence for specific function names
+        if (evidence.includes('`' + toolName + '`') || evidence.includes('"' + toolName + '"')) {
+            confidence += 20;
+        }
+        
+        // Higher confidence for parameter mentions
+        if (evidence.includes('parameters') || evidence.includes('with')) {
+            confidence += 10;
+        }
+        
+        return Math.min(confidence, 100);
+    }
+
+    /**
+     * Extract parameters from response context for a given tool
+     */
+    extractParametersFromResponse(response, toolName) {
+        const parameters = {};
+        
+        // Look for common parameter patterns
+        const paramPatterns = [
+            // Gene names in quotes
+            /(?:gene|name|query).*?["']([^"']+)["']/gi,
+            // Coordinates
+            /(?:position|start|from).*?(\d+)/gi,
+            /(?:end|to).*?(\d+)/gi,
+            // Chromosome names
+            /(?:chromosome|chr).*?["']?([A-Za-z0-9\-_]+)["']?/gi,
+            // Boolean flags
+            /(?:caseSensitive|case).*?(true|false)/gi
+        ];
+        
+        // Extract gene/query names
+        const geneMatch = response.match(/(?:gene|search|find|locate).*?["']([^"']+)["']/i);
+        if (geneMatch) {
+            parameters.name = geneMatch[1];
+            parameters.query = geneMatch[1];
+        }
+        
+        // Extract coordinates
+        const coordMatch = response.match(/(\d+)(?:\s*(?:to|-)?\s*(\d+))?/);
+        if (coordMatch) {
+            parameters.start = parseInt(coordMatch[1]);
+            if (coordMatch[2]) {
+                parameters.end = parseInt(coordMatch[2]);
+            }
+        }
+        
+        // Extract chromosome
+        const chrMatch = response.match(/(?:chromosome|chr).*?([A-Za-z0-9\-_]+)/i);
+        if (chrMatch) {
+            parameters.chromosome = chrMatch[1];
+        }
+        
+        return parameters;
+    }
+
+    /**
+     * Remove duplicate function calls and sort by confidence
+     */
+    deduplicateFunctionCalls(functionCalls) {
+        const seen = new Map();
+        
+        functionCalls.forEach(call => {
+            const key = call.tool_name;
+            if (!seen.has(key) || seen.get(key).confidence < call.confidence) {
+                seen.set(key, call);
+            }
+        });
+        
+        return Array.from(seen.values()).sort((a, b) => b.confidence - a.confidence);
+    }
+
+    /**
      * Parse function call response
      */
     parseFunctionCallResponse(response, parsedResponse = null) {
-        if (parsedResponse) {
-            // Use the pre-parsed response with extracted function calls
-            return parsedResponse.functionCalls.length > 0 ? parsedResponse.functionCalls : parsedResponse;
+        if (parsedResponse && parsedResponse.functionCalls && parsedResponse.functionCalls.length > 0) {
+            // Return the highest confidence function call for single function tests
+            const sortedCalls = parsedResponse.functionCalls.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+            console.log('🎯 Returning highest confidence function call:', sortedCalls[0]);
+            return sortedCalls[0];
         }
 
         try {
             // Fallback: Look for JSON function calls in the response
             const jsonMatches = response.match(/\{[^}]*"tool_name"[^}]*\}/g);
             if (jsonMatches) {
-                return jsonMatches.map(match => JSON.parse(match));
+                const parsed = jsonMatches.map(match => JSON.parse(match));
+                return parsed.length === 1 ? parsed[0] : parsed;
             }
-            return { content: response, functionCalls: [] };
+            
+            // If no function calls detected, return response with empty function calls
+            console.log('⚠️ No function calls detected in response');
+            return { 
+                error: 'No function calls detected',
+                content: response, 
+                functionCalls: [],
+                actualResult: null
+            };
         } catch (error) {
-            return { error: 'Invalid JSON format', response: response };
+            console.error('❌ Error parsing function call response:', error);
+            return { 
+                error: 'Invalid JSON format', 
+                response: response,
+                actualResult: null
+            };
         }
     }
 
@@ -534,55 +688,121 @@ class LLMBenchmarkFramework {
         const actualResult = testResult.actualResult;
         const expectedResult = test.expectedResult;
 
+        console.log('🔍 Evaluating function call test:', {
+            testId: test.id,
+            actualResult: actualResult,
+            expectedResult: expectedResult
+        });
+
+        // Handle case where no function call was detected
+        if (!actualResult || actualResult.error === 'No function calls detected') {
+            evaluation.errors.push('No function call detected in LLM response');
+            evaluation.success = false;
+            return evaluation;
+        }
+
+        // Handle parsing errors
+        if (actualResult.error && actualResult.error !== 'No function calls detected') {
+            evaluation.errors.push(actualResult.error);
+            evaluation.success = false;
+            return evaluation;
+        }
+
         if (Array.isArray(actualResult)) {
             // Multiple function calls expected
             evaluation.score = 0;
             
             for (let i = 0; i < actualResult.length; i++) {
                 const call = actualResult[i];
-                const expected = expectedResult[i];
+                const expected = Array.isArray(expectedResult) ? expectedResult[i] : expectedResult;
                 
                 if (expected) {
-                    if (call.tool_name === expected.tool_name) {
-                        evaluation.score += 40; // Correct function name
-                        
-                        // Check parameters
-                        if (this.compareParameters(call.parameters, expected.parameters)) {
-                            evaluation.score += 60; // Correct parameters
-                        } else {
-                            evaluation.score += 20; // Partial parameter match
-                            evaluation.warnings.push(`Parameters don't match for ${call.tool_name}`);
-                        }
-                    } else {
-                        evaluation.errors.push(`Expected ${expected.tool_name}, got ${call.tool_name}`);
-                    }
+                    const functionScore = this.evaluateSingleFunctionCall(call, expected);
+                    evaluation.score += functionScore.score;
+                    evaluation.errors.push(...functionScore.errors);
+                    evaluation.warnings.push(...functionScore.warnings);
                 }
             }
             
             evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
             evaluation.success = evaluation.score >= (evaluation.maxScore * 0.7);
             
-        } else if (actualResult.error) {
-            evaluation.errors.push(actualResult.error);
-            evaluation.success = false;
-            
         } else {
             // Single function call
-            if (actualResult.tool_name === expectedResult.tool_name) {
-                evaluation.score += 50;
-                if (this.compareParameters(actualResult.parameters, expectedResult.parameters)) {
-                    evaluation.score += 50;
-                    evaluation.success = true;
-                } else {
-                    evaluation.score += 20;
-                    evaluation.warnings.push('Parameters partially match');
-                }
-            } else {
-                evaluation.errors.push(`Expected ${expectedResult.tool_name}, got ${actualResult.tool_name}`);
-            }
+            const functionScore = this.evaluateSingleFunctionCall(actualResult, expectedResult);
+            evaluation.score = functionScore.score;
+            evaluation.success = functionScore.success;
+            evaluation.errors.push(...functionScore.errors);
+            evaluation.warnings.push(...functionScore.warnings);
         }
 
+        console.log('📊 Function call evaluation result:', {
+            score: evaluation.score,
+            success: evaluation.success,
+            errors: evaluation.errors,
+            warnings: evaluation.warnings
+        });
+
         return evaluation;
+    }
+
+    /**
+     * Evaluate a single function call
+     */
+    evaluateSingleFunctionCall(actualCall, expectedCall) {
+        const result = {
+            score: 0,
+            success: false,
+            errors: [],
+            warnings: []
+        };
+
+        if (!actualCall || !actualCall.tool_name) {
+            result.errors.push('Invalid function call format');
+            return result;
+        }
+
+        console.log('🎯 Comparing function calls:', {
+            actual: actualCall.tool_name,
+            expected: expectedCall.tool_name,
+            actualParams: actualCall.parameters,
+            expectedParams: expectedCall.parameters
+        });
+
+        // Check function name (50 points)
+        if (actualCall.tool_name === expectedCall.tool_name) {
+            result.score += 50;
+            console.log('✅ Function name matches');
+        } else {
+            result.errors.push(`Expected function ${expectedCall.tool_name}, got ${actualCall.tool_name}`);
+            console.log('❌ Function name mismatch');
+        }
+
+        // Check parameters (50 points)
+        if (actualCall.parameters && expectedCall.parameters) {
+            const paramScore = this.compareParameters(actualCall.parameters, expectedCall.parameters);
+            result.score += paramScore;
+            
+            if (paramScore >= 40) {
+                console.log('✅ Parameters match well');
+            } else if (paramScore >= 20) {
+                result.warnings.push('Parameters partially match expected values');
+                console.log('⚠️ Parameters partially match');
+            } else {
+                result.errors.push('Parameters do not match expected values');
+                console.log('❌ Parameters do not match');
+            }
+        } else if (!expectedCall.parameters) {
+            // No parameters expected
+            result.score += 50;
+            console.log('✅ No parameters expected');
+        } else {
+            result.errors.push('Missing required parameters');
+            console.log('❌ Missing parameters');
+        }
+
+        result.success = result.score >= 70;
+        return result;
     }
 
     /**
@@ -712,21 +932,79 @@ class LLMBenchmarkFramework {
      * Helper methods
      */
     compareParameters(actual, expected) {
-        if (!actual || !expected) return false;
+        if (!actual && !expected) return 50; // Both empty
+        if (!actual || !expected) return 0;  // One empty, one not
         
-        for (const [key, expectedValue] of Object.entries(expected)) {
-            if (actual[key] !== expectedValue) {
-                // Allow some flexibility for similar values
-                if (typeof expectedValue === 'string' && typeof actual[key] === 'string') {
-                    if (actual[key].toLowerCase() !== expectedValue.toLowerCase()) {
-                        return false;
-                    }
+        const expectedKeys = Object.keys(expected);
+        const actualKeys = Object.keys(actual);
+        
+        if (expectedKeys.length === 0) return 50; // No parameters expected
+        
+        let score = 0;
+        let maxScore = expectedKeys.length * 50; // 50 points per parameter
+        
+        console.log('🔍 Comparing parameters:', {
+            actual: actual,
+            expected: expected,
+            expectedKeys: expectedKeys,
+            actualKeys: actualKeys
+        });
+        
+        for (const key of expectedKeys) {
+            const expectedValue = expected[key];
+            const actualValue = actual[key];
+            
+            if (actualValue === undefined) {
+                console.log(`❌ Missing parameter: ${key}`);
+                continue; // No points for missing parameter
+            }
+            
+            if (actualValue === expectedValue) {
+                score += 50; // Full points for exact match
+                console.log(`✅ Exact match for ${key}: ${actualValue}`);
+            } else if (typeof expectedValue === 'string' && typeof actualValue === 'string') {
+                // String comparison with case insensitivity
+                if (actualValue.toLowerCase() === expectedValue.toLowerCase()) {
+                    score += 45; // Nearly full points for case-insensitive match
+                    console.log(`✅ Case-insensitive match for ${key}: ${actualValue}`);
+                } else if (actualValue.includes(expectedValue) || expectedValue.includes(actualValue)) {
+                    score += 25; // Partial points for substring match
+                    console.log(`⚠️ Partial match for ${key}: ${actualValue} vs ${expectedValue}`);
                 } else {
-                    return false;
+                    console.log(`❌ No match for ${key}: ${actualValue} vs ${expectedValue}`);
                 }
+            } else if (typeof expectedValue === 'number' && typeof actualValue === 'number') {
+                // Number comparison with tolerance
+                const diff = Math.abs(actualValue - expectedValue);
+                const tolerance = Math.abs(expectedValue * 0.1); // 10% tolerance
+                
+                if (diff === 0) {
+                    score += 50; // Exact match
+                    console.log(`✅ Exact number match for ${key}: ${actualValue}`);
+                } else if (diff <= tolerance) {
+                    score += 40; // Close match within tolerance
+                    console.log(`✅ Close number match for ${key}: ${actualValue} vs ${expectedValue}`);
+                } else {
+                    score += 10; // Some points for having a number
+                    console.log(`⚠️ Number mismatch for ${key}: ${actualValue} vs ${expectedValue}`);
+                }
+            } else if (typeof expectedValue === 'boolean' && typeof actualValue === 'boolean') {
+                if (actualValue === expectedValue) {
+                    score += 50;
+                    console.log(`✅ Boolean match for ${key}: ${actualValue}`);
+                } else {
+                    console.log(`❌ Boolean mismatch for ${key}: ${actualValue} vs ${expectedValue}`);
+                }
+            } else {
+                // Type mismatch, but give some points for having the parameter
+                score += 10;
+                console.log(`⚠️ Type mismatch for ${key}: ${typeof actualValue} vs ${typeof expectedValue}`);
             }
         }
-        return true;
+        
+        const finalScore = Math.min(Math.round((score / maxScore) * 50), 50);
+        console.log(`📊 Parameter comparison score: ${finalScore}/50 (${score}/${maxScore})`);
+        return finalScore;
     }
 
     estimateTokenCount(text) {
