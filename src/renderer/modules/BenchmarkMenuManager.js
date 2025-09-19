@@ -124,9 +124,6 @@ class BenchmarkMenuManager {
         // Insert at the top of the body
         document.body.insertBefore(benchmarkMenuBar, document.body.firstChild);
         
-        // Setup menu event handlers
-        this.setupMenuEventHandlers(benchmarkMenuBar);
-        
         // Update main content to account for menu bar
         this.adjustMainContentForMenuBar();
         
@@ -274,11 +271,11 @@ class BenchmarkMenuManager {
             <div class="benchmark-menu-item" data-menu="file">
                 📁 File
                 <div class="benchmark-dropdown-menu" id="benchmarkFileMenu">
-                    <div class="benchmark-dropdown-item" data-action="newBenchmark">
+                    <div class="benchmark-dropdown-item" onclick="benchmarkMenuManager.newBenchmark()">
                         <span>🆕</span> New Benchmark
                         <span style="margin-left: auto; font-size: 11px; color: #6c757d;">Ctrl+N</span>
                     </div>
-                    <div class="benchmark-dropdown-item" data-action="openBenchmarkResults">
+                    <div class="benchmark-dropdown-item" onclick="benchmarkMenuManager.openBenchmarkResults()">
                         <span>📂</span> Open Results
                         <span style="margin-left: auto; font-size: 11px; color: #6c757d;">Ctrl+O</span>
                     </div>
@@ -944,86 +941,6 @@ class BenchmarkMenuManager {
         });
     }
 
-    /**
-     * Setup menu event handlers for the benchmark menu bar
-     */
-    setupMenuEventHandlers(menuBar) {
-        // Menu item click handlers
-        const menuItems = menuBar.querySelectorAll('.benchmark-menu-item');
-        menuItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleDropdown(item);
-            });
-        });
-
-        // Dropdown item click handlers
-        const dropdownItems = menuBar.querySelectorAll('.benchmark-dropdown-item[data-action]');
-        dropdownItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const action = item.dataset.action;
-                this.handleMenuAction(action);
-                this.closeAllDropdowns();
-            });
-        });
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.benchmark-menu-bar')) {
-                this.closeAllDropdowns();
-            }
-        });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            this.handleKeyboardShortcuts(e);
-        });
-
-        console.log('✅ Menu event handlers setup complete');
-    }
-
-    /**
-     * Handle menu action
-     */
-    handleMenuAction(action) {
-        console.log(`🎯 Menu action: ${action}`);
-        
-        if (typeof this[action] === 'function') {
-            this[action]();
-        } else {
-            console.warn(`⚠️ Menu action '${action}' not implemented`);
-        }
-    }
-
-    /**
-     * Toggle dropdown menu
-     */
-    toggleDropdown(menuItem) {
-        const dropdown = menuItem.querySelector('.benchmark-dropdown-menu');
-        const isCurrentlyOpen = dropdown.classList.contains('show');
-        
-        // Close all dropdowns first
-        this.closeAllDropdowns();
-        
-        // If it wasn't open, open it
-        if (!isCurrentlyOpen) {
-            dropdown.classList.add('show');
-            menuItem.classList.add('active');
-        }
-    }
-
-    /**
-     * Close all dropdown menus
-     */
-    closeAllDropdowns() {
-        const dropdowns = document.querySelectorAll('.benchmark-dropdown-menu.show');
-        const activeItems = document.querySelectorAll('.benchmark-menu-item.active');
-        
-        dropdowns.forEach(dropdown => dropdown.classList.remove('show'));
-        activeItems.forEach(item => item.classList.remove('active'));
-    }
-
     // Menu Action Methods Implementation
     newBenchmark() { 
         console.log('📝 New Benchmark');
@@ -1367,7 +1284,7 @@ Features:
      */
     generateHTMLReport(results) {
         const stats = results.overallStats;
-        return `
+        return \`
 <!DOCTYPE html>
 <html>
 <head>
@@ -1409,23 +1326,23 @@ Features:
         </div>
         
         <h2>Test Suite Results</h2>
-        ${results.testSuiteResults.map(suite => `
+        \${results.testSuiteResults.map(suite => \`
             <div class="suite-result">
-                <div class="suite-header">${suite.suiteName} - ${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate</div>
+                <div class="suite-header">\${suite.suiteName} - \${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate</div>
                 <div>
-                    ${suite.testResults.map(test => `
-                        <div class="test-result ${test.success ? 'passed' : 'failed'}">
-                            <strong>${test.testName}</strong><br>
-                            Score: ${test.score}/${test.maxScore} | Duration: ${test.duration}ms
+                    \${suite.testResults.map(test => \`
+                        <div class="test-result \${test.success ? 'passed' : 'failed'}">
+                            <strong>\${test.testName}</strong><br>
+                            Score: \${test.score}/\${test.maxScore} | Duration: \${test.duration}ms
                         </div>
-                    `).join('')}
+                    \`).join('')}
                 </div>
             </div>
-        `).join('')}
+        \`).join('')}
     </div>
 </body>
 </html>
-        `;
+        \`;
     }
 }
 

@@ -18,23 +18,21 @@ class BenchmarkUI {
         console.log('🧪 Activating benchmark mode in main window...');
         
         try {
+            // Load BenchmarkMenuManager if not available
+            if (typeof BenchmarkMenuManager === 'undefined') {
+                await this.loadBenchmarkMenuManager();
+            }
+
             // Initialize menu manager if not already done
             if (!this.menuManager) {
-                if (typeof BenchmarkMenuManager === 'undefined') {
-                    console.error('❌ BenchmarkMenuManager not available');
-                    throw new Error('BenchmarkMenuManager not loaded');
-                }
                 this.menuManager = new BenchmarkMenuManager(this.framework.chatManager.app);
                 window.benchmarkMenuManager = this.menuManager;
-                console.log('✅ BenchmarkMenuManager initialized');
             }
 
             // Activate benchmark menus in main window
-            console.log('🔄 Activating benchmark menus...');
             this.menuManager.activateBenchmarkMenus();
             
             // Show benchmark interface in main content area
-            console.log('🔄 Showing benchmark interface...');
             this.showBenchmarkInterface();
             
             console.log('✅ Benchmark mode activated in main window');

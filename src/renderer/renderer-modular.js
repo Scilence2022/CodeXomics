@@ -653,7 +653,6 @@ class GenomeBrowser {
             'modules/BenchmarkStatistics.js',
             'modules/BenchmarkReportGenerator.js', 
             'modules/LLMBenchmarkFramework.js',
-            'modules/BenchmarkMenuManager.js',
             'modules/BenchmarkUI.js',
             'modules/BenchmarkManager.js'
         ];
