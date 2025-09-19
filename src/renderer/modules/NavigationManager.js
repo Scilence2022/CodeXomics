@@ -686,10 +686,10 @@ class NavigationManager {
                 if (annotation.qualifiers) {
                     checkedCount++;
                     // Search in gene names
-                    const geneName = annotation.qualifiers.gene || '';
-                    const locusTag = annotation.qualifiers.locus_tag || '';
-                    const product = annotation.qualifiers.product || '';
-                    const note = annotation.qualifiers.note || '';
+                    const geneName = this.genomeBrowser.getQualifierValue(annotation.qualifiers, 'gene') || '';
+                    const locusTag = this.genomeBrowser.getQualifierValue(annotation.qualifiers, 'locus_tag') || '';
+                    const product = this.genomeBrowser.getQualifierValue(annotation.qualifiers, 'product') || '';
+                    const note = this.genomeBrowser.getQualifierValue(annotation.qualifiers, 'note') || '';
                     
                     const searchFields = [geneName, locusTag, product, note].join(' ');
                     const fieldToSearch = caseSensitive ? searchFields : searchFields.toUpperCase();

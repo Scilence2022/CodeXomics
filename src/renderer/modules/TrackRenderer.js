@@ -1662,7 +1662,9 @@ class TrackRenderer {
      * Create SVG text label for gene with advanced anti-stretch protection
      */
     createSVGGeneText(gene, width, height, settings) {
-        const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
+        const geneName = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'gene') || 
+                        this.genomeBrowser.getQualifierValue(gene.qualifiers, 'locus_tag') || 
+                        this.genomeBrowser.getQualifierValue(gene.qualifiers, 'product') || gene.type;
         
         // Use fixed font size to prevent stretching, with reasonable scaling
         const baseFontSize = settings?.fontSize || 11;
@@ -1772,15 +1774,19 @@ class TrackRenderer {
         geneGroup.setAttribute('data-gene-start', gene.start);
         geneGroup.setAttribute('data-gene-end', gene.end);
         geneGroup.setAttribute('data-gene-type', gene.type);
-        if (gene.qualifiers?.gene) {
-            geneGroup.setAttribute('data-gene-name', gene.qualifiers.gene);
+        const geneNameAttr = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'gene');
+        if (geneNameAttr) {
+            geneGroup.setAttribute('data-gene-name', geneNameAttr);
         }
-        if (gene.qualifiers?.locus_tag) {
-            geneGroup.setAttribute('data-locus-tag', gene.qualifiers.locus_tag);
+        const locusTagAttr = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'locus_tag');
+        if (locusTagAttr) {
+            geneGroup.setAttribute('data-locus-tag', locusTagAttr);
         }
         
         // Create comprehensive tooltip
-        const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
+        const geneName = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'gene') || 
+                        this.genomeBrowser.getQualifierValue(gene.qualifiers, 'locus_tag') || 
+                        this.genomeBrowser.getQualifierValue(gene.qualifiers, 'product') || gene.type;
         const geneInfo = `${geneName} (${gene.type})`;
         const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
         const operonDisplay = operonInfo.isInOperon ? `\nOperon: ${operonInfo.operonName}` : '\nSingle gene';
@@ -1947,11 +1953,13 @@ class TrackRenderer {
         geneElement.setAttribute('data-gene-start', gene.start);
         geneElement.setAttribute('data-gene-end', gene.end);
         geneElement.setAttribute('data-gene-type', gene.type);
-        if (gene.qualifiers?.gene) {
-            geneElement.setAttribute('data-gene-name', gene.qualifiers.gene);
+        const geneNameAttr2 = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'gene');
+        if (geneNameAttr2) {
+            geneElement.setAttribute('data-gene-name', geneNameAttr2);
         }
-        if (gene.qualifiers?.locus_tag) {
-            geneElement.setAttribute('data-locus-tag', gene.qualifiers.locus_tag);
+        const locusTagAttr2 = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'locus_tag');
+        if (locusTagAttr2) {
+            geneElement.setAttribute('data-locus-tag', locusTagAttr2);
         }
         
         // Get operon information and assign color
@@ -2022,7 +2030,9 @@ class TrackRenderer {
         geneElement.style.lineHeight = `${layout.geneHeight}px`;
         
         // Set text content and shape based on available space
-        const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
+        const geneName = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'gene') || 
+                        this.genomeBrowser.getQualifierValue(gene.qualifiers, 'locus_tag') || 
+                        this.genomeBrowser.getQualifierValue(gene.qualifiers, 'product') || gene.type;
         
         if (width < 1.0) {
             // Very small genes: use triangle shape with directional indicator
@@ -5256,7 +5266,9 @@ class TrackRenderer {
      * Set protein element content and tooltip
      */
     setProteinElementContent(proteinElement, protein, width) {
-        const proteinName = protein.qualifiers.product || protein.qualifiers.gene || protein.qualifiers.locus_tag || 'Protein';
+        const proteinName = this.genomeBrowser.getQualifierValue(protein.qualifiers, 'product') || 
+                           this.genomeBrowser.getQualifierValue(protein.qualifiers, 'gene') || 
+                           this.genomeBrowser.getQualifierValue(protein.qualifiers, 'locus_tag') || 'Protein';
         const proteinInfo = `${proteinName} (CDS)`;
         const positionInfo = `${protein.start}-${protein.end} (${protein.strand === -1 ? '-' : '+'} strand)`;
         

@@ -36,7 +36,10 @@ class UIManager {
             // Close export dropdown if click is outside
             if (exportDropdown && exportDropdown.classList.contains('show')) {
                 if (!exportButton.contains(e.target) && !exportDropdown.contains(e.target)) {
-                    this.closeExportDropdown();
+                    // Don't close if clicking on a dropdown item - let the item handle it
+                    if (!e.target.classList.contains('dropdown-item')) {
+                        this.closeExportDropdown();
+                    }
                 }
             }
         });

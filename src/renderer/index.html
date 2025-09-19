@@ -185,6 +185,11 @@
                             <i class="fas fa-eye"></i>
                             Current View (FASTA)
                         </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="exportConfigBtn" onclick="if(window.genomeBrowser && window.genomeBrowser.exportManager) { window.genomeBrowser.exportManager.showExportConfigDialog(); } else { console.error('ExportManager not available'); }">
+                            <i class="fas fa-cog"></i>
+                            Configure
+                        </button>
                     </div>
                 </div>
             </div>

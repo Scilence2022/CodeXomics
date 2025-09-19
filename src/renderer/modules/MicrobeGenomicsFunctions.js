@@ -781,8 +781,8 @@ class MicrobeGenomicsFunctions {
         let geneSequence = fullSequence.substring(feature.start - 1, feature.end);
         
         // Determine gene name and locus tag for result
-        const geneName = feature.qualifiers?.gene || identifier;
-        const locusTag = feature.qualifiers?.locus_tag || identifier;
+        const geneName = gb.getQualifierValue(feature.qualifiers, 'gene') || identifier;
+        const locusTag = gb.getQualifierValue(feature.qualifiers, 'locus_tag') || identifier;
         
         // Handle strand direction
         let codingSequence = geneSequence;

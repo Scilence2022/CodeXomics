@@ -1086,7 +1086,9 @@ class SequenceUtils {
                 const operonInfo = operons && mainFeature.type !== 'promoter' && mainFeature.type !== 'terminator' ? 
                     this.genomeBrowser.getGeneOperonInfo(mainFeature, operons) : null;
                 featureHexColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(mainFeature.type);
-                featureTitle = `${mainFeature.qualifiers.gene || mainFeature.qualifiers.locus_tag || mainFeature.type} (${mainFeature.start}-${mainFeature.end})`;
+                featureTitle = `${this.genomeBrowser.getQualifierValue(mainFeature.qualifiers, 'gene') || 
+                                this.genomeBrowser.getQualifierValue(mainFeature.qualifiers, 'locus_tag') || 
+                                mainFeature.type} (${mainFeature.start}-${mainFeature.end})`;
             }
             
             // Use cached color calculations
@@ -1434,7 +1436,8 @@ class SequenceUtils {
             const fullSequence = this.genomeBrowser.currentSequence[chromosome];
             const dnaForTranslation = fullSequence.substring(cds.start - 1, cds.end);
             const proteinSequence = this.translateDNA(dnaForTranslation, cds.strand);
-            const geneName = cds.qualifiers.gene || cds.qualifiers.locus_tag || 'Unknown';
+            const geneName = this.genomeBrowser.getQualifierValue(cds.qualifiers, 'gene') || 
+                           this.genomeBrowser.getQualifierValue(cds.qualifiers, 'locus_tag') || 'Unknown';
             
             // Create protein section with DNA-style formatting
             const proteinSection = document.createElement('div');
@@ -1513,7 +1516,8 @@ class SequenceUtils {
             const fullSequence = this.genomeBrowser.currentSequence[chromosome];
             const dnaForTranslation = fullSequence.substring(cds.start - 1, cds.end);
             const proteinSequence = this.translateDNA(dnaForTranslation, cds.strand);
-            const geneName = cds.qualifiers.gene || cds.qualifiers.locus_tag || 'Unknown';
+            const geneName = this.genomeBrowser.getQualifierValue(cds.qualifiers, 'gene') || 
+                           this.genomeBrowser.getQualifierValue(cds.qualifiers, 'locus_tag') || 'Unknown';
             
             const proteinDiv = document.createElement('div');
             proteinDiv.className = 'protein-sequence';

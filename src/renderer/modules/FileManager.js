@@ -703,12 +703,33 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                         // For very long qualifiers like translation, limit initial storage
                         if (key === 'translation' && cleanValue.length > 1000) {
                             // Store only first part for memory efficiency
-                            currentFeature.qualifiers[key] = cleanValue.substring(0, 100) + '...';
+                            cleanValue = cleanValue.substring(0, 100) + '...';
+                        }
+                        
+                        // Support multiple values for the same qualifier key
+                        if (currentFeature.qualifiers[key]) {
+                            // If key already exists, convert to array or append to existing array
+                            if (Array.isArray(currentFeature.qualifiers[key])) {
+                                currentFeature.qualifiers[key].push(cleanValue);
+                            } else {
+                                // Convert existing single value to array
+                                currentFeature.qualifiers[key] = [currentFeature.qualifiers[key], cleanValue];
+                            }
                         } else {
+                            // First occurrence, store as single value
                             currentFeature.qualifiers[key] = cleanValue;
                         }
                     } else {
-                        currentFeature.qualifiers[key] = true;
+                        // Support multiple boolean qualifiers
+                        if (currentFeature.qualifiers[key]) {
+                            if (Array.isArray(currentFeature.qualifiers[key])) {
+                                currentFeature.qualifiers[key].push(true);
+                            } else {
+                                currentFeature.qualifiers[key] = [currentFeature.qualifiers[key], true];
+                            }
+                        } else {
+                            currentFeature.qualifiers[key] = true;
+                        }
                         currentQualifierKey = null; // No continuation expected
                     }
                 }
@@ -719,20 +740,59 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             if (line.match(/^\s{21}[^\/]/) && currentFeature && currentQualifierKey) {
                 const continuationValue = line.trim().replace(/^"/, '').replace(/"$/, '');
                 
-                // For translation qualifiers, skip most of the content to save memory
-                if (currentQualifierKey === 'translation') {
-                    // Only keep the first part, ignore the rest
-                    if (!currentFeature.qualifiers[currentQualifierKey].includes('...')) {
-                        currentFeature.qualifiers[currentQualifierKey] += continuationValue.substring(0, 50);
-                        if (currentFeature.qualifiers[currentQualifierKey].length > 100) {
-                            currentFeature.qualifiers[currentQualifierKey] = 
-                                currentFeature.qualifiers[currentQualifierKey].substring(0, 100) + '...';
+                // Get the current qualifier value (handle both single values and arrays)
+                let currentValue = currentFeature.qualifiers[currentQualifierKey];
+                
+                // If it's an array, work with the last element
+                if (Array.isArray(currentValue)) {
+                    const lastIndex = currentValue.length - 1;
+                    currentValue = currentValue[lastIndex];
+                    
+                    // For translation qualifiers, skip most of the content to save memory
+                    if (currentQualifierKey === 'translation') {
+                        // Only keep the first part, ignore the rest
+                        if (!currentValue.includes('...')) {
+                            currentValue += continuationValue.substring(0, 50);
+                            if (currentValue.length > 100) {
+                                currentValue = currentValue.substring(0, 100) + '...';
+                            }
+                            currentFeature.qualifiers[currentQualifierKey][lastIndex] = currentValue;
+                        }
+                    } else {
+                        // For other qualifiers, keep the full content (no artificial limits)
+                        // Only apply reasonable limits to extremely large qualifiers (>50KB) to prevent memory issues
+                        if (currentValue.length < 50000) {
+                            currentFeature.qualifiers[currentQualifierKey][lastIndex] = currentValue + ' ' + continuationValue;
+                        } else {
+                            // For extremely large qualifiers, add truncation indicator
+                            if (!currentValue.includes('[TRUNCATED]')) {
+                                currentFeature.qualifiers[currentQualifierKey][lastIndex] = currentValue + ' [TRUNCATED - Content too large]';
+                            }
                         }
                     }
                 } else {
-                    // For other qualifiers, keep the full content but with reasonable limits
-                    if (currentFeature.qualifiers[currentQualifierKey].length < 2000) {
-                        currentFeature.qualifiers[currentQualifierKey] += ' ' + continuationValue;
+                    // Single value case
+                    // For translation qualifiers, skip most of the content to save memory
+                    if (currentQualifierKey === 'translation') {
+                        // Only keep the first part, ignore the rest
+                        if (!currentValue.includes('...')) {
+                            currentValue += continuationValue.substring(0, 50);
+                            if (currentValue.length > 100) {
+                                currentValue = currentValue.substring(0, 100) + '...';
+                            }
+                            currentFeature.qualifiers[currentQualifierKey] = currentValue;
+                        }
+                    } else {
+                        // For other qualifiers, keep the full content (no artificial limits)
+                        // Only apply reasonable limits to extremely large qualifiers (>50KB) to prevent memory issues
+                        if (currentValue.length < 50000) {
+                            currentFeature.qualifiers[currentQualifierKey] = currentValue + ' ' + continuationValue;
+                        } else {
+                            // For extremely large qualifiers, add truncation indicator
+                            if (!currentValue.includes('[TRUNCATED]')) {
+                                currentFeature.qualifiers[currentQualifierKey] = currentValue + ' [TRUNCATED - Content too large]';
+                            }
+                        }
                     }
                 }
                 continue;
@@ -807,24 +867,55 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         }
     }
 
+    /**
+     * Helper function to get the first value from a qualifier (supports both single values and arrays)
+     */
+    getQualifierValue(qualifiers, key) {
+        if (!qualifiers || !qualifiers[key]) return null;
+        
+        const value = qualifiers[key];
+        if (Array.isArray(value)) {
+            return value.length > 0 ? value[0] : null;
+        }
+        return value;
+    }
+    
+    /**
+     * Helper function to get all values from a qualifier as an array
+     */
+    getAllQualifierValues(qualifiers, key) {
+        if (!qualifiers || !qualifiers[key]) return [];
+        
+        const value = qualifiers[key];
+        if (Array.isArray(value)) {
+            return value;
+        }
+        return [value];
+    }
+
     finalizeFeature(feature) {
         // Add name from qualifiers if available
-        if (feature.qualifiers.gene) {
-            feature.name = feature.qualifiers.gene;
-        } else if (feature.qualifiers.locus_tag) {
-            feature.name = feature.qualifiers.locus_tag;
-        } else if (feature.qualifiers.product) {
-            feature.name = feature.qualifiers.product;
+        const geneName = this.getQualifierValue(feature.qualifiers, 'gene');
+        const locusTag = this.getQualifierValue(feature.qualifiers, 'locus_tag');
+        const product = this.getQualifierValue(feature.qualifiers, 'product');
+        
+        if (geneName) {
+            feature.name = geneName;
+        } else if (locusTag) {
+            feature.name = locusTag;
+        } else if (product) {
+            feature.name = product;
         }
         
         // Add product information
-        if (feature.qualifiers.product) {
-            feature.product = feature.qualifiers.product;
+        if (product) {
+            feature.product = product;
         }
         
         // Add note information
-        if (feature.qualifiers.note) {
-            feature.note = feature.qualifiers.note;
+        const note = this.getQualifierValue(feature.qualifiers, 'note');
+        if (note) {
+            feature.note = note;
         }
     }
 
@@ -838,19 +929,19 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             const sourceFeature = features.find(feature => feature.type.toLowerCase() === 'source');
             if (sourceFeature) {
                 sourceFeatures[chromosome] = {
-                    organism: sourceFeature.qualifiers.organism || 'Unknown',
-                    strain: sourceFeature.qualifiers.strain || null,
-                    plasmid: sourceFeature.qualifiers.plasmid || null,
-                    note: sourceFeature.qualifiers.note || null,
-                    db_xref: sourceFeature.qualifiers.db_xref || null,
-                    mol_type: sourceFeature.qualifiers.mol_type || null,
-                    isolation_source: sourceFeature.qualifiers.isolation_source || null,
-                    country: sourceFeature.qualifiers.country || null,
-                    collection_date: sourceFeature.qualifiers.collection_date || null,
-                    collected_by: sourceFeature.qualifiers.collected_by || null,
-                    host: sourceFeature.qualifiers.host || null,
-                    serotype: sourceFeature.qualifiers.serotype || null,
-                    serovar: sourceFeature.qualifiers.serovar || null,
+                    organism: this.getQualifierValue(sourceFeature.qualifiers, 'organism') || 'Unknown',
+                    strain: this.getQualifierValue(sourceFeature.qualifiers, 'strain') || null,
+                    plasmid: this.getQualifierValue(sourceFeature.qualifiers, 'plasmid') || null,
+                    note: this.getQualifierValue(sourceFeature.qualifiers, 'note') || null,
+                    db_xref: this.getQualifierValue(sourceFeature.qualifiers, 'db_xref') || null,
+                    mol_type: this.getQualifierValue(sourceFeature.qualifiers, 'mol_type') || null,
+                    isolation_source: this.getQualifierValue(sourceFeature.qualifiers, 'isolation_source') || null,
+                    country: this.getQualifierValue(sourceFeature.qualifiers, 'country') || null,
+                    collection_date: this.getQualifierValue(sourceFeature.qualifiers, 'collection_date') || null,
+                    collected_by: this.getQualifierValue(sourceFeature.qualifiers, 'collected_by') || null,
+                    host: this.getQualifierValue(sourceFeature.qualifiers, 'host') || null,
+                    serotype: this.getQualifierValue(sourceFeature.qualifiers, 'serotype') || null,
+                    serovar: this.getQualifierValue(sourceFeature.qualifiers, 'serovar') || null,
                     qualifiers: sourceFeature.qualifiers
                 };
             }

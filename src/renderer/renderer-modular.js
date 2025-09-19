@@ -302,6 +302,32 @@ class GenomeBrowser {
         this.init();
     }
 
+    /**
+     * Helper function to get the first value from a qualifier (supports both single values and arrays)
+     */
+    getQualifierValue(qualifiers, key) {
+        if (!qualifiers || !qualifiers[key]) return null;
+        
+        const value = qualifiers[key];
+        if (Array.isArray(value)) {
+            return value.length > 0 ? value[0] : null;
+        }
+        return value;
+    }
+    
+    /**
+     * Helper function to get all values from a qualifier as an array
+     */
+    getAllQualifierValues(qualifiers, key) {
+        if (!qualifiers || !qualifiers[key]) return [];
+        
+        const value = qualifiers[key];
+        if (Array.isArray(value)) {
+            return value;
+        }
+        return [value];
+    }
+
     init() {
         // Force reload timestamp: 2025-05-31-15:05
         console.log('🚀 GenomeBrowser initialization starting...');
@@ -608,6 +634,45 @@ class GenomeBrowser {
         document.getElementById('exportGFFBtn').addEventListener('click', () => this.exportManager.exportAsGFF());
         document.getElementById('exportBEDBtn').addEventListener('click', () => this.exportManager.exportAsBED());
         document.getElementById('exportCurrentViewBtn').addEventListener('click', () => this.exportManager.exportCurrentViewAsFasta());
+        // Export configuration button with error handling - use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+            const exportConfigBtn = document.getElementById('exportConfigBtn');
+            if (exportConfigBtn) {
+                exportConfigBtn.addEventListener('click', (e) => {
+                    console.log('🔧 Export Config button clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        // Close the export dropdown first
+                        this.uiManager.closeExportDropdown();
+                        
+                        this.exportManager.showExportConfigDialog();
+                    } catch (error) {
+                        console.error('Error opening export config dialog:', error);
+                        this.showNotification('Error opening export configuration', 'error');
+                    }
+                });
+                console.log('✓ Export Config button listener added');
+            } else {
+                console.warn('✗ Export Config button not found - will retry');
+                // Retry after another delay
+                setTimeout(() => {
+                    const retryBtn = document.getElementById('exportConfigBtn');
+                    if (retryBtn) {
+                        retryBtn.addEventListener('click', (e) => {
+                            console.log('🔧 Export Config button clicked (retry)');
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.uiManager.closeExportDropdown();
+                            this.exportManager.showExportConfigDialog();
+                        });
+                        console.log('✓ Export Config button listener added (retry)');
+                    } else {
+                        console.error('❌ Export Config button still not found after retry');
+                    }
+                }, 1000);
+            }
+        }, 100);
 
         // Welcome screen buttons
         document.getElementById('welcomeOpenGenomeBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('genome'));
@@ -4002,10 +4067,14 @@ class GenomeBrowser {
     generateOperonName(genes) {
         // Generate operon name based on first gene or common prefix
         const firstGene = genes[0];
-        const geneName = firstGene.qualifiers.gene || firstGene.qualifiers.locus_tag || 'unknown';
+        const geneName = this.getQualifierValue(firstGene.qualifiers, 'gene') || 
+                        this.getQualifierValue(firstGene.qualifiers, 'locus_tag') || 'unknown';
         
         // Try to find common prefix among gene names
-        const geneNames = genes.map(g => g.qualifiers.gene || g.qualifiers.locus_tag || '').filter(n => n);
+        const geneNames = genes.map(g => 
+            this.getQualifierValue(g.qualifiers, 'gene') || 
+            this.getQualifierValue(g.qualifiers, 'locus_tag') || ''
+        ).filter(n => n);
         if (geneNames.length > 1) {
             const commonPrefix = this.findCommonPrefix(geneNames);
             if (commonPrefix.length > 2) {
@@ -4063,7 +4132,9 @@ class GenomeBrowser {
         }
         
         // Gene is not in an operon, assign individual color
-        const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || `${gene.type}_${gene.start}`;
+        const geneName = this.getQualifierValue(gene.qualifiers, 'gene') || 
+                        this.getQualifierValue(gene.qualifiers, 'locus_tag') || 
+                        `${gene.type}_${gene.start}`;
         return {
             operonName: geneName,
             color: this.assignOperonColor(geneName),
@@ -4595,16 +4666,33 @@ class GenomeBrowser {
             `;
             
             Object.entries(gene.qualifiers).forEach(([key, value]) => {
-                // Convert value to string and check if it's meaningful
-                const stringValue = value != null ? String(value) : '';
-                if (stringValue && stringValue !== 'Unknown' && stringValue.trim() !== '') {
+                // Handle both single values and arrays of values
+                let valuesToDisplay = [];
+                
+                if (Array.isArray(value)) {
+                    // Multiple values for the same qualifier
+                    valuesToDisplay = value.filter(v => {
+                        const stringValue = v != null ? String(v) : '';
+                        return stringValue && stringValue !== 'Unknown' && stringValue.trim() !== '';
+                    });
+                } else {
+                    // Single value
+                    const stringValue = value != null ? String(value) : '';
+                    if (stringValue && stringValue !== 'Unknown' && stringValue.trim() !== '') {
+                        valuesToDisplay = [stringValue];
+                    }
+                }
+                
+                // Display each value
+                valuesToDisplay.forEach((val, index) => {
+                    const displayLabel = index === 0 ? key.replace(/_/g, ' ') : ''; // Only show label for first occurrence
                     html += `
                         <div class="gene-attribute">
-                            <div class="gene-attribute-label">${key.replace(/_/g, ' ')}</div>
-                            <div class="gene-attribute-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(stringValue))}</div>
+                            <div class="gene-attribute-label">${displayLabel}</div>
+                            <div class="gene-attribute-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(val)))}</div>
                         </div>
                     `;
-                }
+                });
             });
             
             html += `</div>`;
@@ -4622,7 +4710,7 @@ class GenomeBrowser {
         `;
         
         // Add copy translation button if it's a CDS or has translation
-        if (geneType === 'CDS' || (gene.qualifiers && gene.qualifiers.translation)) {
+        if (geneType === 'CDS' || (gene.qualifiers && this.getQualifierValue(gene.qualifiers, 'translation'))) {
             html += `
                 <button class="btn gene-copy-translation-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneTranslation()">
                     <i class="fas fa-copy"></i> Copy Translation
@@ -5376,7 +5464,7 @@ class GenomeBrowser {
         /*
         
         // CDS and Translation sections if applicable
-        if (gene.type === 'CDS' || (gene.qualifiers && gene.qualifiers.translation)) {
+        if (gene.type === 'CDS' || (gene.qualifiers && this.getQualifierValue(gene.qualifiers, 'translation'))) {
             // For CDS features, the DNA sequence is the CDS
             const cdsSequence = dnaSequence;
             const translation = gene.qualifiers?.translation || this.translateDNA(cdsSequence, gene.strand);
@@ -5705,7 +5793,7 @@ class GenomeBrowser {
         let translation;
         
         // Always translate from DNA to ensure we get the complete sequence
-        // The gene.qualifiers.translation might be truncated during GenBank parsing for memory efficiency
+        // The translation qualifier might be truncated during GenBank parsing for memory efficiency
         const sequence = this.currentSequence[currentChr];
         const geneSequence = sequence.substring(gene.start - 1, gene.end);
         translation = this.translateDNA(geneSequence, gene.strand);
@@ -6236,24 +6324,36 @@ class GenomeBrowser {
                 gene.qualifiers = {};
             }
             
-            // Update product/function
+            // Update product/function (keep as single value)
             if (refinedAnnotation.product) {
                 gene.qualifiers.product = refinedAnnotation.product;
             }
             
-            // Update note
+            // Update note (keep as single value)
             if (refinedAnnotation.note) {
                 gene.qualifiers.note = refinedAnnotation.note;
             }
             
-            // Update EC number
+            // Update EC number (may have multiple values)
             if (refinedAnnotation.ec) {
-                gene.qualifiers.ec_number = refinedAnnotation.ec;
+                if (!gene.qualifiers.ec_number) {
+                    gene.qualifiers.ec_number = refinedAnnotation.ec;
+                } else if (Array.isArray(gene.qualifiers.ec_number)) {
+                    gene.qualifiers.ec_number.push(refinedAnnotation.ec);
+                } else {
+                    gene.qualifiers.ec_number = [gene.qualifiers.ec_number, refinedAnnotation.ec];
+                }
             }
             
-            // Update GO terms
+            // Update GO terms (may have multiple values)
             if (refinedAnnotation.go) {
-                gene.qualifiers.go_terms = refinedAnnotation.go;
+                if (!gene.qualifiers.go_terms) {
+                    gene.qualifiers.go_terms = refinedAnnotation.go;
+                } else if (Array.isArray(gene.qualifiers.go_terms)) {
+                    gene.qualifiers.go_terms.push(refinedAnnotation.go);
+                } else {
+                    gene.qualifiers.go_terms = [gene.qualifiers.go_terms, refinedAnnotation.go];
+                }
             }
             
             // Add new qualifiers
@@ -6311,9 +6411,9 @@ class GenomeBrowser {
                     g.gene === geneName || 
                     g.locus_tag === geneName ||
                     (g.qualifiers && (
-                        g.qualifiers.gene === geneName ||
-                        g.qualifiers.locus_tag === geneName ||
-                        g.qualifiers.name === geneName
+                        this.getQualifierValue(g.qualifiers, 'gene') === geneName ||
+                        this.getQualifierValue(g.qualifiers, 'locus_tag') === geneName ||
+                        this.getQualifierValue(g.qualifiers, 'name') === geneName
                     ))
                 );
                 
@@ -6500,13 +6600,15 @@ class GenomeBrowser {
             if (fileInfo.features) {
                 for (const feature of fileInfo.features) {
                     if (feature.qualifiers) {
-                        if (feature.qualifiers.organism) {
-                            console.log(`Found organism from fileInfo.features: ${feature.qualifiers.organism}`);
-                            return this.standardizeOrganismName(feature.qualifiers.organism);
+                        const organism = this.getQualifierValue(feature.qualifiers, 'organism');
+                        if (organism) {
+                            console.log(`Found organism from fileInfo.features: ${organism}`);
+                            return this.standardizeOrganismName(organism);
                         }
-                        if (feature.qualifiers.species) {
-                            console.log(`Found organism from fileInfo.features.species: ${feature.qualifiers.species}`);
-                            return this.standardizeOrganismName(feature.qualifiers.species);
+                        const species = this.getQualifierValue(feature.qualifiers, 'species');
+                        if (species) {
+                            console.log(`Found organism from fileInfo.features.species: ${species}`);
+                            return this.standardizeOrganismName(species);
                         }
                     }
                 }
@@ -6807,8 +6909,20 @@ class GenomeBrowser {
 
         // Remove empty qualifiers
         Object.keys(gene.qualifiers).forEach(key => {
-            if (!gene.qualifiers[key] || gene.qualifiers[key].toString().trim() === '') {
-                delete gene.qualifiers[key];
+            const value = gene.qualifiers[key];
+            if (Array.isArray(value)) {
+                // For arrays, remove empty values
+                const filteredArray = value.filter(v => v && v.toString().trim() !== '');
+                if (filteredArray.length === 0) {
+                    delete gene.qualifiers[key];
+                } else {
+                    gene.qualifiers[key] = filteredArray;
+                }
+            } else {
+                // For single values
+                if (!value || value.toString().trim() === '') {
+                    delete gene.qualifiers[key];
+                }
             }
         });
     }

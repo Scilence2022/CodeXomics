@@ -600,8 +600,9 @@ class VariantAnalyzer {
             `;
 
             for (const gene of affectedGenes) {
-                const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || 'Unknown';
-                const product = gene.qualifiers?.product || '';
+                const geneName = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'gene') || 
+                               this.genomeBrowser.getQualifierValue(gene.qualifiers, 'locus_tag') || 'Unknown';
+                const product = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'product') || '';
                 
                 html += `
                     <div class="gene-item">
