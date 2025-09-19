@@ -4,7 +4,6 @@
 class LLMConfigManager {
     constructor(configManager = null) {
         this.configManager = configManager;
-        this.currentProvider = null;
         this.providers = {
             // OpenAI Direct API - GPT-5 requires bringing your own API key (BYOK)
             openai: {
@@ -560,15 +559,12 @@ class LLMConfigManager {
                     console.log('Loaded providers:', Object.keys(llmConfig.providers));
                     
                     this.providers = { ...this.providers, ...llmConfig.providers };
-                    this.currentProvider = llmConfig.currentProvider;
                     
                     // Load model types if available
                     if (llmConfig.modelTypes) {
                         this.modelTypes = { ...this.modelTypes, ...llmConfig.modelTypes };
                         console.log('Model types loaded:', this.modelTypes);
                     }
-                    
-                    console.log('After merge - current provider:', this.currentProvider);
                     console.log('After merge - providers:', Object.keys(this.providers));
                     
                     // Debug each provider's status
@@ -590,8 +586,11 @@ class LLMConfigManager {
                     console.log('Found LLM configuration in localStorage');
                     const config = JSON.parse(savedConfig);
                     this.providers = { ...this.providers, ...config.providers };
-                    this.currentProvider = config.currentProvider;
-                    console.log('Loaded from localStorage - current provider:', this.currentProvider);
+                    
+                    // Load model types if available
+                    if (config.modelTypes) {
+                        this.modelTypes = { ...this.modelTypes, ...config.modelTypes };
+                    }
                 } else {
                     console.log('No LLM configuration found in localStorage');
                 }
@@ -641,10 +640,8 @@ class LLMConfigManager {
                 provider.enabled = !!(provider.apiKey || providerKey === 'local') && provider.model;
             });
 
-            // Set current provider to the active tab if it's enabled
-            if (this.providers[currentTab].enabled) {
-                this.currentProvider = currentTab;
-            }
+            // Enable provider if it has valid configuration
+            // No need to set a single "current provider" since we use model types now
 
 
             // Get system prompt setting
@@ -657,7 +654,6 @@ class LLMConfigManager {
             if (this.configManager) {
                 // Use ConfigManager if available (now with async support)
                 await this.configManager.set('llm.providers', this.providers);
-                await this.configManager.set('llm.currentProvider', this.currentProvider);
                 await this.configManager.set('llm.systemPrompt', systemPrompt);
                 await this.configManager.set('llm.modelTypes', this.modelTypes);
                 await this.configManager.saveConfig();
@@ -666,7 +662,6 @@ class LLMConfigManager {
                 // Fallback to localStorage
                 const config = {
                     providers: this.providers,
-                    currentProvider: this.currentProvider,
                     modelTypes: this.modelTypes
                 };
                 localStorage.setItem('llmConfiguration', JSON.stringify(config));
@@ -765,15 +760,8 @@ class LLMConfigManager {
             return;
         }
         
-        // Update current provider display
-        const currentProviderElement = document.getElementById('currentProvider');
-        if (currentProviderElement) {
-            if (this.currentProvider && this.providers[this.currentProvider]) {
-                currentProviderElement.textContent = this.providers[this.currentProvider].name;
-            } else {
-                currentProviderElement.textContent = 'None';
-            }
-        }
+        // No need to update current provider display since it's removed
+        // UI updates can be added here for other purposes if needed
     }
 
     async testConnection() {
@@ -976,14 +964,16 @@ class LLMConfigManager {
 
 
     async sendMessage(message, context = null) {
-        if (!this.currentProvider || !this.providers[this.currentProvider].enabled) {
+        // Get the best available provider for task model type
+        const providerKey = this.getProviderForModelType('task');
+        if (!providerKey) {
             throw new Error('No LLM provider configured');
         }
 
-        const provider = this.providers[this.currentProvider];
+        const provider = this.providers[providerKey];
         
         try {
-            switch (this.currentProvider) {
+            switch (providerKey) {
                 case 'openai':
                     return await this.sendOpenAIMessage(provider, message, context);
                 case 'anthropic':
@@ -1008,11 +998,12 @@ class LLMConfigManager {
     }
 
     async sendMessageWithHistory(conversationHistory, context = null) {
-        if (!this.currentProvider || !this.providers[this.currentProvider].enabled) {
+        // Get the best available provider for task model type
+        const primaryProvider = this.getProviderForModelType('task');
+        if (!primaryProvider) {
             throw new Error('No LLM provider configured');
         }
 
-        const primaryProvider = this.currentProvider;
         let lastError;
         
         // Try primary provider first
@@ -2050,12 +2041,55 @@ If the user is asking a general question that doesn't require a tool, respond no
 
     getConfiguration() {
         return {
-            currentProvider: this.currentProvider,
-            providers: this.providers
+            providers: this.providers,
+            modelTypes: this.modelTypes
         };
     }
 
     isConfigured() {
-        return this.currentProvider && this.providers[this.currentProvider].enabled;
+        // Check if at least one provider is enabled
+        return Object.values(this.providers).some(provider => provider.enabled);
+    }
+
+    /**
+     * Get the provider for a specific model type
+     * @param {string} modelType - The type of model (reasoning, task, code, etc.)
+     * @returns {string|null} - The provider key or null if not configured
+     */
+    getProviderForModelType(modelType) {
+        // Check if model type is configured and not set to 'auto'
+        if (this.modelTypes[modelType] && this.modelTypes[modelType].provider !== 'auto') {
+            const providerKey = this.modelTypes[modelType].provider;
+            if (this.providers[providerKey] && this.providers[providerKey].enabled) {
+                return providerKey;
+            }
+        }
+        
+        // Fallback to first available enabled provider
+        for (const [key, provider] of Object.entries(this.providers)) {
+            if (provider.enabled) {
+                return key;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get the model for a specific model type
+     * @param {string} modelType - The type of model (reasoning, task, code, etc.)
+     * @returns {string|null} - The model name or null if not configured
+     */
+    getModelForModelType(modelType) {
+        const providerKey = this.getProviderForModelType(modelType);
+        if (!providerKey) return null;
+        
+        // Check if model type has specific model configured
+        if (this.modelTypes[modelType] && this.modelTypes[modelType].model !== 'auto') {
+            return this.modelTypes[modelType].model;
+        }
+        
+        // Fallback to provider's default model
+        return this.providers[providerKey].model;
     }
 } 

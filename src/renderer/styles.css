@@ -4430,7 +4430,7 @@ to {
 
 .llm-config-status {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 16px 20px;
   background: #f8f9fa;
@@ -4438,21 +4438,6 @@ to {
   margin: 0 -20px -20px -20px;
 }
 
-.status-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #6c757d;
-  font-size: 14px;
-}
-
-.status-info i {
-  color: #667eea;
-}
-
-.status-info strong {
-  color: #374151;
-}
 
 #testConnectionBtn {
   background: #6c757d;
@@ -4835,13 +4820,6 @@ to {
   border-color: #4b5563;
 }
 
-.status-info {
-  color: #9ca3af;
-}
-
-.status-info strong {
-  color: #f3f4f6;
-}
 
 .provider-config input,
     .provider-config select {
