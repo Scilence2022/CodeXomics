@@ -449,6 +449,7 @@ class GenomeBrowser {
         console.log('🌐 Making instance globally available...');
         window.genomeBrowser = this;
         window.genomeApp = this; // For compatibility with ChatManager
+        window.app = this; // For benchmark system compatibility
         
         // Step 8: Initialize UI components
         console.log('🎨 Initializing UI components...');
@@ -8816,6 +8817,7 @@ document.addEventListener('DOMContentLoaded', () => {
     waitForScriptsToLoad().then(() => {
         console.log('✅ All required scripts loaded, initializing Genome AI Studio...');
         window.genomeBrowser = new GenomeBrowser();
+        window.app = window.genomeBrowser; // Ensure app is available for benchmark system
         
         // Initialize enhanced citation display
         const initializeEnhancedCitationDisplay = () => {

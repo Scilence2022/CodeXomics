@@ -286,22 +286,36 @@ class BenchmarkUI {
                 this.setupEventListeners();
             }
 
-            async initializeApp() {
-                try {
-                    if (window.opener && window.opener.app) {
-                        console.log('🔗 Connecting to parent application...');
-                        this.benchmarkManager = await window.opener.app.initializeBenchmarkSystemOnDemand();
+                async initializeApp() {
+                    try {
+                        // Try different ways to access the parent application
+                        let parentApp = null;
                         
-                        if (this.benchmarkManager) {
-                            this.updateStatus('ready', 'System Ready');
-                            console.log('✅ Benchmark system connected');
+                        if (window.opener) {
+                            parentApp = window.opener.genomeBrowser || 
+                                       window.opener.genomeApp || 
+                                       window.opener.app;
                         }
+                        
+                        if (parentApp && typeof parentApp.initializeBenchmarkSystemOnDemand === 'function') {
+                            console.log('🔗 Connecting to parent application...');
+                            this.benchmarkManager = await parentApp.initializeBenchmarkSystemOnDemand();
+                            
+                            if (this.benchmarkManager) {
+                                this.updateStatus('ready', 'System Ready');
+                                console.log('✅ Benchmark system connected');
+                            } else {
+                                throw new Error('Failed to initialize benchmark system');
+                            }
+                        } else {
+                            throw new Error('Parent application not available or missing initializeBenchmarkSystemOnDemand method');
+                        }
+                    } catch (error) {
+                        console.error('❌ Failed to initialize:', error);
+                        this.updateStatus('error', 'Initialization Failed');
+                        alert('Failed to connect to parent application: ' + error.message);
                     }
-                } catch (error) {
-                    console.error('❌ Failed to initialize:', error);
-                    this.updateStatus('error', 'Initialization Failed');
                 }
-            }
 
             setupEventListeners() {
                 // Menu handling
