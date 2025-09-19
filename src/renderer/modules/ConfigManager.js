@@ -12,6 +12,11 @@ class ConfigManager {
         this.config = this.getDefaultConfig();
         this.isInitialized = false;
         
+        // Provide temporary debouncedSave function to prevent errors during initialization
+        this.debouncedSave = this.debounce(() => {
+            this.saveConfig();
+        }, 1000);
+        
         // Initialize asynchronously
         this.initializeConfig().then(() => {
             this.isInitialized = true;
@@ -1022,7 +1027,7 @@ class ConfigManager {
             
             obj[keys[keys.length - 1]] = value;
             
-            if (this.config.ui.autoSaveInterval > 0) {
+            if (this.config.ui.autoSaveInterval > 0 && this.debouncedSave) {
                 this.debouncedSave();
             }
         } catch (error) {
@@ -1048,7 +1053,7 @@ class ConfigManager {
             this.config.chat.history = this.config.chat.history.slice(-this.config.chat.maxHistoryLength);
         }
 
-        if (this.config.llm.autoSave) {
+        if (this.config.llm.autoSave && this.debouncedSave) {
             this.debouncedSave();
         }
 
@@ -1099,7 +1104,9 @@ class ConfigManager {
             recentFiles.splice(this.config.app.maxRecentFiles);
         }
         
-        this.debouncedSave();
+        if (this.debouncedSave) {
+            this.debouncedSave();
+        }
     }
 
     /**
@@ -1194,6 +1201,11 @@ class ConfigManager {
             this.debouncedSave = this.debounce(() => {
                 this.saveConfig();
             }, this.config.ui.autoSaveInterval);
+        } else {
+            // Always provide a fallback debouncedSave function
+            this.debouncedSave = this.debounce(() => {
+                this.saveConfig();
+            }, 1000); // 1 second fallback
         }
     }
 
@@ -1516,7 +1528,7 @@ class ConfigManager {
             });
         }
         
-        if (this.config.ui?.tabSettings?.autoSaveTabStates) {
+        if (this.config.ui?.tabSettings?.autoSaveTabStates && this.debouncedSave) {
             this.debouncedSave();
         }
         
@@ -1556,7 +1568,7 @@ class ConfigManager {
         
         this.config.tabs.activeTabId = tabId;
         
-        if (this.config.ui?.tabSettings?.autoSaveTabStates) {
+        if (this.config.ui?.tabSettings?.autoSaveTabStates && this.debouncedSave) {
             this.debouncedSave();
         }
     }
@@ -1645,7 +1657,9 @@ class ConfigManager {
             ...settings
         };
 
-        this.debouncedSave();
+        if (this.debouncedSave) {
+            this.debouncedSave();
+        }
         console.log('Search settings updated');
     }
 
@@ -1679,7 +1693,9 @@ class ConfigManager {
             this.config.search.history = this.config.search.history.slice(0, maxHistory);
         }
 
-        this.debouncedSave();
+        if (this.debouncedSave) {
+            this.debouncedSave();
+        }
     }
 
     /**
@@ -1713,7 +1729,9 @@ class ConfigManager {
             ...settings
         };
 
-        this.debouncedSave();
+        if (this.debouncedSave) {
+            this.debouncedSave();
+        }
         console.log('Modal settings updated');
     }
 } 
