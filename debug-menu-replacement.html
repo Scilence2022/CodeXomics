@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Menu Replacement</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .status { padding: 10px; margin: 5px 0; border-radius: 3px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+        .log { background: #f8f9fa; padding: 10px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Menu Replacement Debug Tool</h1>
+    
+    <div class="debug-section">
+        <h2>Current DOM State</h2>
+        <div id="domState"></div>
+        <button onclick="checkDOMState()">Check DOM State</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Benchmark System Status</h2>
+        <div id="systemStatus"></div>
+        <button onclick="checkSystemStatus()">Check System Status</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Menu Manager Test</h2>
+        <div id="menuManagerStatus"></div>
+        <button onclick="testMenuManager()">Test Menu Manager</button>
+        <button onclick="activateBenchmarkMenus()">Activate Benchmark Menus</button>
+        <button onclick="deactivateBenchmarkMenus()">Deactivate Benchmark Menus</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Debug Log</h2>
+        <div id="debugLog" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        let debugLog = '';
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog += `[${timestamp}] ${message}\n`;
+            document.getElementById('debugLog').textContent = debugLog;
+            console.log(message);
+        }
+
+        function clearLog() {
+            debugLog = '';
+            document.getElementById('debugLog').textContent = '';
+        }
+
+        function showStatus(elementId, html, type = 'info') {
+            document.getElementById(elementId).innerHTML = `<div class="status ${type}">${html}</div>`;
+        }
+
+        function checkDOMState() {
+            log('Checking DOM state...');
+            
+            const elements = {
+                header: document.querySelector('.header'),
+                menuBar: document.querySelector('.menu-bar'),
+                benchmarkMenuBar: document.querySelector('.benchmark-menu-bar'),
+                benchmarkInterface: document.getElementById('benchmarkInterface'),
+                hiddenElements: document.querySelectorAll('[data-benchmark-hidden="true"]')
+            };
+
+            let html = '<strong>DOM Elements:</strong><br>';
+            html += `• Header (.header): ${elements.header ? '✅ Found' : '❌ Not Found'}<br>`;
+            html += `• Menu Bar (.menu-bar): ${elements.menuBar ? '✅ Found' : '❌ Not Found'}<br>`;
+            html += `• Benchmark Menu Bar: ${elements.benchmarkMenuBar ? '✅ Found' : '❌ Not Found'}<br>`;
+            html += `• Benchmark Interface: ${elements.benchmarkInterface ? '✅ Found' : '❌ Not Found'}<br>`;
+            html += `• Hidden Elements: ${elements.hiddenElements.length} elements<br>`;
+
+            if (elements.header) {
+                html += `• Header Display: ${getComputedStyle(elements.header).display}<br>`;
+                html += `• Header Hidden Attribute: ${elements.header.dataset.benchmarkHidden || 'none'}<br>`;
+            }
+
+            if (elements.benchmarkMenuBar) {
+                html += `• Benchmark Menu Display: ${getComputedStyle(elements.benchmarkMenuBar).display}<br>`;
+                html += `• Benchmark Menu Position: ${elements.benchmarkMenuBar.style.position || 'static'}<br>`;
+            }
+
+            showStatus('domState', html, elements.benchmarkMenuBar ? 'success' : 'warning');
+            log(`DOM state checked. Benchmark menu bar: ${!!elements.benchmarkMenuBar}`);
+        }
+
+        function checkSystemStatus() {
+            log('Checking system status...');
+            
+            try {
+                let html = '<strong>System Status:</strong><br>';
+                
+                // Check window.app
+                html += `• window.app: ${window.app ? '✅ Available' : '❌ Not Available'}<br>`;
+                
+                if (window.app && window.app.benchmarkManager) {
+                    const status = window.app.benchmarkManager.getSystemStatus();
+                    html += `• Benchmark Manager: ✅ Available<br>`;
+                    html += `• Initialized: ${status.initialized ? '✅' : '❌'}<br>`;
+                    html += `• Framework Ready: ${status.frameworkReady ? '✅' : '❌'}<br>`;
+                    html += `• UI Ready: ${status.uiReady ? '✅' : '❌'}<br>`;
+                    html += `• Initialization Pending: ${status.initializationPending ? '⏳' : '✅'}<br>`;
+                } else {
+                    html += `• Benchmark Manager: ❌ Not Available<br>`;
+                }
+
+                // Check menu manager
+                if (window.benchmarkMenuManager) {
+                    html += `• Menu Manager: ✅ Available<br>`;
+                    html += `• Menus Active: ${window.benchmarkMenuManager.benchmarkMenusActive ? '✅' : '❌'}<br>`;
+                } else {
+                    html += `• Menu Manager: ❌ Not Available<br>`;
+                }
+
+                showStatus('systemStatus', html, window.app ? 'success' : 'error');
+                log('System status checked');
+                
+            } catch (error) {
+                showStatus('systemStatus', `Error: ${error.message}`, 'error');
+                log(`System status check error: ${error.message}`);
+            }
+        }
+
+        function testMenuManager() {
+            log('Testing menu manager...');
+            
+            try {
+                if (!window.app || !window.app.benchmarkManager) {
+                    throw new Error('Benchmark manager not available');
+                }
+
+                const benchmarkManager = window.app.benchmarkManager;
+                
+                // Check if UI is available
+                if (!benchmarkManager.ui) {
+                    throw new Error('Benchmark UI not available');
+                }
+
+                // Check if menu manager is initialized
+                if (!benchmarkManager.ui.menuManager) {
+                    log('Menu manager not initialized, creating...');
+                    benchmarkManager.ui.menuManager = new BenchmarkMenuManager(benchmarkManager.app);
+                    window.benchmarkMenuManager = benchmarkManager.ui.menuManager;
+                }
+
+                const menuManager = benchmarkManager.ui.menuManager;
+                const status = menuManager.benchmarkMenusActive;
+
+                let html = '<strong>Menu Manager Test:</strong><br>';
+                html += `• Menu Manager Available: ✅<br>`;
+                html += `• Menus Active: ${status ? '✅ Active' : '❌ Inactive'}<br>`;
+                html += `• Original Menus Stored: ${menuManager.originalMenus ? '✅' : '❌'}<br>`;
+
+                showStatus('menuManagerStatus', html, 'success');
+                log('Menu manager test completed');
+                
+            } catch (error) {
+                showStatus('menuManagerStatus', `Error: ${error.message}`, 'error');
+                log(`Menu manager test error: ${error.message}`);
+            }
+        }
+
+        async function activateBenchmarkMenus() {
+            log('Activating benchmark menus...');
+            
+            try {
+                // Ensure benchmark system is initialized
+                if (!window.app || !window.app.benchmarkManager) {
+                    log('Initializing benchmark system...');
+                    const benchmarkManager = await window.app.initializeBenchmarkSystemOnDemand();
+                    await benchmarkManager.waitForInitialization();
+                }
+
+                const benchmarkManager = window.app.benchmarkManager;
+                
+                // Ensure menu manager is available
+                if (!benchmarkManager.ui.menuManager) {
+                    log('Creating menu manager...');
+                    // Load BenchmarkMenuManager if needed
+                    if (typeof BenchmarkMenuManager === 'undefined') {
+                        await loadScript('src/renderer/modules/BenchmarkMenuManager.js');
+                    }
+                    benchmarkManager.ui.menuManager = new BenchmarkMenuManager(benchmarkManager.app);
+                    window.benchmarkMenuManager = benchmarkManager.ui.menuManager;
+                }
+
+                // Activate menus
+                log('Calling activateBenchmarkMenus...');
+                benchmarkManager.ui.menuManager.activateBenchmarkMenus();
+                
+                // Check result
+                setTimeout(() => {
+                    checkDOMState();
+                    const benchmarkMenuBar = document.querySelector('.benchmark-menu-bar');
+                    if (benchmarkMenuBar) {
+                        log('✅ Benchmark menus activated successfully');
+                        showStatus('menuManagerStatus', 'Benchmark menus activated successfully!', 'success');
+                    } else {
+                        log('❌ Benchmark menus activation failed - no menu bar created');
+                        showStatus('menuManagerStatus', 'Benchmark menus activation failed', 'error');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ Activation error: ${error.message}`);
+                showStatus('menuManagerStatus', `Activation error: ${error.message}`, 'error');
+            }
+        }
+
+        function deactivateBenchmarkMenus() {
+            log('Deactivating benchmark menus...');
+            
+            try {
+                if (window.benchmarkMenuManager) {
+                    window.benchmarkMenuManager.deactivateBenchmarkMenus();
+                    
+                    setTimeout(() => {
+                        checkDOMState();
+                        log('✅ Benchmark menus deactivated');
+                    }, 500);
+                } else {
+                    throw new Error('Menu manager not available');
+                }
+                
+            } catch (error) {
+                log(`❌ Deactivation error: ${error.message}`);
+                showStatus('menuManagerStatus', `Deactivation error: ${error.message}`, 'error');
+            }
+        }
+
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) {
+                    resolve();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            log('Debug tool loaded');
+            setTimeout(() => {
+                checkDOMState();
+                checkSystemStatus();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
