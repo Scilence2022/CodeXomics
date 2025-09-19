@@ -406,6 +406,18 @@ class ToolsIntegrator {
                     maxTokens: 100,
                     temperature: 1.0
                 }
+            },
+            zoom_in: {
+                description: 'Zoom in the current view',
+                example: {
+                    factor: 2
+                }
+            },
+            zoom_out: {
+                description: 'Zoom out the current view',
+                example: {
+                    factor: 2
+                }
             }
         };
 

@@ -3988,7 +3988,8 @@ Data Management:
         const categories = {
             'SEARCH & NAVIGATION': [
                 'search_gene_by_name', 'search_features', 'jump_to_gene', 
-                'navigate_to_position', 'search_by_position', 'open_new_tab'
+                'navigate_to_position', 'search_by_position', 'open_new_tab',
+                'zoom_in', 'zoom_out'
             ],
             'SYSTEM STATUS': [
                 'get_genome_info', 'check_genomics_environment', 'get_file_info', 
