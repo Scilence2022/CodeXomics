@@ -1008,6 +1008,52 @@ class MediumTermMemory {
     }
     
     /**
+     * Store memory entry
+     */
+    async store(memoryEntry) {
+        try {
+            // Store in appropriate medium-term memory structures
+            if (memoryEntry.type === 'tool_call') {
+                this.updateUserPreferences(
+                    memoryEntry.functionName,
+                    memoryEntry.parameters,
+                    memoryEntry.success
+                );
+                
+                // Update workflow patterns
+                if (!this.workflowPatterns.has(memoryEntry.agent)) {
+                    this.workflowPatterns.set(memoryEntry.agent, []);
+                }
+                this.workflowPatterns.get(memoryEntry.agent).push({
+                    function: memoryEntry.functionName,
+                    timestamp: memoryEntry.timestamp,
+                    success: memoryEntry.success
+                });
+            }
+            
+            // Update performance metrics
+            if (memoryEntry.executionTime) {
+                const key = `${memoryEntry.functionName}_${memoryEntry.agent}`;
+                if (!this.performanceMetrics.has(key)) {
+                    this.performanceMetrics.set(key, {
+                        totalTime: 0,
+                        count: 0,
+                        averageTime: 0
+                    });
+                }
+                
+                const metrics = this.performanceMetrics.get(key);
+                metrics.totalTime += memoryEntry.executionTime;
+                metrics.count++;
+                metrics.averageTime = metrics.totalTime / metrics.count;
+            }
+            
+        } catch (error) {
+            console.error('❌ MediumTermMemory.store error:', error);
+        }
+    }
+    
+    /**
      * Update user preferences
      */
     updateUserPreferences(toolName, parameters, success) {
@@ -1208,6 +1254,49 @@ class LongTermMemory {
     }
     
     /**
+     * Store memory entry
+     */
+    async store(memoryEntry) {
+        try {
+            // Store in appropriate long-term memory structures
+            if (memoryEntry.type === 'tool_call') {
+                // Store in historical data
+                const historicalKey = `${memoryEntry.functionName}_${Date.now()}`;
+                this.historicalData.set(historicalKey, {
+                    functionName: memoryEntry.functionName,
+                    parameters: memoryEntry.parameters,
+                    result: memoryEntry.result,
+                    executionTime: memoryEntry.executionTime,
+                    agent: memoryEntry.agent,
+                    success: memoryEntry.success,
+                    timestamp: memoryEntry.timestamp
+                });
+                
+                // Update learned patterns
+                if (!this.learnedPatterns.has(memoryEntry.functionName)) {
+                    this.learnedPatterns.set(memoryEntry.functionName, {
+                        successRate: 0,
+                        commonParameters: new Map(),
+                        averageExecutionTime: 0,
+                        usageCount: 0
+                    });
+                }
+                
+                const pattern = this.learnedPatterns.get(memoryEntry.functionName);
+                pattern.usageCount++;
+                pattern.successRate = (pattern.successRate * (pattern.usageCount - 1) + (memoryEntry.success ? 1 : 0)) / pattern.usageCount;
+                
+                if (memoryEntry.executionTime) {
+                    pattern.averageExecutionTime = (pattern.averageExecutionTime * (pattern.usageCount - 1) + memoryEntry.executionTime) / pattern.usageCount;
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ LongTermMemory.store error:', error);
+        }
+    }
+    
+    /**
      * Store knowledge
      */
     storeKnowledge(domain, knowledge) {
@@ -1403,6 +1492,65 @@ class SemanticMemory {
     async initialize() {
         // No specific initialization needed for semantic memory
         console.log('🧠 SemanticMemory initialized');
+    }
+    
+    /**
+     * Store memory entry
+     */
+    async store(memoryEntry) {
+        try {
+            // Store in appropriate semantic memory structures
+            if (memoryEntry.type === 'tool_call') {
+                // Add concept for the function
+                if (!this.conceptGraph.has(memoryEntry.functionName)) {
+                    this.addConcept(memoryEntry.functionName, {
+                        type: 'function',
+                        category: 'genomics_tool',
+                        success_rate: memoryEntry.success ? 1 : 0,
+                        usage_count: 1
+                    });
+                } else {
+                    // Update existing concept
+                    const concept = this.conceptGraph.get(memoryEntry.functionName);
+                    concept.properties.usage_count = (concept.properties.usage_count || 0) + 1;
+                    concept.properties.last_used = Date.now();
+                    
+                    // Update success rate
+                    const currentSuccessRate = concept.properties.success_rate || 0;
+                    const newSuccessRate = (currentSuccessRate * (concept.properties.usage_count - 1) + (memoryEntry.success ? 1 : 0)) / concept.properties.usage_count;
+                    concept.properties.success_rate = newSuccessRate;
+                }
+                
+                // Add relationships between function and parameters
+                Object.keys(memoryEntry.parameters).forEach(param => {
+                    const paramConcept = `param_${param}`;
+                    if (!this.conceptGraph.has(paramConcept)) {
+                        this.addConcept(paramConcept, {
+                            type: 'parameter',
+                            category: 'function_parameter'
+                        });
+                    }
+                    
+                    // Add relationship
+                    this.addRelationship(memoryEntry.functionName, paramConcept, 'uses');
+                });
+                
+                // Add agent relationship
+                if (memoryEntry.agent) {
+                    const agentConcept = `agent_${memoryEntry.agent}`;
+                    if (!this.conceptGraph.has(agentConcept)) {
+                        this.addConcept(agentConcept, {
+                            type: 'agent',
+                            category: 'execution_agent'
+                        });
+                    }
+                    this.addRelationship(memoryEntry.functionName, agentConcept, 'executed_by');
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ SemanticMemory.store error:', error);
+        }
     }
     
     /**
