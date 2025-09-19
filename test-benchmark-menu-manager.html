@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test BenchmarkMenuManager Loading</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🔍 BenchmarkMenuManager Loading Test</h1>
+    
+    <div id="status"></div>
+    <button onclick="testLoadMenuManager()">Test Load BenchmarkMenuManager</button>
+    <button onclick="testCreateMenuManager()">Test Create BenchmarkMenuManager</button>
+    
+    <div id="log" style="background: #f8f9fa; padding: 10px; margin: 20px 0; font-family: monospace; white-space: pre-wrap;"></div>
+
+    <script>
+        let logContent = '';
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent += `[${timestamp}] ${message}\n`;
+            document.getElementById('log').textContent = logContent;
+            console.log(message);
+        }
+
+        function showStatus(message, type = 'info') {
+            document.getElementById('status').innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function testLoadMenuManager() {
+            log('Testing BenchmarkMenuManager loading...');
+            showStatus('Loading BenchmarkMenuManager...', 'info');
+            
+            const script = document.createElement('script');
+            script.src = 'src/renderer/modules/BenchmarkMenuManager.js';
+            
+            script.onload = () => {
+                log('✅ BenchmarkMenuManager script loaded successfully');
+                
+                if (typeof BenchmarkMenuManager !== 'undefined') {
+                    log('✅ BenchmarkMenuManager class is available');
+                    showStatus('✅ BenchmarkMenuManager loaded successfully!', 'success');
+                } else {
+                    log('❌ BenchmarkMenuManager class not found after loading');
+                    showStatus('❌ BenchmarkMenuManager class not found', 'error');
+                }
+            };
+            
+            script.onerror = (error) => {
+                log(`❌ Failed to load BenchmarkMenuManager: ${error}`);
+                showStatus('❌ Failed to load BenchmarkMenuManager script', 'error');
+            };
+            
+            document.head.appendChild(script);
+        }
+
+        function testCreateMenuManager() {
+            log('Testing BenchmarkMenuManager creation...');
+            
+            if (typeof BenchmarkMenuManager === 'undefined') {
+                log('❌ BenchmarkMenuManager not loaded. Load it first.');
+                showStatus('❌ BenchmarkMenuManager not loaded. Load it first.', 'error');
+                return;
+            }
+            
+            try {
+                // Create a mock app object
+                const mockApp = {
+                    name: 'Test App'
+                };
+                
+                const menuManager = new BenchmarkMenuManager(mockApp);
+                log('✅ BenchmarkMenuManager instance created successfully');
+                log(`Menu manager app: ${menuManager.app.name}`);
+                log(`Menus active: ${menuManager.benchmarkMenusActive}`);
+                
+                showStatus('✅ BenchmarkMenuManager instance created successfully!', 'success');
+                
+            } catch (error) {
+                log(`❌ Failed to create BenchmarkMenuManager: ${error.message}`);
+                showStatus(`❌ Failed to create BenchmarkMenuManager: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            log('Test page loaded');
+            setTimeout(() => {
+                testLoadMenuManager();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

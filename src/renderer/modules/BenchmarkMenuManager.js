@@ -1367,7 +1367,7 @@ Features:
      */
     generateHTMLReport(results) {
         const stats = results.overallStats;
-        return \`
+        return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -1409,23 +1409,23 @@ Features:
         </div>
         
         <h2>Test Suite Results</h2>
-        \${results.testSuiteResults.map(suite => \`
+        ${results.testSuiteResults.map(suite => `
             <div class="suite-result">
-                <div class="suite-header">\${suite.suiteName} - \${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate</div>
+                <div class="suite-header">${suite.suiteName} - ${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate</div>
                 <div>
-                    \${suite.testResults.map(test => \`
-                        <div class="test-result \${test.success ? 'passed' : 'failed'}">
-                            <strong>\${test.testName}</strong><br>
-                            Score: \${test.score}/\${test.maxScore} | Duration: \${test.duration}ms
+                    ${suite.testResults.map(test => `
+                        <div class="test-result ${test.success ? 'passed' : 'failed'}">
+                            <strong>${test.testName}</strong><br>
+                            Score: ${test.score}/${test.maxScore} | Duration: ${test.duration}ms
                         </div>
-                    \`).join('')}
+                    `).join('')}
                 </div>
             </div>
-        \`).join('')}
+        `).join('')}
     </div>
 </body>
 </html>
-        \`;
+        `;
     }
 }
 
