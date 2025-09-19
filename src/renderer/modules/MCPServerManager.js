@@ -42,7 +42,7 @@ class MCPServerManager {
                 description: 'Built-in genome analysis tools',
                 url: 'ws://localhost:3003',
                 enabled: true,
-                autoConnect: true,
+                autoConnect: false, // Changed: Disable auto-connection by default
                 reconnectDelay: 5,
                 category: 'genomics',
                 capabilities: ['genome-navigation', 'sequence-analysis', 'annotation'],
@@ -130,7 +130,7 @@ class MCPServerManager {
             description: serverConfig.description || '',
             url: serverConfig.url,
             enabled: serverConfig.enabled !== false,
-            autoConnect: serverConfig.autoConnect !== false,
+            autoConnect: serverConfig.autoConnect === true, // Changed: Default to false for auto-connection
             reconnectDelay: serverConfig.reconnectDelay || 5,
             category: serverConfig.category || 'general',
             capabilities: serverConfig.capabilities || [],
@@ -1259,6 +1259,16 @@ class MCPServerManager {
 
     // Setup auto-connect for enabled servers
     setupAutoConnect() {
+        // Check global auto-connect setting
+        const globalSettings = this.configManager ? 
+            this.configManager.get('mcpGlobalSettings', { enableAutoConnect: false }) : 
+            { enableAutoConnect: false };
+            
+        if (!globalSettings.enableAutoConnect) {
+            console.log('🚫 MCP auto-connect is disabled globally');
+            return;
+        }
+        
         // Auto-connect to enabled servers after a short delay
         setTimeout(() => {
             for (const [serverId, server] of this.servers) {
@@ -1274,6 +1284,34 @@ class MCPServerManager {
                 }
             }
         }, 1000);
+    }
+
+    // Enable/disable global auto-connect
+    setGlobalAutoConnect(enabled) {
+        const globalSettings = this.configManager ? 
+            this.configManager.get('mcpGlobalSettings', { enableAutoConnect: false }) : 
+            { enableAutoConnect: false };
+            
+        globalSettings.enableAutoConnect = enabled;
+        
+        if (this.configManager) {
+            this.configManager.set('mcpGlobalSettings', globalSettings);
+        }
+        
+        console.log(`🔧 MCP global auto-connect ${enabled ? 'enabled' : 'disabled'}`);
+        
+        // If enabling and there are servers that should auto-connect, connect them now
+        if (enabled) {
+            this.setupAutoConnect();
+        }
+    }
+    
+    // Get global auto-connect status
+    getGlobalAutoConnect() {
+        const globalSettings = this.configManager ? 
+            this.configManager.get('mcpGlobalSettings', { enableAutoConnect: false }) : 
+            { enableAutoConnect: false };
+        return globalSettings.enableAutoConnect;
     }
 
     // Get server status information
