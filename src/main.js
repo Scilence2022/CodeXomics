@@ -1931,6 +1931,45 @@ function createMenu() {
         },
         { type: 'separator' },
         {
+          label: 'Benchmarks',
+          submenu: [
+            {
+              label: 'LLM Instruction Following Benchmark',
+              accelerator: 'CmdOrCtrl+Shift+B',
+              click: () => {
+                sendToCurrentMainWindow('open-benchmark-runner');
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Quick Benchmark',
+              click: () => {
+                sendToCurrentMainWindow('run-quick-benchmark');
+              }
+            },
+            {
+              label: 'Custom Benchmark',
+              click: () => {
+                sendToCurrentMainWindow('open-custom-benchmark');
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Benchmark History',
+              click: () => {
+                sendToCurrentMainWindow('show-benchmark-history');
+              }
+            },
+            {
+              label: 'Export Benchmark Results',
+              click: () => {
+                sendToCurrentMainWindow('export-benchmark-results');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
           label: 'Analysis Tools',
           submenu: [
             {

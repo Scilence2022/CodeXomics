@@ -153,7 +153,7 @@ if (typeof window !== 'undefined') {
         });
     };
 
-    // Load modules in sequence
+    // Load modules in sequence (without benchmark modules - they will be loaded on demand)
     loadFunctionCallsOrganizer()
         .then(() => loadPluginFunctionCallsIntegrator())
         .then(() => loadSmartExecutor())
@@ -175,6 +175,7 @@ if (typeof window !== 'undefined') {
             if (typeof ResizableModalManager !== 'undefined') {
                 window.resizableModalManager = new ResizableModalManager();
             }
+
         })
         .catch(error => {
             console.warn('⚠️ Failed to load Smart Execution System modules:', error);
@@ -366,7 +367,11 @@ class GenomeBrowser {
             console.error('❌ Error initializing ChatManager:', error);
         }
         
-        // Step 5.1: Initialize MultiAgentSettingsManager
+        // Step 5.1: Benchmark System (will be loaded on demand when menu is accessed)
+        console.log('🧪 Benchmark System will be loaded on demand...');
+        this.benchmarkManager = null; // Initialize as null, will be created when needed
+
+        // Step 5.2: Initialize MultiAgentSettingsManager
         console.log('🤖 About to initialize MultiAgentSettingsManager...');
         try {
             this.multiAgentSettingsManager = new MultiAgentSettingsManager(this.configManager);
@@ -609,7 +614,67 @@ class GenomeBrowser {
         }, 500);
     }
     
+    /**
+     * Load and initialize Benchmark System on demand
+     */
+    async initializeBenchmarkSystemOnDemand() {
+        if (this.benchmarkManager && this.benchmarkManager.isInitialized) {
+            console.log('🧪 Benchmark System already initialized');
+            return this.benchmarkManager;
+        }
 
+        console.log('🧪 Loading Benchmark System on demand...');
+        
+        try {
+            // Load benchmark modules
+            await this.loadBenchmarkModules();
+            
+            // Initialize benchmark system
+            if (typeof BenchmarkManager !== 'undefined') {
+                this.benchmarkManager = new BenchmarkManager(this, this.chatManager, this.configManager);
+                window.benchmarkManager = this.benchmarkManager;
+                console.log('✅ Benchmark System loaded and initialized successfully');
+                return this.benchmarkManager;
+            } else {
+                throw new Error('BenchmarkManager class not available after loading modules');
+            }
+        } catch (error) {
+            console.error('❌ Failed to load Benchmark System on demand:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Load Benchmark System modules on demand
+     */
+    async loadBenchmarkModules() {
+        const modules = [
+            'modules/BenchmarkStatistics.js',
+            'modules/BenchmarkReportGenerator.js', 
+            'modules/LLMBenchmarkFramework.js',
+            'modules/BenchmarkUI.js',
+            'modules/BenchmarkManager.js'
+        ];
+        
+        console.log('📦 Loading benchmark modules...');
+        
+        for (const modulePath of modules) {
+            if (!document.querySelector(`script[src="${modulePath}"]`)) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = modulePath;
+                    script.onload = resolve;
+                    script.onerror = (error) => {
+                        console.warn(`⚠️ Failed to load ${modulePath}:`, error);
+                        resolve(); // Continue even if some modules fail
+                    };
+                    document.head.appendChild(script);
+                });
+            }
+        }
+        
+        console.log('✅ Benchmark modules loaded');
+    }
 
     setupEventListeners() {
         // File operations - dropdown menu
@@ -2703,6 +2768,57 @@ class GenomeBrowser {
 
         // Evolution interface is now handled as a separate window
         // No IPC handler needed - menu action creates new window directly
+
+        // Handle Benchmark menu actions (with on-demand loading)
+        ipcRenderer.on('open-benchmark-runner', async () => {
+            try {
+                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
+                benchmarkManager.openBenchmarkRunner();
+            } catch (error) {
+                console.error('Failed to initialize benchmark system:', error);
+                alert('Failed to load benchmark system: ' + error.message);
+            }
+        });
+
+        ipcRenderer.on('run-quick-benchmark', async () => {
+            try {
+                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
+                benchmarkManager.runQuickBenchmark();
+            } catch (error) {
+                console.error('Failed to initialize benchmark system:', error);
+                alert('Failed to load benchmark system: ' + error.message);
+            }
+        });
+
+        ipcRenderer.on('open-custom-benchmark', async () => {
+            try {
+                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
+                benchmarkManager.openCustomBenchmark();
+            } catch (error) {
+                console.error('Failed to initialize benchmark system:', error);
+                alert('Failed to load benchmark system: ' + error.message);
+            }
+        });
+
+        ipcRenderer.on('show-benchmark-history', async () => {
+            try {
+                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
+                benchmarkManager.showBenchmarkHistory();
+            } catch (error) {
+                console.error('Failed to initialize benchmark system:', error);
+                alert('Failed to load benchmark system: ' + error.message);
+            }
+        });
+
+        ipcRenderer.on('export-benchmark-results', async () => {
+            try {
+                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
+                benchmarkManager.exportBenchmarkResults();
+            } catch (error) {
+                console.error('Failed to initialize benchmark system:', error);
+                alert('Failed to load benchmark system: ' + error.message);
+            }
+        });
 
 
 
