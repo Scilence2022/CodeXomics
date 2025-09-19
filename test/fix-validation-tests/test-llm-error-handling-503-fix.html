@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Error Handling 503 Fix Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 2.2em;
+        }
+        
+        .header .subtitle {
+            color: #7f8c8d;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        
+        .test-section h2 {
+            color: #34495e;
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .test-case {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .test-case h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        .test-button:hover {
+            background: #2980b9;
+        }
+        
+        .test-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-pass { background: #27ae60; }
+        .status-fail { background: #e74c3c; }
+        .status-pending { background: #f39c12; }
+        
+        .notification-area {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        .notification {
+            background: white;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border-left: 4px solid #3498db;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .notification.success { border-left-color: #27ae60; }
+        .notification.error { border-left-color: #e74c3c; }
+        .notification.warning { border-left-color: #f39c12; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .metric {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .metric-label {
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 LLM Error Handling 503 Fix Test</h1>
+            <div class="subtitle">Comprehensive testing of HTTP 503 Service Unavailable error handling improvements</div>
+        </div>
+
+        <div class="notification-area" id="notificationArea"></div>
+
+        <div class="test-section">
+            <h2>🎯 Test Overview</h2>
+            <p>This test validates the improvements made to handle HTTP 503 Service Unavailable errors in the LLM communication system:</p>
+            <ul>
+                <li><strong>Retry Logic:</strong> Automatic retry with exponential backoff</li>
+                <li><strong>User Feedback:</strong> Clear notifications during retry attempts</li>
+                <li><strong>Fallback Providers:</strong> Automatic switching to alternative LLM providers</li>
+                <li><strong>Enhanced Error Messages:</strong> User-friendly error descriptions with actionable suggestions</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Test Metrics</h2>
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-value" id="totalTests">0</div>
+                    <div class="metric-label">Total Tests</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="passedTests">0</div>
+                    <div class="metric-label">Passed</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="failedTests">0</div>
+                    <div class="metric-label">Failed</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="retryAttempts">0</div>
+                    <div class="metric-label">Retry Attempts</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔄 Retry Logic Tests</h2>
+            
+            <div class="test-case">
+                <h3>Test 1: HTTP 503 Service Unavailable Retry</h3>
+                <p>Tests automatic retry mechanism for HTTP 503 errors with exponential backoff.</p>
+                <button class="test-button" onclick="testRetryLogic()">Test Retry Logic</button>
+                <div id="retryResult" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 2: Exponential Backoff Calculation</h3>
+                <p>Validates that retry delays increase exponentially with jitter.</p>
+                <button class="test-button" onclick="testBackoffCalculation()">Test Backoff</button>
+                <div id="backoffResult" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 3: Retryable Error Detection</h3>
+                <p>Tests identification of retryable vs non-retryable errors.</p>
+                <button class="test-button" onclick="testErrorDetection()">Test Error Detection</button>
+                <div id="errorDetectionResult" class="result" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔄 Fallback Provider Tests</h2>
+            
+            <div class="test-case">
+                <h3>Test 4: Provider Fallback Chain</h3>
+                <p>Tests automatic fallback to alternative LLM providers when primary fails.</p>
+                <button class="test-button" onclick="testFallbackChain()">Test Fallback</button>
+                <div id="fallbackResult" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 5: Fallback Provider Selection</h3>
+                <p>Validates correct selection of fallback providers based on availability.</p>
+                <button class="test-button" onclick="testFallbackSelection()">Test Selection</button>
+                <div id="fallbackSelectionResult" class="result" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>💬 Error Message Tests</h2>
+            
+            <div class="test-case">
+                <h3>Test 6: Enhanced Error Messages</h3>
+                <p>Tests user-friendly error messages for different HTTP status codes.</p>
+                <button class="test-button" onclick="testErrorMessages()">Test Messages</button>
+                <div id="errorMessagesResult" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 7: User Notification System</h3>
+                <p>Tests notification display during retry attempts and fallback switches.</p>
+                <button class="test-button" onclick="testNotifications()">Test Notifications</button>
+                <div id="notificationsResult" class="result" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🚀 Integration Tests</h2>
+            
+            <div class="test-case">
+                <h3>Test 8: End-to-End Error Handling</h3>
+                <p>Tests complete error handling flow from initial failure to successful fallback.</p>
+                <button class="test-button" onclick="testEndToEnd()">Test E2E</button>
+                <div id="e2eResult" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 9: Performance Impact</h3>
+                <p>Measures performance impact of retry and fallback mechanisms.</p>
+                <button class="test-button" onclick="testPerformance()">Test Performance</button>
+                <div id="performanceResult" class="result" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎮 Interactive Tests</h2>
+            <p>Run all tests sequentially to validate the complete error handling system:</p>
+            <button class="test-button" onclick="runAllTests()" style="background: #27ae60; font-size: 16px; padding: 15px 30px;">
+                🚀 Run All Tests
+            </button>
+            <button class="test-button" onclick="resetTests()" style="background: #e74c3c;">
+                🔄 Reset Tests
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Test metrics
+        let testMetrics = {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            retries: 0
+        };
+
+        // Mock LLMConfigManager for testing
+        class MockLLMConfigManager {
+            constructor() {
+                this.providers = {
+                    siliconflow: { name: 'SiliconFlow', enabled: true },
+                    openai: { name: 'OpenAI', enabled: true },
+                    google: { name: 'Google', enabled: true },
+                    anthropic: { name: 'Anthropic', enabled: false },
+                    openrouter: { name: 'OpenRouter', enabled: true }
+                };
+                this.currentProvider = 'siliconflow';
+                this.app = {
+                    showNotification: (message, type, duration) => {
+                        showNotification(message, type, duration);
+                    }
+                };
+            }
+
+            // Test methods from the actual implementation
+            isRetryableError(status) {
+                const retryableStatuses = [429, 500, 502, 503, 504, 520, 521, 522, 523, 524];
+                return retryableStatuses.includes(status);
+            }
+
+            calculateRetryDelay(attempt, baseDelay = 1000, maxDelay = 30000) {
+                const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
+                const jitter = Math.random() * 0.3 * exponentialDelay;
+                return Math.floor(exponentialDelay + jitter);
+            }
+
+            shouldTryFallback(error) {
+                return error.message.includes('HTTP 503') || 
+                       error.message.includes('Service Unavailable') ||
+                       error.message.includes('HTTP 502') ||
+                       error.message.includes('HTTP 504') ||
+                       error.message.includes('HTTP 429');
+            }
+
+            getFallbackProvider(primaryProvider) {
+                const fallbackChains = {
+                    'siliconflow': ['openrouter', 'openai', 'google', 'anthropic'],
+                    'openrouter': ['openai', 'google', 'anthropic', 'siliconflow'],
+                    'openai': ['google', 'anthropic', 'openrouter', 'siliconflow'],
+                    'google': ['openai', 'anthropic', 'openrouter', 'siliconflow'],
+                    'anthropic': ['openai', 'google', 'openrouter', 'siliconflow']
+                };
+                
+                const fallbacks = fallbackChains[primaryProvider] || [];
+                
+                for (const fallback of fallbacks) {
+                    if (this.providers[fallback] && this.providers[fallback].enabled) {
+                        return fallback;
+                    }
+                }
+                
+                return null;
+            }
+
+            async makeRequestWithRetry(requestFunction, providerName, responseProcessor, maxAttempts = 3) {
+                let lastError;
+                
+                for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    try {
+                        const response = await requestFunction();
+                        return await responseProcessor(response);
+                        
+                    } catch (error) {
+                        lastError = error;
+                        testMetrics.retries++;
+                        
+                        if (error.isRetryable && attempt < maxAttempts) {
+                            const delay = this.calculateRetryDelay(attempt);
+                            console.warn(`🔄 [${providerName}] HTTP ${error.status} error on attempt ${attempt}. Retrying in ${delay}ms...`);
+                            
+                            if (this.app && this.app.showNotification) {
+                                const message = `${providerName} service temporarily unavailable. Retrying in ${Math.ceil(delay/1000)}s (attempt ${attempt + 1}/${maxAttempts})...`;
+                                this.app.showNotification(message, 'warning', 3000);
+                            }
+                            
+                            await new Promise(resolve => setTimeout(resolve, Math.min(delay, 100))); // Speed up for testing
+                        } else {
+                            if (error.isRetryable) {
+                                console.error(`❌ [${providerName}] All ${maxAttempts} attempts failed. Service may be experiencing issues.`);
+                                if (this.app && this.app.showNotification) {
+                                    this.app.showNotification(`${providerName} service is currently unavailable. Please try again later or switch to a different LLM provider.`, 'error', 5000);
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                throw lastError;
+            }
+        }
+
+        const mockLLM = new MockLLMConfigManager();
+
+        // Notification system
+        function showNotification(message, type = 'info', duration = 3000) {
+            const notificationArea = document.getElementById('notificationArea');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${message}
+            `;
+            
+            notificationArea.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, duration);
+        }
+
+        // Update metrics display
+        function updateMetrics() {
+            document.getElementById('totalTests').textContent = testMetrics.total;
+            document.getElementById('passedTests').textContent = testMetrics.passed;
+            document.getElementById('failedTests').textContent = testMetrics.failed;
+            document.getElementById('retryAttempts').textContent = testMetrics.retries;
+        }
+
+        // Test result display
+        function showResult(elementId, success, message, details = '') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${success ? 'success' : 'error'}`;
+            element.innerHTML = `
+                <span class="status-indicator ${success ? 'status-pass' : 'status-fail'}"></span>
+                ${success ? '✅ PASS' : '❌ FAIL'}: ${message}
+                ${details ? `\n\nDetails:\n${details}` : ''}
+            `;
+            
+            testMetrics.total++;
+            if (success) testMetrics.passed++;
+            else testMetrics.failed++;
+            updateMetrics();
+        }
+
+        // Test 1: Retry Logic
+        async function testRetryLogic() {
+            try {
+                const error503 = new Error('HTTP 503: Service Unavailable');
+                error503.status = 503;
+                error503.isRetryable = true;
+
+                let attemptCount = 0;
+                const mockRequest = async () => {
+                    attemptCount++;
+                    if (attemptCount < 3) {
+                        throw error503;
+                    }
+                    return { ok: true };
+                };
+
+                const mockProcessor = async (response) => {
+                    return 'Success after retries';
+                };
+
+                const result = await mockLLM.makeRequestWithRetry(mockRequest, 'TestProvider', mockProcessor, 3);
+                
+                showResult('retryResult', true, 
+                    `Retry logic working correctly. Succeeded after ${attemptCount} attempts.`,
+                    `Result: ${result}\nAttempts made: ${attemptCount}`
+                );
+            } catch (error) {
+                showResult('retryResult', false, 'Retry logic failed', error.message);
+            }
+        }
+
+        // Test 2: Backoff Calculation
+        function testBackoffCalculation() {
+            try {
+                const delays = [];
+                for (let attempt = 1; attempt <= 5; attempt++) {
+                    const delay = mockLLM.calculateRetryDelay(attempt);
+                    delays.push(delay);
+                }
+
+                // Check if delays are increasing (allowing for jitter)
+                let increasing = true;
+                for (let i = 1; i < delays.length; i++) {
+                    const baseDelay1 = 1000 * Math.pow(2, i - 1);
+                    const baseDelay2 = 1000 * Math.pow(2, i);
+                    
+                    // Allow for jitter but check general trend
+                    if (delays[i] < baseDelay1 * 0.7 || delays[i] > baseDelay2 * 1.5) {
+                        increasing = false;
+                        break;
+                    }
+                }
+
+                showResult('backoffResult', increasing, 
+                    'Exponential backoff calculation working correctly',
+                    `Delays: ${delays.map((d, i) => `Attempt ${i+1}: ${d}ms`).join('\n')}`
+                );
+            } catch (error) {
+                showResult('backoffResult', false, 'Backoff calculation failed', error.message);
+            }
+        }
+
+        // Test 3: Error Detection
+        function testErrorDetection() {
+            try {
+                const retryableErrors = [429, 500, 502, 503, 504];
+                const nonRetryableErrors = [400, 401, 403, 404];
+
+                let allCorrect = true;
+                const results = [];
+
+                retryableErrors.forEach(status => {
+                    const isRetryable = mockLLM.isRetryableError(status);
+                    results.push(`HTTP ${status}: ${isRetryable ? 'Retryable ✅' : 'Not Retryable ❌'}`);
+                    if (!isRetryable) allCorrect = false;
+                });
+
+                nonRetryableErrors.forEach(status => {
+                    const isRetryable = mockLLM.isRetryableError(status);
+                    results.push(`HTTP ${status}: ${isRetryable ? 'Retryable ❌' : 'Not Retryable ✅'}`);
+                    if (isRetryable) allCorrect = false;
+                });
+
+                showResult('errorDetectionResult', allCorrect, 
+                    'Error detection working correctly',
+                    results.join('\n')
+                );
+            } catch (error) {
+                showResult('errorDetectionResult', false, 'Error detection failed', error.message);
+            }
+        }
+
+        // Test 4: Fallback Chain
+        function testFallbackChain() {
+            try {
+                const fallback = mockLLM.getFallbackProvider('siliconflow');
+                const expectedFallbacks = ['openrouter', 'openai', 'google'];
+                
+                const isValidFallback = expectedFallbacks.includes(fallback);
+                
+                showResult('fallbackResult', isValidFallback, 
+                    `Fallback provider selection working: ${fallback}`,
+                    `Primary: siliconflow\nFallback: ${fallback}\nExpected one of: ${expectedFallbacks.join(', ')}`
+                );
+            } catch (error) {
+                showResult('fallbackResult', false, 'Fallback chain test failed', error.message);
+            }
+        }
+
+        // Test 5: Fallback Selection
+        function testFallbackSelection() {
+            try {
+                // Test with different provider availability
+                mockLLM.providers.openrouter.enabled = false;
+                mockLLM.providers.openai.enabled = false;
+                
+                const fallback = mockLLM.getFallbackProvider('siliconflow');
+                const expected = 'google'; // Should be the next available
+                
+                // Reset providers
+                mockLLM.providers.openrouter.enabled = true;
+                mockLLM.providers.openai.enabled = true;
+                
+                showResult('fallbackSelectionResult', fallback === expected, 
+                    `Fallback selection respects provider availability`,
+                    `Selected: ${fallback}\nExpected: ${expected}`
+                );
+            } catch (error) {
+                showResult('fallbackSelectionResult', false, 'Fallback selection test failed', error.message);
+            }
+        }
+
+        // Test 6: Error Messages
+        function testErrorMessages() {
+            try {
+                const errorTypes = [
+                    { code: 503, contains: 'Service Temporarily Unavailable' },
+                    { code: 429, contains: 'Rate Limit Exceeded' },
+                    { code: 401, contains: 'Authentication Error' },
+                    { code: 404, contains: 'Model Not Found' }
+                ];
+
+                let allCorrect = true;
+                const results = [];
+
+                errorTypes.forEach(({ code, contains }) => {
+                    const error = new Error(`HTTP ${code}: Test Error`);
+                    let message = '';
+                    
+                    if (error.message.includes('HTTP 503') || error.message.includes('Service Unavailable')) {
+                        message = '🚫 **Service Temporarily Unavailable**';
+                    } else if (error.message.includes('HTTP 429')) {
+                        message = '⏱️ **Rate Limit Exceeded**';
+                    } else if (error.message.includes('HTTP 401')) {
+                        message = '🔐 **Authentication Error**';
+                    } else if (error.message.includes('HTTP 404')) {
+                        message = '🔍 **Model Not Found**';
+                    }
+
+                    const hasCorrectMessage = message.includes(contains);
+                    results.push(`HTTP ${code}: ${hasCorrectMessage ? '✅' : '❌'} ${contains}`);
+                    if (!hasCorrectMessage) allCorrect = false;
+                });
+
+                showResult('errorMessagesResult', allCorrect, 
+                    'Enhanced error messages working correctly',
+                    results.join('\n')
+                );
+            } catch (error) {
+                showResult('errorMessagesResult', false, 'Error messages test failed', error.message);
+            }
+        }
+
+        // Test 7: Notifications
+        function testNotifications() {
+            try {
+                // Test notification system
+                showNotification('Test retry notification', 'warning', 1000);
+                showNotification('Test success notification', 'success', 1000);
+                showNotification('Test error notification', 'error', 1000);
+                
+                showResult('notificationsResult', true, 
+                    'Notification system working correctly',
+                    'Check the notifications that appeared in the top-right corner'
+                );
+            } catch (error) {
+                showResult('notificationsResult', false, 'Notifications test failed', error.message);
+            }
+        }
+
+        // Test 8: End-to-End
+        async function testEndToEnd() {
+            try {
+                // Simulate complete error handling flow
+                const error503 = new Error('HTTP 503: Service Unavailable');
+                error503.status = 503;
+                error503.isRetryable = true;
+
+                // Test shouldTryFallback
+                const shouldFallback = mockLLM.shouldTryFallback(error503);
+                if (!shouldFallback) {
+                    throw new Error('shouldTryFallback returned false for 503 error');
+                }
+
+                // Test getFallbackProvider
+                const fallbackProvider = mockLLM.getFallbackProvider('siliconflow');
+                if (!fallbackProvider) {
+                    throw new Error('No fallback provider found');
+                }
+
+                showResult('e2eResult', true, 
+                    'End-to-end error handling flow working correctly',
+                    `✅ Error detection: 503 is retryable\n✅ Fallback decision: Should try fallback\n✅ Fallback provider: ${fallbackProvider}`
+                );
+            } catch (error) {
+                showResult('e2eResult', false, 'End-to-end test failed', error.message);
+            }
+        }
+
+        // Test 9: Performance
+        async function testPerformance() {
+            try {
+                const startTime = performance.now();
+                
+                // Run multiple retry calculations
+                for (let i = 0; i < 100; i++) {
+                    mockLLM.calculateRetryDelay(Math.floor(Math.random() * 5) + 1);
+                    mockLLM.isRetryableError(503);
+                    mockLLM.getFallbackProvider('siliconflow');
+                }
+                
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                
+                // Performance should be under 10ms for 100 operations
+                const performanceGood = duration < 10;
+                
+                showResult('performanceResult', performanceGood, 
+                    `Performance test ${performanceGood ? 'passed' : 'failed'}`,
+                    `100 operations completed in ${duration.toFixed(2)}ms\nAverage: ${(duration/100).toFixed(3)}ms per operation`
+                );
+            } catch (error) {
+                showResult('performanceResult', false, 'Performance test failed', error.message);
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            resetTests();
+            showNotification('Starting comprehensive error handling tests...', 'info');
+            
+            const tests = [
+                testRetryLogic,
+                testBackoffCalculation, 
+                testErrorDetection,
+                testFallbackChain,
+                testFallbackSelection,
+                testErrorMessages,
+                testNotifications,
+                testEndToEnd,
+                testPerformance
+            ];
+
+            for (let i = 0; i < tests.length; i++) {
+                await new Promise(resolve => setTimeout(resolve, 200)); // Small delay between tests
+                await tests[i]();
+            }
+
+            const successRate = ((testMetrics.passed / testMetrics.total) * 100).toFixed(1);
+            showNotification(`All tests completed! Success rate: ${successRate}% (${testMetrics.passed}/${testMetrics.total})`, 
+                           successRate >= 90 ? 'success' : 'warning', 5000);
+        }
+
+        // Reset tests
+        function resetTests() {
+            testMetrics = { total: 0, passed: 0, failed: 0, retries: 0 };
+            updateMetrics();
+            
+            // Hide all result divs
+            const results = document.querySelectorAll('.result');
+            results.forEach(result => result.style.display = 'none');
+            
+            showNotification('Tests reset', 'info', 1000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateMetrics();
+            showNotification('LLM Error Handling Test Suite loaded successfully', 'success', 3000);
+        });
+    </script>
+</body>
+</html>

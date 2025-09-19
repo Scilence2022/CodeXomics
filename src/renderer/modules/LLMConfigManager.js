@@ -1012,31 +1012,113 @@ class LLMConfigManager {
             throw new Error('No LLM provider configured');
         }
 
-        const provider = this.providers[this.currentProvider];
+        const primaryProvider = this.currentProvider;
+        let lastError;
         
+        // Try primary provider first
         try {
-            switch (this.currentProvider) {
-                case 'openai':
-                    return await this.sendOpenAIMessageWithHistory(provider, conversationHistory, context);
-                case 'anthropic':
-                    return await this.sendAnthropicMessageWithHistory(provider, conversationHistory, context);
-                case 'google':
-                    return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context);
-                case 'deepseek':
-                    return await this.sendDeepSeekMessageWithHistory(provider, conversationHistory, context);
-                case 'siliconflow':
-                    return await this.sendSiliconFlowMessageWithHistory(provider, conversationHistory, context);
-                case 'openrouter':
-                    return await this.sendOpenRouterMessageWithHistory(provider, conversationHistory, context);
-                case 'local':
-                    return await this.sendLocalMessageWithHistory(provider, conversationHistory, context);
-                default:
-                    throw new Error('Unknown provider type');
-            }
+            return await this.sendMessageWithProvider(primaryProvider, conversationHistory, context);
         } catch (error) {
-            console.error('Error sending message with history to LLM:', error);
-            throw error;
+            lastError = error;
+            console.warn(`Primary provider ${primaryProvider} failed:`, error.message);
+            
+            // Only try fallback if it's a service unavailable error and fallback is enabled
+            if (this.shouldTryFallback(error)) {
+                const fallbackProvider = this.getFallbackProvider(primaryProvider);
+                
+                if (fallbackProvider) {
+                    console.log(`Attempting fallback to ${fallbackProvider}...`);
+                    if (this.app && this.app.showNotification) {
+                        this.app.showNotification(`Primary LLM service unavailable. Trying fallback provider (${this.providers[fallbackProvider].name})...`, 'warning', 3000);
+                    }
+                    
+                    try {
+                        const result = await this.sendMessageWithProvider(fallbackProvider, conversationHistory, context);
+                        
+                        // Notify user of successful fallback
+                        if (this.app && this.app.showNotification) {
+                            this.app.showNotification(`Successfully switched to fallback provider (${this.providers[fallbackProvider].name})`, 'success', 3000);
+                        }
+                        
+                        return result;
+                    } catch (fallbackError) {
+                        console.error(`Fallback provider ${fallbackProvider} also failed:`, fallbackError.message);
+                        // Use the original error message
+                    }
+                }
+            }
+            
+            throw lastError;
         }
+    }
+
+    /**
+     * Send message using a specific provider
+     */
+    async sendMessageWithProvider(providerKey, conversationHistory, context) {
+        const provider = this.providers[providerKey];
+        
+        if (!provider || !provider.enabled) {
+            throw new Error(`Provider ${providerKey} is not configured or enabled`);
+        }
+        
+        switch (providerKey) {
+            case 'openai':
+                return await this.sendOpenAIMessageWithHistory(provider, conversationHistory, context);
+            case 'anthropic':
+                return await this.sendAnthropicMessageWithHistory(provider, conversationHistory, context);
+            case 'google':
+                return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context);
+            case 'deepseek':
+                return await this.sendDeepSeekMessageWithHistory(provider, conversationHistory, context);
+            case 'siliconflow':
+                return await this.sendSiliconFlowMessageWithHistory(provider, conversationHistory, context);
+            case 'openrouter':
+                return await this.sendOpenRouterMessageWithHistory(provider, conversationHistory, context);
+            case 'local':
+                return await this.sendLocalMessageWithHistory(provider, conversationHistory, context);
+            default:
+                throw new Error('Unknown provider type');
+        }
+    }
+
+    /**
+     * Check if fallback should be attempted based on error type
+     */
+    shouldTryFallback(error) {
+        // Try fallback for service unavailable errors and rate limits
+        return error.message.includes('HTTP 503') || 
+               error.message.includes('Service Unavailable') ||
+               error.message.includes('HTTP 502') ||
+               error.message.includes('HTTP 504') ||
+               error.message.includes('HTTP 429');
+    }
+
+    /**
+     * Get fallback provider for a given primary provider
+     */
+    getFallbackProvider(primaryProvider) {
+        // Define fallback chains based on reliability and availability
+        const fallbackChains = {
+            'siliconflow': ['openrouter', 'openai', 'google', 'anthropic'],
+            'openrouter': ['openai', 'google', 'anthropic', 'siliconflow'],
+            'openai': ['google', 'anthropic', 'openrouter', 'siliconflow'],
+            'google': ['openai', 'anthropic', 'openrouter', 'siliconflow'],
+            'anthropic': ['openai', 'google', 'openrouter', 'siliconflow'],
+            'deepseek': ['siliconflow', 'openrouter', 'openai', 'google'],
+            'local': ['openrouter', 'openai', 'google', 'siliconflow']
+        };
+        
+        const fallbacks = fallbackChains[primaryProvider] || [];
+        
+        // Find the first enabled fallback provider
+        for (const fallback of fallbacks) {
+            if (this.providers[fallback] && this.providers[fallback].enabled) {
+                return fallback;
+            }
+        }
+        
+        return null;
     }
 
     async sendOpenAIMessage(provider, message, context) {
@@ -1078,26 +1160,38 @@ class LLMConfigManager {
             temperature: 0.7
         }, null, 2));
         
-        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${provider.apiKey}`,
-                'Content-Type': 'application/json'
+        return await this.makeRequestWithRetry(
+            async () => {
+                const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${provider.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: provider.model,
+                        messages: conversationHistory,
+                        max_tokens: 2000,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => '');
+                    const error = new Error(`HTTP ${response.status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
+                    error.status = response.status;
+                    error.isRetryable = this.isRetryableError(response.status);
+                    throw error;
+                }
+                
+                return response;
             },
-            body: JSON.stringify({
-                model: provider.model,
-                messages: conversationHistory,
-                max_tokens: 2000,
-                temperature: 0.7
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
+            'OpenAI',
+            async (response) => {
+                const data = await response.json();
+                return data.choices[0].message.content;
+            }
+        );
     }
 
     async sendAnthropicMessage(provider, message, context) {
@@ -1348,6 +1442,86 @@ class LLMConfigManager {
         return data.choices[0].message.content;
     }
 
+    /**
+     * Check if an HTTP status code indicates a retryable error
+     */
+    isRetryableError(status) {
+        const retryableStatuses = [
+            429, // Too Many Requests
+            500, // Internal Server Error
+            502, // Bad Gateway
+            503, // Service Unavailable
+            504, // Gateway Timeout
+            520, // Unknown Error (Cloudflare)
+            521, // Web Server Is Down (Cloudflare)
+            522, // Connection Timed Out (Cloudflare)
+            523, // Origin Is Unreachable (Cloudflare)
+            524  // A Timeout Occurred (Cloudflare)
+        ];
+        return retryableStatuses.includes(status);
+    }
+
+    /**
+     * Calculate exponential backoff delay with jitter
+     */
+    calculateRetryDelay(attempt, baseDelay = 1000, maxDelay = 30000) {
+        const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
+        // Add jitter to prevent thundering herd
+        const jitter = Math.random() * 0.3 * exponentialDelay;
+        return Math.floor(exponentialDelay + jitter);
+    }
+
+    /**
+     * Show user notification for retry status
+     */
+    showRetryNotification(providerName, attempt, maxAttempts, delay) {
+        if (this.app && this.app.showNotification) {
+            const message = `${providerName} service temporarily unavailable. Retrying in ${Math.ceil(delay/1000)}s (attempt ${attempt}/${maxAttempts})...`;
+            this.app.showNotification(message, 'warning', 3000);
+        } else {
+            console.warn(`🔄 [${providerName}] Retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`);
+        }
+    }
+
+    /**
+     * Make HTTP request with automatic retry logic for service unavailable errors
+     */
+    async makeRequestWithRetry(requestFunction, providerName, responseProcessor, maxAttempts = 3) {
+        let lastError;
+        
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const response = await requestFunction();
+                return await responseProcessor(response);
+                
+            } catch (error) {
+                lastError = error;
+                
+                // Only retry if it's a retryable error and we have attempts left
+                if (error.isRetryable && attempt < maxAttempts) {
+                    const delay = this.calculateRetryDelay(attempt);
+                    
+                    console.warn(`🔄 [${providerName}] HTTP ${error.status} error on attempt ${attempt}. Retrying in ${delay}ms...`);
+                    this.showRetryNotification(providerName, attempt + 1, maxAttempts, delay);
+                    
+                    // Wait before retry
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    // No more retries or non-retryable error
+                    if (error.isRetryable) {
+                        console.error(`❌ [${providerName}] All ${maxAttempts} attempts failed. Service may be experiencing issues.`);
+                        if (this.app && this.app.showNotification) {
+                            this.app.showNotification(`${providerName} service is currently unavailable. Please try again later or switch to a different LLM provider.`, 'error', 5000);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        
+        throw lastError;
+    }
+
     async sendSiliconFlowMessageWithHistory(provider, conversationHistory, context) {
         console.log('Sending to SiliconFlow - Request Payload:', JSON.stringify({
             model: provider.model,
@@ -1356,56 +1530,60 @@ class LLMConfigManager {
             temperature: 0.7
         }, null, 2));
         
-        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${provider.apiKey}`,
-                'Content-Type': 'application/json'
+        return await this.makeRequestWithRetry(
+            async () => {
+                const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${provider.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: provider.model,
+                        messages: conversationHistory,
+                        max_tokens: 2000,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => '');
+                    const error = new Error(`HTTP ${response.status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
+                    error.status = response.status;
+                    error.isRetryable = this.isRetryableError(response.status);
+                    throw error;
+                }
+                
+                return response;
             },
-            body: JSON.stringify({
-                model: provider.model,
-                messages: conversationHistory,
-                max_tokens: 2000,
-                temperature: 0.7
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log('SiliconFlow Raw Response Data:', data);
-        
-        // Check if choices array exists and has content
-        if (!data.choices || data.choices.length === 0) {
-            console.error('SiliconFlow: No choices in response');
-            throw new Error('No choices in LLM response');
-        }
-        
-        const choice = data.choices[0];
-        console.log('SiliconFlow Choice Object:', choice);
-        
-        if (!choice.message) {
-            console.error('SiliconFlow: No message in choice');
-            throw new Error('No message in LLM choice');
-        }
-        
-        console.log('SiliconFlow Message Object:', choice.message);
-        const content = choice.message.content;
-        console.log('SiliconFlow Content Extracted:', content);
-        console.log('Content type:', typeof content);
-        console.log('Content length:', content ? content.length : 'null/undefined');
-        
-        // Handle empty content
-        if (!content || content === null || content === undefined || content.trim() === '') {
-            console.warn('SiliconFlow: Empty content returned, completion_tokens:', data.usage?.completion_tokens);
-            // Don't throw error immediately - let ChatManager handle empty responses and check history
-            console.warn('SiliconFlow: Returning empty content to ChatManager for history check');
-            return ''; // Return empty string for ChatManager to process
-        }
-        
-        return content;
+            'SiliconFlow',
+            async (response) => {
+                const data = await response.json();
+                console.log('SiliconFlow Raw Response Data:', data);
+                
+                // Check if choices array exists and has content
+                if (!data.choices || data.choices.length === 0) {
+                    console.error('SiliconFlow: No choices in response');
+                    throw new Error('No choices in LLM response');
+                }
+                
+                const choice = data.choices[0];
+                console.log('SiliconFlow Choice Object:', choice);
+                
+                if (!choice.message) {
+                    console.error('SiliconFlow: No message in choice');
+                    throw new Error('No message in LLM choice');
+                }
+                
+                console.log('SiliconFlow Message Object:', choice.message);
+                const content = choice.message.content;
+                console.log('SiliconFlow Content Extracted:', content);
+                console.log('Content type:', typeof content);
+                console.log('Content length:', content ? content.length : 'null/undefined');
+                
+                return content || '';
+            }
+        );
     }
 
     async sendOpenRouterMessage(provider, message, context) {

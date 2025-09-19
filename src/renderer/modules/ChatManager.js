@@ -3253,7 +3253,61 @@ class ChatManager {
             console.error('Error:', error);
             console.error('Stack:', error.stack);
             console.error('==============================');
-            const errorMessage = `Sorry, I encountered an error: ${error.message}. Please check your LLM configuration in Options → Configure LLMs.`;
+            
+            let errorMessage;
+            
+            // Provide specific error messages based on error type
+            if (error.message.includes('HTTP 503') || error.message.includes('Service Unavailable')) {
+                errorMessage = `🚫 **Service Temporarily Unavailable**\n\n` +
+                    `The LLM service is currently experiencing high load or maintenance. ` +
+                    `The system automatically retried your request, but the service remains unavailable.\n\n` +
+                    `**Suggestions:**\n` +
+                    `• Wait a few minutes and try again\n` +
+                    `• Switch to a different LLM provider in Options → Configure LLMs\n` +
+                    `• Check the service status page for your LLM provider`;
+                    
+            } else if (error.message.includes('HTTP 429') || error.message.includes('Too Many Requests')) {
+                errorMessage = `⏱️ **Rate Limit Exceeded**\n\n` +
+                    `You've exceeded the API rate limit for your LLM provider. ` +
+                    `The system will automatically retry, but you may need to wait.\n\n` +
+                    `**Suggestions:**\n` +
+                    `• Wait a few minutes before sending another message\n` +
+                    `• Consider upgrading your API plan for higher limits\n` +
+                    `• Switch to a different LLM provider temporarily`;
+                    
+            } else if (error.message.includes('HTTP 401') || error.message.includes('Unauthorized')) {
+                errorMessage = `🔐 **Authentication Error**\n\n` +
+                    `Your API key appears to be invalid or expired.\n\n` +
+                    `**Please:**\n` +
+                    `• Go to Options → Configure LLMs\n` +
+                    `• Check and update your API key\n` +
+                    `• Test the connection before saving`;
+                    
+            } else if (error.message.includes('HTTP 404') || error.message.includes('Not Found')) {
+                errorMessage = `🔍 **Model Not Found**\n\n` +
+                    `The requested model is not available or doesn't exist.\n\n` +
+                    `**Please:**\n` +
+                    `• Go to Options → Configure LLMs\n` +
+                    `• Select a different model\n` +
+                    `• Check your provider's available models`;
+                    
+            } else if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('connection')) {
+                errorMessage = `🌐 **Network Connection Error**\n\n` +
+                    `Unable to connect to the LLM service. This could be due to:\n\n` +
+                    `• Internet connectivity issues\n` +
+                    `• Firewall blocking the connection\n` +
+                    `• Service endpoint temporarily down\n\n` +
+                    `**Please check your internet connection and try again.**`;
+                    
+            } else {
+                errorMessage = `❌ **Unexpected Error**\n\n` +
+                    `${error.message}\n\n` +
+                    `**Troubleshooting:**\n` +
+                    `• Check your LLM configuration in Options → Configure LLMs\n` +
+                    `• Try switching to a different LLM provider\n` +
+                    `• Check the browser console for more details`;
+            }
+            
             console.log('=== ChatManager.sendToLLM DEBUG END (LLM ERROR) ===');
             return errorMessage;
         }
