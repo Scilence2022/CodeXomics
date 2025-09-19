@@ -1677,6 +1677,7 @@ class LLMConfigManager {
 
 You have access to tools that can:
 - Navigate to specific genomic positions (use tool: 'navigate_to_position', parameters: {chromosome: string, start: number, end: number})
+- Zoom in/out the current view (use tool: 'zoom_in' or 'zoom_out', parameters: {factor?: number}) - Default factor is 2x, maximum 10x
 - Search for genes and features BY NAME/DESCRIPTION (use tool: 'search_features', parameters: {query: string, caseSensitive: boolean}) - Use this when users want to find genes by name, product description, or any text-based search like "DNA polymerase", "ribosomal", "lacZ", etc. This will display results in the search panel.
 - Find features near a specific genomic position (use tool: 'get_nearby_features', parameters: {position: number, distance: number, featureTypes?: array}) - Use this only when users want to find what's near a specific coordinate/position, not for name-based searches.
 - Get current browser state (use tool: 'get_current_state') - This will provide general information including counts of annotations and user-defined features.
@@ -1700,6 +1701,8 @@ Do NOT include any explanation, markdown formatting, or code blocks. Return ONLY
 
 Examples:
 - For navigation: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- For zoom in: {"tool_name": "zoom_in", "parameters": {"factor": 2}} or {"tool_name": "zoom_in", "parameters": {"factor": 1.5}}
+- For zoom out: {"tool_name": "zoom_out", "parameters": {"factor": 3}} or {"tool_name": "zoom_out", "parameters": {}}
 - For gene/text search: {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
 - For position search: {"tool_name": "get_nearby_features", "parameters": {"position": 12345, "distance": 5000}}
 

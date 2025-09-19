@@ -58,20 +58,20 @@ class NavigationAgent extends AgentBase {
             },
             {
                 functionName: 'zoom_in',
-                description: 'Zoom in view',
+                description: 'Zoom in view (default 2x, max 10x)',
                 priority: 'high',
                 estimatedTime: 50,
                 validateParameters: (params) => {
-                    if (!params.factor) throw new Error('factor parameter required');
+                    // factor is optional, defaults to 2
                 }
             },
             {
                 functionName: 'zoom_out',
-                description: 'Zoom out view',
+                description: 'Zoom out view (default 2x, max 10x)',
                 priority: 'high',
                 estimatedTime: 50,
                 validateParameters: (params) => {
-                    if (!params.factor) throw new Error('factor parameter required');
+                    // factor is optional, defaults to 2
                 }
             },
             {

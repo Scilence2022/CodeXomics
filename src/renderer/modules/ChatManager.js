@@ -3920,6 +3920,8 @@ Basic Navigation:
   {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
   {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
   {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
+  {"tool_name": "zoom_in", "parameters": {"factor": 2}}
+  {"tool_name": "zoom_out", "parameters": {"factor": 3}}
   {"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
   {"tool_name": "open_new_tab", "parameters": {"geneName": "lacZ"}}
 
@@ -4890,6 +4892,8 @@ Basic Tool Examples:
 - Navigate to position: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
 - Open new tab: {"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
 - Open tab for gene: {"tool_name": "open_new_tab", "parameters": {"geneName": "lacZ"}}
+- Zoom in: {"tool_name": "zoom_in", "parameters": {"factor": 2}}
+- Zoom out: {"tool_name": "zoom_out", "parameters": {"factor": 3}}
 - Search genes: {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
 - Get current state: {"tool_name": "get_current_state", "parameters": {}}
 - Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
@@ -4921,7 +4925,7 @@ MicrobeGenomicsFunctions Examples:
 - Codon usage: {"tool_name": "analyze_codon_usage", "parameters": {"dna": "ATGAAATAG"}}
 - Predict RBS: {"tool_name": "predict_rbs", "parameters": {"seq": "AGGAGG"}}
 - Predict terminator: {"tool_name": "predict_terminator", "parameters": {"seq": "ATGCGCTATCG"}}
-- Navigation controls: {"tool_name": "scroll_left", "parameters": {"bp": 1000}} or {"tool_name": "zoom_in", "parameters": {"factor": 2}}
+- Navigation controls: {"tool_name": "scroll_left", "parameters": {"bp": 1000}}, {"tool_name": "zoom_in", "parameters": {"factor": 2}}, {"tool_name": "zoom_out", "parameters": {"factor": 3}}
 
 CRITICAL DISTINCTION - Search Functions:
 1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features' or 'search_gene_by_name'

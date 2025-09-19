@@ -34,23 +34,25 @@ class MicrobeGenomicsFunctions {
 
     /**
      * Parse a zoom factor value which may be a number or a string like "1.5X", "2x", "10"
-     * Returns a positive numeric factor, defaulting to 2 on invalid input
+     * Returns a positive numeric factor, defaulting to 2 on invalid input, maximum 10x
      */
     static parseZoomFactor(value) {
+        let factor = 2; // Default value
+        
         if (typeof value === 'number' && isFinite(value) && value > 0) {
-            return value;
-        }
-        if (typeof value === 'string') {
+            factor = value;
+        } else if (typeof value === 'string') {
             const normalized = value.trim().toLowerCase().replace(/×/g, 'x');
             // Accept forms like "1.5x", "2x", or plain number strings "1.5", "10"
             const stripped = normalized.endsWith('x') ? normalized.slice(0, -1) : normalized;
             const numeric = parseFloat(stripped);
             if (isFinite(numeric) && numeric > 0) {
-                return numeric;
+                factor = numeric;
             }
         }
-        // Fallback default
-        return 2;
+        
+        // Enforce maximum zoom factor of 10x
+        return Math.min(factor, 10);
     }
 
     /**
