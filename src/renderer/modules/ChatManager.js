@@ -5383,10 +5383,7 @@ ${this.getPluginSystemInfo()}`;
             this.addAgentDecisionMessage(agentName, toolName, reasoning, parameters);
         }
         
-        // 记录工具调用到内存系统
-        if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
-            this.memorySystem.recordToolCall(toolName, parameters);
-        }
+        // Memory recording will be done after execution with result
         
         try {
             // 如果启用了多智能体系统，尝试通过智能体执行
@@ -5400,7 +5397,8 @@ ${this.getPluginSystemInfo()}`;
                         
                         // 记录成功执行到内存
                         if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
-                            this.memorySystem.recordSuccessfulExecution(toolName, parameters, agentResult);
+                            const executionTime = Date.now() - startTime;
+                            this.memorySystem.recordToolCall(toolName, parameters, agentResult.result, executionTime, agentName);
                         }
                         
                         return agentResult.result;
@@ -5426,6 +5424,13 @@ ${this.getPluginSystemInfo()}`;
                         parameters
                     );
                     console.log(`MCP tool ${toolName} execution result:`, result);
+                    
+                    // 记录MCP工具调用到内存系统
+                    if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
+                        const executionTime = Date.now() - startTime;
+                        this.memorySystem.recordToolCall(toolName, parameters, result, executionTime, agentName);
+                    }
+                    
                     return result;
                 } catch (error) {
                     console.warn(`MCP tool execution failed, falling back to local: ${error.message}`);
@@ -5438,6 +5443,13 @@ ${this.getPluginSystemInfo()}`;
                 try {
                     console.log(`Executing plugin function: ${toolName}`);
                     const result = await this.pluginFunctionCallsIntegrator.executePluginFunction(toolName, parameters);
+                    
+                    // 记录插件工具调用到内存系统
+                    if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
+                        const executionTime = Date.now() - startTime;
+                        this.memorySystem.recordToolCall(toolName, parameters, result, executionTime, agentName);
+                    }
+                    
                     return result;
                 } catch (error) {
                     console.error(`Plugin function execution failed for ${toolName}:`, error);
@@ -6012,6 +6024,12 @@ ${this.getPluginSystemInfo()}`;
                 this.addAgentExecutionResult(agentName, toolName, result, executionTime);
             }
             
+            // 记录成功的工具调用到内存系统
+            if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
+                const executionTime = Date.now() - startTime;
+                this.memorySystem.recordToolCall(toolName, parameters, result, executionTime, agentName);
+            }
+            
             return result;
             
         } catch (error) {
@@ -6021,13 +6039,22 @@ ${this.getPluginSystemInfo()}`;
             console.error(`Error:`, error);
             console.error(`Stack:`, error.stack);
             console.error(`===========================`);
-            return {
+            
+            const errorResult = {
                 success: false,
                 error: error.message,
                 tool: toolName,
                 parameters: parameters,
                 timestamp: new Date().toISOString()
             };
+            
+            // 记录失败的工具调用到内存系统
+            if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
+                const executionTime = Date.now() - startTime;
+                this.memorySystem.recordToolCall(toolName, parameters, errorResult, executionTime, agentName || 'System Agent');
+            }
+            
+            return errorResult;
         }
     }
 

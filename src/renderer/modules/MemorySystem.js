@@ -79,7 +79,7 @@ class MemorySystem {
             executionTime,
             agent,
             context: this.currentContext,
-            success: !result.error,
+            success: !result || !result.error,
             memoryType: this.determineMemoryType(functionName, parameters, result)
         };
         
