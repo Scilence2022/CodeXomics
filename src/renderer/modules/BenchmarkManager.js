@@ -9,10 +9,12 @@ class BenchmarkManager {
         this.framework = null;
         this.ui = null;
         this.isInitialized = false;
+        this.initializationPromise = null;
         
         // Initialize asynchronously to avoid blocking
-        this.initializeSystem().catch(error => {
+        this.initializationPromise = this.initializeSystem().catch(error => {
             console.error('❌ Benchmark system initialization failed:', error);
+            throw error;
         });
         this.setupEventHandlers();
     }
@@ -187,9 +189,15 @@ class BenchmarkManager {
      * Open benchmark runner window
      */
     async openBenchmarkRunner() {
+        // Wait for initialization to complete
         if (!this.isInitialized) {
-            this.showError('Benchmark system is not initialized');
-            return;
+            console.log('⏳ Waiting for benchmark system initialization...');
+            try {
+                await this.initializationPromise;
+            } catch (error) {
+                this.showError('Failed to initialize benchmark system: ' + error.message);
+                return;
+            }
         }
 
         await this.ui.showBenchmarkRunner();
@@ -199,9 +207,15 @@ class BenchmarkManager {
      * Run quick benchmark with default settings
      */
     async runQuickBenchmark() {
+        // Wait for initialization to complete
         if (!this.isInitialized) {
-            this.showError('Benchmark system is not initialized');
-            return;
+            console.log('⏳ Waiting for benchmark system initialization...');
+            try {
+                await this.initializationPromise;
+            } catch (error) {
+                this.showError('Failed to initialize benchmark system: ' + error.message);
+                return;
+            }
         }
 
         try {
@@ -228,10 +242,16 @@ class BenchmarkManager {
     /**
      * Open custom benchmark configuration
      */
-    openCustomBenchmark() {
+    async openCustomBenchmark() {
+        // Wait for initialization to complete
         if (!this.isInitialized) {
-            this.showError('Benchmark system is not initialized');
-            return;
+            console.log('⏳ Waiting for benchmark system initialization...');
+            try {
+                await this.initializationPromise;
+            } catch (error) {
+                this.showError('Failed to initialize benchmark system: ' + error.message);
+                return;
+            }
         }
 
         // Create custom benchmark dialog
@@ -242,10 +262,16 @@ class BenchmarkManager {
     /**
      * Show benchmark history
      */
-    showBenchmarkHistory() {
+    async showBenchmarkHistory() {
+        // Wait for initialization to complete
         if (!this.isInitialized) {
-            this.showError('Benchmark system is not initialized');
-            return;
+            console.log('⏳ Waiting for benchmark system initialization...');
+            try {
+                await this.initializationPromise;
+            } catch (error) {
+                this.showError('Failed to initialize benchmark system: ' + error.message);
+                return;
+            }
         }
 
         const history = this.framework.getBenchmarkHistory();
@@ -255,10 +281,16 @@ class BenchmarkManager {
     /**
      * Export benchmark results
      */
-    exportBenchmarkResults() {
+    async exportBenchmarkResults() {
+        // Wait for initialization to complete
         if (!this.isInitialized) {
-            this.showError('Benchmark system is not initialized');
-            return;
+            console.log('⏳ Waiting for benchmark system initialization...');
+            try {
+                await this.initializationPromise;
+            } catch (error) {
+                this.showError('Failed to initialize benchmark system: ' + error.message);
+                return;
+            }
         }
 
         const history = this.framework.getBenchmarkHistory();
@@ -644,8 +676,30 @@ class BenchmarkManager {
             frameworkReady: !!this.framework,
             uiReady: !!this.ui,
             chatManagerAvailable: !!this.chatManager,
-            testSuitesLoaded: this.framework ? this.framework.testSuites.size : 0
+            testSuitesLoaded: this.framework ? this.framework.testSuites.size : 0,
+            initializationPending: !!this.initializationPromise && !this.isInitialized
         };
+    }
+
+    /**
+     * Wait for initialization to complete (public method for external use)
+     */
+    async waitForInitialization() {
+        if (this.isInitialized) {
+            return true;
+        }
+        
+        if (this.initializationPromise) {
+            try {
+                await this.initializationPromise;
+                return this.isInitialized;
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                return false;
+            }
+        }
+        
+        return false;
     }
 }
 

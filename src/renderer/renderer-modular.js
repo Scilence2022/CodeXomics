@@ -2784,7 +2784,7 @@ class GenomeBrowser {
         ipcRenderer.on('run-quick-benchmark', async () => {
             try {
                 const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                benchmarkManager.runQuickBenchmark();
+                await benchmarkManager.runQuickBenchmark();
             } catch (error) {
                 console.error('Failed to initialize benchmark system:', error);
                 alert('Failed to load benchmark system: ' + error.message);
@@ -2794,7 +2794,7 @@ class GenomeBrowser {
         ipcRenderer.on('open-custom-benchmark', async () => {
             try {
                 const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                benchmarkManager.openCustomBenchmark();
+                await benchmarkManager.openCustomBenchmark();
             } catch (error) {
                 console.error('Failed to initialize benchmark system:', error);
                 alert('Failed to load benchmark system: ' + error.message);
@@ -2804,7 +2804,7 @@ class GenomeBrowser {
         ipcRenderer.on('show-benchmark-history', async () => {
             try {
                 const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                benchmarkManager.showBenchmarkHistory();
+                await benchmarkManager.showBenchmarkHistory();
             } catch (error) {
                 console.error('Failed to initialize benchmark system:', error);
                 alert('Failed to load benchmark system: ' + error.message);
@@ -2814,7 +2814,7 @@ class GenomeBrowser {
         ipcRenderer.on('export-benchmark-results', async () => {
             try {
                 const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                benchmarkManager.exportBenchmarkResults();
+                await benchmarkManager.exportBenchmarkResults();
             } catch (error) {
                 console.error('Failed to initialize benchmark system:', error);
                 alert('Failed to load benchmark system: ' + error.message);
