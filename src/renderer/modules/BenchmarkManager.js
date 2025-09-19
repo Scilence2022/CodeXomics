@@ -186,13 +186,13 @@ class BenchmarkManager {
     /**
      * Open benchmark runner window
      */
-    openBenchmarkRunner() {
+    async openBenchmarkRunner() {
         if (!this.isInitialized) {
             this.showError('Benchmark system is not initialized');
             return;
         }
 
-        this.ui.showBenchmarkRunner();
+        await this.ui.showBenchmarkRunner();
     }
 
     /**

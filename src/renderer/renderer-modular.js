@@ -2774,7 +2774,7 @@ class GenomeBrowser {
         ipcRenderer.on('open-benchmark-runner', async () => {
             try {
                 const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                benchmarkManager.openBenchmarkRunner();
+                await benchmarkManager.openBenchmarkRunner();
             } catch (error) {
                 console.error('Failed to initialize benchmark system:', error);
                 alert('Failed to load benchmark system: ' + error.message);

@@ -14,10 +14,15 @@ class BenchmarkUI {
     /**
      * Show benchmark runner - Replace main window menus instead of opening new window
      */
-    showBenchmarkRunner() {
+    async showBenchmarkRunner() {
         console.log('🧪 Activating benchmark mode in main window...');
         
         try {
+            // Load BenchmarkMenuManager if not available
+            if (typeof BenchmarkMenuManager === 'undefined') {
+                await this.loadBenchmarkMenuManager();
+            }
+
             // Initialize menu manager if not already done
             if (!this.menuManager) {
                 this.menuManager = new BenchmarkMenuManager(this.framework.chatManager.app);
@@ -82,6 +87,30 @@ class BenchmarkUI {
         this.setupWindowEventHandlers();
         
         console.log('🧪 Benchmark runner window opened (fallback mode)');
+    }
+
+    /**
+     * Load BenchmarkMenuManager module
+     */
+    async loadBenchmarkMenuManager() {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector('script[src*="BenchmarkMenuManager"]')) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'modules/BenchmarkMenuManager.js';
+            script.onload = () => {
+                console.log('📜 BenchmarkMenuManager loaded');
+                resolve();
+            };
+            script.onerror = (error) => {
+                console.error('❌ Failed to load BenchmarkMenuManager:', error);
+                reject(error);
+            };
+            document.head.appendChild(script);
+        });
     }
 
     /**
@@ -519,32 +548,50 @@ class BenchmarkUI {
     hideMainContent() {
         const elementsToHide = [
             '.genome-browser-container',
-            '.genome-content',
+            '.genome-content', 
             '.main-canvas-container',
             '.sidebar',
-            '.chatbox'
+            '.chatbox',
+            '#app > *:not(.benchmark-menu-bar):not(#benchmarkInterface)',
+            '.main-content',
+            '.content-area',
+            '.genome-viewer',
+            '.tab-container'
         ];
 
         elementsToHide.forEach(selector => {
             const elements = document.querySelectorAll(selector);
             elements.forEach(element => {
+                // Skip if it's the benchmark interface itself
+                if (element.id === 'benchmarkInterface' || 
+                    element.classList.contains('benchmark-menu-bar') ||
+                    element.classList.contains('benchmark-interface')) {
+                    return;
+                }
+                
                 if (!element.dataset.originalDisplay) {
-                    element.dataset.originalDisplay = element.style.display || 'block';
+                    element.dataset.originalDisplay = element.style.display || getComputedStyle(element).display;
                 }
                 element.style.display = 'none';
+                element.dataset.benchmarkHidden = 'true';
             });
         });
+        
+        console.log('🙈 Main content hidden for benchmark mode');
     }
 
     /**
      * Show main content when exiting benchmark mode
      */
     showMainContent() {
-        const hiddenElements = document.querySelectorAll('[data-original-display]');
+        const hiddenElements = document.querySelectorAll('[data-benchmark-hidden="true"]');
         hiddenElements.forEach(element => {
-            element.style.display = element.dataset.originalDisplay;
+            element.style.display = element.dataset.originalDisplay || '';
             delete element.dataset.originalDisplay;
+            delete element.dataset.benchmarkHidden;
         });
+        
+        console.log('👁️ Main content restored');
     }
 
     /**

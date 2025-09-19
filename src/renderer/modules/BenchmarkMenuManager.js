@@ -80,28 +80,42 @@ class BenchmarkMenuManager {
      * Store original menus for later restoration
      */
     storeOriginalMenus() {
-        // Get current menu elements
+        // Get current header and menu elements
+        const header = document.querySelector('.header') || document.querySelector('header');
         const menuBar = document.querySelector('.menu-bar') || document.querySelector('#menuBar');
         const toolbar = document.querySelector('.toolbar') || document.querySelector('#toolbar');
         
         this.originalMenus = {
+            headerHTML: header ? header.outerHTML : null,
             menuBarHTML: menuBar ? menuBar.outerHTML : null,
             toolbarHTML: toolbar ? toolbar.outerHTML : null,
             windowTitle: document.title,
             bodyClass: document.body.className
         };
         
-        console.log('💾 Original menus stored');
+        console.log('💾 Original header and menus stored');
     }
 
     /**
      * Create benchmark-specific menus
      */
     createBenchmarkMenus() {
-        // Remove existing menu bar if present
+        // Remove existing header and menu elements
+        const header = document.querySelector('.header') || document.querySelector('header');
         const existingMenuBar = document.querySelector('.menu-bar') || document.querySelector('#menuBar');
+        const toolbar = document.querySelector('.toolbar') || document.querySelector('#toolbar');
+        
+        if (header) {
+            header.style.display = 'none';
+            header.dataset.benchmarkHidden = 'true';
+        }
         if (existingMenuBar) {
-            existingMenuBar.remove();
+            existingMenuBar.style.display = 'none';
+            existingMenuBar.dataset.benchmarkHidden = 'true';
+        }
+        if (toolbar) {
+            toolbar.style.display = 'none';
+            toolbar.dataset.benchmarkHidden = 'true';
         }
 
         // Create benchmark menu bar
@@ -112,6 +126,8 @@ class BenchmarkMenuManager {
         
         // Update main content to account for menu bar
         this.adjustMainContentForMenuBar();
+        
+        console.log('🧪 Benchmark menus created and original header hidden');
     }
 
     /**
@@ -644,21 +660,12 @@ class BenchmarkMenuManager {
             benchmarkMenuBar.remove();
         }
 
-        // Restore original menu bar if it existed
-        if (this.originalMenus.menuBarHTML) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = this.originalMenus.menuBarHTML;
-            const originalMenuBar = tempDiv.firstChild;
-            document.body.insertBefore(originalMenuBar, document.body.firstChild);
-        }
-
-        // Restore original toolbar if it existed
-        if (this.originalMenus.toolbarHTML) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = this.originalMenus.toolbarHTML;
-            const originalToolbar = tempDiv.firstChild;
-            document.body.appendChild(originalToolbar);
-        }
+        // Restore hidden elements
+        const hiddenElements = document.querySelectorAll('[data-benchmark-hidden="true"]');
+        hiddenElements.forEach(element => {
+            element.style.display = '';
+            delete element.dataset.benchmarkHidden;
+        });
 
         // Restore body class
         if (this.originalMenus.bodyClass) {
@@ -667,6 +674,8 @@ class BenchmarkMenuManager {
 
         // Restore main content layout
         this.restoreMainContentLayout();
+        
+        console.log('✅ Original header and menus restored');
     }
 
     /**
@@ -1029,10 +1038,10 @@ class BenchmarkMenuManager {
     
     exitBenchmarkMode() { 
         console.log('🚪 Exit Benchmark Mode');
+        this.deactivateBenchmarkMenus();
         if (window.app && window.app.benchmarkManager && window.app.benchmarkManager.ui) {
             window.app.benchmarkManager.ui.exitBenchmarkMode();
         }
-        this.deactivateBenchmarkMenus();
     }
     
     copyResults() { 
