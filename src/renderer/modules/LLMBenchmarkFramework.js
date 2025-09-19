@@ -21,6 +21,12 @@ class LLMBenchmarkFramework {
      * Initialize all test suites
      */
     initializeTestSuites() {
+        // Basic Operations Tests (Copy, Paste, Select All, etc.)
+        this.registerTestSuite('basic_operations', new BasicOperationsSuite());
+        
+        // Edit Operations Tests (Comprehensive Edit menu operations)
+        this.registerTestSuite('edit_operations', new EditOperationsSuite());
+        
         // Basic Function Calling Tests
         this.registerTestSuite('basic_functions', new BasicFunctionCallingSuite());
         

@@ -20,13 +20,15 @@ class BenchmarkUI {
         }
 
         const windowFeatures = 'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no';
-        this.window = window.open('', 'BenchmarkRunner', windowFeatures);
         
-        this.window.document.write(this.generateBenchmarkHTML());
-        this.window.document.close();
+        // Use the dedicated benchmark runner HTML file
+        const benchmarkURL = './src/bioinformatics-tools/benchmark-runner.html';
+        this.window = window.open(benchmarkURL, 'BenchmarkRunner', windowFeatures);
         
         // Setup window event handlers
         this.setupWindowEventHandlers();
+        
+        console.log('🧪 Benchmark runner window opened');
     }
 
     /**

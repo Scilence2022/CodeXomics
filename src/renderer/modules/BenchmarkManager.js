@@ -60,6 +60,8 @@ class BenchmarkManager {
      */
     async loadTestSuites() {
         const suites = [
+            'BasicOperationsSuite',
+            'EditOperationsSuite',
             'BasicFunctionCallingSuite',
             'ComplexAnalysisSuite', 
             'PluginIntegrationSuite',
