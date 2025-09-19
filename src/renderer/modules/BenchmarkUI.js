@@ -7,13 +7,65 @@ class BenchmarkUI {
         this.currentResults = null;
         this.isRunning = false;
         this.window = null;
+        this.menuManager = null;
         this.setupEventHandlers();
     }
 
     /**
-     * Show benchmark runner window
+     * Show benchmark runner - Replace main window menus instead of opening new window
      */
     showBenchmarkRunner() {
+        console.log('🧪 Activating benchmark mode in main window...');
+        
+        try {
+            // Initialize menu manager if not already done
+            if (!this.menuManager) {
+                this.menuManager = new BenchmarkMenuManager(this.framework.chatManager.app);
+                window.benchmarkMenuManager = this.menuManager;
+            }
+
+            // Activate benchmark menus in main window
+            this.menuManager.activateBenchmarkMenus();
+            
+            // Show benchmark interface in main content area
+            this.showBenchmarkInterface();
+            
+            console.log('✅ Benchmark mode activated in main window');
+            
+        } catch (error) {
+            console.error('❌ Failed to activate benchmark mode:', error);
+            // Fallback to separate window
+            this.showBenchmarkRunnerWindow();
+        }
+    }
+
+    /**
+     * Show benchmark interface in main window
+     */
+    showBenchmarkInterface() {
+        // Get main content area
+        const mainContent = document.querySelector('.main-content') || 
+                           document.querySelector('#mainContent') || 
+                           document.querySelector('main') ||
+                           document.body;
+
+        // Create benchmark interface
+        const benchmarkInterface = this.createBenchmarkInterface();
+        
+        // Hide existing content
+        this.hideMainContent();
+        
+        // Add benchmark interface
+        mainContent.appendChild(benchmarkInterface);
+        
+        // Setup interface event handlers
+        this.setupBenchmarkInterfaceHandlers();
+    }
+
+    /**
+     * Fallback: Show benchmark runner in separate window
+     */
+    showBenchmarkRunnerWindow() {
         if (this.window && !this.window.closed) {
             this.window.focus();
             return;
@@ -29,7 +81,740 @@ class BenchmarkUI {
         // Setup window event handlers
         this.setupWindowEventHandlers();
         
-        console.log('🧪 Benchmark runner window opened');
+        console.log('🧪 Benchmark runner window opened (fallback mode)');
+    }
+
+    /**
+     * Create benchmark interface for main window
+     */
+    createBenchmarkInterface() {
+        const benchmarkInterface = document.createElement('div');
+        benchmarkInterface.id = 'benchmarkInterface';
+        benchmarkInterface.className = 'benchmark-interface';
+        benchmarkInterface.innerHTML = `
+            <style>
+                .benchmark-interface {
+                    position: fixed;
+                    top: 45px;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                    z-index: 900;
+                    overflow-y: auto;
+                    padding: 20px;
+                }
+
+                .benchmark-container {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    background: rgba(255, 255, 255, 0.95);
+                    border-radius: 15px;
+                    padding: 30px;
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                    backdrop-filter: blur(10px);
+                }
+
+                .benchmark-header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    padding-bottom: 20px;
+                    border-bottom: 3px solid #3498db;
+                }
+
+                .benchmark-title {
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: #2c3e50;
+                    margin-bottom: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 15px;
+                }
+
+                .benchmark-subtitle {
+                    font-size: 16px;
+                    color: #6c757d;
+                    font-weight: 400;
+                }
+
+                .benchmark-section {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 25px;
+                    margin-bottom: 25px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                    border: 1px solid rgba(52, 152, 219, 0.1);
+                }
+
+                .benchmark-section h2 {
+                    color: #2c3e50;
+                    font-size: 20px;
+                    margin-bottom: 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+
+                .config-grid {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr;
+                    gap: 30px;
+                }
+
+                .config-group h3 {
+                    color: #34495e;
+                    font-size: 16px;
+                    font-weight: 600;
+                    margin-bottom: 15px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .checkbox-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+                }
+
+                .checkbox-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    color: #495057;
+                    padding: 8px;
+                    border-radius: 6px;
+                    transition: background 0.2s ease;
+                }
+
+                .checkbox-item:hover {
+                    background: #f8f9fa;
+                }
+
+                .checkbox-item input[type="checkbox"] {
+                    width: 18px;
+                    height: 18px;
+                    accent-color: #3498db;
+                }
+
+                .form-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+
+                .form-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-size: 14px;
+                }
+
+                select {
+                    padding: 10px 12px;
+                    border: 2px solid #e1e8ed;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    background: white;
+                    width: 100%;
+                }
+
+                .btn-group {
+                    display: flex;
+                    justify-content: center;
+                    gap: 15px;
+                    margin-top: 25px;
+                }
+
+                .btn {
+                    padding: 12px 24px;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+                }
+
+                .btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                    transform: none;
+                    box-shadow: none;
+                }
+
+                .btn-primary {
+                    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+                    color: white;
+                }
+
+                .btn-danger {
+                    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+                    color: white;
+                }
+
+                .btn-success {
+                    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+                    color: white;
+                }
+
+                .progress-container {
+                    margin-bottom: 20px;
+                }
+
+                .progress-bar {
+                    width: 100%;
+                    height: 12px;
+                    background: #ecf0f1;
+                    border-radius: 6px;
+                    overflow: hidden;
+                    margin-bottom: 15px;
+                }
+
+                .progress-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, #3498db 0%, #27ae60 100%);
+                    width: 0%;
+                    transition: width 0.3s ease;
+                }
+
+                .progress-info {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                    gap: 15px;
+                }
+
+                .progress-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 10px 15px;
+                    background: #f8f9fa;
+                    border-radius: 6px;
+                    border-left: 4px solid #3498db;
+                }
+
+                .progress-label {
+                    color: #6c757d;
+                    font-weight: 500;
+                    font-size: 13px;
+                }
+
+                .progress-value {
+                    color: #2c3e50;
+                    font-weight: 700;
+                    font-size: 14px;
+                }
+
+                .results-summary {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                    gap: 20px;
+                    margin-bottom: 25px;
+                }
+
+                .summary-card {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 25px;
+                    border-radius: 12px;
+                    text-align: center;
+                    box-shadow: 0 6px 25px rgba(102, 126, 234, 0.3);
+                }
+
+                .summary-card h3 {
+                    font-size: 16px;
+                    margin-bottom: 10px;
+                    opacity: 0.9;
+                }
+
+                .summary-card .value {
+                    font-size: 32px;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+
+                .summary-card .unit {
+                    font-size: 14px;
+                    opacity: 0.8;
+                }
+            </style>
+
+            <div class="benchmark-container">
+                <div class="benchmark-header">
+                    <h1 class="benchmark-title">
+                        <span>🧪</span>
+                        LLM Instruction Following Benchmark
+                        <span>🧪</span>
+                    </h1>
+                    <p class="benchmark-subtitle">Comprehensive testing of LLM instruction following capabilities in Genome AI Studio</p>
+                </div>
+
+                <!-- Configuration Section -->
+                <div class="benchmark-section" id="configSection">
+                    <h2>⚙️ Configuration</h2>
+                    <div class="config-grid">
+                        <div class="config-group">
+                            <h3>📋 Test Suites</h3>
+                            <div class="checkbox-grid">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="suite-basic_operations" checked>
+                                    <span>✂️ Basic Operations</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="suite-edit_operations" checked>
+                                    <span>📝 Edit Operations</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="suite-basic_functions" checked>
+                                    <span>🔧 Basic Functions</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="suite-parameter_handling" checked>
+                                    <span>📊 Parameter Handling</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="suite-performance_tests" checked>
+                                    <span>⚡ Performance Tests</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="suite-complex_analysis">
+                                    <span>🔬 Complex Analysis</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="suite-plugin_integration">
+                                    <span>🔌 Plugin Integration</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="suite-error_recovery">
+                                    <span>🛡️ Error Recovery</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="config-group">
+                            <h3>⚙️ Options</h3>
+                            <div class="form-group">
+                                <label class="form-item">
+                                    <input type="checkbox" id="generateReport" checked>
+                                    <span>📊 Generate Report</span>
+                                </label>
+                                <label class="form-item">
+                                    <input type="checkbox" id="includeCharts" checked>
+                                    <span>📈 Include Charts</span>
+                                </label>
+                                <label class="form-item">
+                                    <input type="checkbox" id="includeRawData">
+                                    <span>📋 Include Raw Data</span>
+                                </label>
+                                <label class="form-item">
+                                    <input type="checkbox" id="stopOnError">
+                                    <span>🛑 Stop on Error</span>
+                                </label>
+                                <label class="form-item">
+                                    <input type="checkbox" id="verboseLogging">
+                                    <span>📝 Verbose Logging</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="config-group">
+                            <h3>⏱️ Settings</h3>
+                            <div class="form-group">
+                                <div>
+                                    <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Test Timeout:</label>
+                                    <select id="testTimeout">
+                                        <option value="15000">15 seconds</option>
+                                        <option value="30000" selected>30 seconds</option>
+                                        <option value="60000">60 seconds</option>
+                                        <option value="120000">120 seconds</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Concurrency:</label>
+                                    <select id="concurrency">
+                                        <option value="1" selected>Sequential</option>
+                                        <option value="2">2 parallel tests</option>
+                                        <option value="3">3 parallel tests</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="startBenchmark">
+                            <span>▶️</span> Start Benchmark
+                        </button>
+                        <button class="btn btn-danger" id="stopBenchmark" disabled>
+                            <span>⏹️</span> Stop
+                        </button>
+                        <button class="btn btn-success" id="exportResults" disabled>
+                            <span>📊</span> Export Results
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress Section -->
+                <div class="benchmark-section" id="progressSection" style="display: none;">
+                    <h2>📊 Progress</h2>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-info">
+                            <div class="progress-item">
+                                <span class="progress-label">Current Suite:</span>
+                                <span class="progress-value" id="currentSuite">-</span>
+                            </div>
+                            <div class="progress-item">
+                                <span class="progress-label">Current Test:</span>
+                                <span class="progress-value" id="currentTest">-</span>
+                            </div>
+                            <div class="progress-item">
+                                <span class="progress-label">Completed:</span>
+                                <span class="progress-value" id="completedTests">0</span>
+                            </div>
+                            <div class="progress-item">
+                                <span class="progress-label">Passed:</span>
+                                <span class="progress-value" id="passedTests">0</span>
+                            </div>
+                            <div class="progress-item">
+                                <span class="progress-label">Failed:</span>
+                                <span class="progress-value" id="failedTests">0</span>
+                            </div>
+                            <div class="progress-item">
+                                <span class="progress-label">Elapsed:</span>
+                                <span class="progress-value" id="elapsedTime">00:00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="benchmark-section" id="resultsSection" style="display: none;">
+                    <h2>📈 Results</h2>
+                    <div class="results-summary" id="resultsSummary"></div>
+                    <div id="resultsContent"></div>
+                </div>
+            </div>
+        `;
+
+        return benchmarkInterface;
+    }
+
+    /**
+     * Hide main content when benchmark interface is active
+     */
+    hideMainContent() {
+        const elementsToHide = [
+            '.genome-browser-container',
+            '.genome-content',
+            '.main-canvas-container',
+            '.sidebar',
+            '.chatbox'
+        ];
+
+        elementsToHide.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(element => {
+                if (!element.dataset.originalDisplay) {
+                    element.dataset.originalDisplay = element.style.display || 'block';
+                }
+                element.style.display = 'none';
+            });
+        });
+    }
+
+    /**
+     * Show main content when exiting benchmark mode
+     */
+    showMainContent() {
+        const hiddenElements = document.querySelectorAll('[data-original-display]');
+        hiddenElements.forEach(element => {
+            element.style.display = element.dataset.originalDisplay;
+            delete element.dataset.originalDisplay;
+        });
+    }
+
+    /**
+     * Setup benchmark interface event handlers
+     */
+    setupBenchmarkInterfaceHandlers() {
+        // Button handlers
+        document.getElementById('startBenchmark').onclick = () => this.startMainWindowBenchmark();
+        document.getElementById('stopBenchmark').onclick = () => this.stopMainWindowBenchmark();
+        document.getElementById('exportResults').onclick = () => this.exportMainWindowResults();
+    }
+
+    /**
+     * Start benchmark in main window
+     */
+    async startMainWindowBenchmark() {
+        if (this.isRunning) return;
+
+        try {
+            this.isRunning = true;
+            
+            // Update UI
+            document.getElementById('startBenchmark').disabled = true;
+            document.getElementById('stopBenchmark').disabled = false;
+            document.getElementById('progressSection').style.display = 'block';
+            
+            // Update menu status
+            if (this.menuManager) {
+                this.menuManager.updateBenchmarkStatus('running', 'Running Benchmark');
+            }
+            
+            // Get configuration
+            const options = this.getBenchmarkConfiguration();
+            
+            console.log('🧪 Starting benchmark in main window:', options);
+            
+            // Run benchmark
+            const results = await this.framework.runAllBenchmarks(options);
+            
+            this.currentResults = results;
+            this.displayMainWindowResults(results);
+            
+            if (this.menuManager) {
+                this.menuManager.updateBenchmarkStatus('ready', 'Benchmark Completed');
+            }
+            
+        } catch (error) {
+            console.error('❌ Benchmark failed:', error);
+            if (this.menuManager) {
+                this.menuManager.updateBenchmarkStatus('error', 'Benchmark Failed');
+            }
+            alert('Benchmark failed: ' + error.message);
+        } finally {
+            this.isRunning = false;
+            document.getElementById('startBenchmark').disabled = false;
+            document.getElementById('stopBenchmark').disabled = true;
+            document.getElementById('exportResults').disabled = false;
+        }
+    }
+
+    /**
+     * Stop benchmark in main window
+     */
+    stopMainWindowBenchmark() {
+        if (!this.isRunning) return;
+        
+        this.isRunning = false;
+        if (this.framework) {
+            this.framework.stopBenchmark();
+        }
+        
+        // Update UI
+        document.getElementById('startBenchmark').disabled = false;
+        document.getElementById('stopBenchmark').disabled = true;
+        
+        if (this.menuManager) {
+            this.menuManager.updateBenchmarkStatus('ready', 'Benchmark Stopped');
+        }
+        
+        console.log('⏹️ Benchmark stopped in main window');
+    }
+
+    /**
+     * Export results from main window
+     */
+    exportMainWindowResults() {
+        if (!this.currentResults) {
+            alert('No results to export');
+            return;
+        }
+        
+        const blob = new Blob([JSON.stringify(this.currentResults, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'benchmark-results-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        console.log('📤 Results exported from main window');
+    }
+
+    /**
+     * Get benchmark configuration from UI
+     */
+    getBenchmarkConfiguration() {
+        const selectedSuites = [];
+        document.querySelectorAll('input[id^="suite-"]:checked').forEach(cb => {
+            selectedSuites.push(cb.id.replace('suite-', ''));
+        });
+
+        return {
+            suites: selectedSuites,
+            generateReport: document.getElementById('generateReport').checked,
+            includeCharts: document.getElementById('includeCharts').checked,
+            includeRawData: document.getElementById('includeRawData')?.checked || false,
+            stopOnError: document.getElementById('stopOnError').checked,
+            verboseLogging: document.getElementById('verboseLogging')?.checked || false,
+            timeout: parseInt(document.getElementById('testTimeout').value),
+            concurrency: parseInt(document.getElementById('concurrency')?.value || '1'),
+            onProgress: (progress, suiteId, suiteResult) => {
+                this.updateMainWindowProgress(progress, suiteId, suiteResult);
+            },
+            onTestProgress: (progress, testId, testResult, suiteId) => {
+                this.updateMainWindowTestProgress(progress, testId, testResult, suiteId);
+            }
+        };
+    }
+
+    /**
+     * Update progress in main window
+     */
+    updateMainWindowProgress(progress, suiteId, suiteResult) {
+        const progressFill = document.getElementById('progressFill');
+        const currentSuite = document.getElementById('currentSuite');
+        
+        if (progressFill) progressFill.style.width = (progress * 100) + '%';
+        if (currentSuite) currentSuite.textContent = suiteId || '-';
+        
+        if (suiteResult) {
+            const completed = parseInt(document.getElementById('completedTests')?.textContent || '0') + suiteResult.stats.totalTests;
+            const passed = parseInt(document.getElementById('passedTests')?.textContent || '0') + suiteResult.stats.passedTests;
+            const failed = parseInt(document.getElementById('failedTests')?.textContent || '0') + suiteResult.stats.failedTests;
+            
+            if (document.getElementById('completedTests')) document.getElementById('completedTests').textContent = completed;
+            if (document.getElementById('passedTests')) document.getElementById('passedTests').textContent = passed;
+            if (document.getElementById('failedTests')) document.getElementById('failedTests').textContent = failed;
+        }
+
+        // Update menu status
+        if (this.menuManager) {
+            this.menuManager.updateBenchmarkStatus('running', 'Running: ' + (suiteId || 'Starting...'), progress);
+        }
+    }
+
+    /**
+     * Update test progress in main window
+     */
+    updateMainWindowTestProgress(progress, testId, testResult, suiteId) {
+        const currentTest = document.getElementById('currentTest');
+        if (currentTest) currentTest.textContent = testId || '-';
+        
+        // Update elapsed time
+        const elapsedTime = document.getElementById('elapsedTime');
+        if (elapsedTime && this.startTime) {
+            const elapsed = Date.now() - this.startTime;
+            const minutes = Math.floor(elapsed / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+
+    /**
+     * Display results in main window
+     */
+    displayMainWindowResults(results) {
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsSummary = document.getElementById('resultsSummary');
+        const resultsContent = document.getElementById('resultsContent');
+        
+        if (resultsSection) resultsSection.style.display = 'block';
+        
+        const stats = results.overallStats;
+        
+        // Display summary cards
+        if (resultsSummary) {
+            resultsSummary.innerHTML = `
+                <div class="summary-card">
+                    <h3>Overall Success Rate</h3>
+                    <div class="value">${stats.overallSuccessRate.toFixed(1)}</div>
+                    <div class="unit">%</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Tests Passed</h3>
+                    <div class="value">${stats.passedTests}</div>
+                    <div class="unit">/ ${stats.totalTests}</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Average Score</h3>
+                    <div class="value">${stats.scoreStats.percentage.mean.toFixed(1)}</div>
+                    <div class="unit">%</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Duration</h3>
+                    <div class="value">${Math.round(results.duration / 1000)}</div>
+                    <div class="unit">seconds</div>
+                </div>
+            `;
+        }
+        
+        // Display detailed results
+        if (resultsContent) {
+            resultsContent.innerHTML = `
+                <h3 style="color: #2c3e50; margin-bottom: 15px;">📋 Detailed Results</h3>
+                ${results.testSuiteResults.map(suite => `
+                    <div style="border: 1px solid #ddd; border-radius: 8px; margin: 15px 0; overflow: hidden;">
+                        <div style="background: #f8f9fa; padding: 20px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>${suite.suiteName}</span>
+                                <span style="font-size: 14px; color: #6c757d;">
+                                    ${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate | 
+                                    ${Math.round(suite.duration / 1000)}s
+                                </span>
+                            </div>
+                        </div>
+                        <div style="padding: 20px; display: none;">
+                            ${suite.testResults.map(test => `
+                                <div style="padding: 12px; margin: 8px 0; border-radius: 6px; background: ${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid ${test.success ? '#28a745' : '#dc3545'};">
+                                    <div style="font-weight: bold; margin-bottom: 5px;">${test.testName}</div>
+                                    <div style="font-size: 13px; color: #6c757d;">
+                                        Score: ${test.score}/${test.maxScore} | 
+                                        Duration: ${test.duration}ms | 
+                                        Status: ${test.status}
+                                    </div>
+                                    ${test.errors.length > 0 ? `<div style="font-size: 12px; color: #dc3545; margin-top: 5px;">Errors: ${test.errors.join(', ')}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+    }
+
+    /**
+     * Exit benchmark mode and restore main app
+     */
+    exitBenchmarkMode() {
+        console.log('🚪 Exiting benchmark mode...');
+        
+        try {
+            // Remove benchmark interface
+            const benchmarkInterface = document.getElementById('benchmarkInterface');
+            if (benchmarkInterface) {
+                benchmarkInterface.remove();
+            }
+
+            // Show main content
+            this.showMainContent();
+
+            // Deactivate benchmark menus
+            if (this.menuManager) {
+                this.menuManager.deactivateBenchmarkMenus();
+            }
+
+            console.log('✅ Benchmark mode exited, main app restored');
+            
+        } catch (error) {
+            console.error('❌ Failed to exit benchmark mode:', error);
+        }
     }
 
     /**
