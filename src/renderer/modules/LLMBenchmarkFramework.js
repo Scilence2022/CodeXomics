@@ -487,6 +487,7 @@ class LLMBenchmarkFramework {
             // Send the test instruction to the LLM with test information
             const instructionOptions = {
                 ...test.options,
+                timeout: timeoutMs, // Pass the actual timeout being used
                 testInfo: {
                     id: test.id,
                     name: test.name,
@@ -617,6 +618,9 @@ class LLMBenchmarkFramework {
             }
         };
 
+        // Declare response variable in outer scope
+        let response = null;
+        
         try {
             console.log(`📤 Sending benchmark test instruction: ${instruction}`);
             
@@ -687,7 +691,7 @@ class LLMBenchmarkFramework {
             try {
                 // Use ChatManager's sendToLLM method which handles all the configuration,
                 // function calling, plugin integration, and system prompts automatically
-                const response = await this.chatManager.sendToLLM(instruction);
+                response = await this.chatManager.sendToLLM(instruction);
                 
                 // Capture response timing
                 const requestEndTime = Date.now();
@@ -725,11 +729,11 @@ class LLMBenchmarkFramework {
             // Capture token usage if available
             interactionData.response.tokenUsage = this.captureTokenUsage();
             
-            // Analyze response quality
-            interactionData.analysis = this.analyzeResponseQuality(instruction, response);
+            // Analyze response quality (response is now in scope)
+            interactionData.analysis = this.analyzeResponseQuality(instruction, response || 'No response received');
             
             // CRITICAL FIX: Check if response indicates LLM failure
-            if (this.isLLMErrorResponse(response)) {
+            if (response && this.isLLMErrorResponse(response)) {
                 console.log('❌ LLM error response detected');
                 const errorMessage = `LLM Error Response: ${response}`;
                 
@@ -748,7 +752,9 @@ class LLMBenchmarkFramework {
             }
             
             // Display response analysis
-            this.displayResponseAnalysis(response, options);
+            if (response) {
+                this.displayResponseAnalysis(response, options);
+            }
             
             // Return both response and detailed interaction data
             return {
