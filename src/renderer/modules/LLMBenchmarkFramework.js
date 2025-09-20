@@ -484,6 +484,9 @@ class LLMBenchmarkFramework {
         }
 
         try {
+            // Calculate timeout for this test
+            const timeoutMs = test.timeout || this.testTimeout;
+            
             // Send the test instruction to the LLM with test information
             const instructionOptions = {
                 ...test.options,
