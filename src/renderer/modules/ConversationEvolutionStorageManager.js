@@ -1,26 +1,146 @@
 /**
  * ConversationEvolutionStorageManager - 对话进化系统存储管理器
  * 为Conversation Evolution System提供独立的存储和历史管理功能
+ * 使用独立的ConversationHistoryStorageManager处理大容量历史数据
  */
 class ConversationEvolutionStorageManager {
     constructor(configManager) {
         this.configManager = configManager;
         this.isInitialized = false;
 
-        // 默认数据结构，作为基准
+        // 初始化独立的历史存储管理器
+        this.historyStorageManager = null;
+        this.initializeHistoryStorage();
+
+        // 默认数据结构，作为基准（仅用于配置，不包含大量历史数据）
         this.defaultHistoryData = this.getDefaultEvolutionConfig().historyData;
         this.storageConfig = this.getDefaultEvolutionConfig().storageConfig;
-        this.historyData = this.deepmerge({}, this.defaultHistoryData);
+        
+        // 轻量级历史数据（仅保存最近的少量数据用于快速访问）
+        this.historyData = {
+            conversations: [], // 仅保存最近50个对话的摘要
+            analysisRecords: [],
+            pluginGenerationHistory: [],
+            evolutionTimeline: [],
+            storageStats: {
+                totalConversations: 0,
+                totalMessages: 0,
+                totalAnalysisCount: 0,
+                totalPluginsGenerated: 0,
+                firstRecordDate: null,
+                lastUpdateDate: null,
+                storageSize: 0
+            }
+        };
 
         // 防抖存储
         this._saveTimeout = null;
 
-        console.log('ConversationEvolutionStorageManager initialized');
+        console.log('ConversationEvolutionStorageManager initialized with independent storage');
 
         // 正确初始化 debouncedSave 方法
         this.debouncedSave = this.debounce(this.saveHistoryData.bind(this), 1500);
         // 构造函数中不再直接调用，改为外部显式调用
         // this.initializeStorage(); 
+    }
+
+    /**
+     * 初始化独立的历史存储管理器
+     */
+    async initializeHistoryStorage() {
+        try {
+            // 动态加载ConversationHistoryStorageManager
+            if (typeof window !== 'undefined' && window.ConversationHistoryStorageManager) {
+                this.historyStorageManager = new window.ConversationHistoryStorageManager(this.configManager);
+            } else if (typeof require !== 'undefined') {
+                const ConversationHistoryStorageManager = require('./ConversationHistoryStorageManager');
+                this.historyStorageManager = new ConversationHistoryStorageManager(this.configManager);
+            }
+            
+            if (this.historyStorageManager) {
+                console.log('✅ Independent history storage manager initialized');
+                
+                // 检查是否需要迁移现有数据
+                await this.checkAndMigrateExistingData();
+            } else {
+                console.warn('⚠️ Failed to initialize independent history storage manager');
+            }
+            
+        } catch (error) {
+            console.error('❌ Failed to initialize history storage:', error);
+        }
+    }
+
+    /**
+     * 检查并迁移现有的大型历史数据
+     */
+    async checkAndMigrateExistingData() {
+        try {
+            // 获取现有的evolution配置
+            const existingConfig = this.configManager.get('evolution', null);
+            
+            if (existingConfig && existingConfig.historyData && existingConfig.historyData.conversations) {
+                const conversations = existingConfig.historyData.conversations;
+                
+                // 如果现有对话数量很大，需要迁移
+                if (conversations.length > 100) {
+                    console.log(`🔄 Starting data migration: ${conversations.length} conversations found`);
+                    
+                    let migratedCount = 0;
+                    const batchSize = 50;
+                    
+                    // 批量迁移对话数据
+                    for (let i = 0; i < conversations.length; i += batchSize) {
+                        const batch = conversations.slice(i, i + batchSize);
+                        
+                        for (const conversation of batch) {
+                            try {
+                                // 迁移完整对话到独立存储
+                                await this.historyStorageManager.addConversation(conversation);
+                                migratedCount++;
+                            } catch (error) {
+                                console.warn(`Failed to migrate conversation ${conversation.id}:`, error);
+                            }
+                        }
+                        
+                        // 小延迟避免阻塞UI
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+                    
+                    console.log(`✅ Migration completed: ${migratedCount}/${conversations.length} conversations migrated`);
+                    
+                    // 创建迁移后的轻量级配置
+                    const lightweightConfig = {
+                        ...existingConfig,
+                        historyData: {
+                            ...existingConfig.historyData,
+                            conversations: conversations.slice(-50).map(conv => ({
+                                id: conv.id,
+                                startTime: conv.startTime,
+                                endTime: conv.endTime,
+                                source: conv.source,
+                                messageCount: conv.events ? conv.events.length : 0,
+                                stats: conv.stats,
+                                metadata: {
+                                    processedAt: conv.metadata?.processedAt,
+                                    version: conv.metadata?.version,
+                                    migrated: true
+                                }
+                            }))
+                        }
+                    };
+                    
+                    // 保存轻量级配置
+                    await this.configManager.set('evolution', lightweightConfig);
+                    await this.configManager.saveConfig();
+                    
+                    console.log(`🎯 Lightweight config saved with ${lightweightConfig.historyData.conversations.length} conversation summaries`);
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ Failed to migrate existing data:', error);
+        }
     }
 
     /**
@@ -123,7 +243,7 @@ class ConversationEvolutionStorageManager {
     }
 
     /**
-     * 保存历史数据
+     * 保存历史数据到配置文件（轻量级配置）和独立存储（大容量数据）
      */
     async saveHistoryData() {
         if (!this.isInitialized) {
@@ -132,20 +252,32 @@ class ConversationEvolutionStorageManager {
         }
         console.log('💾 Saving evolution history data to disk...');
         try {
-            // 准备完整的evolution配置数据
-            const evolutionData = {
+            // 准备轻量级配置数据（不包含大量对话历史）
+            const evolutionConfig = {
                 version: '1.0.1', // 版本号提升
                 lastModified: new Date().toISOString(),
                 storageConfig: this.storageConfig,
-                historyData: this.historyData,
+                historyData: {
+                    // 仅保存统计信息和最近的少量摘要数据
+                    conversations: this.historyData.conversations.slice(-50), // 最近50个对话摘要
+                    analysisRecords: this.historyData.analysisRecords,
+                    pluginGenerationHistory: this.historyData.pluginGenerationHistory,
+                    evolutionTimeline: this.historyData.evolutionTimeline,
+                    storageStats: this.historyData.storageStats
+                }
             };
             
-            // 保存到独立的配置文件
-            await this.configManager.set('evolution', evolutionData);
-            // 确保立即写入磁盘
+            // 保存轻量级配置到ConfigManager
+            await this.configManager.set('evolution', evolutionConfig);
             await this.configManager.saveConfig(); 
             
-            console.log(`✅ History data saved. Conversations: ${this.historyData.conversations.length}`);
+            console.log(`✅ Evolution config saved. Summary conversations: ${evolutionConfig.historyData.conversations.length}`);
+            
+            // 获取独立存储统计信息
+            if (this.historyStorageManager) {
+                const stats = await this.historyStorageManager.getStorageStats();
+                console.log(`📊 Independent storage: ${stats.currentFile.conversations} current, ${stats.archives.count} archives`);
+            }
             
         } catch (error) {
             console.error('❌ Failed to save evolution history:', error);
@@ -183,16 +315,42 @@ class ConversationEvolutionStorageManager {
                 }
             };
 
-            // Add to conversations array
-            this.historyData.conversations.push(conversationRecord);
+            // 1. 保存完整数据到独立存储管理器
+            if (this.historyStorageManager) {
+                this.historyStorageManager.addConversation(conversationRecord).catch(error => {
+                    console.error('❌ Failed to save to independent storage:', error);
+                });
+            }
+
+            // 2. 保存轻量级摘要到内存（用于快速访问）
+            const conversationSummary = {
+                id: conversationRecord.id,
+                startTime: conversationRecord.startTime,
+                endTime: conversationRecord.endTime,
+                source: conversationRecord.source,
+                messageCount: conversationRecord.events ? conversationRecord.events.length : 0,
+                stats: conversationRecord.stats,
+                metadata: {
+                    processedAt: conversationRecord.metadata.processedAt,
+                    version: conversationRecord.metadata.version
+                }
+            };
+
+            // 只在内存中保留最近的对话摘要
+            this.historyData.conversations.push(conversationSummary);
+            
+            // 保持内存中的对话摘要数量限制（最多200个）
+            if (this.historyData.conversations.length > 200) {
+                this.historyData.conversations = this.historyData.conversations.slice(-150); // 保留最新150个
+            }
 
             // Update storage stats
             this.updateStorageStats(conversationRecord);
 
-            // Auto-save
+            // Auto-save (轻量级配置)
             this.debouncedSave();
 
-            console.log(`🧬 Added conversation record: ${conversationRecord.id}. Total now: ${this.historyData.conversations.length}`);
+            console.log(`🧬 Added conversation record: ${conversationRecord.id}. Summary count: ${this.historyData.conversations.length}`);
 
         } catch (error) {
             console.error('❌ Failed to add conversation record:', error);

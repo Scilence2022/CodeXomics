@@ -679,7 +679,7 @@ class ConfigManager {
     /**
      * Validate and clean data before saving to prevent JSON.stringify errors
      */
-    validateAndCleanData(data, maxSize = 10 * 1024 * 1024) { // 10MB default limit
+    validateAndCleanData(data, maxSize = 50 * 1024 * 1024) { // 50MB default limit (increased from 10MB)
         try {
             // Create a deep copy to avoid modifying original data
             const cleanData = JSON.parse(JSON.stringify(data));

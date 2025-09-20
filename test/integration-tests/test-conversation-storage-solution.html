@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversation Storage Solution Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            background-color: #fafafa;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .button.success {
+            background-color: #27ae60;
+        }
+        .button.danger {
+            background-color: #e74c3c;
+        }
+        .button.warning {
+            background-color: #f39c12;
+        }
+        .log {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗄️ Conversation Storage Solution Test</h1>
+        <p>测试新的独立对话历史存储系统，解决147MB数据过载问题</p>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalConversations">0</div>
+                <div class="stat-label">Total Conversations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="storageSize">0 MB</div>
+                <div class="stat-label">Storage Size</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="compressionRatio">0%</div>
+                <div class="stat-label">Compression Ratio</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="archiveCount">0</div>
+                <div class="stat-label">Archive Files</div>
+            </div>
+        </div>
+        
+        <div id="testStatus" class="status info">
+            Ready to test conversation storage solution
+        </div>
+        
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🧪 Test Controls</h2>
+        
+        <div class="test-section">
+            <h3>1. Storage Manager Initialization</h3>
+            <button class="button" onclick="testInitialization()">Initialize Storage Managers</button>
+            <button class="button warning" onclick="testMigration()">Test Data Migration</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. Conversation Storage Tests</h3>
+            <button class="button" onclick="generateTestConversations(10)">Generate 10 Conversations</button>
+            <button class="button" onclick="generateTestConversations(100)">Generate 100 Conversations</button>
+            <button class="button warning" onclick="generateLargeConversations(1000)">Generate 1000 Large Conversations</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. Compression & Archive Tests</h3>
+            <button class="button" onclick="testCompression()">Test Compression</button>
+            <button class="button" onclick="forceArchive()">Force Archive</button>
+            <button class="button" onclick="testRetrieval()">Test Data Retrieval</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. Performance Tests</h3>
+            <button class="button" onclick="performanceTest()">Performance Test</button>
+            <button class="button success" onclick="getStorageStats()">Get Storage Stats</button>
+            <button class="button danger" onclick="clearAllData()">Clear All Data</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📊 Test Results</h2>
+        <div class="log" id="testLog">Test log will appear here...\n</div>
+    </div>
+
+    <!-- Mock ConfigManager for testing -->
+    <script>
+        class MockConfigManager {
+            constructor() {
+                this.data = new Map();
+            }
+            
+            get(key, defaultValue = null) {
+                return this.data.get(key) || defaultValue;
+            }
+            
+            set(key, value) {
+                this.data.set(key, value);
+            }
+            
+            async saveConfig() {
+                // Mock save
+                return true;
+            }
+        }
+    </script>
+
+    <!-- Load the storage managers -->
+    <script src="../../src/renderer/modules/ConversationHistoryStorageManager.js"></script>
+    <script src="../../src/renderer/modules/ConversationEvolutionStorageManager.js"></script>
+
+    <script>
+        // Global variables
+        let configManager;
+        let historyStorageManager;
+        let evolutionStorageManager;
+        let testLog = document.getElementById('testLog');
+        let testStatus = document.getElementById('testStatus');
+        let progressBar = document.getElementById('progressBar');
+        
+        // Logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            testLog.textContent += logEntry;
+            testLog.scrollTop = testLog.scrollHeight;
+            
+            // Update status
+            if (type === 'error') {
+                testStatus.className = 'status error';
+                testStatus.textContent = message;
+            } else if (type === 'success') {
+                testStatus.className = 'status success';
+                testStatus.textContent = message;
+            } else if (type === 'warning') {
+                testStatus.className = 'status warning';
+                testStatus.textContent = message;
+            } else {
+                testStatus.className = 'status info';
+                testStatus.textContent = message;
+            }
+        }
+        
+        // Update progress bar
+        function updateProgress(percentage) {
+            progressBar.style.width = percentage + '%';
+        }
+        
+        // Update stats
+        function updateStats(stats) {
+            if (stats.totalConversations !== undefined) {
+                document.getElementById('totalConversations').textContent = stats.totalConversations;
+            }
+            if (stats.storageSize !== undefined) {
+                document.getElementById('storageSize').textContent = stats.storageSize;
+            }
+            if (stats.compressionRatio !== undefined) {
+                document.getElementById('compressionRatio').textContent = stats.compressionRatio + '%';
+            }
+            if (stats.archiveCount !== undefined) {
+                document.getElementById('archiveCount').textContent = stats.archiveCount;
+            }
+        }
+        
+        // Generate test conversation data
+        function generateTestConversationData(id, size = 'small') {
+            const events = [];
+            const eventCount = size === 'large' ? 100 : size === 'medium' ? 50 : 10;
+            
+            for (let i = 0; i < eventCount; i++) {
+                events.push({
+                    type: 'message',
+                    timestamp: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+                    sender: i % 2 === 0 ? 'user' : 'assistant',
+                    content: `Test message ${i + 1} for conversation ${id}. ${'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(size === 'large' ? 10 : 1)}`,
+                    metadata: {
+                        messageId: `msg_${id}_${i}`,
+                        tokens: Math.floor(Math.random() * 1000) + 100
+                    }
+                });
+            }
+            
+            return {
+                id: `test_conversation_${id}`,
+                startTime: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+                endTime: new Date().toISOString(),
+                events: events,
+                context: {
+                    genome: 'test_genome',
+                    position: { start: 1000, end: 2000 },
+                    tracks: ['genes', 'annotations']
+                },
+                stats: {
+                    totalMessages: events.length,
+                    totalTokens: events.reduce((sum, e) => sum + (e.metadata?.tokens || 0), 0),
+                    duration: Math.floor(Math.random() * 3600000) + 60000
+                },
+                metadata: {
+                    source: 'test_generator',
+                    quality: Math.random() > 0.5 ? 'high' : 'medium',
+                    testSize: size
+                }
+            };
+        }
+        
+        // Test functions
+        async function testInitialization() {
+            try {
+                log('🚀 Initializing storage managers...');
+                updateProgress(10);
+                
+                // Initialize mock config manager
+                configManager = new MockConfigManager();
+                log('✅ Mock ConfigManager initialized');
+                updateProgress(30);
+                
+                // Initialize history storage manager
+                historyStorageManager = new ConversationHistoryStorageManager(configManager);
+                log('✅ ConversationHistoryStorageManager initialized');
+                updateProgress(60);
+                
+                // Initialize evolution storage manager
+                evolutionStorageManager = new ConversationEvolutionStorageManager(configManager);
+                await evolutionStorageManager.initializeStorage();
+                log('✅ ConversationEvolutionStorageManager initialized');
+                updateProgress(100);
+                
+                log('🎉 All storage managers initialized successfully!', 'success');
+                
+                // Update stats
+                const stats = await historyStorageManager.getStorageStats();
+                updateStats({
+                    totalConversations: stats.currentFile.conversations,
+                    storageSize: stats.currentFile.sizeFormatted,
+                    archiveCount: stats.archives.count
+                });
+                
+            } catch (error) {
+                log(`❌ Initialization failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        async function testMigration() {
+            try {
+                log('🔄 Testing data migration...');
+                
+                // Create mock existing data
+                const mockConversations = [];
+                for (let i = 0; i < 150; i++) {
+                    mockConversations.push(generateTestConversationData(i, 'medium'));
+                }
+                
+                configManager.set('evolution', {
+                    historyData: {
+                        conversations: mockConversations
+                    }
+                });
+                
+                log(`📦 Created mock data with ${mockConversations.length} conversations`);
+                
+                // Test migration
+                await evolutionStorageManager.checkAndMigrateExistingData();
+                
+                log('✅ Migration test completed!', 'success');
+                
+            } catch (error) {
+                log(`❌ Migration test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function generateTestConversations(count) {
+            try {
+                log(`📝 Generating ${count} test conversations...`);
+                
+                if (!historyStorageManager) {
+                    log('❌ Storage manager not initialized!', 'error');
+                    return;
+                }
+                
+                for (let i = 0; i < count; i++) {
+                    const conversationData = generateTestConversationData(Date.now() + i, 'small');
+                    await historyStorageManager.addConversation(conversationData);
+                    
+                    if (i % 10 === 0 || i === count - 1) {
+                        updateProgress((i + 1) / count * 100);
+                        log(`Progress: ${i + 1}/${count} conversations generated`);
+                    }
+                }
+                
+                log(`✅ Generated ${count} test conversations successfully!`, 'success');
+                
+                // Update stats
+                const stats = await historyStorageManager.getStorageStats();
+                updateStats({
+                    totalConversations: stats.currentFile.conversations,
+                    storageSize: stats.currentFile.sizeFormatted,
+                    archiveCount: stats.archives.count
+                });
+                
+            } catch (error) {
+                log(`❌ Failed to generate conversations: ${error.message}`, 'error');
+            }
+        }
+        
+        async function generateLargeConversations(count) {
+            try {
+                log(`📝 Generating ${count} LARGE test conversations...`);
+                log('⚠️ This will create significant data volume!', 'warning');
+                
+                if (!historyStorageManager) {
+                    log('❌ Storage manager not initialized!', 'error');
+                    return;
+                }
+                
+                for (let i = 0; i < count; i++) {
+                    const conversationData = generateTestConversationData(Date.now() + i, 'large');
+                    await historyStorageManager.addConversation(conversationData);
+                    
+                    if (i % 50 === 0 || i === count - 1) {
+                        updateProgress((i + 1) / count * 100);
+                        log(`Progress: ${i + 1}/${count} large conversations generated`);
+                    }
+                    
+                    // Small delay to prevent UI blocking
+                    if (i % 100 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+                }
+                
+                log(`✅ Generated ${count} large conversations successfully!`, 'success');
+                
+                // Update stats
+                const stats = await historyStorageManager.getStorageStats();
+                updateStats({
+                    totalConversations: stats.currentFile.conversations,
+                    storageSize: stats.currentFile.sizeFormatted,
+                    archiveCount: stats.archives.count
+                });
+                
+            } catch (error) {
+                log(`❌ Failed to generate large conversations: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testCompression() {
+            try {
+                log('🗜️ Testing compression functionality...');
+                
+                if (!historyStorageManager) {
+                    log('❌ Storage manager not initialized!', 'error');
+                    return;
+                }
+                
+                // Create large test data
+                const largeData = JSON.stringify({
+                    test: 'compression',
+                    data: 'This is a test string that will be repeated many times. '.repeat(10000)
+                });
+                
+                const originalSize = new Blob([largeData]).size;
+                log(`Original data size: ${(originalSize / 1024).toFixed(2)} KB`);
+                
+                // Test compression
+                const compressed = await historyStorageManager.compressData(largeData);
+                const compressedSize = new Blob([compressed]).size;
+                const ratio = Math.round((1 - compressedSize / originalSize) * 100);
+                
+                log(`Compressed size: ${(compressedSize / 1024).toFixed(2)} KB`);
+                log(`Compression ratio: ${ratio}%`);
+                
+                // Test decompression
+                const decompressed = await historyStorageManager.decompressData(compressed);
+                const success = decompressed === largeData;
+                
+                if (success) {
+                    log('✅ Compression/decompression test successful!', 'success');
+                    updateStats({ compressionRatio: ratio });
+                } else {
+                    log('❌ Decompression failed - data mismatch!', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Compression test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function forceArchive() {
+            try {
+                log('📦 Forcing archive creation...');
+                
+                if (!historyStorageManager) {
+                    log('❌ Storage manager not initialized!', 'error');
+                    return;
+                }
+                
+                await historyStorageManager.archiveCurrentConversations();
+                log('✅ Archive created successfully!', 'success');
+                
+                // Update stats
+                const stats = await historyStorageManager.getStorageStats();
+                updateStats({
+                    totalConversations: stats.currentFile.conversations,
+                    storageSize: stats.currentFile.sizeFormatted,
+                    archiveCount: stats.archives.count
+                });
+                
+            } catch (error) {
+                log(`❌ Archive creation failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testRetrieval() {
+            try {
+                log('🔍 Testing data retrieval...');
+                
+                if (!historyStorageManager) {
+                    log('❌ Storage manager not initialized!', 'error');
+                    return;
+                }
+                
+                // Test retrieving a conversation
+                const testId = `test_conversation_${Date.now()}`;
+                const testData = generateTestConversationData(testId, 'medium');
+                
+                // Add conversation
+                await historyStorageManager.addConversation(testData);
+                log(`Added test conversation: ${testId}`);
+                
+                // Retrieve conversation
+                const retrieved = await historyStorageManager.getConversation(testId);
+                
+                if (retrieved && retrieved.id === testId) {
+                    log('✅ Data retrieval test successful!', 'success');
+                } else {
+                    log('❌ Data retrieval failed!', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Retrieval test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function performanceTest() {
+            try {
+                log('⚡ Running performance test...');
+                
+                if (!historyStorageManager) {
+                    log('❌ Storage manager not initialized!', 'error');
+                    return;
+                }
+                
+                const testCount = 100;
+                const startTime = performance.now();
+                
+                // Batch add conversations
+                const promises = [];
+                for (let i = 0; i < testCount; i++) {
+                    const conversationData = generateTestConversationData(`perf_test_${i}`, 'small');
+                    promises.push(historyStorageManager.addConversation(conversationData));
+                }
+                
+                await Promise.all(promises);
+                
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                const throughput = Math.round(testCount / (duration / 1000));
+                
+                log(`Performance test completed:`);
+                log(`- ${testCount} conversations in ${duration.toFixed(2)}ms`);
+                log(`- Throughput: ${throughput} conversations/second`);
+                log('✅ Performance test successful!', 'success');
+                
+            } catch (error) {
+                log(`❌ Performance test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getStorageStats() {
+            try {
+                log('📊 Getting storage statistics...');
+                
+                if (!historyStorageManager) {
+                    log('❌ Storage manager not initialized!', 'error');
+                    return;
+                }
+                
+                const stats = await historyStorageManager.getStorageStats();
+                
+                log('Storage Statistics:');
+                log(`- Current file: ${stats.currentFile.conversations} conversations (${stats.currentFile.sizeFormatted})`);
+                log(`- Archives: ${stats.archives.count} files (${stats.archives.totalSizeFormatted || '0 MB'})`);
+                log(`- Backups: ${stats.backups.count} files (${stats.backups.totalSizeFormatted || '0 MB'})`);
+                log(`- Cache: ${stats.cache.size}/${stats.cache.maxSize} conversations`);
+                
+                updateStats({
+                    totalConversations: stats.currentFile.conversations,
+                    storageSize: stats.currentFile.sizeFormatted,
+                    archiveCount: stats.archives.count
+                });
+                
+                log('✅ Storage stats retrieved successfully!', 'success');
+                
+            } catch (error) {
+                log(`❌ Failed to get storage stats: ${error.message}`, 'error');
+            }
+        }
+        
+        async function clearAllData() {
+            if (!confirm('Are you sure you want to clear ALL test data? This cannot be undone!')) {
+                return;
+            }
+            
+            try {
+                log('🗑️ Clearing all data...');
+                
+                if (!historyStorageManager) {
+                    log('❌ Storage manager not initialized!', 'error');
+                    return;
+                }
+                
+                await historyStorageManager.clearAllData();
+                
+                updateStats({
+                    totalConversations: 0,
+                    storageSize: '0 MB',
+                    compressionRatio: 0,
+                    archiveCount: 0
+                });
+                
+                log('✅ All data cleared successfully!', 'success');
+                
+            } catch (error) {
+                log(`❌ Failed to clear data: ${error.message}`, 'error');
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            log('🧪 Conversation Storage Solution Test initialized');
+            log('Click "Initialize Storage Managers" to begin testing');
+        });
+    </script>
+</body>
+</html>

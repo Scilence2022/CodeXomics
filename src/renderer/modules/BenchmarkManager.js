@@ -27,33 +27,41 @@ class BenchmarkManager {
             // Check if required classes are available
             if (typeof LLMBenchmarkFramework === 'undefined') {
                 console.warn('⚠️ LLMBenchmarkFramework not available, deferring initialization...');
-                // Retry after a delay
-                setTimeout(() => this.initializeSystem(), 1000);
-                return;
+                // Wait and retry
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return await this.initializeSystem();
             }
 
             // Load all test suites
             await this.loadTestSuites();
             
             // Initialize benchmark framework
+            console.log('🔧 Creating LLMBenchmarkFramework...');
             this.framework = new LLMBenchmarkFramework(this.chatManager, this.configManager);
+            console.log('✅ LLMBenchmarkFramework created');
             
             // Initialize UI
+            console.log('🔧 Creating BenchmarkUI...');
             this.ui = new BenchmarkUI(this.framework);
+            console.log('✅ BenchmarkUI created');
             
             this.isInitialized = true;
             console.log('✅ Benchmark system initialized successfully');
+            console.log('🔍 Final state check:', {
+                framework: !!this.framework,
+                ui: !!this.ui,
+                isInitialized: this.isInitialized
+            });
             
         } catch (error) {
             console.error('❌ Failed to initialize benchmark system:', error);
             this.showError('Failed to initialize benchmark system: ' + error.message);
             
             // Retry once after error
-            setTimeout(() => {
-                if (!this.isInitialized) {
-                    this.initializeSystem();
-                }
-            }, 2000);
+            if (!this.isInitialized) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return await this.initializeSystem();
+            }
         }
     }
 
@@ -198,6 +206,13 @@ class BenchmarkManager {
                 this.showError('Failed to initialize benchmark system: ' + error.message);
                 return;
             }
+        }
+
+        // Double-check that UI is available
+        if (!this.ui) {
+            console.error('❌ BenchmarkUI not available after initialization');
+            this.showError('Benchmark UI not properly initialized');
+            return;
         }
 
         await this.ui.showBenchmarkRunner();
