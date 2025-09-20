@@ -457,6 +457,9 @@ class BenchmarkUI {
                         <button class="btn btn-success" id="exportResults" disabled>
                             <span>📊</span> Export Results
                         </button>
+                        <button class="btn" id="exportLLMInteractions" disabled style="background: #9b59b6; color: white;">
+                            <span>🤖</span> Export LLM Interactions
+                        </button>
                     </div>
                 </div>
 
@@ -609,6 +612,12 @@ class BenchmarkUI {
             document.getElementById('startBenchmark').disabled = false;
             document.getElementById('stopBenchmark').disabled = true;
             document.getElementById('exportResults').disabled = false;
+            
+            // Enable LLM interaction export button
+            const exportLLMBtn = document.getElementById('exportLLMInteractions');
+            if (exportLLMBtn) {
+                exportLLMBtn.disabled = false;
+            }
         }
     }
 
@@ -650,6 +659,332 @@ class BenchmarkUI {
         URL.revokeObjectURL(url);
         
         console.log('📤 Results exported from main window');
+    }
+
+    /**
+     * Export detailed LLM interaction data
+     */
+    exportDetailedLLMInteractions() {
+        if (!this.currentResults) {
+            alert('No benchmark results available to export');
+            return;
+        }
+
+        try {
+            // Extract all LLM interaction data
+            const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults);
+            
+            // Create comprehensive export data
+            const exportData = {
+                metadata: {
+                    exportTimestamp: new Date().toISOString(),
+                    benchmarkTimestamp: this.currentResults.startTime,
+                    totalTests: this.currentResults.overallStats?.totalTests || 0,
+                    totalInteractions: detailedInteractions.length,
+                    exportType: 'detailed_llm_interactions',
+                    version: '1.0.0'
+                },
+                
+                // Summary statistics
+                summary: {
+                    totalInteractions: detailedInteractions.length,
+                    successfulInteractions: detailedInteractions.filter(i => !i.analysis?.isError).length,
+                    failedInteractions: detailedInteractions.filter(i => i.analysis?.isError).length,
+                    averageResponseTime: this.calculateAverageResponseTime(detailedInteractions),
+                    totalConsoleLogs: detailedInteractions.reduce((sum, i) => sum + (i.detailedLogs?.totalLogs || 0), 0)
+                },
+                
+                // Complete interaction data
+                interactions: detailedInteractions,
+                
+                // Benchmark results for context
+                benchmarkResults: this.currentResults
+            };
+
+            // Create and download JSON file
+            const jsonString = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'llm-interactions-detailed-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log('📤 Detailed LLM interactions exported');
+            
+            // Also offer HTML report export
+            this.exportDetailedHTMLReport(exportData);
+            
+        } catch (error) {
+            console.error('Failed to export detailed interactions:', error);
+            alert('Failed to export detailed interactions: ' + error.message);
+        }
+    }
+
+    /**
+     * Extract all LLM interaction data from benchmark results
+     */
+    extractAllLLMInteractionData(results) {
+        const interactions = [];
+        
+        if (results.testSuiteResults) {
+            results.testSuiteResults.forEach(suite => {
+                if (suite.testResults) {
+                    suite.testResults.forEach(test => {
+                        if (test.llmInteractionData) {
+                            interactions.push({
+                                ...test.llmInteractionData,
+                                testInfo: {
+                                    testId: test.testId,
+                                    testName: test.testName,
+                                    suiteId: test.suiteId,
+                                    score: test.score,
+                                    success: test.success,
+                                    duration: test.duration,
+                                    status: test.status
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+        
+        return interactions;
+    }
+
+    /**
+     * Calculate average response time from interactions
+     */
+    calculateAverageResponseTime(interactions) {
+        const responseTimes = interactions
+            .map(i => i.response?.responseTime)
+            .filter(time => time && time > 0);
+        
+        if (responseTimes.length === 0) return 0;
+        
+        return responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+    }
+
+    /**
+     * Export detailed HTML report with LLM interactions
+     */
+    exportDetailedHTMLReport(exportData) {
+        try {
+            const htmlContent = this.generateDetailedHTMLReport(exportData);
+            
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'llm-interactions-report-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log('📤 Detailed HTML report exported');
+            
+        } catch (error) {
+            console.error('Failed to export HTML report:', error);
+        }
+    }
+
+    /**
+     * Generate detailed HTML report with complete LLM interaction data
+     */
+    generateDetailedHTMLReport(exportData) {
+        return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed LLM Interaction Report</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 15px; }
+        h2 { color: #34495e; border-bottom: 1px solid #bdc3c7; padding-bottom: 8px; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
+        .summary-card h3 { margin: 0 0 10px 0; font-size: 14px; }
+        .summary-card .value { font-size: 24px; font-weight: bold; }
+        .interaction { border: 1px solid #ddd; border-radius: 8px; margin: 20px 0; overflow: hidden; }
+        .interaction-header { background: #34495e; color: white; padding: 15px; }
+        .interaction-content { padding: 20px; }
+        .section { margin-bottom: 20px; padding: 15px; border-radius: 6px; }
+        .request-section { background: #e3f2fd; border-left: 4px solid #2196f3; }
+        .response-section { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        .thinking-section { background: #f3e5f5; border-left: 4px solid #9c27b0; }
+        .debug-section { background: #fff3e0; border-left: 4px solid #ff9800; }
+        .error-section { background: #ffebee; border-left: 4px solid #f44336; }
+        pre { background: #f8f9fa; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; border: 1px solid #dee2e6; }
+        .metric { display: inline-block; margin: 5px 10px; padding: 5px 10px; background: #ecf0f1; border-radius: 4px; font-size: 12px; }
+        details { margin: 10px 0; }
+        summary { cursor: pointer; font-weight: bold; padding: 8px; background: #f8f9fa; border-radius: 4px; }
+        .log-entry { background: #2c3e50; color: #ecf0f1; padding: 8px; margin: 4px 0; border-radius: 4px; font-family: monospace; font-size: 11px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Detailed LLM Interaction Report</h1>
+        <p><strong>Generated:</strong> ${exportData.metadata.exportTimestamp}</p>
+        <p><strong>Benchmark Date:</strong> ${new Date(exportData.metadata.benchmarkTimestamp).toLocaleString()}</p>
+        
+        <div class="summary">
+            <div class="summary-card">
+                <h3>Total Interactions</h3>
+                <div class="value">${exportData.summary.totalInteractions}</div>
+            </div>
+            <div class="summary-card">
+                <h3>Successful</h3>
+                <div class="value">${exportData.summary.successfulInteractions}</div>
+            </div>
+            <div class="summary-card">
+                <h3>Failed</h3>
+                <div class="value">${exportData.summary.failedInteractions}</div>
+            </div>
+            <div class="summary-card">
+                <h3>Avg Response Time</h3>
+                <div class="value">${Math.round(exportData.summary.averageResponseTime)}ms</div>
+            </div>
+            <div class="summary-card">
+                <h3>Console Logs</h3>
+                <div class="value">${exportData.summary.totalConsoleLogs}</div>
+            </div>
+        </div>
+        
+        <h2>📋 Detailed Interactions</h2>
+        
+        ${exportData.interactions.map(interaction => `
+            <div class="interaction">
+                <div class="interaction-header">
+                    <h3 style="margin: 0;">🧪 ${interaction.testInfo?.testName || interaction.testName}</h3>
+                    <div style="font-size: 12px; opacity: 0.9;">
+                        Test ID: ${interaction.testInfo?.testId || interaction.testId} | 
+                        Request ID: ${interaction.request?.requestId || 'N/A'} | 
+                        Score: ${interaction.testInfo?.score || 'N/A'}/${interaction.testInfo?.maxScore || 100}
+                    </div>
+                </div>
+                
+                <div class="interaction-content">
+                    <!-- Request Section -->
+                    <div class="section request-section">
+                        <h4>📤 Request Information</h4>
+                        <div class="metric">Provider: ${interaction.request?.provider || 'N/A'}</div>
+                        <div class="metric">Model: ${interaction.request?.model || 'N/A'}</div>
+                        <div class="metric">Temperature: ${interaction.request?.temperature || 'N/A'}</div>
+                        <div class="metric">Max Tokens: ${interaction.request?.maxTokens || 'N/A'}</div>
+                        <div class="metric">Timeout: ${interaction.request?.timeout ? (interaction.request.timeout/1000) + 's' : 'N/A'}</div>
+                        
+                        <details>
+                            <summary>📝 Full Prompt</summary>
+                            <pre>${interaction.request?.fullPrompt || interaction.request?.instruction || 'Not available'}</pre>
+                        </details>
+                    </div>
+                    
+                    <!-- Response Section -->
+                    <div class="section response-section">
+                        <h4>📥 Response Information</h4>
+                        <div class="metric">Response Time: ${interaction.response?.responseTime || 0}ms</div>
+                        <div class="metric">Length: ${interaction.response?.rawResponse?.length || 0} chars</div>
+                        <div class="metric">Function Calls: ${interaction.response?.functionCalls?.length || 0}</div>
+                        <div class="metric">Tokens: ${interaction.response?.tokenUsage?.totalTokens || 0}</div>
+                        
+                        <details>
+                            <summary>🗨️ Raw Response</summary>
+                            <pre>${interaction.response?.rawResponse || 'Not available'}</pre>
+                        </details>
+                    </div>
+                    
+                    <!-- Thinking Process -->
+                    ${interaction.detailedLogs?.thinkingProcess?.thinkingContent ? `
+                    <div class="section thinking-section">
+                        <h4>🧠 LLM Thinking Process</h4>
+                        <pre>${interaction.detailedLogs.thinkingProcess.thinkingContent}</pre>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Debug Information -->
+                    ${interaction.detailedLogs?.llmRawResponse?.sectionFound ? `
+                    <div class="section debug-section">
+                        <h4>🔍 Debug Information</h4>
+                        <div class="metric">Response Type: ${interaction.detailedLogs.llmRawResponse.responseType || 'N/A'}</div>
+                        <div class="metric">Original Length: ${interaction.detailedLogs.llmRawResponse.responseLength || 'N/A'}</div>
+                        <div class="metric">Trimmed Length: ${interaction.detailedLogs.llmRawResponse.trimmedLength || 'N/A'}</div>
+                        
+                        ${interaction.detailedLogs.llmRawResponse.hexDump ? `
+                        <details>
+                            <summary>🔢 Hex Dump</summary>
+                            <pre>${interaction.detailedLogs.llmRawResponse.hexDump}</pre>
+                        </details>
+                        ` : ''}
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Error Information -->
+                    ${interaction.analysis?.isError ? `
+                    <div class="section error-section">
+                        <h4>❌ Error Information</h4>
+                        <div class="metric">Error Type: ${interaction.analysis.errorType || 'Unknown'}</div>
+                        <div class="metric">Error Message: ${interaction.analysis.errorMessage || 'No details'}</div>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Complete Console Logs -->
+                    ${interaction.detailedLogs?.logs ? `
+                    <details>
+                        <summary>📜 Complete Console Logs (${interaction.detailedLogs.totalLogs} entries)</summary>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            ${interaction.detailedLogs.logs.map(log => `
+                                <div class="log-entry">
+                                    <div style="font-size: 10px; color: #bdc3c7;">[${log.timestamp}]</div>
+                                    <pre style="margin: 2px 0; color: #ecf0f1;">${log.message}</pre>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </details>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('')}
+        
+        <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3>📊 Export Information</h3>
+            <p><strong>Export Timestamp:</strong> ${exportData.metadata.exportTimestamp}</p>
+            <p><strong>Total Interactions:</strong> ${exportData.summary.totalInteractions}</p>
+            <p><strong>Total Console Logs:</strong> ${exportData.summary.totalConsoleLogs}</p>
+            <p><strong>Average Response Time:</strong> ${Math.round(exportData.summary.averageResponseTime)}ms</p>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+    }
+
+    /**
+     * Export detailed HTML report
+     */
+    exportDetailedHTMLReport(exportData) {
+        try {
+            const htmlContent = this.generateDetailedHTMLReport(exportData);
+            
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'llm-interactions-report-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log('📤 Detailed HTML report exported');
+            
+        } catch (error) {
+            console.error('Failed to export HTML report:', error);
+        }
     }
 
     /**
@@ -699,6 +1034,10 @@ class BenchmarkUI {
                                 <summary style="cursor: pointer; font-weight: bold; color: #2980b9;">📝 Full Prompt (Click to expand)</summary>
                                 <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${requestData.fullPrompt || requestData.instruction || 'Not available'}</pre>
                             </details>
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; font-weight: bold; color: #8e44ad;">🔧 System Prompt (Click to expand)</summary>
+                                <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${requestData.systemPrompt || 'Not available'}</pre>
+                            </details>
                         </div>
                     </div>
                     
@@ -729,6 +1068,9 @@ class BenchmarkUI {
                                 <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${responseData.processedResponse}</pre>
                             </details>
                             ` : ''}
+                            
+                            <!-- ENHANCED: Add detailed debug information from Console logs -->
+                            ${interaction.detailedLogs ? this.generateDetailedLogsDisplay(interaction.detailedLogs) : ''}
                         </div>
                     </div>
                     
@@ -773,6 +1115,125 @@ class BenchmarkUI {
                         </div>
                     </div>
                 </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Generate detailed logs display from captured Console output
+     */
+    generateDetailedLogsDisplay(detailedLogs) {
+        if (!detailedLogs || !detailedLogs.logs) {
+            return '';
+        }
+
+        return `
+            <div style="margin-top: 15px; border-top: 1px solid #ddd; padding-top: 15px;">
+                <h6 style="color: #2c3e50; margin-bottom: 10px;">🔍 Detailed Console Logs (${detailedLogs.totalLogs} entries)</h6>
+                
+                <!-- Thinking Process -->
+                ${detailedLogs.thinkingProcess?.thinkingContent ? `
+                <details style="margin-bottom: 10px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #9b59b6;">🧠 LLM Thinking Process (Click to expand)</summary>
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
+                        <pre style="background: #fff; padding: 10px; border-radius: 4px; font-size: 11px; white-space: pre-wrap; border: 1px solid #e9ecef;">${detailedLogs.thinkingProcess.thinkingContent}</pre>
+                    </div>
+                </details>
+                ` : ''}
+                
+                <!-- Raw Response Debug Info -->
+                ${detailedLogs.llmRawResponse?.sectionFound ? `
+                <details style="margin-bottom: 10px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #17a2b8;">📊 Raw Response Debug Info (Click to expand)</summary>
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                            <div><strong>Type:</strong> ${detailedLogs.llmRawResponse.responseType || 'N/A'}</div>
+                            <div><strong>Length:</strong> ${detailedLogs.llmRawResponse.responseLength || 'N/A'}</div>
+                            <div><strong>Empty:</strong> ${detailedLogs.llmRawResponse.isEmpty || 'N/A'}</div>
+                            <div><strong>Undefined:</strong> ${detailedLogs.llmRawResponse.isUndefined || 'N/A'}</div>
+                        </div>
+                        ${detailedLogs.llmRawResponse.firstChars ? `
+                        <div style="margin-bottom: 8px;">
+                            <strong>First 100 chars:</strong>
+                            <pre style="background: #fff; padding: 8px; border-radius: 4px; font-size: 10px; border: 1px solid #e9ecef;">${detailedLogs.llmRawResponse.firstChars}</pre>
+                        </div>
+                        ` : ''}
+                        ${detailedLogs.llmRawResponse.hexDump ? `
+                        <div style="margin-bottom: 8px;">
+                            <strong>Hex Dump (first 50 chars):</strong>
+                            <pre style="background: #fff; padding: 8px; border-radius: 4px; font-size: 10px; font-family: monospace; border: 1px solid #e9ecef;">${detailedLogs.llmRawResponse.hexDump}</pre>
+                        </div>
+                        ` : ''}
+                    </div>
+                </details>
+                ` : ''}
+                
+                <!-- Tool Call History -->
+                ${detailedLogs.toolCallHistory?.toolCallRounds.length > 0 ? `
+                <details style="margin-bottom: 10px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #28a745;">🔧 Function Call Rounds (Click to expand)</summary>
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
+                        ${detailedLogs.toolCallHistory.toolCallRounds.map(round => `
+                            <div style="background: #fff; padding: 8px; margin: 5px 0; border-radius: 4px; border-left: 3px solid #28a745;">
+                                <strong>Round ${round.current}/${round.total}</strong> - ${round.timestamp}
+                            </div>
+                        `).join('')}
+                        
+                        ${detailedLogs.toolCallHistory.skippedTools.length > 0 ? `
+                        <div style="margin-top: 10px;">
+                            <strong>Skipped Tools:</strong> ${detailedLogs.toolCallHistory.skippedTools.join(', ')}
+                        </div>
+                        ` : ''}
+                    </div>
+                </details>
+                ` : ''}
+                
+                <!-- Conversation History Debug -->
+                ${detailedLogs.conversationHistory?.historyEntries.length > 0 ? `
+                <details style="margin-bottom: 10px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #6f42c1;">💬 Conversation History Debug (Click to expand)</summary>
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
+                        <div style="margin-bottom: 10px;"><strong>Total History Length:</strong> ${detailedLogs.conversationHistory.historyLength || 'N/A'}</div>
+                        ${detailedLogs.conversationHistory.historyEntries.map((entry, index) => `
+                            <div style="background: #fff; padding: 8px; margin: 5px 0; border-radius: 4px; border-left: 3px solid ${entry.role === 'user' ? '#007bff' : entry.role === 'assistant' ? '#28a745' : '#6c757d'};">
+                                <strong>History[${entry.index}]</strong> - Role: ${entry.role}, Length: ${entry.contentLength} chars
+                                ${detailedLogs.conversationHistory.contentPreviews[index] ? `
+                                <div style="font-size: 10px; color: #6c757d; margin-top: 4px; font-style: italic;">
+                                    Preview: ${detailedLogs.conversationHistory.contentPreviews[index]}
+                                </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>
+                ` : ''}
+                
+                <!-- Parse Debug Information -->
+                ${detailedLogs.parseDebugInfo?.parseSteps.length > 0 ? `
+                <details style="margin-bottom: 10px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #dc3545;">🔍 Response Parse Debug (Click to expand)</summary>
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
+                        ${detailedLogs.parseDebugInfo.parseSteps.map(step => `
+                            <div style="background: #fff; padding: 6px; margin: 3px 0; border-radius: 3px; font-size: 10px; font-family: monospace;">
+                                ${step}
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>
+                ` : ''}
+                
+                <!-- Complete Console Log Dump -->
+                <details style="margin-bottom: 10px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #fd7e14;">📜 Complete Console Log Dump (Click to expand)</summary>
+                    <div style="background: #2c3e50; color: #ecf0f1; border-radius: 4px; padding: 12px; margin-top: 8px; max-height: 400px; overflow-y: auto;">
+                        ${detailedLogs.logs.map(log => `
+                            <div style="margin-bottom: 8px; padding: 6px; background: rgba(255,255,255,0.1); border-radius: 3px;">
+                                <div style="font-size: 10px; color: #bdc3c7;">[${log.timestamp}]</div>
+                                <pre style="margin: 4px 0; font-size: 11px; white-space: pre-wrap;">${log.message}</pre>
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>
             </div>
         `;
     }
@@ -1082,6 +1543,7 @@ class BenchmarkUI {
                 <div class="dropdown-item" onclick="benchmarkApp.newBenchmark()">🆕 New Benchmark</div>
                 <div class="dropdown-item" onclick="benchmarkApp.saveBenchmark()">💾 Save Results</div>
                 <div class="dropdown-item" onclick="benchmarkApp.exportResults()">📤 Export Results</div>
+                <div class="dropdown-item" onclick="benchmarkApp.exportDetailedLLMInteractions()">🤖 Export LLM Interactions</div>
                 <div class="dropdown-separator"></div>
                 <div class="dropdown-item" onclick="benchmarkApp.closeWindow()">❌ Close</div>
             </div>
@@ -1595,6 +2057,43 @@ class BenchmarkUI {
         window.addEventListener('benchmark-error', (event) => {
             this.onBenchmarkError(event.detail);
         });
+        
+        // Setup export button handlers when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            this.setupExportButtonHandlers();
+        });
+        
+        // If DOM is already loaded, setup immediately
+        if (document.readyState === 'loading') {
+            // DOM is still loading
+        } else {
+            // DOM is already loaded
+            setTimeout(() => this.setupExportButtonHandlers(), 100);
+        }
+    }
+
+    /**
+     * Setup export button event handlers
+     */
+    setupExportButtonHandlers() {
+        // Main window export buttons
+        const exportResultsBtn = document.getElementById('exportResults');
+        const exportLLMBtn = document.getElementById('exportLLMInteractions');
+        
+        if (exportResultsBtn) {
+            exportResultsBtn.addEventListener('click', () => {
+                this.exportMainWindowResults();
+            });
+        }
+        
+        if (exportLLMBtn) {
+            exportLLMBtn.addEventListener('click', () => {
+                this.exportDetailedLLMInteractions();
+            });
+        }
+        
+        // Make UI instance globally available for onclick handlers
+        window.benchmarkUI = this;
     }
 
     /**

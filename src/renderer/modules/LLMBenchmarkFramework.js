@@ -654,23 +654,65 @@ class LLMBenchmarkFramework {
             // Display detailed test process as a simulated tester
             this.displayTestProcess(instruction, options);
             
-            // Use ChatManager's sendToLLM method which handles all the configuration,
-            // function calling, plugin integration, and system prompts automatically
-            const response = await this.chatManager.sendToLLM(instruction);
+            // ENHANCED: Capture detailed LLM interaction by hooking into ChatManager's internal logging
+            const originalConsoleLog = console.log;
+            const capturedLogs = [];
             
-            // Capture response timing
-            const requestEndTime = Date.now();
-            interactionData.response.responseTime = requestEndTime - requestStartTime;
+            // Temporarily override console.log to capture ChatManager's detailed logging
+            console.log = (...args) => {
+                // Capture ChatManager's detailed logs
+                const logString = args.map(arg => 
+                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+                ).join(' ');
+                
+                capturedLogs.push({
+                    timestamp: new Date().toISOString(),
+                    level: 'log',
+                    message: logString,
+                    args: args
+                });
+                
+                // Still call original console.log
+                originalConsoleLog.apply(console, args);
+            };
             
-            console.log(`📥 Received benchmark response:`, response);
-            
-            // Capture detailed response data
-            interactionData.response.rawResponse = response;
-            interactionData.response.processedResponse = this.processResponse(response);
-            
-            // Extract function calls and tool executions
-            interactionData.response.functionCalls = this.extractFunctionCalls(response);
-            interactionData.response.toolExecutions = this.captureToolExecutions();
+            try {
+                // Use ChatManager's sendToLLM method which handles all the configuration,
+                // function calling, plugin integration, and system prompts automatically
+                const response = await this.chatManager.sendToLLM(instruction);
+                
+                // Capture response timing
+                const requestEndTime = Date.now();
+                interactionData.response.responseTime = requestEndTime - requestStartTime;
+                
+                console.log(`📥 Received benchmark response:`, response);
+                
+                // Capture detailed response data
+                interactionData.response.rawResponse = response;
+                interactionData.response.processedResponse = this.processResponse(response);
+                
+                // Extract function calls and tool executions
+                interactionData.response.functionCalls = this.extractFunctionCalls(response);
+                interactionData.response.toolExecutions = this.captureToolExecutions();
+                
+                // CRITICAL ENHANCEMENT: Capture all the detailed ChatManager logs
+                interactionData.detailedLogs = {
+                    totalLogs: capturedLogs.length,
+                    logs: capturedLogs,
+                    
+                    // Extract specific information from logs
+                    llmRawResponse: this.extractLLMRawResponseFromLogs(capturedLogs),
+                    thinkingProcess: this.extractThinkingProcessFromLogs(capturedLogs),
+                    toolCallHistory: this.extractToolCallHistoryFromLogs(capturedLogs),
+                    conversationHistory: this.extractConversationHistoryFromLogs(capturedLogs),
+                    parseDebugInfo: this.extractParseDebugInfoFromLogs(capturedLogs),
+                    functionCallRounds: this.extractFunctionCallRoundsFromLogs(capturedLogs)
+                };
+                
+            } finally {
+                // Restore original console.log
+                console.log = originalConsoleLog;
+            }
             
             // Capture token usage if available
             interactionData.response.tokenUsage = this.captureTokenUsage();
@@ -1694,6 +1736,219 @@ class LLMBenchmarkFramework {
         } catch (error) {
             return null;
         }
+    }
+
+    /**
+     * Extract LLM raw response information from captured logs
+     */
+    extractLLMRawResponseFromLogs(logs) {
+        const rawResponseInfo = {
+            responseType: null,
+            responseLength: null,
+            isEmpty: null,
+            isUndefined: null,
+            trimmedLength: null,
+            firstChars: null,
+            hexDump: null,
+            fullResponse: null
+        };
+        
+        logs.forEach(log => {
+            const msg = log.message;
+            
+            if (msg.includes('=== LLM Raw Response ===')) {
+                rawResponseInfo.sectionFound = true;
+            } else if (msg.includes('Response type:')) {
+                rawResponseInfo.responseType = msg.split('Response type:')[1]?.trim();
+            } else if (msg.includes('Response length:')) {
+                rawResponseInfo.responseLength = msg.split('Response length:')[1]?.trim();
+            } else if (msg.includes('Response is empty string:')) {
+                rawResponseInfo.isEmpty = msg.split('Response is empty string:')[1]?.trim();
+            } else if (msg.includes('Response is undefined:')) {
+                rawResponseInfo.isUndefined = msg.split('Response is undefined:')[1]?.trim();
+            } else if (msg.includes('Response.trim() length:')) {
+                rawResponseInfo.trimmedLength = msg.split('Response.trim() length:')[1]?.trim();
+            } else if (msg.includes('Response characters (first 100):')) {
+                rawResponseInfo.firstChars = msg.split('Response characters (first 100):')[1]?.trim();
+            } else if (msg.includes('Response hex dump (first 50 chars):')) {
+                rawResponseInfo.hexDump = msg.split('Response hex dump (first 50 chars):')[1]?.trim();
+            } else if (msg.includes('Full response:')) {
+                rawResponseInfo.fullResponse = msg.split('Full response:')[1]?.trim();
+            }
+        });
+        
+        return rawResponseInfo;
+    }
+
+    /**
+     * Extract thinking process from captured logs
+     */
+    extractThinkingProcessFromLogs(logs) {
+        const thinkingInfo = {
+            thinkingContent: null,
+            afterTrimContent: null,
+            afterRemovingThinkingTags: null,
+            afterRemovingCodeBlocks: null,
+            parseSteps: []
+        };
+        
+        logs.forEach(log => {
+            const msg = log.message;
+            
+            if (msg.includes('After trim:')) {
+                thinkingInfo.afterTrimContent = msg.split('After trim:')[1]?.trim();
+            } else if (msg.includes('After removing thinking tags:')) {
+                thinkingInfo.afterRemovingThinkingTags = msg.split('After removing thinking tags:')[1]?.trim();
+            } else if (msg.includes('After removing code block markers:')) {
+                thinkingInfo.afterRemovingCodeBlocks = msg.split('After removing code block markers:')[1]?.trim();
+            } else if (msg.includes('parseToolCall DEBUG')) {
+                thinkingInfo.parseSteps.push(msg);
+            }
+        });
+        
+        // Extract thinking content from the raw response
+        if (thinkingInfo.afterTrimContent && thinkingInfo.afterTrimContent.includes('<think>')) {
+            const thinkMatch = thinkingInfo.afterTrimContent.match(/<think>([\s\S]*?)<\/think>/);
+            if (thinkMatch) {
+                thinkingInfo.thinkingContent = thinkMatch[1].trim();
+            }
+        }
+        
+        return thinkingInfo;
+    }
+
+    /**
+     * Extract tool call history from captured logs
+     */
+    extractToolCallHistoryFromLogs(logs) {
+        const toolCallInfo = {
+            executedTools: [],
+            skippedTools: [],
+            toolCallRounds: [],
+            parseResults: []
+        };
+        
+        logs.forEach(log => {
+            const msg = log.message;
+            
+            if (msg.includes('=== FUNCTION CALL ROUND')) {
+                const roundMatch = msg.match(/ROUND (\d+)\/(\d+)/);
+                if (roundMatch) {
+                    toolCallInfo.toolCallRounds.push({
+                        current: parseInt(roundMatch[1]),
+                        total: parseInt(roundMatch[2]),
+                        timestamp: log.timestamp
+                    });
+                }
+            } else if (msg.includes('Skipping already executed tool:')) {
+                const toolName = msg.split('Skipping already executed tool:')[1]?.trim();
+                toolCallInfo.skippedTools.push(toolName);
+            } else if (msg.includes('Already executed tools:')) {
+                // This would be followed by an array log
+            } else if (msg.includes('Parsed tool call result:')) {
+                toolCallInfo.parseResults.push(msg);
+            } else if (msg.includes('Valid tool call found')) {
+                toolCallInfo.parseResults.push(msg);
+            }
+        });
+        
+        return toolCallInfo;
+    }
+
+    /**
+     * Extract conversation history from captured logs
+     */
+    extractConversationHistoryFromLogs(logs) {
+        const conversationInfo = {
+            historyLength: null,
+            historyEntries: [],
+            contentPreviews: []
+        };
+        
+        logs.forEach(log => {
+            const msg = log.message;
+            
+            if (msg.includes('Current conversation history length:')) {
+                conversationInfo.historyLength = msg.split('Current conversation history length:')[1]?.trim();
+            } else if (msg.includes('History[')) {
+                const historyMatch = msg.match(/History\[(\d+)\] Role: (\w+), Content length: (\d+)/);
+                if (historyMatch) {
+                    conversationInfo.historyEntries.push({
+                        index: parseInt(historyMatch[1]),
+                        role: historyMatch[2],
+                        contentLength: parseInt(historyMatch[3])
+                    });
+                }
+            } else if (msg.includes('Content preview:')) {
+                conversationInfo.contentPreviews.push(msg.split('Content preview:')[1]?.trim());
+            }
+        });
+        
+        return conversationInfo;
+    }
+
+    /**
+     * Extract parse debug information from captured logs
+     */
+    extractParseDebugInfoFromLogs(logs) {
+        const parseInfo = {
+            parseSteps: [],
+            jsonParseAttempts: [],
+            directParseResults: [],
+            toolCallDetection: []
+        };
+        
+        logs.forEach(log => {
+            const msg = log.message;
+            
+            if (msg.includes('parseToolCall DEBUG')) {
+                parseInfo.parseSteps.push(msg);
+            } else if (msg.includes('Attempting direct JSON parse')) {
+                parseInfo.jsonParseAttempts.push(msg);
+            } else if (msg.includes('Direct parse successful:')) {
+                parseInfo.directParseResults.push(msg);
+            } else if (msg.includes('Valid tool call found')) {
+                parseInfo.toolCallDetection.push(msg);
+            } else if (msg.includes('Multiple tool calls found:')) {
+                parseInfo.toolCallDetection.push(msg);
+            }
+        });
+        
+        return parseInfo;
+    }
+
+    /**
+     * Extract function call rounds information from captured logs
+     */
+    extractFunctionCallRoundsFromLogs(logs) {
+        const roundsInfo = {
+            totalRounds: 0,
+            roundDetails: [],
+            executionFlow: []
+        };
+        
+        logs.forEach(log => {
+            const msg = log.message;
+            
+            if (msg.includes('=== FUNCTION CALL ROUND')) {
+                const roundMatch = msg.match(/ROUND (\d+)\/(\d+)/);
+                if (roundMatch) {
+                    roundsInfo.totalRounds = Math.max(roundsInfo.totalRounds, parseInt(roundMatch[1]));
+                    roundsInfo.roundDetails.push({
+                        roundNumber: parseInt(roundMatch[1]),
+                        maxRounds: parseInt(roundMatch[2]),
+                        timestamp: log.timestamp
+                    });
+                }
+            } else if (msg.includes('thinking...') || msg.includes('Sending to LLM...')) {
+                roundsInfo.executionFlow.push({
+                    step: msg,
+                    timestamp: log.timestamp
+                });
+            }
+        });
+        
+        return roundsInfo;
     }
 
     /**
