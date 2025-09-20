@@ -432,6 +432,9 @@ class LLMBenchmarkFramework {
             result.actualResult = testResult.actualResult;
             result.details = testResult.details || {};
             result.metrics = testResult.metrics || {};
+            
+            // CRITICAL ENHANCEMENT: Store complete LLM interaction data
+            result.llmInteractionData = testResult.llmInteractionData || null;
 
             // Evaluate the test result
             const evaluation = await this.evaluateTestResult(test, testResult);
@@ -493,18 +496,37 @@ class LLMBenchmarkFramework {
                 }
             };
             
-            const llmResponse = await this.sendTestInstruction(test.instruction, instructionOptions);
+            const llmInteractionResult = await this.sendTestInstruction(test.instruction, instructionOptions);
+            
+            // Handle both old format (string) and new format (object with interactionData)
+            let llmResponse, interactionData;
+            if (typeof llmInteractionResult === 'string') {
+                // Old format - just response string
+                llmResponse = llmInteractionResult;
+                interactionData = null;
+            } else {
+                // New format - response with detailed interaction data
+                llmResponse = llmInteractionResult.response;
+                interactionData = llmInteractionResult.interactionData;
+            }
             
             // Parse and analyze the response
             const actualResult = await this.parseTestResponse(llmResponse, test);
             
-            // Collect metrics
+            // Collect enhanced metrics including interaction data
             const metrics = {
                 responseTime: Date.now() - startTime,
                 responseLength: llmResponse ? llmResponse.length : 0,
                 tokenCount: this.estimateTokenCount(llmResponse),
                 functionCallsCount: this.countFunctionCalls(llmResponse),
-                instructionComplexity: this.calculateInstructionComplexity(test.instruction)
+                instructionComplexity: this.calculateInstructionComplexity(test.instruction),
+                
+                // Enhanced metrics from interaction data
+                llmResponseTime: interactionData?.response?.responseTime || 0,
+                tokenUsage: interactionData?.response?.tokenUsage || {},
+                confidence: interactionData?.analysis?.confidence || null,
+                ambiguity: interactionData?.analysis?.ambiguity || null,
+                contextRelevance: interactionData?.analysis?.contextRelevance || null
             };
 
             return {
@@ -514,7 +536,10 @@ class LLMBenchmarkFramework {
                 details: {
                     instruction: test.instruction,
                     context: context
-                }
+                },
+                
+                // CRITICAL ENHANCEMENT: Include complete LLM interaction data
+                llmInteractionData: interactionData
             };
 
         } finally {
@@ -531,6 +556,7 @@ class LLMBenchmarkFramework {
 
     /**
      * Send test instruction to LLM using ChatManager's configuration and function tools
+     * Enhanced to capture detailed LLM interaction data for comprehensive analysis
      */
     async sendTestInstruction(instruction, options = {}) {
         if (!this.chatManager) {
@@ -542,8 +568,77 @@ class LLMBenchmarkFramework {
             throw new Error('LLM not configured. Please configure an LLM provider first.');
         }
 
+        // Capture detailed LLM interaction data
+        const interactionData = {
+            timestamp: new Date().toISOString(),
+            testId: options.testInfo?.id || 'unknown',
+            testName: options.testInfo?.name || 'Unknown Test',
+            
+            // Request details
+            request: {
+                instruction: instruction,
+                systemPrompt: null, // Will be captured from ChatManager
+                fullPrompt: null,   // Complete prompt sent to LLM
+                provider: null,     // LLM provider used
+                model: null,        // Model name
+                temperature: null,  // Model parameters
+                maxTokens: null,
+                timeout: options.timeout || this.testTimeout,
+                contextLength: 0,   // Length of conversation context
+                availableTools: [], // Available function tools
+                requestId: this.generateRequestId()
+            },
+            
+            // Response details
+            response: {
+                rawResponse: null,          // Complete LLM response
+                processedResponse: null,    // Processed/cleaned response
+                functionCalls: [],          // Detected function calls
+                toolExecutions: [],         // Tool execution results
+                responseTime: 0,            // Time to get response
+                tokenUsage: {               // Token consumption
+                    promptTokens: 0,
+                    completionTokens: 0,
+                    totalTokens: 0
+                },
+                finishReason: null,         // Why LLM stopped generating
+                modelVersion: null          // Actual model version used
+            },
+            
+            // Analysis metadata
+            analysis: {
+                isError: false,
+                errorType: null,
+                errorMessage: null,
+                confidence: null,           // LLM response confidence
+                complexity: null,           // Instruction complexity score
+                ambiguity: null,            // Instruction ambiguity score
+                contextRelevance: null      // Context relevance score
+            }
+        };
+
         try {
             console.log(`📤 Sending benchmark test instruction: ${instruction}`);
+            
+            // Capture request timing
+            const requestStartTime = Date.now();
+            
+            // Get LLM configuration details
+            const llmConfig = this.chatManager.llmConfigManager.getCurrentConfig();
+            if (llmConfig) {
+                interactionData.request.provider = llmConfig.provider;
+                interactionData.request.model = llmConfig.model;
+                interactionData.request.temperature = llmConfig.temperature;
+                interactionData.request.maxTokens = llmConfig.maxTokens;
+            }
+            
+            // Capture system prompt and context
+            interactionData.request.systemPrompt = this.captureSystemPrompt();
+            interactionData.request.contextLength = this.getChatContextLength();
+            interactionData.request.availableTools = this.getAvailableTools();
+            
+            // Build full prompt for logging
+            interactionData.request.fullPrompt = this.buildFullPrompt(instruction);
             
             // Display detailed test process as a simulated tester
             this.displayTestProcess(instruction, options);
@@ -552,25 +647,71 @@ class LLMBenchmarkFramework {
             // function calling, plugin integration, and system prompts automatically
             const response = await this.chatManager.sendToLLM(instruction);
             
+            // Capture response timing
+            const requestEndTime = Date.now();
+            interactionData.response.responseTime = requestEndTime - requestStartTime;
+            
             console.log(`📥 Received benchmark response:`, response);
+            
+            // Capture detailed response data
+            interactionData.response.rawResponse = response;
+            interactionData.response.processedResponse = this.processResponse(response);
+            
+            // Extract function calls and tool executions
+            interactionData.response.functionCalls = this.extractFunctionCalls(response);
+            interactionData.response.toolExecutions = this.captureToolExecutions();
+            
+            // Capture token usage if available
+            interactionData.response.tokenUsage = this.captureTokenUsage();
+            
+            // Analyze response quality
+            interactionData.analysis = this.analyzeResponseQuality(instruction, response);
             
             // CRITICAL FIX: Check if response indicates LLM failure
             if (this.isLLMErrorResponse(response)) {
                 console.log('❌ LLM error response detected');
                 const errorMessage = `LLM Error Response: ${response}`;
+                
+                // Update interaction data with error info
+                interactionData.analysis.isError = true;
+                interactionData.analysis.errorType = 'llm_error_response';
+                interactionData.analysis.errorMessage = errorMessage;
+                
                 this.displayTestError(new Error(errorMessage), options);
-                throw new Error(errorMessage);
+                
+                // Return interaction data even for errors
+                return {
+                    response: response,
+                    interactionData: interactionData
+                };
             }
             
             // Display response analysis
             this.displayResponseAnalysis(response, options);
             
-            return response;
+            // Return both response and detailed interaction data
+            return {
+                response: response,
+                interactionData: interactionData
+            };
 
         } catch (error) {
             console.error('❌ Benchmark test instruction failed:', error);
+            
+            // Capture error in interaction data
+            interactionData.analysis.isError = true;
+            interactionData.analysis.errorType = 'communication_error';
+            interactionData.analysis.errorMessage = error.message;
+            interactionData.response.responseTime = Date.now() - (interactionData.request.timestamp ? new Date(interactionData.request.timestamp).getTime() : Date.now());
+            
             this.displayTestError(error, options);
-            throw new Error(`LLM communication failed: ${error.message}`);
+            
+            // Return error with interaction data
+            throw {
+                originalError: error,
+                interactionData: interactionData,
+                message: `LLM communication failed: ${error.message}`
+            };
         }
     }
 
@@ -1245,6 +1386,303 @@ class LLMBenchmarkFramework {
                               lowerResponse.includes('please:') && lowerResponse.includes('configure llms');
         
         return hasErrorPattern || isErrorMessage;
+    }
+
+    /**
+     * Generate unique request ID for tracking
+     */
+    generateRequestId() {
+        return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    /**
+     * Capture system prompt from ChatManager
+     */
+    captureSystemPrompt() {
+        try {
+            // Try to get system prompt from ChatManager
+            if (this.chatManager && this.chatManager.buildSystemMessage) {
+                return this.chatManager.buildSystemMessage();
+            }
+            return 'System prompt not available';
+        } catch (error) {
+            return `Error capturing system prompt: ${error.message}`;
+        }
+    }
+
+    /**
+     * Get current chat context length
+     */
+    getChatContextLength() {
+        try {
+            if (this.chatManager && this.chatManager.configManager) {
+                const history = this.chatManager.configManager.getChatHistory();
+                return history ? history.length : 0;
+            }
+            return 0;
+        } catch (error) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get available tools for the current context
+     */
+    getAvailableTools() {
+        try {
+            if (this.chatManager && this.chatManager.app) {
+                // Try to get available tools from the application
+                const tools = [];
+                
+                // Add genomic analysis tools
+                if (this.chatManager.app.fileManager) {
+                    tools.push('file_operations', 'sequence_analysis');
+                }
+                
+                // Add visualization tools
+                if (this.chatManager.app.visualizationToolsManager) {
+                    tools.push('visualization_tools');
+                }
+                
+                // Add plugin tools
+                if (this.chatManager.app.pluginManager) {
+                    tools.push('plugin_functions');
+                }
+                
+                return tools;
+            }
+            return [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    /**
+     * Build full prompt for logging
+     */
+    buildFullPrompt(instruction) {
+        try {
+            const systemPrompt = this.captureSystemPrompt();
+            return `${systemPrompt}\n\nUser: ${instruction}`;
+        } catch (error) {
+            return instruction;
+        }
+    }
+
+    /**
+     * Process response for analysis
+     */
+    processResponse(response) {
+        try {
+            // Clean and normalize response
+            let processed = response.trim();
+            
+            // Remove thinking tags if present
+            processed = processed.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+            
+            // Extract main content
+            if (processed.includes('```json')) {
+                const jsonMatch = processed.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    processed = jsonMatch[1].trim();
+                }
+            }
+            
+            return processed;
+        } catch (error) {
+            return response;
+        }
+    }
+
+    /**
+     * Capture tool executions from the current session
+     */
+    captureToolExecutions() {
+        try {
+            // This would need to be integrated with ChatManager's tool execution tracking
+            // For now, return empty array as placeholder
+            return [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    /**
+     * Capture token usage information
+     */
+    captureTokenUsage() {
+        try {
+            // This would need to be integrated with LLM provider's token tracking
+            // For now, return default structure
+            return {
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+                note: 'Token usage tracking not implemented for this provider'
+            };
+        } catch (error) {
+            return {
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Analyze response quality and characteristics
+     */
+    analyzeResponseQuality(instruction, response) {
+        try {
+            const analysis = {
+                isError: false,
+                errorType: null,
+                errorMessage: null,
+                confidence: this.calculateResponseConfidence(response),
+                complexity: this.calculateInstructionComplexity(instruction),
+                ambiguity: this.calculateInstructionAmbiguity(instruction),
+                contextRelevance: this.calculateContextRelevance(instruction, response)
+            };
+
+            // Check for error patterns
+            if (this.isLLMErrorResponse(response)) {
+                analysis.isError = true;
+                analysis.errorType = 'llm_error_response';
+                analysis.errorMessage = 'Response contains error patterns';
+            }
+
+            return analysis;
+        } catch (error) {
+            return {
+                isError: true,
+                errorType: 'analysis_error',
+                errorMessage: error.message,
+                confidence: null,
+                complexity: null,
+                ambiguity: null,
+                contextRelevance: null
+            };
+        }
+    }
+
+    /**
+     * Calculate response confidence score
+     */
+    calculateResponseConfidence(response) {
+        try {
+            let confidence = 50; // Base confidence
+            
+            // Higher confidence for JSON responses
+            if (response.includes('{') && response.includes('}')) {
+                confidence += 20;
+            }
+            
+            // Higher confidence for function calls
+            if (response.includes('tool_name') && response.includes('parameters')) {
+                confidence += 20;
+            }
+            
+            // Lower confidence for error messages
+            if (this.isLLMErrorResponse(response)) {
+                confidence = Math.max(10, confidence - 40);
+            }
+            
+            // Lower confidence for very short responses
+            if (response.length < 20) {
+                confidence -= 15;
+            }
+            
+            return Math.max(0, Math.min(100, confidence));
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Calculate instruction complexity score
+     */
+    calculateInstructionComplexity(instruction) {
+        try {
+            let complexity = 0;
+            
+            // Base complexity from length
+            complexity += Math.min(30, instruction.length / 20);
+            
+            // Technical terms increase complexity
+            const technicalTerms = ['gene', 'protein', 'sequence', 'analysis', 'search', 'navigate', 'position'];
+            const foundTerms = technicalTerms.filter(term => instruction.toLowerCase().includes(term));
+            complexity += foundTerms.length * 5;
+            
+            // Multiple actions increase complexity
+            const actionWords = ['and', 'then', 'also', 'additionally', 'furthermore'];
+            const foundActions = actionWords.filter(word => instruction.toLowerCase().includes(word));
+            complexity += foundActions.length * 10;
+            
+            return Math.max(0, Math.min(100, complexity));
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Calculate instruction ambiguity score
+     */
+    calculateInstructionAmbiguity(instruction) {
+        try {
+            let ambiguity = 0;
+            
+            // Vague terms increase ambiguity
+            const vagueTerms = ['something', 'anything', 'maybe', 'perhaps', 'might', 'could', 'some'];
+            const foundVague = vagueTerms.filter(term => instruction.toLowerCase().includes(term));
+            ambiguity += foundVague.length * 15;
+            
+            // Questions increase ambiguity
+            if (instruction.includes('?')) {
+                ambiguity += 10;
+            }
+            
+            // Lack of specific parameters increases ambiguity
+            if (!instruction.match(/["'][^"']+["']/) && !instruction.match(/\d+/)) {
+                ambiguity += 20;
+            }
+            
+            return Math.max(0, Math.min(100, ambiguity));
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Calculate context relevance score
+     */
+    calculateContextRelevance(instruction, response) {
+        try {
+            let relevance = 50; // Base relevance
+            
+            // Check if response addresses the instruction
+            const instructionWords = instruction.toLowerCase().split(/\s+/);
+            const responseWords = response.toLowerCase().split(/\s+/);
+            
+            const commonWords = instructionWords.filter(word => 
+                word.length > 3 && responseWords.includes(word)
+            );
+            
+            relevance += Math.min(30, commonWords.length * 5);
+            
+            // Check for function call relevance
+            if (instruction.toLowerCase().includes('search') && response.includes('search_')) {
+                relevance += 20;
+            }
+            
+            if (instruction.toLowerCase().includes('navigate') && response.includes('navigate_')) {
+                relevance += 20;
+            }
+            
+            return Math.max(0, Math.min(100, relevance));
+        } catch (error) {
+            return null;
+        }
     }
 
     /**

@@ -18,6 +18,7 @@ class BenchmarkReportGenerator {
         const reportType = options.type || 'detailed';
         const includeCharts = options.includeCharts !== false;
         const includeRawData = options.includeRawData === true;
+        const includeLLMInteractions = options.includeLLMInteractions !== false; // Default to true
         
         const report = {
             metadata: this.generateMetadata(benchmarkResults, options),
@@ -29,6 +30,14 @@ class BenchmarkReportGenerator {
             recommendations: this.generateRecommendations(benchmarkResults),
             appendices: this.generateAppendices(benchmarkResults, includeRawData)
         };
+
+        // CRITICAL ENHANCEMENT: Add comprehensive LLM interaction analysis
+        if (includeLLMInteractions) {
+            report.llmInteractionAnalysis = this.generateLLMInteractionAnalysis(benchmarkResults);
+            report.conversationFlows = this.generateConversationFlows(benchmarkResults);
+            report.promptAnalysis = this.generatePromptAnalysis(benchmarkResults);
+            report.responsePatterns = this.generateResponsePatterns(benchmarkResults);
+        }
 
         if (includeCharts) {
             report.charts = this.generateChartData(benchmarkResults);
@@ -798,6 +807,279 @@ class BenchmarkReportGenerator {
     renderStatisticalAnalysis(analysis) { return '<p>Statistical analysis content</p>'; }
     renderErrorAnalysis(analysis) { return '<p>Error analysis content</p>'; }
     renderRecommendations(recommendations) { return '<p>Recommendations content</p>'; }
+
+    /**
+     * CRITICAL ENHANCEMENT: Generate comprehensive LLM interaction analysis
+     */
+    generateLLMInteractionAnalysis(benchmarkResults) {
+        const analysis = {
+            summary: {
+                totalInteractions: 0,
+                successfulInteractions: 0,
+                failedInteractions: 0,
+                averageResponseTime: 0,
+                totalTokensUsed: 0,
+                averageConfidence: 0
+            },
+            providerAnalysis: {},
+            modelAnalysis: {},
+            timeoutAnalysis: {},
+            errorPatterns: {},
+            responseQualityDistribution: {}
+        };
+
+        const allInteractions = this.extractAllLLMInteractions(benchmarkResults);
+        analysis.summary.totalInteractions = allInteractions.length;
+
+        if (allInteractions.length === 0) {
+            return analysis;
+        }
+
+        // Analyze interactions by provider and model
+        const providerStats = {};
+        const modelStats = {};
+        let totalResponseTime = 0;
+        let totalTokens = 0;
+        let totalConfidence = 0;
+        let confidenceCount = 0;
+
+        allInteractions.forEach(interaction => {
+            const provider = interaction.request?.provider || 'unknown';
+            const model = interaction.request?.model || 'unknown';
+            
+            // Provider analysis
+            if (!providerStats[provider]) {
+                providerStats[provider] = {
+                    interactions: 0,
+                    successful: 0,
+                    failed: 0,
+                    totalResponseTime: 0,
+                    totalTokens: 0
+                };
+            }
+            
+            providerStats[provider].interactions++;
+            if (!interaction.analysis?.isError) {
+                providerStats[provider].successful++;
+                analysis.summary.successfulInteractions++;
+            } else {
+                providerStats[provider].failed++;
+                analysis.summary.failedInteractions++;
+            }
+            
+            if (interaction.response?.responseTime) {
+                providerStats[provider].totalResponseTime += interaction.response.responseTime;
+                totalResponseTime += interaction.response.responseTime;
+            }
+            
+            if (interaction.response?.tokenUsage?.totalTokens) {
+                providerStats[provider].totalTokens += interaction.response.tokenUsage.totalTokens;
+                totalTokens += interaction.response.tokenUsage.totalTokens;
+            }
+            
+            // Model analysis
+            if (!modelStats[model]) {
+                modelStats[model] = {
+                    interactions: 0,
+                    averageConfidence: 0,
+                    averageComplexity: 0,
+                    averageAmbiguity: 0
+                };
+            }
+            
+            modelStats[model].interactions++;
+            
+            if (interaction.analysis?.confidence !== null) {
+                totalConfidence += interaction.analysis.confidence;
+                confidenceCount++;
+            }
+        });
+
+        // Calculate averages
+        analysis.summary.averageResponseTime = totalResponseTime / allInteractions.length;
+        analysis.summary.totalTokensUsed = totalTokens;
+        analysis.summary.averageConfidence = confidenceCount > 0 ? totalConfidence / confidenceCount : 0;
+
+        analysis.providerAnalysis = providerStats;
+        analysis.modelAnalysis = modelStats;
+
+        return analysis;
+    }
+
+    /**
+     * Extract all LLM interactions from benchmark results
+     */
+    extractAllLLMInteractions(benchmarkResults) {
+        const interactions = [];
+        
+        if (benchmarkResults.testSuiteResults) {
+            benchmarkResults.testSuiteResults.forEach(suiteResult => {
+                if (suiteResult.testResults) {
+                    suiteResult.testResults.forEach(testResult => {
+                        if (testResult.llmInteractionData) {
+                            interactions.push(testResult.llmInteractionData);
+                        }
+                    });
+                }
+            });
+        }
+        
+        return interactions;
+    }
+
+    /**
+     * Generate conversation flows analysis
+     */
+    generateConversationFlows(benchmarkResults) {
+        const flows = {
+            totalConversations: 0,
+            averageLength: 0,
+            successfulFlows: 0,
+            interruptedFlows: 0,
+            flowPatterns: {},
+            commonFailurePoints: []
+        };
+
+        const allInteractions = this.extractAllLLMInteractions(benchmarkResults);
+        
+        // Group interactions by test to analyze conversation flows
+        const conversationsByTest = {};
+        allInteractions.forEach(interaction => {
+            const testId = interaction.testId;
+            if (!conversationsByTest[testId]) {
+                conversationsByTest[testId] = [];
+            }
+            conversationsByTest[testId].push(interaction);
+        });
+
+        flows.totalConversations = Object.keys(conversationsByTest).length;
+        
+        // Analyze each conversation flow
+        Object.values(conversationsByTest).forEach(conversation => {
+            const isSuccessful = conversation.every(interaction => !interaction.analysis?.isError);
+            if (isSuccessful) {
+                flows.successfulFlows++;
+            } else {
+                flows.interruptedFlows++;
+            }
+        });
+
+        return flows;
+    }
+
+    /**
+     * Generate prompt analysis
+     */
+    generatePromptAnalysis(benchmarkResults) {
+        const analysis = {
+            promptStats: {
+                averageLength: 0,
+                maxLength: 0,
+                minLength: 0,
+                commonPatterns: []
+            },
+            systemPromptAnalysis: {
+                length: 0,
+                toolsAvailable: 0,
+                contextProvided: false
+            },
+            instructionAnalysis: {
+                averageComplexity: 0,
+                averageAmbiguity: 0,
+                mostComplexInstructions: [],
+                mostAmbiguousInstructions: []
+            }
+        };
+
+        const allInteractions = this.extractAllLLMInteractions(benchmarkResults);
+        
+        if (allInteractions.length === 0) {
+            return analysis;
+        }
+
+        // Analyze prompts
+        const promptLengths = [];
+        let totalComplexity = 0;
+        let totalAmbiguity = 0;
+        let complexityCount = 0;
+        let ambiguityCount = 0;
+
+        allInteractions.forEach(interaction => {
+            if (interaction.request?.fullPrompt) {
+                promptLengths.push(interaction.request.fullPrompt.length);
+            }
+            
+            if (interaction.analysis?.complexity !== null) {
+                totalComplexity += interaction.analysis.complexity;
+                complexityCount++;
+            }
+            
+            if (interaction.analysis?.ambiguity !== null) {
+                totalAmbiguity += interaction.analysis.ambiguity;
+                ambiguityCount++;
+            }
+        });
+
+        if (promptLengths.length > 0) {
+            analysis.promptStats.averageLength = promptLengths.reduce((a, b) => a + b, 0) / promptLengths.length;
+            analysis.promptStats.maxLength = Math.max(...promptLengths);
+            analysis.promptStats.minLength = Math.min(...promptLengths);
+        }
+
+        analysis.instructionAnalysis.averageComplexity = complexityCount > 0 ? totalComplexity / complexityCount : 0;
+        analysis.instructionAnalysis.averageAmbiguity = ambiguityCount > 0 ? totalAmbiguity / ambiguityCount : 0;
+
+        return analysis;
+    }
+
+    /**
+     * Generate response patterns analysis
+     */
+    generateResponsePatterns(benchmarkResults) {
+        const patterns = {
+            responseTypes: {
+                functionCalls: 0,
+                textResponses: 0,
+                errorResponses: 0,
+                mixedResponses: 0
+            },
+            commonResponsePatterns: [],
+            successfulResponsePatterns: [],
+            failedResponsePatterns: [],
+            responseQualityDistribution: {
+                highConfidence: 0,
+                mediumConfidence: 0,
+                lowConfidence: 0
+            }
+        };
+
+        const allInteractions = this.extractAllLLMInteractions(benchmarkResults);
+        
+        allInteractions.forEach(interaction => {
+            const response = interaction.response?.rawResponse || '';
+            const confidence = interaction.analysis?.confidence || 0;
+            
+            // Classify response types
+            if (response.includes('tool_name') && response.includes('parameters')) {
+                patterns.responseTypes.functionCalls++;
+            } else if (interaction.analysis?.isError) {
+                patterns.responseTypes.errorResponses++;
+            } else {
+                patterns.responseTypes.textResponses++;
+            }
+            
+            // Classify confidence levels
+            if (confidence >= 80) {
+                patterns.responseQualityDistribution.highConfidence++;
+            } else if (confidence >= 50) {
+                patterns.responseQualityDistribution.mediumConfidence++;
+            } else {
+                patterns.responseQualityDistribution.lowConfidence++;
+            }
+        });
+
+        return patterns;
+    }
 }
 
 // Make available globally

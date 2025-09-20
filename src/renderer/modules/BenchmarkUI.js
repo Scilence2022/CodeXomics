@@ -407,6 +407,10 @@ class BenchmarkUI {
                                     <span>📋 Include Raw Data</span>
                                 </label>
                                 <label class="form-item">
+                                    <input type="checkbox" id="includeLLMInteractions" checked>
+                                    <span>🤖 Include LLM Interaction Details</span>
+                                </label>
+                                <label class="form-item">
                                     <input type="checkbox" id="stopOnError">
                                     <span>🛑 Stop on Error</span>
                                 </label>
@@ -649,6 +653,171 @@ class BenchmarkUI {
     }
 
     /**
+     * Generate detailed LLM interaction display for test results
+     */
+    generateLLMInteractionDisplay(testResult) {
+        if (!testResult.llmInteractionData) {
+            return '<div class="llm-interaction-missing">❌ No LLM interaction data available</div>';
+        }
+
+        const interaction = testResult.llmInteractionData;
+        const requestData = interaction.request || {};
+        const responseData = interaction.response || {};
+        const analysisData = interaction.analysis || {};
+
+        return `
+            <div class="llm-interaction-details" style="border: 1px solid #ddd; border-radius: 8px; margin: 10px 0; background: #f9f9f9;">
+                <div class="interaction-header" style="background: #34495e; color: white; padding: 10px; border-radius: 8px 8px 0 0;">
+                    <h4 style="margin: 0; font-size: 14px;">🤖 LLM Interaction Details</h4>
+                    <div style="font-size: 11px; opacity: 0.8;">
+                        Request ID: ${requestData.requestId || 'N/A'} | 
+                        Timestamp: ${interaction.timestamp || 'N/A'}
+                    </div>
+                </div>
+                
+                <div class="interaction-content" style="padding: 15px;">
+                    <!-- Request Information -->
+                    <div class="request-section" style="margin-bottom: 20px;">
+                        <h5 style="color: #2c3e50; margin-bottom: 10px; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px;">
+                            📤 Request Information
+                        </h5>
+                        <div class="request-details" style="background: white; padding: 10px; border-radius: 4px; border-left: 4px solid #3498db;">
+                            <div style="margin-bottom: 8px;">
+                                <strong>Provider:</strong> ${requestData.provider || 'Not specified'} |
+                                <strong>Model:</strong> ${requestData.model || 'Not specified'} |
+                                <strong>Timeout:</strong> ${requestData.timeout ? (requestData.timeout/1000) + 's' : 'N/A'}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <strong>Temperature:</strong> ${requestData.temperature || 'N/A'} |
+                                <strong>Max Tokens:</strong> ${requestData.maxTokens || 'N/A'} |
+                                <strong>Context Length:</strong> ${requestData.contextLength || 0}
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <strong>Available Tools:</strong> ${requestData.availableTools ? requestData.availableTools.join(', ') : 'None'}
+                            </div>
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; font-weight: bold; color: #2980b9;">📝 Full Prompt (Click to expand)</summary>
+                                <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${requestData.fullPrompt || requestData.instruction || 'Not available'}</pre>
+                            </details>
+                        </div>
+                    </div>
+                    
+                    <!-- Response Information -->
+                    <div class="response-section" style="margin-bottom: 20px;">
+                        <h5 style="color: #2c3e50; margin-bottom: 10px; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px;">
+                            📥 Response Information
+                        </h5>
+                        <div class="response-details" style="background: white; padding: 10px; border-radius: 4px; border-left: 4px solid #27ae60;">
+                            <div style="margin-bottom: 8px;">
+                                <strong>Response Time:</strong> ${responseData.responseTime || 0}ms |
+                                <strong>Response Length:</strong> ${responseData.rawResponse ? responseData.rawResponse.length : 0} chars |
+                                <strong>Function Calls:</strong> ${responseData.functionCalls ? responseData.functionCalls.length : 0}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <strong>Token Usage:</strong> 
+                                Prompt: ${responseData.tokenUsage?.promptTokens || 0}, 
+                                Completion: ${responseData.tokenUsage?.completionTokens || 0}, 
+                                Total: ${responseData.tokenUsage?.totalTokens || 0}
+                            </div>
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; font-weight: bold; color: #27ae60;">🗨️ Raw Response (Click to expand)</summary>
+                                <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${responseData.rawResponse || 'Not available'}</pre>
+                            </details>
+                            ${responseData.processedResponse && responseData.processedResponse !== responseData.rawResponse ? `
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; font-weight: bold; color: #f39c12;">⚙️ Processed Response (Click to expand)</summary>
+                                <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${responseData.processedResponse}</pre>
+                            </details>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Analysis Information -->
+                    <div class="analysis-section">
+                        <h5 style="color: #2c3e50; margin-bottom: 10px; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px;">
+                            🔍 Quality Analysis
+                        </h5>
+                        <div class="analysis-details" style="background: white; padding: 10px; border-radius: 4px; border-left: 4px solid ${analysisData.isError ? '#e74c3c' : '#9b59b6'};">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                                <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
+                                    <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getConfidenceColor(analysisData.confidence)};">
+                                        ${analysisData.confidence !== null ? analysisData.confidence.toFixed(1) + '%' : 'N/A'}
+                                    </div>
+                                    <div style="font-size: 11px; color: #7f8c8d;">Confidence</div>
+                                </div>
+                                <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
+                                    <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getComplexityColor(analysisData.complexity)};">
+                                        ${analysisData.complexity !== null ? analysisData.complexity.toFixed(1) : 'N/A'}
+                                    </div>
+                                    <div style="font-size: 11px; color: #7f8c8d;">Complexity</div>
+                                </div>
+                                <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
+                                    <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getAmbiguityColor(analysisData.ambiguity)};">
+                                        ${analysisData.ambiguity !== null ? analysisData.ambiguity.toFixed(1) : 'N/A'}
+                                    </div>
+                                    <div style="font-size: 11px; color: #7f8c8d;">Ambiguity</div>
+                                </div>
+                                <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
+                                    <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getRelevanceColor(analysisData.contextRelevance)};">
+                                        ${analysisData.contextRelevance !== null ? analysisData.contextRelevance.toFixed(1) + '%' : 'N/A'}
+                                    </div>
+                                    <div style="font-size: 11px; color: #7f8c8d;">Relevance</div>
+                                </div>
+                            </div>
+                            ${analysisData.isError ? `
+                            <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 8px; margin-top: 8px;">
+                                <strong style="color: #721c24;">❌ Error Detected:</strong> 
+                                <span style="color: #721c24;">${analysisData.errorType || 'Unknown'} - ${analysisData.errorMessage || 'No details'}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Get color for confidence score
+     */
+    static getConfidenceColor(confidence) {
+        if (confidence === null) return '#95a5a6';
+        if (confidence >= 80) return '#27ae60';
+        if (confidence >= 60) return '#f39c12';
+        return '#e74c3c';
+    }
+
+    /**
+     * Get color for complexity score
+     */
+    static getComplexityColor(complexity) {
+        if (complexity === null) return '#95a5a6';
+        if (complexity >= 70) return '#e74c3c';
+        if (complexity >= 40) return '#f39c12';
+        return '#27ae60';
+    }
+
+    /**
+     * Get color for ambiguity score
+     */
+    static getAmbiguityColor(ambiguity) {
+        if (ambiguity === null) return '#95a5a6';
+        if (ambiguity >= 50) return '#e74c3c';
+        if (ambiguity >= 25) return '#f39c12';
+        return '#27ae60';
+    }
+
+    /**
+     * Get color for relevance score
+     */
+    static getRelevanceColor(relevance) {
+        if (relevance === null) return '#95a5a6';
+        if (relevance >= 80) return '#27ae60';
+        if (relevance >= 60) return '#f39c12';
+        return '#e74c3c';
+    }
+
+    /**
      * Get benchmark configuration from UI
      */
     getBenchmarkConfiguration() {
@@ -662,6 +831,7 @@ class BenchmarkUI {
             generateReport: document.getElementById('generateReport').checked,
             includeCharts: document.getElementById('includeCharts').checked,
             includeRawData: document.getElementById('includeRawData')?.checked || false,
+            includeLLMInteractions: document.getElementById('includeLLMInteractions')?.checked !== false, // Default to true
             stopOnError: document.getElementById('stopOnError').checked,
             verboseLogging: document.getElementById('verboseLogging')?.checked || false,
             timeout: parseInt(document.getElementById('testTimeout').value),
@@ -717,7 +887,7 @@ class BenchmarkUI {
     }
 
     /**
-     * Display results in main window
+     * Display results in main window with enhanced LLM interaction details
      */
     displayMainWindowResults(results) {
         const resultsSection = document.getElementById('resultsSection');
@@ -779,6 +949,9 @@ class BenchmarkUI {
                                         Status: ${test.status}
                                     </div>
                                     ${test.errors.length > 0 ? `<div style="font-size: 12px; color: #dc3545; margin-top: 5px;">Errors: ${test.errors.join(', ')}</div>` : ''}
+                                    
+                                    <!-- CRITICAL ENHANCEMENT: Add detailed LLM interaction display -->
+                                    ${this.generateLLMInteractionDisplay(test)}
                                 </div>
                             `).join('')}
                         </div>
@@ -991,6 +1164,9 @@ class BenchmarkUI {
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
                                 <input type="checkbox" id="includeCharts" checked> Include Charts
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                                <input type="checkbox" id="includeLLMInteractions" checked> Include LLM Interactions
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
                                 <input type="checkbox" id="stopOnError"> Stop on Error
