@@ -158,6 +158,11 @@ class LLMBenchmarkFramework {
         };
 
         const tests = testSuite.getTests();
+        const filteredTests = options.tests ? 
+            tests.filter(test => options.tests.includes(test.id)) : tests;
+
+        // Display test suite start
+        this.displayTestSuiteStart(testSuite, filteredTests.length);
         
         for (let i = 0; i < tests.length; i++) {
             const test = tests[i];
@@ -166,14 +171,17 @@ class LLMBenchmarkFramework {
                 continue; // Skip if specific tests requested and this isn't one
             }
 
-            console.log(`Running test: ${test.id} (${i + 1}/${tests.length})`);
+            console.log(`Running test: ${test.id} (${i + 1}/${filteredTests.length})`);
+            
+            // Display test progress
+            this.displayTestProgress(test, i + 1, filteredTests.length);
             
             const testResult = await this.runSingleTest(test, suiteId);
             results.testResults.push(testResult);
             
             // Update test progress if callback provided
             if (options.onTestProgress) {
-                const progress = (i + 1) / tests.length;
+                const progress = (i + 1) / filteredTests.length;
                 options.onTestProgress(progress, test.id, testResult, suiteId);
             }
         }
@@ -182,7 +190,74 @@ class LLMBenchmarkFramework {
         results.duration = results.endTime - results.startTime;
         results.stats = this.statisticsEngine.calculateSuiteStatistics(results.testResults);
 
+        // Display test suite completion
+        this.displayTestSuiteComplete(testSuite, results);
+
         return results;
+    }
+
+    /**
+     * Display test suite start information
+     */
+    displayTestSuiteStart(testSuite, testCount) {
+        this.chatManager.addThinkingMessage(
+            `📋 **Test Suite Execution Started**\n\n` +
+            `**Suite Name:** ${testSuite.getName()}\n` +
+            `**Suite ID:** ${testSuite.suiteId || 'N/A'}\n` +
+            `**Description:** ${testSuite.description || 'No description available'}\n` +
+            `**Total Tests:** ${testCount} tests\n` +
+            `**Test Types:** Function calls, workflows, and analysis\n\n` +
+            `🎯 **Test Suite Objectives:**\n` +
+            `• Validate LLM instruction following capabilities\n` +
+            `• Test function calling accuracy and parameters\n` +
+            `• Measure response quality and consistency\n` +
+            `• Evaluate performance metrics\n\n` +
+            `⚡ Starting test execution...`
+        );
+    }
+
+    /**
+     * Display individual test progress
+     */
+    displayTestProgress(test, currentIndex, totalTests) {
+        this.chatManager.updateThinkingMessage(
+            `\n\n📍 **Test ${currentIndex}/${totalTests}**\n` +
+            `**Starting:** ${test.name} (${test.id})\n` +
+            `**Progress:** ${Math.round((currentIndex / totalTests) * 100)}%\n` +
+            `═══════════════════════════════════════`
+        );
+    }
+
+    /**
+     * Display test suite completion summary
+     */
+    displayTestSuiteComplete(testSuite, results) {
+        const successRate = ((results.stats.passedTests / results.stats.totalTests) * 100).toFixed(1);
+        const avgScore = results.stats.scoreStats.average.toFixed(1);
+        const durationSeconds = (results.duration / 1000).toFixed(1);
+        
+        const gradeEmoji = successRate >= 90 ? '🏆' : 
+                          successRate >= 75 ? '🥈' : 
+                          successRate >= 60 ? '🥉' : '📊';
+
+        this.chatManager.updateThinkingMessage(
+            `\n\n${gradeEmoji} **Test Suite Complete**\n\n` +
+            `**Suite:** ${testSuite.getName()}\n` +
+            `**Duration:** ${durationSeconds}s\n` +
+            `**Success Rate:** ${successRate}% (${results.stats.passedTests}/${results.stats.totalTests})\n` +
+            `**Average Score:** ${avgScore}/100\n\n` +
+            `📊 **Results Breakdown:**\n` +
+            `• ✅ Passed: ${results.stats.passedTests} tests\n` +
+            `• ❌ Failed: ${results.stats.failedTests} tests\n` +
+            `• ⚠️ Errors: ${results.stats.errorTests} tests\n\n` +
+            `📈 **Performance Summary:**\n` +
+            `• Best Score: ${results.stats.scoreStats.max}/100\n` +
+            `• Worst Score: ${results.stats.scoreStats.min}/100\n` +
+            `• Avg Response Time: ${results.stats.performanceStats.averageResponseTime}ms\n\n` +
+            `${successRate >= 80 ? '🎉 Excellent performance!' : 
+              successRate >= 60 ? '👍 Good performance with room for improvement.' : 
+              '🔧 Performance needs attention.'}`
+        );
     }
 
     /**
@@ -274,8 +349,19 @@ class LLMBenchmarkFramework {
         }
 
         try {
-            // Send the test instruction to the LLM
-            const llmResponse = await this.sendTestInstruction(test.instruction, test.options);
+            // Send the test instruction to the LLM with test information
+            const instructionOptions = {
+                ...test.options,
+                testInfo: {
+                    id: test.id,
+                    name: test.name,
+                    type: test.type,
+                    expectedResult: test.expectedResult,
+                    maxScore: test.maxScore
+                }
+            };
+            
+            const llmResponse = await this.sendTestInstruction(test.instruction, instructionOptions);
             
             // Parse and analyze the response
             const actualResult = await this.parseTestResponse(llmResponse, test);
@@ -327,17 +413,103 @@ class LLMBenchmarkFramework {
         try {
             console.log(`📤 Sending benchmark test instruction: ${instruction}`);
             
+            // Display detailed test process as a simulated tester
+            this.displayTestProcess(instruction, options);
+            
             // Use ChatManager's sendToLLM method which handles all the configuration,
             // function calling, plugin integration, and system prompts automatically
             const response = await this.chatManager.sendToLLM(instruction);
             
             console.log(`📥 Received benchmark response:`, response);
+            
+            // Display response analysis
+            this.displayResponseAnalysis(response, options);
+            
             return response;
 
         } catch (error) {
             console.error('❌ Benchmark test instruction failed:', error);
+            this.displayTestError(error, options);
             throw new Error(`LLM communication failed: ${error.message}`);
         }
+    }
+
+    /**
+     * Display detailed test process as a simulated tester
+     */
+    displayTestProcess(instruction, options = {}) {
+        const testInfo = options.testInfo || {};
+        const testName = testInfo.name || 'Unknown Test';
+        const testType = testInfo.type || 'function_call';
+        const expectedResult = testInfo.expectedResult || {};
+        
+        // Show test initiation
+        this.chatManager.addThinkingMessage(
+            `🧪 **Test Execution Started**\n\n` +
+            `**Test Name:** ${testName}\n` +
+            `**Test Type:** ${testType}\n` +
+            `**Test ID:** ${testInfo.id || 'N/A'}\n\n` +
+            `**Expected Function:** ${expectedResult.tool_name || 'N/A'}\n` +
+            `**Expected Parameters:** ${JSON.stringify(expectedResult.parameters || {}, null, 2)}\n\n` +
+            `**Test Instruction:**\n` +
+            `"${instruction}"`
+        );
+        
+        // Show what we're testing for
+        this.chatManager.updateThinkingMessage(
+            `\n\n📋 **Test Criteria:**\n` +
+            `• LLM should understand the instruction correctly\n` +
+            `• LLM should call the expected function: \`${expectedResult.tool_name}\`\n` +
+            `• Parameters should match expected values\n` +
+            `• Function execution should be successful\n\n` +
+            `⏳ Sending instruction to LLM...`
+        );
+    }
+
+    /**
+     * Display response analysis
+     */
+    displayResponseAnalysis(response, options = {}) {
+        const testInfo = options.testInfo || {};
+        
+        // Analyze the response
+        const extractedCalls = this.extractFunctionCallsFromResponse(response);
+        const hasValidResponse = response && response.length > 0;
+        const detectedFunctions = extractedCalls.map(call => call.tool_name).join(', ');
+        
+        this.chatManager.updateThinkingMessage(
+            `\n\n📥 **LLM Response Received:**\n` +
+            `**Response Length:** ${response ? response.length : 0} characters\n` +
+            `**Response Preview:** "${response ? response.substring(0, 150) + (response.length > 150 ? '...' : '') : 'No response'}"\n\n` +
+            `🔍 **Function Call Analysis:**\n` +
+            `**Detected Functions:** ${detectedFunctions || 'None detected'}\n` +
+            `**Detection Confidence:** ${extractedCalls.length > 0 ? extractedCalls[0].confidence + '%' : 'N/A'}\n` +
+            `**Function Call Evidence:** ${extractedCalls.length > 0 ? extractedCalls[0].evidence : 'No evidence found'}\n\n` +
+            `📊 **Initial Assessment:**\n` +
+            `• Response received: ${hasValidResponse ? '✅ Yes' : '❌ No'}\n` +
+            `• Function calls detected: ${extractedCalls.length > 0 ? '✅ Yes' : '❌ No'}\n` +
+            `• Expected function found: ${detectedFunctions.includes(testInfo.expectedResult?.tool_name) ? '✅ Yes' : '❌ No'}\n\n` +
+            `⚖️ Proceeding to detailed evaluation...`
+        );
+    }
+
+    /**
+     * Display test error information
+     */
+    displayTestError(error, options = {}) {
+        const testInfo = options.testInfo || {};
+        
+        this.chatManager.updateThinkingMessage(
+            `\n\n❌ **Test Execution Error:**\n` +
+            `**Error Type:** ${error.name || 'Unknown Error'}\n` +
+            `**Error Message:** ${error.message}\n` +
+            `**Test Status:** FAILED (Error during execution)\n\n` +
+            `🔧 **Troubleshooting:**\n` +
+            `• Check LLM configuration\n` +
+            `• Verify network connectivity\n` +
+            `• Check function calling setup\n` +
+            `• Review test instruction format`
+        );
     }
 
     /**
@@ -649,8 +821,12 @@ class LLMBenchmarkFramework {
             warnings: []
         };
 
+        // Display evaluation start
+        this.displayEvaluationStart(test, testResult);
+
         if (!testResult.actualResult) {
             evaluation.errors.push('No result obtained from test execution');
+            this.displayEvaluationResult(test, evaluation, testResult);
             return evaluation;
         }
 
@@ -659,26 +835,84 @@ class LLMBenchmarkFramework {
             try {
                 const customEval = await test.evaluator(testResult.actualResult, test.expectedResult, testResult);
                 Object.assign(evaluation, customEval);
+                this.displayEvaluationResult(test, evaluation, testResult);
                 return evaluation;
             } catch (error) {
                 evaluation.errors.push(`Custom evaluator failed: ${error.message}`);
+                this.displayEvaluationResult(test, evaluation, testResult);
                 return evaluation;
             }
         }
 
         // Default evaluation based on test type
+        let finalEvaluation;
         switch (test.type) {
             case 'function_call':
-                return this.evaluateFunctionCallTest(test, testResult, evaluation);
+                finalEvaluation = this.evaluateFunctionCallTest(test, testResult, evaluation);
+                break;
             case 'text_analysis':
-                return this.evaluateTextAnalysisTest(test, testResult, evaluation);
+                finalEvaluation = this.evaluateTextAnalysisTest(test, testResult, evaluation);
+                break;
             case 'json_output':
-                return this.evaluateJSONOutputTest(test, testResult, evaluation);
+                finalEvaluation = this.evaluateJSONOutputTest(test, testResult, evaluation);
+                break;
             case 'workflow':
-                return this.evaluateWorkflowTest(test, testResult, evaluation);
+                finalEvaluation = this.evaluateWorkflowTest(test, testResult, evaluation);
+                break;
             default:
-                return this.evaluateGenericTest(test, testResult, evaluation);
+                finalEvaluation = this.evaluateGenericTest(test, testResult, evaluation);
         }
+
+        // Display final evaluation result
+        this.displayEvaluationResult(test, finalEvaluation, testResult);
+        return finalEvaluation;
+    }
+
+    /**
+     * Display evaluation start information
+     */
+    displayEvaluationStart(test, testResult) {
+        this.chatManager.updateThinkingMessage(
+            `\n\n⚖️ **Test Evaluation Started**\n` +
+            `**Evaluating:** ${test.name}\n` +
+            `**Evaluation Method:** ${test.evaluator ? 'Custom Evaluator' : 'Default ' + test.type + ' Evaluator'}\n` +
+            `**Max Score:** ${test.maxScore || 100} points\n` +
+            `**Response Time:** ${testResult.metrics?.responseTime || 'N/A'}ms\n\n` +
+            `🔍 Analyzing test results...`
+        );
+    }
+
+    /**
+     * Display detailed evaluation results
+     */
+    displayEvaluationResult(test, evaluation, testResult) {
+        const successIcon = evaluation.success ? '✅' : '❌';
+        const scorePercentage = ((evaluation.score / evaluation.maxScore) * 100).toFixed(1);
+        const gradeEmoji = evaluation.success ? '🎉' : evaluation.score > 50 ? '⚠️' : '💥';
+        
+        // Determine performance level
+        let performanceLevel = 'Excellent';
+        if (scorePercentage < 70) performanceLevel = 'Poor';
+        else if (scorePercentage < 85) performanceLevel = 'Good';
+        else if (scorePercentage < 95) performanceLevel = 'Very Good';
+
+        this.chatManager.updateThinkingMessage(
+            `\n\n${gradeEmoji} **Test Evaluation Complete**\n\n` +
+            `**Test Result:** ${successIcon} ${evaluation.success ? 'PASS' : 'FAIL'}\n` +
+            `**Score:** ${evaluation.score}/${evaluation.maxScore} (${scorePercentage}%)\n` +
+            `**Performance:** ${performanceLevel}\n` +
+            `**Response Time:** ${testResult.metrics?.responseTime || 'N/A'}ms\n\n` +
+            `📊 **Detailed Analysis:**\n` +
+            `${evaluation.errors.length > 0 ? '**Errors:**\n' + evaluation.errors.map(e => `• ${e}`).join('\n') + '\n\n' : ''}` +
+            `${evaluation.warnings.length > 0 ? '**Warnings:**\n' + evaluation.warnings.map(w => `• ${w}`).join('\n') + '\n\n' : ''}` +
+            `${evaluation.errors.length === 0 && evaluation.warnings.length === 0 ? '• All criteria met successfully\n\n' : ''}` +
+            `📈 **Test Metrics:**\n` +
+            `• Token Usage: ~${testResult.metrics?.tokenCount || 'N/A'} tokens\n` +
+            `• Response Length: ${testResult.metrics?.responseLength || 'N/A'} characters\n` +
+            `• Function Calls: ${testResult.metrics?.functionCallsCount || 'N/A'}\n` +
+            `• Instruction Complexity: ${testResult.metrics?.instructionComplexity || 'N/A'}\n\n` +
+            `${evaluation.success ? '🎯 Test completed successfully!' : '🔧 Test requires attention.'}`
+        );
     }
 
     /**
