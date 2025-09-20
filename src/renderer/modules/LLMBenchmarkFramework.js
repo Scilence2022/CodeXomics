@@ -660,16 +660,24 @@ class LLMBenchmarkFramework {
             
             // Temporarily override console.log to capture ChatManager's detailed logging
             console.log = (...args) => {
-                // Capture ChatManager's detailed logs
-                const logString = args.map(arg => 
-                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-                ).join(' ');
+                // Capture ChatManager's detailed logs with safe JSON handling
+                const logString = args.map(arg => {
+                    if (typeof arg === 'object' && arg !== null) {
+                        try {
+                            // Use safe JSON stringify to avoid circular references
+                            return JSON.stringify(arg, this.getCircularReplacer(), 2);
+                        } catch (error) {
+                            return `[Object: ${arg.constructor?.name || 'Unknown'} - Circular Reference]`;
+                        }
+                    }
+                    return String(arg);
+                }).join(' ');
                 
                 capturedLogs.push({
                     timestamp: new Date().toISOString(),
                     level: 'log',
                     message: logString,
-                    args: args
+                    args: this.sanitizeArgsForStorage(args)
                 });
                 
                 // Still call original console.log
@@ -692,7 +700,7 @@ class LLMBenchmarkFramework {
                 interactionData.response.processedResponse = this.processResponse(response);
                 
                 // Extract function calls and tool executions
-                interactionData.response.functionCalls = this.extractFunctionCalls(response);
+                interactionData.response.functionCalls = this.extractFunctionCallsFromResponse(response);
                 interactionData.response.toolExecutions = this.captureToolExecutions();
                 
                 // CRITICAL ENHANCEMENT: Capture all the detailed ChatManager logs
@@ -1949,6 +1957,43 @@ class LLMBenchmarkFramework {
         });
         
         return roundsInfo;
+    }
+
+    /**
+     * Get circular reference replacer for safe JSON.stringify
+     */
+    getCircularReplacer() {
+        const seen = new WeakSet();
+        return (key, value) => {
+            if (typeof value === 'object' && value !== null) {
+                if (seen.has(value)) {
+                    return `[Circular Reference: ${value.constructor?.name || 'Object'}]`;
+                }
+                seen.add(value);
+            }
+            return value;
+        };
+    }
+
+    /**
+     * Sanitize arguments for safe storage
+     */
+    sanitizeArgsForStorage(args) {
+        return args.map(arg => {
+            if (typeof arg === 'object' && arg !== null) {
+                try {
+                    // Try to create a safe copy without circular references
+                    return JSON.parse(JSON.stringify(arg, this.getCircularReplacer()));
+                } catch (error) {
+                    return {
+                        type: arg.constructor?.name || 'Object',
+                        error: 'Circular reference or non-serializable',
+                        keys: Object.keys(arg).slice(0, 10) // First 10 keys for reference
+                    };
+                }
+            }
+            return arg;
+        });
     }
 
     /**
