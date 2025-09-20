@@ -624,12 +624,23 @@ class LLMBenchmarkFramework {
             const requestStartTime = Date.now();
             
             // Get LLM configuration details
-            const llmConfig = this.chatManager.llmConfigManager.getCurrentConfig();
-            if (llmConfig) {
-                interactionData.request.provider = llmConfig.provider;
-                interactionData.request.model = llmConfig.model;
-                interactionData.request.temperature = llmConfig.temperature;
-                interactionData.request.maxTokens = llmConfig.maxTokens;
+            try {
+                const llmConfig = this.chatManager.llmConfigManager.getConfiguration();
+                if (llmConfig && llmConfig.providers) {
+                    // Find the currently enabled provider
+                    const currentProvider = this.chatManager.llmConfigManager.getProviderForModelType('task');
+                    if (currentProvider && llmConfig.providers[currentProvider]) {
+                        const providerConfig = llmConfig.providers[currentProvider];
+                        interactionData.request.provider = currentProvider;
+                        interactionData.request.model = providerConfig.model;
+                        interactionData.request.temperature = providerConfig.temperature;
+                        interactionData.request.maxTokens = providerConfig.maxTokens;
+                    }
+                }
+            } catch (configError) {
+                console.warn('Failed to capture LLM config:', configError);
+                interactionData.request.provider = 'unknown';
+                interactionData.request.model = 'unknown';
             }
             
             // Capture system prompt and context
