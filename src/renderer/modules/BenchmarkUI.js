@@ -7,40 +7,22 @@ class BenchmarkUI {
         this.currentResults = null;
         this.isRunning = false;
         this.window = null;
-        this.menuManager = null;
         this.setupEventHandlers();
     }
 
     /**
-     * Show benchmark runner - Replace main window menus instead of opening new window
+     * Show benchmark runner - Open in separate window
      */
     async showBenchmarkRunner() {
-        console.log('🧪 Activating benchmark mode in main window...');
+        console.log('🧪 Opening benchmark runner window...');
         
         try {
-            // Load BenchmarkMenuManager if not available
-            if (typeof BenchmarkMenuManager === 'undefined') {
-                await this.loadBenchmarkMenuManager();
-            }
-
-            // Initialize menu manager if not already done
-            if (!this.menuManager) {
-                this.menuManager = new BenchmarkMenuManager(this.framework.chatManager.app);
-                window.benchmarkMenuManager = this.menuManager;
-            }
-
-            // Activate benchmark menus in main window
-            this.menuManager.activateBenchmarkMenus();
-            
-            // Show benchmark interface in main content area
-            this.showBenchmarkInterface();
-            
-            console.log('✅ Benchmark mode activated in main window');
+            // Directly open benchmark runner window
+            this.showBenchmarkRunnerWindow();
+            console.log('✅ Benchmark runner window opened');
             
         } catch (error) {
-            console.error('❌ Failed to activate benchmark mode:', error);
-            // Fallback to separate window
-            this.showBenchmarkRunnerWindow();
+            console.error('❌ Failed to open benchmark runner:', error);
         }
     }
 
@@ -89,29 +71,6 @@ class BenchmarkUI {
         console.log('🧪 Benchmark runner window opened (fallback mode)');
     }
 
-    /**
-     * Load BenchmarkMenuManager module
-     */
-    async loadBenchmarkMenuManager() {
-        return new Promise((resolve, reject) => {
-            if (document.querySelector('script[src*="BenchmarkMenuManager"]')) {
-                resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = 'modules/BenchmarkMenuManager.js';
-            script.onload = () => {
-                console.log('📜 BenchmarkMenuManager loaded');
-                resolve();
-            };
-            script.onerror = (error) => {
-                console.error('❌ Failed to load BenchmarkMenuManager:', error);
-                reject(error);
-            };
-            document.head.appendChild(script);
-        });
-    }
 
     /**
      * Create benchmark interface for main window
@@ -619,9 +578,7 @@ class BenchmarkUI {
             document.getElementById('progressSection').style.display = 'block';
             
             // Update menu status
-            if (this.menuManager) {
-                this.menuManager.updateBenchmarkStatus('running', 'Running Benchmark');
-            }
+            // Status update removed - no menu manager
             
             // Get configuration
             const options = this.getBenchmarkConfiguration();
@@ -634,15 +591,11 @@ class BenchmarkUI {
             this.currentResults = results;
             this.displayMainWindowResults(results);
             
-            if (this.menuManager) {
-                this.menuManager.updateBenchmarkStatus('ready', 'Benchmark Completed');
-            }
+            // Status update removed - no menu manager
             
         } catch (error) {
             console.error('❌ Benchmark failed:', error);
-            if (this.menuManager) {
-                this.menuManager.updateBenchmarkStatus('error', 'Benchmark Failed');
-            }
+            // Status update removed - no menu manager
             alert('Benchmark failed: ' + error.message);
         } finally {
             this.isRunning = false;
@@ -667,9 +620,7 @@ class BenchmarkUI {
         document.getElementById('startBenchmark').disabled = false;
         document.getElementById('stopBenchmark').disabled = true;
         
-        if (this.menuManager) {
-            this.menuManager.updateBenchmarkStatus('ready', 'Benchmark Stopped');
-        }
+        // Status update removed - no menu manager
         
         console.log('⏹️ Benchmark stopped in main window');
     }
@@ -742,9 +693,7 @@ class BenchmarkUI {
         }
 
         // Update menu status
-        if (this.menuManager) {
-            this.menuManager.updateBenchmarkStatus('running', 'Running: ' + (suiteId || 'Starting...'), progress);
-        }
+        // Status update removed - no menu manager
     }
 
     /**
@@ -853,9 +802,7 @@ class BenchmarkUI {
             this.showMainContent();
 
             // Deactivate benchmark menus
-            if (this.menuManager) {
-                this.menuManager.deactivateBenchmarkMenus();
-            }
+            // Menu deactivation removed - no menu manager
 
             console.log('✅ Benchmark mode exited, main app restored');
             
