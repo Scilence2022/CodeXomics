@@ -371,36 +371,55 @@ class BasicFunctionCallingSuite {
             return evaluation;
         }
 
-        // CRITICAL FIX: Handle inferred function calls
+        // CRITICAL FIX: Handle inferred function calls with proper confidence validation
         if (actualResult.inferred) {
             console.log('🧠 Processing inferred function call:', actualResult);
-            // Treat inferred calls as valid function calls
+            
+            // IMPORTANT: Check confidence level - low confidence should result in lower scores
+            const confidence = actualResult.confidence || 0;
+            const isLowConfidence = confidence < 70;
+            
+            if (isLowConfidence) {
+                console.log(`⚠️ Low confidence inference (${confidence}%), applying penalties`);
+                evaluation.warnings.push(`Low confidence inference (${confidence}%)`);
+            }
+            
             const call = actualResult;
             
-            // Check function name (50 points)
+            // Check function name (50 points, reduced for low confidence)
             if (call.tool_name === expectedResult.tool_name) {
-                evaluation.score += 50;
-                console.log('✅ Inferred function name matches');
+                const nameScore = isLowConfidence ? 30 : 50; // Reduce score for low confidence
+                evaluation.score += nameScore;
+                console.log(`✅ Inferred function name matches (${nameScore} points)`);
             } else {
                 evaluation.errors.push(`Expected function ${expectedResult.tool_name}, got ${call.tool_name} (inferred)`);
                 console.log('❌ Inferred function name mismatch');
             }
 
-            // Check parameters (50 points) - be more lenient for inferred calls
+            // Check parameters (50 points) - be more strict for low confidence calls
             if (call.parameters && expectedResult.parameters) {
                 const paramScore = this.evaluateParameters(call.parameters, expectedResult.parameters);
-                evaluation.score += Math.max(paramScore, 30); // Minimum 30 points for inferred params
+                const adjustedParamScore = isLowConfidence ? Math.min(paramScore, 20) : Math.max(paramScore, 30);
+                evaluation.score += adjustedParamScore;
                 
-                if (paramScore < 40) {
-                    evaluation.warnings.push('Parameters inferred from response context');
+                if (paramScore < 40 || isLowConfidence) {
+                    evaluation.warnings.push('Parameters inferred from response context with limited accuracy');
                 }
             } else if (!expectedResult.parameters) {
                 // No parameters expected
-                evaluation.score += 50;
+                const noParamScore = isLowConfidence ? 30 : 50;
+                evaluation.score += noParamScore;
             } else {
-                // Give partial credit for inferred calls even without perfect params
-                evaluation.score += 25;
+                // Give minimal credit for low confidence inferred calls without params
+                const partialScore = isLowConfidence ? 10 : 25;
+                evaluation.score += partialScore;
                 evaluation.warnings.push('Parameters inferred with limited accuracy');
+            }
+
+            // Apply overall confidence penalty
+            if (isLowConfidence) {
+                evaluation.score = Math.max(0, evaluation.score * 0.7); // 30% penalty for low confidence
+                evaluation.errors.push(`Low confidence inference (${confidence}%) - likely due to LLM error or unclear response`);
             }
 
             evaluation.success = evaluation.score >= 70;

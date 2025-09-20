@@ -538,6 +538,14 @@ class LLMBenchmarkFramework {
             
             console.log(`📥 Received benchmark response:`, response);
             
+            // CRITICAL FIX: Check if response indicates LLM failure
+            if (this.isLLMErrorResponse(response)) {
+                console.log('❌ LLM error response detected');
+                const errorMessage = `LLM Error Response: ${response}`;
+                this.displayTestError(new Error(errorMessage), options);
+                throw new Error(errorMessage);
+            }
+            
             // Display response analysis
             this.displayResponseAnalysis(response, options);
             
@@ -1057,7 +1065,26 @@ class LLMBenchmarkFramework {
             expectedResult: expectedResult
         });
         
-        // Success indicators suggest function was executed
+        // CRITICAL FIX: Check for error patterns first to prevent false positives
+        const errorPatterns = [
+            'error', 'failed', 'not found', 'not available', 'unavailable',
+            'not configured', 'not exist', 'missing', 'invalid',
+            'connection failed', 'timeout', '404', '500', 'http error',
+            'model not found', 'provider failed', 'api error',
+            'no llm', 'llm error', 'communication error'
+        ];
+
+        const hasErrorPattern = errorPatterns.some(pattern => 
+            lowerResponse.includes(pattern)
+        );
+
+        if (hasErrorPattern) {
+            console.log('❌ Error pattern detected in response, skipping inference');
+            console.log('🔍 Found error patterns:', errorPatterns.filter(pattern => lowerResponse.includes(pattern)));
+            return null;
+        }
+        
+        // Success indicators suggest function was executed successfully
         const successIndicators = [
             'found', 'located', 'identified', 'discovered', 'retrieved',
             'navigated', 'moved', 'jumped', 'displayed', 'showed',
@@ -1075,10 +1102,24 @@ class LLMBenchmarkFramework {
             foundIndicators: successIndicators.filter(indicator => lowerResponse.includes(indicator))
         });
 
-        // ENHANCED LOGIC: If we have an expected result and success indicators,
-        // assume the expected function was called successfully
+        // ENHANCED LOGIC: Only infer if we have genuine success indicators AND no error patterns
         if (hasSuccessIndicator && expectedResult && expectedResult.tool_name) {
             console.log('🎯 Using expected result as basis for inference');
+            
+            // Additional validation: check if response actually contains function execution evidence
+            const executionEvidence = [
+                'task completed', 'analysis finished', 'operation successful',
+                'result:', 'output:', 'data retrieved', 'information found'
+            ];
+            
+            const hasExecutionEvidence = executionEvidence.some(evidence => 
+                lowerResponse.includes(evidence)
+            );
+            
+            if (!hasExecutionEvidence) {
+                console.log('⚠️ No execution evidence found, reducing confidence');
+                // Still allow inference but with lower confidence
+            }
             
             // Extract parameters from response using the expected function context
             const inferredParams = this.extractParametersFromResponse(response, expectedResult.tool_name);
@@ -1089,9 +1130,9 @@ class LLMBenchmarkFramework {
             return {
                 tool_name: expectedResult.tool_name,
                 parameters: finalParams,
-                confidence: 85, // High confidence when we have expected result + success indicators
+                confidence: hasExecutionEvidence ? 85 : 60, // Lower confidence without execution evidence
                 inferred: true,
-                evidence: `Response contains success indicators and matches expected function: ${expectedResult.tool_name}`
+                evidence: `Response contains success indicators${hasExecutionEvidence ? ' and execution evidence' : ''} for function: ${expectedResult.tool_name}`
             };
         }
 
@@ -1158,6 +1199,36 @@ class LLMBenchmarkFramework {
         }
 
         return null;
+    }
+
+    /**
+     * Check if response indicates LLM error or failure
+     */
+    isLLMErrorResponse(response) {
+        if (!response || typeof response !== 'string') return false;
+        
+        const lowerResponse = response.toLowerCase();
+        
+        // Error patterns that indicate LLM failure
+        const errorPatterns = [
+            'model not found', 'model "', 'not found, try pulling',
+            'llm not configured', 'no llm provider', 'provider failed',
+            'connection failed', 'api error', 'http error', 'timeout',
+            'error sending message', 'failed to load resource',
+            'server responded with a status of', '404', '500', '503',
+            'communication error', 'network error', 'service unavailable'
+        ];
+        
+        const hasErrorPattern = errorPatterns.some(pattern => 
+            lowerResponse.includes(pattern)
+        );
+        
+        // Also check for specific error message patterns
+        const isErrorMessage = lowerResponse.includes('**model not found**') ||
+                              lowerResponse.includes('**error**') ||
+                              lowerResponse.includes('please:') && lowerResponse.includes('configure llms');
+        
+        return hasErrorPattern || isErrorMessage;
     }
 
     /**
