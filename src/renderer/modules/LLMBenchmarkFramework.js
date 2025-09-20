@@ -102,6 +102,13 @@ class LLMBenchmarkFramework {
 
             // Run each test suite
             for (const [suiteId, testSuite] of this.testSuites.entries()) {
+                // Check if benchmark was stopped
+                if (!this.isRunning) {
+                    console.log('🛑 Benchmark stopped by user');
+                    this.chatManager.updateThinkingMessage('\n\n🛑 **Benchmark Stopped**\nBenchmark execution was stopped by user request.');
+                    break;
+                }
+
                 if (options.suites && !options.suites.includes(suiteId)) {
                     continue; // Skip if specific suites requested and this isn't one
                 }
@@ -166,6 +173,13 @@ class LLMBenchmarkFramework {
         
         for (let i = 0; i < tests.length; i++) {
             const test = tests[i];
+            
+            // Check if benchmark was stopped
+            if (!this.isRunning) {
+                console.log('🛑 Test suite stopped by user');
+                this.chatManager.updateThinkingMessage('\n\n🛑 **Test Suite Stopped**\nTest suite execution was stopped by user request.');
+                break;
+            }
             
             if (options.tests && !options.tests.includes(test.id)) {
                 continue; // Skip if specific tests requested and this isn't one
@@ -264,6 +278,30 @@ class LLMBenchmarkFramework {
      * Run a single test
      */
     async runSingleTest(test, suiteId) {
+        // Check if benchmark was stopped before starting test
+        if (!this.isRunning) {
+            console.log(`🛑 Test ${test.id} skipped - benchmark stopped`);
+            return {
+                testId: test.id,
+                testName: test.name,
+                suiteId: suiteId,
+                startTime: Date.now(),
+                endTime: Date.now(),
+                duration: 0,
+                status: 'cancelled',
+                success: false,
+                score: 0,
+                maxScore: test.maxScore || 100,
+                details: { cancelled: true },
+                errors: ['Test cancelled by user'],
+                warnings: [],
+                llmResponse: null,
+                expectedResult: test.expectedResult || null,
+                actualResult: null,
+                metrics: {}
+            };
+        }
+
         const startTime = Date.now();
         this.currentTest = test;
         
@@ -1349,8 +1387,19 @@ class LLMBenchmarkFramework {
      * Stop current benchmark
      */
     stopBenchmark() {
+        console.log('🛑 Stopping benchmark...');
         this.isRunning = false;
-        console.log('Benchmark stopped by user');
+        
+        // Display stop message in ChatBox
+        if (this.chatManager) {
+            this.chatManager.updateThinkingMessage(
+                '\n\n🛑 **Benchmark Stop Requested**\n' +
+                'Stopping benchmark execution gracefully...\n' +
+                'Current test will complete, then execution will halt.'
+            );
+        }
+        
+        console.log('✅ Benchmark stop signal sent');
     }
 
     /**
