@@ -1284,7 +1284,7 @@ Features:
      */
     generateHTMLReport(results) {
         const stats = results.overallStats;
-        return \`
+        return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -1338,11 +1338,11 @@ Features:
                     \`).join('')}
                 </div>
             </div>
-        \`).join('')}
+        `).join('')}
     </div>
 </body>
 </html>
-        \`;
+        `;
     }
 }
 

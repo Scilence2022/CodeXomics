@@ -10,7 +10,8 @@ class ConversationEvolutionStorageManager {
 
         // 初始化独立的历史存储管理器
         this.historyStorageManager = null;
-        this.initializeHistoryStorage();
+        // 延迟初始化，确保所有脚本都已加载
+        setTimeout(() => this.initializeHistoryStorage(), 100);
 
         // 默认数据结构，作为基准（仅用于配置，不包含大量历史数据）
         this.defaultHistoryData = this.getDefaultEvolutionConfig().historyData;
@@ -52,9 +53,11 @@ class ConversationEvolutionStorageManager {
             // 动态加载ConversationHistoryStorageManager
             if (typeof window !== 'undefined' && window.ConversationHistoryStorageManager) {
                 this.historyStorageManager = new window.ConversationHistoryStorageManager(this.configManager);
-            } else if (typeof require !== 'undefined') {
-                const ConversationHistoryStorageManager = require('./ConversationHistoryStorageManager');
-                this.historyStorageManager = new ConversationHistoryStorageManager(this.configManager);
+                console.log('✅ Using window.ConversationHistoryStorageManager');
+            } else {
+                console.log('⚠️ ConversationHistoryStorageManager not found in window, will skip independent storage');
+                // For now, skip independent storage if not available
+                // The system will still work with the lightweight storage in ConversationEvolutionStorageManager
             }
             
             if (this.historyStorageManager) {
