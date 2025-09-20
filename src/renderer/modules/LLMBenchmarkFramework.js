@@ -90,6 +90,12 @@ class LLMBenchmarkFramework {
         this.isRunning = true;
         const startTime = Date.now();
         
+        // Set timeout from options if provided
+        if (options.timeout) {
+            this.testTimeout = options.timeout;
+            console.log(`🕐 Test timeout set to ${this.testTimeout}ms (${this.testTimeout/1000}s)`);
+        }
+        
         try {
             const results = {
                 startTime: startTime,
@@ -151,6 +157,12 @@ class LLMBenchmarkFramework {
         const testSuite = this.testSuites.get(suiteId);
         if (!testSuite) {
             throw new Error(`Test suite not found: ${suiteId}`);
+        }
+
+        // Set timeout from options if provided
+        if (options.timeout) {
+            this.testTimeout = options.timeout;
+            console.log(`🕐 Test timeout set to ${this.testTimeout}ms (${this.testTimeout/1000}s) for suite ${suiteId}`);
         }
 
         const startTime = Date.now();
@@ -404,11 +416,15 @@ class LLMBenchmarkFramework {
         };
 
         try {
+            // Use test-specific timeout if available, otherwise use global timeout
+            const timeoutMs = test.timeout || this.testTimeout;
+            console.log(`⏱️ Running test ${test.id} with timeout: ${timeoutMs}ms (${timeoutMs/1000}s)`);
+            
             // Execute the test
             const testResult = await Promise.race([
                 this.executeTest(test),
                 new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Test timeout')), this.testTimeout)
+                    setTimeout(() => reject(new Error(`Test timeout after ${timeoutMs}ms`)), timeoutMs)
                 )
             ]);
 
