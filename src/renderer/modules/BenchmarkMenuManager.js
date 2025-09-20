@@ -1307,35 +1307,35 @@ Features:
 <body>
     <div class="container">
         <h1>🧪 LLM Instruction Following Benchmark Report</h1>
-        <p><strong>Generated:</strong> \${new Date().toLocaleString()}</p>
-        <p><strong>Duration:</strong> \${Math.round(results.duration / 1000)} seconds</p>
+        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        <p><strong>Duration:</strong> ${Math.round(results.duration / 1000)} seconds</p>
         
         <div class="summary">
             <div class="summary-card">
                 <h3>Success Rate</h3>
-                <div class="value">\${stats.overallSuccessRate.toFixed(1)}%</div>
+                <div class="value">${stats.overallSuccessRate.toFixed(1)}%</div>
             </div>
             <div class="summary-card">
                 <h3>Tests Passed</h3>
-                <div class="value">\${stats.passedTests}/\${stats.totalTests}</div>
+                <div class="value">${stats.passedTests}/${stats.totalTests}</div>
             </div>
             <div class="summary-card">
                 <h3>Average Score</h3>
-                <div class="value">\${stats.scoreStats.percentage.mean.toFixed(1)}%</div>
+                <div class="value">${stats.scoreStats.percentage.mean.toFixed(1)}%</div>
             </div>
         </div>
         
         <h2>Test Suite Results</h2>
-        \${results.testSuiteResults.map(suite => \`
+        ${results.testSuiteResults.map(suite => `
             <div class="suite-result">
-                <div class="suite-header">\${suite.suiteName} - \${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate</div>
+                <div class="suite-header">${suite.suiteName} - ${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate</div>
                 <div>
-                    \${suite.testResults.map(test => \`
-                        <div class="test-result \${test.success ? 'passed' : 'failed'}">
-                            <strong>\${test.testName}</strong><br>
-                            Score: \${test.score}/\${test.maxScore} | Duration: \${test.duration}ms
+                    ${suite.testResults.map(test => `
+                        <div class="test-result ${test.success ? 'passed' : 'failed'}">
+                            <strong>${test.testName}</strong><br>
+                            Score: ${test.score}/${test.maxScore} | Duration: ${test.duration}ms
                         </div>
-                    \`).join('')}
+                    `).join('')}
                 </div>
             </div>
         `).join('')}
