@@ -13,6 +13,15 @@ class LLMBenchmarkFramework {
         this.statisticsEngine = new BenchmarkStatistics();
         this.reportGenerator = new BenchmarkReportGenerator();
         
+        // MEMORY SAFETY: Add memory monitoring
+        this.memoryMonitor = {
+            maxMemoryUsage: 500 * 1024 * 1024, // 500MB limit
+            warningThreshold: 400 * 1024 * 1024, // 400MB warning
+            lastCheck: Date.now(),
+            checkInterval: 5000, // Check every 5 seconds
+            enabled: true
+        };
+        
         this.initializeTestSuites();
         this.setupEventHandlers();
     }
@@ -704,22 +713,39 @@ class LLMBenchmarkFramework {
             this.displayTestProcess(instruction, options);
             
             // ENHANCED: Capture detailed LLM interaction by hooking into ChatManager's internal logging
+            // MEMORY SAFETY: Add limits to prevent memory crashes
             const originalConsoleLog = console.log;
             const capturedLogs = [];
+            const MAX_CAPTURED_LOGS = 1000; // Limit to prevent memory overflow
+            const MAX_LOG_SIZE = 10000; // Max characters per log entry
             
             // Temporarily override console.log to capture ChatManager's detailed logging
             console.log = (...args) => {
+                // MEMORY SAFETY: Check limits before capturing
+                if (capturedLogs.length >= MAX_CAPTURED_LOGS) {
+                    // Remove oldest logs to make room (FIFO)
+                    capturedLogs.shift();
+                }
+                
                 // Capture ChatManager's detailed logs with safe JSON handling
                 const logString = args.map(arg => {
                     if (typeof arg === 'object' && arg !== null) {
                         try {
                             // Use safe JSON stringify to avoid circular references
-                            return JSON.stringify(arg, this.getCircularReplacer(), 2);
+                            const jsonString = JSON.stringify(arg, this.getCircularReplacer(), 2);
+                            // MEMORY SAFETY: Truncate large objects
+                            return jsonString.length > MAX_LOG_SIZE ? 
+                                jsonString.substring(0, MAX_LOG_SIZE) + '...[TRUNCATED]' : 
+                                jsonString;
                         } catch (error) {
                             return `[Object: ${arg.constructor?.name || 'Unknown'} - Circular Reference]`;
                         }
                     }
-                    return String(arg);
+                    const stringArg = String(arg);
+                    // MEMORY SAFETY: Truncate large strings
+                    return stringArg.length > MAX_LOG_SIZE ? 
+                        stringArg.substring(0, MAX_LOG_SIZE) + '...[TRUNCATED]' : 
+                        stringArg;
                 }).join(' ');
                 
                 capturedLogs.push({
@@ -769,6 +795,9 @@ class LLMBenchmarkFramework {
             } finally {
                 // Restore original console.log
                 console.log = originalConsoleLog;
+                
+                // MEMORY SAFETY: Check memory usage and cleanup if needed
+                this.checkMemoryUsage();
             }
             
             // Capture token usage if available
@@ -2787,6 +2816,96 @@ class LLMBenchmarkFramework {
             default:
                 throw new Error(`Unsupported export format: ${format}`);
         }
+    }
+
+    /**
+     * MEMORY SAFETY: Check memory usage and cleanup if needed
+     */
+    checkMemoryUsage() {
+        if (!this.memoryMonitor.enabled) return;
+        
+        const now = Date.now();
+        if (now - this.memoryMonitor.lastCheck < this.memoryMonitor.checkInterval) {
+            return; // Skip check if too soon
+        }
+        
+        this.memoryMonitor.lastCheck = now;
+        
+        try {
+            // Check if performance.memory is available (Chrome/Chromium)
+            if (performance.memory) {
+                const usedMemory = performance.memory.usedJSHeapSize;
+                const totalMemory = performance.memory.totalJSHeapSize;
+                
+                console.log(`🔍 [Memory Monitor] Used: ${(usedMemory / 1024 / 1024).toFixed(2)}MB, Total: ${(totalMemory / 1024 / 1024).toFixed(2)}MB`);
+                
+                if (usedMemory > this.memoryMonitor.maxMemoryUsage) {
+                    console.warn('⚠️ [Memory Monitor] Memory limit exceeded! Triggering cleanup...');
+                    this.triggerMemoryCleanup();
+                } else if (usedMemory > this.memoryMonitor.warningThreshold) {
+                    console.warn('⚠️ [Memory Monitor] Memory usage high, monitoring closely...');
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ [Memory Monitor] Memory check failed:', error.message);
+        }
+    }
+
+    /**
+     * MEMORY SAFETY: Trigger memory cleanup
+     */
+    triggerMemoryCleanup() {
+        console.log('🧹 [Memory Monitor] Starting memory cleanup...');
+        
+        try {
+            // Clear old benchmark results if too many
+            if (this.benchmarkResults.length > 50) {
+                const toRemove = this.benchmarkResults.length - 50;
+                this.benchmarkResults.splice(0, toRemove);
+                console.log(`🧹 [Memory Monitor] Removed ${toRemove} old benchmark results`);
+            }
+            
+            // Clear test suites if they have accumulated data
+            this.testSuites.forEach(suite => {
+                if (suite.cleanup && typeof suite.cleanup === 'function') {
+                    try {
+                        suite.cleanup();
+                    } catch (error) {
+                        console.warn('⚠️ [Memory Monitor] Suite cleanup failed:', error.message);
+                    }
+                }
+            });
+            
+            // Force garbage collection hint
+            if (typeof gc === 'function') {
+                gc();
+                console.log('🧹 [Memory Monitor] Garbage collection triggered');
+            }
+            
+            console.log('✅ [Memory Monitor] Memory cleanup completed');
+            
+        } catch (error) {
+            console.error('❌ [Memory Monitor] Memory cleanup failed:', error);
+        }
+    }
+
+    /**
+     * MEMORY SAFETY: Get memory usage info
+     */
+    getMemoryInfo() {
+        if (!performance.memory) {
+            return { available: false, message: 'Memory API not available' };
+        }
+        
+        return {
+            available: true,
+            used: performance.memory.usedJSHeapSize,
+            total: performance.memory.totalJSHeapSize,
+            limit: performance.memory.jsHeapSizeLimit,
+            usedMB: (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2),
+            totalMB: (performance.memory.totalJSHeapSize / 1024 / 1024).toFixed(2),
+            limitMB: (performance.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)
+        };
     }
 }
 
