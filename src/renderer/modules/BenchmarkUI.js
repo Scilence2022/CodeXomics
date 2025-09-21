@@ -33,11 +33,12 @@ class BenchmarkUI {
         try {
             console.log('🎯 Starting benchmark interface display...');
             
-            // Get main content area
-            const mainContent = document.querySelector('.main-content') || 
-                               document.querySelector('#mainContent') || 
-                               document.querySelector('main') ||
-                               document.body;
+            // Get main content area with fallbacks
+            let mainContent = document.querySelector('.main-content') || 
+                             document.querySelector('#mainContent') || 
+                             document.querySelector('main') ||
+                             document.querySelector('body') ||
+                             document.documentElement;
 
             console.log('📦 Main content element:', mainContent);
 
@@ -45,30 +46,62 @@ class BenchmarkUI {
             const benchmarkInterface = this.createBenchmarkInterface();
             console.log('🔧 Benchmark interface created:', benchmarkInterface);
             
-            // Hide existing content
+            // Hide existing content carefully
             this.hideMainContent();
             console.log('🙈 Main content hidden');
             
-            // Add benchmark interface
-            mainContent.appendChild(benchmarkInterface);
-            console.log('✅ Benchmark interface added to DOM');
+            // Add benchmark interface to body to ensure it's always visible
+            document.body.appendChild(benchmarkInterface);
+            console.log('✅ Benchmark interface added to body');
             
-            // Ensure interface is visible
+            // Ensure interface is visible with multiple methods
             benchmarkInterface.style.display = 'block';
             benchmarkInterface.style.visibility = 'visible';
             benchmarkInterface.style.opacity = '1';
+            benchmarkInterface.style.position = 'fixed';
+            benchmarkInterface.style.top = '0';
+            benchmarkInterface.style.left = '0';
+            benchmarkInterface.style.width = '100vw';
+            benchmarkInterface.style.height = '100vh';
+            benchmarkInterface.style.zIndex = '999999';
+            
+            // Force immediate rendering
+            benchmarkInterface.offsetHeight;
+            benchmarkInterface.offsetWidth;
             
             // Setup interface event handlers
             this.setupBenchmarkInterfaceHandlers();
             console.log('🎮 Event handlers setup complete');
             
-            // Force a reflow to ensure rendering
-            benchmarkInterface.offsetHeight;
+            // Verify interface is actually visible
+            const isVisible = benchmarkInterface.offsetHeight > 0 && 
+                             benchmarkInterface.offsetWidth > 0 &&
+                             window.getComputedStyle(benchmarkInterface).display !== 'none';
+            
+            if (!isVisible) {
+                console.warn('⚠️ Interface may not be visible, forcing display');
+                benchmarkInterface.style.cssText = `
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    z-index: 999999 !important;
+                    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
+                `;
+            }
             
             console.log('✅ Benchmark interface display complete');
             
         } catch (error) {
             console.error('❌ Failed to show benchmark interface:', error);
+            
+            // Emergency fallback: show alert with instructions
+            alert('Failed to display benchmark interface. Please try restarting the application.');
+            
             throw error;
         }
     }

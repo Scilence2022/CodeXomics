@@ -106,7 +106,11 @@ class LLMBenchmarkFramework {
                 options: options
             };
 
-            // Run each test suite
+            // Monitor memory usage
+            const initialMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+            console.log(`🧠 Initial memory usage: ${Math.round(initialMemory / 1024 / 1024)} MB`);
+
+            // Run each test suite with error handling
             for (const [suiteId, testSuite] of this.testSuites.entries()) {
                 // Check if benchmark was stopped
                 if (!this.isRunning) {
@@ -121,13 +125,43 @@ class LLMBenchmarkFramework {
 
                 console.log(`Running test suite: ${suiteId}`);
                 
-                const suiteResult = await this.runTestSuite(suiteId, options);
-                results.testSuiteResults.push(suiteResult);
-                
-                // Update progress if callback provided
-                if (options.onProgress) {
-                    const progress = results.testSuiteResults.length / this.testSuites.size;
-                    options.onProgress(progress, suiteId, suiteResult);
+                try {
+                    const suiteResult = await this.runTestSuite(suiteId, options);
+                    results.testSuiteResults.push(suiteResult);
+                    
+                    // Update progress if callback provided
+                    if (options.onProgress) {
+                        const progress = results.testSuiteResults.length / this.testSuites.size;
+                        options.onProgress(progress, suiteId, suiteResult);
+                    }
+                    
+                    // Memory monitoring
+                    const currentMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                    const memoryDelta = currentMemory - initialMemory;
+                    console.log(`🧠 Memory after suite ${suiteId}: ${Math.round(currentMemory / 1024 / 1024)} MB (Δ${Math.round(memoryDelta / 1024 / 1024)} MB)`);
+                    
+                    // Force garbage collection if memory usage is high
+                    if (memoryDelta > 100 * 1024 * 1024 && global.gc) { // 100MB threshold
+                        global.gc();
+                        console.log('🧹 Forced garbage collection due to high memory usage');
+                    }
+                    
+                } catch (suiteError) {
+                    console.error(`❌ Error in test suite ${suiteId}:`, suiteError);
+                    
+                    // Add error result instead of crashing
+                    results.testSuiteResults.push({
+                        suiteId: suiteId,
+                        startTime: Date.now(),
+                        endTime: Date.now(),
+                        duration: 0,
+                        testResults: [],
+                        stats: { totalTests: 0, passedTests: 0, failedTests: 0, averageScore: 0 },
+                        error: suiteError.message
+                    });
+                    
+                    // Continue with next suite
+                    continue;
                 }
             }
 
@@ -183,18 +217,15 @@ class LLMBenchmarkFramework {
         // Display test suite start
         this.displayTestSuiteStart(testSuite, filteredTests.length);
         
-        for (let i = 0; i < tests.length; i++) {
-            const test = tests[i];
+        // Run tests with proper memory management
+        for (let i = 0; i < filteredTests.length; i++) {
+            const test = filteredTests[i];
             
             // Check if benchmark was stopped
             if (!this.isRunning) {
                 console.log('🛑 Test suite stopped by user');
                 this.chatManager.updateThinkingMessage('\n\n🛑 **Test Suite Stopped**\nTest suite execution was stopped by user request.');
                 break;
-            }
-            
-            if (options.tests && !options.tests.includes(test.id)) {
-                continue; // Skip if specific tests requested and this isn't one
             }
 
             console.log(`Running test: ${test.id} (${i + 1}/${filteredTests.length})`);
@@ -209,6 +240,17 @@ class LLMBenchmarkFramework {
             if (options.onTestProgress) {
                 const progress = (i + 1) / filteredTests.length;
                 options.onTestProgress(progress, test.id, testResult, suiteId);
+            }
+            
+            // Memory management: Force garbage collection every 5 tests
+            if (i % 5 === 0 && global.gc) {
+                global.gc();
+                console.log(`🧹 Memory cleanup performed after test ${i + 1}`);
+            }
+            
+            // Add small delay to prevent overwhelming the system
+            if (i < filteredTests.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
         }
 
