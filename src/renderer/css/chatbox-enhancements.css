@@ -362,20 +362,6 @@
 
 /* Multi-Agent System Styles */
 
-/* Agent System Button */
-#agentSystemBtn {
-    transition: all 0.3s ease;
-}
-
-#agentSystemBtn.enabled {
-    background: rgba(76, 175, 80, 0.2);
-    border-color: #4CAF50;
-}
-
-#agentSystemBtn.enabled:hover {
-    background: rgba(76, 175, 80, 0.3);
-    transform: scale(1.05);
-}
 
 /* Agent Settings Modal */
 .agent-settings-modal-content {
@@ -507,9 +493,6 @@
     }
 }
 
-#agentSystemBtn.enabled {
-    animation: agentPulse 2s infinite;
-}
 
 /* Agent Info Display */
 .agent-info {
