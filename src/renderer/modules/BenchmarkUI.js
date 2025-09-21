@@ -30,23 +30,47 @@ class BenchmarkUI {
      * Show benchmark interface in main window
      */
     showBenchmarkInterface() {
-        // Get main content area
-        const mainContent = document.querySelector('.main-content') || 
-                           document.querySelector('#mainContent') || 
-                           document.querySelector('main') ||
-                           document.body;
+        try {
+            console.log('🎯 Starting benchmark interface display...');
+            
+            // Get main content area
+            const mainContent = document.querySelector('.main-content') || 
+                               document.querySelector('#mainContent') || 
+                               document.querySelector('main') ||
+                               document.body;
 
-        // Create benchmark interface
-        const benchmarkInterface = this.createBenchmarkInterface();
-        
-        // Hide existing content
-        this.hideMainContent();
-        
-        // Add benchmark interface
-        mainContent.appendChild(benchmarkInterface);
-        
-        // Setup interface event handlers
-        this.setupBenchmarkInterfaceHandlers();
+            console.log('📦 Main content element:', mainContent);
+
+            // Create benchmark interface
+            const benchmarkInterface = this.createBenchmarkInterface();
+            console.log('🔧 Benchmark interface created:', benchmarkInterface);
+            
+            // Hide existing content
+            this.hideMainContent();
+            console.log('🙈 Main content hidden');
+            
+            // Add benchmark interface
+            mainContent.appendChild(benchmarkInterface);
+            console.log('✅ Benchmark interface added to DOM');
+            
+            // Ensure interface is visible
+            benchmarkInterface.style.display = 'block';
+            benchmarkInterface.style.visibility = 'visible';
+            benchmarkInterface.style.opacity = '1';
+            
+            // Setup interface event handlers
+            this.setupBenchmarkInterfaceHandlers();
+            console.log('🎮 Event handlers setup complete');
+            
+            // Force a reflow to ensure rendering
+            benchmarkInterface.offsetHeight;
+            
+            console.log('✅ Benchmark interface display complete');
+            
+        } catch (error) {
+            console.error('❌ Failed to show benchmark interface:', error);
+            throw error;
+        }
     }
 
     /**
@@ -83,14 +107,16 @@ class BenchmarkUI {
             <style>
                 .benchmark-interface {
                     position: fixed;
-                    top: 45px;
+                    top: 0;
                     left: 0;
                     right: 0;
                     bottom: 0;
                     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-                    z-index: 900;
+                    z-index: 9999;
                     overflow-y: auto;
                     padding: 20px;
+                    display: block !important;
+                    visibility: visible !important;
                 }
 
                 .benchmark-container {
@@ -521,28 +547,34 @@ class BenchmarkUI {
             '.main-canvas-container',
             '.sidebar',
             '.chatbox',
-            '#app > *:not(.benchmark-menu-bar):not(#benchmarkInterface)',
-            '.main-content',
+            '.main-content:not(#benchmarkInterface)',
             '.content-area',
             '.genome-viewer',
-            '.tab-container'
+            '.tab-container',
+            '.header',
+            '.menu-bar',
+            '.toolbar'
         ];
 
         elementsToHide.forEach(selector => {
             const elements = document.querySelectorAll(selector);
             elements.forEach(element => {
-                // Skip if it's the benchmark interface itself
+                // Skip if it's the benchmark interface itself or any benchmark-related element
                 if (element.id === 'benchmarkInterface' || 
                     element.classList.contains('benchmark-menu-bar') ||
-                    element.classList.contains('benchmark-interface')) {
+                    element.classList.contains('benchmark-interface') ||
+                    element.closest('#benchmarkInterface')) {
                     return;
                 }
                 
-                if (!element.dataset.originalDisplay) {
-                    element.dataset.originalDisplay = element.style.display || getComputedStyle(element).display;
+                // Only hide if element is visible
+                if (element.offsetParent !== null) {
+                    if (!element.dataset.originalDisplay) {
+                        element.dataset.originalDisplay = element.style.display || getComputedStyle(element).display;
+                    }
+                    element.style.display = 'none';
+                    element.dataset.benchmarkHidden = 'true';
                 }
-                element.style.display = 'none';
-                element.dataset.benchmarkHidden = 'true';
             });
         });
         
