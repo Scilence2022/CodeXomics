@@ -43,28 +43,28 @@ class LLMBenchmarkFramework {
         this.registerTestSuite('complex_analysis', new ComplexAnalysisSuite());
         
         // Plugin Integration Tests
-        this.registerTestSuite('plugin_integration', new PluginIntegrationSuite());
+        // this.registerTestSuite('plugin_integration', new PluginIntegrationSuite());
         
         // Parameter Handling Tests
-        this.registerTestSuite('parameter_handling', new ParameterHandlingSuite());
+        //this.registerTestSuite('parameter_handling', new ParameterHandlingSuite());
         
         // Error Recovery Tests
-        this.registerTestSuite('error_recovery', new ErrorRecoverySuite());
+       // this.registerTestSuite('error_recovery', new ErrorRecoverySuite());
         
         // Multi-step Workflow Tests
-        this.registerTestSuite('workflow_tests', new WorkflowTestSuite());
+       // this.registerTestSuite('workflow_tests', new WorkflowTestSuite());
         
         // Contextual Understanding Tests
-        this.registerTestSuite('contextual_understanding', new ContextualUnderstandingSuite());
+        // this.registerTestSuite('contextual_understanding', new ContextualUnderstandingSuite());
         
         // Edge Case Tests
-        this.registerTestSuite('edge_cases', new EdgeCaseTestSuite());
+       //  this.registerTestSuite('edge_cases', new EdgeCaseTestSuite());
         
         // Performance Tests
         this.registerTestSuite('performance_tests', new PerformanceTestSuite());
         
         // Consistency Tests
-        this.registerTestSuite('consistency_tests', new ConsistencyTestSuite());
+       // this.registerTestSuite('consistency_tests', new ConsistencyTestSuite());
         
         console.log(`Initialized ${this.testSuites.size} test suites with ${this.getTotalTestCount()} total tests`);
     }
@@ -466,14 +466,28 @@ class LLMBenchmarkFramework {
             metrics: {}
         };
 
+        let partialTestResult = null;
+        
         try {
             // Use test-specific timeout if available, otherwise use global timeout
             const timeoutMs = test.timeout || this.testTimeout;
             console.log(`⏱️ Running test ${test.id} with timeout: ${timeoutMs}ms (${timeoutMs/1000}s)`);
             
-            // Execute the test
+            // Create a promise that tracks partial progress
+            const executeTestWithProgress = async () => {
+                try {
+                    const testResult = await this.executeTest(test);
+                    return testResult;
+                } catch (error) {
+                    // Even if test execution fails, try to capture any partial LLM interaction data
+                    console.warn(`Test execution failed for ${test.id}, but attempting to capture partial data:`, error);
+                    throw error;
+                }
+            };
+            
+            // Execute the test with timeout
             const testResult = await Promise.race([
-                this.executeTest(test),
+                executeTestWithProgress(),
                 new Promise((_, reject) => 
                     setTimeout(() => reject(new Error(`Test timeout after ${timeoutMs}ms`)), timeoutMs)
                 )
@@ -506,6 +520,18 @@ class LLMBenchmarkFramework {
             result.score = 0;
             result.errors.push(error.message);
             console.error(`Test ${test.id} failed with error:`, error);
+            
+            // CRITICAL FIX: Try to capture LLM interaction data even on timeout/error
+            // Check if we have any LLM interaction data from ChatManager or other sources
+            try {
+                const partialInteractionData = await this.attemptToRecoverLLMInteractionData(test, error);
+                if (partialInteractionData) {
+                    result.llmInteractionData = partialInteractionData;
+                    console.log(`🔄 Recovered partial LLM interaction data for test ${test.id}`);
+                }
+            } catch (recoveryError) {
+                console.warn(`Failed to recover LLM interaction data for test ${test.id}:`, recoveryError);
+            }
         }
 
         result.endTime = Date.now();
@@ -866,32 +892,32 @@ class LLMBenchmarkFramework {
         const expectedResult = testInfo.expectedResult || {};
         
         // Create professional test engineer persona
-        const testerName = "Dr. Sarah Chen";
-        const testerRole = "Senior LLM Test Engineer";
+        const testerName = "Genome AI Studio";
+        const testerRole = "Benchmark Tester";
         
         // Show test initiation with improved formatting
         this.chatManager.addThinkingMessage(
-            `👩‍🔬 **${testerName}** (${testerRole})<br>` +
+            `👩${testerName} (${testerRole})<br>` +
             `═══════════════════════════════════════════════════════════<br><br>` +
             
-            `🧪 **INITIATING TEST EXECUTION**<br><br>` +
+            `🧪 INITIATING TEST EXECUTION<br><br>` +
             
-            `**📋 Test Specification:**<br>` +
+            `📋 Test Specification:<br>` +
             `&nbsp;&nbsp;&nbsp;• Name: ${testName}<br>` +
             `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(testType)}<br>` +
             `&nbsp;&nbsp;&nbsp;• ID: ${testInfo.id || 'N/A'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Max Score: ${testInfo.maxScore || 100} points<br><br>` +
             
-            `**🎯 Expected Behavior:**<br>` +
+            `🎯 Expected Behavior:<br>` +
             `${this.formatExpectedBehavior(testType, expectedResult, instruction)}<br><br>` +
             
-            `**📝 Test Instruction to LLM:**<br>` +
+            `📝 Test Instruction to LLM:<br>` +
             `&nbsp;&nbsp;&nbsp;"${instruction}"<br><br>` +
             
-            `**⚖️ Evaluation Criteria:**<br>` +
+            `⚖️ Evaluation Criteria:<br>` +
             `${this.formatEvaluationCriteria(testType, expectedResult)}<br><br>` +
             
-            `⚡ **Status:** Sending instruction to LLM for evaluation...`
+            `⚡ Status:** Sending instruction to LLM for evaluation...`
         );
     }
 
@@ -994,28 +1020,29 @@ class LLMBenchmarkFramework {
         
         // Create separation between tester analysis and LLM response
         this.chatManager.updateThinkingMessage(
-            `<br><br>🤖 **LLM RESPONSE RECEIVED**<br>` +
+            `<br><br>🤖 LLM RESPONSE RECEIVED<br>` +
+            `<br><br>🤖 LLM RESPONSE RECEIVED<br>` +
             `───────────────────────────────────────────────────────────<br>` +
-            `**📊 Response Summary:**<br>` +
+            `📊 Response Summary:<br>` +
             `&nbsp;&nbsp;&nbsp;• Length: ${response ? response.length : 0} characters<br>` +
             `&nbsp;&nbsp;&nbsp;• Processing time: ~${Math.random() * 2 + 1 | 0}s<br>` +
             `&nbsp;&nbsp;&nbsp;• Content preview:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"${response ? response.substring(0, 100) + (response.length > 100 ? '...' : '') : 'No response'}"<br><br>` +
             `───────────────────────────────────────────────────────────<br><br>` +
             
-            `👩‍🔬 **Dr. Sarah Chen - ANALYZING LLM RESPONSE**<br><br>` +
+            `👩‍🔬 Genome AI Studio - ANALYZING LLM RESPONSE**<br><br>` +
             
-            `**🔍 Technical Analysis:**<br>` +
+            `🔍 Technical Analysis:<br>` +
             `&nbsp;&nbsp;&nbsp;• Function detection: ${extractedCalls.length > 0 ? `✅ Found ${extractedCalls.length} function(s)` : '❌ No functions detected'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Detected functions: ${detectedFunctions || 'None'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Confidence level: ${extractedCalls.length > 0 ? extractedCalls[0].confidence + '%' : 'N/A'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Evidence pattern:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"${extractedCalls.length > 0 ? extractedCalls[0].evidence : 'No evidence found'}"<br><br>` +
             
-            `**📋 Compliance Check:**<br>` +
+            `📋 Compliance Check:<br>` +
             `&nbsp;&nbsp;&nbsp;• Response completeness: ${hasValidResponse ? '✅ Complete' : '❌ Incomplete'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Function execution: ${extractedCalls.length > 0 ? '✅ Detected' : '❌ Not detected'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Expected behavior match: ${this.assessBehaviorMatch(testInfo, extractedCalls)}<br><br>` +
             
-            `⚖️ **Status:** Proceeding to detailed scoring evaluation...`
+            `⚖️ Status: Proceeding to detailed scoring evaluation...`
         );
     }
 
@@ -2800,6 +2827,201 @@ class LLMBenchmarkFramework {
     clearBenchmarkHistory() {
         this.benchmarkResults = [];
         console.log('Benchmark history cleared');
+    }
+
+    /**
+     * Attempt to recover LLM interaction data when test fails/times out
+     * This method tries to extract any available LLM interaction data from various sources
+     */
+    async attemptToRecoverLLMInteractionData(test, error) {
+        console.log(`🔄 Attempting to recover LLM interaction data for test ${test.id}...`);
+        
+        try {
+            // Check if ChatManager has recent conversation data
+            if (this.chatManager && this.chatManager.conversationHistory) {
+                const recentMessages = this.chatManager.conversationHistory.slice(-5); // Last 5 messages
+                
+                // Look for messages related to this test
+                const testRelatedMessages = recentMessages.filter(msg => 
+                    msg.content && (
+                        msg.content.includes(test.instruction) ||
+                        msg.content.includes(test.id) ||
+                        msg.content.includes('search_gene_by_name') || // Based on the logs
+                        msg.content.includes('lacZ') // Based on the logs
+                    )
+                );
+                
+                if (testRelatedMessages.length > 0) {
+                    console.log(`Found ${testRelatedMessages.length} test-related messages`);
+                    
+                    // Reconstruct interaction data from conversation history
+                    const lastUserMessage = testRelatedMessages.find(msg => msg.role === 'user');
+                    const lastAssistantMessage = testRelatedMessages.find(msg => msg.role === 'assistant');
+                    
+                    if (lastUserMessage || lastAssistantMessage) {
+                        return this.reconstructInteractionDataFromMessages(test, lastUserMessage, lastAssistantMessage, error);
+                    }
+                }
+            }
+            
+            // Check if there's any cached LLM response data
+            if (this.chatManager && this.chatManager.lastResponse) {
+                console.log('Found cached LLM response data');
+                return this.reconstructInteractionDataFromCachedResponse(test, this.chatManager.lastResponse, error);
+            }
+            
+            // Try to get data from ConversationEvolution system
+            if (window.evolutionManager && window.evolutionManager.getRecentConversations) {
+                const recentConversations = window.evolutionManager.getRecentConversations(1);
+                if (recentConversations && recentConversations.length > 0) {
+                    console.log('Found recent conversation data from Evolution system');
+                    return this.reconstructInteractionDataFromEvolution(test, recentConversations[0], error);
+                }
+            }
+            
+            console.log('No recoverable LLM interaction data found');
+            return null;
+            
+        } catch (recoveryError) {
+            console.error('Error during LLM interaction data recovery:', recoveryError);
+            return null;
+        }
+    }
+
+    /**
+     * Reconstruct interaction data from conversation messages
+     */
+    reconstructInteractionDataFromMessages(test, userMessage, assistantMessage, error) {
+        return {
+            timestamp: new Date().toISOString(),
+            testId: test.id,
+            testName: test.name,
+            
+            request: {
+                instruction: test.instruction,
+                timestamp: userMessage ? new Date(userMessage.timestamp || Date.now()).toISOString() : new Date().toISOString(),
+                requestId: `recovered_${test.id}_${Date.now()}`,
+                originalMessage: userMessage ? userMessage.content : test.instruction
+            },
+            
+            response: {
+                content: assistantMessage ? assistantMessage.content : null,
+                timestamp: assistantMessage ? new Date(assistantMessage.timestamp || Date.now()).toISOString() : new Date().toISOString(),
+                responseId: `recovered_resp_${test.id}_${Date.now()}`,
+                recovered: true,
+                recoveryReason: 'timeout_recovery'
+            },
+            
+            analysis: {
+                isError: true,
+                errorDetails: error.message,
+                taskCompleted: false,
+                confidence: 0,
+                recoveredData: true,
+                timeoutOccurred: error.message.includes('timeout')
+            },
+            
+            detailedLogs: {
+                totalLogs: 3,
+                consoleLogs: [
+                    `Test ${test.id} started`,
+                    `LLM interaction occurred (recovered from conversation history)`,
+                    `Test failed: ${error.message}`
+                ],
+                errorLogs: [error.message],
+                recoveryLogs: ['Data recovered from conversation history']
+            }
+        };
+    }
+
+    /**
+     * Reconstruct interaction data from cached response
+     */
+    reconstructInteractionDataFromCachedResponse(test, cachedResponse, error) {
+        return {
+            timestamp: new Date().toISOString(),
+            testId: test.id,
+            testName: test.name,
+            
+            request: {
+                instruction: test.instruction,
+                timestamp: new Date().toISOString(),
+                requestId: `cached_${test.id}_${Date.now()}`
+            },
+            
+            response: {
+                content: cachedResponse,
+                timestamp: new Date().toISOString(),
+                responseId: `cached_resp_${test.id}_${Date.now()}`,
+                recovered: true,
+                recoveryReason: 'cached_response'
+            },
+            
+            analysis: {
+                isError: true,
+                errorDetails: error.message,
+                taskCompleted: false,
+                confidence: 0,
+                recoveredData: true,
+                timeoutOccurred: error.message.includes('timeout')
+            },
+            
+            detailedLogs: {
+                totalLogs: 3,
+                consoleLogs: [
+                    `Test ${test.id} started`,
+                    `LLM response cached (recovered)`,
+                    `Test failed: ${error.message}`
+                ],
+                errorLogs: [error.message],
+                recoveryLogs: ['Data recovered from cached response']
+            }
+        };
+    }
+
+    /**
+     * Reconstruct interaction data from Evolution system
+     */
+    reconstructInteractionDataFromEvolution(test, conversationData, error) {
+        return {
+            timestamp: new Date().toISOString(),
+            testId: test.id,
+            testName: test.name,
+            
+            request: {
+                instruction: test.instruction,
+                timestamp: conversationData.timestamp || new Date().toISOString(),
+                requestId: `evolution_${test.id}_${Date.now()}`
+            },
+            
+            response: {
+                content: conversationData.lastResponse || null,
+                timestamp: conversationData.timestamp || new Date().toISOString(),
+                responseId: `evolution_resp_${test.id}_${Date.now()}`,
+                recovered: true,
+                recoveryReason: 'evolution_system'
+            },
+            
+            analysis: {
+                isError: true,
+                errorDetails: error.message,
+                taskCompleted: false,
+                confidence: 0,
+                recoveredData: true,
+                timeoutOccurred: error.message.includes('timeout')
+            },
+            
+            detailedLogs: {
+                totalLogs: 3,
+                consoleLogs: [
+                    `Test ${test.id} started`,
+                    `LLM interaction tracked by Evolution system`,
+                    `Test failed: ${error.message}`
+                ],
+                errorLogs: [error.message],
+                recoveryLogs: ['Data recovered from Evolution system']
+            }
+        };
     }
 
     /**

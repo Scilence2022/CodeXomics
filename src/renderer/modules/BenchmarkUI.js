@@ -790,6 +790,7 @@ class BenchmarkUI {
 
     /**
      * Extract all LLM interaction data from benchmark results
+     * Enhanced to extract data from multiple sources including incomplete/timeout scenarios
      */
     extractAllLLMInteractionData(results) {
         const interactions = [];
@@ -798,6 +799,7 @@ class BenchmarkUI {
             results.testSuiteResults.forEach(suite => {
                 if (suite.testResults) {
                     suite.testResults.forEach(test => {
+                        // Primary source: dedicated llmInteractionData field
                         if (test.llmInteractionData) {
                             interactions.push({
                                 ...test.llmInteractionData,
@@ -811,6 +813,12 @@ class BenchmarkUI {
                                     status: test.status
                                 }
                             });
+                        } else {
+                            // Fallback: construct interaction data from available test fields
+                            const reconstructedInteraction = this.reconstructLLMInteractionFromTest(test);
+                            if (reconstructedInteraction) {
+                                interactions.push(reconstructedInteraction);
+                            }
                         }
                     });
                 }
@@ -818,6 +826,143 @@ class BenchmarkUI {
         }
         
         return interactions;
+    }
+
+    /**
+     * Reconstruct LLM interaction data from test result fields
+     * Used when dedicated llmInteractionData is not available
+     */
+    reconstructLLMInteractionFromTest(test) {
+        // Skip if no meaningful data is available
+        if (!test.llmResponse && !test.actualResult && !test.errors?.length && !test.metrics) {
+            return null;
+        }
+
+        const interaction = {
+            // Reconstruct request information
+            request: {
+                prompt: test.details?.instruction || `Test: ${test.testName}`,
+                timestamp: new Date(test.startTime || Date.now()).toISOString(),
+                requestId: `reconstructed_${test.testId}_${Date.now()}`,
+                testContext: {
+                    expectedResult: test.expectedResult,
+                    maxScore: test.maxScore,
+                    testType: test.type || 'unknown'
+                }
+            },
+
+            // Reconstruct response information
+            response: {
+                content: test.llmResponse || null,
+                responseTime: test.metrics?.responseTime || test.duration || 0,
+                timestamp: new Date(test.endTime || Date.now()).toISOString(),
+                responseId: `reconstructed_resp_${test.testId}_${Date.now()}`,
+                
+                // Extract function calls if available
+                toolCalls: this.extractToolCallsFromResult(test.actualResult),
+                
+                // Response metadata
+                tokenCount: test.metrics?.tokenCount || 0,
+                responseLength: test.metrics?.responseLength || 0,
+                functionCallsCount: test.metrics?.functionCallsCount || 0
+            },
+
+            // Reconstruct analysis information
+            analysis: {
+                correctToolUsed: test.success && test.actualResult?.tool_name,
+                parametersCorrect: test.success,
+                taskCompleted: test.success,
+                isError: test.status === 'error' || test.errors?.length > 0,
+                errorDetails: test.errors?.join('; ') || null,
+                confidence: test.metrics?.confidence || null,
+                score: test.score || 0,
+                maxScore: test.maxScore || 100,
+                successRate: test.success ? 100 : 0
+            },
+
+            // Reconstruct detailed logs
+            detailedLogs: {
+                totalLogs: (test.errors?.length || 0) + (test.warnings?.length || 0) + 1,
+                consoleLogs: [
+                    `Test ${test.testId} (${test.testName}) executed`,
+                    ...(test.errors || []).map(error => `ERROR: ${error}`),
+                    ...(test.warnings || []).map(warning => `WARNING: ${warning}`),
+                    `Result: ${test.status} (score: ${test.score}/${test.maxScore})`
+                ],
+                errorLogs: test.errors || [],
+                warningLogs: test.warnings || [],
+                performanceLogs: test.metrics ? [
+                    `Response time: ${test.metrics.responseTime || test.duration}ms`,
+                    `Token count: ${test.metrics.tokenCount || 'unknown'}`,
+                    `Function calls: ${test.metrics.functionCallsCount || 0}`
+                ] : []
+            },
+
+            // Test context information
+            testInfo: {
+                testId: test.testId,
+                testName: test.testName,
+                suiteId: test.suiteId,
+                score: test.score,
+                success: test.success,
+                duration: test.duration,
+                status: test.status,
+                
+                // Additional context
+                startTime: test.startTime,
+                endTime: test.endTime,
+                expectedResult: test.expectedResult,
+                actualResult: test.actualResult
+            }
+        };
+
+        return interaction;
+    }
+
+    /**
+     * Extract tool calls from actualResult
+     */
+    extractToolCallsFromResult(actualResult) {
+        if (!actualResult) return [];
+
+        const toolCalls = [];
+
+        // Handle direct tool call format
+        if (actualResult.tool_name) {
+            toolCalls.push({
+                tool: actualResult.tool_name,
+                parameters: actualResult.parameters || {},
+                result: actualResult.result || 'executed'
+            });
+        }
+
+        // Handle array of function calls
+        if (Array.isArray(actualResult)) {
+            actualResult.forEach(call => {
+                if (call.tool_name) {
+                    toolCalls.push({
+                        tool: call.tool_name,
+                        parameters: call.parameters || {},
+                        result: call.result || 'executed'
+                    });
+                }
+            });
+        }
+
+        // Handle functionCalls array
+        if (actualResult.functionCalls && Array.isArray(actualResult.functionCalls)) {
+            actualResult.functionCalls.forEach(call => {
+                if (call.tool_name || call.name) {
+                    toolCalls.push({
+                        tool: call.tool_name || call.name,
+                        parameters: call.parameters || call.args || {},
+                        result: call.result || 'executed'
+                    });
+                }
+            });
+        }
+
+        return toolCalls;
     }
 
     /**
@@ -1893,7 +2038,13 @@ class BenchmarkUI {
                     alert('No results to save');
                     return;
                 }
-                this.downloadJSON(this.currentResults, 'benchmark-results');
+                
+                try {
+                    this.downloadJSON(this.currentResults, 'benchmark-results');
+                } catch (error) {
+                    console.error('Failed to save benchmark:', error);
+                    alert('Failed to save benchmark: ' + error.message);
+                }
             }
 
             exportResults() {
@@ -1905,6 +2056,9 @@ class BenchmarkUI {
                 try {
                     // Export detailed LLM interaction data
                     const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults);
+                    
+                    // Clean the benchmark results to avoid circular references
+                    const cleanBenchmarkResults = this.cleanDataForExport(this.currentResults);
                     
                     // Create comprehensive export data
                     const exportData = {
@@ -1926,14 +2080,14 @@ class BenchmarkUI {
                             totalConsoleLogs: detailedInteractions.reduce((sum, i) => sum + (i.detailedLogs?.totalLogs || 0), 0)
                         },
                         
-                        // Complete interaction data
-                        llmInteractions: detailedInteractions,
+                        // Complete interaction data (cleaned)
+                        llmInteractions: this.cleanDataForExport(detailedInteractions),
                         
-                        // Complete benchmark results for context
-                        benchmarkResults: this.currentResults
+                        // Complete benchmark results for context (cleaned)
+                        benchmarkResults: cleanBenchmarkResults
                     };
 
-                    this.downloadJSON(exportData, 'benchmark-detailed-export');
+                    this.downloadJSONSafe(exportData, 'benchmark-detailed-export');
                     
                     console.log('📤 Detailed benchmark results with LLM interactions exported');
                     this.updateStatus('ready', 'Results exported successfully');
@@ -1943,7 +2097,13 @@ class BenchmarkUI {
                     console.error('Failed to export detailed results:', error);
                     alert('Failed to export detailed results: ' + error.message);
                     // Fallback to basic export
-                    this.downloadJSON(this.currentResults, 'benchmark-basic-export');
+                    try {
+                        const cleanResults = this.cleanDataForExport(this.currentResults);
+                        this.downloadJSONSafe(cleanResults, 'benchmark-basic-export-fallback');
+                    } catch (fallbackError) {
+                        console.error('Fallback export also failed:', fallbackError);
+                        alert('Export failed completely: ' + fallbackError.message);
+                    }
                 }
             }
 
@@ -1954,6 +2114,7 @@ class BenchmarkUI {
 
             /**
              * Extract all LLM interaction data from benchmark results
+             * Enhanced to extract data from multiple sources including incomplete/timeout scenarios
              */
             extractAllLLMInteractionData(results) {
                 const interactions = [];
@@ -1962,6 +2123,7 @@ class BenchmarkUI {
                     results.testSuiteResults.forEach(suite => {
                         if (suite.testResults) {
                             suite.testResults.forEach(test => {
+                                // Primary source: dedicated llmInteractionData field
                                 if (test.llmInteractionData) {
                                     interactions.push({
                                         ...test.llmInteractionData,
@@ -1975,6 +2137,12 @@ class BenchmarkUI {
                                             status: test.status
                                         }
                                     });
+                                } else {
+                                    // Fallback: construct interaction data from available test fields
+                                    const reconstructedInteraction = this.reconstructLLMInteractionFromTest(test);
+                                    if (reconstructedInteraction) {
+                                        interactions.push(reconstructedInteraction);
+                                    }
                                 }
                             });
                         }
@@ -1982,6 +2150,143 @@ class BenchmarkUI {
                 }
                 
                 return interactions;
+            }
+
+            /**
+             * Reconstruct LLM interaction data from test result fields
+             * Used when dedicated llmInteractionData is not available
+             */
+            reconstructLLMInteractionFromTest(test) {
+                // Skip if no meaningful data is available
+                if (!test.llmResponse && !test.actualResult && !test.errors?.length && !test.metrics) {
+                    return null;
+                }
+
+                const interaction = {
+                    // Reconstruct request information
+                    request: {
+                        prompt: test.details?.instruction || 'Test: ' + test.testName,
+                        timestamp: new Date(test.startTime || Date.now()).toISOString(),
+                        requestId: 'reconstructed_' + test.testId + '_' + Date.now(),
+                        testContext: {
+                            expectedResult: test.expectedResult,
+                            maxScore: test.maxScore,
+                            testType: test.type || 'unknown'
+                        }
+                    },
+
+                    // Reconstruct response information
+                    response: {
+                        content: test.llmResponse || null,
+                        responseTime: test.metrics?.responseTime || test.duration || 0,
+                        timestamp: new Date(test.endTime || Date.now()).toISOString(),
+                        responseId: 'reconstructed_resp_' + test.testId + '_' + Date.now(),
+                        
+                        // Extract function calls if available
+                        toolCalls: this.extractToolCallsFromResult(test.actualResult),
+                        
+                        // Response metadata
+                        tokenCount: test.metrics?.tokenCount || 0,
+                        responseLength: test.metrics?.responseLength || 0,
+                        functionCallsCount: test.metrics?.functionCallsCount || 0
+                    },
+
+                    // Reconstruct analysis information
+                    analysis: {
+                        correctToolUsed: test.success && test.actualResult?.tool_name,
+                        parametersCorrect: test.success,
+                        taskCompleted: test.success,
+                        isError: test.status === 'error' || test.errors?.length > 0,
+                        errorDetails: test.errors?.join('; ') || null,
+                        confidence: test.metrics?.confidence || null,
+                        score: test.score || 0,
+                        maxScore: test.maxScore || 100,
+                        successRate: test.success ? 100 : 0
+                    },
+
+                    // Reconstruct detailed logs
+                    detailedLogs: {
+                        totalLogs: (test.errors?.length || 0) + (test.warnings?.length || 0) + 1,
+                        consoleLogs: [
+                            'Test ' + test.testId + ' (' + test.testName + ') executed',
+                            ...(test.errors || []).map(error => 'ERROR: ' + error),
+                            ...(test.warnings || []).map(warning => 'WARNING: ' + warning),
+                            'Result: ' + test.status + ' (score: ' + test.score + '/' + test.maxScore + ')'
+                        ],
+                        errorLogs: test.errors || [],
+                        warningLogs: test.warnings || [],
+                        performanceLogs: test.metrics ? [
+                            'Response time: ' + (test.metrics.responseTime || test.duration) + 'ms',
+                            'Token count: ' + (test.metrics.tokenCount || 'unknown'),
+                            'Function calls: ' + (test.metrics.functionCallsCount || 0)
+                        ] : []
+                    },
+
+                    // Test context information
+                    testInfo: {
+                        testId: test.testId,
+                        testName: test.testName,
+                        suiteId: test.suiteId,
+                        score: test.score,
+                        success: test.success,
+                        duration: test.duration,
+                        status: test.status,
+                        
+                        // Additional context
+                        startTime: test.startTime,
+                        endTime: test.endTime,
+                        expectedResult: test.expectedResult,
+                        actualResult: test.actualResult
+                    }
+                };
+
+                return interaction;
+            }
+
+            /**
+             * Extract tool calls from actualResult
+             */
+            extractToolCallsFromResult(actualResult) {
+                if (!actualResult) return [];
+
+                const toolCalls = [];
+
+                // Handle direct tool call format
+                if (actualResult.tool_name) {
+                    toolCalls.push({
+                        tool: actualResult.tool_name,
+                        parameters: actualResult.parameters || {},
+                        result: actualResult.result || 'executed'
+                    });
+                }
+
+                // Handle array of function calls
+                if (Array.isArray(actualResult)) {
+                    actualResult.forEach(call => {
+                        if (call.tool_name) {
+                            toolCalls.push({
+                                tool: call.tool_name,
+                                parameters: call.parameters || {},
+                                result: call.result || 'executed'
+                            });
+                        }
+                    });
+                }
+
+                // Handle functionCalls array
+                if (actualResult.functionCalls && Array.isArray(actualResult.functionCalls)) {
+                    actualResult.functionCalls.forEach(call => {
+                        if (call.tool_name || call.name) {
+                            toolCalls.push({
+                                tool: call.tool_name || call.name,
+                                parameters: call.parameters || call.args || {},
+                                result: call.result || 'executed'
+                            });
+                        }
+                    });
+                }
+
+                return toolCalls;
             }
 
             /**
@@ -1998,6 +2303,63 @@ class BenchmarkUI {
             }
 
             /**
+             * Safe JSON serialization that handles circular references
+             */
+            safeJSONStringify(obj, space = 2) {
+                const seen = new WeakSet();
+                return JSON.stringify(obj, (key, value) => {
+                    if (typeof value === "object" && value !== null) {
+                        if (seen.has(value)) {
+                            return "[Circular Reference]";
+                        }
+                        seen.add(value);
+                    }
+                    // Filter out potentially problematic properties
+                    if (key === 'genomeBrowser' || key === 'fileManager' || key === 'app' || key === 'chatManager' || key === 'configManager') {
+                        return "[Object Reference Removed]";
+                    }
+                    // Filter out DOM elements and functions
+                    if (typeof value === 'function') {
+                        return "[Function]";
+                    }
+                    if (value instanceof Element || value instanceof Node) {
+                        return "[DOM Element]";
+                    }
+                    return value;
+                }, space);
+            }
+
+            /**
+             * Clean data for safe export by removing circular references and problematic objects
+             */
+            cleanDataForExport(data) {
+                if (!data) return data;
+                
+                // Create a deep copy while filtering out problematic properties
+                const cleanData = JSON.parse(this.safeJSONStringify(data));
+                return cleanData;
+            }
+
+            /**
+             * Safe download JSON method using safe serialization
+             */
+            downloadJSONSafe(data, filename) {
+                try {
+                    const jsonString = this.safeJSONStringify(data, 2);
+                    const blob = new Blob([jsonString], {type: 'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename + '.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Download failed:', error);
+                    throw new Error('Failed to serialize data for download: ' + error.message);
+                }
+            }
+
+            /**
              * Export basic benchmark results
              */
             exportBasicResults() {
@@ -2005,10 +2367,17 @@ class BenchmarkUI {
                     alert('No results to export');
                     return;
                 }
-                this.downloadJSON(this.currentResults, 'benchmark-basic-results');
-                console.log('📄 Basic benchmark results exported');
-                this.updateStatus('ready', 'Basic results exported');
-                setTimeout(() => this.updateStatus('ready', 'System Ready'), 2000);
+                
+                try {
+                    const cleanResults = this.cleanDataForExport(this.currentResults);
+                    this.downloadJSONSafe(cleanResults, 'benchmark-basic-results');
+                    console.log('📄 Basic benchmark results exported');
+                    this.updateStatus('ready', 'Basic results exported');
+                    setTimeout(() => this.updateStatus('ready', 'System Ready'), 2000);
+                } catch (error) {
+                    console.error('Failed to export basic results:', error);
+                    alert('Failed to export basic results: ' + error.message);
+                }
             }
 
             /**
@@ -2028,6 +2397,9 @@ class BenchmarkUI {
                         alert('No LLM interaction data found in results');
                         return;
                     }
+                    
+                    // Clean interactions data to avoid circular references
+                    const cleanInteractions = this.cleanDataForExport(detailedInteractions);
                     
                     // Create comprehensive export data focused on interactions
                     const exportData = {
@@ -2049,11 +2421,11 @@ class BenchmarkUI {
                             totalConsoleLogs: detailedInteractions.reduce((sum, i) => sum + (i.detailedLogs?.totalLogs || 0), 0)
                         },
                         
-                        // Complete interaction data
-                        interactions: detailedInteractions
+                        // Complete interaction data (cleaned)
+                        interactions: cleanInteractions
                     };
 
-                    this.downloadJSON(exportData, 'llm-interactions-detailed');
+                    this.downloadJSONSafe(exportData, 'llm-interactions-detailed');
                     
                     console.log('🤖 Detailed LLM interactions exported');
                     this.updateStatus('ready', 'LLM interactions exported');
@@ -2232,13 +2604,21 @@ class BenchmarkUI {
             }
 
             downloadJSON(data, filename) {
-                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename + '.json';
-                a.click();
-                URL.revokeObjectURL(url);
+                try {
+                    // Use safe serialization to handle circular references
+                    const cleanData = this.cleanDataForExport(data);
+                    const jsonString = this.safeJSONStringify(cleanData, 2);
+                    const blob = new Blob([jsonString], {type: 'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename + '.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Download failed:', error);
+                    throw new Error('Failed to serialize data for download: ' + error.message);
+                }
             }
         }
 
