@@ -1607,8 +1607,9 @@ class BenchmarkUI {
             <div class="dropdown-menu" id="fileMenu">
                 <div class="dropdown-item" onclick="benchmarkApp.newBenchmark()">🆕 New Benchmark</div>
                 <div class="dropdown-item" onclick="benchmarkApp.saveBenchmark()">💾 Save Results</div>
-                <div class="dropdown-item" onclick="benchmarkApp.exportResults()">📤 Export Results</div>
-                <div class="dropdown-item" onclick="benchmarkApp.exportDetailedLLMInteractions()">🤖 Export LLM Interactions</div>
+                <div class="dropdown-item" onclick="benchmarkApp.exportResults()">📤 Export Detailed Results</div>
+                <div class="dropdown-item" onclick="benchmarkApp.exportBasicResults()">📄 Export Basic Results</div>
+                <div class="dropdown-item" onclick="benchmarkApp.exportDetailedLLMInteractions()">🤖 Export LLM Interactions Only</div>
                 <div class="dropdown-separator"></div>
                 <div class="dropdown-item" onclick="benchmarkApp.closeWindow()">❌ Close</div>
             </div>
@@ -1722,7 +1723,7 @@ class BenchmarkUI {
                         ⏹️ Stop
                     </button>
                     <button id="exportResults" style="background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; margin: 0 5px;" disabled>
-                        📊 Export
+                        📊 Export Detailed Results
                     </button>
                 </div>
             </div>
@@ -1900,12 +1901,168 @@ class BenchmarkUI {
                     alert('No results to export');
                     return;
                 }
-                this.downloadJSON(this.currentResults, 'benchmark-export');
+                
+                try {
+                    // Export detailed LLM interaction data
+                    const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults);
+                    
+                    // Create comprehensive export data
+                    const exportData = {
+                        metadata: {
+                            exportTimestamp: new Date().toISOString(),
+                            benchmarkTimestamp: this.currentResults.startTime,
+                            totalTests: this.currentResults.overallStats?.totalTests || 0,
+                            totalInteractions: detailedInteractions.length,
+                            exportType: 'detailed_benchmark_results_with_llm_interactions',
+                            version: '1.0.0'
+                        },
+                        
+                        // Summary statistics
+                        summary: {
+                            totalInteractions: detailedInteractions.length,
+                            successfulInteractions: detailedInteractions.filter(i => !i.analysis?.isError).length,
+                            failedInteractions: detailedInteractions.filter(i => i.analysis?.isError).length,
+                            averageResponseTime: this.calculateAverageResponseTime(detailedInteractions),
+                            totalConsoleLogs: detailedInteractions.reduce((sum, i) => sum + (i.detailedLogs?.totalLogs || 0), 0)
+                        },
+                        
+                        // Complete interaction data
+                        llmInteractions: detailedInteractions,
+                        
+                        // Complete benchmark results for context
+                        benchmarkResults: this.currentResults
+                    };
+
+                    this.downloadJSON(exportData, 'benchmark-detailed-export');
+                    
+                    console.log('📤 Detailed benchmark results with LLM interactions exported');
+                    this.updateStatus('ready', 'Results exported successfully');
+                    setTimeout(() => this.updateStatus('ready', 'System Ready'), 2000);
+                    
+                } catch (error) {
+                    console.error('Failed to export detailed results:', error);
+                    alert('Failed to export detailed results: ' + error.message);
+                    // Fallback to basic export
+                    this.downloadJSON(this.currentResults, 'benchmark-basic-export');
+                }
             }
 
             closeWindow() {
                 if (this.isRunning && !confirm('Stop benchmark and close?')) return;
                 window.close();
+            }
+
+            /**
+             * Extract all LLM interaction data from benchmark results
+             */
+            extractAllLLMInteractionData(results) {
+                const interactions = [];
+                
+                if (results.testSuiteResults) {
+                    results.testSuiteResults.forEach(suite => {
+                        if (suite.testResults) {
+                            suite.testResults.forEach(test => {
+                                if (test.llmInteractionData) {
+                                    interactions.push({
+                                        ...test.llmInteractionData,
+                                        testInfo: {
+                                            testId: test.testId,
+                                            testName: test.testName,
+                                            suiteId: test.suiteId,
+                                            score: test.score,
+                                            success: test.success,
+                                            duration: test.duration,
+                                            status: test.status
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                return interactions;
+            }
+
+            /**
+             * Calculate average response time from interactions
+             */
+            calculateAverageResponseTime(interactions) {
+                const responseTimes = interactions
+                    .map(i => i.response?.responseTime)
+                    .filter(time => time && time > 0);
+                
+                if (responseTimes.length === 0) return 0;
+                
+                return responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+            }
+
+            /**
+             * Export basic benchmark results
+             */
+            exportBasicResults() {
+                if (!this.currentResults) {
+                    alert('No results to export');
+                    return;
+                }
+                this.downloadJSON(this.currentResults, 'benchmark-basic-results');
+                console.log('📄 Basic benchmark results exported');
+                this.updateStatus('ready', 'Basic results exported');
+                setTimeout(() => this.updateStatus('ready', 'System Ready'), 2000);
+            }
+
+            /**
+             * Export detailed LLM interaction data only
+             */
+            exportDetailedLLMInteractions() {
+                if (!this.currentResults) {
+                    alert('No benchmark results available to export');
+                    return;
+                }
+
+                try {
+                    // Extract all LLM interaction data
+                    const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults);
+                    
+                    if (detailedInteractions.length === 0) {
+                        alert('No LLM interaction data found in results');
+                        return;
+                    }
+                    
+                    // Create comprehensive export data focused on interactions
+                    const exportData = {
+                        metadata: {
+                            exportTimestamp: new Date().toISOString(),
+                            benchmarkTimestamp: this.currentResults.startTime,
+                            totalTests: this.currentResults.overallStats?.totalTests || 0,
+                            totalInteractions: detailedInteractions.length,
+                            exportType: 'llm_interactions_only',
+                            version: '1.0.0'
+                        },
+                        
+                        // Summary statistics
+                        summary: {
+                            totalInteractions: detailedInteractions.length,
+                            successfulInteractions: detailedInteractions.filter(i => !i.analysis?.isError).length,
+                            failedInteractions: detailedInteractions.filter(i => i.analysis?.isError).length,
+                            averageResponseTime: this.calculateAverageResponseTime(detailedInteractions),
+                            totalConsoleLogs: detailedInteractions.reduce((sum, i) => sum + (i.detailedLogs?.totalLogs || 0), 0)
+                        },
+                        
+                        // Complete interaction data
+                        interactions: detailedInteractions
+                    };
+
+                    this.downloadJSON(exportData, 'llm-interactions-detailed');
+                    
+                    console.log('🤖 Detailed LLM interactions exported');
+                    this.updateStatus('ready', 'LLM interactions exported');
+                    setTimeout(() => this.updateStatus('ready', 'System Ready'), 2000);
+                    
+                } catch (error) {
+                    console.error('Failed to export detailed interactions:', error);
+                    alert('Failed to export detailed interactions: ' + error.message);
+                }
             }
 
             // Edit Menu Actions
