@@ -3747,6 +3747,49 @@ The gene search has been completed successfully.`;
     }
 
     /**
+     * Test function call parsing with sample LLM response
+     * This method helps debug function call extraction issues
+     */
+    testFunctionCallParsing() {
+        // Sample LLM response from user
+        const sampleResponse = `<think>
+Okay, the user wants to search for the gene lacZ. Let me check the available tools. The relevant function here is search_gene_by_name, which is under the SEARCH & NAVIGATION category. The parameters needed are the name of the gene. Since the user specified "lacZ", I should use that as the parameter. I need to make sure the tool call is correctly formatted in JSON. Also, according to the priority, local tools are first, so this should be okay. No other parameters are needed, just the gene name. Let me structure the JSON accordingly.
+</think>
+
+{"tool_name": "search_gene_by_name", "parameters": {"name": "lacZ"}}`;
+
+        console.log('🧪 Testing function call parsing with sample response...');
+        console.log('Sample response:', sampleResponse);
+        
+        // Test parseToolCall
+        const parsedToolCall = this.parseToolCall(sampleResponse);
+        console.log('Parsed tool call:', parsedToolCall);
+        
+        // Test displayLLMThinking
+        console.log('Testing thinking display...');
+        this.displayLLMThinking(sampleResponse);
+        
+        // Expected result
+        const expectedResult = {
+            tool_name: "search_gene_by_name",
+            parameters: { name: "lacZ" }
+        };
+        
+        // Verify result
+        if (parsedToolCall && 
+            parsedToolCall.tool_name === expectedResult.tool_name &&
+            JSON.stringify(parsedToolCall.parameters) === JSON.stringify(expectedResult.parameters)) {
+            console.log('✅ Function call parsing test PASSED');
+            return true;
+        } else {
+            console.log('❌ Function call parsing test FAILED');
+            console.log('Expected:', expectedResult);
+            console.log('Got:', parsedToolCall);
+            return false;
+        }
+    }
+
+    /**
      * Get detailed current state information for system prompts
      */
     getDetailedCurrentState(context) {
@@ -12654,13 +12697,38 @@ ${this.getPluginSystemInfo()}`;
         const thinkingMatch = response.match(/<think>([\s\S]*?)<\/think>/);
         if (thinkingMatch) {
             const thinkingContent = thinkingMatch[1].trim();
-            this.updateThinkingMessage(`💭 Model thinking: ${thinkingContent}`);
+            // 格式化思考内容，使其更易读
+            const formattedThinking = this.formatThinkingContent(thinkingContent);
+            this.updateThinkingMessage(`💭 Model thinking:\n\n${formattedThinking}`);
         }
         
         // 检查是否有工具调用分析
         if (response.includes('tool_name') || response.includes('function_name')) {
             this.updateThinkingMessage('🔧 Analyzing required tool calls...');
         }
+    }
+
+    /**
+     * 格式化思考内容，使其更易读
+     */
+    formatThinkingContent(thinkingContent) {
+        // 清理和格式化思考内容
+        let formatted = thinkingContent
+            .replace(/\n\s*\n/g, '\n') // 移除多余的空行
+            .trim();
+        
+        // 如果内容很长，进行适当的换行处理
+        if (formatted.length > 200) {
+            // 在句号、问号、感叹号后添加换行（如果后面不是换行符）
+            formatted = formatted.replace(/([.!?])\s+(?=[A-Z])/g, '$1\n\n');
+        }
+        
+        // 确保内容以适当的格式结束
+        if (!formatted.endsWith('.') && !formatted.endsWith('!') && !formatted.endsWith('?')) {
+            formatted += '...';
+        }
+        
+        return formatted;
     }
 
     /**
