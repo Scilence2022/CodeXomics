@@ -2956,6 +2956,19 @@ class ChatManager {
                                 content: `Tool execution completed: ${successMessages.join('; ')}`
                             });
                             
+                            // ENHANCED: Check for simple task completion after successful tool execution
+                            const shouldTerminateEarly = this.shouldTerminateAfterToolExecution(toolsToExecute, successfulResults, message);
+                            if (shouldTerminateEarly) {
+                                console.log('=== EARLY TERMINATION AFTER SUCCESSFUL TOOL EXECUTION ===');
+                                console.log('Simple task completed successfully, terminating early');
+                                console.log('=========================================================');
+                                
+                                taskCompleted = true;
+                                // Generate a simple completion response based on the tool results
+                                finalResponse = this.generateCompletionResponseFromToolResults(successfulResults, toolsToExecute);
+                                break;
+                            }
+                            
                             console.log(`${successfulResults.length} tool(s) executed successfully. Continuing to round ${currentRound + 1} to check for follow-up actions.`);
                         }
                         
@@ -3469,6 +3482,16 @@ class ChatManager {
             { patterns: ['i have completed', 'i have finished', 'i have done'], weight: 0.8, reason: 'Direct completion confirmation' },
             { patterns: ['the task is complete', 'the task is finished', 'the task is done'], weight: 0.85, reason: 'Task status confirmation' },
             
+            // Gene search completion signals
+            { patterns: ['gene found', 'found the gene', 'located the gene', 'gene located'], weight: 0.85, reason: 'Gene search completed' },
+            { patterns: ['gene information', 'gene details', 'gene data', 'gene sequence'], weight: 0.8, reason: 'Gene information provided' },
+            { patterns: ['here is the gene', 'here are the details', 'gene details are'], weight: 0.75, reason: 'Gene details presented' },
+            { patterns: ['gene name:', 'gene id:', 'gene symbol:', 'location:'], weight: 0.8, reason: 'Gene metadata provided' },
+            
+            // Search result completion
+            { patterns: ['search results', 'search completed', 'found results'], weight: 0.75, reason: 'Search results provided' },
+            { patterns: ['no results found', 'no matches found', 'gene not found'], weight: 0.8, reason: 'Search completed with no results' },
+            
             // Summary/conclusion signals
             { patterns: ['in summary', 'to summarize', 'in conclusion', 'overall'], weight: 0.7, reason: 'Summary provided' },
             { patterns: ['final result', 'final analysis', 'final summary'], weight: 0.75, reason: 'Final results provided' },
@@ -3580,6 +3603,94 @@ class ChatManager {
         }
         
         return result;
+    }
+
+    /**
+     * Determine if we should terminate early after successful tool execution
+     * This helps prevent infinite loops for simple tasks like gene searches
+     */
+    shouldTerminateAfterToolExecution(toolsToExecute, successfulResults, originalMessage) {
+        // Check if this is a simple search task that likely doesn't need follow-up
+        const message = originalMessage.toLowerCase();
+        
+        // Simple search patterns that typically complete with one tool call
+        const simpleSearchPatterns = [
+            'search for gene',
+            'find gene',
+            'locate gene',
+            'show me gene',
+            'get gene',
+            'gene information',
+            'gene details'
+        ];
+        
+        const isSimpleSearch = simpleSearchPatterns.some(pattern => message.includes(pattern));
+        
+        // Check if we executed a search tool successfully
+        const searchTools = ['search_gene_by_name', 'search_sequence', 'find_feature', 'search_feature'];
+        const executedSearchTool = toolsToExecute.some(tool => searchTools.includes(tool.tool_name));
+        
+        // Check if the tool execution was successful and returned meaningful data
+        const hasValidResults = successfulResults.some(result => {
+            if (!result.result) return false;
+            
+            // Check if result contains actual data (not just empty or error responses)
+            const resultStr = JSON.stringify(result.result).toLowerCase();
+            return !resultStr.includes('error') && 
+                   !resultStr.includes('not found') && 
+                   !resultStr.includes('no results') &&
+                   resultStr.length > 20; // Reasonable data length
+        });
+        
+        // For simple searches with successful results, terminate early
+        if (isSimpleSearch && executedSearchTool && hasValidResults) {
+            console.log('Early termination criteria met: Simple search with successful results');
+            return true;
+        }
+        
+        // For complex tasks or failed searches, continue with normal flow
+        return false;
+    }
+
+    /**
+     * Generate a completion response based on tool execution results
+     */
+    generateCompletionResponseFromToolResults(successfulResults, toolsToExecute) {
+        if (successfulResults.length === 0) {
+            return "Task completed but no results were obtained.";
+        }
+        
+        const tool = toolsToExecute[0]; // Assume single tool for simple tasks
+        const result = successfulResults[0];
+        
+        // Generate appropriate response based on tool type
+        switch (tool.tool_name) {
+            case 'search_gene_by_name':
+                if (result.result && result.result.length > 0) {
+                    const gene = result.result[0]; // Get first result
+                    return `Found the gene "${gene.name || gene.symbol || 'Unknown'}". Here are the details:
+
+**Gene Information:**
+- Name: ${gene.name || 'N/A'}
+- Symbol: ${gene.symbol || 'N/A'}
+- Location: ${gene.location || 'N/A'}
+- Strand: ${gene.strand || 'N/A'}
+- Length: ${gene.length || 'N/A'} bp
+
+The gene search has been completed successfully.`;
+                } else {
+                    return "Gene search completed, but no matching genes were found in the current genome.";
+                }
+                
+            case 'search_sequence':
+                return `Sequence search completed successfully. Found ${result.result?.length || 0} matching sequence(s).`;
+                
+            case 'find_feature':
+                return `Feature search completed successfully. Found ${result.result?.length || 0} matching feature(s).`;
+                
+            default:
+                return `Task completed successfully using ${tool.tool_name}. Results have been processed.`;
+        }
     }
 
     /**

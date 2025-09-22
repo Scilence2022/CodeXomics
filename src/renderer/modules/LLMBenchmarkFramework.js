@@ -233,7 +233,7 @@ class LLMBenchmarkFramework {
             // Check if benchmark was stopped
             if (!this.isRunning) {
                 console.log('🛑 Test suite stopped by user');
-                this.chatManager.updateThinkingMessage('\n\n🛑 **Test Suite Stopped**\nTest suite execution was stopped by user request.');
+                this.chatManager.updateThinkingMessage('\n\n🛑 Test Suite Stopped\nTest suite execution was stopped by user request.');
                 break;
             }
 
@@ -317,7 +317,9 @@ class LLMBenchmarkFramework {
             `👩‍🔬 **Dr. Sarah Chen:** "Proceeding with ${test.name}"\n` +
             `**Test ID:** ${test.id} | **Type:** ${this.getTestTypeDescription(test.type)}\n` +
             `**Estimated Completion:** ${Math.ceil((totalTests - currentIndex) * 0.5)} minutes remaining\n` +
-            `═══════════════════════════════════════════════════════════`
+            `═══════════════════════════════════════════════════════════` +
+            `👩‍🔬 LLM Response: ${test.llmResponse}"\n` 
+
         );
     }
 
