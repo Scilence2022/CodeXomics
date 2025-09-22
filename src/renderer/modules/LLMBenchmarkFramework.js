@@ -802,9 +802,23 @@ class LLMBenchmarkFramework {
                 interactionData.response.rawResponse = response;
                 interactionData.response.processedResponse = this.processResponse(response);
                 
-                // Extract function calls and tool executions
-                interactionData.response.functionCalls = this.extractFunctionCallsFromResponse(response);
-                interactionData.response.toolExecutions = this.captureToolExecutions();
+                // ENHANCED: Get actual function call execution data from ChatManager
+                const executionData = this.chatManager.getLastExecutionData();
+                if (executionData) {
+                    interactionData.response.functionCalls = executionData.functionCalls || [];
+                    interactionData.response.toolExecutions = executionData.toolResults || [];
+                    interactionData.response.executionRounds = executionData.rounds || 0;
+                    interactionData.response.totalExecutionTime = executionData.totalExecutionTime || 0;
+                    interactionData.response.actualExecutionData = executionData;
+                    
+                    console.log(`🔍 Actual function calls executed:`, executionData.functionCalls);
+                    console.log(`🔧 Tool execution results:`, executionData.toolResults);
+                } else {
+                    // Fallback to text-based extraction if no execution data available
+                    console.log(`⚠️ No execution data available, falling back to text parsing`);
+                    interactionData.response.functionCalls = this.extractFunctionCallsFromResponse(response);
+                    interactionData.response.toolExecutions = this.captureToolExecutions();
+                }
                 
                 // CRITICAL ENHANCEMENT: Capture all the detailed ChatManager logs
                 interactionData.detailedLogs = {
@@ -1337,6 +1351,28 @@ class LLMBenchmarkFramework {
             expectedFunction: options.expectedResult?.tool_name
         });
 
+        // ENHANCED: Check for actual execution data first
+        if (parsedResponse && parsedResponse.actualExecutionData) {
+            const executionData = parsedResponse.actualExecutionData;
+            console.log('🎯 Using actual execution data:', executionData);
+            
+            if (executionData.functionCalls && executionData.functionCalls.length > 0) {
+                // Return the actual function call that was executed
+                const executedCall = executionData.functionCalls[0]; // Get first executed function
+                console.log('✅ Found actual executed function call:', executedCall);
+                return {
+                    tool_name: executedCall.tool_name,
+                    parameters: executedCall.parameters,
+                    executed: true,
+                    round: executedCall.round,
+                    timestamp: executedCall.timestamp,
+                    confidence: 100, // Actual execution = 100% confidence
+                    actualResult: true
+                };
+            }
+        }
+
+        // Fallback to text-based detection
         if (parsedResponse && parsedResponse.functionCalls && parsedResponse.functionCalls.length > 0) {
             // Return the highest confidence function call for single function tests
             const sortedCalls = parsedResponse.functionCalls.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));

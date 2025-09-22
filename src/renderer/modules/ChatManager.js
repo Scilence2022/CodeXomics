@@ -2626,11 +2626,24 @@ class ChatManager {
         }
     }
 
-    async sendToLLM(message) {
+    async sendToLLM(message, options = {}) {
         // Check if LLM is configured
         if (!this.llmConfigManager.isConfigured()) {
             return "I need to be configured first. Please go to Options → Configure LLMs to set up your preferred AI provider (OpenAI, Anthropic, Google, or Local LLM).";
         }
+
+        // Initialize execution tracking for benchmark integration
+        const executionData = {
+            functionCalls: [],
+            toolResults: [],
+            rounds: 0,
+            startTime: Date.now(),
+            endTime: null,
+            totalExecutionTime: 0
+        };
+
+        // Store execution data for benchmark access
+        this.lastExecutionData = executionData;
 
         console.log('=== ChatManager.sendToLLM DEBUG START ===');
         console.log('User message:', message);
@@ -2924,6 +2937,23 @@ class ChatManager {
                         
                         console.log('Tool execution completed. Results:', toolResults);
                         
+                        // BENCHMARK INTEGRATION: Track function calls and results for benchmark access
+                        if (this.lastExecutionData) {
+                            // Track function calls
+                            toolsToExecute.forEach(tool => {
+                                this.lastExecutionData.functionCalls.push({
+                                    tool_name: tool.tool_name,
+                                    parameters: tool.parameters,
+                                    round: currentRound,
+                                    timestamp: new Date().toISOString()
+                                });
+                            });
+                            
+                            // Track tool results
+                            this.lastExecutionData.toolResults.push(...toolResults);
+                            this.lastExecutionData.rounds = currentRound;
+                        }
+                        
                         // Track executed tools to prevent re-execution
                         toolsToExecute.forEach(tool => {
                             const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
@@ -3019,6 +3049,14 @@ class ChatManager {
                 
                 finalResponse = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
                 console.log('Final summary response:', finalResponse);
+            }
+            
+            // BENCHMARK INTEGRATION: Complete execution data tracking
+            if (this.lastExecutionData) {
+                this.lastExecutionData.endTime = Date.now();
+                this.lastExecutionData.totalExecutionTime = this.lastExecutionData.endTime - this.lastExecutionData.startTime;
+                this.lastExecutionData.finalResponse = finalResponse || 'I completed the requested actions. Please let me know if you need anything else.';
+                console.log('📊 Execution data for benchmark:', this.lastExecutionData);
             }
             
             console.log('=== ChatManager.sendToLLM DEBUG END (SUCCESS) ===');
@@ -3691,6 +3729,21 @@ The gene search has been completed successfully.`;
             default:
                 return `Task completed successfully using ${tool.tool_name}. Results have been processed.`;
         }
+    }
+
+    /**
+     * Get execution data for benchmark integration
+     * Returns the function calls and tool results from the last LLM interaction
+     */
+    getLastExecutionData() {
+        return this.lastExecutionData || null;
+    }
+
+    /**
+     * Clear execution data (for memory management)
+     */
+    clearExecutionData() {
+        this.lastExecutionData = null;
     }
 
     /**
