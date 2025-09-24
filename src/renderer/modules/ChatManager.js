@@ -4139,14 +4139,21 @@ class ChatManager {
             'show me gene',
             'get gene',
             'gene information',
-            'gene details'
+            'gene details',
+            'codon usage analysis',
+            'codon analysis',
+            'analyze codon',
+            'codon frequency',
+            'codon bias'
         ];
         
         const isSimpleSearch = simpleSearchPatterns.some(pattern => message.includes(pattern));
         
-        // Check if we executed a search tool successfully
+        // Check if we executed a search or analysis tool successfully
         const searchTools = ['search_gene_by_name', 'search_sequence', 'find_feature', 'search_feature'];
+        const analysisTools = ['codon_usage_analysis', 'compute_gc', 'analyze_region'];
         const executedSearchTool = toolsToExecute.some(tool => searchTools.includes(tool.tool_name));
+        const executedAnalysisTool = toolsToExecute.some(tool => analysisTools.includes(tool.tool_name));
         
         // Check if the tool execution was successful and returned meaningful data
         const hasValidResults = successfulResults.some(result => {
@@ -4160,9 +4167,9 @@ class ChatManager {
                    resultStr.length > 20; // Reasonable data length
         });
         
-        // For simple searches with successful results, terminate early
-        if (isSimpleSearch && executedSearchTool && hasValidResults) {
-            console.log('Early termination criteria met: Simple search with successful results');
+        // For simple searches or analyses with successful results, terminate early
+        if (isSimpleSearch && (executedSearchTool || executedAnalysisTool) && hasValidResults) {
+            console.log('Early termination criteria met: Simple search/analysis with successful results');
             return true;
         }
         
@@ -4205,6 +4212,37 @@ The gene search has been completed successfully.`;
                 
             case 'find_feature':
                 return `Feature search completed successfully. Found ${result.result?.length || 0} matching feature(s).`;
+                
+            case 'codon_usage_analysis':
+                if (result.result) {
+                    const data = result.result;
+                    const geneInfo = data.geneName ? ` for gene **${data.geneName}**` : '';
+                    const locusInfo = data.locusTag ? ` (locus tag: ${data.locusTag})` : '';
+                    
+                    return `## Codon Usage Analysis Results${geneInfo}${locusInfo}
+
+**Analysis Summary:**
+- **Total Codons**: ${data.totalCodons}
+- **Unique Codons**: ${data.uniqueCodons}
+- **Sequence Length**: ${data.sequenceLength} bp
+- **Analysis Type**: ${data.analysisType}
+
+**Top 10 Most Frequent Codons:**
+${data.mostFrequentCodons.slice(0, 10).map(codon => 
+    `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences)`
+).join('\n')}
+
+**Amino Acid Composition:**
+${Object.entries(data.aminoAcidComposition)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 10)
+    .map(([aa, count]) => `- **${aa}**: ${count} codons`)
+    .join('\n')}
+
+The codon usage analysis has been completed successfully.`;
+                } else {
+                    return "Codon usage analysis completed, but no results were obtained.";
+                }
                 
             default:
                 return `Task completed successfully using ${tool.tool_name}. Results have been processed.`;
