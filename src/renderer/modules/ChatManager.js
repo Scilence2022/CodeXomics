@@ -1322,7 +1322,7 @@ class ChatManager {
                     break;
                     
                 case 'search_gene_by_name':
-                    result = this.executeMicrobeFunction('searchGeneByName', parameters);
+                    result = await this.searchGeneByName(parameters);
                     break;
                     
                 case 'search_sequence_motif':
@@ -1726,6 +1726,249 @@ class ChatManager {
         }
         
         throw new Error('Navigation manager not available');
+    }
+
+    async searchGeneByName(params) {
+        const { name } = params;
+        
+        console.log('searchGeneByName called with params:', params);
+        
+        if (!this.app || !this.app.navigationManager) {
+            throw new Error('Navigation manager not available');
+        }
+        
+        // Use improved gene search logic with relevance scoring
+        const searchResults = this.performIntelligentGeneSearch(name);
+        
+        // Display results in sidebar using NavigationManager's populateSearchResults
+        this.app.navigationManager.searchResults = searchResults;
+        this.app.navigationManager.populateSearchResults(searchResults, name);
+        
+        console.log('Intelligent gene search completed, results:', searchResults);
+        
+        return {
+            name: name,
+            results: searchResults,
+            count: searchResults.length,
+            success: true
+        };
+    }
+
+    /**
+     * Perform intelligent gene search with relevance scoring and filtering
+     */
+    performIntelligentGeneSearch(geneName) {
+        if (!this.app || !this.app.currentAnnotations) {
+            return [];
+        }
+        
+        const currentChr = document.getElementById('chromosomeSelect')?.value;
+        if (!currentChr || !this.app.currentAnnotations[currentChr]) {
+            return [];
+        }
+        
+        const annotations = this.app.currentAnnotations[currentChr];
+        const searchTerm = geneName.toLowerCase();
+        const results = [];
+        
+        console.log(`🔍 Intelligent search for gene: "${geneName}"`);
+        console.log(`📊 Searching in ${annotations.length} annotations`);
+        
+        annotations.forEach(annotation => {
+            if (!annotation.qualifiers) return;
+            
+            const geneNameValue = this.app.getQualifierValue(annotation.qualifiers, 'gene') || '';
+            const locusTag = this.app.getQualifierValue(annotation.qualifiers, 'locus_tag') || '';
+            const product = this.app.getQualifierValue(annotation.qualifiers, 'product') || '';
+            const note = this.app.getQualifierValue(annotation.qualifiers, 'note') || '';
+            
+            // Debug logging for problematic values
+            if (typeof geneNameValue !== 'string' || typeof locusTag !== 'string' || 
+                typeof product !== 'string' || typeof note !== 'string') {
+                console.warn('Non-string qualifier values found:', {
+                    gene: { value: geneNameValue, type: typeof geneNameValue },
+                    locus_tag: { value: locusTag, type: typeof locusTag },
+                    product: { value: product, type: typeof product },
+                    note: { value: note, type: typeof note }
+                });
+            }
+            
+            // Calculate relevance score with error handling
+            let relevanceScore;
+            try {
+                relevanceScore = this.calculateGeneRelevanceScore(
+                    searchTerm, 
+                    geneNameValue, 
+                    locusTag, 
+                    product, 
+                    note
+                );
+            } catch (error) {
+                console.error('Error calculating relevance score for annotation:', {
+                    geneName: geneNameValue,
+                    locusTag: locusTag,
+                    product: product,
+                    note: note,
+                    error: error.message
+                });
+                // Skip this annotation if there's an error
+                return;
+            }
+            
+            // Only include results with meaningful relevance (score > 0)
+            if (relevanceScore && relevanceScore.score > 0) {
+                const result = {
+                    type: 'gene',
+                    position: annotation.start,
+                    end: annotation.end,
+                    name: geneNameValue || locusTag || annotation.type,
+                    details: `${annotation.type}: ${product || 'No description'}`,
+                    annotation: annotation,
+                    relevanceScore: relevanceScore.score,
+                    matchType: relevanceScore.matchType,
+                    matchedField: relevanceScore.matchedField
+                };
+                
+                results.push(result);
+                console.log(`✅ Found match: ${result.name} (score: ${relevanceScore.score}, type: ${relevanceScore.matchType})`);
+            }
+        });
+        
+        // Sort by relevance score (highest first), then by position
+        results.sort((a, b) => {
+            if (b.relevanceScore !== a.relevanceScore) {
+                return b.relevanceScore - a.relevanceScore;
+            }
+            return a.position - b.position;
+        });
+        
+        // Limit results to most relevant ones (max 20 for gene search)
+        const limitedResults = results.slice(0, 20);
+        
+        console.log(`📈 Search completed: ${limitedResults.length} relevant results found`);
+        console.log(`🎯 Top results:`, limitedResults.slice(0, 5).map(r => `${r.name} (${r.relevanceScore})`));
+        
+        return limitedResults;
+    }
+
+    /**
+     * Calculate relevance score for gene search
+     */
+    calculateGeneRelevanceScore(searchTerm, geneName, locusTag, product, note) {
+        let maxScore = 0;
+        let matchType = 'none';
+        let matchedField = '';
+        
+        const fields = [
+            { name: 'gene', value: geneName, weight: 100 },
+            { name: 'locus_tag', value: locusTag, weight: 80 },
+            { name: 'product', value: product, weight: 20 },
+            { name: 'note', value: note, weight: 10 }
+        ];
+        
+        fields.forEach(field => {
+            if (!field.value) return;
+            
+            // Ensure field.value is a string and convert to lowercase
+            let fieldValue;
+            if (typeof field.value === 'string') {
+                fieldValue = field.value.toLowerCase();
+            } else if (Array.isArray(field.value)) {
+                // Handle array values (join them)
+                fieldValue = field.value.join(' ').toLowerCase();
+            } else if (typeof field.value === 'object' && field.value !== null) {
+                // Handle object values (convert to string)
+                fieldValue = String(field.value).toLowerCase();
+            } else {
+                // Handle other types (numbers, booleans, etc.)
+                fieldValue = String(field.value).toLowerCase();
+            }
+            
+            let score = 0;
+            let type = 'none';
+            
+            // Exact match (highest priority)
+            if (fieldValue === searchTerm) {
+                score = field.weight * 10;
+                type = 'exact';
+            }
+            // Starts with search term
+            else if (fieldValue.startsWith(searchTerm)) {
+                score = field.weight * 8;
+                type = 'starts_with';
+            }
+            // Ends with search term
+            else if (fieldValue.endsWith(searchTerm)) {
+                score = field.weight * 6;
+                type = 'ends_with';
+            }
+            // Contains search term as whole word
+            else if (new RegExp(`\\b${searchTerm}\\b`).test(fieldValue)) {
+                score = field.weight * 5;
+                type = 'whole_word';
+            }
+            // Contains search term (partial match)
+            else if (fieldValue.includes(searchTerm)) {
+                score = field.weight * 2;
+                type = 'partial';
+            }
+            // Fuzzy match for gene names (allow some character differences)
+            else if (field.name === 'gene' || field.name === 'locus_tag') {
+                const fuzzyScore = this.calculateFuzzyMatch(searchTerm, fieldValue);
+                if (fuzzyScore > 0.7) { // 70% similarity threshold
+                    score = field.weight * fuzzyScore;
+                    type = 'fuzzy';
+                }
+            }
+            
+            if (score > maxScore) {
+                maxScore = score;
+                matchType = type;
+                matchedField = field.name;
+            }
+        });
+        
+        return {
+            score: maxScore,
+            matchType: matchType,
+            matchedField: matchedField
+        };
+    }
+
+    /**
+     * Calculate fuzzy match score between two strings
+     */
+    calculateFuzzyMatch(str1, str2) {
+        if (str1.length === 0) return str2.length === 0 ? 1 : 0;
+        if (str2.length === 0) return 0;
+        
+        const matrix = [];
+        
+        // Initialize matrix
+        for (let i = 0; i <= str2.length; i++) {
+            matrix[i] = [i];
+        }
+        for (let j = 0; j <= str1.length; j++) {
+            matrix[0][j] = j;
+        }
+        
+        // Fill matrix
+        for (let i = 1; i <= str2.length; i++) {
+            for (let j = 1; j <= str1.length; j++) {
+                if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1, // substitution
+                        matrix[i][j - 1] + 1,     // insertion
+                        matrix[i - 1][j] + 1      // deletion
+                    );
+                }
+            }
+        }
+        
+        const maxLength = Math.max(str1.length, str2.length);
+        return maxLength === 0 ? 1 : (maxLength - matrix[str2.length][str1.length]) / maxLength;
     }
 
     getCurrentState() {
@@ -5679,7 +5922,7 @@ ${this.getPluginSystemInfo()}`;
                     break;
                     
                 case 'search_gene_by_name':
-                    result = this.executeMicrobeFunction('searchGeneByName', parameters);
+                    result = await this.searchGeneByName(parameters);
                     break;
                     
                 case 'search_by_position':
@@ -5839,7 +6082,7 @@ ${this.getPluginSystemInfo()}`;
                     break;
                     
                 case 'search_gene_by_name':
-                    result = this.executeMicrobeFunction('searchGeneByName', parameters);
+                    result = await this.searchGeneByName(parameters);
                     break;
                     
                 case 'search_sequence_motif':
