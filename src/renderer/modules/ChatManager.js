@@ -8547,10 +8547,11 @@ ${this.getPluginSystemInfo()}`;
     }
 
     async codonUsageAnalysis(params) {
-        const { sequence, geneName, chromosome } = params;
+        const { sequence, geneName, locusTag, chromosome } = params;
         
         let analysisSequence = sequence;
         let geneInfo = null;
+        let searchTerm = null;
         
         // If sequence is provided directly, use it
         if (sequence && typeof sequence === 'string') {
@@ -8561,11 +8562,12 @@ ${this.getPluginSystemInfo()}`;
                 throw new Error('Sequence must contain only A, T, G, C nucleotides');
             }
         } 
-        // Otherwise, try to get sequence from gene name
-        else if (geneName) {
-            const geneDetails = await this.getGeneDetails({ geneName, chromosome });
+        // Otherwise, try to get sequence from gene name or locus tag
+        else if (geneName || locusTag) {
+            searchTerm = geneName || locusTag;
+            const geneDetails = await this.getGeneDetails({ geneName: searchTerm, chromosome });
             if (!geneDetails.found || geneDetails.genes.length === 0) {
-                throw new Error(`Gene "${geneName}" not found`);
+                throw new Error(`Gene "${searchTerm}" not found`);
             }
             
             const gene = geneDetails.genes.find(g => g.type === 'CDS') || geneDetails.genes[0];
@@ -8580,7 +8582,7 @@ ${this.getPluginSystemInfo()}`;
             
             geneInfo = gene;
         } else {
-            throw new Error('Either sequence or geneName must be provided');
+            throw new Error('Either sequence, geneName, or locusTag must be provided');
         }
         
         // Check if sequence length is multiple of 3 (complete codons)
@@ -8633,14 +8635,16 @@ ${this.getPluginSystemInfo()}`;
         })).sort((a, b) => b.frequency - a.frequency);
         
         return {
-            geneName: geneName,
+            geneName: geneName || (geneInfo ? geneInfo.name : null),
+            locusTag: locusTag || (geneInfo ? geneInfo.locusTag : null),
             gene: geneInfo,
             totalCodons: totalCodons,
             uniqueCodons: Object.keys(codonCounts).length,
             codonUsage: codonUsage,
             aminoAcidComposition: aminoAcidCounts,
             mostFrequentCodons: codonUsage.slice(0, 10),
-            sequenceLength: analysisSequence.length
+            sequenceLength: analysisSequence.length,
+            analysisType: sequence ? 'sequence' : (geneName ? 'geneName' : 'locusTag')
         };
     }
 

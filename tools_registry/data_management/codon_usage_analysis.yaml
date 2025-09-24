@@ -1,6 +1,6 @@
 name: codon_usage_analysis
 version: 1.0.0
-description: Analyze codon usage patterns in DNA coding sequence with comprehensive statistics and visualization
+description: Analyze codon usage patterns in DNA coding sequence with comprehensive statistics and visualization. Supports analysis by direct sequence input, gene name, or locus tag.
 category: data_management
 keywords:
   - codon
@@ -12,6 +12,11 @@ keywords:
   - frequency
   - bias
   - statistics
+  - gene
+  - locus
+  - lacZ
+  - geneName
+  - locusTag
 priority: 2
 execution:
   type: client
@@ -25,12 +30,30 @@ parameters:
   properties:
     sequence:
       type: string
-      description: DNA sequence to analyze (must contain only A, T, G, C nucleotides)
+      description: DNA sequence to analyze (must contain only A, T, G, C nucleotides). Alternative to geneName/locusTag.
       minLength: 3
       pattern: "^[ATGC]+$"
       examples:
         - "ATGGCTAGCTAGCTAGCTAG"
         - "ATGAAACCCGGGTTT"
+    geneName:
+      type: string
+      description: Gene name to analyze (e.g., 'lacZ', 'araA'). Alternative to sequence/locusTag.
+      examples:
+        - "lacZ"
+        - "araA"
+        - "trpA"
+    locusTag:
+      type: string
+      description: Locus tag to analyze (e.g., 'b0001', 'b0002'). Alternative to sequence/geneName.
+      examples:
+        - "b0001"
+        - "b0002"
+        - "b0003"
+    chromosome:
+      type: string
+      description: Chromosome/contig name (optional, uses current chromosome if not specified)
+      default: "current"
     clientId:
       type: string
       description: Browser client ID for multi-window support
@@ -58,16 +81,28 @@ parameters:
       description: Step size for sliding window analysis
       minimum: 1
       default: 1
-  required: ["sequence"]
+  required: []
+  anyOf:
+    - required: ["sequence"]
+    - required: ["geneName"]
+    - required: ["locusTag"]
 sample_usages:
   - user_query: Analyze codon usage in this DNA sequence
     tool_call: codon_usage_analysis(sequence="ATGGCTAGCTAGCTAGCTAG", include_statistics=true, normalize_sequence=true)
     thought: User wants to analyze codon usage patterns in the provided DNA sequence
     expected_result: Detailed codon usage statistics and frequency analysis
   - user_query: codon usage analysis of lacZ gene
-    tool_call: codon_usage_analysis(sequence="ATGAAACCCGGGTTT", genetic_code="standard", include_statistics=true)
-    thought: User wants codon usage analysis for the lacZ gene sequence
-    expected_result: Codon frequency analysis showing usage bias and statistics
+    tool_call: codon_usage_analysis(geneName="lacZ", include_statistics=true, genetic_code="standard")
+    thought: User wants codon usage analysis for the lacZ gene by gene name
+    expected_result: Codon frequency analysis showing usage bias and statistics for lacZ gene
+  - user_query: analyze codon usage for locus tag b0001
+    tool_call: codon_usage_analysis(locusTag="b0001", include_statistics=true, genetic_code="standard")
+    thought: User wants codon usage analysis for the gene with locus tag b0001
+    expected_result: Codon frequency analysis showing usage bias and statistics for gene b0001
+  - user_query: codon usage analysis of araA gene on chromosome U00096
+    tool_call: codon_usage_analysis(geneName="araA", chromosome="U00096", include_statistics=true)
+    thought: User wants codon usage analysis for araA gene on specific chromosome
+    expected_result: Codon frequency analysis for araA gene on chromosome U00096
 relationships:
   depends_on: []
   conflicts_with: []
@@ -104,6 +139,16 @@ error_handling:
     retry: true
 returns:
   success: "boolean - Whether operation was successful"
-  result: "object - Analysis results including codon_frequencies, codon_usage_bias, statistics, normalized_sequence, and analysis_metadata"
+  result: "object - Analysis results including:
+    - geneName: string - Gene name (if analyzed by gene name)
+    - locusTag: string - Locus tag (if analyzed by locus tag)
+    - gene: object - Gene information (if analyzed by gene name/locus tag)
+    - totalCodons: number - Total number of codons analyzed
+    - uniqueCodons: number - Number of unique codons found
+    - codonUsage: array - Array of codon usage data with frequency percentages
+    - aminoAcidComposition: object - Amino acid composition counts
+    - mostFrequentCodons: array - Top 10 most frequent codons
+    - sequenceLength: number - Length of analyzed sequence
+    - analysisType: string - Type of analysis performed (sequence/geneName/locusTag)"
   error: "string - Error message if success is false"
   error_type: "string - Type of error for proper handling"
