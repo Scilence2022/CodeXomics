@@ -602,11 +602,16 @@ class ChatManager {
             console.log('🔧 Initializing Dynamic Tools Registry System...');
             
             // Load the SystemIntegration module from tools_registry
+            console.log('🔧 Loading SystemIntegration module...');
             const SystemIntegration = require('../../tools_registry/system_integration');
+            console.log('🔧 SystemIntegration loaded:', typeof SystemIntegration);
             
             if (SystemIntegration) {
+                console.log('🔧 Creating SystemIntegration instance...');
                 this.dynamicTools = new SystemIntegration();
+                console.log('🔧 Calling initialize()...');
                 const initialized = await this.dynamicTools.initialize();
+                console.log('🔧 Initialize result:', initialized);
                 
                 if (initialized) {
                     console.log('✅ Dynamic Tools Registry System initialized');
@@ -620,6 +625,7 @@ class ChatManager {
             }
         } catch (error) {
             console.error('❌ Failed to initialize Dynamic Tools Registry System:', error);
+            console.error('❌ Error details:', error.message, error.stack);
             this.dynamicToolsEnabled = false;
         }
     }
@@ -3842,15 +3848,27 @@ class ChatManager {
         }
         
         // Try to use Dynamic Tools Registry if available and enabled
+        console.log('🔧 [buildSystemMessage] Checking Dynamic Tools Registry...');
+        console.log('🔧 [buildSystemMessage] dynamicToolsEnabled:', this.dynamicToolsEnabled);
+        console.log('🔧 [buildSystemMessage] dynamicTools:', this.dynamicTools);
+        
         if (this.dynamicToolsEnabled && this.dynamicTools) {
             try {
+                console.log('🔧 [buildSystemMessage] Using Dynamic Tools Registry...');
                 const context = this.getCurrentContextForDynamicTools();
                 const lastUserQuery = this.getLastUserQuery();
+                console.log('🔧 [buildSystemMessage] Context:', context);
+                console.log('🔧 [buildSystemMessage] Last user query:', lastUserQuery);
+                
                 const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context);
+                console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
                 return promptData.systemPrompt;
             } catch (error) {
                 console.warn('Dynamic Tools Registry failed, falling back to standard system message:', error);
+                console.error('Dynamic Tools Registry error details:', error.message, error.stack);
             }
+        } else {
+            console.log('🔧 [buildSystemMessage] Dynamic Tools Registry not available, using fallback');
         }
         
         // For default system message, use optimized version by default
