@@ -134,6 +134,10 @@ class ChatManager {
                 // Listen for settings changes
                 window.addEventListener('chatbox-settingsChanged', (event) => {
                     this.updateSettingsFromManager();
+                    
+                    // Check if Dynamic Tools Registry setting changed
+                    const dynamicToolsRegistryEnabled = this.configManager.get('chatboxSettings.enableDynamicToolsRegistry', true);
+                    console.log('🔧 [ChatManager] Dynamic Tools Registry setting changed:', dynamicToolsRegistryEnabled);
                 });
                 
                 // Set global reference for settings modal
@@ -744,8 +748,11 @@ class ChatManager {
      * Get Dynamic Tools Registry integration status
      */
     getDynamicToolsStatus() {
+        const settingsEnabled = this.configManager.get('chatboxSettings.enableDynamicToolsRegistry', true);
         return {
-            enabled: this.dynamicToolsEnabled,
+            enabled: settingsEnabled && this.dynamicToolsEnabled,
+            settingsEnabled: settingsEnabled,
+            systemEnabled: this.dynamicToolsEnabled,
             initialized: this.dynamicTools !== null,
             status: this.dynamicTools ? this.dynamicTools.getIntegrationStatus() : null
         };
@@ -3873,12 +3880,16 @@ class ChatManager {
             return `${processedPrompt}\n\n${toolContext}`;
         }
         
+        // Check if Dynamic Tools Registry is enabled in settings
+        const dynamicToolsRegistryEnabled = this.configManager.get('chatboxSettings.enableDynamicToolsRegistry', true);
+        console.log('🔧 [buildSystemMessage] Dynamic Tools Registry enabled in settings:', dynamicToolsRegistryEnabled);
+        
         // Try to use Dynamic Tools Registry if available and enabled
         console.log('🔧 [buildSystemMessage] Checking Dynamic Tools Registry...');
         console.log('🔧 [buildSystemMessage] dynamicToolsEnabled:', this.dynamicToolsEnabled);
         console.log('🔧 [buildSystemMessage] dynamicTools:', this.dynamicTools);
         
-        if (this.dynamicToolsEnabled && this.dynamicTools) {
+        if (dynamicToolsRegistryEnabled && this.dynamicToolsEnabled && this.dynamicTools) {
             try {
                 console.log('🔧 [buildSystemMessage] Using Dynamic Tools Registry...');
                 const context = this.getCurrentContextForDynamicTools();
@@ -3894,7 +3905,13 @@ class ChatManager {
                 console.error('Dynamic Tools Registry error details:', error.message, error.stack);
             }
         } else {
-            console.log('🔧 [buildSystemMessage] Dynamic Tools Registry not available, using fallback');
+            if (!dynamicToolsRegistryEnabled) {
+                console.log('🔧 [buildSystemMessage] Dynamic Tools Registry disabled in settings, using fallback');
+            } else if (!this.dynamicToolsEnabled) {
+                console.log('🔧 [buildSystemMessage] Dynamic Tools Registry not initialized, using fallback');
+            } else if (!this.dynamicTools) {
+                console.log('🔧 [buildSystemMessage] Dynamic Tools Registry not available, using fallback');
+            }
         }
         
         // For default system message, use optimized version by default

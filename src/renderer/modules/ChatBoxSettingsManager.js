@@ -37,6 +37,7 @@ class ChatBoxSettingsManager {
             logToolCalls: false,
             enableAbortButton: true,
             useOptimizedPrompt: true, // 新增：使用优化的系统提示
+            enableDynamicToolsRegistry: true, // 新增：启用Dynamic Tools Registry
             
             // Tool priority settings
             toolPriority: ['local', 'genomics', 'plugins', 'mcp'], // 工具优先级顺序
@@ -713,10 +714,18 @@ class ChatBoxSettingsManager {
                                 <h4>System Prompt</h4>
                                 <div class="form-group">
                                     <label>
+                                        <input type="checkbox" id="enableDynamicToolsRegistry" class="setting-checkbox">
+                                        Enable Dynamic Tools Registry
+                                    </label>
+                                    <small class="help-text">Use intelligent tool selection based on user intent and context. When disabled, uses the traditional comprehensive system prompt.</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="useOptimizedPrompt" class="setting-checkbox">
                                         Use optimized system prompt
                                     </label>
-                                    <small class="help-text">Use streamlined system prompt for better performance and reduced token usage</small>
+                                    <small class="help-text">Use streamlined system prompt for better performance and reduced token usage (only applies when Dynamic Tools Registry is disabled)</small>
                                 </div>
                             </div>
                             
