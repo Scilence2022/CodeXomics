@@ -157,12 +157,15 @@ class ToolsRegistryManager {
     async getAllTools() {
         const allTools = [];
         const categories = this.categoriesCache?.categories || {};
+        console.log('🔍 [Dynamic Tools] Available categories:', Object.keys(categories));
         
         for (const categoryName of Object.keys(categories)) {
             const categoryTools = await this.getToolsByCategory(categoryName);
+            console.log('🔍 [Dynamic Tools] Category', categoryName, 'has', categoryTools.length, 'tools');
             allTools.push(...categoryTools);
         }
         
+        console.log('🔍 [Dynamic Tools] Total tools loaded:', allTools.length);
         return allTools;
     }
 
@@ -171,20 +174,29 @@ class ToolsRegistryManager {
      */
     async getRelevantTools(userQuery, context = {}) {
         try {
+            console.log('🔍 [Dynamic Tools] Analyzing query:', userQuery);
+            console.log('🔍 [Dynamic Tools] Context:', context);
+            
             // Analyze user intent
             const intent = await this.analyzeUserIntent(userQuery);
+            console.log('🔍 [Dynamic Tools] Detected intent:', intent);
             
             // Get candidate tools
             const candidateTools = await this.getCandidateTools(intent, context);
+            console.log('🔍 [Dynamic Tools] Candidate tools count:', candidateTools.length);
             
             // Score and rank tools
             const scoredTools = await this.scoreTools(candidateTools, intent, context);
+            console.log('🔍 [Dynamic Tools] Scored tools count:', scoredTools.length);
             
             // Return top relevant tools
-            return scoredTools
+            const relevantTools = scoredTools
                 .sort((a, b) => b.score - a.score)
                 .slice(0, 10) // Top 10 most relevant tools
                 .map(item => item.tool);
+                
+            console.log('🔍 [Dynamic Tools] Final relevant tools count:', relevantTools.length);
+            return relevantTools;
                 
         } catch (error) {
             console.error('Failed to get relevant tools:', error);
@@ -197,12 +209,13 @@ class ToolsRegistryManager {
      */
     async analyzeUserIntent(userQuery) {
         const query = userQuery.toLowerCase();
+        console.log('🔍 [Dynamic Tools] Analyzing intent for query:', query);
         
         // Intent keywords mapping
         const intentKeywords = {
             navigation: ['navigate', 'go to', 'jump', 'position', 'location', 'move'],
             search: ['search', 'find', 'look for', 'query', 'locate'],
-            analysis: ['analyze', 'calculate', 'compute', 'measure', 'count'],
+            analysis: ['analyze', 'calculate', 'compute', 'measure', 'count', 'analysis'],
             sequence: ['sequence', 'dna', 'rna', 'protein', 'amino acid'],
             structure: ['structure', '3d', 'pdb', 'alphafold', 'protein structure'],
             database: ['database', 'uniprot', 'interpro', 'lookup', 'entry'],
@@ -222,14 +235,18 @@ class ToolsRegistryManager {
                     confidence: matches.length / keywords.length,
                     keywords: matches
                 });
+                console.log('🔍 [Dynamic Tools] Intent detected:', intent, 'matches:', matches, 'confidence:', matches.length / keywords.length);
             }
         }
 
-        return {
+        const result = {
             primary: detectedIntents.sort((a, b) => b.confidence - a.confidence)[0]?.intent || 'general',
             all: detectedIntents,
             query: userQuery
         };
+        
+        console.log('🔍 [Dynamic Tools] Final intent analysis:', result);
+        return result;
     }
 
     /**
@@ -237,28 +254,45 @@ class ToolsRegistryManager {
      */
     async getCandidateTools(intent, context) {
         const allTools = await this.getAllTools();
+        console.log('🔍 [Dynamic Tools] Total tools available:', allTools.length);
         
         // Filter by intent
+        const intentKeywords = this.getIntentKeywords(intent.primary);
+        console.log('🔍 [Dynamic Tools] Intent keywords:', intentKeywords);
+        
         const intentFiltered = allTools.filter(tool => {
             const toolKeywords = tool.keywords || [];
-            const intentKeywords = this.getIntentKeywords(intent.primary);
-            
-            return intentKeywords.some(keyword => 
+            const matches = intentKeywords.some(keyword => 
                 toolKeywords.some(toolKeyword => 
                     toolKeyword.toLowerCase().includes(keyword.toLowerCase())
                 )
             );
+            if (matches) {
+                console.log('🔍 [Dynamic Tools] Tool matched by intent:', tool.name, 'keywords:', toolKeywords);
+            }
+            return matches;
         });
+        console.log('🔍 [Dynamic Tools] Intent filtered tools count:', intentFiltered.length);
 
         // Filter by context
         const contextFiltered = intentFiltered.filter(tool => {
             // Check if tool requires specific context
-            if (tool.execution?.requires_auth && !context.hasAuth) return false;
-            if (tool.execution?.requires_data && !context.hasData) return false;
-            if (tool.execution?.requires_network && !context.hasNetwork) return false;
+            if (tool.execution?.requires_auth && !context.hasAuth) {
+                console.log('🔍 [Dynamic Tools] Tool filtered out (requires auth):', tool.name);
+                return false;
+            }
+            if (tool.execution?.requires_data && !context.hasData) {
+                console.log('🔍 [Dynamic Tools] Tool filtered out (requires data):', tool.name);
+                return false;
+            }
+            if (tool.execution?.requires_network && !context.hasNetwork) {
+                console.log('🔍 [Dynamic Tools] Tool filtered out (requires network):', tool.name);
+                return false;
+            }
             
             return true;
         });
+        console.log('🔍 [Dynamic Tools] Context filtered tools count:', contextFiltered.length);
 
         return contextFiltered;
     }
