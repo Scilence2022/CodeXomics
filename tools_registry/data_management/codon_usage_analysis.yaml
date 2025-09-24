@@ -1,6 +1,6 @@
 name: codon_usage_analysis
 version: 1.0.0
-description: Analyze codon usage patterns in DNA coding sequence
+description: Analyze codon usage patterns in DNA coding sequence with comprehensive statistics and visualization
 category: data_management
 keywords:
   - codon
@@ -8,27 +8,66 @@ keywords:
   - analysis
   - dna
   - coding
+  - sequence
+  - frequency
+  - bias
+  - statistics
 priority: 2
 execution:
   type: client
-  timeout: 15000
-  retries: 2
+  timeout: 30000
+  retries: 3
   requires_auth: false
   requires_data: false
   requires_network: false
 parameters:
   type: object
   properties:
+    sequence:
+      type: string
+      description: DNA sequence to analyze (must contain only A, T, G, C nucleotides)
+      minLength: 3
+      pattern: "^[ATGC]+$"
+      examples:
+        - "ATGGCTAGCTAGCTAGCTAG"
+        - "ATGAAACCCGGGTTT"
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
-  required: []
+    include_statistics:
+      type: boolean
+      description: Whether to include detailed codon frequency statistics
+      default: true
+    normalize_sequence:
+      type: boolean
+      description: Whether to normalize sequence (remove N's, convert to uppercase)
+      default: true
+    genetic_code:
+      type: string
+      description: Genetic code to use for analysis
+      enum: ["standard", "vertebrate_mitochondrial", "yeast_mitochondrial", "mold_mitochondrial"]
+      default: "standard"
+    window_size:
+      type: integer
+      description: Window size for sliding window analysis (0 = analyze entire sequence)
+      minimum: 0
+      default: 0
+    step_size:
+      type: integer
+      description: Step size for sliding window analysis
+      minimum: 1
+      default: 1
+  required: ["sequence"]
 sample_usages:
-  - user_query: Use codon_usage_analysis to analyze genomic data
-    tool_call: codon_usage_analysis(parameter1='value1', parameter2='value2')
-    thought: User wants to use codon_usage_analysis for analyze codon usage patterns in dna coding sequence
-    expected_result: Result from codon_usage_analysis analysis
+  - user_query: Analyze codon usage in this DNA sequence
+    tool_call: codon_usage_analysis(sequence="ATGGCTAGCTAGCTAGCTAG", include_statistics=true, normalize_sequence=true)
+    thought: User wants to analyze codon usage patterns in the provided DNA sequence
+    expected_result: Detailed codon usage statistics and frequency analysis
+  - user_query: codon usage analysis of lacZ gene
+    tool_call: codon_usage_analysis(sequence="ATGAAACCCGGGTTT", genetic_code="standard", include_statistics=true)
+    thought: User wants codon usage analysis for the lacZ gene sequence
+    expected_result: Codon frequency analysis showing usage bias and statistics
 relationships:
   depends_on: []
   conflicts_with: []
@@ -46,7 +85,30 @@ metadata:
     - important
   complexity: moderate
   usage_pattern: common
-error_handling: {}
+error_handling:
+  invalid_sequence:
+    error: "Sequence must contain only A, T, G, C nucleotides"
+    solution: "Use normalize_sequence=true to clean the sequence, or provide a valid DNA sequence"
+    retry: true
+  empty_sequence:
+    error: "Sequence is empty or too short"
+    solution: "Provide a sequence with at least 3 nucleotides"
+    retry: false
+  invalid_genetic_code:
+    error: "Invalid genetic code specified"
+    solution: "Use one of: standard, vertebrate_mitochondrial, yeast_mitochondrial, mold_mitochondrial"
+    retry: true
+  analysis_failed:
+    error: "Codon usage analysis failed"
+    solution: "Check sequence validity and try again"
+    retry: true
 returns:
   success: boolean - Whether operation was successful
-  result: object - Operation result
+  result: object - Analysis results including:
+    - codon_frequencies: object - Frequency of each codon
+    - codon_usage_bias: object - Bias analysis for each amino acid
+    - statistics: object - Statistical measures (GC content, codon diversity, etc.)
+    - normalized_sequence: string - Cleaned sequence used for analysis
+    - analysis_metadata: object - Analysis parameters and metadata
+  error: string - Error message if success is false
+  error_type: string - Type of error for proper handling
