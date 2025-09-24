@@ -219,7 +219,7 @@ class ToolsRegistryManager {
         
         // Intent keywords mapping
         const intentKeywords = {
-            navigation: ['navigate', 'go to', 'jump', 'position', 'location', 'move'],
+            navigation: ['navigate', 'go to', 'jump', 'position', 'location', 'move', 'go', 'navigate to'],
             search: ['search', 'find', 'look for', 'query', 'locate'],
             analysis: ['analyze', 'calculate', 'compute', 'measure', 'count', 'analysis'],
             sequence: ['sequence', 'dna', 'rna', 'protein', 'amino acid'],
@@ -234,7 +234,14 @@ class ToolsRegistryManager {
         const detectedIntents = [];
         
         for (const [intent, keywords] of Object.entries(intentKeywords)) {
-            const matches = keywords.filter(keyword => query.includes(keyword));
+            const matches = keywords.filter(keyword => {
+                // Handle multi-word keywords like "go to"
+                if (keyword.includes(' ')) {
+                    return query.includes(keyword);
+                } else {
+                    return query.includes(keyword);
+                }
+            });
             if (matches.length > 0) {
                 detectedIntents.push({
                     intent,
@@ -242,6 +249,18 @@ class ToolsRegistryManager {
                     keywords: matches
                 });
                 console.log('🔍 [Dynamic Tools] Intent detected:', intent, 'matches:', matches, 'confidence:', matches.length / keywords.length);
+            }
+        }
+
+        // Special handling for position/coordinate patterns
+        if (query.match(/\d+-\d+/) || query.match(/\d+:\d+/) || query.match(/position\s+\d+/)) {
+            if (!detectedIntents.some(intent => intent.intent === 'navigation')) {
+                detectedIntents.push({
+                    intent: 'navigation',
+                    confidence: 0.8,
+                    keywords: ['position', 'coordinates']
+                });
+                console.log('🔍 [Dynamic Tools] Position pattern detected, adding navigation intent');
             }
         }
 
@@ -325,7 +344,7 @@ class ToolsRegistryManager {
      */
     getIntentKeywords(intent) {
         const intentKeywordMap = {
-            navigation: ['navigate', 'position', 'location', 'jump', 'go'],
+            navigation: ['navigate', 'position', 'location', 'jump', 'go', 'go to', 'navigate to', 'coordinates'],
             search: ['search', 'find', 'query', 'lookup'],
             analysis: ['analyze', 'calculate', 'compute', 'measure'],
             sequence: ['sequence', 'dna', 'rna', 'protein'],
@@ -372,6 +391,18 @@ class ToolsRegistryManager {
                 )
             ).length;
             score += keywordMatches * 15;
+
+            // Special bonus for navigation tools when position patterns are detected
+            if (tool.category === 'navigation' && intent.query.match(/\d+-\d+/) || intent.query.match(/\d+:\d+/)) {
+                score += 50; // High bonus for navigation tools with position patterns
+                console.log('🔍 [Dynamic Tools] Navigation tool bonus applied for position pattern:', tool.name);
+            }
+
+            // Special bonus for "go to" queries with navigation tools
+            if (tool.category === 'navigation' && intent.query.toLowerCase().includes('go')) {
+                score += 30; // Bonus for "go" queries
+                console.log('🔍 [Dynamic Tools] Navigation tool bonus applied for "go" query:', tool.name);
+            }
 
             // Usage frequency score
             const usageStats = this.usageStats.get(tool.name) || { count: 0, success_rate: 0 };

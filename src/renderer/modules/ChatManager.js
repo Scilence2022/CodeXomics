@@ -667,7 +667,8 @@ class ChatManager {
         
         // Enhanced context with detailed genome browser state
         const genomeState = context.genomeBrowser.currentState;
-        const hasData = genomeState.loadedFiles.length > 0;
+        // For navigation tools, consider data available if there's a current chromosome
+        const hasData = genomeState.loadedFiles.length > 0 || genomeState.currentChromosome;
         
         return {
             hasData: hasData,
