@@ -3097,6 +3097,7 @@ class ChatManager {
         
         // 设置AbortController
         this.conversationState.abortController = new AbortController();
+        console.log('AbortController initialized:', !!this.conversationState.abortController);
 
         try {
             // Check if multi-agent system is enabled
@@ -3143,8 +3144,14 @@ class ChatManager {
             // Iterative function calling loop
             while (currentRound < maxRounds && !taskCompleted) {
                 // 检查是否被中止
-                if (this.conversationState.abortController.signal.aborted) {
+                if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
                     throw new Error('AbortError');
+                }
+                
+                // 防御性检查：如果abortController为null，重新初始化
+                if (!this.conversationState.abortController) {
+                    console.warn('AbortController is null during processing, reinitializing...');
+                    this.conversationState.abortController = new AbortController();
                 }
                 
                 currentRound++;
@@ -3158,7 +3165,7 @@ class ChatManager {
                 const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
                 
                 // 检查响应是否被中止
-                if (this.conversationState.abortController.signal.aborted) {
+                if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
                     throw new Error('AbortError');
                 }
                 
@@ -3287,7 +3294,7 @@ class ChatManager {
                         console.log('Executing tool(s)...');
                         
                         // 检查是否被中止
-                        if (this.conversationState.abortController.signal.aborted) {
+                        if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
                             throw new Error('AbortError');
                         }
                         
