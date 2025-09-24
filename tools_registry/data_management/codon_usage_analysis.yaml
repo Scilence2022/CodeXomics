@@ -103,12 +103,7 @@ error_handling:
     solution: "Check sequence validity and try again"
     retry: true
 returns:
-  success: boolean - Whether operation was successful
-  result: object - Analysis results including:
-    - codon_frequencies: object - Frequency of each codon
-    - codon_usage_bias: object - Bias analysis for each amino acid
-    - statistics: object - Statistical measures (GC content, codon diversity, etc.)
-    - normalized_sequence: string - Cleaned sequence used for analysis
-    - analysis_metadata: object - Analysis parameters and metadata
-  error: string - Error message if success is false
-  error_type: string - Type of error for proper handling
+  success: "boolean - Whether operation was successful"
+  result: "object - Analysis results including codon_frequencies, codon_usage_bias, statistics, normalized_sequence, and analysis_metadata"
+  error: "string - Error message if success is false"
+  error_type: "string - Type of error for proper handling"
