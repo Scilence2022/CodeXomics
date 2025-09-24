@@ -23,11 +23,13 @@ A modern, cross-platform genome analysis studio built with Electron, featuring a
 
 ### 🤖 **AI-Powered Assistant**
 - **Natural Language Queries** - Ask questions about genes, functions, and genomic regions
+- **Dynamic Tool Registry** - Intelligent tool selection based on user intent and context
 - **Conversation Evolution** - Advanced conversation recording and analysis system
 - **Multi-Provider Support** - OpenAI, Anthropic, Google Gemini, and local LLM integration
 - **Smart Navigation** - AI can jump to genes, analyze regions, and provide insights
 - **Interactive Chat** - Persistent conversation with genomic context awareness
 - **Thinking Process** - View AI reasoning process for transparent analysis
+- **Context-Aware Tools** - Tools adapt to current genome state and user queries
 
 ### 🔬 **Professional Analysis Tools**
 - **KGML Pathway Viewer** - Complete KEGG pathway visualization tool with dynamic interaction
@@ -129,13 +131,16 @@ Gene Details sidebar now supports 50+ biological databases:
 - **Species-specific**: FlyBase, WormBase, SGD, MGI
 - **Chemical/Drug**: PubChem, ChEBI, ChEMBL
 
-### **AI Integration**
+### **AI Integration with Dynamic Tool Registry**
 ```
 User: "Find all DNA polymerase genes"
-AI: [Searches genome and displays results]
+AI: [Dynamically selects search tools and displays results]
 
 User: "What's the GC content of this region?"
-AI: [Analyzes current view and provides statistics]
+AI: [Selects GC analysis tools and provides statistics]
+
+User: "codon usage analysis of lacZ gene"
+AI: [Intelligently selects codon_usage_analysis tool with gene context]
 
 User: "Show me protein networks for this gene"
 AI: [Launches STRING networks tool with gene context]
@@ -234,15 +239,19 @@ File → Save Project (saves as .prj.GAI format)
 View → Grid/List/Details or use toolbar buttons
 ```
 
-### **AI Interaction**
+### **AI Interaction with Dynamic Tool Registry**
 ```
-Enhanced Queries:
-- "Show me all ribosomal genes"
-- "Analyze protein networks for this gene"
-- "Load the glycolysis pathway"
-- "Find genes involved in DNA repair"
-- "Export the current sequence as FASTA"
-- "What databases have information on this gene?"
+Enhanced Queries with Intelligent Tool Selection:
+- "Show me all ribosomal genes" → [Selects gene search tools]
+- "Analyze protein networks for this gene" → [Selects STRING network tools]
+- "codon usage analysis of lacZ gene" → [Selects codon analysis tools]
+- "Load the glycolysis pathway" → [Selects pathway visualization tools]
+- "Find genes involved in DNA repair" → [Selects gene search and analysis tools]
+- "Export the current sequence as FASTA" → [Selects sequence export tools]
+- "What databases have information on this gene?" → [Selects database search tools]
+- "Calculate GC content of this region" → [Selects GC analysis tools]
+- "Find ORFs in this sequence" → [Selects ORF prediction tools]
+- "Search for protein structures" → [Selects AlphaFold/PDB search tools]
 ```
 
 ## ⚙️ Configuration
@@ -292,12 +301,22 @@ Documents/GenomeExplorer Projects/
 ```
 src/
 ├── main/                       # Electron main process
+├── tools_registry/            # Dynamic Tool Registry System
+│   ├── registry_manager.js    # Core registry management
+│   ├── system_integration.js  # System integration layer
+│   ├── tool_categories.yaml   # Tool categorization metadata
+│   └── [category_dirs]/       # Tool definition directories
+│       ├── navigation/        # Navigation tools
+│       ├── sequence/          # Sequence analysis tools
+│       ├── data_management/   # Data management tools
+│       ├── protein/           # Protein analysis tools
+│       └── ...                # Other tool categories
 ├── renderer/                   # Browser application
 │   ├── modules/               # Core modules
 │   │   ├── FileManager.js            # File operations
 │   │   ├── TrackRenderer.js          # Visualization engine
 │   │   ├── NavigationManager.js      # Search & navigation
-│   │   ├── ChatManager.js            # AI integration
+│   │   ├── ChatManager.js            # AI integration with Dynamic Tools
 │   │   ├── ProjectManager.js         # Project management
 │   │   ├── PluginManager.js          # Plugin system
 │   │   ├── ConversationEvolutionManager.js  # Conversation tracking
@@ -322,6 +341,26 @@ Plugin System Components:
 ├── FunctionCallsOrganizer.js     # Function categorization
 ├── PluginSecurityValidator.js    # Security validation
 └── PluginMarketplace.js          # Plugin distribution
+```
+
+### **Dynamic Tool Registry Architecture**
+```
+Dynamic Tool Registry Components:
+├── registry_manager.js           # Core registry management
+├── system_integration.js         # System integration layer
+├── tool_categories.yaml          # Tool categorization metadata
+└── [category_dirs]/              # Tool definition directories
+    ├── navigation/               # Navigation tools (8 tools)
+    ├── sequence/                 # Sequence analysis tools (8 tools)
+    ├── data_management/          # Data management tools (4 tools)
+    ├── protein/                  # Protein analysis tools (6 tools)
+    ├── database/                 # Database integration tools (6 tools)
+    ├── ai_analysis/              # AI analysis tools (5 tools)
+    ├── pathway/                  # Pathway analysis tools (2 tools)
+    ├── sequence_editing/         # Sequence editing tools (10 tools)
+    ├── plugin_management/        # Plugin management tools (12 tools)
+    ├── coordination/             # Multi-agent coordination (15 tools)
+    └── external_apis/            # External API tools (12 tools)
 ```
 
 ## 🧪 Testing
@@ -456,6 +495,7 @@ We welcome contributions from the genomics and bioinformatics community!
 ## 📝 Recent Updates (v0.3 beta)
 
 ### **Major Enhancements**
+- ✅ **Dynamic Tool Registry** - Intelligent tool selection based on user intent and context
 - ✅ **Complete Plugin System** - Full plugin architecture with marketplace
 - ✅ **KGML Pathway Viewer** - Advanced pathway visualization tool
 - ✅ **Enhanced Gene Details** - 50+ database cross-references
@@ -463,6 +503,7 @@ We welcome contributions from the genomics and bioinformatics community!
 - ✅ **Project Management** - XML project format with multiple view modes
 - ✅ **Conversation Evolution** - Advanced AI conversation tracking
 - ✅ **AlphaFold Integration** - Protein structure prediction access
+- ✅ **Context-Aware AI** - Tools adapt to current genome state and user queries
 
 ### **Bug Fixes**
 - ✅ **View Mode Functionality** - Fixed Grid/List/Details view switching
@@ -472,10 +513,12 @@ We welcome contributions from the genomics and bioinformatics community!
 - ✅ **Database Links** - Improved external database connectivity
 
 ### **System Improvements**
+- ✅ **Dynamic Tool Selection** - Intelligent tool selection reduces context size and improves performance
 - ✅ **Menu Reorganization** - Streamlined menu structure
-- ✅ **Performance Optimization** - Better memory management
+- ✅ **Performance Optimization** - Better memory management and tool caching
 - ✅ **Security Enhancement** - Plugin sandboxing and validation
 - ✅ **Cross-platform Compatibility** - Improved file path handling
+- ✅ **Tool Registry Integration** - Seamless integration with existing ChatBox system
 
 ## 📄 License
 

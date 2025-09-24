@@ -47,6 +47,7 @@ This document serves as the central navigation hub for the **Genome AI Studio v0
 #### **Feature Reference**
 - **[Comprehensive Feature Reference](project-guides/COMPREHENSIVE_FEATURE_REFERENCE.md)** - Complete feature overview
 - **[Bioinformatics Tools Guide](project-guides/BIOINFORMATICS_TOOLS_README.md)** - Analysis tool documentation
+- **[Dynamic Tool Registry Guide](project-guides/DYNAMIC_TOOL_REGISTRY_GUIDE.md)** - Intelligent tool selection system
 
 ---
 

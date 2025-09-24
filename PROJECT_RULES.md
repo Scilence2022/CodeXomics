@@ -55,6 +55,12 @@ src/
 ├── main.js                    # Electron main process
 ├── preload.js                 # Preload script
 ├── mcp-server.js             # MCP server implementation
+├── tools_registry/           # Dynamic Tool Registry
+│   ├── registry_manager.js   # Core registry management
+│   ├── system_integration.js # System integration layer
+│   ├── tool_categories.yaml  # Tool categorization metadata
+│   └── [category_dirs]/      # Tool definition directories
+│       └── *.yaml           # Individual tool definitions
 └── renderer/
     ├── index.html            # Main UI
     ├── styles.css            # Global styles
@@ -70,6 +76,14 @@ src/
 - **MUST** register plugins through PluginManager
 - **MUST** follow the function calling schema for LLM integration
 - **MUST** implement proper error handling and validation
+
+### 4. **Dynamic Tool Registry System**
+- **MUST** use YAML-based tool definitions in `tools_registry/` directory
+- **MUST** follow the established tool definition schema
+- **MUST** implement proper tool categorization and metadata
+- **MUST** use intelligent tool selection based on user intent analysis
+- **MUST** implement caching mechanisms for performance optimization
+- **MUST** provide fallback to traditional system prompts when disabled
 
 ## 💻 Code Standards
 
@@ -133,6 +147,14 @@ try {
 - **MUST** provide progress feedback for long operations
 - **MUST** implement efficient algorithms for large datasets
 - **MUST** handle malformed data gracefully
+
+### 5. **Dynamic Tool Registry Modules**
+- **MUST** use YAML schema validation for tool definitions
+- **MUST** implement proper tool categorization and metadata
+- **MUST** provide intelligent tool selection based on user intent
+- **MUST** implement caching for performance optimization
+- **MUST** handle tool loading errors gracefully
+- **MUST** support multiple input methods (sequence, geneName, locusTag)
 
 ## 🔌 Plugin Development
 
@@ -263,6 +285,14 @@ const plugin = {
 - **MUST** cache frequently used results
 - **MUST** provide fallback for offline operation
 - **MUST** optimize system prompts for efficiency
+
+### 4. **Dynamic Tool Registry Performance**
+- **MUST** implement intelligent tool caching (5-minute cache timeout)
+- **MUST** use lazy loading for tool definitions
+- **MUST** optimize YAML parsing and validation
+- **MUST** implement efficient tool selection algorithms
+- **MUST** provide early termination for simple tasks
+- **MUST** minimize context size through dynamic tool selection
 
 ## 🔒 Security Requirements
 
