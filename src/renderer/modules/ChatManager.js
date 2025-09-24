@@ -1710,6 +1710,15 @@ class ChatManager {
             // Get the results from NavigationManager
             const searchResults = this.app.navigationManager.searchResults || [];
             
+            // Auto-scroll sidebar to search results panel (similar to Gene Details)
+            if (searchResults.length > 0 && this.app.scrollSidebarToSection) {
+                const searchResultsSection = document.getElementById('searchResultsSection');
+                if (searchResultsSection) {
+                    this.app.scrollSidebarToSection(searchResultsSection);
+                    console.log('🔄 Auto-scrolled sidebar to search results panel');
+                }
+            }
+            
             // Restore original setting
             if (caseSensitiveCheckbox && originalCaseSensitive !== undefined) {
                 caseSensitiveCheckbox.checked = originalCaseSensitive;
@@ -1743,6 +1752,15 @@ class ChatManager {
         // Display results in sidebar using NavigationManager's populateSearchResults
         this.app.navigationManager.searchResults = searchResults;
         this.app.navigationManager.populateSearchResults(searchResults, name);
+        
+        // Auto-scroll sidebar to search results panel (similar to Gene Details)
+        if (searchResults.length > 0 && this.app.scrollSidebarToSection) {
+            const searchResultsSection = document.getElementById('searchResultsSection');
+            if (searchResultsSection) {
+                this.app.scrollSidebarToSection(searchResultsSection);
+                console.log('🔄 Auto-scrolled sidebar to search results panel');
+            }
+        }
         
         console.log('Intelligent gene search completed, results:', searchResults);
         
