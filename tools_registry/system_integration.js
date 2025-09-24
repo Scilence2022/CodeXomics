@@ -71,12 +71,28 @@ class SystemIntegration {
     buildSystemPrompt(promptData, context) {
         const { tools, toolDescriptions, sampleUsages } = promptData;
         
+        // Build detailed genome browser state information
+        let genomeStateInfo = '';
+        if (context.genomeBrowser) {
+            const gb = context.genomeBrowser;
+            genomeStateInfo = `
+- **Current Chromosome**: ${gb.currentChromosome || 'None'}
+- **Current Position**: ${gb.currentPosition ? `${gb.currentPosition.start}-${gb.currentPosition.end}` : 'None'}
+- **Visible Tracks**: ${gb.visibleTracks ? gb.visibleTracks.join(', ') : 'None'}
+- **Loaded Files**: ${gb.loadedFiles ? gb.loadedFiles.length : 0} files
+- **Sequence Length**: ${gb.sequenceLength ? gb.sequenceLength.toLocaleString() + ' bp' : 'Unknown'}
+- **Annotations**: ${gb.annotationsCount || 0} annotations
+- **User Features**: ${gb.userDefinedFeaturesCount || 0} user-defined features`;
+        } else {
+            genomeStateInfo = '- **Genome Browser**: No genome data loaded';
+        }
+
         return `# Genome AI Studio - Dynamic Tools System
 
 You are an advanced AI assistant for Genome AI Studio, equipped with ${tools.length} dynamically selected tools based on the user's query.
 
 ## 🧬 Current Context
-- **Genome Browser**: ${context.hasData ? 'Genome data loaded' : 'No genome data loaded'}
+${genomeStateInfo}
 - **Network Status**: ${context.hasNetwork ? 'Connected' : 'Offline'}
 - **Authentication**: ${context.hasAuth ? 'Authenticated' : 'Not authenticated'}
 - **Active Tools**: ${tools.length} tools available

@@ -634,6 +634,12 @@ class ChatManager {
      * Get the last user query for Dynamic Tools Registry intent analysis
      */
     getLastUserQuery() {
+        // Try to get the current message being processed
+        if (this.currentMessage) {
+            return this.currentMessage;
+        }
+        
+        // Fallback to chat history
         if (this.chatHistory.length === 0) return '';
         const lastMessage = this.chatHistory[this.chatHistory.length - 1];
         return lastMessage.role === 'user' ? lastMessage.content : '';
@@ -655,14 +661,31 @@ class ChatManager {
             }
         }
         
+        // Enhanced context with detailed genome browser state
+        const genomeState = context.genomeBrowser.currentState;
+        const hasData = genomeState.loadedFiles.length > 0;
+        
         return {
-            hasData: context.genomeBrowser.currentState.loadedFiles.length > 0,
+            hasData: hasData,
             hasNetwork: navigator.onLine,
             hasAuth: hasAuth,
             currentCategory: this.getCurrentCategory(),
-            loadedGenome: context.genomeBrowser.currentState,
-            activeTracks: context.genomeBrowser.currentState.visibleTracks || [],
-            currentPosition: context.genomeBrowser.currentState.currentPosition || null
+            
+            // Detailed genome browser state
+            genomeBrowser: {
+                currentChromosome: genomeState.currentChromosome,
+                currentPosition: genomeState.currentPosition,
+                visibleTracks: genomeState.visibleTracks || [],
+                loadedFiles: genomeState.loadedFiles,
+                sequenceLength: genomeState.sequenceLength,
+                annotationsCount: genomeState.annotationsCount,
+                userDefinedFeaturesCount: genomeState.userDefinedFeaturesCount
+            },
+            
+            // Legacy fields for backward compatibility
+            loadedGenome: genomeState,
+            activeTracks: genomeState.visibleTracks || [],
+            currentPosition: genomeState.currentPosition || null
         };
     }
 
@@ -3040,6 +3063,9 @@ class ChatManager {
     }
 
     async sendToLLM(message, options = {}) {
+        // Set current message for Dynamic Tools Registry
+        this.currentMessage = message;
+        
         // Check if LLM is configured
         if (!this.llmConfigManager.isConfigured()) {
             return "I need to be configured first. Please go to Options → Configure LLMs to set up your preferred AI provider (OpenAI, Anthropic, Google, or Local LLM).";
