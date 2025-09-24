@@ -186,8 +186,14 @@ class ToolsRegistryManager {
             console.log('🔍 [Dynamic Tools] Candidate tools count:', candidateTools.length);
             
             // Score and rank tools
-            const scoredTools = await this.scoreTools(candidateTools, intent, context);
-            console.log('🔍 [Dynamic Tools] Scored tools count:', scoredTools.length);
+        const scoredTools = await this.scoreTools(candidateTools, intent, context);
+        console.log('🔍 [Dynamic Tools] Scored tools count:', scoredTools.length);
+        
+        // Debug: Show top scored tools
+        console.log('🔍 [Dynamic Tools] Top scored tools:');
+        scoredTools.slice(0, 5).forEach((tool, index) => {
+            console.log(`  ${index + 1}. ${tool.tool.name} (score: ${tool.score})`);
+        });
             
             // Return top relevant tools
             const relevantTools = scoredTools
@@ -256,19 +262,36 @@ class ToolsRegistryManager {
         const allTools = await this.getAllTools();
         console.log('🔍 [Dynamic Tools] Total tools available:', allTools.length);
         
+        // Extract query keywords for direct matching
+        const queryKeywords = intent.query.toLowerCase().split(/\s+/).filter(word => 
+            word.length > 2 && !['the', 'and', 'or', 'of', 'in', 'to', 'for', 'with', 'by'].includes(word)
+        );
+        console.log('🔍 [Dynamic Tools] Query keywords:', queryKeywords);
+        
         // Filter by intent
         const intentKeywords = this.getIntentKeywords(intent.primary);
         console.log('🔍 [Dynamic Tools] Intent keywords:', intentKeywords);
         
         const intentFiltered = allTools.filter(tool => {
             const toolKeywords = tool.keywords || [];
-            const matches = intentKeywords.some(keyword => 
+            
+            // Check intent keyword matches
+            const intentMatches = intentKeywords.some(keyword => 
                 toolKeywords.some(toolKeyword => 
                     toolKeyword.toLowerCase().includes(keyword.toLowerCase())
                 )
             );
+            
+            // Check direct query keyword matches (higher priority)
+            const queryMatches = queryKeywords.some(queryKeyword => 
+                toolKeywords.some(toolKeyword => 
+                    toolKeyword.toLowerCase().includes(queryKeyword.toLowerCase())
+                )
+            );
+            
+            const matches = intentMatches || queryMatches;
             if (matches) {
-                console.log('🔍 [Dynamic Tools] Tool matched by intent:', tool.name, 'keywords:', toolKeywords);
+                console.log('🔍 [Dynamic Tools] Tool matched by intent:', tool.name, 'keywords:', toolKeywords, 'query matches:', queryMatches);
             }
             return matches;
         });
@@ -327,9 +350,22 @@ class ToolsRegistryManager {
             // Base score from priority
             score += (4 - (tool.priority || 3)) * 10;
 
+            // Extract query keywords for direct matching
+            const queryKeywords = intent.query.toLowerCase().split(/\s+/).filter(word => 
+                word.length > 2 && !['the', 'and', 'or', 'of', 'in', 'to', 'for', 'with', 'by'].includes(word)
+            );
+
+            // Direct query keyword matching score (higher priority)
+            const toolKeywords = tool.keywords || [];
+            const queryMatches = queryKeywords.filter(queryKeyword =>
+                toolKeywords.some(toolKeyword =>
+                    toolKeyword.toLowerCase().includes(queryKeyword.toLowerCase())
+                )
+            ).length;
+            score += queryMatches * 25; // Higher weight for direct query matches
+
             // Intent matching score
             const intentKeywords = this.getIntentKeywords(intent.primary);
-            const toolKeywords = tool.keywords || [];
             const keywordMatches = intentKeywords.filter(keyword =>
                 toolKeywords.some(toolKeyword =>
                     toolKeyword.toLowerCase().includes(keyword.toLowerCase())
@@ -353,7 +389,7 @@ class ToolsRegistryManager {
             }
 
             return { tool, score };
-        });
+        }).sort((a, b) => b.score - a.score);
     }
 
     /**
