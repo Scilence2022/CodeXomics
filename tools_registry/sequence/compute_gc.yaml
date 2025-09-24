@@ -1,0 +1,110 @@
+# compute_gc.yaml
+name: "compute_gc"
+version: "1.2.0"
+description: "Calculate GC content percentage and other nucleotide composition statistics for a DNA sequence."
+category: "sequence"
+keywords: ["gc", "content", "calculate", "composition", "nucleotide", "statistics", "analysis"]
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: "client"
+  timeout: 5000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: "object"
+  properties:
+    sequence:
+      type: "string"
+      description: "DNA sequence to analyze (A, T, C, G, N allowed)"
+      examples: ["ATGCGCTATCG", "ATGAAATAG", "NNNNATGCGCTATCGNNNN"]
+    include_statistics:
+      type: "boolean"
+      description: "Whether to include detailed nucleotide statistics"
+      default: true
+    window_size:
+      type: "number"
+      description: "Window size for sliding window GC analysis (0 = no sliding window)"
+      default: 0
+      minimum: 0
+      maximum: 1000
+    step_size:
+      type: "number"
+      description: "Step size for sliding window analysis"
+      default: 100
+      minimum: 1
+    normalize_case:
+      type: "boolean"
+      description: "Whether to normalize sequence to uppercase"
+      default: true
+    clientId:
+      type: "string"
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["sequence"]
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Calculate the GC content of this sequence: ATGCGCTATCG"
+    tool_call: "compute_gc(sequence='ATGCGCTATCG', include_statistics=true)"
+    thought: "User wants basic GC content calculation for a short sequence"
+    expected_result: "GC content percentage and nucleotide counts"
+
+  - user_query: "What's the GC content of the lacZ gene?"
+    tool_call: "compute_gc(sequence='ATGAAAGAATTGAAAGAAGCTGGCTGGAAAGAACTGCAGCCG', include_statistics=true)"
+    thought: "User wants GC analysis of a gene sequence with detailed statistics"
+    expected_result: "GC content, nucleotide composition, and sequence statistics"
+
+  - user_query: "Analyze GC content with sliding window of 100bp"
+    tool_call: "compute_gc(sequence='long_sequence', window_size=100, step_size=50)"
+    thought: "User wants sliding window analysis to see GC content variation"
+    expected_result: "Array of GC content values for each window position"
+
+  - user_query: "Get nucleotide composition statistics"
+    tool_call: "compute_gc(sequence='ATGCGCTATCG', include_statistics=true, normalize_case=true)"
+    thought: "User wants comprehensive nucleotide analysis"
+    expected_result: "Complete nucleotide composition with percentages and counts"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ["get_sequence"]
+  conflicts_with: []
+  enhances: ["analyze_region", "sequence_statistics"]
+  alternatives: ["sequence_statistics"]
+  prerequisites: []
+  follow_up: ["translate_dna", "find_orfs", "predict_promoter"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["core", "analysis", "gc", "composition"]
+  complexity: "simple"
+  usage_pattern: "common"
+
+# Error handling
+error_handling:
+  empty_sequence: "Returns error if sequence is empty or null"
+  invalid_characters: "Returns warning for non-standard nucleotides (N, R, Y, etc.)"
+  sequence_too_long: "Returns error if sequence exceeds processing limits"
+  invalid_window: "Returns error if window_size > sequence length"
+
+# Return value specification
+returns:
+  success: "boolean - Whether calculation was successful"
+  gc_content: "number - GC content percentage (0-100)"
+  at_content: "number - AT content percentage (0-100)"
+  sequence_length: "number - Length of analyzed sequence"
+  nucleotide_counts: "object - Count of each nucleotide (A, T, C, G, N)"
+  nucleotide_percentages: "object - Percentage of each nucleotide"
+  gc_skew: "number - GC skew value (G-C)/(G+C)"
+  at_skew: "number - AT skew value (A-T)/(A+T)"
+  sliding_window: "array - GC content for each window (if window_size > 0)"
+  statistics: "object - Additional sequence statistics (if include_statistics=true)"

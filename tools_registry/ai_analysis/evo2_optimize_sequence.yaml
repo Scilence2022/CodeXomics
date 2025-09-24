@@ -1,0 +1,63 @@
+name: evo2_optimize_sequence
+version: 1.0.0
+description: Optimize DNA sequences for specific properties using Evo2
+category: ai_analysis
+keywords:
+  - optimize
+  - sequence
+  - dna
+  - properties
+  - evo2
+priority: 2
+execution:
+  type: server
+  timeout: 120000
+  retries: 2
+  requires_auth: true
+  requires_data: false
+  requires_network: true
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    sequence:
+      type: string
+      description: DNA sequence for analysis
+    maxTokens:
+      type: number
+      description: Maximum length of generated sequence
+      default: 1000
+  required:
+    - sequence
+sample_usages:
+  - user_query: Use evo2_optimize_sequence to analyze genomic data
+    tool_call: evo2_optimize_sequence(parameter1='value1', parameter2='value2')
+    thought: User wants to use evo2_optimize_sequence for optimize dna sequences for specific properties using evo2
+    expected_result: Result from evo2_optimize_sequence analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - ai_analysis
+    - important
+  complexity: moderate
+  usage_pattern: common
+error_handling:
+  api_error: Returns error if AI service is unavailable
+  generation_failed: Returns error if generation fails
+returns:
+  success: boolean - Whether analysis was successful
+  generated_sequence: string - Generated DNA sequence
+  confidence_scores: array - Confidence scores for each position

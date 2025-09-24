@@ -1,0 +1,187 @@
+# Genome AI Studio Tool Categories
+# Defines the hierarchical organization of all tools
+
+categories:
+  navigation:
+    name: "Navigation & State Management"
+    description: "Tools for genome browser navigation, state management, and track control"
+    icon: "🧭"
+    priority: 1
+    color: "#4CAF50"
+    subcategories:
+      - "browser_navigation"
+      - "state_management"
+      - "track_control"
+    tools_count: 8
+
+  sequence:
+    name: "Sequence Analysis"
+    description: "Tools for DNA/RNA sequence analysis, motif searching, and basic bioinformatics"
+    icon: "🧬"
+    priority: 1
+    color: "#2196F3"
+    subcategories:
+      - "sequence_retrieval"
+      - "sequence_analysis"
+      - "motif_search"
+      - "prediction"
+    tools_count: 8
+
+  protein:
+    name: "Protein Structure"
+    description: "Tools for protein structure analysis, PDB searches, and AlphaFold integration"
+    icon: "🔬"
+    priority: 1
+    color: "#FF9800"
+    subcategories:
+      - "structure_retrieval"
+      - "structure_visualization"
+      - "alphafold_integration"
+      - "pdb_search"
+    tools_count: 6
+
+  database:
+    name: "Database Integration"
+    description: "Tools for accessing biological databases (UniProt, InterPro, etc.)"
+    icon: "🗄️"
+    priority: 2
+    color: "#9C27B0"
+    subcategories:
+      - "uniprot_search"
+      - "interpro_analysis"
+      - "database_queries"
+      - "cross_references"
+    tools_count: 6
+
+  ai_analysis:
+    name: "AI-Powered Analysis"
+    description: "NVIDIA EVO2 AI tools for sequence generation, function prediction, and CRISPR design"
+    icon: "🤖"
+    priority: 1
+    color: "#E91E63"
+    subcategories:
+      - "sequence_generation"
+      - "function_prediction"
+      - "crispr_design"
+      - "sequence_optimization"
+    tools_count: 5
+
+  data_management:
+    name: "Data Management"
+    description: "Tools for data annotation, export, and codon usage analysis"
+    icon: "📊"
+    priority: 2
+    color: "#607D8B"
+    subcategories:
+      - "annotation_management"
+      - "data_export"
+      - "codon_analysis"
+      - "region_analysis"
+    tools_count: 4
+
+  pathway:
+    name: "Pathway & BLAST"
+    description: "Tools for metabolic pathway visualization and BLAST sequence searches"
+    icon: "🔄"
+    priority: 2
+    color: "#795548"
+    subcategories:
+      - "pathway_visualization"
+      - "blast_search"
+      - "metabolic_analysis"
+    tools_count: 3
+
+  sequence_editing:
+    name: "Sequence Editing"
+    description: "Tools for sequence manipulation, editing, and action management"
+    icon: "✏️"
+    priority: 1
+    color: "#FF5722"
+    subcategories:
+      - "sequence_manipulation"
+      - "action_management"
+      - "clipboard_operations"
+    tools_count: 10
+
+  plugin_management:
+    name: "Plugin Management"
+    description: "Tools for plugin installation, execution, and development"
+    icon: "🔌"
+    priority: 3
+    color: "#3F51B5"
+    subcategories:
+      - "plugin_installation"
+      - "plugin_execution"
+      - "plugin_development"
+      - "plugin_marketplace"
+    tools_count: 12
+
+  coordination:
+    name: "Multi-Agent Coordination"
+    description: "Tools for coordinating multiple AI agents and workflow management"
+    icon: "🎯"
+    priority: 2
+    color: "#00BCD4"
+    subcategories:
+      - "task_coordination"
+      - "workflow_management"
+      - "agent_management"
+      - "error_recovery"
+    tools_count: 15
+
+  external_apis:
+    name: "External API Integration"
+    description: "Tools for integrating with external biological databases and APIs"
+    icon: "🌐"
+    priority: 2
+    color: "#8BC34A"
+    subcategories:
+      - "blast_apis"
+      - "uniprot_apis"
+      - "alphafold_apis"
+      - "evo2_apis"
+    tools_count: 12
+
+# Tool priority levels
+priority_levels:
+  1: "Critical - Core functionality tools"
+  2: "Important - Enhanced functionality tools"
+  3: "Optional - Specialized or advanced tools"
+
+# Tool execution types
+execution_types:
+  client: "Executed in the browser/client"
+  server: "Executed on the server"
+  hybrid: "Combines client and server execution"
+
+# Tool relationship types
+relationship_types:
+  depends_on: "This tool requires another tool to function"
+  conflicts_with: "This tool cannot be used with another tool"
+  enhances: "This tool improves another tool's functionality"
+  alternatives: "This tool can be used instead of another tool"
+  prerequisites: "This tool should be used before another tool"
+  follow_up: "This tool is commonly used after another tool"
+
+# Usage patterns
+usage_patterns:
+  frequent: "Used in >50% of sessions"
+  common: "Used in 20-50% of sessions"
+  occasional: "Used in 5-20% of sessions"
+  rare: "Used in <5% of sessions"
+
+# Tool complexity levels
+complexity_levels:
+  simple: "Single operation, minimal parameters"
+  moderate: "Multiple operations, several parameters"
+  complex: "Complex workflows, many parameters"
+  expert: "Advanced functionality, requires expertise"
+
+# Integration requirements
+integration_requirements:
+  none: "No special requirements"
+  auth: "Requires authentication"
+  network: "Requires network connection"
+  data: "Requires loaded genome data"
+  plugin: "Requires specific plugin"
+  api_key: "Requires API key"

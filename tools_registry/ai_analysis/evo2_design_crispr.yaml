@@ -1,0 +1,64 @@
+name: evo2_design_crispr
+version: 1.0.0
+description: Design CRISPR-Cas molecular complexes using Evo2
+category: ai_analysis
+keywords:
+  - design
+  - crispr
+  - cas
+  - molecular
+  - evo2
+priority: 1
+execution:
+  type: server
+  timeout: 120000
+  retries: 2
+  requires_auth: true
+  requires_data: false
+  requires_network: true
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    sequence:
+      type: string
+      description: DNA sequence for analysis
+    maxTokens:
+      type: number
+      description: Maximum length of generated sequence
+      default: 1000
+  required:
+    - sequence
+sample_usages:
+  - user_query: Use evo2_design_crispr to analyze genomic data
+    tool_call: evo2_design_crispr(parameter1='value1', parameter2='value2')
+    thought: User wants to use evo2_design_crispr for design crispr-cas molecular complexes using evo2
+    expected_result: Result from evo2_design_crispr analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - ai_analysis
+    - core
+    - essential
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  api_error: Returns error if AI service is unavailable
+  generation_failed: Returns error if generation fails
+returns:
+  success: boolean - Whether analysis was successful
+  generated_sequence: string - Generated DNA sequence
+  confidence_scores: array - Confidence scores for each position

@@ -1,0 +1,65 @@
+name: create_plugin
+version: 1.0.0
+description: Create a new plugin from template or code
+category: plugin_management
+keywords:
+  - create
+  - plugin
+  - template
+  - code
+priority: 3
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: true
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    pluginId:
+      type: string
+      description: Plugin identifier
+    status:
+      type: string
+      description: Plugin status filter
+      enum:
+        - all
+        - installed
+        - enabled
+        - disabled
+  required: []
+sample_usages:
+  - user_query: Use create_plugin to analyze genomic data
+    tool_call: create_plugin(parameter1='value1', parameter2='value2')
+    thought: User wants to use create_plugin for create a new plugin from template or code
+    expected_result: Result from create_plugin analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - plugin_management
+    - optional
+  complexity: complex
+  usage_pattern: occasional
+error_handling:
+  plugin_not_found: Returns error if plugin not found
+  installation_failed: Returns error if installation fails
+returns:
+  success: boolean - Whether operation was successful
+  plugins: array - List of plugins
+  count: number - Number of plugins

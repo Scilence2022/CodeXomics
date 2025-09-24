@@ -1,0 +1,51 @@
+name: find_pathway_genes
+version: 1.0.0
+description: Find genes associated with a specific metabolic pathway
+category: pathway
+keywords:
+  - find
+  - pathway
+  - genes
+  - metabolic
+priority: 2
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Use find_pathway_genes to analyze genomic data
+    tool_call: find_pathway_genes(parameter1='value1', parameter2='value2')
+    thought: User wants to use find_pathway_genes for find genes associated with a specific metabolic pathway
+    expected_result: Result from find_pathway_genes analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - pathway
+    - important
+  complexity: moderate
+  usage_pattern: common
+error_handling: {}
+returns:
+  success: boolean - Whether operation was successful
+  result: object - Operation result

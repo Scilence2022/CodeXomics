@@ -1,0 +1,103 @@
+# navigate_to_position.yaml
+name: "navigate_to_position"
+version: "1.2.0"
+description: "Navigate to a specific genomic position in the genome browser. If only position is provided, defaults to 2000bp range centered on that position."
+category: "navigation"
+keywords: ["navigate", "position", "location", "jump", "go to", "genome browser", "coordinates"]
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: "client"
+  timeout: 5000
+  retries: 3
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: "object"
+  properties:
+    chromosome:
+      type: "string"
+      description: "Chromosome name (e.g., 'chr1', 'NC_000913.3', 'U00096')"
+      examples: ["chr1", "NC_000913.3", "U00096", "chromosome1"]
+    start:
+      type: "number"
+      description: "Start position in base pairs (1-based coordinate)"
+      minimum: 1
+      examples: [1000, 50000, 1000000]
+    end:
+      type: "number"
+      description: "End position in base pairs (1-based coordinate)"
+      minimum: 1
+      examples: [2000, 60000, 1002000]
+    position:
+      type: "number"
+      description: "Center position for 2000bp range (alternative to start/end)"
+      minimum: 1
+      examples: [1500, 55000, 1001000]
+    clientId:
+      type: "string"
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["chromosome"]
+  anyOf:
+    - required: ["start", "end"]
+    - required: ["position"]
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Go to position 1000-2000 on chromosome 1"
+    tool_call: "navigate_to_position(chromosome='chr1', start=1000, end=2000)"
+    thought: "User wants to navigate to a specific genomic region with start and end coordinates"
+    expected_result: "Browser view updates to show the specified region with genes and features"
+
+  - user_query: "Jump to position 50000 on the current chromosome"
+    tool_call: "navigate_to_position(chromosome='NC_000913.3', position=50000)"
+    thought: "User wants to center the view on position 50000, which will create a 2000bp window"
+    expected_result: "Browser centers on position 50000 showing 1000bp on each side"
+
+  - user_query: "Navigate to the E. coli chromosome at position 1000000"
+    tool_call: "navigate_to_position(chromosome='U00096', position=1000000)"
+    thought: "User specifies E. coli chromosome (U00096) and wants to center on position 1000000"
+    expected_result: "Browser shows the region around 1000000 on the E. coli chromosome"
+
+  - user_query: "Show me the region from 50000 to 60000"
+    tool_call: "navigate_to_position(chromosome='chr1', start=50000, end=60000)"
+    thought: "User wants to see a specific 10kb region, so I use start and end parameters"
+    expected_result: "Browser displays the 10kb region with all contained features"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["get_current_state", "search_features"]
+  alternatives: ["jump_to_gene"]
+  prerequisites: []
+  follow_up: ["get_sequence", "analyze_region", "search_features"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["core", "navigation", "browser", "essential"]
+  complexity: "simple"
+  usage_pattern: "frequent"
+
+# Error handling
+error_handling:
+  invalid_chromosome: "Returns error if chromosome not found in loaded genome"
+  invalid_position: "Returns error if position is outside genome bounds"
+  missing_parameters: "Returns error if required parameters are missing"
+  client_error: "Returns error if browser client is not available"
+
+# Return value specification
+returns:
+  success: "boolean - Whether navigation was successful"
+  message: "string - Status message or error description"
+  new_position: "object - New browser position information"
+  features_visible: "array - List of features visible in the new region"

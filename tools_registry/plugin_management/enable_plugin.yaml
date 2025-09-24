@@ -1,0 +1,64 @@
+name: enable_plugin
+version: 1.0.0
+description: Enable a disabled plugin
+category: plugin_management
+keywords:
+  - enable
+  - plugin
+  - activate
+priority: 2
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: true
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    pluginId:
+      type: string
+      description: Plugin identifier
+    status:
+      type: string
+      description: Plugin status filter
+      enum:
+        - all
+        - installed
+        - enabled
+        - disabled
+  required: []
+sample_usages:
+  - user_query: Use enable_plugin to analyze genomic data
+    tool_call: enable_plugin(parameter1='value1', parameter2='value2')
+    thought: User wants to use enable_plugin for enable a disabled plugin
+    expected_result: Result from enable_plugin analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - plugin_management
+    - important
+  complexity: moderate
+  usage_pattern: common
+error_handling:
+  plugin_not_found: Returns error if plugin not found
+  installation_failed: Returns error if installation fails
+returns:
+  success: boolean - Whether operation was successful
+  plugins: array - List of plugins
+  count: number - Number of plugins

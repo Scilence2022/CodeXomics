@@ -62,6 +62,7 @@
     "file-saver": "^2.0.5",
     "generic-filehandle2": "^2.0.12",
     "igv": "^2.15.8",
+    "js-yaml": "^4.1.0",
     "marked": "^9.1.6",
     "multer": "^2.0.1",
     "ngl": "^2.3.1",

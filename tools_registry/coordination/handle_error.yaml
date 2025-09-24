@@ -1,0 +1,67 @@
+name: handle_error
+version: 1.0.0
+description: Handle errors in task execution
+category: coordination
+keywords:
+  - handle
+  - error
+  - execution
+  - task
+priority: 2
+execution:
+  type: client
+  timeout: 60000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    task:
+      type: string
+      description: Task description
+    priority:
+      type: string
+      description: Task priority
+      enum:
+        - low
+        - normal
+        - high
+        - urgent
+      default: normal
+  required:
+    - task
+sample_usages:
+  - user_query: Use handle_error to analyze genomic data
+    tool_call: handle_error(parameter1='value1', parameter2='value2')
+    thought: User wants to use handle_error for handle errors in task execution
+    expected_result: Result from handle_error analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - coordination
+    - important
+  complexity: moderate
+  usage_pattern: common
+error_handling:
+  task_decomposition_failed: Returns error if task cannot be decomposed
+  agent_unavailable: Returns error if required agent is unavailable
+returns:
+  success: boolean - Whether coordination was successful
+  task_id: string - Unique identifier for this task
+  results: object - Integrated results from all subtasks

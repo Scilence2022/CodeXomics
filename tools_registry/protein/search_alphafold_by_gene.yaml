@@ -1,0 +1,118 @@
+# search_alphafold_by_gene.yaml
+name: "search_alphafold_by_gene"
+version: "1.4.0"
+description: "Search AlphaFold database for protein structures by gene name. Returns predicted 3D structures with confidence scores and metadata."
+category: "protein"
+keywords: ["alphafold", "protein", "structure", "3d", "prediction", "gene", "search", "uniprot"]
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: "server"
+  timeout: 30000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: true
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: "object"
+  properties:
+    geneName:
+      type: "string"
+      description: "Gene name to search for (e.g., 'p53', 'lacZ', 'dnaA')"
+      examples: ["p53", "lacZ", "dnaA", "rpoB", "recA"]
+    organism:
+      type: "string"
+      description: "Organism name for more specific search (e.g., 'Homo sapiens', 'Escherichia coli')"
+      default: "Homo sapiens"
+      examples: ["Homo sapiens", "Escherichia coli", "Saccharomyces cerevisiae", "Mus musculus"]
+    maxResults:
+      type: "number"
+      description: "Maximum number of results to return"
+      default: 10
+      minimum: 1
+      maximum: 50
+    minConfidence:
+      type: "number"
+      description: "Minimum confidence score threshold (0-100)"
+      default: 70
+      minimum: 0
+      maximum: 100
+    includeSequence:
+      type: "boolean"
+      description: "Whether to include protein sequence in results"
+      default: true
+    includeMetadata:
+      type: "boolean"
+      description: "Whether to include detailed metadata (function, domains, etc.)"
+      default: true
+    format:
+      type: "string"
+      enum: ["summary", "detailed", "minimal"]
+      description: "Output format detail level"
+      default: "detailed"
+    clientId:
+      type: "string"
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["geneName"]
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Search AlphaFold for p53 protein structure"
+    tool_call: "search_alphafold_by_gene(geneName='p53', organism='Homo sapiens', minConfidence=80)"
+    thought: "User wants to find the p53 protein structure with high confidence"
+    expected_result: "List of p53 structures with confidence scores and metadata"
+
+  - user_query: "Find lacZ protein structure in E. coli"
+    tool_call: "search_alphafold_by_gene(geneName='lacZ', organism='Escherichia coli', includeSequence=true)"
+    thought: "User wants lacZ structure from E. coli with sequence information"
+    expected_result: "lacZ structure with sequence and confidence data"
+
+  - user_query: "Get all high-confidence protein structures for dnaA"
+    tool_call: "search_alphafold_by_gene(geneName='dnaA', minConfidence=90, maxResults=5)"
+    thought: "User wants only high-confidence dnaA structures, limited to 5 results"
+    expected_result: "Top 5 high-confidence dnaA structures"
+
+  - user_query: "Search for protein structures with minimal output"
+    tool_call: "search_alphafold_by_gene(geneName='recA', format='minimal', maxResults=3)"
+    thought: "User wants a quick search with minimal information"
+    expected_result: "Basic recA structure information only"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["open_alphafold_viewer", "fetch_alphafold_structure"]
+  alternatives: ["search_protein_by_gene"]
+  prerequisites: []
+  follow_up: ["open_alphafold_viewer", "fetch_alphafold_structure", "analyze_interpro_domains"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["protein", "structure", "alphafold", "prediction"]
+  complexity: "moderate"
+  usage_pattern: "common"
+
+# Error handling
+error_handling:
+  gene_not_found: "Returns empty result if no structures found for the gene"
+  network_error: "Returns error if AlphaFold API is unavailable"
+  invalid_organism: "Returns error if organism name is invalid"
+  api_limit_exceeded: "Returns error if API rate limit is exceeded"
+
+# Return value specification
+returns:
+  success: "boolean - Whether search was successful"
+  results_count: "number - Number of structures found"
+  structures: "array - List of protein structures with details"
+  structure_details: "object - For each structure: uniprot_id, confidence, sequence, metadata"
+  search_metadata: "object - Search parameters and execution time"
+  confidence_scores: "array - Confidence scores for each structure"
+  organism_matches: "array - Organism information for each match"

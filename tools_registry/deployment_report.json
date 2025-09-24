@@ -1,0 +1,468 @@
+{
+  "timestamp": "2025-09-24T13:12:10.886Z",
+  "version": "1.0.0",
+  "stats": {
+    "totalTools": 88,
+    "validTools": 88,
+    "invalidTools": 0,
+    "categories": 11,
+    "totalSize": 172673
+  },
+  "errors": [],
+  "warnings": [],
+  "categories": [
+    "navigation",
+    "sequence",
+    "protein",
+    "database",
+    "ai_analysis",
+    "data_management",
+    "pathway",
+    "sequence_editing",
+    "plugin_management",
+    "coordination",
+    "external_apis"
+  ],
+  "tools": [
+    {
+      "name": "get_current_state",
+      "category": "navigation",
+      "file": "get_current_state.yaml"
+    },
+    {
+      "name": "get_genome_info",
+      "category": "navigation",
+      "file": "get_genome_info.yaml"
+    },
+    {
+      "name": "jump_to_gene",
+      "category": "navigation",
+      "file": "jump_to_gene.yaml"
+    },
+    {
+      "name": "navigate_to_position",
+      "category": "navigation",
+      "file": "navigate_to_position.yaml"
+    },
+    {
+      "name": "open_new_tab",
+      "category": "navigation",
+      "file": "open_new_tab.yaml"
+    },
+    {
+      "name": "search_features",
+      "category": "navigation",
+      "file": "search_features.yaml"
+    },
+    {
+      "name": "search_gene_by_name",
+      "category": "navigation",
+      "file": "search_gene_by_name.yaml"
+    },
+    {
+      "name": "toggle_track",
+      "category": "navigation",
+      "file": "toggle_track.yaml"
+    },
+    {
+      "name": "compute_gc",
+      "category": "sequence",
+      "file": "compute_gc.yaml"
+    },
+    {
+      "name": "find_orfs",
+      "category": "sequence",
+      "file": "find_orfs.yaml"
+    },
+    {
+      "name": "get_coding_sequence",
+      "category": "sequence",
+      "file": "get_coding_sequence.yaml"
+    },
+    {
+      "name": "get_sequence",
+      "category": "sequence",
+      "file": "get_sequence.yaml"
+    },
+    {
+      "name": "predict_promoter",
+      "category": "sequence",
+      "file": "predict_promoter.yaml"
+    },
+    {
+      "name": "reverse_complement",
+      "category": "sequence",
+      "file": "reverse_complement.yaml"
+    },
+    {
+      "name": "search_sequence_motif",
+      "category": "sequence",
+      "file": "search_sequence_motif.yaml"
+    },
+    {
+      "name": "translate_dna",
+      "category": "sequence",
+      "file": "translate_dna.yaml"
+    },
+    {
+      "name": "fetch_alphafold_structure",
+      "category": "protein",
+      "file": "fetch_alphafold_structure.yaml"
+    },
+    {
+      "name": "fetch_protein_structure",
+      "category": "protein",
+      "file": "fetch_protein_structure.yaml"
+    },
+    {
+      "name": "open_alphafold_viewer",
+      "category": "protein",
+      "file": "open_alphafold_viewer.yaml"
+    },
+    {
+      "name": "open_protein_viewer",
+      "category": "protein",
+      "file": "open_protein_viewer.yaml"
+    },
+    {
+      "name": "search_alphafold_by_gene",
+      "category": "protein",
+      "file": "search_alphafold_by_gene.yaml"
+    },
+    {
+      "name": "search_protein_by_gene",
+      "category": "protein",
+      "file": "search_protein_by_gene.yaml"
+    },
+    {
+      "name": "advanced_uniprot_search",
+      "category": "database",
+      "file": "advanced_uniprot_search.yaml"
+    },
+    {
+      "name": "analyze_interpro_domains",
+      "category": "database",
+      "file": "analyze_interpro_domains.yaml"
+    },
+    {
+      "name": "get_interpro_entry_details",
+      "category": "database",
+      "file": "get_interpro_entry_details.yaml"
+    },
+    {
+      "name": "get_uniprot_entry",
+      "category": "database",
+      "file": "get_uniprot_entry.yaml"
+    },
+    {
+      "name": "search_interpro_entry",
+      "category": "database",
+      "file": "search_interpro_entry.yaml"
+    },
+    {
+      "name": "search_uniprot_database",
+      "category": "database",
+      "file": "search_uniprot_database.yaml"
+    },
+    {
+      "name": "evo2_analyze_essentiality",
+      "category": "ai_analysis",
+      "file": "evo2_analyze_essentiality.yaml"
+    },
+    {
+      "name": "evo2_design_crispr",
+      "category": "ai_analysis",
+      "file": "evo2_design_crispr.yaml"
+    },
+    {
+      "name": "evo2_generate_sequence",
+      "category": "ai_analysis",
+      "file": "evo2_generate_sequence.yaml"
+    },
+    {
+      "name": "evo2_optimize_sequence",
+      "category": "ai_analysis",
+      "file": "evo2_optimize_sequence.yaml"
+    },
+    {
+      "name": "evo2_predict_function",
+      "category": "ai_analysis",
+      "file": "evo2_predict_function.yaml"
+    },
+    {
+      "name": "analyze_region",
+      "category": "data_management",
+      "file": "analyze_region.yaml"
+    },
+    {
+      "name": "codon_usage_analysis",
+      "category": "data_management",
+      "file": "codon_usage_analysis.yaml"
+    },
+    {
+      "name": "create_annotation",
+      "category": "data_management",
+      "file": "create_annotation.yaml"
+    },
+    {
+      "name": "export_data",
+      "category": "data_management",
+      "file": "export_data.yaml"
+    },
+    {
+      "name": "find_pathway_genes",
+      "category": "pathway",
+      "file": "find_pathway_genes.yaml"
+    },
+    {
+      "name": "show_metabolic_pathway",
+      "category": "pathway",
+      "file": "show_metabolic_pathway.yaml"
+    },
+    {
+      "name": "clear_actions",
+      "category": "sequence_editing",
+      "file": "clear_actions.yaml"
+    },
+    {
+      "name": "copy_sequence",
+      "category": "sequence_editing",
+      "file": "copy_sequence.yaml"
+    },
+    {
+      "name": "cut_sequence",
+      "category": "sequence_editing",
+      "file": "cut_sequence.yaml"
+    },
+    {
+      "name": "delete_sequence",
+      "category": "sequence_editing",
+      "file": "delete_sequence.yaml"
+    },
+    {
+      "name": "execute_actions",
+      "category": "sequence_editing",
+      "file": "execute_actions.yaml"
+    },
+    {
+      "name": "get_action_list",
+      "category": "sequence_editing",
+      "file": "get_action_list.yaml"
+    },
+    {
+      "name": "insert_sequence",
+      "category": "sequence_editing",
+      "file": "insert_sequence.yaml"
+    },
+    {
+      "name": "paste_sequence",
+      "category": "sequence_editing",
+      "file": "paste_sequence.yaml"
+    },
+    {
+      "name": "replace_sequence",
+      "category": "sequence_editing",
+      "file": "replace_sequence.yaml"
+    },
+    {
+      "name": "undo_last_action",
+      "category": "sequence_editing",
+      "file": "undo_last_action.yaml"
+    },
+    {
+      "name": "call_plugin_function",
+      "category": "plugin_management",
+      "file": "call_plugin_function.yaml"
+    },
+    {
+      "name": "create_plugin",
+      "category": "plugin_management",
+      "file": "create_plugin.yaml"
+    },
+    {
+      "name": "disable_plugin",
+      "category": "plugin_management",
+      "file": "disable_plugin.yaml"
+    },
+    {
+      "name": "enable_plugin",
+      "category": "plugin_management",
+      "file": "enable_plugin.yaml"
+    },
+    {
+      "name": "execute_plugin",
+      "category": "plugin_management",
+      "file": "execute_plugin.yaml"
+    },
+    {
+      "name": "get_plugin_functions",
+      "category": "plugin_management",
+      "file": "get_plugin_functions.yaml"
+    },
+    {
+      "name": "get_plugin_info",
+      "category": "plugin_management",
+      "file": "get_plugin_info.yaml"
+    },
+    {
+      "name": "install_plugin",
+      "category": "plugin_management",
+      "file": "install_plugin.yaml"
+    },
+    {
+      "name": "list_plugins",
+      "category": "plugin_management",
+      "file": "list_plugins.yaml"
+    },
+    {
+      "name": "search_plugins",
+      "category": "plugin_management",
+      "file": "search_plugins.yaml"
+    },
+    {
+      "name": "uninstall_plugin",
+      "category": "plugin_management",
+      "file": "uninstall_plugin.yaml"
+    },
+    {
+      "name": "validate_plugin",
+      "category": "plugin_management",
+      "file": "validate_plugin.yaml"
+    },
+    {
+      "name": "assign_task_to_agent",
+      "category": "coordination",
+      "file": "assign_task_to_agent.yaml"
+    },
+    {
+      "name": "balance_load",
+      "category": "coordination",
+      "file": "balance_load.yaml"
+    },
+    {
+      "name": "cache_strategy",
+      "category": "coordination",
+      "file": "cache_strategy.yaml"
+    },
+    {
+      "name": "coordinate_task",
+      "category": "coordination",
+      "file": "coordinate_task.yaml"
+    },
+    {
+      "name": "create_workflow",
+      "category": "coordination",
+      "file": "create_workflow.yaml"
+    },
+    {
+      "name": "decompose_task",
+      "category": "coordination",
+      "file": "decompose_task.yaml"
+    },
+    {
+      "name": "execute_workflow",
+      "category": "coordination",
+      "file": "execute_workflow.yaml"
+    },
+    {
+      "name": "fallback_strategy",
+      "category": "coordination",
+      "file": "fallback_strategy.yaml"
+    },
+    {
+      "name": "get_agent_status",
+      "category": "coordination",
+      "file": "get_agent_status.yaml"
+    },
+    {
+      "name": "get_workflow_status",
+      "category": "coordination",
+      "file": "get_workflow_status.yaml"
+    },
+    {
+      "name": "handle_error",
+      "category": "coordination",
+      "file": "handle_error.yaml"
+    },
+    {
+      "name": "integrate_results",
+      "category": "coordination",
+      "file": "integrate_results.yaml"
+    },
+    {
+      "name": "optimize_execution",
+      "category": "coordination",
+      "file": "optimize_execution.yaml"
+    },
+    {
+      "name": "parallel_execution",
+      "category": "coordination",
+      "file": "parallel_execution.yaml"
+    },
+    {
+      "name": "retry_failed_task",
+      "category": "coordination",
+      "file": "retry_failed_task.yaml"
+    },
+    {
+      "name": "alphafold_get_structure",
+      "category": "external_apis",
+      "file": "alphafold_get_structure.yaml"
+    },
+    {
+      "name": "alphafold_search",
+      "category": "external_apis",
+      "file": "alphafold_search.yaml"
+    },
+    {
+      "name": "blast_protein",
+      "category": "external_apis",
+      "file": "blast_protein.yaml"
+    },
+    {
+      "name": "blast_search",
+      "category": "external_apis",
+      "file": "blast_search.yaml"
+    },
+    {
+      "name": "blast_sequence",
+      "category": "external_apis",
+      "file": "blast_sequence.yaml"
+    },
+    {
+      "name": "evo2_design",
+      "category": "external_apis",
+      "file": "evo2_design.yaml"
+    },
+    {
+      "name": "evo2_optimize",
+      "category": "external_apis",
+      "file": "evo2_optimize.yaml"
+    },
+    {
+      "name": "interpro_search",
+      "category": "external_apis",
+      "file": "interpro_search.yaml"
+    },
+    {
+      "name": "kegg_search",
+      "category": "external_apis",
+      "file": "kegg_search.yaml"
+    },
+    {
+      "name": "uniprot_get_annotation",
+      "category": "external_apis",
+      "file": "uniprot_get_annotation.yaml"
+    },
+    {
+      "name": "uniprot_get_protein",
+      "category": "external_apis",
+      "file": "uniprot_get_protein.yaml"
+    },
+    {
+      "name": "uniprot_search",
+      "category": "external_apis",
+      "file": "uniprot_search.yaml"
+    }
+  ]
+}

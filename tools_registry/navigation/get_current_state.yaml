@@ -1,0 +1,71 @@
+name: get_current_state
+version: 1.0.0
+description: Get current state of the Genome AI Studio browser
+category: navigation
+keywords:
+  - current
+  - state
+  - browser
+  - status
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    chromosome:
+      type: string
+      description: Chromosome name
+      examples:
+        - chr1
+        - NC_000913.3
+        - U00096
+    start:
+      type: number
+      description: Start position (1-based coordinate)
+      minimum: 1
+    end:
+      type: number
+      description: End position (1-based coordinate)
+      minimum: 1
+  required:
+    - chromosome
+sample_usages:
+  - user_query: Use get_current_state to analyze genomic data
+    tool_call: get_current_state(parameter1='value1', parameter2='value2')
+    thought: User wants to use get_current_state for get current state of the genome ai studio browser
+    expected_result: Result from get_current_state analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - core
+    - essential
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  invalid_chromosome: Returns error if chromosome not found
+  invalid_position: Returns error if position is invalid
+returns:
+  success: boolean - Whether operation was successful
+  message: string - Status message or error description
+  position: object - New browser position information

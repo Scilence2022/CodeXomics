@@ -1,0 +1,68 @@
+name: undo_last_action
+version: 1.0.0
+description: Attempt to undo the last completed action
+category: sequence_editing
+keywords:
+  - undo
+  - last
+  - action
+  - completed
+priority: 2
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    chromosome:
+      type: string
+      description: Chromosome identifier
+    start:
+      type: number
+      description: Start position (1-based coordinate)
+      minimum: 1
+    end:
+      type: number
+      description: End position (1-based coordinate)
+      minimum: 1
+  required:
+    - chromosome
+    - start
+    - end
+sample_usages:
+  - user_query: Use undo_last_action to analyze genomic data
+    tool_call: undo_last_action(parameter1='value1', parameter2='value2')
+    thought: User wants to use undo_last_action for attempt to undo the last completed action
+    expected_result: Result from undo_last_action analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - sequence_editing
+    - important
+  complexity: moderate
+  usage_pattern: common
+error_handling:
+  invalid_region: Returns error if region is invalid
+  clipboard_error: Returns error if clipboard operation fails
+returns:
+  success: boolean - Whether operation was successful
+  action_id: string - Unique identifier for this action
+  sequence_length: number - Length of processed sequence

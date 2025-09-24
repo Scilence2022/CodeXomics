@@ -1,0 +1,97 @@
+# search_gene_by_name.yaml
+name: "search_gene_by_name"
+version: "1.1.0"
+description: "Search for a specific gene by name or locus tag in the loaded genome. Returns gene information and can optionally navigate to the gene location."
+category: "navigation"
+keywords: ["search", "gene", "name", "locus", "tag", "find", "locate", "gene search"]
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: "client"
+  timeout: 10000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: "object"
+  properties:
+    name:
+      type: "string"
+      description: "Gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA')"
+      examples: ["lacZ", "b0062", "araA", "dnaA", "rpoB"]
+    exact_match:
+      type: "boolean"
+      description: "Whether to require exact name match (default: false for partial matching)"
+      default: false
+    case_sensitive:
+      type: "boolean"
+      description: "Whether search is case sensitive (default: false)"
+      default: false
+    navigate_to_gene:
+      type: "boolean"
+      description: "Whether to automatically navigate to the gene location (default: true)"
+      default: true
+    include_annotations:
+      type: "boolean"
+      description: "Whether to include detailed gene annotations (default: true)"
+      default: true
+    clientId:
+      type: "string"
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["name"]
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Find the lacZ gene"
+    tool_call: "search_gene_by_name(name='lacZ', navigate_to_gene=true)"
+    thought: "User wants to find and navigate to the lacZ gene, which is a common E. coli gene"
+    expected_result: "Gene found and browser navigates to lacZ location showing gene details"
+
+  - user_query: "Search for gene b0062"
+    tool_call: "search_gene_by_name(name='b0062', exact_match=true)"
+    thought: "User is searching by locus tag, so exact match is appropriate"
+    expected_result: "Gene b0062 found with complete annotation information"
+
+  - user_query: "Look for genes containing 'ara'"
+    tool_call: "search_gene_by_name(name='ara', exact_match=false, navigate_to_gene=false)"
+    thought: "User wants to find genes with 'ara' in the name, not navigate to them"
+    expected_result: "List of all genes containing 'ara' in their name or description"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ["get_genome_info"]
+  conflicts_with: []
+  enhances: ["navigate_to_position", "get_sequence"]
+  alternatives: ["search_features"]
+  prerequisites: []
+  follow_up: ["get_sequence", "analyze_region", "get_coding_sequence"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["core", "search", "gene", "essential"]
+  complexity: "simple"
+  usage_pattern: "frequent"
+
+# Error handling
+error_handling:
+  gene_not_found: "Returns empty result if no genes match the search criteria"
+  multiple_matches: "Returns list of all matching genes with scores"
+  invalid_name: "Returns error if gene name is empty or invalid"
+  no_genome_loaded: "Returns error if no genome is currently loaded"
+
+# Return value specification
+returns:
+  success: "boolean - Whether search was successful"
+  genes_found: "number - Number of genes matching the search"
+  genes: "array - List of matching gene objects with details"
+  gene_details: "object - Detailed information for each gene including position, function, annotations"
+  navigation_result: "object - Result of navigation to gene (if navigate_to_gene=true)"

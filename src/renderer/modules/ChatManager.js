@@ -85,6 +85,11 @@ class ChatManager {
         this.evolutionEnabled = true;
         this.initializeEvolutionIntegration();
         
+        // Initialize Dynamic Tools Registry System
+        this.dynamicTools = null;
+        this.dynamicToolsEnabled = true;
+        this.initializeDynamicTools();
+        
         // Set global reference for copy button functionality
         window.chatManager = this;
         
@@ -587,6 +592,134 @@ class ChatManager {
         } catch (error) {
             console.error('❌ Failed to initialize Evolution integration:', error);
         }
+    }
+
+    /**
+     * Initialize Dynamic Tools Registry System
+     */
+    async initializeDynamicTools() {
+        try {
+            console.log('🔧 Initializing Dynamic Tools Registry System...');
+            
+            // Load the SystemIntegration module from tools_registry
+            const SystemIntegration = require('../../tools_registry/system_integration');
+            
+            if (SystemIntegration) {
+                this.dynamicTools = new SystemIntegration();
+                const initialized = await this.dynamicTools.initialize();
+                
+                if (initialized) {
+                    console.log('✅ Dynamic Tools Registry System initialized');
+                } else {
+                    console.warn('⚠️ Dynamic Tools Registry System failed to initialize, using fallback');
+                    this.dynamicToolsEnabled = false;
+                }
+            } else {
+                console.warn('SystemIntegration not available');
+                this.dynamicToolsEnabled = false;
+            }
+        } catch (error) {
+            console.error('❌ Failed to initialize Dynamic Tools Registry System:', error);
+            this.dynamicToolsEnabled = false;
+        }
+    }
+
+    /**
+     * Get the last user query for Dynamic Tools Registry intent analysis
+     */
+    getLastUserQuery() {
+        if (this.chatHistory.length === 0) return '';
+        const lastMessage = this.chatHistory[this.chatHistory.length - 1];
+        return lastMessage.role === 'user' ? lastMessage.content : '';
+    }
+
+    /**
+     * Get current context for Dynamic Tools Registry
+     */
+    getCurrentContextForDynamicTools() {
+        const context = this.getCurrentContext();
+        
+        // Check if there's a valid LLM provider configured
+        let hasAuth = false;
+        if (this.llmConfigManager) {
+            const currentProvider = this.llmConfigManager.getProviderForModelType('task');
+            if (currentProvider) {
+                const provider = this.llmConfigManager.providers[currentProvider];
+                hasAuth = !!(provider && provider.apiKey && provider.enabled);
+            }
+        }
+        
+        return {
+            hasData: context.genomeBrowser.currentState.loadedFiles.length > 0,
+            hasNetwork: navigator.onLine,
+            hasAuth: hasAuth,
+            currentCategory: this.getCurrentCategory(),
+            loadedGenome: context.genomeBrowser.currentState,
+            activeTracks: context.genomeBrowser.currentState.visibleTracks || [],
+            currentPosition: context.genomeBrowser.currentState.currentPosition || null
+        };
+    }
+
+    /**
+     * Get current category based on active tools or context
+     */
+    getCurrentCategory() {
+        // This would be determined based on current analysis context
+        if (this.app?.genomeData?.currentAnalysis) {
+            return this.app.genomeData.currentAnalysis.category;
+        }
+        return null;
+    }
+
+    /**
+     * Get Dynamic Tools Registry statistics
+     */
+    async getDynamicToolsStats() {
+        if (this.dynamicToolsEnabled && this.dynamicTools) {
+            return await this.dynamicTools.getRegistryStats();
+        }
+        return { total_tools: 0, total_categories: 0 };
+    }
+
+    /**
+     * Get tool usage statistics from Dynamic Tools Registry
+     */
+    getDynamicToolsUsageStats() {
+        if (this.dynamicToolsEnabled && this.dynamicTools) {
+            return this.dynamicTools.getToolUsageStats();
+        }
+        return {};
+    }
+
+    /**
+     * Search tools by keywords using Dynamic Tools Registry
+     */
+    async searchDynamicTools(keywords, limit = 10) {
+        if (this.dynamicToolsEnabled && this.dynamicTools) {
+            return await this.dynamicTools.searchTools(keywords, limit);
+        }
+        return [];
+    }
+
+    /**
+     * Get tools by category using Dynamic Tools Registry
+     */
+    async getDynamicToolsByCategory(categoryName) {
+        if (this.dynamicToolsEnabled && this.dynamicTools) {
+            return await this.dynamicTools.getToolsByCategory(categoryName);
+        }
+        return [];
+    }
+
+    /**
+     * Get Dynamic Tools Registry integration status
+     */
+    getDynamicToolsStatus() {
+        return {
+            enabled: this.dynamicToolsEnabled,
+            initialized: this.dynamicTools !== null,
+            status: this.dynamicTools ? this.dynamicTools.getIntegrationStatus() : null
+        };
     }
 
     /**
@@ -2959,7 +3092,7 @@ class ChatManager {
             console.log('Context for LLM:', context);
             
             // Build initial conversation history including the new message
-            let conversationHistory = this.buildConversationHistory(message);
+            let conversationHistory = await this.buildConversationHistory(message);
             console.log('Initial conversation history length:', conversationHistory.length);
             
             let currentRound = 0;
@@ -3639,11 +3772,11 @@ class ChatManager {
         }
     }
 
-    buildConversationHistory(newMessage) {
+    async buildConversationHistory(newMessage) {
         const history = [];
         
         // Add system context message
-        const systemMessage = this.buildSystemMessage();
+        const systemMessage = await this.buildSystemMessage();
         history.push({ role: 'system', content: systemMessage });
         
         // If context mode is enabled (current message only), skip conversation history
@@ -3691,7 +3824,7 @@ class ChatManager {
         return history;
     }
 
-    buildSystemMessage() {
+    async buildSystemMessage() {
         // Get user-defined system prompt
         const userSystemPrompt = this.configManager.get('llm.systemPrompt', '');
         
@@ -3706,6 +3839,18 @@ class ChatManager {
             // Choose context based on optimization setting
             const toolContext = useOptimizedPrompt ? this.getOptimizedToolContext() : this.getCompleteToolContext();
             return `${processedPrompt}\n\n${toolContext}`;
+        }
+        
+        // Try to use Dynamic Tools Registry if available and enabled
+        if (this.dynamicToolsEnabled && this.dynamicTools) {
+            try {
+                const context = this.getCurrentContextForDynamicTools();
+                const lastUserQuery = this.getLastUserQuery();
+                const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context);
+                return promptData.systemPrompt;
+            } catch (error) {
+                console.warn('Dynamic Tools Registry failed, falling back to standard system message:', error);
+            }
         }
         
         // For default system message, use optimized version by default
@@ -5669,6 +5814,7 @@ ${this.getPluginSystemInfo()}`;
         console.log(`Executing tool: ${toolName} with parameters:`, parameters);
         
         const startTime = Date.now();
+        let success = false;
         
         // Check if multi-agent system is enabled
         const multiAgentEnabled = this.configManager.get('multiAgentSettings.multiAgentSystemEnabled', false);
@@ -6333,6 +6479,13 @@ ${this.getPluginSystemInfo()}`;
                 this.memorySystem.recordToolCall(toolName, parameters, result, executionTime, agentName);
             }
             
+            // Track tool usage for Dynamic Tools Registry optimization
+            if (this.dynamicToolsEnabled && this.dynamicTools) {
+                const executionTime = Date.now() - startTime;
+                this.dynamicTools.trackToolUsage(toolName, true, executionTime);
+            }
+            
+            success = true;
             return result;
             
         } catch (error) {
@@ -6355,6 +6508,12 @@ ${this.getPluginSystemInfo()}`;
             if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
                 const executionTime = Date.now() - startTime;
                 this.memorySystem.recordToolCall(toolName, parameters, errorResult, executionTime, agentName || 'System Agent');
+            }
+            
+            // Track failed tool usage for Dynamic Tools Registry optimization
+            if (this.dynamicToolsEnabled && this.dynamicTools) {
+                const executionTime = Date.now() - startTime;
+                this.dynamicTools.trackToolUsage(toolName, false, executionTime);
             }
             
             return errorResult;

@@ -1,0 +1,115 @@
+# copy_sequence.yaml
+name: "copy_sequence"
+version: "1.1.0"
+description: "Copy a sequence region to clipboard for later use in sequence editing operations. Part of the sequence editing action queue system."
+category: "sequence_editing"
+keywords: ["copy", "sequence", "clipboard", "edit", "manipulation", "action", "queue"]
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: "client"
+  timeout: 10000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: "object"
+  properties:
+    chromosome:
+      type: "string"
+      description: "Chromosome identifier (e.g., 'chr1', 'chromosome1', 'NC_000913.3')"
+      examples: ["chr1", "chromosome1", "NC_000913.3", "U00096"]
+    start:
+      type: "number"
+      description: "Start position (1-based genomic coordinate)"
+      minimum: 1
+      examples: [1000, 50000, 1000000]
+    end:
+      type: "number"
+      description: "End position (1-based genomic coordinate)"
+      minimum: 1
+      examples: [2000, 60000, 1002000]
+    strand:
+      type: "string"
+      enum: ["+", "-"]
+      description: "Strand direction (+ for forward, - for reverse)"
+      default: "+"
+    include_annotations:
+      type: "boolean"
+      description: "Whether to include gene/feature annotations with the sequence"
+      default: false
+    action_id:
+      type: "string"
+      description: "Unique identifier for this action in the queue"
+      default: null
+    clientId:
+      type: "string"
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["chromosome", "start", "end"]
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Copy the sequence from position 1000 to 2000"
+    tool_call: "copy_sequence(chromosome='chr1', start=1000, end=2000, strand='+')"
+    thought: "User wants to copy a specific genomic region to the clipboard"
+    expected_result: "Sequence copied to clipboard, ready for paste operations"
+
+  - user_query: "Copy the lacZ gene sequence"
+    tool_call: "copy_sequence(chromosome='NC_000913.3', start=360000, end=365000, include_annotations=true)"
+    thought: "User wants to copy a gene with its annotations for detailed editing"
+    expected_result: "Gene sequence with annotations copied to clipboard"
+
+  - user_query: "Copy the reverse strand of this region"
+    tool_call: "copy_sequence(chromosome='chr1', start=50000, end=50100, strand='-')"
+    thought: "User wants the reverse complement of the specified region"
+    expected_result: "Reverse complement sequence copied to clipboard"
+
+  - user_query: "Copy this sequence for later editing"
+    tool_call: "copy_sequence(chromosome='U00096', start=1000000, end=1001000, action_id='copy_001')"
+    thought: "User wants to copy a sequence with a specific action ID for tracking"
+    expected_result: "Sequence copied with action ID for queue management"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ["get_sequence"]
+  conflicts_with: []
+  enhances: ["paste_sequence", "cut_sequence"]
+  alternatives: []
+  prerequisites: []
+  follow_up: ["paste_sequence", "get_action_list", "execute_actions"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["editing", "clipboard", "sequence", "action"]
+  complexity: "simple"
+  usage_pattern: "common"
+
+# Error handling
+error_handling:
+  invalid_region: "Returns error if start > end or region is invalid"
+  region_too_large: "Returns error if region exceeds maximum copy size"
+  chromosome_not_found: "Returns error if chromosome not found in loaded genome"
+  position_out_of_bounds: "Returns error if positions exceed genome length"
+  clipboard_error: "Returns error if clipboard operation fails"
+
+# Return value specification
+returns:
+  success: "boolean - Whether copy operation was successful"
+  action_id: "string - Unique identifier for this action"
+  sequence_length: "number - Length of copied sequence"
+  chromosome: "string - Source chromosome"
+  start: "number - Start position of copied region"
+  end: "number - End position of copied region"
+  strand: "string - Strand of copied sequence"
+  sequence: "string - The copied sequence (if requested)"
+  annotations: "array - Gene/feature annotations (if requested)"
+  clipboard_status: "string - Status of clipboard operation"

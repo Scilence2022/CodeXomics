@@ -1,0 +1,458 @@
+/**
+ * Genome AI Studio Tools Registry Manager
+ * Implements dynamic tool retrieval and injection system
+ */
+
+const fs = require('fs').promises;
+const path = require('path');
+const yaml = require('js-yaml');
+
+class ToolsRegistryManager {
+    constructor() {
+        this.registryPath = __dirname;
+        this.toolsCache = new Map();
+        this.categoriesCache = null;
+        this.lastCacheUpdate = 0;
+        this.cacheTimeout = 300000; // 5 minutes
+        
+        // Tool usage tracking
+        this.usageStats = new Map();
+        this.userContext = new Map();
+        
+        // Initialize
+        this.initializeRegistry();
+    }
+
+    /**
+     * Initialize the tools registry
+     */
+    async initializeRegistry() {
+        try {
+            await this.loadCategories();
+            await this.preloadCriticalTools();
+            console.log('✅ Tools Registry Manager initialized successfully');
+        } catch (error) {
+            console.error('❌ Failed to initialize Tools Registry Manager:', error);
+        }
+    }
+
+    /**
+     * Load tool categories metadata
+     */
+    async loadCategories() {
+        try {
+            const categoriesPath = path.join(this.registryPath, 'tool_categories.yaml');
+            const categoriesData = await fs.readFile(categoriesPath, 'utf8');
+            this.categoriesCache = yaml.load(categoriesData);
+        } catch (error) {
+            console.error('Failed to load tool categories:', error);
+            this.categoriesCache = { categories: {} };
+        }
+    }
+
+    /**
+     * Preload critical tools for faster access
+     */
+    async preloadCriticalTools() {
+        const criticalTools = [
+            'navigate_to_position',
+            'get_current_state',
+            'search_gene_by_name',
+            'get_sequence',
+            'compute_gc'
+        ];
+
+        for (const toolName of criticalTools) {
+            try {
+                await this.getToolDefinition(toolName);
+            } catch (error) {
+                console.warn(`Failed to preload critical tool ${toolName}:`, error);
+            }
+        }
+    }
+
+    /**
+     * Get tool definition by name
+     */
+    async getToolDefinition(toolName) {
+        // Check cache first
+        if (this.toolsCache.has(toolName)) {
+            const cached = this.toolsCache.get(toolName);
+            if (Date.now() - cached.timestamp < this.cacheTimeout) {
+                return cached.definition;
+            }
+        }
+
+        // Load from file
+        try {
+            const toolPath = await this.findToolFile(toolName);
+            const toolData = await fs.readFile(toolPath, 'utf8');
+            const definition = yaml.load(toolData);
+
+            // Cache the definition
+            this.toolsCache.set(toolName, {
+                definition,
+                timestamp: Date.now()
+            });
+
+            return definition;
+        } catch (error) {
+            console.error(`Failed to load tool definition for ${toolName}:`, error);
+            throw new Error(`Tool not found: ${toolName}`);
+        }
+    }
+
+    /**
+     * Find tool file in the registry
+     */
+    async findToolFile(toolName) {
+        const categories = this.categoriesCache?.categories || {};
+        
+        for (const [categoryName, categoryInfo] of Object.entries(categories)) {
+            const categoryPath = path.join(this.registryPath, categoryName);
+            
+            try {
+                const toolFile = path.join(categoryPath, `${toolName}.yaml`);
+                await fs.access(toolFile);
+                return toolFile;
+            } catch (error) {
+                // Tool not found in this category, continue searching
+                continue;
+            }
+        }
+        
+        throw new Error(`Tool file not found: ${toolName}.yaml`);
+    }
+
+    /**
+     * Get tools by category
+     */
+    async getToolsByCategory(categoryName) {
+        try {
+            const categoryPath = path.join(this.registryPath, categoryName);
+            const files = await fs.readdir(categoryPath);
+            const yamlFiles = files.filter(file => file.endsWith('.yaml'));
+            
+            const tools = [];
+            for (const file of yamlFiles) {
+                const toolName = path.basename(file, '.yaml');
+                try {
+                    const definition = await this.getToolDefinition(toolName);
+                    tools.push(definition);
+                } catch (error) {
+                    console.warn(`Failed to load tool ${toolName}:`, error);
+                }
+            }
+            
+            return tools;
+        } catch (error) {
+            console.error(`Failed to load tools for category ${categoryName}:`, error);
+            return [];
+        }
+    }
+
+    /**
+     * Get all available tools
+     */
+    async getAllTools() {
+        const allTools = [];
+        const categories = this.categoriesCache?.categories || {};
+        
+        for (const categoryName of Object.keys(categories)) {
+            const categoryTools = await this.getToolsByCategory(categoryName);
+            allTools.push(...categoryTools);
+        }
+        
+        return allTools;
+    }
+
+    /**
+     * Dynamic tool retrieval based on user intent
+     */
+    async getRelevantTools(userQuery, context = {}) {
+        try {
+            // Analyze user intent
+            const intent = await this.analyzeUserIntent(userQuery);
+            
+            // Get candidate tools
+            const candidateTools = await this.getCandidateTools(intent, context);
+            
+            // Score and rank tools
+            const scoredTools = await this.scoreTools(candidateTools, intent, context);
+            
+            // Return top relevant tools
+            return scoredTools
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10) // Top 10 most relevant tools
+                .map(item => item.tool);
+                
+        } catch (error) {
+            console.error('Failed to get relevant tools:', error);
+            return await this.getFallbackTools();
+        }
+    }
+
+    /**
+     * Analyze user intent from query
+     */
+    async analyzeUserIntent(userQuery) {
+        const query = userQuery.toLowerCase();
+        
+        // Intent keywords mapping
+        const intentKeywords = {
+            navigation: ['navigate', 'go to', 'jump', 'position', 'location', 'move'],
+            search: ['search', 'find', 'look for', 'query', 'locate'],
+            analysis: ['analyze', 'calculate', 'compute', 'measure', 'count'],
+            sequence: ['sequence', 'dna', 'rna', 'protein', 'amino acid'],
+            structure: ['structure', '3d', 'pdb', 'alphafold', 'protein structure'],
+            database: ['database', 'uniprot', 'interpro', 'lookup', 'entry'],
+            editing: ['edit', 'modify', 'change', 'replace', 'insert', 'delete'],
+            pathway: ['pathway', 'metabolic', 'kegg', 'reaction', 'enzyme'],
+            blast: ['blast', 'similarity', 'align', 'match', 'homolog'],
+            plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace']
+        };
+
+        const detectedIntents = [];
+        
+        for (const [intent, keywords] of Object.entries(intentKeywords)) {
+            const matches = keywords.filter(keyword => query.includes(keyword));
+            if (matches.length > 0) {
+                detectedIntents.push({
+                    intent,
+                    confidence: matches.length / keywords.length,
+                    keywords: matches
+                });
+            }
+        }
+
+        return {
+            primary: detectedIntents.sort((a, b) => b.confidence - a.confidence)[0]?.intent || 'general',
+            all: detectedIntents,
+            query: userQuery
+        };
+    }
+
+    /**
+     * Get candidate tools based on intent
+     */
+    async getCandidateTools(intent, context) {
+        const allTools = await this.getAllTools();
+        
+        // Filter by intent
+        const intentFiltered = allTools.filter(tool => {
+            const toolKeywords = tool.keywords || [];
+            const intentKeywords = this.getIntentKeywords(intent.primary);
+            
+            return intentKeywords.some(keyword => 
+                toolKeywords.some(toolKeyword => 
+                    toolKeyword.toLowerCase().includes(keyword.toLowerCase())
+                )
+            );
+        });
+
+        // Filter by context
+        const contextFiltered = intentFiltered.filter(tool => {
+            // Check if tool requires specific context
+            if (tool.execution?.requires_auth && !context.hasAuth) return false;
+            if (tool.execution?.requires_data && !context.hasData) return false;
+            if (tool.execution?.requires_network && !context.hasNetwork) return false;
+            
+            return true;
+        });
+
+        return contextFiltered;
+    }
+
+    /**
+     * Get keywords for specific intent
+     */
+    getIntentKeywords(intent) {
+        const intentKeywordMap = {
+            navigation: ['navigate', 'position', 'location', 'jump', 'go'],
+            search: ['search', 'find', 'query', 'lookup'],
+            analysis: ['analyze', 'calculate', 'compute', 'measure'],
+            sequence: ['sequence', 'dna', 'rna', 'protein'],
+            structure: ['structure', '3d', 'pdb', 'alphafold'],
+            database: ['database', 'uniprot', 'interpro'],
+            editing: ['edit', 'modify', 'change', 'replace'],
+            pathway: ['pathway', 'metabolic', 'kegg'],
+            blast: ['blast', 'similarity', 'align'],
+            plugin: ['plugin', 'install', 'enable']
+        };
+
+        return intentKeywordMap[intent] || [];
+    }
+
+    /**
+     * Score tools based on relevance
+     */
+    async scoreTools(tools, intent, context) {
+        return tools.map(tool => {
+            let score = 0;
+
+            // Base score from priority
+            score += (4 - (tool.priority || 3)) * 10;
+
+            // Intent matching score
+            const intentKeywords = this.getIntentKeywords(intent.primary);
+            const toolKeywords = tool.keywords || [];
+            const keywordMatches = intentKeywords.filter(keyword =>
+                toolKeywords.some(toolKeyword =>
+                    toolKeyword.toLowerCase().includes(keyword.toLowerCase())
+                )
+            ).length;
+            score += keywordMatches * 15;
+
+            // Usage frequency score
+            const usageStats = this.usageStats.get(tool.name) || { count: 0, success_rate: 0 };
+            score += Math.log(usageStats.count + 1) * 5;
+            score += usageStats.success_rate * 10;
+
+            // Context relevance score
+            if (context.currentCategory && tool.category === context.currentCategory) {
+                score += 20;
+            }
+
+            // Tool relationship score
+            if (tool.relationships?.enhances) {
+                score += 5;
+            }
+
+            return { tool, score };
+        });
+    }
+
+    /**
+     * Get fallback tools when intent analysis fails
+     */
+    async getFallbackTools() {
+        const fallbackToolNames = [
+            'navigate_to_position',
+            'get_current_state',
+            'search_gene_by_name',
+            'get_sequence',
+            'compute_gc'
+        ];
+
+        const tools = [];
+        for (const toolName of fallbackToolNames) {
+            try {
+                const definition = await this.getToolDefinition(toolName);
+                tools.push(definition);
+            } catch (error) {
+                console.warn(`Failed to load fallback tool ${toolName}:`, error);
+            }
+        }
+
+        return tools;
+    }
+
+    /**
+     * Generate system prompt with relevant tools
+     */
+    async generateSystemPrompt(userQuery, context = {}) {
+        try {
+            // Get relevant tools
+            const relevantTools = await this.getRelevantTools(userQuery, context);
+            
+            // Generate tool descriptions
+            const toolDescriptions = relevantTools.map(tool => {
+                const params = Object.entries(tool.parameters?.properties || {})
+                    .map(([name, param]) => `${name}: ${param.type} - ${param.description}`)
+                    .join(', ');
+
+                return `- **${tool.name}**: ${tool.description}\n  Parameters: ${params}`;
+            }).join('\n');
+
+            // Generate sample usages
+            const sampleUsages = relevantTools
+                .filter(tool => tool.sample_usages && tool.sample_usages.length > 0)
+                .map(tool => {
+                    const sample = tool.sample_usages[0];
+                    return `- **${tool.name}**: "${sample.user_query}" → \`${sample.tool_call}\``;
+                })
+                .join('\n');
+
+            return {
+                tools: relevantTools,
+                toolDescriptions,
+                sampleUsages,
+                totalTools: relevantTools.length
+            };
+
+        } catch (error) {
+            console.error('Failed to generate system prompt:', error);
+            return {
+                tools: [],
+                toolDescriptions: '',
+                sampleUsages: '',
+                totalTools: 0
+            };
+        }
+    }
+
+    /**
+     * Track tool usage for optimization
+     */
+    trackToolUsage(toolName, success, executionTime) {
+        const stats = this.usageStats.get(toolName) || {
+            count: 0,
+            success_count: 0,
+            total_time: 0,
+            success_rate: 0
+        };
+
+        stats.count++;
+        if (success) stats.success_count++;
+        stats.total_time += executionTime;
+        stats.success_rate = stats.success_count / stats.count;
+
+        this.usageStats.set(toolName, stats);
+    }
+
+    /**
+     * Get tool usage statistics
+     */
+    getToolUsageStats() {
+        const stats = {};
+        for (const [toolName, data] of this.usageStats.entries()) {
+            stats[toolName] = {
+                usage_count: data.count,
+                success_rate: data.success_rate,
+                avg_execution_time: data.total_time / data.count
+            };
+        }
+        return stats;
+    }
+
+    /**
+     * Clear cache
+     */
+    clearCache() {
+        this.toolsCache.clear();
+        this.categoriesCache = null;
+        this.lastCacheUpdate = 0;
+    }
+
+    /**
+     * Get registry statistics
+     */
+    async getRegistryStats() {
+        const allTools = await this.getAllTools();
+        const categories = this.categoriesCache?.categories || {};
+        
+        return {
+            total_tools: allTools.length,
+            total_categories: Object.keys(categories).length,
+            cached_tools: this.toolsCache.size,
+            usage_tracked: this.usageStats.size,
+            categories: Object.entries(categories).map(([name, info]) => ({
+                name,
+                tools_count: info.tools_count,
+                priority: info.priority
+            }))
+        };
+    }
+}
+
+module.exports = ToolsRegistryManager;

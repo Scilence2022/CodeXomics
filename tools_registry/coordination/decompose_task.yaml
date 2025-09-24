@@ -1,0 +1,67 @@
+name: decompose_task
+version: 1.0.0
+description: Decompose a complex task into subtasks
+category: coordination
+keywords:
+  - decompose
+  - task
+  - subtasks
+  - complex
+priority: 2
+execution:
+  type: client
+  timeout: 60000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    task:
+      type: string
+      description: Task description
+    priority:
+      type: string
+      description: Task priority
+      enum:
+        - low
+        - normal
+        - high
+        - urgent
+      default: normal
+  required:
+    - task
+sample_usages:
+  - user_query: Use decompose_task to analyze genomic data
+    tool_call: decompose_task(parameter1='value1', parameter2='value2')
+    thought: User wants to use decompose_task for decompose a complex task into subtasks
+    expected_result: Result from decompose_task analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - coordination
+    - important
+  complexity: moderate
+  usage_pattern: common
+error_handling:
+  task_decomposition_failed: Returns error if task cannot be decomposed
+  agent_unavailable: Returns error if required agent is unavailable
+returns:
+  success: boolean - Whether coordination was successful
+  task_id: string - Unique identifier for this task
+  results: object - Integrated results from all subtasks

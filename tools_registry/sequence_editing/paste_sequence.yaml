@@ -1,0 +1,69 @@
+name: paste_sequence
+version: 1.0.0
+description: Paste sequence from clipboard at specified position
+category: sequence_editing
+keywords:
+  - paste
+  - sequence
+  - clipboard
+  - position
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    chromosome:
+      type: string
+      description: Chromosome identifier
+    start:
+      type: number
+      description: Start position (1-based coordinate)
+      minimum: 1
+    end:
+      type: number
+      description: End position (1-based coordinate)
+      minimum: 1
+  required:
+    - chromosome
+    - start
+    - end
+sample_usages:
+  - user_query: Use paste_sequence to analyze genomic data
+    tool_call: paste_sequence(parameter1='value1', parameter2='value2')
+    thought: User wants to use paste_sequence for paste sequence from clipboard at specified position
+    expected_result: Result from paste_sequence analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - sequence_editing
+    - core
+    - essential
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  invalid_region: Returns error if region is invalid
+  clipboard_error: Returns error if clipboard operation fails
+returns:
+  success: boolean - Whether operation was successful
+  action_id: string - Unique identifier for this action
+  sequence_length: number - Length of processed sequence

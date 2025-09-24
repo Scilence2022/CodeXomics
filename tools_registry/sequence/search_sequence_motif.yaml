@@ -1,0 +1,62 @@
+name: search_sequence_motif
+version: 1.0.0
+description: Search for sequence motifs in the genome
+category: sequence
+keywords:
+  - search
+  - motif
+  - pattern
+  - sequence
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    sequence:
+      type: string
+      description: DNA sequence to analyze
+      examples:
+        - ATGCGCTATCG
+        - ATGAAATAG
+  required:
+    - sequence
+sample_usages:
+  - user_query: Use search_sequence_motif to analyze genomic data
+    tool_call: search_sequence_motif(parameter1='value1', parameter2='value2')
+    thought: User wants to use search_sequence_motif for search for sequence motifs in the genome
+    expected_result: Result from search_sequence_motif analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - sequence
+    - core
+    - essential
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  invalid_sequence: Returns error if sequence is invalid
+  empty_sequence: Returns error if sequence is empty
+returns:
+  success: boolean - Whether analysis was successful
+  result: object - Analysis results
+  sequence: string - Processed sequence

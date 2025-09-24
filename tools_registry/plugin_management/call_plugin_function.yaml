@@ -1,0 +1,66 @@
+name: call_plugin_function
+version: 1.0.0
+description: Call a specific function within a plugin
+category: plugin_management
+keywords:
+  - call
+  - plugin
+  - function
+  - specific
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: true
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    pluginId:
+      type: string
+      description: Plugin identifier
+    status:
+      type: string
+      description: Plugin status filter
+      enum:
+        - all
+        - installed
+        - enabled
+        - disabled
+  required: []
+sample_usages:
+  - user_query: Use call_plugin_function to analyze genomic data
+    tool_call: call_plugin_function(parameter1='value1', parameter2='value2')
+    thought: User wants to use call_plugin_function for call a specific function within a plugin
+    expected_result: Result from call_plugin_function analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - plugin_management
+    - core
+    - essential
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  plugin_not_found: Returns error if plugin not found
+  installation_failed: Returns error if installation fails
+returns:
+  success: boolean - Whether operation was successful
+  plugins: array - List of plugins
+  count: number - Number of plugins

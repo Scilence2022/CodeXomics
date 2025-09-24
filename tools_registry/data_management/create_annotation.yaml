@@ -1,0 +1,51 @@
+name: create_annotation
+version: 1.0.0
+description: Create a new user-defined annotation
+category: data_management
+keywords:
+  - create
+  - annotation
+  - user
+  - defined
+priority: 2
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Use create_annotation to analyze genomic data
+    tool_call: create_annotation(parameter1='value1', parameter2='value2')
+    thought: User wants to use create_annotation for create a new user-defined annotation
+    expected_result: Result from create_annotation analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - data_management
+    - important
+  complexity: moderate
+  usage_pattern: common
+error_handling: {}
+returns:
+  success: boolean - Whether operation was successful
+  result: object - Operation result

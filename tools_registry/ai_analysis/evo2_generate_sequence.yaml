@@ -1,0 +1,130 @@
+# evo2_generate_sequence.yaml
+name: "evo2_generate_sequence"
+version: "1.5.0"
+description: "Generate DNA sequences using NVIDIA Evo2 model. Can perform zero-shot function prediction, CRISPR-Cas complex design, and generate coding-rich sequences up to 1M bp."
+category: "ai_analysis"
+keywords: ["evo2", "generate", "sequence", "dna", "ai", "nvidia", "synthetic", "design", "crispr"]
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: "server"
+  timeout: 120000
+  retries: 1
+  requires_auth: true
+  requires_data: false
+  requires_network: true
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: "object"
+  properties:
+    prompt:
+      type: "string"
+      description: "Input DNA sequence as starting prompt or empty for de novo generation"
+      default: ""
+      examples: ["ATGAAATAG", "ATGCGCTATCG", ""]
+    maxTokens:
+      type: "number"
+      description: "Maximum length of generated sequence (up to 1048576)"
+      default: 1000
+      minimum: 10
+      maximum: 1048576
+    temperature:
+      type: "number"
+      description: "Generation temperature (0.0-2.0, higher = more creative)"
+      default: 1.0
+      minimum: 0.0
+      maximum: 2.0
+    topP:
+      type: "number"
+      description: "Top-p sampling (0.0-1.0, nucleus sampling)"
+      default: 0.9
+      minimum: 0.0
+      maximum: 1.0
+    seed:
+      type: "number"
+      description: "Random seed for reproducible generation"
+      default: null
+    taxonomy:
+      type: "string"
+      description: "Target organism taxonomy in format: |k__[kingdom];p__[phylum];c__[class];o__[order];g__[genus];s__[species]|"
+      default: null
+      examples: ["|k__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;g__Escherichia;s__coli|"]
+    stopSequences:
+      type: "array"
+      items:
+        type: "string"
+      description: "Stop generation at these sequences"
+      default: []
+      examples: [["TAA", "TAG", "TGA"], ["ATG"]]
+    stream:
+      type: "boolean"
+      description: "Stream the response for long sequences"
+      default: false
+    clientId:
+      type: "string"
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: []
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Generate a 500bp DNA sequence for E. coli"
+    tool_call: "evo2_generate_sequence(maxTokens=500, taxonomy='|k__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;g__Escherichia;s__coli|')"
+    thought: "User wants a synthetic E. coli DNA sequence of specific length"
+    expected_result: "500bp DNA sequence optimized for E. coli characteristics"
+
+  - user_query: "Continue this sequence: ATGAAATAG"
+    tool_call: "evo2_generate_sequence(prompt='ATGAAATAG', maxTokens=200, temperature=0.8)"
+    thought: "User wants to extend an existing sequence with AI generation"
+    expected_result: "Extended sequence starting from the provided prompt"
+
+  - user_query: "Generate a high-confidence coding sequence"
+    tool_call: "evo2_generate_sequence(maxTokens=1000, temperature=0.5, topP=0.8, stopSequences=['TAA', 'TAG', 'TGA'])"
+    thought: "User wants a conservative, coding-rich sequence with stop codons"
+    expected_result: "1000bp sequence with high coding potential and proper stop codons"
+
+  - user_query: "Create a CRISPR guide sequence"
+    tool_call: "evo2_generate_sequence(prompt='ATG', maxTokens=20, temperature=1.2, stopSequences=['TAA'])"
+    thought: "User wants a short sequence suitable for CRISPR guide design"
+    expected_result: "20bp sequence optimized for CRISPR applications"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["evo2_predict_function", "evo2_design_crispr"]
+  alternatives: []
+  prerequisites: []
+  follow_up: ["compute_gc", "translate_dna", "find_orfs", "evo2_predict_function"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["ai", "generation", "evo2", "synthetic", "advanced"]
+  complexity: "complex"
+  usage_pattern: "occasional"
+
+# Error handling
+error_handling:
+  api_error: "Returns error if Evo2 API is unavailable or returns error"
+  invalid_parameters: "Returns error if parameters are out of valid range"
+  generation_failed: "Returns error if sequence generation fails"
+  timeout: "Returns error if generation takes too long"
+  auth_failed: "Returns error if API authentication fails"
+
+# Return value specification
+returns:
+  success: "boolean - Whether generation was successful"
+  sequence: "string - Generated DNA sequence"
+  length: "number - Length of generated sequence"
+  prompt_used: "string - Input prompt that was used"
+  generation_metadata: "object - Generation parameters and settings"
+  confidence_scores: "array - Confidence scores for each position (if available)"
+  stop_reason: "string - Reason why generation stopped (length, stop_sequence, etc.)"
+  generation_time: "number - Time taken for generation in milliseconds"
+  model_info: "object - Evo2 model version and configuration used"
