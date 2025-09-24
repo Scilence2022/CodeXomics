@@ -1818,8 +1818,8 @@ class ChatManager {
                     searchTerm, 
                     geneNameValue, 
                     locusTag, 
-                    product, 
-                    note
+                    product
+                    // Note: removed note parameter to reduce token usage
                 );
             } catch (error) {
                 console.error('Error calculating relevance score for annotation:', {
@@ -1841,7 +1841,20 @@ class ChatManager {
                     end: annotation.end,
                     name: geneNameValue || locusTag || annotation.type,
                     details: `${annotation.type}: ${product || 'No description'}`,
-                    annotation: annotation,
+                    // Remove full annotation object to reduce token usage
+                    // Only include essential annotation data without note information
+                    annotation: {
+                        start: annotation.start,
+                        end: annotation.end,
+                        type: annotation.type,
+                        strand: annotation.strand,
+                        qualifiers: {
+                            gene: geneNameValue,
+                            locus_tag: locusTag,
+                            product: product
+                            // Note: intentionally excluding 'note' field to reduce token usage
+                        }
+                    },
                     relevanceScore: relevanceScore.score,
                     matchType: relevanceScore.matchType,
                     matchedField: relevanceScore.matchedField
@@ -1872,7 +1885,7 @@ class ChatManager {
     /**
      * Calculate relevance score for gene search
      */
-    calculateGeneRelevanceScore(searchTerm, geneName, locusTag, product, note) {
+    calculateGeneRelevanceScore(searchTerm, geneName, locusTag, product) {
         let maxScore = 0;
         let matchType = 'none';
         let matchedField = '';
@@ -1880,8 +1893,8 @@ class ChatManager {
         const fields = [
             { name: 'gene', value: geneName, weight: 100 },
             { name: 'locus_tag', value: locusTag, weight: 80 },
-            { name: 'product', value: product, weight: 20 },
-            { name: 'note', value: note, weight: 10 }
+            { name: 'product', value: product, weight: 20 }
+            // Note: removed 'note' field to reduce token usage and improve search relevance
         ];
         
         fields.forEach(field => {
