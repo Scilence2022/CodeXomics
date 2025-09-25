@@ -103,7 +103,7 @@ class ToolsRegistryManager {
     }
 
     /**
-     * Find tool file in the registry
+     * Find tool file in the registry (supports subdirectories)
      */
     async findToolFile(toolName) {
         const categories = this.categoriesCache?.categories || {};
@@ -112,9 +112,16 @@ class ToolsRegistryManager {
             const categoryPath = path.join(this.registryPath, categoryName);
             
             try {
-                const toolFile = path.join(categoryPath, `${toolName}.yaml`);
-                await fs.access(toolFile);
-                return toolFile;
+                // Search recursively in the category directory
+                const yamlFiles = await this.findYamlFilesRecursively(categoryPath);
+                const matchingFile = yamlFiles.find(file => 
+                    path.basename(file, '.yaml') === toolName
+                );
+                
+                if (matchingFile) {
+                    await fs.access(matchingFile);
+                    return matchingFile;
+                }
             } catch (error) {
                 // Tool not found in this category, continue searching
                 continue;
@@ -125,19 +132,21 @@ class ToolsRegistryManager {
     }
 
     /**
-     * Get tools by category
+     * Get tools by category (supports subdirectories)
      */
     async getToolsByCategory(categoryName) {
         try {
             const categoryPath = path.join(this.registryPath, categoryName);
-            const files = await fs.readdir(categoryPath);
-            const yamlFiles = files.filter(file => file.endsWith('.yaml'));
-            
             const tools = [];
-            for (const file of yamlFiles) {
-                const toolName = path.basename(file, '.yaml');
+            
+            // Recursively search for YAML files in category directory
+            const yamlFiles = await this.findYamlFilesRecursively(categoryPath);
+            
+            for (const yamlFile of yamlFiles) {
+                const toolName = path.basename(yamlFile, '.yaml');
                 try {
-                    const definition = await this.getToolDefinition(toolName);
+                    const toolData = await fs.readFile(yamlFile, 'utf8');
+                    const definition = yaml.load(toolData);
                     tools.push(definition);
                 } catch (error) {
                     console.warn(`Failed to load tool ${toolName}:`, error);
@@ -149,6 +158,33 @@ class ToolsRegistryManager {
             console.error(`Failed to load tools for category ${categoryName}:`, error);
             return [];
         }
+    }
+    
+    /**
+     * Recursively find YAML files in a directory
+     */
+    async findYamlFilesRecursively(dirPath) {
+        const yamlFiles = [];
+        
+        try {
+            const items = await fs.readdir(dirPath, { withFileTypes: true });
+            
+            for (const item of items) {
+                const fullPath = path.join(dirPath, item.name);
+                
+                if (item.isDirectory()) {
+                    // Recursively search subdirectories
+                    const subYamlFiles = await this.findYamlFilesRecursively(fullPath);
+                    yamlFiles.push(...subYamlFiles);
+                } else if (item.isFile() && item.name.endsWith('.yaml')) {
+                    yamlFiles.push(fullPath);
+                }
+            }
+        } catch (error) {
+            console.warn(`Could not read directory ${dirPath}:`, error);
+        }
+        
+        return yamlFiles;
     }
 
     /**
@@ -228,7 +264,8 @@ class ToolsRegistryManager {
             editing: ['edit', 'modify', 'change', 'replace', 'insert', 'delete'],
             pathway: ['pathway', 'metabolic', 'kegg', 'reaction', 'enzyme'],
             blast: ['blast', 'similarity', 'align', 'match', 'homolog'],
-            plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace']
+            plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace'],
+            file_operations: ['load', 'export', 'save', 'import', 'file', 'open', 'read', 'write', 'download', 'upload']
         };
 
         const detectedIntents = [];
@@ -353,7 +390,8 @@ class ToolsRegistryManager {
             editing: ['edit', 'modify', 'change', 'replace'],
             pathway: ['pathway', 'metabolic', 'kegg'],
             blast: ['blast', 'similarity', 'align'],
-            plugin: ['plugin', 'install', 'enable']
+            plugin: ['plugin', 'install', 'enable'],
+            file_operations: ['load', 'export', 'save', 'import', 'file', 'open', 'read', 'write', 'download', 'upload']
         };
 
         return intentKeywordMap[intent] || [];
