@@ -1,13 +1,16 @@
 name: search_features
 version: 1.0.0
-description: Search for genomic features by name or type
+description: "Search for genomic features (genes, CDS, tRNA, etc.) by name, type, or annotation. Use this for TEXT-BASED feature searches. For direct gene navigation, use jump_to_gene."
 category: navigation
 keywords:
   - search
   - features
   - genomic
   - find
-priority: 1
+  - text search
+  - annotation
+  - gene type
+priority: 2
 execution:
   type: client
   timeout: 15000
@@ -18,39 +21,70 @@ execution:
 parameters:
   type: object
   properties:
+    query:
+      type: string
+      description: "Search query for feature name, gene name, annotation, or keyword"
+      examples:
+        - "ribosomal"
+        - "transport"
+        - "kinase"
+        - "tRNA"
+    feature_type:
+      type: string
+      description: "Filter by specific feature type (optional)"
+      examples:
+        - "CDS"
+        - "tRNA"
+        - "rRNA"
+        - "gene"
+        - "promoter"
+    case_sensitive:
+      type: boolean
+      description: "Whether search should be case sensitive"
+      default: false
+    exact_match:
+      type: boolean
+      description: "Whether to require exact match or allow partial matching"
+      default: false
+    max_results:
+      type: number
+      description: "Maximum number of results to return"
+      default: 50
+      minimum: 1
+      maximum: 1000
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
-    chromosome:
-      type: string
-      description: Chromosome name
-      examples:
-        - chr1
-        - NC_000913.3
-        - U00096
-    start:
-      type: number
-      description: Start position (1-based coordinate)
-      minimum: 1
-    end:
-      type: number
-      description: End position (1-based coordinate)
-      minimum: 1
   required:
-    - chromosome
+    - query
 sample_usages:
-  - user_query: Use search_features to analyze genomic data
-    tool_call: search_features(parameter1='value1', parameter2='value2')
-    thought: User wants to use search_features for search for genomic features by name or type
-    expected_result: Result from search_features analysis
+  - user_query: "Find all ribosomal proteins"
+    tool_call: "search_features(query='ribosomal', feature_type='CDS')"
+    thought: "User wants to search for features related to ribosomes, filtering by CDS type"
+    expected_result: "List of all CDS features containing 'ribosomal' in name or annotation"
+  
+  - user_query: "Search for tRNA features"
+    tool_call: "search_features(query='tRNA', feature_type='tRNA')"
+    thought: "User wants to find all tRNA features"
+    expected_result: "List of all tRNA features in the genome"
+  
+  - user_query: "Find transport-related genes"
+    tool_call: "search_features(query='transport', exact_match=false)"
+    thought: "User wants features related to transport functions using partial matching"
+    expected_result: "List of features with transport-related annotations"
+  
+  - user_query: "Look for kinase enzymes"
+    tool_call: "search_features(query='kinase', case_sensitive=false, max_results=20)"
+    thought: "User searching for kinase-related features with case-insensitive matching"
+    expected_result: "Up to 20 features containing 'kinase' in their annotations"
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: []
-  alternatives: []
+  enhances: ["navigate_to_position"]
+  alternatives: ["search_gene_by_name"]  # search_gene_by_name for gene-specific searches
   prerequisites: []
-  follow_up: []
+  follow_up: ["jump_to_gene", "navigate_to_position"]
 metadata:
   usage_count: 0
   success_rate: 0
@@ -58,14 +92,19 @@ metadata:
   last_used: null
   tags:
     - navigation
-    - core
-    - essential
+    - search
+    - features
+    - annotation
   complexity: simple
-  usage_pattern: frequent
+  usage_pattern: occasional
+  recommendation: "Use for general feature searches; use jump_to_gene for specific gene navigation"
 error_handling:
-  invalid_chromosome: Returns error if chromosome not found
-  invalid_position: Returns error if position is invalid
+  no_results: "Returns empty list if no features match the search criteria"
+  invalid_query: "Returns error if search query is empty or invalid"
+  invalid_feature_type: "Returns error if specified feature type is not recognized"
 returns:
-  success: boolean - Whether operation was successful
+  success: boolean - Whether search was successful
   message: string - Status message or error description
-  position: object - New browser position information
+  features_found: number - Number of matching features
+  features: array - List of matching feature objects with details
+  total_results: number - Total available results (may be more than returned if limited by max_results)

@@ -1,13 +1,16 @@
 name: get_current_state
 version: 1.0.0
-description: Get current state of the Genome AI Studio browser
+description: "Get the current state of the genome browser including position, visible tracks, loaded data, and session information. Use this to understand the current context before making other operations."
 category: navigation
 keywords:
   - current
   - state
   - browser
   - status
-priority: 1
+  - context
+  - information
+  - session
+priority: 2
 execution:
   type: client
   timeout: 15000
@@ -22,35 +25,37 @@ parameters:
       type: string
       description: Browser client ID for multi-window support
       default: default
-    chromosome:
-      type: string
-      description: Chromosome name
-      examples:
-        - chr1
-        - NC_000913.3
-        - U00096
-    start:
-      type: number
-      description: Start position (1-based coordinate)
-      minimum: 1
-    end:
-      type: number
-      description: End position (1-based coordinate)
-      minimum: 1
-  required:
-    - chromosome
+    include_tracks:
+      type: boolean
+      description: "Whether to include detailed track information"
+      default: true
+    include_data_summary:
+      type: boolean
+      description: "Whether to include summary of loaded data files"
+      default: true
+  required: []
 sample_usages:
-  - user_query: Use get_current_state to analyze genomic data
-    tool_call: get_current_state(parameter1='value1', parameter2='value2')
-    thought: User wants to use get_current_state for get current state of the genome ai studio browser
-    expected_result: Result from get_current_state analysis
+  - user_query: "What's the current state of the browser?"
+    tool_call: "get_current_state(include_tracks=true, include_data_summary=true)"
+    thought: "User wants to know the current browser state including tracks and data"
+    expected_result: "Complete browser state with position, tracks, and loaded data information"
+  
+  - user_query: "Where am I currently in the genome?"
+    tool_call: "get_current_state()"
+    thought: "User wants to know current genomic position and context"
+    expected_result: "Current chromosome, position range, and visible features"
+  
+  - user_query: "Show me the current session information"
+    tool_call: "get_current_state(include_data_summary=true)"
+    thought: "User wants current state with focus on loaded data"
+    expected_result: "Current browser state including summary of loaded files and data"
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: []
+  enhances: ["navigate_to_position", "search_features"]
   alternatives: []
   prerequisites: []
-  follow_up: []
+  follow_up: ["navigate_to_position", "jump_to_gene"]
 metadata:
   usage_count: 0
   success_rate: 0
@@ -58,14 +63,19 @@ metadata:
   last_used: null
   tags:
     - navigation
-    - core
-    - essential
+    - state
+    - information
+    - context
   complexity: simple
-  usage_pattern: frequent
+  usage_pattern: occasional
+  recommendation: "Use this to understand current context before making navigation decisions"
 error_handling:
-  invalid_chromosome: Returns error if chromosome not found
-  invalid_position: Returns error if position is invalid
+  client_error: "Returns error if browser client is not available"
+  no_data: "Returns basic state info even if no genome data is loaded"
 returns:
   success: boolean - Whether operation was successful
-  message: string - Status message or error description
-  position: object - New browser position information
+  current_position: object - Current chromosome and position range
+  visible_tracks: array - List of currently visible tracks
+  loaded_files: array - Summary of loaded data files
+  session_info: object - Current session information
+  browser_state: object - Detailed browser state information

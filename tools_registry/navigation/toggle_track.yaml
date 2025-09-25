@@ -1,6 +1,6 @@
 name: toggle_track
 version: 1.0.0
-description: Show or hide a specific track in the browser
+description: "Show or hide specific tracks in the genome browser (genes, GC content, sequence, etc.). Use this to control which genomic data layers are visible."
 category: navigation
 keywords:
   - toggle
@@ -8,6 +8,8 @@ keywords:
   - show
   - hide
   - visible
+  - display
+  - layer
 priority: 2
 execution:
   type: client
@@ -19,39 +21,50 @@ execution:
 parameters:
   type: object
   properties:
+    track_name:
+      type: string
+      description: "Name of the track to toggle"
+      examples:
+        - "genes"
+        - "gc"
+        - "sequence"
+        - "variants"
+        - "reads"
+        - "proteins"
+      enum: ["genes", "gc", "sequence", "variants", "reads", "proteins", "actions"]
+    action:
+      type: string
+      description: "Action to perform on the track"
+      enum: ["show", "hide", "toggle"]
+      default: "toggle"
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
-    chromosome:
-      type: string
-      description: Chromosome name
-      examples:
-        - chr1
-        - NC_000913.3
-        - U00096
-    start:
-      type: number
-      description: Start position (1-based coordinate)
-      minimum: 1
-    end:
-      type: number
-      description: End position (1-based coordinate)
-      minimum: 1
   required:
-    - chromosome
+    - track_name
 sample_usages:
-  - user_query: Use toggle_track to analyze genomic data
-    tool_call: toggle_track(parameter1='value1', parameter2='value2')
-    thought: User wants to use toggle_track for show or hide a specific track in the browser
-    expected_result: Result from toggle_track analysis
+  - user_query: "Hide the gene track"
+    tool_call: "toggle_track(track_name='genes', action='hide')"
+    thought: "User wants to hide the genes track from the browser view"
+    expected_result: "Genes track becomes invisible in the browser"
+  
+  - user_query: "Show GC content"
+    tool_call: "toggle_track(track_name='gc', action='show')"
+    thought: "User wants to display the GC content track"
+    expected_result: "GC content track becomes visible in the browser"
+  
+  - user_query: "Toggle sequence display"
+    tool_call: "toggle_track(track_name='sequence', action='toggle')"
+    thought: "User wants to toggle the sequence track visibility"
+    expected_result: "Sequence track switches between visible and hidden state"
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: []
+  enhances: ["get_current_state"]
   alternatives: []
   prerequisites: []
-  follow_up: []
+  follow_up: ["get_current_state"]
 metadata:
   usage_count: 0
   success_rate: 0
@@ -59,13 +72,17 @@ metadata:
   last_used: null
   tags:
     - navigation
-    - important
-  complexity: moderate
+    - tracks
+    - display
+    - ui control
+  complexity: simple
   usage_pattern: common
+  recommendation: "Use to control which data layers are visible in the browser"
 error_handling:
-  invalid_chromosome: Returns error if chromosome not found
-  invalid_position: Returns error if position is invalid
+  invalid_track: "Returns error if track name is not recognized"
+  client_error: "Returns error if browser client is not available"
 returns:
   success: boolean - Whether operation was successful
-  message: string - Status message or error description
-  position: object - New browser position information
+  track_name: string - Name of the affected track
+  new_state: string - New visibility state (shown/hidden)
+  visible_tracks: array - List of currently visible tracks

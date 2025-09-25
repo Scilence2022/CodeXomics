@@ -1,9 +1,9 @@
 # navigate_to_position.yaml
 name: "navigate_to_position"
 version: "1.2.0"
-description: "Navigate to a specific genomic position in the genome browser. If only position is provided, defaults to 2000bp range centered on that position."
+description: "Navigate to specific genomic coordinates in the genome browser. Use this for COORDINATE-BASED navigation when you have exact positions. For gene-based navigation, use jump_to_gene instead."
 category: "navigation"
-keywords: ["navigate", "position", "location", "jump", "go to", "genome browser", "coordinates"]
+keywords: ["navigate", "position", "coordinates", "jump", "go to", "genome browser", "location", "range"]
 priority: 1
 
 # Tool execution metadata
