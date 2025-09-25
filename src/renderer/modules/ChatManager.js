@@ -6961,52 +6961,71 @@ ${this.getPluginSystemInfo()}`;
      * Execute load genome file operation
      */
     async executeLoadGenomeFile(parameters) {
-        console.log(`🧬 [ChatManager] Loading genome file:`, parameters);
+        console.log(`🧬 [ChatManager] executeLoadGenomeFile called with parameters:`, parameters);
         
         const { filePath, fileFormat = 'auto', replaceCurrent = true, validateFile = true } = parameters;
         
         if (!filePath) {
+            console.error(`❌ [ChatManager] Missing filePath parameter`);
             throw new Error('filePath parameter is required for load_genome_file');
         }
         
         try {
-            // Check if file exists (basic validation)
-            const fs = require('fs');
-            if (!fs.existsSync(filePath)) {
-                throw new Error(`File not found: ${filePath}`);
-            }
+            console.log(`📁 [ChatManager] Attempting to load file: ${filePath}`);
             
             const genomeBrowser = window.genomeBrowser;
-            if (!genomeBrowser || !genomeBrowser.fileManager) {
+            if (!genomeBrowser) {
+                console.error(`❌ [ChatManager] window.genomeBrowser not available`);
+                throw new Error('Genome browser not available');
+            }
+            
+            if (!genomeBrowser.fileManager) {
+                console.error(`❌ [ChatManager] genomeBrowser.fileManager not available`);
                 throw new Error('FileManager not available in genome browser');
             }
             
-            // Use the existing file loading functionality
-            const result = await genomeBrowser.fileManager.loadGenomeFile({
-                filePath: filePath,
-                format: fileFormat,
-                replace: replaceCurrent,
-                validate: validateFile
-            });
+            console.log(`✅ [ChatManager] genomeBrowser and fileManager available`);
             
-            console.log(`✅ [ChatManager] Genome file loaded successfully:`, result);
+            // Use IPC-based file validation like FileManager does
+            console.log(`🔍 [ChatManager] Validating file using IPC: ${filePath}`);
+            const { ipcRenderer } = require('electron');
+            const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
             
-            return {
+            if (!fileInfo.success) {
+                console.error(`❌ [ChatManager] File validation failed:`, fileInfo.error);
+                throw new Error(`File not found or not accessible: ${fileInfo.error}`);
+            }
+            
+            console.log(`✅ [ChatManager] File validation successful:`, fileInfo.info);
+            
+            // Call the FileManager's loadFile method
+            console.log(`📋 [ChatManager] Calling fileManager.loadFile with path: ${filePath}`);
+            await genomeBrowser.fileManager.loadFile(filePath);
+            
+            // Get information about the loaded file
+            const currentFile = genomeBrowser.fileManager.currentFile;
+            console.log(`📊 [ChatManager] Current file after loading:`, currentFile);
+            
+            const result = {
                 success: true,
                 tool: 'load_genome_file',
                 filePath: filePath,
-                fileFormat: result.detectedFormat || fileFormat,
+                fileFormat: fileFormat,
                 replaceCurrent: replaceCurrent,
-                sequenceCount: result.sequenceCount || 1,
-                sequenceNames: result.sequenceNames || [],
-                fileSize: result.fileSize || 0,
-                loadTime: result.loadTime || 0,
+                fileName: currentFile?.info?.name || fileInfo.info?.name || 'Unknown',
+                fileSize: currentFile?.info?.size || fileInfo.info?.size || 0,
+                fileExtension: currentFile?.info?.extension || fileInfo.info?.extension || 'Unknown',
+                loadTime: Date.now(),
                 message: `Genome file loaded successfully from ${filePath}`,
                 timestamp: new Date().toISOString()
             };
             
+            console.log(`✅ [ChatManager] Genome file loaded successfully:`, result);
+            return result;
+            
         } catch (error) {
-            console.error(`❌ [ChatManager] Failed to load genome file:`, error);
+            console.error(`❌ [ChatManager] executeLoadGenomeFile failed with error:`, error);
+            console.error(`❌ [ChatManager] Error stack:`, error.stack);
             throw new Error(`Failed to load genome file: ${error.message}`);
         }
     }

@@ -2369,6 +2369,46 @@ app.on('before-quit', async () => {
   }
 });
 
+// CRITICAL: IPC handler for MCP tool execution
+// This is the missing bridge between MCP server and renderer process
+ipcMain.on('tool-execution', async (event, data) => {
+  console.log('🔧 [Main] Received tool execution request:', data);
+  const { requestId, toolName, parameters, clientId } = data;
+  
+  try {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      throw new Error('Main window not available for tool execution');
+    }
+    
+    // Forward the tool execution request to the renderer process
+    console.log('📡 [Main] Forwarding tool execution to renderer:', toolName);
+    mainWindow.webContents.send('execute-tool-request', {
+      requestId,
+      toolName,
+      parameters,
+      clientId
+    });
+    
+  } catch (error) {
+    console.error('❌ [Main] Tool execution forwarding failed:', error);
+    // Send error response back to MCP server
+    event.sender.send('tool-response', {
+      requestId,
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// IPC handler for tool execution responses from renderer
+ipcMain.on('tool-response', (event, response) => {
+  console.log('📨 [Main] Received tool response from renderer:', response);
+  // Forward the response back to MCP server
+  if (unifiedMCPServer && unifiedMCPServer.handleToolResponse) {
+    unifiedMCPServer.handleToolResponse(response);
+  }
+});
+
 // IPC handlers
 ipcMain.handle('read-file', async (event, filePath) => {
   try {

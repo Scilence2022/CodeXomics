@@ -3042,6 +3042,47 @@ class GenomeBrowser {
             }
         });
 
+        // CRITICAL: Handle tool execution requests from MCP server
+        // This is the missing bridge that forwards tools to ChatManager
+        ipcRenderer.on('execute-tool-request', async (event, data) => {
+            console.log('🔧 [Renderer] Received tool execution request:', data);
+            const { requestId, toolName, parameters, clientId } = data;
+            
+            try {
+                let result;
+                
+                // Use ChatManager's tool execution system
+                if (window.genomeBrowser && window.genomeBrowser.chatManager) {
+                    console.log('📋 [Renderer] Executing tool via ChatManager:', toolName);
+                    result = await window.genomeBrowser.chatManager.executeToolByName(toolName, parameters);
+                } else if (window.chatManager) {
+                    console.log('📋 [Renderer] Executing tool via global ChatManager:', toolName);
+                    result = await window.chatManager.executeToolByName(toolName, parameters);
+                } else {
+                    throw new Error('ChatManager not available for tool execution');
+                }
+                
+                console.log('✅ [Renderer] Tool executed successfully:', toolName, result);
+                
+                // Send success response back to main process
+                ipcRenderer.send('tool-response', {
+                    requestId,
+                    success: true,
+                    result
+                });
+                
+            } catch (error) {
+                console.error('❌ [Renderer] Tool execution failed:', error);
+                
+                // Send error response back to main process
+                ipcRenderer.send('tool-response', {
+                    requestId,
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+
         // Handle notifications from main process
         ipcRenderer.on('show-notification', (event, notificationData) => {
             console.log('📢 Received notification from main process:', notificationData);

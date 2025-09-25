@@ -753,10 +753,13 @@ class StandardClaudeMCPServer {
                 parameters
             });
             
-            this.mainWindow.webContents.send('mcp-tool-call', {
+            // Send tool execution request to main process
+            console.log(`📡 [MCP Server] Sending tool execution to main process: ${toolName}`);
+            this.mainWindow.webContents.send('tool-execution', {
                 requestId,
-                method: toolName,
-                parameters
+                toolName,
+                parameters,
+                clientId
             });
         });
     }
