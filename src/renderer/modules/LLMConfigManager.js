@@ -52,7 +52,59 @@ class LLMConfigManager {
                 apiKey: '',
                 model: 'Qwen/Qwen2.5-72B-Instruct',
                 baseUrl: 'https://api.siliconflow.cn/v1',
-                enabled: false
+                enabled: false,
+                availableModels: [
+                    // DeepSeek Models (Latest)
+                    'Pro/deepseek-ai/DeepSeek-R1',
+                    'Pro/deepseek-ai/DeepSeek-V3',
+                    'deepseek-ai/DeepSeek-R1',
+                    'deepseek-ai/DeepSeek-V3',
+                    'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B',
+                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B',
+                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B',
+                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
+                    'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
+                    'deepseek-ai/DeepSeek-V2.5',
+                    // Qwen Models (Code Specialized First)
+                    'Qwen/Qwen3-Coder-480B-A35B-Instruct',
+                    'Qwen/Qwen2.5-Coder-32B-Instruct',
+                    'Qwen/Qwen2.5-Coder-7B-Instruct',
+                    // Qwen General Models
+                    'Qwen/Qwen3-235B-A22B-Thinking-2507',
+                    'Qwen/Qwen3-235B-A22B-Instruct-2507',
+                    'Qwen/Qwen3-32B',
+                    'Qwen/Qwen3-14B',
+                    'Qwen/Qwen3-8B',
+                    'Qwen/QwQ-32B',
+                    'Qwen/QwQ-32B-Preview',
+                    'Qwen/Qwen2.5-72B-Instruct-128K',
+                    'Qwen/Qwen2.5-72B-Instruct',
+                    'Qwen/Qwen2.5-32B-Instruct',
+                    'Qwen/Qwen2.5-14B-Instruct',
+                    'Qwen/Qwen2.5-7B-Instruct',
+                    'Qwen/Qwen2-7B-Instruct',
+                    'Qwen/Qwen2-1.5B-Instruct',
+                    // GLM Models
+                    'THUDM/GLM-Z1-32B-0414',
+                    'THUDM/GLM-4-32B-0414',
+                    'THUDM/GLM-Z1-Rumination-32B-0414',
+                    'THUDM/GLM-4-9B-0414',
+                    'THUDM/glm-4-9b-chat',
+                    'Pro/THUDM/chatglm3-6b',
+                    'Pro/THUDM/glm-4-9b-chat',
+                    // Other Models
+                    'baidu/ERNIE-4.5-300B-A47B',
+                    'moonshotai/Kimi-K2-Instruct',
+                    'ascend-tribe/pangu-pro-moe',
+                    'tencent/Hunyuan-A13B-Instruct',
+                    'zai-org/GLM-4.5',
+                    'zai-org/GLM-4.5-Air',
+                    'MiniMaxAI/MiniMax-M1-80k',
+                    'Tongyi-Zhiwen/QwenLong-L1-32B',
+                    'TeleAI/TeleChat2',
+                    'internlm/internlm2_5-7b-chat',
+                    'internlm/internlm2_5-20b-chat'
+                ]
             },
             // OpenRouter - Access to GPT-5 series via OpenRouter API
             openrouter: {
@@ -86,42 +138,91 @@ class LLMConfigManager {
             }
         };
         
-        // Model type configurations
+        // Model type configurations with intelligent defaults
         this.modelTypes = {
             reasoning: {
                 provider: 'auto',
                 model: 'auto',
-                description: 'For complex reasoning and analysis tasks'
+                description: 'For complex reasoning and analysis tasks',
+                preferredProviders: ['anthropic', 'openai', 'google', 'deepseek'],
+                preferredModels: {
+                    'anthropic': 'claude-3-5-sonnet-20241022',
+                    'openai': 'gpt-4o',
+                    'google': 'gemini-2.0-flash',
+                    'deepseek': 'deepseek-chat',
+                    'siliconflow': 'Qwen/Qwen3-235B-A22B-Thinking-2507',
+                    'openrouter': 'openai/gpt-5'
+                }
             },
             task: {
                 provider: 'auto',
                 model: 'auto',
-                description: 'For general task execution and completion'
+                description: 'For general task execution and completion',
+                preferredProviders: ['openai', 'anthropic', 'siliconflow', 'google'],
+                preferredModels: {
+                    'openai': 'gpt-4o',
+                    'anthropic': 'claude-3-5-sonnet-20241022',
+                    'siliconflow': 'Qwen/Qwen2.5-72B-Instruct',
+                    'google': 'gemini-2.0-flash',
+                    'deepseek': 'deepseek-chat',
+                    'openrouter': 'openai/gpt-4o'
+                }
             },
             code: {
                 provider: 'auto',
                 model: 'auto',
-                description: 'For code generation and programming tasks'
+                description: 'For code generation and programming tasks',
+                preferredProviders: ['siliconflow', 'deepseek', 'openai', 'anthropic'],
+                preferredModels: {
+                    'siliconflow': 'Qwen/Qwen3-Coder-480B-A35B-Instruct',
+                    'deepseek': 'deepseek-coder',
+                    'openai': 'gpt-4o',
+                    'anthropic': 'claude-3-5-sonnet-20241022',
+                    'openrouter': 'openai/gpt-4o',
+                    'local': 'deepseek-r1:70b'
+                }
             },
             voiceTTS: {
                 provider: 'auto',
                 model: 'auto',
-                description: 'For text-to-speech conversion'
+                description: 'For text-to-speech conversion',
+                preferredProviders: ['openai', 'google'],
+                preferredModels: {
+                    'openai': 'tts-1',
+                    'google': 'gemini-2.0-flash'
+                }
             },
             voiceSTT: {
                 provider: 'auto',
                 model: 'auto',
-                description: 'For speech-to-text conversion'
+                description: 'For speech-to-text conversion',
+                preferredProviders: ['openai', 'google'],
+                preferredModels: {
+                    'openai': 'whisper-1',
+                    'google': 'gemini-2.0-flash'
+                }
             },
             image: {
                 provider: 'auto',
                 model: 'auto',
-                description: 'For image analysis and generation'
+                description: 'For image analysis and generation',
+                preferredProviders: ['openai', 'google', 'anthropic'],
+                preferredModels: {
+                    'openai': 'gpt-4o',
+                    'google': 'gemini-2.0-flash',
+                    'anthropic': 'claude-3-5-sonnet-20241022'
+                }
             },
             multimodal: {
                 provider: 'auto',
                 model: 'auto',
-                description: 'For processing text, images, and other media'
+                description: 'For processing text, images, and other media',
+                preferredProviders: ['google', 'openai', 'anthropic'],
+                preferredModels: {
+                    'google': 'gemini-2.0-flash',
+                    'openai': 'gpt-4o',
+                    'anthropic': 'claude-3-5-sonnet-20241022'
+                }
             }
         };
         
@@ -207,6 +308,14 @@ class LLMConfigManager {
                 this.testAllModelTypes();
             });
         }
+        
+        // Smart model selection button
+        const smartSelectBtn = document.getElementById('smartModelSelection');
+        if (smartSelectBtn) {
+            smartSelectBtn.addEventListener('click', () => {
+                this.applySmartModelSelection();
+            });
+        }
     }
 
     updateModelTypeOptions(type) {
@@ -221,6 +330,20 @@ class LLMConfigManager {
         // Clear existing options
         modelSelect.innerHTML = '<option value="auto">Auto (Use provider default)</option>';
         
+        // Check if provider is enabled
+        if (selectedProvider !== 'auto' && (!provider || !provider.enabled)) {
+            const warningOption = document.createElement('option');
+            warningOption.value = 'disabled';
+            warningOption.textContent = '⚠️ Provider not configured or enabled';
+            warningOption.disabled = true;
+            modelSelect.appendChild(warningOption);
+            
+            // Show warning message
+            this.showProviderWarning(selectedProvider, type);
+            return;
+        }
+        
+        // Populate models based on provider configuration
         if (provider && provider.models) {
             Object.entries(provider.models).forEach(([modelId, modelName]) => {
                 const option = document.createElement('option');
@@ -236,6 +359,18 @@ class LLMConfigManager {
                 modelSelect.appendChild(option);
             });
         }
+        
+        // Set intelligent default if model type has preferred models
+        const modelTypeConfig = this.modelTypes[type];
+        if (modelTypeConfig && modelTypeConfig.preferredModels && modelTypeConfig.preferredModels[selectedProvider]) {
+            const preferredModel = modelTypeConfig.preferredModels[selectedProvider];
+            const preferredOption = modelSelect.querySelector(`option[value="${preferredModel}"]`);
+            if (preferredOption) {
+                modelSelect.value = preferredModel;
+                // Add indicator for recommended model
+                preferredOption.textContent = `⭐ ${preferredOption.textContent} (Recommended)`;
+            }
+        }
     }
 
     resetModelTypeSelection() {
@@ -247,6 +382,117 @@ class LLMConfigManager {
             
             this.loadModelTypeSelectionToUI();
             this.showNotification('Model type selections reset to defaults', 'success');
+        }
+    }
+    
+    /**
+     * Show warning for unconfigured provider
+     */
+    showProviderWarning(providerName, modelType) {
+        const providerDisplayName = this.providers[providerName]?.name || providerName;
+        const message = `The ${providerDisplayName} provider is not configured or enabled. Please configure it in the provider tabs before using it for ${modelType} tasks.`;
+        
+        // Show a non-intrusive warning
+        if (this.showNotification) {
+            this.showNotification(message, 'warning', 4000);
+        } else {
+            console.warn(message);
+        }
+    }
+    
+    /**
+     * Get intelligent model recommendation for a model type
+     */
+    getRecommendedProvider(modelType) {
+        const modelTypeConfig = this.modelTypes[modelType];
+        if (!modelTypeConfig || !modelTypeConfig.preferredProviders) {
+            return this.getFirstEnabledProvider();
+        }
+        
+        // Find first preferred provider that is enabled
+        for (const providerKey of modelTypeConfig.preferredProviders) {
+            if (this.providers[providerKey] && this.providers[providerKey].enabled) {
+                return providerKey;
+            }
+        }
+        
+        // Fallback to any enabled provider
+        return this.getFirstEnabledProvider();
+    }
+    
+    /**
+     * Get first enabled provider
+     */
+    getFirstEnabledProvider() {
+        for (const [key, provider] of Object.entries(this.providers)) {
+            if (provider.enabled) {
+                return key;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Apply smart model selection based on enabled providers
+     */
+    async applySmartModelSelection() {
+        const smartBtn = document.getElementById('smartModelSelection');
+        if (!smartBtn) return;
+        
+        smartBtn.classList.add('loading');
+        smartBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+        
+        try {
+            let selectionsMade = 0;
+            
+            // Get enabled providers
+            const enabledProviders = Object.keys(this.providers).filter(key => 
+                this.providers[key].enabled
+            );
+            
+            if (enabledProviders.length === 0) {
+                this.showNotification('No LLM providers are enabled. Please configure and enable at least one provider first.', 'warning');
+                return;
+            }
+            
+            // Apply intelligent selection for each model type
+            Object.keys(this.modelTypes).forEach(type => {
+                const recommendedProvider = this.getRecommendedProvider(type);
+                if (recommendedProvider) {
+                    const providerSelect = document.getElementById(`${type}Provider`);
+                    const modelSelect = document.getElementById(`${type}Model`);
+                    
+                    if (providerSelect && providerSelect.value === 'auto') {
+                        providerSelect.value = recommendedProvider;
+                        this.updateModelTypeOptions(type);
+                        
+                        // Set recommended model if available
+                        const modelTypeConfig = this.modelTypes[type];
+                        const preferredModel = modelTypeConfig.preferredModels && 
+                                             modelTypeConfig.preferredModels[recommendedProvider];
+                        if (preferredModel && modelSelect) {
+                            const modelOption = modelSelect.querySelector(`option[value="${preferredModel}"]`);
+                            if (modelOption) {
+                                modelSelect.value = preferredModel;
+                            }
+                        }
+                        
+                        selectionsMade++;
+                    }
+                }
+            });
+            
+            if (selectionsMade > 0) {
+                this.showNotification(`Smart selection applied! Updated ${selectionsMade} model type configurations based on your enabled providers and task requirements.`, 'success');
+            } else {
+                this.showNotification('All model types are already configured. No changes were made.', 'info');
+            }
+            
+        } catch (error) {
+            this.showNotification(`Smart selection failed: ${error.message}`, 'error');
+        } finally {
+            smartBtn.classList.remove('loading');
+            smartBtn.innerHTML = '<i class="fas fa-magic"></i> Smart Selection';
         }
     }
 
@@ -2072,20 +2318,30 @@ Current context summary:
     }
 
     /**
-     * Get the provider for a specific model type
+     * Get the provider for a specific model type with improved logic
      * @param {string} modelType - The type of model (reasoning, task, code, etc.)
      * @returns {string|null} - The provider key or null if not configured
      */
     getProviderForModelType(modelType) {
+        const modelTypeConfig = this.modelTypes[modelType];
+        
         // Check if model type is configured and not set to 'auto'
-        if (this.modelTypes[modelType] && this.modelTypes[modelType].provider !== 'auto') {
-            const providerKey = this.modelTypes[modelType].provider;
+        if (modelTypeConfig && modelTypeConfig.provider !== 'auto') {
+            const providerKey = modelTypeConfig.provider;
             if (this.providers[providerKey] && this.providers[providerKey].enabled) {
                 return providerKey;
+            } else {
+                console.warn(`Configured provider '${providerKey}' for model type '${modelType}' is not enabled`);
             }
         }
         
-        // Fallback to first available enabled provider
+        // Use intelligent recommendation based on model type
+        const recommendedProvider = this.getRecommendedProvider(modelType);
+        if (recommendedProvider) {
+            return recommendedProvider;
+        }
+        
+        // Final fallback to first available enabled provider
         for (const [key, provider] of Object.entries(this.providers)) {
             if (provider.enabled) {
                 return key;

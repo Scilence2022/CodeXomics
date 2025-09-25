@@ -420,6 +420,14 @@ class MultiAgentSettingsManager {
             });
         }
         
+        // Model type change handler to show intelligent recommendations
+        const modelTypeSelect = document.getElementById('multiAgentModelType');
+        if (modelTypeSelect) {
+            modelTypeSelect.addEventListener('change', () => {
+                this.showModelTypeRecommendations(modelTypeSelect.value);
+            });
+        }
+        
         // Save settings
         const saveBtn = document.getElementById('saveMultiAgentSettingsBtn');
         if (saveBtn) {
@@ -466,6 +474,36 @@ class MultiAgentSettingsManager {
             refreshMetricsBtn.addEventListener('click', () => {
                 this.refreshMetrics();
             });
+        }
+    }
+    
+    /**
+     * Show model type recommendations based on selected type
+     */
+    showModelTypeRecommendations(modelType) {
+        if (!window.llmConfigManager || modelType === 'auto') return;
+        
+        const modelTypeConfig = window.llmConfigManager.modelTypes[modelType];
+        if (!modelTypeConfig || !modelTypeConfig.preferredProviders) return;
+        
+        // Find available providers from preferred list
+        const availablePreferred = modelTypeConfig.preferredProviders.filter(providerKey => {
+            const provider = window.llmConfigManager.providers[providerKey];
+            return provider && provider.enabled;
+        });
+        
+        if (availablePreferred.length > 0) {
+            const recommendations = availablePreferred.slice(0, 3).map(providerKey => {
+                const provider = window.llmConfigManager.providers[providerKey];
+                const preferredModel = modelTypeConfig.preferredModels && modelTypeConfig.preferredModels[providerKey];
+                return `${provider.name}${preferredModel ? ` (${preferredModel})` : ''}`;
+            }).join(', ');
+            
+            // Show recommendation in the help text of model type select
+            const helpText = document.querySelector('#multiAgentModelType + .help-text');
+            if (helpText) {
+                helpText.innerHTML = `Choose model type for agent decision making. Recommended for ${modelType}: ${recommendations}. Configure specific models in Options → Configure LLMs → Model Selection.`;
+            }
         }
     }
     

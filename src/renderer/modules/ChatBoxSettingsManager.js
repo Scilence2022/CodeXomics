@@ -78,6 +78,8 @@ class ChatBoxSettingsManager {
             
             // Model Selection Settings
             chatboxModelType: 'auto',
+            chatboxLLMProvider: 'auto', // New: specific provider override
+            chatboxLLMModel: 'auto', // New: specific model override
             chatboxLLMTemperature: 0.7,
             chatboxLLMMaxTokens: 4000,
             chatboxLLMTimeout: 30,
@@ -278,6 +280,66 @@ class ChatBoxSettingsManager {
                 const { key, value } = event.detail;
                 this.setSetting(key, value);
             });
+        }
+        
+        // Setup chatbox-specific model event listeners
+        this.setupChatboxModelEventListeners();
+    }
+    
+    /**
+     * Setup event listeners for chatbox-specific model configuration
+     */
+    setupChatboxModelEventListeners() {
+        // Provider change handler
+        const providerSelect = document.getElementById('chatboxLLMProvider');
+        if (providerSelect) {
+            providerSelect.addEventListener('change', () => {
+                this.updateChatboxModelOptions();
+            });
+        }
+    }
+    
+    /**
+     * Update model options based on selected provider
+     */
+    updateChatboxModelOptions() {
+        const providerSelect = document.getElementById('chatboxLLMProvider');
+        const modelSelect = document.getElementById('chatboxLLMModel');
+        
+        if (!providerSelect || !modelSelect) return;
+        
+        const selectedProvider = providerSelect.value;
+        
+        // Clear existing options
+        modelSelect.innerHTML = '<option value="auto">Auto (Use provider default)</option>';
+        
+        // Get LLM configuration if available
+        if (window.llmConfigManager && selectedProvider !== 'auto') {
+            const provider = window.llmConfigManager.providers[selectedProvider];
+            
+            if (provider && provider.enabled) {
+                if (provider.models) {
+                    Object.entries(provider.models).forEach(([modelId, modelName]) => {
+                        const option = document.createElement('option');
+                        option.value = modelId;
+                        option.textContent = modelName;
+                        modelSelect.appendChild(option);
+                    });
+                } else if (provider.availableModels) {
+                    provider.availableModels.forEach(modelId => {
+                        const option = document.createElement('option');
+                        option.value = modelId;
+                        option.textContent = modelId;
+                        modelSelect.appendChild(option);
+                    });
+                }
+            } else {
+                const warningOption = document.createElement('option');
+                warningOption.value = 'disabled';
+                warningOption.textContent = '⚠️ Provider not configured';
+                warningOption.disabled = true;
+                modelSelect.appendChild(warningOption);
+            }
         }
     }
 
@@ -566,6 +628,29 @@ class ChatBoxSettingsManager {
                                         <option value="multimodal">Multimodal Model</option>
                                     </select>
                                     <small class="help-text">Choose the primary model type for ChatBox conversations. Configure specific models in Options → Configure LLMs → Model Selection.</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="chatboxLLMProvider">Provider Override:</label>
+                                    <select id="chatboxLLMProvider" class="select">
+                                        <option value="auto">Auto (Use model type default)</option>
+                                        <option value="openai">OpenAI</option>
+                                        <option value="anthropic">Anthropic (Claude)</option>
+                                        <option value="google">Google (Gemini)</option>
+                                        <option value="deepseek">DeepSeek</option>
+                                        <option value="siliconflow">SiliconFlow</option>
+                                        <option value="openrouter">OpenRouter</option>
+                                        <option value="local">Local LLM</option>
+                                    </select>
+                                    <small class="help-text">Override the provider for ChatBox conversations (optional)</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="chatboxLLMModel">Model Override:</label>
+                                    <select id="chatboxLLMModel" class="select">
+                                        <option value="auto">Auto (Use provider default)</option>
+                                    </select>
+                                    <small class="help-text">Override the specific model for ChatBox conversations (optional)</small>
                                 </div>
                                 
                                 <div class="form-group">
@@ -1243,6 +1328,8 @@ class ChatBoxSettingsManager {
             'debugMode': 'Debug Mode',
             'logToolCalls': 'Log Tool Calls',
             'chatboxModelType': 'Primary Model Type',
+            'chatboxLLMProvider': 'LLM Provider Override',
+            'chatboxLLMModel': 'LLM Model Override',
             'chatboxLLMTemperature': 'LLM Temperature',
             'chatboxLLMMaxTokens': 'LLM Max Tokens',
             'chatboxLLMTimeout': 'LLM Timeout',
