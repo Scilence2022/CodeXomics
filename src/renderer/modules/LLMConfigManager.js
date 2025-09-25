@@ -1756,9 +1756,14 @@ class LLMConfigManager {
             console.log('Local LLM appears to be requesting a tool call:', data.choices[0].message.tool_calls);
             // Return the entire message object, which includes tool_calls, so ChatManager can process it.
             return data.choices[0].message;
-        } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+        } else if (data.choices && data.choices[0] && data.choices[0].message && typeof data.choices[0].message.content === 'string') {
+            const content = data.choices[0].message.content;
+            if (content.trim() === '') {
+                console.warn('Local LLM returned empty content, this might indicate a model issue');
+                return 'I apologize, but the local LLM model returned an empty response. This could indicate:\n\n• The model is still loading or initializing\n• The model encountered an issue processing the request\n• The model requires different parameters\n\nPlease try:\n1. Waiting a moment and trying again\n2. Checking if the local LLM service is running properly\n3. Switching to a different LLM provider temporarily';
+            }
             // Standard text response
-            return data.choices[0].message.content;
+            return content;
         } else {
             console.error('Unexpected response structure from Local LLM:', data);
             throw new Error('Unexpected response structure from Local LLM. Check console for details.');
@@ -1801,8 +1806,13 @@ class LLMConfigManager {
         if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.tool_calls) {
             console.log('Local LLM appears to be requesting a tool call:', data.choices[0].message.tool_calls);
             return data.choices[0].message;
-        } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-            return data.choices[0].message.content;
+        } else if (data.choices && data.choices[0] && data.choices[0].message && typeof data.choices[0].message.content === 'string') {
+            const content = data.choices[0].message.content;
+            if (content.trim() === '') {
+                console.warn('Local LLM returned empty content, this might indicate a model issue');
+                return 'I apologize, but the local LLM model returned an empty response. This could indicate:\n\n• The model is still loading or initializing\n• The model encountered an issue processing the request\n• The model requires different parameters\n\nPlease try:\n1. Waiting a moment and trying again\n2. Checking if the local LLM service is running properly\n3. Switching to a different LLM provider temporarily';
+            }
+            return content;
         } else {
             console.error('Unexpected response structure from Local LLM:', data);
             throw new Error('Unexpected response structure from Local LLM. Check console for details.');
@@ -1838,7 +1848,11 @@ class LLMConfigManager {
 
     buildGooglePrompt(userMessage, context) {
         const systemMessage = this.buildSystemMessage(context);
-        return `${systemMessage}\n\nUser: ${userMessage}\n\nAssistant:`;
+        return `${systemMessage}
+
+User: ${userMessage}
+
+Assistant:`;
     }
 
     buildSystemMessage(context) {
@@ -1886,7 +1900,13 @@ If the user is asking a general question that doesn't require a tool, respond no
             // For now, the main change is that the LLM knows annotationsCount is a count.
             // We can be more sophisticated here later if needed.
             const currentState = context.genomeBrowser.currentState;
-            systemMessage += `\n\nCurrent context summary:\n- Chromosome: ${currentState.currentChromosome || 'N/A'}\n- Position: ${currentState.currentPosition ? `${currentState.currentPosition.start}-${currentState.currentPosition.end}` : 'N/A'}\n- Annotations Loaded: ${currentState.annotationsCount || 0}\n- User Features: ${currentState.userDefinedFeaturesCount || 0}`;
+            systemMessage += `
+
+Current context summary:
+- Chromosome: ${currentState.currentChromosome || 'N/A'}
+- Position: ${currentState.currentPosition ? `${currentState.currentPosition.start}-${currentState.currentPosition.end}` : 'N/A'}
+- Annotations Loaded: ${currentState.annotationsCount || 0}
+- User Features: ${currentState.userDefinedFeaturesCount || 0}`;
         } else if (context) {
             // Fallback for a differently structured context, though less likely now
             console.log('Context provided but not in expected structure:', context);
