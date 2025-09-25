@@ -1,12 +1,8 @@
 name: reverse_complement
-version: 1.0.0
-description: Get reverse complement of DNA sequence
+version: 1.1.0
+description: "Generate the reverse complement of a DNA sequence. Reverses the sequence order and converts each base to its complement (A↔T, G↔C)."
 category: sequence
-keywords:
-  - reverse
-  - complement
-  - dna
-  - sequence
+keywords: ["reverse", "complement", "dna", "sequence", "strand", "antisense"]
 priority: 1
 execution:
   type: client
@@ -18,23 +14,39 @@ execution:
 parameters:
   type: object
   properties:
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
     sequence:
       type: string
-      description: DNA sequence to analyze
-      examples:
-        - ATGCGCTATCG
-        - ATGAAATAG
-  required:
-    - sequence
+      description: "DNA sequence to reverse complement (accepts ATGC nucleotides)"
+      pattern: "^[ATGCNatgcn]+$"
+      examples: ["ATGCGCTATCG", "TTAGCATGCGC", "AAATTTGGGCCC"]
+    preserve_case:
+      type: boolean
+      description: "Preserve original case of nucleotides"
+      default: false
+    validate_sequence:
+      type: boolean
+      description: "Validate input sequence contains only valid nucleotides"
+      default: true
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["sequence"]
 sample_usages:
-  - user_query: Use reverse_complement to analyze genomic data
-    tool_call: reverse_complement(parameter1='value1', parameter2='value2')
-    thought: User wants to use reverse_complement for get reverse complement of dna sequence
-    expected_result: Result from reverse_complement analysis
+  - user_query: "Get the reverse complement of ATGCGCTATCG"
+    tool_call: "reverse_complement(sequence='ATGCGCTATCG')"
+    thought: "User wants the reverse complement of a specific DNA sequence"
+    expected_result: "Reverse complement sequence: CGATAACGCAT"
+  
+  - user_query: "What's the antisense strand of this sequence?"
+    tool_call: "reverse_complement(sequence='TTAGCATGCGC', preserve_case=true)"
+    thought: "User wants the antisense (reverse complement) strand with case preserved"
+    expected_result: "Antisense strand sequence with original case formatting"
+  
+  - user_query: "Reverse complement this primer sequence"
+    tool_call: "reverse_complement(sequence='AAATTTGGGCCC', validate_sequence=true)"
+    thought: "User wants to reverse complement a primer with sequence validation"
+    expected_result: "Validated reverse complement suitable for primer design"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -57,6 +69,9 @@ error_handling:
   invalid_sequence: Returns error if sequence is invalid
   empty_sequence: Returns error if sequence is empty
 returns:
-  success: boolean - Whether analysis was successful
-  result: object - Analysis results
-  sequence: string - Processed sequence
+  success: "boolean - Whether reverse complement generation was successful"
+  original_sequence: "string - Original input sequence"
+  reverse_complement: "string - Generated reverse complement sequence"
+  sequence_length: "number - Length of the sequence"
+  composition: "object - Nucleotide composition of original sequence"
+  validation_passed: "boolean - Whether sequence validation passed (if enabled)"

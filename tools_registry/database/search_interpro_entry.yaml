@@ -1,12 +1,8 @@
 name: search_interpro_entry
-version: 1.0.0
-description: Search InterPro database for specific entries
+version: 1.1.0
+description: "Search InterPro database for domain families, functional sites, and protein signatures using keywords, names, or descriptions."
 category: database
-keywords:
-  - search
-  - interpro
-  - entry
-  - database
+keywords: ["search", "interpro", "entry", "database", "domains", "families", "signatures"]
 priority: 2
 execution:
   type: server
@@ -18,27 +14,66 @@ execution:
 parameters:
   type: object
   properties:
+    search_term:
+      type: string
+      description: "Search term for InterPro entries (domain name, keyword, or description)"
+      examples: ["kinase", "immunoglobulin", "DNA binding", "kringle", "zinc finger"]
+    search_type:
+      type: string
+      enum: ["name", "description", "keyword", "signature", "all"]
+      description: "Type of search to perform"
+      default: "all"
+    entry_type:
+      type: string
+      enum: ["domain", "family", "repeat", "site", "homologous_superfamily", "all"]
+      description: "Filter by InterPro entry type"
+      default: "all"
+    database_source:
+      type: array
+      description: "Filter by member databases"
+      items:
+        type: string
+        enum: ["Pfam", "SMART", "PROSITE", "PRINTS", "PANTHER", "Gene3D", "SUPERFAMILY"]
+      default: []
+    max_results:
+      type: number
+      description: "Maximum number of entries to return"
+      minimum: 1
+      maximum: 500
+      default: 50
+    sort_by:
+      type: string
+      enum: ["relevance", "name", "type", "protein_count"]
+      description: "Sort order for results"
+      default: "relevance"
+    include_statistics:
+      type: boolean
+      description: "Include statistics (protein count, organism distribution)"
+      default: true
+    organism_filter:
+      type: string
+      description: "Filter entries by organism (optional)"
+      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus"]
     clientId:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
-    query:
-      type: string
-      description: Search query term
-    searchType:
-      type: string
-      description: Type of search
-      enum:
-        - protein_name
-        - gene_name
-        - uniprot_id
-  required:
-    - query
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["search_term"]
 sample_usages:
-  - user_query: Use search_interpro_entry to analyze genomic data
-    tool_call: search_interpro_entry(parameter1='value1', parameter2='value2')
-    thought: User wants to use search_interpro_entry for search interpro database for specific entries
-    expected_result: Result from search_interpro_entry analysis
+  - user_query: "Search for kinase domains in InterPro"
+    tool_call: "search_interpro_entry(search_term='kinase', entry_type='domain', database_source=['Pfam', 'SMART'])"
+    thought: "User wants to find kinase domains from specific member databases"
+    expected_result: "List of kinase-related domain entries from Pfam and SMART databases"
+  
+  - user_query: "Find DNA binding families"
+    tool_call: "search_interpro_entry(search_term='DNA binding', search_type='description', entry_type='family', max_results=20)"
+    thought: "User wants protein families involved in DNA binding"
+    expected_result: "DNA-binding protein families with descriptions and statistics"
+  
+  - user_query: "Search for immunoglobulin signatures"
+    tool_call: "search_interpro_entry(search_term='immunoglobulin', search_type='name', include_statistics=true, sort_by='protein_count')"
+    thought: "User wants immunoglobulin-related entries sorted by abundance"
+    expected_result: "Immunoglobulin signatures sorted by number of matching proteins"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -60,6 +95,11 @@ error_handling:
   network_error: Returns error if database is unavailable
   query_error: Returns error if query is invalid
 returns:
-  success: boolean - Whether search was successful
-  results: array - List of database entries found
-  count: number - Number of results
+  success: "boolean - Whether search was successful"
+  results_count: "number - Number of InterPro entries found"
+  entries: "array - List of matching InterPro entries with IDs, names, and types"
+  entry_details: "array - For each entry: ID, name, type, description, member databases"
+  statistics: "object - Search statistics and entry distribution (if requested)"
+  search_parameters: "object - Parameters used in the search"
+  database_distribution: "object - Count of entries by member database"
+  type_distribution: "object - Count of entries by InterPro type"

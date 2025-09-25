@@ -1,12 +1,8 @@
 name: predict_promoter
-version: 1.0.0
-description: Predict promoter regions in DNA sequence
+version: 1.1.0
+description: "Predict promoter regions in a DNA sequence using computational algorithms. Identifies potential transcription start sites and regulatory elements."
 category: sequence
-keywords:
-  - predict
-  - promoter
-  - regions
-  - dna
+keywords: ["promoter", "prediction", "transcription", "regulatory", "tss", "sequence analysis"]
 priority: 2
 execution:
   type: client
@@ -18,23 +14,46 @@ execution:
 parameters:
   type: object
   properties:
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
     sequence:
       type: string
-      description: DNA sequence to analyze
-      examples:
-        - ATGCGCTATCG
-        - ATGAAATAG
-  required:
-    - sequence
+      description: "DNA sequence to analyze for promoter regions (minimum 100 bp recommended)"
+      minLength: 50
+      examples: ["ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC", "TTATAAAGCTCGATCGGATCCGTACGTACGATCGATCGATCGAATCGATCGAT"]
+    threshold:
+      type: number
+      description: "Prediction confidence threshold (0.0-1.0)"
+      minimum: 0.0
+      maximum: 1.0
+      default: 0.5
+    organism_type:
+      type: string
+      enum: ["prokaryote", "eukaryote", "auto"]
+      description: "Organism type for promoter prediction model"
+      default: "auto"
+    include_tss:
+      type: boolean
+      description: "Include transcription start site predictions"
+      default: true
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["sequence"]
 sample_usages:
-  - user_query: Use predict_promoter to analyze genomic data
-    tool_call: predict_promoter(parameter1='value1', parameter2='value2')
-    thought: User wants to use predict_promoter for predict promoter regions in dna sequence
-    expected_result: Result from predict_promoter analysis
+  - user_query: "Find promoter regions in this DNA sequence"
+    tool_call: "predict_promoter(sequence='ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC')"
+    thought: "User wants to identify potential promoter regions in a specific DNA sequence"
+    expected_result: "List of predicted promoter regions with positions and confidence scores"
+  
+  - user_query: "Predict promoters with high confidence in bacterial sequence"
+    tool_call: "predict_promoter(sequence='TTATAAAGCTCGATCGGATCCGTACGTACGATCGATCGATCGAATCGATCGAT', threshold=0.8, organism_type='prokaryote')"
+    thought: "User wants high-confidence promoter predictions for prokaryotic sequence"
+    expected_result: "High-confidence promoter predictions specific to bacterial sequences"
+  
+  - user_query: "Find transcription start sites in this region"
+    tool_call: "predict_promoter(sequence='CGCGCGCGCGCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGAC', include_tss=true)"
+    thought: "User wants both promoter regions and transcription start site predictions"
+    expected_result: "Promoter regions with detailed TSS predictions and positions"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -56,6 +75,10 @@ error_handling:
   invalid_sequence: Returns error if sequence is invalid
   empty_sequence: Returns error if sequence is empty
 returns:
-  success: boolean - Whether analysis was successful
-  result: object - Analysis results
-  sequence: string - Processed sequence
+  success: "boolean - Whether promoter prediction was successful"
+  promoters: "array - List of predicted promoter regions with positions and scores"
+  tss_sites: "array - Predicted transcription start sites (if requested)"
+  sequence_length: "number - Length of analyzed sequence"
+  threshold_used: "number - Confidence threshold applied"
+  organism_type: "string - Organism type used for prediction model"
+  algorithm_version: "string - Version of prediction algorithm used"

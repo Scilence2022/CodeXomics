@@ -1,13 +1,8 @@
 name: evo2_predict_function
-version: 1.0.0
-description: Predict gene function from DNA sequence using Evo2
+version: 1.1.0
+description: "Predict gene function from DNA sequence using NVIDIA Evo2 model. Provides functional annotations, GO terms, and protein classification."
 category: ai_analysis
-keywords:
-  - predict
-  - function
-  - dna
-  - sequence
-  - evo2
+keywords: ["predict", "function", "dna", "sequence", "evo2", "annotation", "GO terms"]
 priority: 1
 execution:
   type: server
@@ -19,24 +14,78 @@ execution:
 parameters:
   type: object
   properties:
+    dna_sequence:
+      type: string
+      description: "DNA sequence for functional prediction (minimum 150 bp for coding sequences)"
+      pattern: "^[ATGCNatgcn]+$"
+      minLength: 150
+      examples: ["ATGAAATCGAAACGTACGTACGATCGATCGATCGAATCGATCGATCGCTGAAATAG", "ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGCTTAACGTACGTACGATCGATCGATCGAATCGATCGATCG"]
+    sequence_type:
+      type: string
+      enum: ["coding", "non_coding", "regulatory", "auto_detect"]
+      description: "Type of DNA sequence for appropriate analysis"
+      default: "auto_detect"
+    organism_context:
+      type: string
+      description: "Organism context for function prediction"
+      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus", "Saccharomyces cerevisiae"]
+      default: "Homo sapiens"
+    prediction_scope:
+      type: array
+      description: "Types of functional predictions to include"
+      items:
+        type: string
+        enum: ["molecular_function", "biological_process", "cellular_component", "enzyme_class", "pathway", "domain"]
+      default: ["molecular_function", "biological_process"]
+    confidence_threshold:
+      type: number
+      description: "Minimum confidence score for predictions (0.0-1.0)"
+      minimum: 0.0
+      maximum: 1.0
+      default: 0.5
+    include_go_terms:
+      type: boolean
+      description: "Include Gene Ontology term predictions"
+      default: true
+    include_pathways:
+      type: boolean
+      description: "Include metabolic pathway predictions"
+      default: false
+    include_homologs:
+      type: boolean
+      description: "Include homologous protein matches"
+      default: true
+    max_predictions:
+      type: number
+      description: "Maximum number of function predictions to return"
+      minimum: 1
+      maximum: 50
+      default: 10
+    output_format:
+      type: string
+      enum: ["detailed", "summary", "go_only"]
+      description: "Format for function prediction output"
+      default: "detailed"
     clientId:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
-    sequence:
-      type: string
-      description: DNA sequence for analysis
-    maxTokens:
-      type: number
-      description: Maximum length of generated sequence
-      default: 1000
-  required:
-    - sequence
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["dna_sequence"]
 sample_usages:
-  - user_query: Use evo2_predict_function to analyze genomic data
-    tool_call: evo2_predict_function(parameter1='value1', parameter2='value2')
-    thought: User wants to use evo2_predict_function for predict gene function from dna sequence using evo2
-    expected_result: Result from evo2_predict_function analysis
+  - user_query: "Predict function of this gene sequence"
+    tool_call: "evo2_predict_function(dna_sequence='ATGAAATCGAAACGTACGTACGATCGATCGATCGAATCGATCGATCGCTGAAATAG', organism_context='Escherichia coli', include_go_terms=true)"
+    thought: "User wants comprehensive function prediction including GO terms for bacterial sequence"
+    expected_result: "Functional predictions with GO terms and confidence scores"
+  
+  - user_query: "Get enzyme classification for this sequence"
+    tool_call: "evo2_predict_function(dna_sequence='ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC', prediction_scope=['enzyme_class', 'molecular_function'], confidence_threshold=0.8)"
+    thought: "User wants high-confidence enzyme classification and molecular function"
+    expected_result: "Enzyme class predictions with high confidence scores"
+  
+  - user_query: "Find pathways and homologs for this gene"
+    tool_call: "evo2_predict_function(dna_sequence='ATGAAATCGAAACGTACGTACGATCGATCGATCGAATCGATCGATCGCTGAAATAG', include_pathways=true, include_homologs=true, max_predictions=20)"
+    thought: "User wants pathway associations and homologous protein matches"
+    expected_result: "Pathway predictions and homologous protein matches with functional annotations"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -59,6 +108,12 @@ error_handling:
   api_error: Returns error if AI service is unavailable
   generation_failed: Returns error if generation fails
 returns:
-  success: boolean - Whether analysis was successful
-  generated_sequence: string - Generated DNA sequence
-  confidence_scores: array - Confidence scores for each position
+  success: "boolean - Whether function prediction was successful"
+  sequence_info: "object - Basic sequence information and detected features"
+  function_predictions: "array - Predicted functions with confidence scores"
+  go_terms: "array - Gene Ontology terms with evidence codes (if requested)"
+  enzyme_classification: "object - EC numbers and enzyme class predictions"
+  pathways: "array - Associated metabolic pathways (if requested)"
+  homologous_proteins: "array - Similar proteins with known functions (if requested)"
+  confidence_summary: "object - Overall confidence metrics for predictions"
+  prediction_metadata: "object - Evo2 model information and analysis parameters"

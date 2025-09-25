@@ -1,13 +1,8 @@
 name: evo2_optimize_sequence
-version: 1.0.0
-description: Optimize DNA sequences for specific properties using Evo2
+version: 1.1.0
+description: "Optimize DNA sequences for specific properties using NVIDIA Evo2 model. Enhances codon usage, expression levels, stability, and other desired characteristics."
 category: ai_analysis
-keywords:
-  - optimize
-  - sequence
-  - dna
-  - properties
-  - evo2
+keywords: ["optimize", "sequence", "dna", "properties", "evo2", "codon usage", "expression"]
 priority: 2
 execution:
   type: server
@@ -19,24 +14,78 @@ execution:
 parameters:
   type: object
   properties:
+    original_sequence:
+      type: string
+      description: "Original DNA sequence to optimize (minimum 50 bp)"
+      pattern: "^[ATGCNatgcn]+$"
+      minLength: 50
+      examples: ["ATGAAATCGAAACGTACGTACGATCGATCGATCGAATCGATCGATCG", "ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC"]
+    optimization_targets:
+      type: array
+      description: "Properties to optimize for"
+      items:
+        type: string
+        enum: ["codon_usage", "expression_level", "stability", "gc_content", "avoid_repeats", "remove_sites", "minimize_secondary_structure"]
+      default: ["codon_usage", "expression_level"]
+    target_organism:
+      type: string
+      description: "Organism for codon usage optimization"
+      examples: ["Homo sapiens", "Escherichia coli", "Saccharomyces cerevisiae", "Pichia pastoris"]
+      default: "Escherichia coli"
+    expression_system:
+      type: string
+      enum: ["prokaryotic", "eukaryotic", "mammalian", "yeast", "insect"]
+      description: "Expression system for optimization"
+      default: "prokaryotic"
+    gc_content_target:
+      type: number
+      description: "Target GC content percentage (0-100)"
+      minimum: 20
+      maximum: 80
+      default: 50
+    avoid_restriction_sites:
+      type: array
+      description: "Restriction enzyme sites to avoid"
+      items:
+        type: string
+      examples: [["EcoRI", "BamHI", "HindIII"], ["GAATTC", "GGATCC"]]
+      default: []
+    preserve_amino_acids:
+      type: boolean
+      description: "Preserve amino acid sequence (synonymous changes only)"
+      default: true
+    optimization_strength:
+      type: number
+      description: "Optimization strength (0.1-1.0, higher = more aggressive)"
+      minimum: 0.1
+      maximum: 1.0
+      default: 0.7
+    max_iterations:
+      type: number
+      description: "Maximum optimization iterations"
+      minimum: 1
+      maximum: 10
+      default: 3
     clientId:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
-    sequence:
-      type: string
-      description: DNA sequence for analysis
-    maxTokens:
-      type: number
-      description: Maximum length of generated sequence
-      default: 1000
-  required:
-    - sequence
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["original_sequence"]
 sample_usages:
-  - user_query: Use evo2_optimize_sequence to analyze genomic data
-    tool_call: evo2_optimize_sequence(parameter1='value1', parameter2='value2')
-    thought: User wants to use evo2_optimize_sequence for optimize dna sequences for specific properties using evo2
-    expected_result: Result from evo2_optimize_sequence analysis
+  - user_query: "Optimize this sequence for E. coli expression"
+    tool_call: "evo2_optimize_sequence(original_sequence='ATGAAATCGAAACGTACGTACGATCGATCGATCGAATCGATCGATCG', target_organism='Escherichia coli', optimization_targets=['codon_usage', 'expression_level'])"
+    thought: "User wants to optimize codon usage and expression for E. coli"
+    expected_result: "Optimized sequence with improved codon usage for E. coli expression"
+  
+  - user_query: "Optimize GC content and remove restriction sites"
+    tool_call: "evo2_optimize_sequence(original_sequence='ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC', optimization_targets=['gc_content', 'remove_sites'], gc_content_target=45, avoid_restriction_sites=['EcoRI', 'BamHI'])"
+    thought: "User wants balanced GC content and removal of specific restriction sites"
+    expected_result: "Sequence optimized for 45% GC content without EcoRI and BamHI sites"
+  
+  - user_query: "Aggressive optimization for mammalian expression"
+    tool_call: "evo2_optimize_sequence(original_sequence='ATGAAATCGAAACGTACGTACGATCGATCGATCGAATCGATCGATCG', expression_system='mammalian', optimization_strength=0.9, optimization_targets=['codon_usage', 'stability', 'minimize_secondary_structure'])"
+    thought: "User wants comprehensive optimization for mammalian cell expression"
+    expected_result: "Heavily optimized sequence for mammalian expression with improved stability"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -58,6 +107,11 @@ error_handling:
   api_error: Returns error if AI service is unavailable
   generation_failed: Returns error if generation fails
 returns:
-  success: boolean - Whether analysis was successful
-  generated_sequence: string - Generated DNA sequence
-  confidence_scores: array - Confidence scores for each position
+  success: "boolean - Whether sequence optimization was successful"
+  original_sequence: "string - Original input sequence"
+  optimized_sequence: "string - Optimized DNA sequence"
+  optimization_report: "object - Detailed report of changes made and improvements achieved"
+  property_scores: "object - Before/after scores for optimized properties"
+  codon_usage_improvement: "number - Percentage improvement in codon usage"
+  amino_acid_preserved: "boolean - Whether amino acid sequence was preserved"
+  iterations_performed: "number - Number of optimization iterations completed"

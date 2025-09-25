@@ -1,13 +1,8 @@
 name: fetch_protein_structure
-version: 1.0.0
-description: Fetch protein 3D structure from PDB database
+version: 1.1.0
+description: "Download protein 3D structure from PDB database by PDB ID or gene name. Retrieves experimental structures with resolution data."
 category: protein
-keywords:
-  - fetch
-  - protein
-  - structure
-  - pdb
-  - 3d
+keywords: ["fetch", "download", "protein", "structure", "pdb", "experimental", "crystallography"]
 priority: 1
 execution:
   type: server
@@ -15,32 +10,63 @@ execution:
   retries: 2
   requires_auth: false
   requires_data: false
-  requires_network: false
+  requires_network: true
 parameters:
   type: object
   properties:
-    clientId:
+    pdb_id:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
+      description: "PDB ID for the structure (e.g., '1TUP', '2BEG', '4HHB')"
+      pattern: "^[0-9][A-Z0-9]{3}$"
+      examples: ["1TUP", "2BEG", "4HHB", "1LMB"]
     geneName:
       type: string
-      description: Gene name to search for
-      examples:
-        - p53
-        - lacZ
-        - dnaA
+      description: "Gene name as alternative to PDB ID (searches for best structure)"
+      examples: ["p53", "lacZ", "dnaA", "hemoglobin"]
     organism:
       type: string
-      description: Organism name
-      default: Homo sapiens
-  required:
-    - geneName
+      description: "Organism name for gene name searches"
+      default: "Homo sapiens"
+      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus"]
+    resolution_threshold:
+      type: number
+      description: "Maximum resolution in Angstroms (for experimental structures)"
+      minimum: 0.5
+      maximum: 5.0
+      default: 3.0
+    structure_method:
+      type: string
+      enum: ["any", "x-ray", "nmr", "cryo-em", "neutron"]
+      description: "Preferred experimental method"
+      default: "any"
+    include_ligands:
+      type: boolean
+      description: "Include bound ligands and cofactors"
+      default: true
+    biological_assembly:
+      type: boolean
+      description: "Download biological assembly instead of asymmetric unit"
+      default: false
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: []
 sample_usages:
-  - user_query: Use fetch_protein_structure to analyze genomic data
-    tool_call: fetch_protein_structure(parameter1='value1', parameter2='value2')
-    thought: User wants to use fetch_protein_structure for fetch protein 3d structure from pdb database
-    expected_result: Result from fetch_protein_structure analysis
+  - user_query: "Download p53 crystal structure from PDB"
+    tool_call: "fetch_protein_structure(pdb_id='1TUP', include_ligands=true)"
+    thought: "User wants to download a specific p53 crystal structure with ligands"
+    expected_result: "PDB file with p53 structure including bound DNA and cofactors"
+  
+  - user_query: "Get high-resolution lacZ structure"
+    tool_call: "fetch_protein_structure(geneName='lacZ', organism='Escherichia coli', resolution_threshold=2.0, structure_method='x-ray')"
+    thought: "User wants high-resolution X-ray structure of lacZ protein"
+    expected_result: "High-resolution X-ray crystal structure of lacZ enzyme"
+  
+  - user_query: "Download biological assembly of hemoglobin"
+    tool_call: "fetch_protein_structure(geneName='hemoglobin', biological_assembly=true, organism='Homo sapiens')"
+    thought: "User wants the complete biological unit of hemoglobin"
+    expected_result: "Complete hemoglobin tetramer structure as biological assembly"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -63,6 +89,11 @@ error_handling:
   gene_not_found: Returns error if gene not found
   structure_not_found: Returns error if structure not found
 returns:
-  success: boolean - Whether search was successful
-  structures: array - List of protein structures found
-  confidence: number - Confidence score
+  success: "boolean - Whether structure download was successful"
+  structure_file: "string - Path to downloaded PDB structure file"
+  pdb_id: "string - PDB ID of the downloaded structure"
+  resolution: "number - Resolution of the structure in Angstroms"
+  experimental_method: "string - Method used to determine structure"
+  organism_source: "string - Source organism of the protein"
+  ligands_included: "array - List of bound ligands and cofactors"
+  assembly_type: "string - Type of assembly downloaded (asymmetric/biological)"

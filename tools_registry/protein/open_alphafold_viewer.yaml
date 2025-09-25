@@ -1,13 +1,8 @@
 name: open_alphafold_viewer
-version: 1.0.0
-description: Open AlphaFold 3D structure viewer with enhanced features
+version: 1.1.0
+description: "Open AlphaFold 3D structure viewer in a separate window with interactive visualization and analysis tools."
 category: protein
-keywords:
-  - open
-  - alphafold
-  - viewer
-  - 3d
-  - structure
+keywords: ["open", "viewer", "alphafold", "3d", "structure", "visualization", "interactive"]
 priority: 1
 execution:
   type: server
@@ -15,32 +10,66 @@ execution:
   retries: 2
   requires_auth: false
   requires_data: false
-  requires_network: false
+  requires_network: true
 parameters:
   type: object
   properties:
-    clientId:
+    uniprot_id:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
+      description: "UniProt ID of protein to visualize (e.g., 'P04637', 'P00350')"
+      pattern: "^[A-Z0-9]{6,10}$"
+      examples: ["P04637", "P00350", "P0A7B8"]
     geneName:
       type: string
-      description: Gene name to search for
-      examples:
-        - p53
-        - lacZ
-        - dnaA
+      description: "Gene name as alternative to UniProt ID"
+      examples: ["p53", "lacZ", "dnaA", "rpoB"]
     organism:
       type: string
-      description: Organism name
-      default: Homo sapiens
-  required:
-    - geneName
+      description: "Organism name for gene name resolution"
+      default: "Homo sapiens"
+      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus"]
+    viewer_mode:
+      type: string
+      enum: ["confidence", "domains", "full", "cartoon"]
+      description: "Visualization mode for the structure"
+      default: "confidence"
+    highlight_regions:
+      type: array
+      description: "Amino acid regions to highlight (format: [start, end])"
+      items:
+        type: array
+        minItems: 2
+        maxItems: 2
+      examples: [[100, 150], [200, 250]]
+    color_scheme:
+      type: string
+      enum: ["confidence", "rainbow", "domain", "secondary"]
+      description: "Color scheme for visualization"
+      default: "confidence"
+    show_confidence_panel:
+      type: boolean
+      description: "Show confidence score panel"
+      default: true
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: []
 sample_usages:
-  - user_query: Use open_alphafold_viewer to analyze genomic data
-    tool_call: open_alphafold_viewer(parameter1='value1', parameter2='value2')
-    thought: User wants to use open_alphafold_viewer for open alphafold 3d structure viewer with enhanced features
-    expected_result: Result from open_alphafold_viewer analysis
+  - user_query: "Open p53 structure in AlphaFold viewer"
+    tool_call: "open_alphafold_viewer(uniprot_id='P04637', viewer_mode='confidence')"
+    thought: "User wants to visualize p53 structure with confidence coloring"
+    expected_result: "AlphaFold viewer opens showing p53 with confidence-based coloring"
+  
+  - user_query: "Visualize lacZ with domain highlighting"
+    tool_call: "open_alphafold_viewer(geneName='lacZ', organism='Escherichia coli', viewer_mode='domains', color_scheme='domain')"
+    thought: "User wants to see lacZ structure with domain-based visualization"
+    expected_result: "lacZ structure displayed with different colors for each domain"
+  
+  - user_query: "Show protein structure with specific region highlighted"
+    tool_call: "open_alphafold_viewer(geneName='dnaA', highlight_regions=[[100, 150], [200, 250]], show_confidence_panel=true)"
+    thought: "User wants to highlight specific regions in dnaA structure"
+    expected_result: "dnaA structure with highlighted regions and confidence panel"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -63,6 +92,11 @@ error_handling:
   gene_not_found: Returns error if gene not found
   structure_not_found: Returns error if structure not found
 returns:
-  success: boolean - Whether search was successful
-  structures: array - List of protein structures found
-  confidence: number - Confidence score
+  success: "boolean - Whether viewer opened successfully"
+  viewer_url: "string - URL of the opened viewer window"
+  protein_name: "string - Name of the protein being visualized"
+  uniprot_id: "string - UniProt ID of the protein"
+  viewer_mode: "string - Visualization mode used"
+  structure_loaded: "boolean - Whether 3D structure loaded successfully"
+  confidence_available: "boolean - Whether confidence data is available"
+  viewer_features: "array - List of available viewer features and tools"

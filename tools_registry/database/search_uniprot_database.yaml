@@ -1,12 +1,8 @@
 name: search_uniprot_database
-version: 1.0.0
-description: Search UniProt database with various search types
+version: 1.1.0
+description: "Search UniProt database with various search types including protein names, gene names, organisms, and functional keywords."
 category: database
-keywords:
-  - search
-  - uniprot
-  - database
-  - protein
+keywords: ["search", "uniprot", "database", "protein", "gene", "organism", "function"]
 priority: 1
 execution:
   type: server
@@ -18,27 +14,84 @@ execution:
 parameters:
   type: object
   properties:
+    search_query:
+      type: string
+      description: "Main search term (protein name, gene name, keyword, etc.)"
+      examples: ["insulin", "p53", "kinase", "membrane protein", "E. coli"]
+    search_type:
+      type: string
+      enum: ["protein_name", "gene_name", "organism", "keyword", "uniprot_id", "sequence", "all_fields"]
+      description: "Type of search to perform in UniProt"
+      default: "all_fields"
+    organism:
+      type: string
+      description: "Filter results by organism name or taxonomy ID"
+      examples: ["Homo sapiens", "Escherichia coli", "9606", "511145"]
+    reviewed_only:
+      type: boolean
+      description: "Search only reviewed entries (Swiss-Prot)"
+      default: false
+    evidence_filter:
+      type: array
+      description: "Filter by evidence levels"
+      items:
+        type: string
+        enum: ["experimental", "homology", "predicted", "uncertain"]
+      default: []
+    length_range:
+      type: object
+      description: "Filter by protein sequence length"
+      properties:
+        min:
+          type: number
+          minimum: 1
+          description: "Minimum sequence length"
+        max:
+          type: number
+          minimum: 1
+          description: "Maximum sequence length"
+    max_results:
+      type: number
+      description: "Maximum number of results to return"
+      minimum: 1
+      maximum: 1000
+      default: 100
+    sort_by:
+      type: string
+      enum: ["relevance", "protein_name", "organism", "length", "date_modified"]
+      description: "Sort order for results"
+      default: "relevance"
+    include_isoforms:
+      type: boolean
+      description: "Include protein isoforms in results"
+      default: false
+    output_fields:
+      type: array
+      description: "Specific fields to include in output"
+      items:
+        type: string
+        enum: ["accession", "protein_name", "gene_name", "organism", "length", "sequence", "function", "go_terms"]
+      default: ["accession", "protein_name", "gene_name", "organism", "length"]
     clientId:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
-    query:
-      type: string
-      description: Search query term
-    searchType:
-      type: string
-      description: Type of search
-      enum:
-        - protein_name
-        - gene_name
-        - uniprot_id
-  required:
-    - query
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["search_query"]
 sample_usages:
-  - user_query: Use search_uniprot_database to analyze genomic data
-    tool_call: search_uniprot_database(parameter1='value1', parameter2='value2')
-    thought: User wants to use search_uniprot_database for search uniprot database with various search types
-    expected_result: Result from search_uniprot_database analysis
+  - user_query: "Search for insulin proteins in UniProt"
+    tool_call: "search_uniprot_database(search_query='insulin', search_type='protein_name', organism='Homo sapiens', reviewed_only=true)"
+    thought: "User wants reviewed human insulin proteins from UniProt"
+    expected_result: "List of reviewed human insulin protein entries with details"
+  
+  - user_query: "Find all kinase proteins with experimental evidence"
+    tool_call: "search_uniprot_database(search_query='kinase', search_type='keyword', evidence_filter=['experimental'], max_results=50)"
+    thought: "User wants kinase proteins with experimental evidence"
+    expected_result: "Kinase proteins supported by experimental evidence"
+  
+  - user_query: "Search for small proteins (less than 100 AA) in E. coli"
+    tool_call: "search_uniprot_database(search_query='*', organism='Escherichia coli', length_range={'min': 1, 'max': 100}, sort_by='length')"
+    thought: "User wants small E. coli proteins sorted by length"
+    expected_result: "Small E. coli proteins sorted from shortest to longest"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -61,6 +114,11 @@ error_handling:
   network_error: Returns error if database is unavailable
   query_error: Returns error if query is invalid
 returns:
-  success: boolean - Whether search was successful
-  results: array - List of database entries found
-  count: number - Number of results
+  success: "boolean - Whether database search was successful"
+  results_count: "number - Number of UniProt entries found"
+  entries: "array - List of UniProt entries matching search criteria"
+  entry_details: "array - For each entry: accession, name, organism, length, and requested fields"
+  search_summary: "object - Summary of search parameters and filters applied"
+  reviewed_count: "number - Number of reviewed (Swiss-Prot) entries"
+  unreviewed_count: "number - Number of unreviewed (TrEMBL) entries"
+  organism_distribution: "object - Distribution of results by organism"

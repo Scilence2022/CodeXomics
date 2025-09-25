@@ -1,13 +1,8 @@
 name: evo2_analyze_essentiality
-version: 1.0.0
-description: Analyze gene essentiality at nucleotide resolution using Evo2
+version: 1.1.0
+description: "Analyze gene essentiality at nucleotide resolution using NVIDIA Evo2 model. Predicts essential regions and fitness effects of mutations."
 category: ai_analysis
-keywords:
-  - analyze
-  - essentiality
-  - gene
-  - nucleotide
-  - evo2
+keywords: ["analyze", "essentiality", "gene", "nucleotide", "evo2", "mutations", "fitness"]
 priority: 2
 execution:
   type: server
@@ -19,24 +14,65 @@ execution:
 parameters:
   type: object
   properties:
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
     sequence:
       type: string
-      description: DNA sequence for analysis
-    maxTokens:
+      description: "DNA sequence to analyze for gene essentiality (minimum 50 bp recommended)"
+      pattern: "^[ATGCNatgcn]+$"
+      minLength: 50
+      examples: ["ATGAAATCGAAACGTACGTACGATCGATCGATCGAATCGATCGATCG", "ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC"]
+    analysis_window:
       type: number
-      description: Maximum length of generated sequence
-      default: 1000
-  required:
-    - sequence
+      description: "Window size for sliding window analysis (bp)"
+      minimum: 10
+      maximum: 1000
+      default: 100
+    organism_context:
+      type: string
+      description: "Organism context for essentiality prediction"
+      examples: ["Homo sapiens", "Escherichia coli", "Saccharomyces cerevisiae"]
+      default: "Homo sapiens"
+    mutation_types:
+      type: array
+      description: "Types of mutations to analyze for fitness effects"
+      items:
+        type: string
+        enum: ["substitution", "insertion", "deletion", "all"]
+      default: ["substitution"]
+    confidence_threshold:
+      type: number
+      description: "Minimum confidence score for predictions (0.0-1.0)"
+      minimum: 0.0
+      maximum: 1.0
+      default: 0.7
+    include_regulatory:
+      type: boolean
+      description: "Include regulatory regions in essentiality analysis"
+      default: true
+    output_format:
+      type: string
+      enum: ["detailed", "summary", "scores_only"]
+      description: "Format for essentiality analysis output"
+      default: "detailed"
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["sequence"]
 sample_usages:
-  - user_query: Use evo2_analyze_essentiality to analyze genomic data
-    tool_call: evo2_analyze_essentiality(parameter1='value1', parameter2='value2')
-    thought: User wants to use evo2_analyze_essentiality for analyze gene essentiality at nucleotide resolution using evo2
-    expected_result: Result from evo2_analyze_essentiality analysis
+  - user_query: "Analyze essentiality of this gene sequence"
+    tool_call: "evo2_analyze_essentiality(sequence='ATGAAATCGAAACGTACGTACGATCGATCGATCGAATCGATCGATCG', organism_context='Escherichia coli')"
+    thought: "User wants to determine which parts of the gene are essential for function"
+    expected_result: "Essentiality scores showing critical nucleotides and regions"
+  
+  - user_query: "Find essential regions with high confidence"
+    tool_call: "evo2_analyze_essentiality(sequence='ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC', confidence_threshold=0.9, include_regulatory=true)"
+    thought: "User wants high-confidence essential regions including regulatory elements"
+    expected_result: "High-confidence essential regions with regulatory analysis"
+  
+  - user_query: "Analyze mutation effects on gene fitness"
+    tool_call: "evo2_analyze_essentiality(sequence='ATGAAATCGAAACGTACGTACGATCGATCGATCGAATCGATCGATCG', mutation_types=['substitution', 'deletion'], analysis_window=50)"
+    thought: "User wants to understand fitness effects of different mutation types"
+    expected_result: "Fitness impact analysis for substitutions and deletions"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -58,6 +94,11 @@ error_handling:
   api_error: Returns error if AI service is unavailable
   generation_failed: Returns error if generation fails
 returns:
-  success: boolean - Whether analysis was successful
-  generated_sequence: string - Generated DNA sequence
-  confidence_scores: array - Confidence scores for each position
+  success: "boolean - Whether essentiality analysis was successful"
+  sequence_length: "number - Length of analyzed sequence"
+  essentiality_scores: "array - Per-nucleotide essentiality scores (0.0-1.0)"
+  essential_regions: "array - Identified essential regions with coordinates and confidence"
+  mutation_effects: "object - Predicted fitness effects for different mutation types"
+  regulatory_elements: "array - Essential regulatory regions (if requested)"
+  confidence_distribution: "object - Distribution of confidence scores"
+  analysis_metadata: "object - Analysis parameters and Evo2 model information"

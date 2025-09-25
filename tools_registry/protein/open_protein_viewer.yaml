@@ -1,13 +1,8 @@
 name: open_protein_viewer
-version: 1.0.0
-description: Open 3D protein structure viewer in a separate window
+version: 1.1.0
+description: "Open interactive 3D protein structure viewer for PDB structures in a separate window with molecular visualization tools."
 category: protein
-keywords:
-  - open
-  - viewer
-  - 3d
-  - protein
-  - structure
+keywords: ["open", "viewer", "3d", "protein", "structure", "pdb", "molecular", "visualization"]
 priority: 1
 execution:
   type: server
@@ -15,32 +10,71 @@ execution:
   retries: 2
   requires_auth: false
   requires_data: false
-  requires_network: false
+  requires_network: true
 parameters:
   type: object
   properties:
-    clientId:
+    pdb_id:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
+      description: "PDB ID of structure to visualize (e.g., '1TUP', '2BEG')"
+      pattern: "^[0-9][A-Z0-9]{3}$"
+      examples: ["1TUP", "2BEG", "4HHB", "1LMB"]
     geneName:
       type: string
-      description: Gene name to search for
-      examples:
-        - p53
-        - lacZ
-        - dnaA
+      description: "Gene name as alternative to PDB ID (opens best available structure)"
+      examples: ["p53", "lacZ", "dnaA", "hemoglobin"]
     organism:
       type: string
-      description: Organism name
-      default: Homo sapiens
-  required:
-    - geneName
+      description: "Organism name for gene name searches"
+      default: "Homo sapiens"
+      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus"]
+    representation:
+      type: string
+      enum: ["cartoon", "surface", "stick", "ball_stick", "ribbon"]
+      description: "3D representation style"
+      default: "cartoon"
+    color_scheme:
+      type: string
+      enum: ["chain", "secondary", "atom", "residue", "temperature"]
+      description: "Coloring scheme for visualization"
+      default: "chain"
+    show_ligands:
+      type: boolean
+      description: "Display bound ligands and cofactors"
+      default: true
+    show_waters:
+      type: boolean
+      description: "Display water molecules"
+      default: false
+    center_on_ligand:
+      type: boolean
+      description: "Center view on largest ligand if present"
+      default: false
+    viewer_type:
+      type: string
+      enum: ["molstar", "ngl", "pymol", "default"]
+      description: "Molecular viewer to use"
+      default: "default"
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: []
 sample_usages:
-  - user_query: Use open_protein_viewer to analyze genomic data
-    tool_call: open_protein_viewer(parameter1='value1', parameter2='value2')
-    thought: User wants to use open_protein_viewer for open 3d protein structure viewer in a separate window
-    expected_result: Result from open_protein_viewer analysis
+  - user_query: "Open p53 crystal structure in 3D viewer"
+    tool_call: "open_protein_viewer(pdb_id='1TUP', representation='cartoon', show_ligands=true)"
+    thought: "User wants to visualize p53 crystal structure with bound DNA"
+    expected_result: "3D viewer opens showing p53 structure with cartoon representation and DNA ligand"
+  
+  - user_query: "Visualize lacZ enzyme structure"
+    tool_call: "open_protein_viewer(geneName='lacZ', organism='Escherichia coli', color_scheme='secondary', representation='ribbon')"
+    thought: "User wants to see lacZ structure with secondary structure coloring"
+    expected_result: "lacZ structure displayed with ribbon representation and secondary structure colors"
+  
+  - user_query: "Open hemoglobin structure focused on heme group"
+    tool_call: "open_protein_viewer(geneName='hemoglobin', show_ligands=true, center_on_ligand=true, representation='surface')"
+    thought: "User wants hemoglobin structure centered on heme group with surface representation"
+    expected_result: "Hemoglobin structure with surface view centered on heme ligand"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -63,6 +97,11 @@ error_handling:
   gene_not_found: Returns error if gene not found
   structure_not_found: Returns error if structure not found
 returns:
-  success: boolean - Whether search was successful
-  structures: array - List of protein structures found
-  confidence: number - Confidence score
+  success: "boolean - Whether viewer opened successfully"
+  viewer_url: "string - URL of the opened viewer window"
+  structure_id: "string - PDB ID or identifier of loaded structure"
+  protein_name: "string - Name of the protein being visualized"
+  resolution: "number - Resolution of the structure (if available)"
+  representation_used: "string - 3D representation style applied"
+  ligands_displayed: "array - List of ligands shown in the structure"
+  viewer_type: "string - Type of molecular viewer used"

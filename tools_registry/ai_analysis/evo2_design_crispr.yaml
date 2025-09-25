@@ -1,13 +1,8 @@
 name: evo2_design_crispr
-version: 1.0.0
-description: Design CRISPR-Cas molecular complexes using Evo2
+version: 1.1.0
+description: "Design CRISPR-Cas molecular complexes using NVIDIA Evo2 model. Creates guide RNAs, predicts off-targets, and optimizes targeting efficiency."
 category: ai_analysis
-keywords:
-  - design
-  - crispr
-  - cas
-  - molecular
-  - evo2
+keywords: ["design", "crispr", "cas", "guide rna", "evo2", "targeting", "off-target"]
 priority: 1
 execution:
   type: server
@@ -19,24 +14,75 @@ execution:
 parameters:
   type: object
   properties:
+    target_sequence:
+      type: string
+      description: "Target DNA sequence for CRISPR design (minimum 100 bp for context)"
+      pattern: "^[ATGCNatgcn]+$"
+      minLength: 100
+      examples: ["ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGCTTAACGTACGTACGATCGATCGATCGAATCGATCGATCG"]
+    cas_system:
+      type: string
+      enum: ["Cas9", "Cas12a", "Cas12b", "Cas13", "auto"]
+      description: "CRISPR-Cas system to use for design"
+      default: "Cas9"
+    target_position:
+      type: number
+      description: "Specific position within target sequence to cut (optional)"
+      minimum: 1
+    design_mode:
+      type: string
+      enum: ["knockout", "knock-in", "base_editing", "prime_editing", "activation", "repression"]
+      description: "Type of CRISPR application"
+      default: "knockout"
+    guide_count:
+      type: number
+      description: "Number of guide RNAs to design"
+      minimum: 1
+      maximum: 10
+      default: 3
+    organism:
+      type: string
+      description: "Target organism for specificity optimization"
+      examples: ["Homo sapiens", "Mus musculus", "Escherichia coli"]
+      default: "Homo sapiens"
+    off_target_analysis:
+      type: boolean
+      description: "Perform off-target prediction analysis"
+      default: true
+    efficiency_optimization:
+      type: boolean
+      description: "Optimize guides for cutting efficiency"
+      default: true
+    pam_requirement:
+      type: string
+      description: "Specific PAM sequence requirement (auto-detected if not specified)"
+      examples: ["NGG", "TTTN", "TYCV"]
+    score_threshold:
+      type: number
+      description: "Minimum efficiency score for guide selection (0.0-1.0)"
+      minimum: 0.0
+      maximum: 1.0
+      default: 0.6
     clientId:
       type: string
-      description: Browser client ID for multi-window support
-      default: default
-    sequence:
-      type: string
-      description: DNA sequence for analysis
-    maxTokens:
-      type: number
-      description: Maximum length of generated sequence
-      default: 1000
-  required:
-    - sequence
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["target_sequence"]
 sample_usages:
-  - user_query: Use evo2_design_crispr to analyze genomic data
-    tool_call: evo2_design_crispr(parameter1='value1', parameter2='value2')
-    thought: User wants to use evo2_design_crispr for design crispr-cas molecular complexes using evo2
-    expected_result: Result from evo2_design_crispr analysis
+  - user_query: "Design CRISPR guides for gene knockout"
+    tool_call: "evo2_design_crispr(target_sequence='ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC', design_mode='knockout', guide_count=5)"
+    thought: "User wants multiple guide RNAs for efficient gene knockout"
+    expected_result: "5 guide RNAs with efficiency scores and off-target predictions"
+  
+  - user_query: "Design Cas12a guides with minimal off-targets"
+    tool_call: "evo2_design_crispr(target_sequence='ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC', cas_system='Cas12a', off_target_analysis=true, score_threshold=0.8)"
+    thought: "User wants high-quality Cas12a guides with thorough off-target analysis"
+    expected_result: "High-scoring Cas12a guides with comprehensive off-target predictions"
+  
+  - user_query: "Design guides for base editing at specific position"
+    tool_call: "evo2_design_crispr(target_sequence='ATGCGCTATCGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGC', design_mode='base_editing', target_position=50, organism='Mus musculus')"
+    thought: "User wants base editing guides optimized for mouse and specific position"
+    expected_result: "Base editing guides optimized for position 50 in mouse context"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -59,6 +105,11 @@ error_handling:
   api_error: Returns error if AI service is unavailable
   generation_failed: Returns error if generation fails
 returns:
-  success: boolean - Whether analysis was successful
-  generated_sequence: string - Generated DNA sequence
-  confidence_scores: array - Confidence scores for each position
+  success: "boolean - Whether CRISPR design was successful"
+  guide_rnas: "array - Designed guide RNA sequences with scores and metadata"
+  efficiency_scores: "array - Predicted cutting efficiency for each guide"
+  off_target_sites: "array - Potential off-target sites with similarity scores"
+  pam_sites: "array - PAM site locations and sequences"
+  design_summary: "object - Summary of design parameters and recommendations"
+  cas_system_used: "string - CRISPR-Cas system used for design"
+  optimization_metrics: "object - Efficiency and specificity optimization results"

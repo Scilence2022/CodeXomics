@@ -1,13 +1,8 @@
 name: translate_dna
-version: 1.0.0
-description: Translate DNA sequence to protein (amino acid sequence)
+version: 1.1.0
+description: "Translate DNA sequence to amino acid sequence using genetic code. Supports multiple reading frames and genetic code tables."
 category: sequence
-keywords:
-  - translate
-  - dna
-  - protein
-  - amino
-  - acid
+keywords: ["translate", "dna", "protein", "amino acid", "genetic code", "orf"]
 priority: 1
 execution:
   type: client
@@ -19,23 +14,54 @@ execution:
 parameters:
   type: object
   properties:
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
     sequence:
       type: string
-      description: DNA sequence to analyze
-      examples:
-        - ATGCGCTATCG
-        - ATGAAATAG
-  required:
-    - sequence
+      description: "DNA sequence to translate (must be multiple of 3 for complete translation)"
+      pattern: "^[ATGCNatgcn]+$"
+      examples: ["ATGCGCTATCGAAAG", "TTGAAATAG", "ATGAAAAAATAG"]
+    reading_frame:
+      type: number
+      enum: [1, 2, 3]
+      description: "Reading frame to use (1, 2, or 3)"
+      default: 1
+    genetic_code:
+      type: string
+      enum: ["standard", "vertebrate_mitochondrial", "bacterial", "archaeal"]
+      description: "Genetic code table to use for translation"
+      default: "standard"
+    find_orfs:
+      type: boolean
+      description: "Find and translate all open reading frames (ORFs)"
+      default: false
+    min_orf_length:
+      type: number
+      description: "Minimum ORF length in amino acids (when find_orfs=true)"
+      minimum: 10
+      default: 50
+    include_stop_codons:
+      type: boolean
+      description: "Include stop codons (*) in translation"
+      default: true
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["sequence"]
 sample_usages:
-  - user_query: Use translate_dna to analyze genomic data
-    tool_call: translate_dna(parameter1='value1', parameter2='value2')
-    thought: User wants to use translate_dna for translate dna sequence to protein (amino acid sequence)
-    expected_result: Result from translate_dna analysis
+  - user_query: "Translate this DNA sequence to protein"
+    tool_call: "translate_dna(sequence='ATGCGCTATCGAAAG', reading_frame=1)"
+    thought: "User wants to translate a DNA sequence starting from reading frame 1"
+    expected_result: "Amino acid sequence: MRYRK (with start and stop codons if present)"
+  
+  - user_query: "Find all possible ORFs in this sequence"
+    tool_call: "translate_dna(sequence='TTGAAATAG', find_orfs=true, min_orf_length=10)"
+    thought: "User wants to find and translate all open reading frames above minimum length"
+    expected_result: "List of ORFs with their positions, frames, and amino acid sequences"
+  
+  - user_query: "Translate using mitochondrial genetic code"
+    tool_call: "translate_dna(sequence='ATGAAAAAATAG', genetic_code='vertebrate_mitochondrial', include_stop_codons=false)"
+    thought: "User wants translation using mitochondrial code without stop codons"
+    expected_result: "Amino acid sequence using mitochondrial genetic code table"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -58,6 +84,11 @@ error_handling:
   invalid_sequence: Returns error if sequence is invalid
   empty_sequence: Returns error if sequence is empty
 returns:
-  success: boolean - Whether analysis was successful
-  result: object - Analysis results
-  sequence: string - Processed sequence
+  success: "boolean - Whether translation was successful"
+  original_sequence: "string - Original DNA sequence"
+  amino_acid_sequence: "string - Translated amino acid sequence"
+  reading_frame: "number - Reading frame used for translation"
+  genetic_code_used: "string - Genetic code table used"
+  orfs_found: "array - List of ORFs if find_orfs was enabled"
+  sequence_length: "number - Length of DNA sequence"
+  protein_length: "number - Length of resulting protein sequence"

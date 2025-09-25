@@ -1,12 +1,8 @@
 name: search_protein_by_gene
-version: 1.0.0
-description: Search for protein structures associated with a gene
+version: 1.1.0
+description: "Search PDB database for experimental protein structures associated with a gene name. Returns available crystal structures, NMR structures, and cryo-EM models."
 category: protein
-keywords:
-  - search
-  - protein
-  - gene
-  - structure
+keywords: ["search", "protein", "gene", "structure", "pdb", "experimental", "crystallography"]
 priority: 1
 execution:
   type: server
@@ -14,32 +10,67 @@ execution:
   retries: 2
   requires_auth: false
   requires_data: false
-  requires_network: false
+  requires_network: true
 parameters:
   type: object
   properties:
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
     geneName:
       type: string
-      description: Gene name to search for
-      examples:
-        - p53
-        - lacZ
-        - dnaA
+      description: "Gene name to search for associated protein structures"
+      examples: ["p53", "lacZ", "dnaA", "rpoB", "hemoglobin"]
     organism:
       type: string
-      description: Organism name
-      default: Homo sapiens
-  required:
-    - geneName
+      description: "Organism name for more specific search results"
+      default: "Homo sapiens"
+      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus", "Saccharomyces cerevisiae"]
+    max_resolution:
+      type: number
+      description: "Maximum resolution in Angstroms (filters low-quality structures)"
+      minimum: 0.5
+      maximum: 10.0
+      default: 5.0
+    structure_methods:
+      type: array
+      description: "Experimental methods to include in search"
+      items:
+        type: string
+        enum: ["x-ray", "nmr", "cryo-em", "neutron", "fiber diffraction"]
+      default: ["x-ray", "nmr", "cryo-em"]
+    max_results:
+      type: number
+      description: "Maximum number of structures to return"
+      minimum: 1
+      maximum: 100
+      default: 20
+    include_complexes:
+      type: boolean
+      description: "Include protein complexes and bound structures"
+      default: true
+    sort_by:
+      type: string
+      enum: ["resolution", "date", "relevance", "method"]
+      description: "Sort order for results"
+      default: "resolution"
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: ["geneName"]
 sample_usages:
-  - user_query: Use search_protein_by_gene to analyze genomic data
-    tool_call: search_protein_by_gene(parameter1='value1', parameter2='value2')
-    thought: User wants to use search_protein_by_gene for search for protein structures associated with a gene
-    expected_result: Result from search_protein_by_gene analysis
+  - user_query: "Find all p53 protein structures in PDB"
+    tool_call: "search_protein_by_gene(geneName='p53', organism='Homo sapiens', max_resolution=3.0)"
+    thought: "User wants high-quality p53 structures from PDB database"
+    expected_result: "List of p53 crystal structures with resolution data and PDB IDs"
+  
+  - user_query: "Search for lacZ structures including complexes"
+    tool_call: "search_protein_by_gene(geneName='lacZ', organism='Escherichia coli', include_complexes=true, sort_by='resolution')"
+    thought: "User wants lacZ structures including protein complexes, sorted by quality"
+    expected_result: "lacZ structures including enzyme-substrate complexes sorted by resolution"
+  
+  - user_query: "Find recent NMR structures of this protein"
+    tool_call: "search_protein_by_gene(geneName='dnaA', structure_methods=['nmr'], sort_by='date', max_results=5)"
+    thought: "User wants recent NMR structures limited to 5 results"
+    expected_result: "Most recent NMR structures of dnaA protein from PDB"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -62,6 +93,11 @@ error_handling:
   gene_not_found: Returns error if gene not found
   structure_not_found: Returns error if structure not found
 returns:
-  success: boolean - Whether search was successful
-  structures: array - List of protein structures found
-  confidence: number - Confidence score
+  success: "boolean - Whether search was successful"
+  results_count: "number - Number of structures found"
+  structures: "array - List of protein structures with PDB IDs and metadata"
+  best_structure: "object - Highest quality structure found"
+  structure_details: "array - For each structure: PDB ID, resolution, method, organism"
+  search_parameters: "object - Parameters used in the search"
+  complexes_found: "number - Number of protein complexes in results"
+  methods_distribution: "object - Count of structures by experimental method"
