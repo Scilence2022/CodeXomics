@@ -1,12 +1,14 @@
 name: jump_to_gene
 version: 1.0.0
-description: Jump directly to a gene location by name
+description: Jump directly to a gene location by gene name or locus tag. This is the PRIMARY tool for navigating to genes when you know the gene name.
 category: navigation
 keywords:
   - jump
   - gene
-  - location
   - navigate
+  - direct
+  - primary
+  - go to gene
 priority: 1
 execution:
   type: client
@@ -18,39 +20,41 @@ execution:
 parameters:
   type: object
   properties:
+    geneName:
+      type: string
+      description: Gene name or locus tag to jump to (e.g., 'lacZ', 'lysC', 'b0062', 'araA')
+      examples:
+        - lacZ
+        - lysC
+        - dnaA
+        - b0062
+        - araA
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
-    chromosome:
-      type: string
-      description: Chromosome name
-      examples:
-        - chr1
-        - NC_000913.3
-        - U00096
-    start:
-      type: number
-      description: Start position (1-based coordinate)
-      minimum: 1
-    end:
-      type: number
-      description: End position (1-based coordinate)
-      minimum: 1
   required:
-    - chromosome
+    - geneName
 sample_usages:
-  - user_query: Use jump_to_gene to analyze genomic data
-    tool_call: jump_to_gene(parameter1='value1', parameter2='value2')
-    thought: User wants to use jump_to_gene for jump directly to a gene location by name
-    expected_result: Result from jump_to_gene analysis
+  - user_query: Navigate to lysC gene
+    tool_call: jump_to_gene(geneName='lysC')
+    thought: User wants to directly navigate to the lysC gene, use primary navigation tool
+    expected_result: Browser navigates directly to lysC gene location
+  - user_query: Go to lacZ
+    tool_call: jump_to_gene(geneName='lacZ')
+    thought: Direct navigation request to lacZ gene
+    expected_result: Browser jumps to lacZ gene position
+  - user_query: Jump to gene b0062
+    tool_call: jump_to_gene(geneName='b0062')
+    thought: User wants to navigate to specific locus tag
+    expected_result: Browser navigates to gene b0062 location
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: []
-  alternatives: []
+  enhances: ["navigate_to_position"]
+  alternatives: ["search_gene_by_name"]  # Use this as fallback if gene name not found
   prerequisites: []
-  follow_up: []
+  follow_up: ["get_sequence", "analyze_region"]
 metadata:
   usage_count: 0
   success_rate: 0
@@ -60,12 +64,16 @@ metadata:
     - navigation
     - core
     - essential
+    - primary
   complexity: simple
   usage_pattern: frequent
+  recommendation: "Use this as the PRIMARY tool for navigating to genes by name"
 error_handling:
-  invalid_chromosome: Returns error if chromosome not found
-  invalid_position: Returns error if position is invalid
+  gene_not_found: "Returns error if gene name not found, suggest using search_gene_by_name as fallback"
+  invalid_gene_name: "Returns error if gene name is empty or invalid"
+  no_genome_loaded: "Returns error if no genome annotations are loaded"
 returns:
   success: boolean - Whether operation was successful
   message: string - Status message or error description
+  gene_info: object - Information about the found gene
   position: object - New browser position information

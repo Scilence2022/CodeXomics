@@ -1,10 +1,10 @@
 # search_gene_by_name.yaml
 name: "search_gene_by_name"
 version: "1.1.0"
-description: "Search for a specific gene by name or locus tag in the loaded genome. Returns gene information and can optionally navigate to the gene location."
+description: "Search for genes by name or locus tag with partial matching support. Use this as a FALLBACK when jump_to_gene fails or when you need to search with partial/fuzzy matching. For direct navigation to known genes, use jump_to_gene first."
 category: "navigation"
-keywords: ["search", "gene", "name", "locus", "tag", "find", "locate", "gene search"]
-priority: 1
+keywords: ["search", "gene", "name", "locus", "tag", "find", "locate", "gene search", "fallback", "partial match"]
+priority: 2  # Lower priority than jump_to_gene
 
 # Tool execution metadata
 execution:
@@ -47,29 +47,30 @@ parameters:
 
 # High-quality examples for few-shot learning
 sample_usages:
-  - user_query: "Find the lacZ gene"
-    tool_call: "search_gene_by_name(name='lacZ', navigate_to_gene=true)"
-    thought: "User wants to find and navigate to the lacZ gene, which is a common E. coli gene"
-    expected_result: "Gene found and browser navigates to lacZ location showing gene details"
-
-  - user_query: "Search for gene b0062"
-    tool_call: "search_gene_by_name(name='b0062', exact_match=true)"
-    thought: "User is searching by locus tag, so exact match is appropriate"
-    expected_result: "Gene b0062 found with complete annotation information"
-
-  - user_query: "Look for genes containing 'ara'"
+  - user_query: "Find all genes containing 'ara'"
     tool_call: "search_gene_by_name(name='ara', exact_match=false, navigate_to_gene=false)"
-    thought: "User wants to find genes with 'ara' in the name, not navigate to them"
+    thought: "User wants to search for genes with 'ara' in the name using partial matching, not direct navigation"
     expected_result: "List of all genes containing 'ara' in their name or description"
+
+  - user_query: "Search for gene lysC if jump_to_gene fails"
+    tool_call: "search_gene_by_name(name='lysC', exact_match=false, navigate_to_gene=true)"
+    thought: "Fallback search for lysC gene with partial matching and navigation"
+    expected_result: "Gene lysC found using fuzzy search and browser navigates to location"
+
+  - user_query: "Look for genes similar to 'lacz'"
+    tool_call: "search_gene_by_name(name='lacz', exact_match=false, case_sensitive=false)"
+    thought: "User might have typo in gene name, use fuzzy search"
+    expected_result: "Finds lacZ and other similar genes despite case/spelling differences"
 
 # Tool relationships and dependencies
 relationships:
   depends_on: ["get_genome_info"]
   conflicts_with: []
   enhances: ["navigate_to_position", "get_sequence"]
-  alternatives: ["search_features"]
+  alternatives: ["jump_to_gene"]  # jump_to_gene is preferred for direct navigation
   prerequisites: []
   follow_up: ["get_sequence", "analyze_region", "get_coding_sequence"]
+  recommendation: "Use jump_to_gene first for direct navigation, use this for fuzzy/partial searches"
 
 # Performance and usage statistics
 metadata:
@@ -77,9 +78,10 @@ metadata:
   success_rate: 0.0
   avg_execution_time: 0
   last_used: null
-  tags: ["core", "search", "gene", "essential"]
+  tags: ["core", "search", "gene", "fallback", "fuzzy"]
   complexity: "simple"
-  usage_pattern: "frequent"
+  usage_pattern: "occasional"  # Less frequent than jump_to_gene
+  recommendation: "Use as fallback when jump_to_gene fails or for fuzzy searching"
 
 # Error handling
 error_handling:
