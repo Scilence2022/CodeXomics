@@ -3652,12 +3652,12 @@ svg {
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -8071,12 +8071,12 @@ svg {
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -15388,12 +15388,12 @@ svg {
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -19364,12 +19364,12 @@ svg {
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -24819,12 +24819,12 @@ svg {
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;

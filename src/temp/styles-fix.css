@@ -1912,12 +1912,12 @@
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -2081,11 +2081,6 @@
 }
 
 /* Responsive adjustments for track splitters */
-
-.operon-gene-count {
-    color: var(--text-secondary);
-    font-size: 12px;
-}
 
 /* Search Results Panel */
 .search-results-list {
@@ -4244,12 +4239,12 @@
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -4406,11 +4401,6 @@
 }
 
 /* Responsive adjustments for track splitters */
-
-.operon-gene-count {
-    color: var(--text-secondary);
-    font-size: 12px;
-}
 
 /* Search Results Panel */
 .search-results-list {
@@ -8407,12 +8397,12 @@ path.svg-gene-element.selected {
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -8564,11 +8554,6 @@ path.svg-gene-element.selected {
 }
 
 /* Responsive adjustments for track splitters */
-
-.operon-gene-count {
-    color: var(--text-secondary);
-    font-size: 12px;
-}
 
 /* Search Results Panel */
 .search-results-list {
@@ -10403,12 +10388,12 @@ path.svg-gene-element.selected {
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -10559,11 +10544,6 @@ path.svg-gene-element.selected {
 }
 
 /* Responsive adjustments for track splitters */
-
-.operon-gene-count {
-    color: var(--text-secondary);
-    font-size: 12px;
-}
 
 /* Search Results Panel */
 .search-results-list {
@@ -13992,12 +13972,12 @@ path.svg-gene-element.selected {
 }
 
 .operon-gene-count {
-    background: var(--primary-color);
-    color: white;
+    background: #1e3a8a; /* Dark blue background */
+    color: #93c5fd; /* Light blue text */
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700; /* Bold font weight for better visibility */
     min-width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -14189,11 +14169,6 @@ path.svg-gene-element.selected {
 }
 
 /* Responsive adjustments for track splitters */
-
-.operon-gene-count {
-    color: var(--text-secondary);
-    font-size: 12px;
-}
 
 /* Search Results Panel */
 .search-results-list {
