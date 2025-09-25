@@ -2178,10 +2178,10 @@ class ChatManager {
         }
 
         // Debug logging to understand the app state
-        console.log('ChatManager getCurrentState - this.app:', this.app);
-        console.log('ChatManager getCurrentState - this.app.currentChromosome:', this.app.currentChromosome);
-        console.log('ChatManager getCurrentState - this.app.currentAnnotations:', this.app.currentAnnotations);
-        console.log('ChatManager getCurrentState - this.app.currentPosition:', this.app.currentPosition);
+        // console.log('ChatManager getCurrentState - this.app:', this.app);
+        // console.log('ChatManager getCurrentState - this.app.currentChromosome:', this.app.currentChromosome);
+       // console.log('ChatManager getCurrentState - this.app.currentAnnotations:', this.app.currentAnnotations);
+        // console.log('ChatManager getCurrentState - this.app.currentPosition:', this.app.currentPosition);
 
         const state = {
             currentChromosome: this.app.currentChromosome,
