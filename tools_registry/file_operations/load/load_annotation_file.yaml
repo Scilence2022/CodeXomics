@@ -1,0 +1,124 @@
+name: load_annotation_file
+version: 1.0.0
+description: Load annotation files in GFF or BED format directly by file path
+category: file_operations
+keywords:
+  - load
+  - annotation
+  - gff
+  - bed
+  - features
+priority: 1
+execution:
+  type: client
+  timeout: 60000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: Absolute path to the annotation file (GFF or BED format)
+      examples:
+        - "/path/to/annotations.gff"
+        - "/path/to/annotations.gff3"
+        - "/path/to/features.bed"
+        - "/path/to/genes.gtf"
+    fileFormat:
+      type: string
+      description: Format of the annotation file
+      enum:
+        - "auto"
+        - "gff"
+        - "gff3"
+        - "gtf"
+        - "bed"
+      default: "auto"
+    mergeWithExisting:
+      type: boolean
+      description: Whether to merge with existing annotations or replace them
+      default: false
+    chromosome:
+      type: string
+      description: Target chromosome for the annotations (optional)
+      examples:
+        - "chr1"
+        - "chromosome1"
+        - "NC_000913"
+    validateFeatures:
+      type: boolean
+      description: Whether to validate feature coordinates against genome
+      default: true
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: "default"
+  required:
+    - filePath
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Load GFF annotations from /data/genes.gff"
+    tool_call: "load_annotation_file(filePath='/data/genes.gff', fileFormat='gff')"
+    thought: "User wants to load gene annotations in GFF format"
+    expected_result: "GFF annotations loaded and displayed on genome browser"
+
+  - user_query: "Load BED file /annotations/features.bed and merge with existing data"
+    tool_call: "load_annotation_file(filePath='/annotations/features.bed', fileFormat='bed', mergeWithExisting=true)"
+    thought: "User wants to load BED features and add to existing annotations"
+    expected_result: "BED features loaded and merged with current annotations"
+
+  - user_query: "Load GTF file for chromosome chr1 from /data/chr1.gtf"
+    tool_call: "load_annotation_file(filePath='/data/chr1.gtf', fileFormat='gtf', chromosome='chr1')"
+    thought: "User wants to load GTF annotations specifically for chromosome chr1"
+    expected_result: "GTF annotations loaded for chromosome chr1"
+
+  - user_query: "Auto-detect and load annotation file /unknown/format.txt without validation"
+    tool_call: "load_annotation_file(filePath='/unknown/format.txt', fileFormat='auto', validateFeatures=false)"
+    thought: "User wants to auto-detect format and load without coordinate validation"
+    expected_result: "Annotation file format auto-detected and loaded without validation"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ["load_genome_file"]
+  conflicts_with: []
+  enhances: ["search_features", "jump_to_gene", "navigate_to_position"]
+  alternatives: []
+  prerequisites: ["load_genome_file"]
+  follow_up: ["search_gene_by_name", "analyze_region", "export_data"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["file", "load", "annotation", "gff", "bed", "features"]
+  complexity: "simple"
+  usage_pattern: "common"
+
+# Error handling
+error_handling:
+  file_not_found: "Returns error if specified file path does not exist"
+  invalid_format: "Returns error if file format is not supported"
+  no_genome_loaded: "Returns error if no genome is loaded for coordinate validation"
+  coordinate_mismatch: "Returns warning if feature coordinates exceed genome boundaries"
+  permission_denied: "Returns error if file cannot be read due to permissions"
+  malformed_features: "Returns error if features are malformed or invalid"
+
+# Return value specification
+returns:
+  success: "boolean - Whether annotations were loaded successfully"
+  file_path: "string - Path of the loaded annotation file"
+  file_format: "string - Detected or specified file format"
+  features_count: "number - Number of features/annotations loaded"
+  chromosomes: "array - List of chromosomes with loaded annotations"
+  feature_types: "array - Types of features found (gene, CDS, exon, etc.)"
+  file_size: "number - Size of loaded file in bytes"
+  load_time: "number - Time taken to load annotations in milliseconds"
+  validation_passed: "boolean - Whether coordinate validation passed"
+  merge_result: "object - Details about merge operation if applicable"
+  error_message: "string - Error message if loading failed"

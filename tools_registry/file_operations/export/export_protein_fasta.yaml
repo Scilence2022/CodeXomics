@@ -1,0 +1,196 @@
+name: export_protein_fasta
+version: 1.0.0
+description: Export protein sequences translated from CDS in FASTA format to specified file path
+category: file_operations
+keywords:
+  - export
+  - protein
+  - fasta
+  - translation
+  - amino
+priority: 1
+execution:
+  type: client
+  timeout: 60000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: Absolute path where to save the protein FASTA file
+      examples:
+        - "/path/to/export/proteins.fasta"
+        - "/data/amino_sequences.fa"
+        - "/output/translated.fasta"
+    chromosome:
+      type: string
+      description: Specific chromosome to export proteins from (optional)
+      examples:
+        - "chr1"
+        - "chromosome1"
+        - "NC_000913"
+    startPosition:
+      type: number
+      description: Start position for protein export (1-based, optional)
+      minimum: 1
+    endPosition:
+      type: number
+      description: End position for protein export (1-based, optional)
+      minimum: 1
+    geneNames:
+      type: array
+      description: Specific gene names to export proteins for (optional)
+      items:
+        type: string
+      examples:
+        - ["lacZ", "recA", "dnaA"]
+        - ["TP53", "BRCA1"]
+    translationTable:
+      type: string
+      description: Genetic code table for translation
+      enum:
+        - "standard"
+        - "bacterial"
+        - "mitochondrial"
+        - "chloroplast"
+        - "custom"
+      default: "standard"
+    includePartial:
+      type: boolean
+      description: Whether to include partial protein sequences
+      default: true
+    includePseudogenes:
+      type: boolean
+      description: Whether to include pseudogene translations
+      default: false
+    minLength:
+      type: number
+      description: Minimum protein length to include (in amino acids)
+      default: 1
+      minimum: 1
+    maxLength:
+      type: number
+      description: Maximum protein length to include (in amino acids)
+      minimum: 1
+    stopCodonTreatment:
+      type: string
+      description: How to handle stop codons in translation
+      enum:
+        - "include"
+        - "remove"
+        - "replace"
+      default: "remove"
+    strand:
+      type: string
+      description: Strand to export proteins from
+      enum:
+        - "both"
+        - "plus"
+        - "minus"
+      default: "both"
+    lineLength:
+      type: number
+      description: Number of characters per line in FASTA output
+      default: 80
+      minimum: 1
+      maximum: 1000
+    includeGeneInfo:
+      type: boolean
+      description: Whether to include gene information in FASTA headers
+      default: true
+    singleLetterCode:
+      type: boolean
+      description: Whether to use single letter amino acid codes
+      default: true
+    overwrite:
+      type: boolean
+      description: Whether to overwrite existing file
+      default: false
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: "default"
+  required:
+    - filePath
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Export all protein sequences to /data/proteins.fasta"
+    tool_call: "export_protein_fasta(filePath='/data/proteins.fasta')"
+    thought: "User wants to export all translated protein sequences"
+    expected_result: "All protein sequences exported to FASTA file"
+
+  - user_query: "Export proteins for specific genes using bacterial genetic code"
+    tool_call: "export_protein_fasta(filePath='/output/bacterial_proteins.fasta', geneNames=['lacZ', 'recA'], translationTable='bacterial')"
+    thought: "User wants to export specific proteins using bacterial translation table"
+    expected_result: "Specific proteins exported using bacterial genetic code"
+
+  - user_query: "Export proteins from chromosome chr1 region 10000-50000"
+    tool_call: "export_protein_fasta(filePath='/data/chr1_proteins.fasta', chromosome='chr1', startPosition=10000, endPosition=50000)"
+    thought: "User wants to export proteins from specific chromosomal region"
+    expected_result: "Protein sequences from specified region exported"
+
+  - user_query: "Export long proteins (>100 AA) with stop codons included"
+    tool_call: "export_protein_fasta(filePath='/data/long_proteins.fasta', minLength=100, stopCodonTreatment='include')"
+    thought: "User wants to export filtered proteins with stop codons preserved"
+    expected_result: "Long protein sequences exported with stop codons included"
+
+  - user_query: "Export proteins without pseudogenes and with gene info"
+    tool_call: "export_protein_fasta(filePath='/clean/proteins_clean.fasta', includePseudogenes=false, includeGeneInfo=true)"
+    thought: "User wants clean protein export without pseudogenes but with gene information"
+    expected_result: "Clean protein sequences exported with gene information"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ["load_genome_file", "load_annotation_file"]
+  conflicts_with: []
+  enhances: []
+  alternatives: ["export_cds_fasta", "export_fasta_sequence"]
+  prerequisites: ["load_genome_file", "load_annotation_file"]
+  follow_up: []
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["file", "export", "protein", "fasta", "translation", "amino"]
+  complexity: "moderate"
+  usage_pattern: "common"
+
+# Error handling
+error_handling:
+  no_genome_loaded: "Returns error if no genome data is loaded"
+  no_annotations: "Returns error if no annotation data is loaded"
+  no_cds_found: "Returns error if no CDS features found for translation"
+  invalid_path: "Returns error if file path is invalid or not writable"
+  invalid_region: "Returns error if start/end positions are invalid"
+  chromosome_not_found: "Returns error if specified chromosome does not exist"
+  gene_not_found: "Returns warning if specified genes are not found"
+  translation_error: "Returns error if translation fails for any sequence"
+  permission_denied: "Returns error if cannot write to specified location"
+  file_exists: "Returns error if file exists and overwrite is false"
+  disk_space: "Returns error if insufficient disk space for export"
+
+# Return value specification
+returns:
+  success: "boolean - Whether export was successful"
+  file_path: "string - Path of the exported protein FASTA file"
+  proteins_exported: "number - Number of protein sequences exported"
+  genes_exported: "number - Number of unique genes translated"
+  total_length: "number - Total length of exported proteins (amino acids)"
+  chromosomes: "array - List of chromosomes with exported proteins"
+  strand_distribution: "object - Distribution of proteins by strand"
+  length_stats: "object - Statistics about protein lengths"
+  translation_table: "string - Genetic code table used for translation"
+  file_size: "number - Size of exported file in bytes"
+  export_time: "number - Time taken to export in milliseconds"
+  filter_results: "object - Results of applied filters"
+  translation_stats: "object - Statistics about translation process"
+  region_info: "object - Information about exported region if applicable"
+  error_message: "string - Error message if export failed"

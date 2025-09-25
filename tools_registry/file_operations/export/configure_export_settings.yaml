@@ -1,0 +1,197 @@
+name: configure_export_settings
+version: 1.0.0
+description: Configure export settings and preferences for all export operations
+category: file_operations
+keywords:
+  - configure
+  - export
+  - settings
+  - preferences
+priority: 1
+execution:
+  type: client
+  timeout: 10000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    defaultOutputDirectory:
+      type: string
+      description: Default directory for all export operations
+      examples:
+        - "/data/exports"
+        - "/output"
+        - "/home/user/genome_exports"
+    filenamePattern:
+      type: string
+      description: Pattern for auto-generated filenames
+      examples:
+        - "{type}_{chromosome}_{timestamp}"
+        - "{organism}_{type}_{date}"
+        - "export_{counter}"
+      default: "{type}_{timestamp}"
+    defaultLineLength:
+      type: number
+      description: Default line length for FASTA exports
+      default: 80
+      minimum: 1
+      maximum: 1000
+    defaultOverwriteBehavior:
+      type: string
+      description: Default behavior when file exists
+      enum:
+        - "ask"
+        - "overwrite"
+        - "rename"
+        - "skip"
+      default: "ask"
+    defaultCompressionFormat:
+      type: string
+      description: Default compression format for exports
+      enum:
+        - "none"
+        - "gzip"
+        - "zip"
+      default: "none"
+    includeTimestampByDefault:
+      type: boolean
+      description: Whether to include timestamp in filenames by default
+      default: false
+    defaultUpperCase:
+      type: boolean
+      description: Whether to export sequences in uppercase by default
+      default: false
+    defaultRemoveGaps:
+      type: boolean
+      description: Whether to remove gaps from sequences by default
+      default: false
+    defaultGffVersion:
+      type: string
+      description: Default GFF version for annotation exports
+      enum:
+        - "gff3"
+        - "gff2"
+        - "gtf"
+      default: "gff3"
+    defaultBedFormat:
+      type: string
+      description: Default BED format for feature exports
+      enum:
+        - "bed3"
+        - "bed6"
+        - "bed9"
+        - "bed12"
+      default: "bed6"
+    defaultTranslationTable:
+      type: string
+      description: Default genetic code table for protein translation
+      enum:
+        - "standard"
+        - "bacterial"
+        - "mitochondrial"
+        - "chloroplast"
+      default: "standard"
+    includeMetadataByDefault:
+      type: boolean
+      description: Whether to include metadata in exports by default
+      default: true
+    defaultSortMethod:
+      type: string
+      description: Default sorting method for feature exports
+      enum:
+        - "position"
+        - "name"
+        - "type"
+        - "none"
+      default: "position"
+    autoCreateDirectories:
+      type: boolean
+      description: Whether to automatically create output directories
+      default: true
+    maxFileSize:
+      type: number
+      description: Maximum file size for exports (in MB)
+      default: 1000
+      minimum: 1
+    enableProgressLogging:
+      type: boolean
+      description: Whether to enable detailed progress logging
+      default: true
+    backupExistingFiles:
+      type: boolean
+      description: Whether to backup existing files before overwriting
+      default: false
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: "default"
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Set default export directory to /data/exports"
+    tool_call: "configure_export_settings(defaultOutputDirectory='/data/exports')"
+    thought: "User wants to configure default export directory"
+    expected_result: "Default export directory set to /data/exports"
+
+  - user_query: "Configure exports with timestamps and gzip compression"
+    tool_call: "configure_export_settings(includeTimestampByDefault=true, defaultCompressionFormat='gzip')"
+    thought: "User wants timestamps and compression enabled by default"
+    expected_result: "Export settings configured for timestamps and gzip compression"
+
+  - user_query: "Set filename pattern and overwrite behavior"
+    tool_call: "configure_export_settings(filenamePattern='{organism}_{type}_{date}', defaultOverwriteBehavior='rename')"
+    thought: "User wants custom filename pattern and rename behavior"
+    expected_result: "Filename pattern and overwrite behavior configured"
+
+  - user_query: "Configure for bacterial genome exports"
+    tool_call: "configure_export_settings(defaultTranslationTable='bacterial', defaultGffVersion='gff3', defaultUpperCase=true)"
+    thought: "User wants settings optimized for bacterial genome work"
+    expected_result: "Export settings configured for bacterial genome analysis"
+
+  - user_query: "Enable backup and progress logging with large file support"
+    tool_call: "configure_export_settings(backupExistingFiles=true, enableProgressLogging=true, maxFileSize=5000)"
+    thought: "User wants comprehensive export settings with backups and large file support"
+    expected_result: "Export settings configured with backup and large file support"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["export_fasta_sequence", "export_genbank_format", "export_cds_fasta", "export_protein_fasta", "export_gff_annotations", "export_bed_format", "export_current_view_fasta"]
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["configure", "export", "settings", "preferences"]
+  complexity: "simple"
+  usage_pattern: "occasional"
+
+# Error handling
+error_handling:
+  invalid_directory: "Returns error if default output directory is invalid"
+  invalid_pattern: "Returns error if filename pattern contains invalid characters"
+  invalid_line_length: "Returns error if line length is outside valid range"
+  invalid_file_size: "Returns error if max file size is invalid"
+  permission_denied: "Returns error if cannot access configuration directory"
+  config_save_failed: "Returns error if configuration cannot be saved"
+
+# Return value specification
+returns:
+  success: "boolean - Whether configuration was successful"
+  settings_updated: "number - Number of settings that were changed"
+  current_settings: "object - All current export settings"
+  changes_applied: "array - List of settings that were modified"
+  config_file_path: "string - Path to configuration file"
+  validation_results: "object - Results of settings validation"
+  restart_required: "boolean - Whether restart is required for changes"
+  previous_settings: "object - Previous settings before changes"
+  error_message: "string - Error message if configuration failed"

@@ -1,0 +1,154 @@
+name: load_operon_file
+version: 1.0.0
+description: Load operon files in JSON, CSV, or TXT format directly by file path
+category: file_operations
+keywords:
+  - load
+  - operon
+  - json
+  - csv
+  - txt
+priority: 1
+execution:
+  type: client
+  timeout: 60000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: Absolute path to the operon file (JSON, CSV, or TXT format)
+      examples:
+        - "/path/to/operons.json"
+        - "/path/to/operons.csv"
+        - "/path/to/operons.txt"
+    fileFormat:
+      type: string
+      description: Format of the operon file
+      enum:
+        - "auto"
+        - "json"
+        - "csv"
+        - "txt"
+        - "tsv"
+      default: "auto"
+    delimiter:
+      type: string
+      description: Delimiter for CSV/TXT files (auto-detected if not specified)
+      examples:
+        - ","
+        - "\t"
+        - " "
+      default: "auto"
+    chromosome:
+      type: string
+      description: Target chromosome for the operons (optional)
+      examples:
+        - "chr1"
+        - "chromosome1"
+        - "NC_000913"
+    validateOperons:
+      type: boolean
+      description: Whether to validate operon coordinates against genome
+      default: true
+    mergeWithExisting:
+      type: boolean
+      description: Whether to merge with existing operon data
+      default: false
+    displayAsTrack:
+      type: boolean
+      description: Whether to display operons as a track in genome browser
+      default: true
+    colorScheme:
+      type: string
+      description: Color scheme for operon display
+      enum:
+        - "default"
+        - "strand"
+        - "size"
+        - "custom"
+      default: "default"
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: "default"
+  required:
+    - filePath
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Load operon data from /data/operons.json"
+    tool_call: "load_operon_file(filePath='/data/operons.json', fileFormat='json')"
+    thought: "User wants to load operon data in JSON format"
+    expected_result: "JSON operon data loaded and displayed as track"
+
+  - user_query: "Load CSV operon file with tab delimiter"
+    tool_call: "load_operon_file(filePath='/data/operons.csv', fileFormat='csv', delimiter='\t')"
+    thought: "User wants to load tab-delimited CSV operon file"
+    expected_result: "Tab-delimited operon data loaded successfully"
+
+  - user_query: "Load operons for chromosome chr1 from /operons/chr1.txt"
+    tool_call: "load_operon_file(filePath='/operons/chr1.txt', chromosome='chr1', displayAsTrack=true)"
+    thought: "User wants to load operons for specific chromosome and display as track"
+    expected_result: "Operons loaded for chromosome chr1 and displayed as track"
+
+  - user_query: "Auto-detect and load operon file without validation"
+    tool_call: "load_operon_file(filePath='/unknown/operons.txt', fileFormat='auto', validateOperons=false)"
+    thought: "User wants to auto-detect format and load without coordinate validation"
+    expected_result: "Operon file format auto-detected and loaded without validation"
+
+  - user_query: "Load operons with strand-based coloring and merge with existing"
+    tool_call: "load_operon_file(filePath='/data/new_operons.csv', colorScheme='strand', mergeWithExisting=true)"
+    thought: "User wants to load operons with strand-based colors and merge with current data"
+    expected_result: "Operons loaded with strand coloring and merged with existing data"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ["load_genome_file"]
+  conflicts_with: []
+  enhances: ["search_features", "navigate_to_position", "analyze_region"]
+  alternatives: []
+  prerequisites: ["load_genome_file"]
+  follow_up: ["search_gene_by_name", "analyze_region", "export_data"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["file", "load", "operon", "json", "csv", "txt"]
+  complexity: "simple"
+  usage_pattern: "common"
+
+# Error handling
+error_handling:
+  file_not_found: "Returns error if specified operon file does not exist"
+  invalid_format: "Returns error if file format is not supported or malformed"
+  no_genome_loaded: "Returns error if no genome is loaded for coordinate validation"
+  invalid_coordinates: "Returns error if operon coordinates are invalid"
+  permission_denied: "Returns error if file cannot be read due to permissions"
+  parsing_error: "Returns error if file structure cannot be parsed"
+  coordinate_mismatch: "Returns warning if operon coordinates exceed genome boundaries"
+  empty_file: "Returns error if file contains no valid operon data"
+
+# Return value specification
+returns:
+  success: "boolean - Whether operon file was loaded successfully"
+  file_path: "string - Path of the loaded operon file"
+  file_format: "string - Detected or specified file format"
+  operons_count: "number - Number of operons loaded"
+  chromosomes: "array - List of chromosomes with loaded operons"
+  operon_names: "array - Names of loaded operons"
+  total_genes: "number - Total number of genes in all operons"
+  file_size: "number - Size of loaded file in bytes"
+  load_time: "number - Time taken to load operons in milliseconds"
+  validation_passed: "boolean - Whether coordinate validation passed"
+  merge_result: "object - Details about merge operation if applicable"
+  display_settings: "object - Display settings applied to operons"
+  parsing_stats: "object - Statistics about file parsing process"
+  error_message: "string - Error message if loading failed"

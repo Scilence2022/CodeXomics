@@ -2,6 +2,19 @@
 # Defines the hierarchical organization of all tools
 
 categories:
+  file_operations:
+    name: "File Operations"
+    description: "Tools for loading and exporting various genomic file formats"
+    icon: "📁"
+    priority: 1
+    color: "#F44336"
+    subcategories:
+      - "file_loading"
+      - "file_export"
+      - "format_conversion"
+      - "export_configuration"
+    tools_count: 14
+
   navigation:
     name: "Navigation & State Management"
     description: "Tools for genome browser navigation, state management, and track control"

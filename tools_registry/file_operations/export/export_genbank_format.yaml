@@ -1,0 +1,170 @@
+name: export_genbank_format
+version: 1.0.0
+description: Export genome data in GenBank format to specified file path
+category: file_operations
+keywords:
+  - export
+  - genbank
+  - gbk
+  - annotations
+priority: 1
+execution:
+  type: client
+  timeout: 90000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filePath:
+      type: string
+      description: Absolute path where to save the GenBank file
+      examples:
+        - "/path/to/export/genome.gb"
+        - "/data/annotations.gbk"
+        - "/output/chromosome.genbank"
+    chromosome:
+      type: string
+      description: Specific chromosome to export (optional, exports all if not specified)
+      examples:
+        - "chr1"
+        - "chromosome1"
+        - "NC_000913"
+    startPosition:
+      type: number
+      description: Start position for export (1-based, optional)
+      minimum: 1
+    endPosition:
+      type: number
+      description: End position for export (1-based, optional)
+      minimum: 1
+    includeSequence:
+      type: boolean
+      description: Whether to include sequence data in GenBank file
+      default: true
+    includeAnnotations:
+      type: boolean
+      description: Whether to include feature annotations
+      default: true
+    organism:
+      type: string
+      description: Organism name for GenBank header
+      examples:
+        - "Escherichia coli"
+        - "Homo sapiens"
+        - "Saccharomyces cerevisiae"
+    dataClass:
+      type: string
+      description: Data class for GenBank header
+      enum:
+        - "CON"
+        - "DNA"
+        - "RNA"
+        - "PRT"
+        - "UNK"
+      default: "DNA"
+    division:
+      type: string
+      description: GenBank division code
+      enum:
+        - "BCT"
+        - "VRL"
+        - "PLN"
+        - "INV"
+        - "MAM"
+        - "VRT"
+        - "SYN"
+        - "UNA"
+      default: "UNA"
+    topology:
+      type: string
+      description: Sequence topology
+      enum:
+        - "linear"
+        - "circular"
+      default: "linear"
+    overwrite:
+      type: boolean
+      description: Whether to overwrite existing file
+      default: false
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: "default"
+  required:
+    - filePath
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Export complete genome as GenBank to /data/genome.gb"
+    tool_call: "export_genbank_format(filePath='/data/genome.gb', includeAnnotations=true)"
+    thought: "User wants to export complete genome with annotations in GenBank format"
+    expected_result: "Complete genome with annotations exported to GenBank file"
+
+  - user_query: "Export chromosome chr1 for E. coli as circular DNA"
+    tool_call: "export_genbank_format(filePath='/output/ecoli_chr1.gb', chromosome='chr1', organism='Escherichia coli', topology='circular', division='BCT')"
+    thought: "User wants to export specific chromosome for E. coli with proper metadata"
+    expected_result: "Chromosome chr1 exported with E. coli metadata as circular DNA"
+
+  - user_query: "Export region 10000-50000 without sequence data"
+    tool_call: "export_genbank_format(filePath='/data/region_annotations.gb', startPosition=10000, endPosition=50000, includeSequence=false)"
+    thought: "User wants to export only annotations from specific region without sequence"
+    expected_result: "Genomic region annotations exported without sequence data"
+
+  - user_query: "Export sequence-only GenBank file for human chromosome"
+    tool_call: "export_genbank_format(filePath='/human/chr1_seq.gb', chromosome='chr1', includeAnnotations=false, organism='Homo sapiens', division='MAM')"
+    thought: "User wants sequence-only GenBank export for human chromosome"
+    expected_result: "Human chromosome sequence exported without annotations"
+
+  - user_query: "Export GenBank file and overwrite existing"
+    tool_call: "export_genbank_format(filePath='/data/genome.gb', overwrite=true)"
+    thought: "User wants to export GenBank file and replace existing file"
+    expected_result: "GenBank file exported and existing file overwritten"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ["load_genome_file"]
+  conflicts_with: []
+  enhances: []
+  alternatives: ["export_fasta_sequence", "export_gff_annotations"]
+  prerequisites: ["load_genome_file"]
+  follow_up: []
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["file", "export", "genbank", "gbk", "annotations"]
+  complexity: "moderate"
+  usage_pattern: "common"
+
+# Error handling
+error_handling:
+  no_genome_loaded: "Returns error if no genome data is loaded"
+  no_annotations: "Returns warning if no annotations available and includeAnnotations is true"
+  invalid_path: "Returns error if file path is invalid or not writable"
+  invalid_region: "Returns error if start/end positions are invalid"
+  chromosome_not_found: "Returns error if specified chromosome does not exist"
+  permission_denied: "Returns error if cannot write to specified location"
+  file_exists: "Returns error if file exists and overwrite is false"
+  disk_space: "Returns error if insufficient disk space for export"
+  invalid_metadata: "Returns error if organism or division metadata is invalid"
+
+# Return value specification
+returns:
+  success: "boolean - Whether export was successful"
+  file_path: "string - Path of the exported GenBank file"
+  sequences_exported: "number - Number of sequences exported"
+  features_exported: "number - Number of features/annotations exported"
+  total_length: "number - Total length of exported sequences"
+  chromosomes: "array - List of chromosomes exported"
+  file_size: "number - Size of exported file in bytes"
+  export_time: "number - Time taken to export in milliseconds"
+  genbank_version: "string - GenBank format version used"
+  metadata_included: "object - Metadata information included in export"
+  region_info: "object - Information about exported region if applicable"
+  error_message: "string - Error message if export failed"

@@ -440,6 +440,92 @@ class ToolDefinitionCreator {
                 priority: 2
             },
 
+            // File Operations Tools
+            'load_genome_file': {
+                category: 'file_operations',
+                description: 'Load genome files in FASTA or GenBank format directly by file path',
+                keywords: ['load', 'genome', 'fasta', 'genbank', 'sequence'],
+                priority: 1
+            },
+            'load_annotation_file': {
+                category: 'file_operations',
+                description: 'Load annotation files in GFF or BED format directly by file path',
+                keywords: ['load', 'annotation', 'gff', 'bed', 'features'],
+                priority: 1
+            },
+            'load_variant_file': {
+                category: 'file_operations',
+                description: 'Load variant files in VCF format directly by file path',
+                keywords: ['load', 'variant', 'vcf', 'mutation', 'snp'],
+                priority: 1
+            },
+            'load_reads_file': {
+                category: 'file_operations',
+                description: 'Load alignment files in SAM or BAM format directly by file path',
+                keywords: ['load', 'reads', 'sam', 'bam', 'alignment'],
+                priority: 1
+            },
+            'load_wig_tracks': {
+                category: 'file_operations',
+                description: 'Load WIG track files (multiple files supported) directly by file paths',
+                keywords: ['load', 'wig', 'tracks', 'multiple', 'coverage'],
+                priority: 1
+            },
+            'load_operon_file': {
+                category: 'file_operations',
+                description: 'Load operon files in JSON, CSV, or TXT format directly by file path',
+                keywords: ['load', 'operon', 'json', 'csv', 'txt'],
+                priority: 1
+            },
+            'export_fasta_sequence': {
+                category: 'file_operations',
+                description: 'Export genome sequences in FASTA format to specified file path',
+                keywords: ['export', 'fasta', 'sequence', 'genome'],
+                priority: 1
+            },
+            'export_genbank_format': {
+                category: 'file_operations',
+                description: 'Export genome data in GenBank format to specified file path',
+                keywords: ['export', 'genbank', 'gbk', 'annotations'],
+                priority: 1
+            },
+            'export_cds_fasta': {
+                category: 'file_operations',
+                description: 'Export coding sequences (CDS) in FASTA format to specified file path',
+                keywords: ['export', 'cds', 'fasta', 'coding', 'sequences'],
+                priority: 1
+            },
+            'export_protein_fasta': {
+                category: 'file_operations',
+                description: 'Export protein sequences translated from CDS in FASTA format to specified file path',
+                keywords: ['export', 'protein', 'fasta', 'translation', 'amino'],
+                priority: 1
+            },
+            'export_gff_annotations': {
+                category: 'file_operations',
+                description: 'Export feature annotations in GFF format to specified file path',
+                keywords: ['export', 'gff', 'annotations', 'features'],
+                priority: 1
+            },
+            'export_bed_format': {
+                category: 'file_operations',
+                description: 'Export feature annotations in BED format to specified file path',
+                keywords: ['export', 'bed', 'annotations', 'features', 'track'],
+                priority: 1
+            },
+            'export_current_view_fasta': {
+                category: 'file_operations',
+                description: 'Export current visible region as FASTA sequence to specified file path',
+                keywords: ['export', 'current', 'view', 'fasta', 'region'],
+                priority: 1
+            },
+            'configure_export_settings': {
+                category: 'file_operations',
+                description: 'Configure export settings and preferences for all export operations',
+                keywords: ['configure', 'export', 'settings', 'preferences'],
+                priority: 1
+            },
+
             // External API Tools
             'blast_sequence': {
                 category: 'external_apis',
@@ -650,7 +736,7 @@ class ToolDefinitionCreator {
      * Check if category requires data
      */
     requiresData(category) {
-        return ['navigation', 'sequence', 'sequence_editing'].includes(category);
+        return ['navigation', 'sequence', 'sequence_editing', 'file_operations'].includes(category);
     }
 
     /**
@@ -786,6 +872,23 @@ class ToolDefinitionCreator {
                     description: "Target database",
                     default: "nr"
                 }
+            },
+            'file_operations': {
+                filePath: {
+                    type: "string",
+                    description: "Absolute path to the file",
+                    examples: ["/path/to/genome.fasta", "/data/annotations.gff", "/output/export.bed"]
+                },
+                fileFormat: {
+                    type: "string",
+                    description: "File format",
+                    enum: ["auto", "fasta", "genbank", "gff", "bed", "vcf", "sam", "bam", "wig"]
+                },
+                overwrite: {
+                    type: "boolean",
+                    description: "Whether to overwrite existing file",
+                    default: false
+                }
             }
         };
 
@@ -805,7 +908,8 @@ class ToolDefinitionCreator {
             'sequence_editing': ['chromosome', 'start', 'end'],
             'plugin_management': [],
             'coordination': ['task'],
-            'external_apis': ['sequence', 'blastType', 'database']
+            'external_apis': ['sequence', 'blastType', 'database'],
+            'file_operations': ['filePath']
         };
 
         return required[category] || [];
@@ -892,6 +996,13 @@ class ToolDefinitionCreator {
             'external_apis': {
                 api_error: "Returns error if external API is unavailable",
                 network_timeout: "Returns error if request times out"
+            },
+            'file_operations': {
+                file_not_found: "Returns error if specified file does not exist",
+                invalid_path: "Returns error if file path is invalid or not writable",
+                permission_denied: "Returns error if file cannot be read/written due to permissions",
+                invalid_format: "Returns error if file format is not supported",
+                disk_space: "Returns error if insufficient disk space"
             }
         };
 
@@ -947,6 +1058,13 @@ class ToolDefinitionCreator {
                 success: "boolean - Whether API call was successful",
                 results: "array - List of API results",
                 execution_time: "number - API call execution time"
+            },
+            'file_operations': {
+                success: "boolean - Whether file operation was successful",
+                file_path: "string - Path of the processed file",
+                file_size: "number - Size of the file in bytes",
+                operation_time: "number - Time taken for operation in milliseconds",
+                format_detected: "string - Detected or specified file format"
             }
         };
 
