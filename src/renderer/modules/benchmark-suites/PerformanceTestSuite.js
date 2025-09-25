@@ -27,7 +27,7 @@ class PerformanceTestSuite {
                     maxResponseTime: 5000
                 },
                 maxScore: 100,
-                timeout: 10000,
+                timeout: 300000, // 5 minutes to allow for longer LLM response times
                 evaluator: this.evaluatePerformance.bind(this)
             }
         ];
