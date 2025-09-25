@@ -171,6 +171,7 @@ class MultiAgentSettingsManager {
                     'deepseek-ai/DeepSeek-V2.5': 'DeepSeek-V2.5 (Legacy)',
                     
                     // Qwen Models
+                    'Qwen/Qwen3-Coder-480B-A35B-Instruct': 'Qwen3-Coder-480B-A35B-Instruct (Code Specialized)',
                     'Qwen/Qwen3-235B-A22B-Thinking-2507': 'Qwen3-235B-A22B-Thinking-2507',
                     'Qwen/Qwen3-235B-A22B-Instruct-2507': 'Qwen3-235B-A22B-Instruct-2507',
                     'Qwen/Qwen3-32B': 'Qwen3-32B (Latest)',
