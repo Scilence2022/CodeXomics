@@ -1826,7 +1826,7 @@
 
 .operon-gene-count {
   background: #1e3a8a; /* Dark blue background */
-  color: #93c5fd; /* Light blue text, bold weight applied below */
+  color: white; /* White text for maximum contrast */
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 10px;
