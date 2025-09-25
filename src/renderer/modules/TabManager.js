@@ -2508,6 +2508,11 @@ class TabManager {
             if (tabState.sidebarPanels.searchResultsSection.visible && tabState.sidebarPanels.searchResultsSection.content) {
                 searchPanel.innerHTML = tabState.sidebarPanels.searchResultsSection.content;
                 searchPanel.style.display = 'block';
+                
+                // Re-attach event handlers for search result items
+                if (this.genomeBrowser && this.genomeBrowser.navigationManager) {
+                    this.genomeBrowser.navigationManager.reattachSearchResultEventHandlers();
+                }
             } else {
                 searchPanel.style.display = 'none';
             }
@@ -2549,6 +2554,7 @@ class TabManager {
             tabState.sidebarPanels = {
                 geneDetailsSection: { visible: false, content: null },
                 readDetailsSection: { visible: false, content: null },
+                variantDetailsSection: { visible: false, content: null },
                 searchResultsSection: { visible: false, content: null }
             };
         }

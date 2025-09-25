@@ -2012,6 +2012,35 @@ class NavigationManager {
         this.currentSearchIndex = 0;
     }
 
+    /**
+     * Re-attach event handlers for search result items
+     * This method can be called when content is restored from tab state
+     */
+    reattachSearchResultEventHandlers() {
+        const searchResultsList = document.getElementById('searchResultsList');
+        if (!searchResultsList) return;
+        
+        // Find all search result items and re-attach click handlers
+        const searchResultItems = searchResultsList.querySelectorAll('.search-result-item');
+        searchResultItems.forEach(item => {
+            // Remove any existing click listeners to avoid duplicates
+            const newItem = item.cloneNode(true);
+            item.parentNode.replaceChild(newItem, item);
+            
+            // Add click handler for navigation
+            newItem.addEventListener('click', (e) => {
+                const index = parseInt(e.currentTarget.dataset.index);
+                this.navigateToSearchResult(index);
+                
+                // Highlight selected result
+                searchResultsList.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('selected'));
+                e.currentTarget.classList.add('selected');
+            });
+        });
+        
+        console.log(`🔧 [NavigationManager] Re-attached event handlers for ${searchResultItems.length} search result items`);
+    }
+
     // Set global dragging behavior
     setGlobalDragging(enabled) {
         this.globalDraggingEnabled = enabled;
