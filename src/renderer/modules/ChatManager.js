@@ -6555,6 +6555,63 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.executeActionFunction('undoLastAction', parameters);
                     break;
                     
+                // File Operations tools
+                case 'load_genome_file':
+                    result = await this.executeFileOperationTool('load_genome_file', parameters);
+                    break;
+                    
+                case 'load_annotation_file':
+                    result = await this.executeFileOperationTool('load_annotation_file', parameters);
+                    break;
+                    
+                case 'load_variant_file':
+                    result = await this.executeFileOperationTool('load_variant_file', parameters);
+                    break;
+                    
+                case 'load_reads_file':
+                    result = await this.executeFileOperationTool('load_reads_file', parameters);
+                    break;
+                    
+                case 'load_operon_file':
+                    result = await this.executeFileOperationTool('load_operon_file', parameters);
+                    break;
+                    
+                case 'load_wig_tracks':
+                    result = await this.executeFileOperationTool('load_wig_tracks', parameters);
+                    break;
+                    
+                case 'export_fasta_sequence':
+                    result = await this.executeFileOperationTool('export_fasta_sequence', parameters);
+                    break;
+                    
+                case 'export_genbank_format':
+                    result = await this.executeFileOperationTool('export_genbank_format', parameters);
+                    break;
+                    
+                case 'export_gff_annotations':
+                    result = await this.executeFileOperationTool('export_gff_annotations', parameters);
+                    break;
+                    
+                case 'export_bed_format':
+                    result = await this.executeFileOperationTool('export_bed_format', parameters);
+                    break;
+                    
+                case 'export_cds_fasta':
+                    result = await this.executeFileOperationTool('export_cds_fasta', parameters);
+                    break;
+                    
+                case 'export_protein_fasta':
+                    result = await this.executeFileOperationTool('export_protein_fasta', parameters);
+                    break;
+                    
+                case 'export_current_view_fasta':
+                    result = await this.executeFileOperationTool('export_current_view_fasta', parameters);
+                    break;
+                    
+                case 'configure_export_settings':
+                    result = await this.executeFileOperationTool('configure_export_settings', parameters);
+                    break;
+                    
                 // Plugin system functions
                 default:
                     // Try to execute as plugin function
@@ -6829,6 +6886,185 @@ ${this.getPluginSystemInfo()}`;
             console.error(`❌ [ChatManager] Action function ${functionName} failed:`, error);
             throw error;
         }
+    }
+
+    /**
+     * Execute file operations tools
+     */
+    async executeFileOperationTool(toolName, parameters) {
+        console.log(`🗂️ [ChatManager] Executing file operation tool: ${toolName}`, parameters);
+        
+        try {
+            // File operations are client-side operations that interact with the browser
+            // and the file system through the Genome AI Studio interface
+            
+            const genomeBrowser = window.genomeBrowser;
+            if (!genomeBrowser) {
+                throw new Error('Genome browser not available for file operations');
+            }
+            
+            // Handle different file operation tools
+            switch (toolName) {
+                case 'load_genome_file':
+                    return await this.executeLoadGenomeFile(parameters);
+                    
+                case 'load_annotation_file':
+                    return await this.executeLoadAnnotationFile(parameters);
+                    
+                case 'load_variant_file':
+                    return await this.executeLoadVariantFile(parameters);
+                    
+                case 'load_reads_file':
+                    return await this.executeLoadReadsFile(parameters);
+                    
+                case 'load_operon_file':
+                    return await this.executeLoadOperonFile(parameters);
+                    
+                case 'load_wig_tracks':
+                    return await this.executeLoadWigTracks(parameters);
+                    
+                case 'export_fasta_sequence':
+                    return await this.executeExportFastaSequence(parameters);
+                    
+                case 'export_genbank_format':
+                    return await this.executeExportGenbankFormat(parameters);
+                    
+                case 'export_gff_annotations':
+                    return await this.executeExportGffAnnotations(parameters);
+                    
+                case 'export_bed_format':
+                    return await this.executeExportBedFormat(parameters);
+                    
+                case 'export_cds_fasta':
+                    return await this.executeExportCdsFasta(parameters);
+                    
+                case 'export_protein_fasta':
+                    return await this.executeExportProteinFasta(parameters);
+                    
+                case 'export_current_view_fasta':
+                    return await this.executeExportCurrentViewFasta(parameters);
+                    
+                case 'configure_export_settings':
+                    return await this.executeConfigureExportSettings(parameters);
+                    
+                default:
+                    throw new Error(`Unknown file operation tool: ${toolName}`);
+            }
+            
+        } catch (error) {
+            console.error(`❌ [ChatManager] File operation tool ${toolName} failed:`, error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Execute load genome file operation
+     */
+    async executeLoadGenomeFile(parameters) {
+        console.log(`🧬 [ChatManager] Loading genome file:`, parameters);
+        
+        const { filePath, fileFormat = 'auto', replaceCurrent = true, validateFile = true } = parameters;
+        
+        if (!filePath) {
+            throw new Error('filePath parameter is required for load_genome_file');
+        }
+        
+        try {
+            // Check if file exists (basic validation)
+            const fs = require('fs');
+            if (!fs.existsSync(filePath)) {
+                throw new Error(`File not found: ${filePath}`);
+            }
+            
+            const genomeBrowser = window.genomeBrowser;
+            if (!genomeBrowser || !genomeBrowser.fileManager) {
+                throw new Error('FileManager not available in genome browser');
+            }
+            
+            // Use the existing file loading functionality
+            const result = await genomeBrowser.fileManager.loadGenomeFile({
+                filePath: filePath,
+                format: fileFormat,
+                replace: replaceCurrent,
+                validate: validateFile
+            });
+            
+            console.log(`✅ [ChatManager] Genome file loaded successfully:`, result);
+            
+            return {
+                success: true,
+                tool: 'load_genome_file',
+                filePath: filePath,
+                fileFormat: result.detectedFormat || fileFormat,
+                replaceCurrent: replaceCurrent,
+                sequenceCount: result.sequenceCount || 1,
+                sequenceNames: result.sequenceNames || [],
+                fileSize: result.fileSize || 0,
+                loadTime: result.loadTime || 0,
+                message: `Genome file loaded successfully from ${filePath}`,
+                timestamp: new Date().toISOString()
+            };
+            
+        } catch (error) {
+            console.error(`❌ [ChatManager] Failed to load genome file:`, error);
+            throw new Error(`Failed to load genome file: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Stub implementations for other file operations
+     * These can be implemented as needed
+     */
+    async executeLoadAnnotationFile(parameters) {
+        throw new Error('load_annotation_file not yet implemented');
+    }
+    
+    async executeLoadVariantFile(parameters) {
+        throw new Error('load_variant_file not yet implemented');
+    }
+    
+    async executeLoadReadsFile(parameters) {
+        throw new Error('load_reads_file not yet implemented');
+    }
+    
+    async executeLoadOperonFile(parameters) {
+        throw new Error('load_operon_file not yet implemented');
+    }
+    
+    async executeLoadWigTracks(parameters) {
+        throw new Error('load_wig_tracks not yet implemented');
+    }
+    
+    async executeExportFastaSequence(parameters) {
+        throw new Error('export_fasta_sequence not yet implemented');
+    }
+    
+    async executeExportGenbankFormat(parameters) {
+        throw new Error('export_genbank_format not yet implemented');
+    }
+    
+    async executeExportGffAnnotations(parameters) {
+        throw new Error('export_gff_annotations not yet implemented');
+    }
+    
+    async executeExportBedFormat(parameters) {
+        throw new Error('export_bed_format not yet implemented');
+    }
+    
+    async executeExportCdsFasta(parameters) {
+        throw new Error('export_cds_fasta not yet implemented');
+    }
+    
+    async executeExportProteinFasta(parameters) {
+        throw new Error('export_protein_fasta not yet implemented');
+    }
+    
+    async executeExportCurrentViewFasta(parameters) {
+        throw new Error('export_current_view_fasta not yet implemented');
+    }
+    
+    async executeConfigureExportSettings(parameters) {
+        throw new Error('configure_export_settings not yet implemented');
     }
 
     getCurrentContext() {
