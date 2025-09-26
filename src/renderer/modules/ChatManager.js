@@ -5051,9 +5051,23 @@ class ChatManager {
             
             // Navigation operations - position-based movements that can be repeated
             position_navigation: {
-                tools: ['navigate_to_position', 'scroll_left', 'scroll_right', 'zoom_in', 'zoom_out'],
+                tools: ['navigate_to_position', 'scroll_left', 'scroll_right'],
                 policy: 'always_allowed',
                 condition: () => true
+            },
+            
+            // Zoom operations - prevent rapid repetition
+            zoom_operations: {
+                tools: ['zoom_in', 'zoom_out'],
+                policy: 'rate_limited',
+                condition: (tool, history, results) => {
+                    const recentExecution = this.findRecentExecution(toolName, history, 5000); // 5 seconds
+                    if (recentExecution) {
+                        console.log(`🚫 [Policy] Zoom operation rate limited: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
             },
             
             // Gene/feature navigation - single execution per gene/feature
@@ -5102,13 +5116,33 @@ class ChatManager {
             
             // Display/UI state operations - once per round
             display_operations: {
-                tools: ['toggle_track', 'show_hide_features', 'set_view_mode', 'refresh_view'],
+                tools: ['show_hide_features', 'set_view_mode', 'refresh_view'],
                 policy: 'once_per_round',
                 condition: (tool, history, results, round) => {
                     const executedInCurrentRound = results.some(r => r.tool === toolName);
                     if (executedInCurrentRound) {
                         console.log(`🚫 [Policy] Display operation already executed in current round: ${toolName}`);
                         return false;
+                    }
+                    return true;
+                }
+            },
+            
+            // Track toggle operations - prevent rapid repetition of same track toggle
+            track_operations: {
+                tools: ['toggle_track', 'toggle_annotation_track'],
+                policy: 'parameter_based_rate_limited',
+                condition: (tool, history, results) => {
+                    // Check for recent execution of same track toggle
+                    const recentExecution = this.findRecentExecution(toolName, history, 3000); // 3 seconds
+                    if (recentExecution && recentExecution.parameters) {
+                        // Allow if toggling a different track
+                        const currentTrack = tool.parameters?.trackName;
+                        const recentTrack = recentExecution.parameters?.trackName;
+                        if (currentTrack === recentTrack) {
+                            console.log(`🚫 [Policy] Track toggle rate limited for same track: ${currentTrack}`);
+                            return false;
+                        }
                     }
                     return true;
                 }
@@ -5175,6 +5209,79 @@ class ChatManager {
             }
         }
         return false;
+    }
+
+    /**
+     * Find recent execution of a tool within a time window
+     */
+    findRecentExecution(toolName, conversationHistory, timeWindowMs = 5000) {
+        const now = Date.now();
+        
+        // Look through conversation history for recent executions
+        for (let i = conversationHistory.length - 1; i >= 0; i--) {
+            const msg = conversationHistory[i];
+            
+            // Check system messages for successful executions
+            if (msg.role === 'system' && msg.content) {
+                if (msg.content.includes(`${toolName} executed successfully`)) {
+                    // Estimate message timestamp (conversations are usually recent)
+                    const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
+                    
+                    if (now - estimatedTimestamp < timeWindowMs) {
+                        console.log(`🔍 Found recent execution of ${toolName} within ${timeWindowMs}ms window`);
+                        return {
+                            toolName,
+                            timestamp: estimatedTimestamp,
+                            messageIndex: i
+                        };
+                    }
+                }
+            }
+            
+            // Check assistant messages for tool calls
+            if (msg.role === 'assistant' && msg.content) {
+                try {
+                    // Try to parse as single tool call
+                    const parsed = JSON.parse(msg.content);
+                    if (parsed.tool_name === toolName) {
+                        const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
+                        
+                        if (now - estimatedTimestamp < timeWindowMs) {
+                            console.log(`🔍 Found recent tool call of ${toolName} within ${timeWindowMs}ms window`);
+                            return {
+                                toolName,
+                                timestamp: estimatedTimestamp,
+                                messageIndex: i,
+                                parameters: parsed.parameters
+                            };
+                        }
+                    }
+                } catch (e) {
+                    // Try to parse as multiple tool calls
+                    try {
+                        const multipleToolCalls = this.parseMultipleToolCalls(msg.content);
+                        const matchingTool = multipleToolCalls.find(t => t.tool_name === toolName);
+                        if (matchingTool) {
+                            const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
+                            
+                            if (now - estimatedTimestamp < timeWindowMs) {
+                                console.log(`🔍 Found recent tool call of ${toolName} in multiple calls within ${timeWindowMs}ms window`);
+                                return {
+                                    toolName,
+                                    timestamp: estimatedTimestamp,
+                                    messageIndex: i,
+                                    parameters: matchingTool.parameters
+                                };
+                            }
+                        }
+                    } catch (e2) {
+                        // Not a tool call, continue
+                    }
+                }
+            }
+        }
+        
+        return null;
     }
 
     /**
