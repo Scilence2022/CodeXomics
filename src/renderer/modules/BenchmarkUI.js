@@ -33,28 +33,15 @@ class BenchmarkUI {
         try {
             console.log('🎯 Starting benchmark interface display...');
             
-            // Get main content area with fallbacks
-            let mainContent = document.querySelector('.main-content') || 
-                             document.querySelector('#mainContent') || 
-                             document.querySelector('main') ||
-                             document.querySelector('body') ||
-                             document.documentElement;
-
-            console.log('📦 Main content element:', mainContent);
-
             // Create benchmark interface
             const benchmarkInterface = this.createBenchmarkInterface();
             console.log('🔧 Benchmark interface created:', benchmarkInterface);
             
-            // Hide existing content carefully
-            this.hideMainContent();
-            console.log('🙈 Main content hidden');
-            
-            // Add benchmark interface to body to ensure it's always visible
+            // Add benchmark interface to body as an overlay
             document.body.appendChild(benchmarkInterface);
             console.log('✅ Benchmark interface added to body');
             
-            // Ensure interface is visible with multiple methods
+            // Ensure interface is visible with overlay positioning
             benchmarkInterface.style.display = 'block';
             benchmarkInterface.style.visibility = 'visible';
             benchmarkInterface.style.opacity = '1';
@@ -698,64 +685,6 @@ class BenchmarkUI {
     }
 
     /**
-     * Hide main content when benchmark interface is active
-     */
-    hideMainContent() {
-        const elementsToHide = [
-            '.genome-browser-container',
-            '.genome-content', 
-            '.main-canvas-container',
-            '.sidebar',
-            '.chatbox',
-            '.main-content:not(#benchmarkInterface)',
-            '.content-area',
-            '.genome-viewer',
-            '.tab-container',
-            '.header',
-            '.menu-bar',
-            '.toolbar'
-        ];
-
-        elementsToHide.forEach(selector => {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(element => {
-                // Skip if it's the benchmark interface itself or any benchmark-related element
-                if (element.id === 'benchmarkInterface' || 
-                    element.classList.contains('benchmark-menu-bar') ||
-                    element.classList.contains('benchmark-interface') ||
-                    element.closest('#benchmarkInterface')) {
-                    return;
-                }
-                
-                // Only hide if element is visible
-                if (element.offsetParent !== null) {
-                    if (!element.dataset.originalDisplay) {
-                        element.dataset.originalDisplay = element.style.display || getComputedStyle(element).display;
-                    }
-                    element.style.display = 'none';
-                    element.dataset.benchmarkHidden = 'true';
-                }
-            });
-        });
-        
-        console.log('🙈 Main content hidden for benchmark mode');
-    }
-
-    /**
-     * Show main content when exiting benchmark mode
-     */
-    showMainContent() {
-        const hiddenElements = document.querySelectorAll('[data-benchmark-hidden="true"]');
-        hiddenElements.forEach(element => {
-            element.style.display = element.dataset.originalDisplay || '';
-            delete element.dataset.originalDisplay;
-            delete element.dataset.benchmarkHidden;
-        });
-        
-        console.log('👁️ Main content restored');
-    }
-
-    /**
      * Toggle benchmark interface between collapsed and expanded states
      */
     toggleBenchmarkInterface() {
@@ -784,7 +713,7 @@ class BenchmarkUI {
     }
 
     /**
-     * Close benchmark interface and restore main content
+     * Close benchmark interface
      */
     closeBenchmarkInterface() {
         console.log('📜 Closing benchmark interface...');
@@ -794,9 +723,6 @@ class BenchmarkUI {
         if (benchmarkInterface) {
             benchmarkInterface.remove();
         }
-        
-        // Show main content
-        this.showMainContent();
         
         // Stop any running benchmark
         if (this.isRunning) {
@@ -2332,13 +2258,7 @@ class BenchmarkUI {
                 benchmarkInterface.remove();
             }
 
-            // Show main content
-            this.showMainContent();
-
-            // Deactivate benchmark menus
-            // Menu deactivation removed - no menu manager
-
-            console.log('✅ Benchmark mode exited, main app restored');
+            console.log('✅ Benchmark mode exited');
             
         } catch (error) {
             console.error('❌ Failed to exit benchmark mode:', error);
