@@ -205,6 +205,20 @@ class FunctionCallsOrganizer {
                     'biological-networks.analyzeNetworkCentrality',
                     'biological-networks.detectNetworkCommunities'
                 ]
+            },
+            
+            // 类别12: 数据库集成类 - 中等优先级，网络依赖型
+            databaseIntegration: {
+                priority: 3,
+                description: "Database integration and external API access",
+                functions: [
+                    'search_uniprot_database',
+                    'advanced_uniprot_search',
+                    'get_uniprot_entry',
+                    'analyze_interpro_domains',
+                    'search_interpro_entry',
+                    'get_interpro_entry_details'
+                ]
             }
         };
         
