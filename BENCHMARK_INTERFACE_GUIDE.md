@@ -2,16 +2,18 @@
 
 ## How to Open the Testing Interface
 
-The Genome AI Studio now includes a comprehensive benchmark testing interface for evaluating LLM instruction following capabilities. Here's how to access it:
+The Genome AI Studio includes a comprehensive benchmark testing interface for evaluating LLM instruction following capabilities. Here's how to access it:
 
-### Method 1: Through Benchmark & Debug Tools (Recommended)
+### Primary Method: Through Benchmark & Debug Tools
 1. **Open the application** - Run `npm start` in the GenomeAIStudio directory
-2. **Access Benchmark & Debug Tools** - Click the "Benchmark & Debug Tools" button in the top menu bar
+2. **Access Benchmark & Debug Tools** - Click the "Benchmark & Debug Tools" button in the Options menu
 3. **Launch Benchmark** - In the Benchmark & Debug Tools modal, click "Open Benchmark" under "LLM Benchmark Suite"
 4. **Start Testing** - The benchmark interface will open in full-screen mode
 
-### Method 2: Direct Access (Developer)
+### Alternative Method: Direct Access (Developer)
 - Open browser console and run: `window.genomeBrowser.openBenchmarkInterface()`
+
+**Note**: The benchmark functionality was previously available in the Tools menu but has been consolidated under Benchmark & Debug Tools for better organization.
 
 ## Interface Overview
 

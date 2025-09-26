@@ -46,28 +46,16 @@ class LLMBenchmarkFramework {
         this.registerTestSuite('complex_analysis', new ComplexAnalysisSuite());
         
         // Plugin Integration Tests
-        // this.registerTestSuite('plugin_integration', new PluginIntegrationSuite());
+        this.registerTestSuite('plugin_integration', new PluginIntegrationSuite());
         
         // Parameter Handling Tests
-        //this.registerTestSuite('parameter_handling', new ParameterHandlingSuite());
-        
-        // Error Recovery Tests
-       // this.registerTestSuite('error_recovery', new ErrorRecoverySuite());
+        this.registerTestSuite('parameter_handling', new ParameterHandlingSuite());
         
         // Multi-step Workflow Tests
-       // this.registerTestSuite('workflow_tests', new WorkflowTestSuite());
-        
-        // Contextual Understanding Tests
-        // this.registerTestSuite('contextual_understanding', new ContextualUnderstandingSuite());
-        
-        // Edge Case Tests
-       //  this.registerTestSuite('edge_cases', new EdgeCaseTestSuite());
+        this.registerTestSuite('workflow_tests', new WorkflowTestSuite());
         
         // Performance Tests
         this.registerTestSuite('performance_tests', new PerformanceTestSuite());
-        
-        // Consistency Tests
-       // this.registerTestSuite('consistency_tests', new ConsistencyTestSuite());
         
         console.log(`Initialized ${this.testSuites.size} test suites with ${this.getTotalTestCount()} total tests`);
     }

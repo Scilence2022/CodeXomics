@@ -2695,57 +2695,6 @@ class GenomeBrowser {
         // Evolution interface is now handled as a separate window
         // No IPC handler needed - menu action creates new window directly
 
-        // Handle Benchmark menu actions (with on-demand loading)
-        ipcRenderer.on('open-benchmark-runner', async () => {
-            try {
-                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                await benchmarkManager.openBenchmarkRunner();
-            } catch (error) {
-                console.error('Failed to initialize benchmark system:', error);
-                alert('Failed to load benchmark system: ' + error.message);
-            }
-        });
-
-        ipcRenderer.on('run-quick-benchmark', async () => {
-            try {
-                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                await benchmarkManager.runQuickBenchmark();
-            } catch (error) {
-                console.error('Failed to initialize benchmark system:', error);
-                alert('Failed to load benchmark system: ' + error.message);
-            }
-        });
-
-        ipcRenderer.on('open-custom-benchmark', async () => {
-            try {
-                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                await benchmarkManager.openCustomBenchmark();
-            } catch (error) {
-                console.error('Failed to initialize benchmark system:', error);
-                alert('Failed to load benchmark system: ' + error.message);
-            }
-        });
-
-        ipcRenderer.on('show-benchmark-history', async () => {
-            try {
-                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                await benchmarkManager.showBenchmarkHistory();
-            } catch (error) {
-                console.error('Failed to initialize benchmark system:', error);
-                alert('Failed to load benchmark system: ' + error.message);
-            }
-        });
-
-        ipcRenderer.on('export-benchmark-results', async () => {
-            try {
-                const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-                await benchmarkManager.exportBenchmarkResults();
-            } catch (error) {
-                console.error('Failed to initialize benchmark system:', error);
-                alert('Failed to load benchmark system: ' + error.message);
-            }
-        });
-
 
 
         // Handle Edit menu actions

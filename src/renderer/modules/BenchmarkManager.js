@@ -76,12 +76,8 @@ class BenchmarkManager {
             'ComplexAnalysisSuite', 
             'PluginIntegrationSuite',
             'ParameterHandlingSuite',
-            'ErrorRecoverySuite',
             'WorkflowTestSuite',
-            'ContextualUnderstandingSuite',
-            'EdgeCaseTestSuite',
-            'PerformanceTestSuite',
-            'ConsistencyTestSuite'
+            'PerformanceTestSuite'
         ];
 
         console.log('📦 Loading test suites...');
@@ -146,47 +142,19 @@ class BenchmarkManager {
             });
         }
 
-        // Listen for benchmark events
-        window.addEventListener('open-benchmark-runner', () => {
-            this.openBenchmarkRunner();
-        });
-
-        window.addEventListener('run-quick-benchmark', () => {
-            this.runQuickBenchmark();
-        });
-
-        window.addEventListener('open-custom-benchmark', () => {
-            this.openCustomBenchmark();
-        });
-
-        window.addEventListener('show-benchmark-history', () => {
-            this.showBenchmarkHistory();
-        });
-
-        window.addEventListener('export-benchmark-results', () => {
-            this.exportBenchmarkResults();
-        });
+        // Listen for benchmark events (UI-triggered only)
+        // Note: Main menu benchmark actions have been removed
     }
 
     /**
-     * Handle menu actions from main process
+     * Handle menu actions from main process (legacy support)
+     * Note: Main menu benchmark actions have been removed
      */
     handleMenuAction(action, data) {
         switch (action) {
             case 'open-benchmark-runner':
+                console.warn('Benchmark runner should be accessed via Benchmark & Debug Tools');
                 this.openBenchmarkRunner();
-                break;
-            case 'run-quick-benchmark':
-                this.runQuickBenchmark();
-                break;
-            case 'open-custom-benchmark':
-                this.openCustomBenchmark();
-                break;
-            case 'show-benchmark-history':
-                this.showBenchmarkHistory();
-                break;
-            case 'export-benchmark-results':
-                this.exportBenchmarkResults();
                 break;
             default:
                 console.warn('Unknown benchmark action:', action);
@@ -390,8 +358,8 @@ class BenchmarkManager {
                                 <label><input type="checkbox" value="complex_analysis" checked> Complex Analysis</label>
                                 <label><input type="checkbox" value="plugin_integration"> Plugin Integration</label>
                                 <label><input type="checkbox" value="parameter_handling" checked> Parameter Handling</label>
-                                <label><input type="checkbox" value="error_recovery"> Error Recovery</label>
                                 <label><input type="checkbox" value="workflow_tests"> Workflow Tests</label>
+                                <label><input type="checkbox" value="performance_tests" checked> Performance Tests</label>
                                 <label><input type="checkbox" value="contextual_understanding"> Contextual Understanding</label>
                                 <label><input type="checkbox" value="edge_cases"> Edge Cases</label>
                                 <label><input type="checkbox" value="performance_tests" checked> Performance Tests</label>

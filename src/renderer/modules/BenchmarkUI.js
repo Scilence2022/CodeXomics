@@ -168,16 +168,48 @@ class BenchmarkUI {
                     padding-bottom: 20px;
                     border-bottom: 3px solid #3498db;
                     position: relative;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .benchmark-header:hover {
+                    background: rgba(52, 152, 219, 0.05);
                 }
 
                 .header-content {
                     width: 100%;
                 }
 
-                .close-benchmark-btn {
+                .header-controls {
                     position: absolute;
                     top: 10px;
                     right: 10px;
+                    display: flex;
+                    gap: 8px;
+                    z-index: 10;
+                }
+
+                .minimize-benchmark-btn {
+                    width: 40px;
+                    height: 40px;
+                    border: none;
+                    background: #3498db;
+                    color: white;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    font-size: 18px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.3s ease;
+                }
+
+                .minimize-benchmark-btn:hover {
+                    background: #2980b9;
+                    transform: scale(1.1);
+                }
+
+                .close-benchmark-btn {
                     width: 40px;
                     height: 40px;
                     border: none;
@@ -190,12 +222,60 @@ class BenchmarkUI {
                     align-items: center;
                     justify-content: center;
                     transition: all 0.3s ease;
-                    z-index: 10;
                 }
 
                 .close-benchmark-btn:hover {
                     background: #c0392b;
                     transform: scale(1.1);
+                }
+
+                /* Collapsed state styles */
+                .benchmark-interface.collapsed {
+                    height: 80px !important;
+                    overflow: hidden;
+                }
+
+                .benchmark-interface.collapsed .benchmark-container {
+                    height: 80px;
+                    padding: 10px 30px;
+                    overflow: hidden;
+                }
+
+                .benchmark-interface.collapsed .benchmark-section:not(.benchmark-header) {
+                    display: none !important;
+                }
+
+                .benchmark-interface.collapsed .benchmark-header {
+                    margin-bottom: 0;
+                    padding-bottom: 0;
+                    border-bottom: none;
+                }
+
+                .benchmark-interface.collapsed .benchmark-title {
+                    font-size: 20px;
+                    margin-bottom: 0;
+                }
+
+                .benchmark-interface.collapsed .benchmark-subtitle {
+                    font-size: 12px;
+                }
+
+                .expand-indicator {
+                    display: none;
+                    position: absolute;
+                    bottom: 5px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(52, 152, 219, 0.2);
+                    color: #3498db;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 10px;
+                    font-weight: 600;
+                }
+
+                .benchmark-interface.collapsed .expand-indicator {
+                    display: block;
                 }
 
                 .benchmark-title {
@@ -429,7 +509,7 @@ class BenchmarkUI {
             </style>
 
             <div class="benchmark-container">
-                <div class="benchmark-header">
+                <div class="benchmark-header" onclick="window.benchmarkUI.toggleBenchmarkInterface()">
                     <div class="header-content">
                         <h1 class="benchmark-title">
                             <span>🧪</span>
@@ -437,10 +517,16 @@ class BenchmarkUI {
                             <span>🧪</span>
                         </h1>
                         <p class="benchmark-subtitle">Comprehensive testing of LLM instruction following capabilities in Genome AI Studio</p>
+                        <div class="expand-indicator">Click to expand ↕️</div>
                     </div>
-                    <button class="close-benchmark-btn" onclick="window.benchmarkUI.closeBenchmarkInterface()" title="Close Benchmark Interface">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <div class="header-controls">
+                        <button class="minimize-benchmark-btn" onclick="event.stopPropagation(); window.benchmarkUI.toggleBenchmarkInterface()" title="Minimize/Expand Interface">
+                            <i class="fas fa-chevron-up" id="toggleIcon"></i>
+                        </button>
+                        <button class="close-benchmark-btn" onclick="event.stopPropagation(); window.benchmarkUI.closeBenchmarkInterface()" title="Close Benchmark Interface">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Configuration Section -->
@@ -450,6 +536,10 @@ class BenchmarkUI {
                         <div class="config-group">
                             <h3>📋 Test Suites</h3>
                             <div class="checkbox-grid">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="suite-comprehensive_genomic">
+                                    <span>🧬 Comprehensive Genomic Analysis</span>
+                                </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-basic_operations" checked>
                                     <span>✂️ Basic Operations</span>
@@ -479,8 +569,8 @@ class BenchmarkUI {
                                     <span>🔌 Plugin Integration</span>
                                 </label>
                                 <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-error_recovery">
-                                    <span>🛡️ Error Recovery</span>
+                                    <input type="checkbox" id="suite-workflow_tests">
+                                    <span>🔄 Workflow Tests</span>
                                 </label>
                             </div>
                         </div>
@@ -552,6 +642,9 @@ class BenchmarkUI {
                         </button>
                         <button class="btn" id="exportLLMInteractions" disabled style="background: #9b59b6; color: white;">
                             <span>🤖</span> Export LLM Interactions
+                        </button>
+                        <button class="btn" id="testManualDialog" style="background: #f39c12; color: white;" title="Test Manual Dialog System">
+                            <span>🗪</span> Test Manual Dialog
                         </button>
                     </div>
                 </div>
@@ -663,6 +756,34 @@ class BenchmarkUI {
     }
 
     /**
+     * Toggle benchmark interface between collapsed and expanded states
+     */
+    toggleBenchmarkInterface() {
+        const benchmarkInterface = document.getElementById('benchmarkInterface');
+        const toggleIcon = document.getElementById('toggleIcon');
+        
+        if (!benchmarkInterface) return;
+        
+        const isCollapsed = benchmarkInterface.classList.contains('collapsed');
+        
+        if (isCollapsed) {
+            // Expand
+            benchmarkInterface.classList.remove('collapsed');
+            if (toggleIcon) {
+                toggleIcon.className = 'fas fa-chevron-up';
+            }
+            console.log('🔼 Benchmark interface expanded');
+        } else {
+            // Collapse
+            benchmarkInterface.classList.add('collapsed');
+            if (toggleIcon) {
+                toggleIcon.className = 'fas fa-chevron-down';
+            }
+            console.log('🔽 Benchmark interface collapsed');
+        }
+    }
+
+    /**
      * Close benchmark interface and restore main content
      */
     closeBenchmarkInterface() {
@@ -693,6 +814,7 @@ class BenchmarkUI {
         document.getElementById('startBenchmark').onclick = () => this.startMainWindowBenchmark();
         document.getElementById('stopBenchmark').onclick = () => this.stopMainWindowBenchmark();
         document.getElementById('exportResults').onclick = () => this.exportMainWindowResults();
+        document.getElementById('testManualDialog').onclick = () => this.triggerTestManualDialog();
         
         // Add manual test interaction handlers
         this.setupManualTestHandlers();
@@ -702,15 +824,49 @@ class BenchmarkUI {
      * Setup handlers for manual test interactions
      */
     setupManualTestHandlers() {
+        console.log('🔍 Setting up manual test handlers...');
+        
         // Listen for manual test events
         document.addEventListener('manualTestRequired', (event) => {
+            console.log('📝 Manual test required event received:', event.detail);
             this.handleManualTest(event.detail);
         });
         
         // Listen for manual test completion
         document.addEventListener('manualTestCompleted', (event) => {
+            console.log('✅ Manual test completed event received:', event.detail);
             this.handleManualTestCompletion(event.detail);
         });
+        
+        console.log('✅ Manual test handlers setup complete');
+    }
+
+    /**
+     * Trigger a manual test (for testing the dialog system)
+     */
+    triggerTestManualDialog() {
+        console.log('🧪 Triggering test manual dialog...');
+        
+        const testData = {
+            testId: 'test_manual_01',
+            testName: 'Test Manual Dialog',
+            category: 'navigation',
+            complexity: 'simple',
+            instruction: 'This is a test manual dialog. Please verify that this dialog appears correctly and all interactive elements work as expected.',
+            expectedResult: {
+                tool_name: 'test_function',
+                parameters: {
+                    test: true
+                }
+            },
+            maxScore: 5,
+            manualVerification: 'Please verify: 1) This dialog appears correctly, 2) All buttons are clickable, 3) The interface is user-friendly, 4) You can interact with verification items.'
+        };
+        
+        // Dispatch manual test event
+        document.dispatchEvent(new CustomEvent('manualTestRequired', {
+            detail: testData
+        }));
     }
 
     /**
@@ -719,17 +875,34 @@ class BenchmarkUI {
     async handleManualTest(testData) {
         console.log('🔍 Manual test required:', testData.testName);
         
-        // Create manual test dialog
-        const dialog = this.createManualTestDialog(testData);
-        document.body.appendChild(dialog);
-        
-        // Show the dialog
-        dialog.style.display = 'flex';
-        
-        // Return a promise that resolves when user completes the test
-        return new Promise((resolve) => {
-            dialog.dataset.resolveCallback = resolve.toString();
-        });
+        try {
+            // Create manual test dialog
+            const dialog = this.createManualTestDialog(testData);
+            document.body.appendChild(dialog);
+            
+            // Show the dialog with animation
+            dialog.style.display = 'flex';
+            dialog.style.opacity = '0';
+            dialog.offsetHeight; // Force reflow
+            dialog.style.transition = 'opacity 0.3s ease';
+            dialog.style.opacity = '1';
+            
+            console.log('✨ Manual test dialog displayed for:', testData.testName);
+            
+            // Return a promise that resolves when user completes the test
+            return new Promise((resolve) => {
+                dialog.dataset.resolveCallback = JSON.stringify({
+                    testId: testData.testId,
+                    resolve: resolve.toString()
+                });
+                
+                // Store resolve function globally for access from onclick handlers
+                window[`resolveManualTest_${testData.testId}`] = resolve;
+            });
+        } catch (error) {
+            console.error('❌ Error creating manual test dialog:', error);
+            throw error;
+        }
     }
 
     /**
@@ -748,22 +921,36 @@ class BenchmarkUI {
                     left: 0;
                     width: 100%;
                     height: 100%;
-                    background: rgba(0, 0, 0, 0.5);
+                    background: rgba(0, 0, 0, 0.6);
                     display: none;
                     justify-content: center;
                     align-items: center;
-                    z-index: 10000;
+                    z-index: 999999;
+                    backdrop-filter: blur(5px);
                 }
                 
                 .manual-test-content {
                     background: white;
-                    border-radius: 12px;
+                    border-radius: 15px;
                     padding: 30px;
-                    max-width: 800px;
+                    max-width: 900px;
                     width: 90%;
                     max-height: 80%;
                     overflow-y: auto;
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+                    border: 3px solid #3498db;
+                    animation: modalAppear 0.3s ease;
+                }
+                
+                @keyframes modalAppear {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.8) translateY(-50px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1) translateY(0);
+                    }
                 }
                 
                 .manual-test-header {
@@ -1060,38 +1247,59 @@ class BenchmarkUI {
      * Complete manual test with user input
      */
     completeManualTest(testId, result) {
+        console.log('✅ Completing manual test:', testId, 'with result:', result);
+        
         const dialog = document.getElementById(`manual-test-${testId}`);
-        if (!dialog) return;
+        if (!dialog) {
+            console.error('❌ Manual test dialog not found for:', testId);
+            return;
+        }
         
-        // Get manual score
-        const scoreSelect = document.getElementById(`manual-score-${testId}`);
-        const manualScore = scoreSelect ? parseInt(scoreSelect.value) : 0;
-        
-        // Get verification checklist status
-        const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
-        const completedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
-        const totalItems = checkboxes.length;
-        
-        // Create result data
-        const resultData = {
-            testId: testId,
-            result: result,
-            manualScore: manualScore,
-            verificationCompletion: totalItems > 0 ? (completedItems / totalItems) : 1,
-            completedVerifications: completedItems,
-            totalVerifications: totalItems,
-            timestamp: new Date().toISOString()
-        };
-        
-        // Close dialog
-        dialog.remove();
-        
-        // Dispatch completion event
-        document.dispatchEvent(new CustomEvent('manualTestCompleted', {
-            detail: resultData
-        }));
-        
-        console.log('✅ Manual test completed:', resultData);
+        try {
+            // Get manual score
+            const scoreSelect = document.getElementById(`manual-score-${testId}`);
+            const manualScore = scoreSelect ? parseInt(scoreSelect.value) : 0;
+            
+            // Get verification checklist status
+            const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
+            const completedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
+            const totalItems = checkboxes.length;
+            
+            // Create result data
+            const resultData = {
+                testId: testId,
+                result: result,
+                manualScore: manualScore,
+                verificationCompletion: totalItems > 0 ? (completedItems / totalItems) : 1,
+                completedVerifications: completedItems,
+                totalVerifications: totalItems,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Close dialog with animation
+            dialog.style.transition = 'opacity 0.3s ease';
+            dialog.style.opacity = '0';
+            setTimeout(() => {
+                dialog.remove();
+            }, 300);
+            
+            // Resolve the promise if available
+            const resolveFunction = window[`resolveManualTest_${testId}`];
+            if (resolveFunction) {
+                resolveFunction(resultData);
+                delete window[`resolveManualTest_${testId}`];
+            }
+            
+            // Dispatch completion event
+            document.dispatchEvent(new CustomEvent('manualTestCompleted', {
+                detail: resultData
+            }));
+            
+            console.log('✨ Manual test completed successfully:', resultData);
+            
+        } catch (error) {
+            console.error('❌ Error completing manual test:', error);
+        }
     }
 
     /**
