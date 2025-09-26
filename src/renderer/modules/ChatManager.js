@@ -3577,10 +3577,25 @@ class ChatManager {
                 let toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
                 
                 // Filter out already executed tools to prevent infinite loops
+                // BUT allow re-execution of certain tools like file loading operations
+                const reExecutableTools = new Set([
+                    'load_genome_file', 'load_annotation_file', 'load_variant_file',
+                    'load_reads_file', 'load_wig_tracks', 'load_operon_file',
+                    'navigate_to_position', 'search_gene_by_name', 'get_current_state'
+                ]);
+                
                 toolsToExecute = toolsToExecute.filter(tool => {
                     const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
+                    
+                    // Allow re-execution of certain tools
+                    if (reExecutableTools.has(tool.tool_name)) {
+                        console.log(`✅ Allowing re-execution of re-executable tool: ${tool.tool_name}`);
+                        return true;
+                    }
+                    
+                    // For other tools, check if already executed
                     if (executedTools.has(toolKey)) {
-                        console.log(`Skipping already executed tool: ${tool.tool_name}`);
+                        console.log(`⚠️ Skipping already executed tool: ${tool.tool_name}`);
                         return false;
                     }
                     return true;
@@ -3624,12 +3639,24 @@ class ChatManager {
                             console.log(`Parse result for message ${i}:`, previousToolCall);
                             if (previousToolCall) {
                                 const toolKey = `${previousToolCall.tool_name}:${JSON.stringify(previousToolCall.parameters)}`;
-                                if (!executedTools.has(toolKey)) {
+                                
+                                // Allow re-execution of certain tools even if they were executed before
+                                const reExecutableTools = new Set([
+                                    'load_genome_file', 'load_annotation_file', 'load_variant_file',
+                                    'load_reads_file', 'load_wig_tracks', 'load_operon_file',
+                                    'navigate_to_position', 'search_gene_by_name', 'get_current_state'
+                                ]);
+                                
+                                if (reExecutableTools.has(previousToolCall.tool_name)) {
+                                    console.log('✅ Found re-executable tool call from previous round:', previousToolCall);
+                                    toolsToExecute = [previousToolCall];
+                                    break;
+                                } else if (!executedTools.has(toolKey)) {
                                     console.log('✅ Found unexecuted tool call from previous round:', previousToolCall);
                                     toolsToExecute = [previousToolCall];
                                     break;
                                 } else {
-                                    console.log(`⚠️ Tool ${previousToolCall.tool_name} already executed, skipping`);
+                                    console.log(`⚠️ Tool ${previousToolCall.tool_name} already executed and not re-executable, skipping`);
                                 }
                             } else {
                                 console.log(`❌ No tool call found in message ${i}`);
@@ -3789,10 +3816,24 @@ class ChatManager {
                             this.lastExecutionData.rounds = currentRound;
                         }
                         
-                        // Track executed tools to prevent re-execution
+                        // Track executed tools to prevent infinite loops
+                        // But be more selective about which tools to track for re-execution prevention
+                        const nonReExecutableTools = new Set([
+                            'blast_search', 'fetch_protein_structure', 'get_uniprot_entry',
+                            'create_annotation', 'export_data', 'delete_feature'
+                        ]);
+                        
                         toolsToExecute.forEach(tool => {
                             const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
-                            executedTools.add(toolKey);
+                            
+                            // Only track non-re-executable tools to prevent infinite loops
+                            // File loading and navigation tools can be re-executed as needed
+                            if (nonReExecutableTools.has(tool.tool_name)) {
+                                executedTools.add(toolKey);
+                                console.log(`🔒 Tracking execution for non-re-executable tool: ${tool.tool_name}`);
+                            } else {
+                                console.log(`🔄 Not tracking execution for re-executable tool: ${tool.tool_name}`);
+                            }
                         });
                         
                         // 显示工具执行结果
