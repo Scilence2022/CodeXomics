@@ -835,13 +835,13 @@ class BenchmarkUI {
             
             // Return a promise that resolves when user completes the test
             return new Promise((resolve) => {
-                dialog.dataset.resolveCallback = JSON.stringify({
-                    testId: testData.testId,
-                    resolve: resolve.toString()
-                });
-                
                 // Store resolve function globally for access from onclick handlers
-                window[`resolveManualTest_${testData.testId}`] = resolve;
+                window[`resolveManualTest_${testData.testId}`] = (resultData) => {
+                    console.log('📝 Manual test completed, resolving promise:', resultData);
+                    resolve(resultData);
+                };
+                
+                console.log('⏳ Waiting for user to complete manual test:', testData.testId);
             });
         } catch (error) {
             console.error('❌ Error creating manual test dialog:', error);
@@ -1182,9 +1182,21 @@ class BenchmarkUI {
     parseVerificationItems(verificationText) {
         if (!verificationText) return [];
         
-        // Split by numbered items (1), 2), 3), etc.)
-        const items = verificationText.split(/\d+\)\s*/).filter(item => item.trim());
-        return items.map(item => item.trim());
+        // Remove "Please verify:" prefix if it exists
+        let cleanText = verificationText.replace(/^Please verify:\s*/i, '');
+        
+        // Split by numbered items (1), 2), 3), etc.) or simple enumeration
+        const items = cleanText.split(/\d+\)\s*/).filter(item => item.trim());
+        
+        // If no numbered items found, try splitting by commas or line breaks
+        if (items.length <= 1) {
+            const alternativeItems = cleanText.split(/[,;\n]/).filter(item => item.trim());
+            if (alternativeItems.length > 1) {
+                return alternativeItems.map(item => item.trim());
+            }
+        }
+        
+        return items.map(item => item.trim()).filter(item => item.length > 0);
     }
 
     /**

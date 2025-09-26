@@ -645,90 +645,121 @@ class LLMBenchmarkFramework {
     async executeManualTest(test) {
         console.log(`📋 Executing manual test: ${test.name}`);
         
-        return new Promise((resolve) => {
-            // Prepare test data for manual dialog
-            const testData = {
-                testId: test.id,
-                testName: test.name,
-                category: test.category || 'manual',
-                complexity: test.complexity || 'simple',
-                instruction: test.instruction,
-                expectedResult: test.expectedResult,
-                maxScore: test.maxScore || 100,
-                manualVerification: test.manualVerification,
-                timeout: test.timeout || this.testTimeout
-            };
+        // Prepare test data for manual dialog
+        const testData = {
+            testId: test.id,
+            testName: test.name,
+            category: test.category || 'manual',
+            complexity: test.complexity || 'simple',
+            instruction: test.instruction,
+            expectedResult: test.expectedResult,
+            maxScore: test.maxScore || 100,
+            manualVerification: test.manualVerification,
+            timeout: test.timeout || this.testTimeout
+        };
+        
+        const startTime = Date.now();
+        
+        try {
+            // Check if BenchmarkUI is available
+            if (!window.benchmarkUI || !window.benchmarkUI.handleManualTest) {
+                throw new Error('BenchmarkUI not available for manual test handling');
+            }
             
-            // Set up event listener for manual test completion
-            const handleManualCompletion = (event) => {
-                if (event.detail.testId === test.id) {
-                    // Remove event listener
-                    document.removeEventListener('manualTestCompleted', handleManualCompletion);
-                    
-                    // Process manual test result
-                    const manualResult = event.detail;
-                    console.log(`✅ Manual test completed:`, manualResult);
-                    
-                    // Create test result in expected format
-                    const testResult = {
-                        llmResponse: `Manual test completed: ${manualResult.result}`,
-                        actualResult: {
-                            tool_name: test.expectedResult?.tool_name || 'manual_verification',
-                            parameters: test.expectedResult?.parameters || {},
-                            manual_result: manualResult.result,
-                            manual_score: manualResult.manualScore,
-                            verification_completion: manualResult.verificationCompletion
-                        },
-                        metrics: {
-                            responseTime: Date.now() - startTime,
-                            manualScore: manualResult.manualScore,
-                            verificationCompletion: manualResult.verificationCompletion,
-                            completedVerifications: manualResult.completedVerifications,
-                            totalVerifications: manualResult.totalVerifications
-                        },
-                        details: {
-                            instruction: test.instruction,
-                            manualResult: manualResult
-                        },
-                        llmInteractionData: {
-                            request: {
-                                instruction: test.instruction,
-                                timestamp: new Date().toISOString(),
-                                requestId: `manual_${test.id}_${Date.now()}`,
-                                testContext: testData
-                            },
-                            response: {
-                                content: `Manual verification: ${manualResult.result}`,
-                                responseTime: Date.now() - startTime,
-                                timestamp: new Date().toISOString(),
-                                manualInput: true
-                            },
-                            analysis: {
-                                isManual: true,
-                                manualResult: manualResult.result,
-                                manualScore: manualResult.manualScore,
-                                verificationCompletion: manualResult.verificationCompletion
-                            }
-                        }
-                    };
-                    
-                    resolve(testResult);
+            console.log(`📡 Requesting manual test dialog for: ${test.name}`);
+            
+            // Call BenchmarkUI's handleManualTest method and wait for result
+            const manualResult = await window.benchmarkUI.handleManualTest(testData);
+            
+            console.log(`✅ Manual test completed:`, manualResult);
+            
+            // Create test result in expected format
+            const testResult = {
+                llmResponse: `Manual test completed: ${manualResult.result}`,
+                actualResult: {
+                    tool_name: test.expectedResult?.tool_name || 'manual_verification',
+                    parameters: test.expectedResult?.parameters || {},
+                    manual_result: manualResult.result,
+                    manual_score: manualResult.manualScore,
+                    verification_completion: manualResult.verificationCompletion
+                },
+                metrics: {
+                    responseTime: Date.now() - startTime,
+                    manualScore: manualResult.manualScore,
+                    verificationCompletion: manualResult.verificationCompletion,
+                    completedVerifications: manualResult.completedVerifications,
+                    totalVerifications: manualResult.totalVerifications
+                },
+                details: {
+                    instruction: test.instruction,
+                    manualResult: manualResult
+                },
+                llmInteractionData: {
+                    request: {
+                        instruction: test.instruction,
+                        timestamp: new Date().toISOString(),
+                        requestId: `manual_${test.id}_${Date.now()}`,
+                        testContext: testData
+                    },
+                    response: {
+                        content: `Manual verification: ${manualResult.result}`,
+                        responseTime: Date.now() - startTime,
+                        timestamp: new Date().toISOString(),
+                        manualInput: true
+                    },
+                    analysis: {
+                        isManual: true,
+                        manualResult: manualResult.result,
+                        manualScore: manualResult.manualScore,
+                        verificationCompletion: manualResult.verificationCompletion
+                    }
                 }
             };
             
-            // Track start time
-            const startTime = Date.now();
+            return testResult;
             
-            // Listen for manual test completion
-            document.addEventListener('manualTestCompleted', handleManualCompletion);
+        } catch (error) {
+            console.error(`❌ Manual test failed for ${test.name}:`, error);
             
-            // Dispatch manual test required event
-            document.dispatchEvent(new CustomEvent('manualTestRequired', {
-                detail: testData
-            }));
-            
-            console.log(`📡 Manual test event dispatched for: ${test.name}`);
-        });
+            // Return error result
+            return {
+                llmResponse: `Manual test failed: ${error.message}`,
+                actualResult: {
+                    tool_name: 'manual_test_error',
+                    parameters: {},
+                    error: error.message
+                },
+                metrics: {
+                    responseTime: Date.now() - startTime,
+                    manualScore: 0,
+                    verificationCompletion: 0
+                },
+                details: {
+                    instruction: test.instruction,
+                    error: error.message
+                },
+                llmInteractionData: {
+                    request: {
+                        instruction: test.instruction,
+                        timestamp: new Date().toISOString(),
+                        requestId: `manual_error_${test.id}_${Date.now()}`,
+                        testContext: testData
+                    },
+                    response: {
+                        content: `Manual test error: ${error.message}`,
+                        responseTime: Date.now() - startTime,
+                        timestamp: new Date().toISOString(),
+                        manualInput: false,
+                        error: true
+                    },
+                    analysis: {
+                        isManual: true,
+                        isError: true,
+                        errorMessage: error.message
+                    }
+                }
+            };
+        }
     }
 
     /**
