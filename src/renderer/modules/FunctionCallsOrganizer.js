@@ -402,10 +402,14 @@ class FunctionCallsOrganizer {
             'load_reads_file', 'load_wig_tracks', 'load_operon_file'
         ];
         
+        // Extract tool names from the tools array (tools may be objects with .tool property)
+        const toolNames = tools.map(t => typeof t === 'string' ? t : t.tool || t.tool_name || t);
+        
         // Check if any of the tools are file loading tools
-        const hasFileLoadingTools = tools.some(toolName => fileLoadingTools.includes(toolName));
+        const hasFileLoadingTools = toolNames.some(toolName => fileLoadingTools.includes(toolName));
         if (hasFileLoadingTools) {
             console.log('🔄 File loading tools detected - forcing sequential execution');
+            console.log('Tool names detected:', toolNames);
             return false;
         }
         
