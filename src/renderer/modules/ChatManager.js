@@ -4957,7 +4957,10 @@ class ChatManager {
             'load genome', 'load file', 'open file', 'import file',
             'load annotation', 'load variant', 'load reads', 'load wig', 'load operon',
             // UI action patterns
-            'open new tab', 'create new tab', 'new tab'
+            'open new tab', 'create new tab', 'new tab',
+            // Track control patterns
+            'toggle track', 'hide track', 'show track', 'toggle off', 'toggle on',
+            'turn off', 'turn on', 'hide gc', 'show gc', 'toggle gc'
         ];
         
         const isSingleExecutionTask = singleExecutionPatterns.some(pattern => message.includes(pattern));
@@ -4969,7 +4972,9 @@ class ChatManager {
             'codon_usage_analysis', 'compute_gc', 'analyze_region', 'analyze_interpro_domains',
             'load_genome_file', 'load_annotation_file', 'load_variant_file', 
             'load_reads_file', 'load_wig_tracks', 'load_operon_file',
-            'open_new_tab', 'create_annotation', 'export_data'
+            'open_new_tab', 'create_annotation', 'export_data',
+            // Track control operations - complete actions that don't need follow-up
+            'toggle_track', 'toggle_annotation_track'
         ];
         
         const executedTaskCompletingTool = toolsToExecute.some(tool => 
@@ -4984,7 +4989,9 @@ class ChatManager {
             const fileAndUITools = [
                 'load_genome_file', 'load_annotation_file', 'load_variant_file',
                 'load_reads_file', 'load_wig_tracks', 'load_operon_file',
-                'open_new_tab', 'create_annotation', 'export_data'
+                'open_new_tab', 'create_annotation', 'export_data',
+                // Track control operations
+                'toggle_track', 'toggle_annotation_track'
             ];
             
             if (fileAndUITools.includes(result.tool)) {
