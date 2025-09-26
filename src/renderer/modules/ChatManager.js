@@ -1034,6 +1034,20 @@ class ChatManager {
                     fileType: 'reads'
                 };
             } else {
+                // Check if we're in benchmark mode and avoid showing file dialogs
+                if (this.isBenchmarkMode()) {
+                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating reads file dialog');
+                    return {
+                        success: true,
+                        message: 'File dialog simulation - would open reads file selection dialog in normal mode',
+                        action: 'dialog_simulated',
+                        fileType: 'reads',
+                        tool: 'load_reads_file',
+                        timestamp: new Date().toISOString(),
+                        benchmark_mode: true
+                    };
+                }
+                
                 // Show file dialog for reads files
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
@@ -1105,6 +1119,21 @@ class ChatManager {
                     count: pathsArray.length
                 };
             } else {
+                // Check if we're in benchmark mode and avoid showing file dialogs
+                if (this.isBenchmarkMode()) {
+                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating WIG tracks dialog');
+                    return {
+                        success: true,
+                        message: 'File dialog simulation - would open WIG tracks selection dialog in normal mode',
+                        action: 'dialog_simulated',
+                        fileType: 'wig',
+                        tool: 'load_wig_tracks',
+                        timestamp: new Date().toISOString(),
+                        benchmark_mode: true,
+                        multiple: multiple
+                    };
+                }
+                
                 // Show file dialog for WIG tracks
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
@@ -1169,6 +1198,20 @@ class ChatManager {
                     format: format
                 };
             } else {
+                // Check if we're in benchmark mode and avoid showing file dialogs
+                if (this.isBenchmarkMode()) {
+                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating operon file dialog');
+                    return {
+                        success: true,
+                        message: 'File dialog simulation - would open operon file selection dialog in normal mode',
+                        action: 'dialog_simulated',
+                        fileType: 'operon',
+                        tool: 'load_operon_file',
+                        timestamp: new Date().toISOString(),
+                        benchmark_mode: true
+                    };
+                }
+                
                 // Show file dialog for operon files
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');

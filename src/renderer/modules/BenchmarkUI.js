@@ -757,17 +757,30 @@ class BenchmarkUI {
     setupManualTestHandlers() {
         console.log('🔍 Setting up manual test handlers...');
         
-        // Listen for manual test events
-        document.addEventListener('manualTestRequired', (event) => {
+        // Remove existing event listeners to prevent duplicates
+        if (this.manualTestRequiredHandler) {
+            document.removeEventListener('manualTestRequired', this.manualTestRequiredHandler);
+        }
+        if (this.manualTestCompletedHandler) {
+            document.removeEventListener('manualTestCompleted', this.manualTestCompletedHandler);
+        }
+        
+        // Create bound handlers
+        this.manualTestRequiredHandler = (event) => {
             console.log('📝 Manual test required event received:', event.detail);
             this.handleManualTest(event.detail);
-        });
+        };
         
-        // Listen for manual test completion
-        document.addEventListener('manualTestCompleted', (event) => {
+        this.manualTestCompletedHandler = (event) => {
             console.log('✅ Manual test completed event received:', event.detail);
             this.handleManualTestCompletion(event.detail);
-        });
+        };
+        
+        // Listen for manual test events
+        document.addEventListener('manualTestRequired', this.manualTestRequiredHandler);
+        
+        // Listen for manual test completion
+        document.addEventListener('manualTestCompleted', this.manualTestCompletedHandler);
         
         console.log('✅ Manual test handlers setup complete');
     }

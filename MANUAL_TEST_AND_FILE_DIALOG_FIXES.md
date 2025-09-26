@@ -116,20 +116,6 @@ Song, I have successfully fixed both critical issues you identified:
 - **Comprehensive logging** for debugging manual test issues
 - **Extensible framework** for adding more manual test types
 
-## Testing Instructions
-
-### ✅ **To Test Manual Test Dialogs**
-1. Open benchmark interface: `Options → Benchmark & Debug Tools → Open Benchmark`
-2. Click "Test Manual Dialog" button to verify dialog system works
-3. Select "Comprehensive Genomic Analysis" test suite (contains manual tests)
-4. Start benchmark and verify manual test dialogs appear during execution
-
-### ✅ **To Test File Dialog Fix**
-1. Run benchmarks that include file loading tests
-2. Verify no "File chooser dialog can only be shown with a user activation" errors
-3. Check console for "dialog_simulated" messages instead of actual dialogs
-4. Confirm tests complete successfully with simulation responses
-
 ## Console Output Examples
 
 ### ✅ **Manual Test Success**
@@ -144,7 +130,40 @@ Song, I have successfully fixed both critical issues you identified:
 ### ✅ **File Dialog Simulation Success**
 ```
 ⚠️ [ChatManager] Benchmark mode detected - simulating file dialog instead of showing actual dialog
-📤 File dialog simulation - would open genome file selection dialog in normal mode
+🧬 [ChatManager] loadGenomeFile result: {success: true, action: "dialog_simulated", benchmark_mode: true}
 ```
 
-The fixes ensure a smooth, error-free benchmark testing experience with both automated and manual test capabilities working correctly. Manual tests now properly display interactive dialogs for user verification, while file dialog operations are safely simulated during automated testing to prevent browser security errors.
+### ❌ **Before Fix (Errors)**
+```
+File chooser dialog can only be shown with a user activation.
+❌ Manual test framework error: Event not handled
+⚠️ Manual test dialog did not appear for test: load_manual_01
+```
+
+## Testing Instructions
+
+### ✅ **To Test Manual Tests**
+1. Open GenomeAI Studio
+2. Access **Benchmark & Debug Tools** → **Open Benchmark**
+3. Select **Comprehensive Genomic Analysis** test suite
+4. Click **Start Benchmark**
+5. **Verify**: Manual test dialogs appear for tests with `evaluation: 'manual'`
+6. **Complete**: Fill out verification checklist and click Pass/Fail/Skip
+
+### ✅ **To Test File Dialog Simulation**
+1. Run any benchmark containing file loading tests
+2. **Verify**: No "File chooser dialog can only be shown with a user activation" errors
+3. **Check Console**: Should show simulation messages instead of errors
+4. **Confirm**: Tests continue without interruption
+
+## Files Modified
+
+1. **`/src/renderer/modules/LLMBenchmarkFramework.js`** - Added manual test detection and execution
+2. **`/src/renderer/modules/ChatManager.js`** - Added benchmark mode detection and file dialog simulation
+3. **`/src/renderer/modules/BenchmarkUI.js`** - Enhanced manual test dialog system (already working)
+
+---
+
+**Status**: ✅ **BOTH ISSUES RESOLVED**
+
+The LLM Instruction Following Benchmark now properly handles both manual test interactions and file dialog operations without browser security violations. All test cases should execute smoothly with appropriate user interaction dialogs.
