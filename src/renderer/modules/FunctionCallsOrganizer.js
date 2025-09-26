@@ -47,6 +47,7 @@ class FunctionCallsOrganizer {
                     'get_nearby_features',
                     'get_operons',
                     'get_file_info',
+                    'get_genome_info',  // CRITICAL FIX: Added missing tool
                     'search_pattern',
                     'search_motif',
                     'search_sequence_motif',
@@ -271,9 +272,17 @@ class FunctionCallsOrganizer {
         // 分析用户消息中的关键词
         const messageKeywords = this.extractKeywords(userMessage.toLowerCase());
         
+        console.log('📊 [FunctionCallsOrganizer] analyzeRequestStrategy:', {
+            userMessage,
+            requestedTools,
+            messageKeywords
+        });
+        
         // 分析请求的工具
         for (const tool of requestedTools) {
             const category = this.functionToCategory.get(tool);
+            console.log(`🔍 [FunctionCallsOrganizer] Tool: ${tool}, Category: ${category}`);
+            
             if (category) {
                 strategy.categories.add(category);
                 
@@ -285,6 +294,8 @@ class FunctionCallsOrganizer {
                     tool: tool,
                     category: category
                 });
+            } else {
+                console.warn(`⚠️ [FunctionCallsOrganizer] Tool '${tool}' not found in category mapping`);
             }
         }
         

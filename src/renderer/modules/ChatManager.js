@@ -4270,6 +4270,33 @@ class ChatManager {
                                 content: `Tool execution errors: ${errorMessages.join('; ')}`
                             });
                             console.log(`${failedResults.length} tool(s) failed:`, failedResults);
+                            
+                            // CRITICAL FIX: If ALL tools failed, terminate to prevent infinite retry
+                            if (successfulResults.length === 0) {
+                                console.log('=== ALL TOOLS FAILED - TERMINATING TO PREVENT INFINITE RETRY ===');
+                                console.log('Failed tools:', failedResults.map(r => r.tool));
+                                console.log('Errors:', failedResults.map(r => r.error));
+                                console.log('This prevents infinite retry loops when tools consistently fail');
+                                console.log('================================================================');
+                                
+                                taskCompleted = true;
+                                
+                                // Generate more informative error response based on the specific tool
+                                if (failedResults.length === 1 && failedResults[0].tool === 'get_genome_info') {
+                                    finalResponse = `ℹ️ **Unable to retrieve genome information**\n\n` +
+                                        `The genome information tool is currently unavailable. This might be because:\n` +
+                                        `- No genome file is currently loaded\n` +
+                                        `- The genome browser is not initialized\n` +
+                                        `- The requested data is not available\n\n` +
+                                        `Please try loading a genome file first or check if the genome browser is properly initialized.`;
+                                } else {
+                                    finalResponse = `❌ **Tool Execution Failed**\n\n` +
+                                        `The following tool(s) could not be executed:\n` +
+                                        failedResults.map(r => `- **${r.tool}**: ${r.error || 'Unknown error'}`).join('\n') +
+                                        `\n\nPlease check your system configuration or try a different approach.`;
+                                }
+                                break;
+                            }
                         }
                     } catch (error) {
                         console.error('=== TOOL EXECUTION EXCEPTION ===');
@@ -4950,6 +4977,8 @@ class ChatManager {
             'gene information', 'gene details',
             // Navigation patterns
             'jump to gene', 'go to gene', 'navigate to gene', 'find gene',
+            'navigate to position', 'go to position', 'move to position', 'navigate to',
+            'jump to position', 'show position', 'go to coordinates',
             // Analysis patterns  
             'codon usage analysis', 'codon analysis', 'analyze codon', 'codon frequency', 'codon bias',
             'analyze domains', 'domain analysis', 'interpro analysis', 'protein domains',
@@ -4960,7 +4989,10 @@ class ChatManager {
             'open new tab', 'create new tab', 'new tab',
             // Track control patterns
             'toggle track', 'hide track', 'show track', 'toggle off', 'toggle on',
-            'turn off', 'turn on', 'hide gc', 'show gc', 'toggle gc'
+            'turn off', 'turn on', 'hide gc', 'show gc', 'toggle gc',
+            // State information patterns
+            'get genome info', 'genome information', 'show genome info', 'genome details',
+            'get current state', 'current state', 'browser state', 'show state'
         ];
         
         const isSingleExecutionTask = singleExecutionPatterns.some(pattern => message.includes(pattern));
@@ -4974,7 +5006,11 @@ class ChatManager {
             'load_reads_file', 'load_wig_tracks', 'load_operon_file',
             'open_new_tab', 'create_annotation', 'export_data',
             // Track control operations - complete actions that don't need follow-up
-            'toggle_track', 'toggle_annotation_track'
+            'toggle_track', 'toggle_annotation_track',
+            // Navigation operations - complete actions that don't need follow-up
+            'navigate_to_position',
+            // State information operations - complete actions that don't need follow-up
+            'get_genome_info', 'get_current_state', 'get_file_info'
         ];
         
         const executedTaskCompletingTool = toolsToExecute.some(tool => 
@@ -4991,7 +5027,11 @@ class ChatManager {
                 'load_reads_file', 'load_wig_tracks', 'load_operon_file',
                 'open_new_tab', 'create_annotation', 'export_data',
                 // Track control operations
-                'toggle_track', 'toggle_annotation_track'
+                'toggle_track', 'toggle_annotation_track',
+                // Navigation operations
+                'navigate_to_position',
+                // State information operations
+                'get_genome_info', 'get_current_state', 'get_file_info'
             ];
             
             if (fileAndUITools.includes(result.tool)) {
@@ -5056,9 +5096,23 @@ class ChatManager {
                 }
             },
             
-            // Navigation operations - position-based movements that can be repeated
+            // Navigation operations - prevent re-navigation to same position
             position_navigation: {
-                tools: ['navigate_to_position', 'scroll_left', 'scroll_right'],
+                tools: ['navigate_to_position'],
+                policy: 'parameter_based',
+                condition: (tool, history, results) => {
+                    const existingExecution = this.findExistingExecution(toolKey, history);
+                    if (existingExecution && existingExecution.success) {
+                        console.log(`🚫 [Policy] Navigation already executed with same parameters: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
+            },
+            
+            // Scroll operations - can be repeated (different from precise navigation)
+            scroll_operations: {
+                tools: ['scroll_left', 'scroll_right'],
                 policy: 'always_allowed',
                 condition: () => true
             },
@@ -5155,12 +5209,19 @@ class ChatManager {
                 }
             },
             
-            // State operations - always allowed (read-only information)
+            // State operations - parameter-based to prevent repetition
             state: {
                 tools: ['get_current_state', 'get_genome_info', 'get_file_info', 'get_sequence',
                        'get_current_region', 'get_visible_tracks'],
-                policy: 'always_allowed', 
-                condition: () => true
+                policy: 'parameter_based',
+                condition: (tool, history, results) => {
+                    const existingExecution = this.findExistingExecution(toolKey, history);
+                    if (existingExecution && existingExecution.success) {
+                        console.log(`🚫 [Policy] State operation already executed with same parameters: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
             },
             
             // External API operations - prevent rapid re-execution
