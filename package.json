@@ -130,28 +130,30 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
-      "title": "${productName} ${version}",
+      "title": "Install ${productName} ${version}",
       "icon": "build/icon.icns",
+      "iconSize": 80,
       "window": {
-        "width": 540,
-        "height": 380
+        "width": 660,
+        "height": 420
       },
       "contents": [
         {
-          "x": 140,
-          "y": 180,
+          "x": 180,
+          "y": 170,
           "type": "file"
         },
         {
-          "x": 400,
-          "y": 180,
+          "x": 480,
+          "y": 170,
           "type": "link",
           "path": "/Applications"
         }
       ],
-      "background": null,
+      "background": "build/dmg-background.png",
       "format": "UDZO",
-      "writeUpdateInfo": false
+      "writeUpdateInfo": false,
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "win": {
       "target": [
