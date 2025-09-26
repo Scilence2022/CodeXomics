@@ -667,15 +667,14 @@ class ChatManager {
             console.log('🧬 [ChatManager] Parsed parameters:', { filePath, showFileDialog, fileType });
             console.log('🧬 [ChatManager] App structure check:', {
                 hasApp: !!this.app,
-                hasGenomeBrowser: !!this.app?.genomeBrowser,
-                hasFileManager: !!this.app?.genomeBrowser?.fileManager
+                hasFileManager: !!this.app?.fileManager
             });
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
                 console.log('🧬 [ChatManager] Direct file loading mode');
                 
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     const error = 'FileManager not available - app structure missing';
                     console.error('❌ [ChatManager]', error);
                     throw new Error(error);
@@ -702,7 +701,7 @@ class ChatManager {
                 console.log('🧬 [ChatManager] Calling fileManager.loadFile...');
                 
                 // Load file directly
-                await this.app.genomeBrowser.fileManager.loadFile(filePath);
+                await this.app.fileManager.loadFile(filePath);
                 
                 console.log('✅ [ChatManager] fileManager.loadFile completed successfully');
                 
@@ -722,11 +721,11 @@ class ChatManager {
                 console.log('🧬 [ChatManager] File dialog mode');
                 
                 // Show file dialog for genome files
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
-                this.app.genomeBrowser.fileManager.openSpecificFileType('genome');
+                this.app.fileManager.openSpecificFileType('genome');
                 
                 return {
                     success: true,
@@ -771,7 +770,7 @@ class ChatManager {
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
@@ -784,7 +783,7 @@ class ChatManager {
                 }
                 
                 // Load file directly
-                await this.app.genomeBrowser.fileManager.loadFile(filePath);
+                await this.app.fileManager.loadFile(filePath);
                 
                 return {
                     success: true,
@@ -794,11 +793,11 @@ class ChatManager {
                 };
             } else {
                 // Show file dialog for annotation files
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
-                this.app.genomeBrowser.fileManager.openSpecificFileType('annotation');
+                this.app.fileManager.openSpecificFileType('annotation');
                 
                 return {
                     success: true,
@@ -832,7 +831,7 @@ class ChatManager {
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
@@ -845,7 +844,7 @@ class ChatManager {
                 }
                 
                 // Load file directly
-                await this.app.genomeBrowser.fileManager.loadFile(filePath);
+                await this.app.fileManager.loadFile(filePath);
                 
                 return {
                     success: true,
@@ -855,11 +854,11 @@ class ChatManager {
                 };
             } else {
                 // Show file dialog for variant files
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
-                this.app.genomeBrowser.fileManager.openSpecificFileType('variant');
+                this.app.fileManager.openSpecificFileType('variant');
                 
                 return {
                     success: true,
@@ -893,7 +892,7 @@ class ChatManager {
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
@@ -906,7 +905,7 @@ class ChatManager {
                 }
                 
                 // Load file directly
-                await this.app.genomeBrowser.fileManager.loadFile(filePath);
+                await this.app.fileManager.loadFile(filePath);
                 
                 return {
                     success: true,
@@ -916,11 +915,11 @@ class ChatManager {
                 };
             } else {
                 // Show file dialog for reads files
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
-                this.app.genomeBrowser.fileManager.openSpecificFileType('reads');
+                this.app.fileManager.openSpecificFileType('reads');
                 
                 return {
                     success: true,
@@ -955,7 +954,7 @@ class ChatManager {
             
             // If direct file path(s) provided and showFileDialog is false, load directly
             if (filePaths && !showFileDialog) {
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
@@ -973,9 +972,9 @@ class ChatManager {
                 
                 // Load multiple WIG files
                 if (pathsArray.length > 1) {
-                    await this.app.genomeBrowser.fileManager.loadMultipleWIGFiles(pathsArray);
+                    await this.app.fileManager.loadMultipleWIGFiles(pathsArray);
                 } else {
-                    await this.app.genomeBrowser.fileManager.loadFile(pathsArray[0]);
+                    await this.app.fileManager.loadFile(pathsArray[0]);
                 }
                 
                 return {
@@ -987,11 +986,11 @@ class ChatManager {
                 };
             } else {
                 // Show file dialog for WIG tracks
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
-                this.app.genomeBrowser.fileManager.openSpecificFileType('tracks');
+                this.app.fileManager.openSpecificFileType('tracks');
                 
                 return {
                     success: true,
@@ -1027,7 +1026,7 @@ class ChatManager {
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
@@ -1040,7 +1039,7 @@ class ChatManager {
                 }
                 
                 // Load operon file directly
-                await this.app.genomeBrowser.fileManager.loadOperonFile(filePath);
+                await this.app.fileManager.loadOperonFile(filePath);
                 
                 return {
                     success: true,
@@ -1051,11 +1050,11 @@ class ChatManager {
                 };
             } else {
                 // Show file dialog for operon files
-                if (!this.app?.genomeBrowser?.fileManager) {
+                if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
                 
-                this.app.genomeBrowser.fileManager.openSpecificFileType('operon');
+                this.app.fileManager.openSpecificFileType('operon');
                 
                 return {
                     success: true,
