@@ -7,7 +7,7 @@ const VERSION_INFO = require('./version');
 
 // Application constants
 const APP_NAME = VERSION_INFO.appName;
-const PROJECT_DIRECTORY_NAME = 'Genome AI Studio Projects';
+const PROJECT_DIRECTORY_NAME = 'CodeXomics Projects';
 
 let mainWindow;
 
@@ -23,7 +23,7 @@ let currentActiveWindow = null;
 // 为 Circos Genome Plotter 创建专门的菜单系统
 function createCircosPlotterMenu(circosWindow) {
   const template = [
-    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
+    // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
     ...(process.platform === 'darwin' ? [{
       label: 'Genome AI Studio',
       submenu: [
@@ -572,9 +572,9 @@ function createCircosPlotterMenu(circosWindow) {
 
 function createToolWindowMenu(toolWindow, toolName) {
   const template = [
-    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
+    // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
     ...(process.platform === 'darwin' ? [{
-      label: 'Genome AI Studio',
+      label: 'CodeXomics',
       submenu: [
         {
           label: `About ${toolName}`,
@@ -892,7 +892,7 @@ function createToolWindowMenu(toolWindow, toolName) {
         {
           label: 'Report Issue',
           click: () => {
-            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/issues');
+            require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/issues');
           }
         },
         {
@@ -1315,7 +1315,7 @@ function createEvo2WindowMenu(evo2Window) {
         ]),
         { type: 'separator' },
         {
-          label: 'Open Main Genome AI Studio',
+          label: 'Open Main CodeXomics',
           click: () => {
             // Focus main window
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1441,7 +1441,7 @@ function createWindow() {
 function getCurrentMainWindow() {
   // First try to use the tracked current active window
   if (currentActiveWindow && !currentActiveWindow.isDestroyed() && 
-      currentActiveWindow.getTitle().includes('Genome AI Studio') && 
+      currentActiveWindow.getTitle().includes('CodeXomics') && 
       !currentActiveWindow.getTitle().includes('Project Manager')) {
     return currentActiveWindow;
   }
@@ -1454,7 +1454,7 @@ function getCurrentMainWindow() {
   // Last resort: find any main window
   const mainWindows = BrowserWindow.getAllWindows().filter(win => 
     !win.isDestroyed() && 
-    win.getTitle().includes('Genome AI Studio') && 
+    win.getTitle().includes('CodeXomics') && 
     !win.getTitle().includes('Project Manager')
   );
   
@@ -1474,12 +1474,12 @@ function sendToCurrentMainWindow(channel, ...args) {
 // Create menu
 function createMenu() {
   const template = [
-    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
+    // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
     ...(process.platform === 'darwin' ? [{
-      label: 'Genome AI Studio',
+      label: 'CodeXomics',
       submenu: [
         {
-          label: 'About Genome AI Studio',
+          label: 'About CodeXomics',
           click: () => {
             sendToCurrentMainWindow('show-about');
           }
@@ -1494,7 +1494,7 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Hide Genome AI Studio',
+          label: 'Hide CodeXomics',
           accelerator: 'Cmd+H',
           role: 'hide'
         },
@@ -1509,7 +1509,7 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Quit Genome AI Studio',
+          label: 'Quit CodeXomics',
           accelerator: 'Cmd+Q',
           click: () => {
             app.quit();
@@ -1580,7 +1580,7 @@ function createMenu() {
               const result = await dialog.showOpenDialog(null, {
                 properties: ['openFile'],
                 filters: [
-                  { name: 'Genome AI Studio Project Files', extensions: ['GAI', 'prj.GAI'] },
+                  { name: 'CodeXomics Project Files', extensions: ['GAI', 'prj.GAI'] },
                   { name: 'XML Files', extensions: ['xml'] },
                   { name: 'Project Files', extensions: ['genomeproj', 'json'] },
                   { name: 'All Files', extensions: ['*'] }
@@ -2219,18 +2219,18 @@ function createMenu() {
         {
           label: 'Documentation',
           click: () => {
-            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/docs');
+            require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/docs');
           }
         },
         {
           label: 'Report Issue',
           click: () => {
-            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/issues');
+            require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/issues');
           }
         }
       ]
     },
-    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
+    // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
     {
       label: APP_NAME,
       submenu: [
@@ -2675,7 +2675,7 @@ ipcMain.on('open-smart-execution-demo', (event) => {
         contextIsolation: true,
         enableRemoteModule: false
       },
-      title: 'Smart Execution Demo - Genome AI Studio',
+      title: 'Smart Execution Demo - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       show: false // Don't show until ready
     });
@@ -2726,7 +2726,7 @@ ipcMain.on('open-resource-manager', (event) => {
         enableRemoteModule: false,
         preload: path.join(__dirname, 'preload.js')
       },
-      title: 'Resource Manager - Genome AI Studio',
+      title: 'Resource Manager - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       resizable: true,
       minimizable: true,
@@ -2942,7 +2942,7 @@ function createCircosWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Circos Genome Plotter - Genome AI Studio',
+      title: 'Circos Genome Plotter - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       show: false
     });
@@ -3247,7 +3247,7 @@ function createEvolutionWindow() {
               type: 'info',
               title: 'About Conversation Evolution System',
               message: 'Conversation Evolution System v1.0',
-              detail: 'AI-powered conversation analysis and plugin generation system for Genome AI Studio'
+              detail: 'AI-powered conversation analysis and plugin generation system for CodeXomics'
             });
           }
         }
@@ -4450,7 +4450,7 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
         {
           label: 'Report Issue',
           click: () => {
-            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/issues');
+            require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/issues');
           }
         },
         {
@@ -5282,7 +5282,7 @@ function createProjectManagerWindow() {
         enableRemoteModule: false,
         preload: path.join(__dirname, 'preload.js')
       },
-      title: 'Project Manager - Genome AI Studio',
+      title: 'Project Manager - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       resizable: true,
       minimizable: true,
@@ -5306,7 +5306,7 @@ function createProjectManagerWindow() {
     projectManagerWindow.on('blur', () => {
       // Find any main window (including newly created ones)
       const mainWindows = BrowserWindow.getAllWindows().filter(win => 
-        win.getTitle().includes('Genome AI Studio') && !win.getTitle().includes('Project Manager')
+        win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
       );
       
       if (mainWindows.length > 0) {
@@ -5347,7 +5347,7 @@ function createProjectManagerWindow() {
     projectManagerWindow.on('closed', () => {
       console.log('Project Manager window closed - reverting to main menu');
       const mainWindow = BrowserWindow.getAllWindows().find(win => 
-        win.getTitle().includes('Genome AI Studio') && !win.getTitle().includes('Project Manager')
+        win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
       );
       if (mainWindow && !mainWindow.isDestroyed()) {
         createMenu(); // Restore main window menu
@@ -5384,7 +5384,7 @@ function createProjectManagerMenu(projectManagerWindow) {
             const result = await dialog.showOpenDialog(projectManagerWindow, {
               properties: ['openFile'],
               filters: [
-                { name: 'Genome AI Studio Project Files', extensions: ['GAI', 'prj.GAI'] },
+                { name: 'CodeXomics Project Files', extensions: ['GAI', 'prj.GAI'] },
                 { name: 'XML Files', extensions: ['xml'] },
                 { name: 'Project Files', extensions: ['genomeproj', 'json'] },
                 { name: 'All Files', extensions: ['*'] }
@@ -6165,7 +6165,7 @@ ipcMain.handle('selectProjectFile', async () => {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openFile'],
       filters: [
-        { name: 'Genome AI Studio Project Files', extensions: ['GAI', 'prj.GAI'] },
+        { name: 'CodeXomics Project Files', extensions: ['GAI', 'prj.GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj', 'json'] },
         { name: 'All Files', extensions: ['*'] }
@@ -6986,7 +6986,7 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
 ipcMain.handle('createTempFile', async (event, fileName, content) => {
   try {
     const tempDir = app.getPath('temp');
-    const tempFilePath = path.join(tempDir, 'genomeaistudio_temp_' + Date.now() + '_' + fileName);
+    const tempFilePath = path.join(tempDir, 'codexomics_temp_' + Date.now() + '_' + fileName);
     
     fs.writeFileSync(tempFilePath, content, 'utf8');
     
@@ -8225,7 +8225,7 @@ function getMainWindows() {
   const allWindows = BrowserWindow.getAllWindows();
   
   const mainWindow = allWindows.find(win => 
-    win.getTitle().includes('Genome AI Studio') && 
+    win.getTitle().includes('CodeXomics') && 
     !win.getTitle().includes('Project Manager') &&
     !win.isDestroyed()
   );
@@ -8597,9 +8597,9 @@ ipcMain.handle('getProjectDirectoryName', async () => {
     
     // Check which project directory exists
     const possibleNames = [
+      'CodeXomics Projects',
       'Genome AI Studio Projects',
       'GenomeExplorer Projects',
-      'GenomeAI Studio Projects',
       'Genome Explorer Projects'
     ];
     

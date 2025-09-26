@@ -43,7 +43,7 @@ const createSvgBackground = () => {
   
   <!-- App Name with glow -->
   <text x="330" y="75" text-anchor="middle" fill="white" font-family="SF Pro Display, -apple-system, sans-serif" font-size="36" font-weight="200" opacity="0.98" filter="url(#glow)">
-    Genome AI Studio
+    CodeXomics
   </text>
   
   <!-- Subtitle -->

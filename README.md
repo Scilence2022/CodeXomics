@@ -1,6 +1,6 @@
-# Genome AI Studio v0.3 beta
+# CodeXomics v0.3 beta
 
-A modern, cross-platform genome analysis studio built with Electron, featuring an advanced plugin system, AI-powered natural language interaction, and comprehensive bioinformatics tools for exploring genomic data.
+A modern, cross-platform bioinformatics analysis platform built with Electron, featuring an advanced plugin system, AI-powered natural language interaction, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
 
 ## ✨ Key Features
 
@@ -57,17 +57,17 @@ A modern, cross-platform genome analysis studio built with Electron, featuring a
 ## 🚀 Installation
 
 ### **Download Pre-built Releases**
-Download the latest version for your platform from [GitHub Releases](https://github.com/Scilence2022/GenomeAIStudio/releases):
+Download the latest version for your platform from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases):
 
-- **macOS**: `Genome-AI-Studio-0.3.0-beta.dmg`
-- **Windows**: `Genome-AI-Studio-Setup-0.3.0-beta.exe`
-- **Linux**: `Genome-AI-Studio-0.3.0-beta.AppImage`
+- **macOS**: `CodeXomics-0.3.0-beta.dmg`
+- **Windows**: `CodeXomics-Setup-0.3.0-beta.exe`
+- **Linux**: `CodeXomics-0.3.0-beta.AppImage`
 
 ### **Build from Source**
 ```bash
 # Clone the repository
-git clone https://github.com/Scilence2022/GenomeAIStudio.git
-cd GenomeAIStudio
+git clone https://github.com/Scilence2022/CodeXomics.git
+cd CodeXomics
 
 # Install dependencies
 npm install
@@ -278,7 +278,7 @@ Enhanced Queries with Intelligent Tool Selection:
    ```
 
 ### **Application Settings**
-Configuration files stored in: `~/.genome-ai-studio/`
+Configuration files stored in: `~/.codexomics/`
 - `config.json` - Main application settings
 - `llm-config.json` - AI provider configurations
 - `ui-preferences.json` - Interface customizations
@@ -535,5 +535,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Bioinformatics Community** - Inspiration and feedback
 
 ---
-**Genome AI Studio** - Intelligent genomic analysis with advanced plugin system for the modern researcher 
+**CodeXomics** - Intelligent bioinformatics analysis with advanced plugin system for the modern researcher 
 

@@ -1,8 +1,8 @@
-# Genome AI Studio: A Distributed AI-Powered Platform for Deep Gene Research and the Future of Decentralized Genomic Databases
+# CodeXomics: A Distributed AI-Powered Platform for Deep Gene Research and the Future of Decentralized Genomic Databases
 
 ## Abstract
 
-The exponential growth of genomic data presents unprecedented challenges for traditional centralized database architectures. Here, we present Genome AI Studio, a next-generation, AI-powered platform that revolutionizes genomic analysis through its modular architecture, advanced plugin system, and distributed computing capabilities. Through a comprehensive case study with Deep Gene Research, we demonstrate the platform's ability to integrate 150+ analysis functions across 11 functional categories, enabling real-time collaborative genomic research. Genome AI Studio's multi-layered function calling architecture, supporting four distinct subsystems (Local/Built-in, MCP Server, Plugin System V2, and Bioinformatics Tools), provides unprecedented scalability and extensibility. Furthermore, we propose a paradigm shift from centralized genomic databases (such as EcoCyc) to distributed architectures enabled by Genome AI Studio, highlighting advantages including enhanced scalability, improved data security, real-time collaboration, and cost efficiency. Our analysis reveals that distributed genomic databases can achieve linear scaling with network size while maintaining data consistency through AI-powered quality control. This work establishes Genome AI Studio as a transformative platform for genomic research and provides a roadmap for implementing the next generation of decentralized genomic databases.
+The exponential growth of genomic data presents unprecedented challenges for traditional centralized database architectures. Here, we present CodeXomics, a next-generation, AI-powered platform that revolutionizes genomic analysis through its modular architecture, advanced plugin system, and distributed computing capabilities. Through a comprehensive case study with Deep Gene Research, we demonstrate the platform's ability to integrate 150+ analysis functions across 11 functional categories, enabling real-time collaborative genomic research. CodeXomics's multi-layered function calling architecture, supporting four distinct subsystems (Local/Built-in, MCP Server, Plugin System V2, and Bioinformatics Tools), provides unprecedented scalability and extensibility. Furthermore, we propose a paradigm shift from centralized genomic databases (such as EcoCyc) to distributed architectures enabled by CodeXomics, highlighting advantages including enhanced scalability, improved data security, real-time collaboration, and cost efficiency. Our analysis reveals that distributed genomic databases can achieve linear scaling with network size while maintaining data consistency through AI-powered quality control. This work establishes CodeXomics as a transformative platform for genomic research and provides a roadmap for implementing the next generation of decentralized genomic databases.
 
 **Keywords:** genomic databases, artificial intelligence, distributed computing, bioinformatics, genome analysis, data integration
 
@@ -14,9 +14,9 @@ The field of genomics is experiencing an unprecedented data explosion, with curr
 
 The centralized nature of these databases creates several bottlenecks: (1) data silos that prevent seamless integration across different research domains, (2) limited scalability as data volumes continue to grow exponentially, (3) delayed updates and synchronization across global research communities, and (4) restricted access control that hinders collaborative research efforts. These limitations become particularly pronounced in deep gene research, where comprehensive analysis requires integration of diverse data types, real-time collaboration, and advanced computational capabilities.
 
-### 1.2 Genome AI Studio: A Next-Generation Platform
+### 1.2 CodeXomics: A Next-Generation Platform
 
-Genome AI Studio represents a paradigm shift in genomic analysis platforms, addressing the limitations of traditional approaches through its innovative architecture and AI-powered capabilities. Built on Electron framework for cross-platform compatibility, the platform features a sophisticated multi-layered function calling architecture that integrates four distinct subsystems:
+CodeXomics represents a paradigm shift in genomic analysis platforms, addressing the limitations of traditional approaches through its innovative architecture and AI-powered capabilities. Built on Electron framework for cross-platform compatibility, the platform features a sophisticated multi-layered function calling architecture that integrates four distinct subsystems:
 
 **Modular Architecture Components:**
 - **Local/Built-in Functions**: 80+ core genomics functions for direct JavaScript execution
@@ -37,11 +37,11 @@ The platform's AI integration layer supports multiple large language model provi
 
 Deep Gene Research represents an ideal case study for demonstrating Genome AI Studio's capabilities in real-world genomic research scenarios. This research domain requires sophisticated analysis tools that can integrate diverse data types, perform complex computational analyses, and facilitate collaborative research efforts. The integration of Genome AI Studio with Deep Gene Research provides a comprehensive validation of the platform's capabilities while highlighting the potential for distributed genomic database architectures.
 
-## 2. Genome AI Studio: Technical Architecture and Capabilities
+## 2. CodeXomics: Technical Architecture and Capabilities
 
 ### 2.1 Core System Architecture
 
-Genome AI Studio employs a sophisticated multi-layered architecture designed for scalability, extensibility, and performance. The core system consists of four primary components that work in concert to provide comprehensive genomic analysis capabilities.
+CodeXomics employs a sophisticated multi-layered architecture designed for scalability, extensibility, and performance. The core system consists of four primary components that work in concert to provide comprehensive genomic analysis capabilities.
 
 **Multi-layered Function Calling Architecture:**
 The platform's function calling system represents a significant advancement in bioinformatics tool integration, providing 150+ functions across 11 functional categories. This architecture enables seamless integration of diverse analysis tools while maintaining performance and security.
@@ -130,7 +130,7 @@ The platform's visualization capabilities represent a significant advancement in
 - **Multi-view Support**: Grid, List, and Details views for comprehensive data exploration
 - **State Persistence**: Automatic saving and restoration of track configurations across sessions
 
-## 3. Case Study: Deep Gene Research with Genome AI Studio
+## 3. Case Study: Deep Gene Research with CodeXomics
 
 ### 3.1 Methodology
 
@@ -203,7 +203,7 @@ Centralized systems often employ rigid access control mechanisms that limit coll
 **Cost Structure and Maintenance:**
 The maintenance and scaling of centralized databases require significant financial resources, creating barriers for smaller research institutions and limiting global access to genomic data.
 
-### 4.2 Distributed Database Architecture with Genome AI Studio
+### 4.2 Distributed Database Architecture with CodeXomics
 
 **Node-based Distribution:**
 The proposed distributed genomic database architecture leverages Genome AI Studio's modular architecture to create a network of interconnected nodes, where each Genome AI Studio instance functions as a database node. This approach enables:

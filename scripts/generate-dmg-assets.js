@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Generate DMG Assets Script for Genome AI Studio
+ * Generate DMG Assets Script for CodeXomics
  * 
  * This script generates the necessary assets for a beautiful DMG installer:
  * - Converts PNG icon to ICNS format
@@ -16,7 +16,7 @@ const projectRoot = path.dirname(__dirname);
 const buildDir = path.join(projectRoot, 'build');
 const assetsDir = path.join(projectRoot, 'assets');
 
-console.log('🎨 Generating DMG Assets for Genome AI Studio...');
+console.log('🎨 Generating DMG Assets for CodeXomics...');
 
 // Ensure build directory exists
 if (!fs.existsSync(buildDir)) {
@@ -104,7 +104,7 @@ const dmgBackgroundHtml = `
 </head>
 <body>
     <div class="logo-area">
-        <h1 class="app-name">Genome AI Studio</h1>
+        <h1 class="app-name">CodeXomics</h1>
         <p class="version">AI-Powered Genome Analysis</p>
     </div>
     

@@ -49,7 +49,7 @@ class StandardClaudeMCPServer {
         
         // Create MCP Server with proper server info
         this.mcpServer = new Server({
-            name: 'genome-ai-studio',
+            name: 'codexomics',
             version: '1.0.0',
         }, {
             capabilities: {
@@ -99,7 +99,7 @@ class StandardClaudeMCPServer {
                     logging: {}
                 },
                 serverInfo: {
-                    name: 'genome-ai-studio',
+                    name: 'codexomics',
                     version: '1.0.0',
                     description: `Genome AI Studio MCP Server with ${tools.length} genomics tools`
                 }
@@ -238,7 +238,7 @@ class StandardClaudeMCPServer {
         this.app.get('/mcp', (req, res) => {
             const tools = this.toolsIntegrator.getAvailableTools();
             res.json({
-                name: 'genome-ai-studio',
+                name: 'codexomics',
                 version: '1.0.0',
                 description: 'Genome AI Studio MCP Server',
                 protocolVersion: this.protocolVersion,
@@ -379,7 +379,7 @@ class StandardClaudeMCPServer {
                             logging: {}
                         },
                         serverInfo: {
-                            name: 'genome-ai-studio',
+                            name: 'codexomics',
                             version: '1.0.0'
                         }
                     },
@@ -554,7 +554,7 @@ class StandardClaudeMCPServer {
                                 logging: {}
                             },
                             serverInfo: {
-                                name: 'genome-ai-studio',
+                                name: 'codexomics',
                                 version: '1.0.0',
                                 description: `Genome AI Studio MCP Server with ${tools.length} genomics tools`
                             }

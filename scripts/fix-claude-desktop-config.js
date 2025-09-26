@@ -34,7 +34,7 @@ function createCleanConfig() {
     
     return {
         mcpServers: {
-            "genome-ai-studio": {
+            "codexomics": {
                 command: "node",
                 args: [serverPath],
                 env: {}
@@ -109,7 +109,7 @@ function fixClaudeConfig() {
         console.log('\n💡 Next Steps:');
         console.log('1. Restart Claude Desktop completely');
         console.log('2. Start the MCP server: node start-claude-mcp-server.js');
-        console.log('3. Check Claude Desktop for the genome-ai-studio server');
+        console.log('3. Check Claude Desktop for the codexomics server');
         
         return true;
         

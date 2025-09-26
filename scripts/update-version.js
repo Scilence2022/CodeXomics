@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Version Update Script for Genome AI Studio
+ * Version Update Script for CodeXomics
  * 
  * This script ensures that the version in package.json stays in sync
  * with the unified version.js file.

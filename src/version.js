@@ -1,10 +1,10 @@
 /**
- * Unified Version Management for Genome AI Studio
+ * Unified Version Management for CodeXomics
  * 
  * This file centralizes all version-related information to ensure consistency
  * across the application. All other files should import from this file.
  * 
- * @author Genome AI Studio Team
+ * @author CodeXomics Team
  * @version 0.3.4-beta
  */
 
@@ -23,7 +23,7 @@ const VERSION_DISPLAY = `v${VERSION_MAJOR}.${VERSION_MINOR} ${VERSION_PRERELEASE
 const VERSION_DISPLAY_FULL = `v${VERSION_FULL}`;
 
 // Application information
-const APP_NAME = 'Genome AI Studio';
+const APP_NAME = 'CodeXomics';
 const APP_TITLE = `${APP_NAME} ${VERSION_DISPLAY}`;
 const APP_TITLE_FULL = `${APP_NAME} ${VERSION_DISPLAY_FULL}`;
 

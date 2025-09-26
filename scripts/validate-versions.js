@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Version Validation Script for Genome AI Studio
+ * Version Validation Script for CodeXomics
  * 
  * This script validates that all version references across the codebase
  * are consistent and using the unified version system.
@@ -97,10 +97,10 @@ function checkHardcodedVersions() {
             'v0\\.[0-9]\\.[0-9]',
             'Version [0-9]\\.[0-9]\\.[0-9]',
             'version.*[0-9]\\.[0-9]\\.[0-9].*beta',
-            'Genome AI Studio v[0-9]\\.[0-9]'
+            'CodeXomics v[0-9]\\.[0-9]'
         ];
         
-        const command = `grep -r "${searchPatterns.join('\\|')}" --include="*.js" --include="*.html" --include="*.md" src/ README.md | grep -v "VERSION_INFO" | grep -v "about-version" | grep -v "@version" | grep -v "# Genome AI Studio" | head -10`;
+        const command = `grep -r "${searchPatterns.join('\\|')}" --include="*.js" --include="*.html" --include="*.md" src/ README.md | grep -v "VERSION_INFO" | grep -v "about-version" | grep -v "@version" | grep -v "# CodeXomics" | head -10`;
         
         exec(command, (error, stdout, stderr) => {
             if (stdout && stdout.trim()) {

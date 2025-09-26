@@ -1,7 +1,7 @@
 /**
- * Genome AI Studio RPC Interface
+ * CodeXomics RPC Interface
  * 
- * This module provides direct RPC access to Genome AI Studio functionality
+ * This module provides direct RPC access to CodeXomics functionality
  * without requiring WebSocket connections. It uses Electron's IPC mechanism
  * for efficient local communication.
  */
@@ -53,10 +53,10 @@ class GenomeStudioRPC extends EventEmitter {
         });
     }
 
-    // Make an RPC call to Genome AI Studio
+    // Make an RPC call to CodeXomics
     async call(method, parameters = {}, timeout = 30000) {
         if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-            throw new Error('Genome AI Studio is not running or main window is not available');
+            throw new Error('CodeXomics is not running or main window is not available');
         }
 
         const requestId = this.generateRequestId();
@@ -180,7 +180,7 @@ class GenomeStudioRPC extends EventEmitter {
         return await this.call('ping');
     }
 
-    // Check if Genome AI Studio is ready for RPC calls
+    // Check if CodeXomics is ready for RPC calls
     isReady() {
         return this.mainWindow && !this.mainWindow.isDestroyed() && !this.mainWindow.webContents.isLoading();
     }

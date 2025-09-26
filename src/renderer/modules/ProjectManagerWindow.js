@@ -3271,7 +3271,7 @@ System Information:
 • Timestamp: ${new Date().toISOString()}
             `.trim();
             
-            const mailtoLink = `mailto:support@genomeaistudio.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            const mailtoLink = `mailto:support@codexomics.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             
             // Try to open email client
             const a = document.createElement('a');
@@ -3499,7 +3499,7 @@ System Information:
 • Project Manager Version: 1.0.0
             `.trim();
             
-            const mailtoLink = `mailto:support@genomeaistudio.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            const mailtoLink = `mailto:support@codexomics.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             
             // Try to open email client
             const a = document.createElement('a');
@@ -3516,7 +3516,7 @@ System Information:
     showAbout() {
         const about = `
 📁 Project Manager
-Part of Genome AI Studio
+Part of CodeXomics
 
 Version: 1.0.0 Beta
 Build: ${new Date().toISOString().split('T')[0]}
@@ -3533,10 +3533,10 @@ Advanced project management for genomic data analysis and bioinformatics workflo
 • Cross-platform compatibility
 
 👥 Development Team:
-Genome AI Studio Development Team
+CodeXomics Development Team
 
 📧 Support:
-support@genomeaistudio.com
+support@codexomics.com
 
 📖 Documentation:
 Visit Help → User Guide for comprehensive documentation

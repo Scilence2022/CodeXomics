@@ -51,7 +51,7 @@ cp "$TEMP_DIR"/*.png build/icons/
 echo -e "${GREEN}生成.icns文件...${NC}"
 
 # 创建iconset目录
-ICONSET_DIR="$TEMP_DIR/GenomeAIStudio.iconset"
+ICONSET_DIR="$TEMP_DIR/CodeXomics.iconset"
 mkdir -p "$ICONSET_DIR"
 
 # 复制不同尺寸的文件到iconset目录

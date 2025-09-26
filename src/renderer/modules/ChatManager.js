@@ -12397,7 +12397,7 @@ ${this.getPluginSystemInfo()}`;
             const response = await fetch(uniprotSearchUrl, {
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'GenomeAIStudio/1.0'
+                    'User-Agent': 'CodeXomics/1.0'
                 }
             });
             
@@ -12409,7 +12409,7 @@ ${this.getPluginSystemInfo()}`;
                 const altResponse = await fetch(altUrl, {
                     headers: {
                         'Accept': 'application/json',
-                        'User-Agent': 'GenomeAIStudio/1.0'
+                        'User-Agent': 'CodeXomics/1.0'
                     }
                 });
                 

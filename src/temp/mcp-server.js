@@ -1290,7 +1290,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'GenomeAIStudio/0.2 (contact: support@genomeaistudio.com)'
+                    'User-Agent': 'CodeXomics/0.2 (contact: support@codexomics.com)'
                 }
             });
             

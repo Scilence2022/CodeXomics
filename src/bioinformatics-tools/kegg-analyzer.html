@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KEGG Pathway Analysis - Genome AI Studio</title>
+    <title>KEGG Pathway Analysis - CodeXomics</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <!-- Plotly loading commented out to improve performance -->
@@ -385,14 +385,106 @@ MYC" rows="8"></textarea>
             }
 
             loadHumanSample() {
-                document.getElementById('geneInput').value = `TP53\nEGFR\nBRCA1\nMYC\nKRAS\nPTEN\nRB1\nCDKN2A`;
+                document.getElementById('geneInput').value = `TP53
+EGFR
+BRCA1
+MYC
+KRAS
+PTEN
+RB1
+CDKN2A`;
                 document.getElementById('organism').value = 'hsa';
                 this.closeSampleDialog();
                 this.showStatus('Human cancer genes sample loaded successfully!', 'success');
             }
 
             loadEcoliSample() {
-                document.getElementById('geneInput').value = `lacZ\nlacY\nlacA\ntrpA\ntrpB\ntrpC\ntrpD\ntrpE\nrecA\nrecB\nrecC\nlexA\nrpoB\nrpoD\nftsZ\ndnaA\ndnaB\ndnaC\ngyrA\ngyrB\ntopA\nssb\npolA\nligA\ndam\nseqA\nftsA\nftsQ\nftsW\nftsI\nmurE\nmurF\nacrA\nacrB\ntolC\nompF\nompC\nmalE\nmalF\nmalG\nmalK\nglpF\nglpK\nglpD\nfadA\nfadB\naceA\naceB\ngltA\nacnA\nacnB\nicdA\nsucA\nsucB\nsucC\nsucD\nsdhA\nsdhB\nsdhC\nsdhD\nfumA\nfumB\nfumC\nmdh\npykA\npykF\neno\npgk\ngapA\nfbaA\ntpiA\npfkA\npfkB\nglk\npgi\nfbp\ngnd\nzwf\nrpe\nrpiA\ntkfA\ntkfB\ntktA\ntktB\ntalA\ntalB`;
+                document.getElementById('geneInput').value = `lacZ
+lacY
+lacA
+trpA
+trpB
+trpC
+trpD
+trpE
+recA
+recB
+recC
+lexA
+rpoB
+rpoD
+ftsZ
+dnaA
+dnaB
+dnaC
+gyrA
+gyrB
+topA
+ssb
+polA
+ligA
+dam
+seqA
+ftsA
+ftsQ
+ftsW
+ftsI
+murE
+murF
+acrA
+acrB
+tolC
+ompF
+ompC
+malE
+malF
+malG
+malK
+glpF
+glpK
+glpD
+fadA
+fadB
+aceA
+aceB
+gltA
+acnA
+acnB
+icdA
+sucA
+sucB
+sucC
+sucD
+sdhA
+sdhB
+sdhC
+sdhD
+fumA
+fumB
+fumC
+mdh
+pykA
+pykF
+eno
+pgk
+gapA
+fbaA
+tpiA
+pfkA
+pfkB
+glk
+pgi
+fbp
+gnd
+zwf
+rpe
+rpiA
+tkfA
+tkfB
+tktA
+tktB
+talA
+talB`;
                 document.getElementById('organism').value = 'eco';
                 this.closeSampleDialog();
                 this.showStatus('E. coli K12 metabolic genes sample loaded successfully!', 'success');

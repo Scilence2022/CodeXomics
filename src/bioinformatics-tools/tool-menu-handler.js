@@ -450,24 +450,50 @@ class ToolMenuHandler {
 
     // === 设置和帮助 ===
     showPreferences() {
-        alert(`${this.toolName} Preferences\n\nPreferences functionality is under development...\n\nYou can customize analysis behavior by modifying tool parameters.`);
+        alert(`${this.toolName} Preferences
+
+Preferences functionality is under development...
+
+You can customize analysis behavior by modifying tool parameters.`);
     }
 
     showAnalysisSettings() {
-        alert(`${this.toolName} Analysis Settings\n\nAnalysis settings functionality is under development...\n\nPlease use the parameter controls on the tool interface to adjust analysis settings.`);
+        alert(`${this.toolName} Analysis Settings
+
+Analysis settings functionality is under development...
+
+Please use the parameter controls on the tool interface to adjust analysis settings.`);
     }
 
     showOutputFormat() {
-        alert(`${this.toolName} Output Format\n\nSupported output formats:\n- Text files (.txt)\n- CSV files (.csv)\n- JSON files (.json)\n\nUse "Save Results" or "Export Data" to select format.`);
+        alert(`${this.toolName} Output Format
+
+Supported output formats:
+- Text files (.txt)
+- CSV files (.csv)
+- JSON files (.json)
+
+Use "Save Results" or "Export Data" to select format.`);
     }
 
     showAdvancedOptions() {
-        alert(`${this.toolName} Advanced Options\n\nAdvanced options functionality is under development...\n\nPlease use the advanced parameter controls on the tool interface.`);
+        alert(`${this.toolName} Advanced Options
+
+Advanced options functionality is under development...
+
+Please use the advanced parameter controls on the tool interface.`);
     }
 
     showAbout(toolName) {
         const name = toolName || this.toolName;
-        alert(`About ${name}\n\nThis is part of the Genome AI Studio bioinformatics toolkit.\n\nVersion: 0.2.0\nDeveloper: Genome AI Studio Team\n\n${name} provides professional bioinformatics analysis capabilities to help researchers analyze genomic data.`);
+        alert(`About ${name}
+
+This is part of the CodeXomics bioinformatics toolkit.
+
+Version: 0.2.0
+Developer: CodeXomics Team
+
+${name} provides professional bioinformatics analysis capabilities to help researchers analyze genomic data.`);
     }
 
     showUserGuide() {
@@ -499,20 +525,34 @@ Need more help? Please check the tool documentation or contact technical support
     }
 
     showDocumentation() {
-        alert(`${this.toolName} Documentation\n\nOnline documentation functionality is under development...\n\nYou can:\n1. Use F1 key to view quick help\n2. Check tooltip information on the tool interface\n3. Contact technical support for detailed instructions`);
+        alert(`${this.toolName} Documentation
+
+Online documentation functionality is under development...
+
+You can:
+1. Use F1 key to view quick help
+2. Check tooltip information on the tool interface
+3. Contact technical support for detailed instructions`);
     }
 
     showOnlineResources() {
         if (typeof require !== 'undefined') {
             const { shell } = require('electron');
-            shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio');
+            shell.openExternal('https://github.com/Scilence2022/CodeXomics');
         } else {
             alert('Online Resources:\n\n- GitHub project page\n- User manual\n- Sample data\n- Video tutorials\n\nPlease visit the project website for more resources.');
         }
     }
 
     showContactSupport() {
-        alert(`联系 ${this.toolName} 技术支持\n\n支持方式:\n- 邮箱: support@genomeaistudio.com\n- GitHub Issues\n- 用户论坛\n\n请描述您遇到的问题，我们将尽快回复。`);
+        alert(`联系 ${this.toolName} 技术支持
+
+支持方式:
+- 邮箱: support@codexomics.com
+- GitHub Issues
+- 用户论坛
+
+请描述您遇到的问题，我们将尽快回复。`);
     }
 
     // === 辅助方法 ===
