@@ -219,6 +219,21 @@ class FunctionCallsOrganizer {
                     'search_interpro_entry',
                     'get_interpro_entry_details'
                 ]
+            },
+            
+            // 类别13: 数据导出类 - 中等优先级，文件操作型
+            dataExport: {
+                priority: 3,
+                description: "Data export and file generation operations",
+                functions: [
+                    'export_fasta_sequence',
+                    'export_genbank_format',
+                    'export_cds_fasta',
+                    'export_protein_fasta',
+                    'export_gff_annotations',
+                    'export_bed_format',
+                    'export_current_view_fasta'
+                ]
             }
         };
         

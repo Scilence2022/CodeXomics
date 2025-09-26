@@ -2836,6 +2836,357 @@ class ChatManager {
         throw new Error('Export manager not available');
     }
 
+    /**
+     * Export full genome sequence as FASTA format
+     * Built-in tool equivalent for "FASTA Sequence" export dropdown option
+     */
+    async exportFastaSequence(parameters = {}) {
+        const { filename, includeDescription = true } = parameters;
+        
+        console.log('🧬 [ChatManager] Exporting FASTA sequence:', parameters);
+        
+        if (!this.app || !this.app.exportManager) {
+            throw new Error('Export manager not available');
+        }
+        
+        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentSequence) {
+            throw new Error('No genome data loaded to export');
+        }
+        
+        try {
+            // Use the existing export manager method
+            await this.app.exportManager.exportAsFasta();
+            
+            const chromosomes = Object.keys(this.app.genomeBrowser.currentSequence);
+            const totalLength = chromosomes.reduce((sum, chr) => {
+                return sum + this.app.genomeBrowser.currentSequence[chr].length;
+            }, 0);
+            
+            return {
+                success: true,
+                tool: 'export_fasta_sequence',
+                timestamp: new Date().toISOString(),
+                exported_format: 'FASTA',
+                filename: filename || 'genome.fasta',
+                chromosomes: chromosomes,
+                total_chromosomes: chromosomes.length,
+                total_length: totalLength,
+                message: `Successfully exported ${chromosomes.length} chromosome(s) as FASTA format`,
+                details: `Total sequence length: ${totalLength.toLocaleString()} bp`
+            };
+        } catch (error) {
+            console.error('❌ [ChatManager] FASTA export failed:', error);
+            throw new Error(`FASTA export failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Export genome data as GenBank format
+     * Built-in tool equivalent for "GenBank Format" export dropdown option
+     */
+    async exportGenBankFormat(parameters = {}) {
+        const { filename, includeProteinSequences = false } = parameters;
+        
+        console.log('📄 [ChatManager] Exporting GenBank format:', parameters);
+        
+        if (!this.app || !this.app.exportManager) {
+            throw new Error('Export manager not available');
+        }
+        
+        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentSequence) {
+            throw new Error('No genome data loaded to export');
+        }
+        
+        try {
+            // Configure protein sequence inclusion if specified
+            if (this.app.exportManager.exportConfig) {
+                this.app.exportManager.exportConfig.includeProteinSequences = includeProteinSequences;
+            }
+            
+            // Use the existing export manager method
+            await this.app.exportManager.exportAsGenBank();
+            
+            const chromosomes = Object.keys(this.app.genomeBrowser.currentSequence);
+            const totalFeatures = chromosomes.reduce((sum, chr) => {
+                const features = this.app.genomeBrowser.currentAnnotations?.[chr] || [];
+                return sum + features.length;
+            }, 0);
+            
+            return {
+                success: true,
+                tool: 'export_genbank_format',
+                timestamp: new Date().toISOString(),
+                exported_format: 'GenBank',
+                filename: filename || 'genome.gbk',
+                chromosomes: chromosomes,
+                total_chromosomes: chromosomes.length,
+                total_features: totalFeatures,
+                include_protein_sequences: includeProteinSequences,
+                message: `Successfully exported ${chromosomes.length} chromosome(s) as GenBank format`,
+                details: `Included ${totalFeatures} features${includeProteinSequences ? ' with protein translations' : ''}`
+            };
+        } catch (error) {
+            console.error('❌ [ChatManager] GenBank export failed:', error);
+            throw new Error(`GenBank export failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Export coding sequences as FASTA format
+     * Built-in tool equivalent for "CDS FASTA" export dropdown option
+     */
+    async exportCDSFasta(parameters = {}) {
+        const { filename, includeGeneNames = true } = parameters;
+        
+        console.log('🧬 [ChatManager] Exporting CDS FASTA:', parameters);
+        
+        if (!this.app || !this.app.exportManager) {
+            throw new Error('Export manager not available');
+        }
+        
+        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentAnnotations) {
+            throw new Error('No annotation data loaded to export CDS sequences');
+        }
+        
+        try {
+            // Use the existing export manager method
+            await this.app.exportManager.exportCDSAsFasta();
+            
+            // Count CDS features
+            const chromosomes = Object.keys(this.app.genomeBrowser.currentAnnotations);
+            const cdsCount = chromosomes.reduce((sum, chr) => {
+                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                return sum + features.filter(f => f.type === 'CDS' || f.type === 'gene').length;
+            }, 0);
+            
+            return {
+                success: true,
+                tool: 'export_cds_fasta',
+                timestamp: new Date().toISOString(),
+                exported_format: 'CDS FASTA',
+                filename: filename || 'cds_sequences.fasta',
+                chromosomes: chromosomes,
+                total_cds_sequences: cdsCount,
+                include_gene_names: includeGeneNames,
+                message: `Successfully exported ${cdsCount} CDS sequences as FASTA format`,
+                details: `Exported from ${chromosomes.length} chromosome(s)`
+            };
+        } catch (error) {
+            console.error('❌ [ChatManager] CDS FASTA export failed:', error);
+            throw new Error(`CDS FASTA export failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Export protein sequences as FASTA format
+     * Built-in tool equivalent for "Protein FASTA" export dropdown option
+     */
+    async exportProteinFasta(parameters = {}) {
+        const { filename, includeGeneNames = true, translationTable = 1 } = parameters;
+        
+        console.log('🧬 [ChatManager] Exporting Protein FASTA:', parameters);
+        
+        if (!this.app || !this.app.exportManager) {
+            throw new Error('Export manager not available');
+        }
+        
+        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentAnnotations) {
+            throw new Error('No annotation data loaded to export protein sequences');
+        }
+        
+        try {
+            // Use the existing export manager method
+            await this.app.exportManager.exportProteinAsFasta();
+            
+            // Count protein-coding features
+            const chromosomes = Object.keys(this.app.genomeBrowser.currentAnnotations);
+            const proteinCount = chromosomes.reduce((sum, chr) => {
+                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                return sum + features.filter(f => {
+                    return (f.type === 'CDS' || f.type === 'gene') && 
+                           f.start && f.end && f.start < f.end;
+                }).length;
+            }, 0);
+            
+            return {
+                success: true,
+                tool: 'export_protein_fasta',
+                timestamp: new Date().toISOString(),
+                exported_format: 'Protein FASTA',
+                filename: filename || 'protein_sequences.fasta',
+                chromosomes: chromosomes,
+                total_protein_sequences: proteinCount,
+                translation_table: translationTable,
+                include_gene_names: includeGeneNames,
+                message: `Successfully exported ${proteinCount} protein sequences as FASTA format`,
+                details: `Translated from CDS features using genetic code table ${translationTable}`
+            };
+        } catch (error) {
+            console.error('❌ [ChatManager] Protein FASTA export failed:', error);
+            throw new Error(`Protein FASTA export failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Export feature annotations as GFF format
+     * Built-in tool equivalent for "GFF Annotations" export dropdown option
+     */
+    async exportGFFAnnotations(parameters = {}) {
+        const { filename, gffVersion = 3, includeSequences = false } = parameters;
+        
+        console.log('📋 [ChatManager] Exporting GFF annotations:', parameters);
+        
+        if (!this.app || !this.app.exportManager) {
+            throw new Error('Export manager not available');
+        }
+        
+        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentAnnotations) {
+            throw new Error('No annotation data loaded to export as GFF');
+        }
+        
+        try {
+            // Use the existing export manager method
+            await this.app.exportManager.exportAsGFF();
+            
+            // Count features
+            const chromosomes = Object.keys(this.app.genomeBrowser.currentAnnotations);
+            const featureCount = chromosomes.reduce((sum, chr) => {
+                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                return sum + features.length;
+            }, 0);
+            
+            const featureTypes = chromosomes.reduce((types, chr) => {
+                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                features.forEach(f => {
+                    if (f.type && !types.includes(f.type)) {
+                        types.push(f.type);
+                    }
+                });
+                return types;
+            }, []);
+            
+            return {
+                success: true,
+                tool: 'export_gff_annotations',
+                timestamp: new Date().toISOString(),
+                exported_format: `GFF${gffVersion}`,
+                filename: filename || 'features.gff3',
+                chromosomes: chromosomes,
+                total_features: featureCount,
+                feature_types: featureTypes,
+                gff_version: gffVersion,
+                include_sequences: includeSequences,
+                message: `Successfully exported ${featureCount} features as GFF${gffVersion} format`,
+                details: `Feature types: ${featureTypes.join(', ')}`
+            };
+        } catch (error) {
+            console.error('❌ [ChatManager] GFF export failed:', error);
+            throw new Error(`GFF export failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Export feature annotations as BED format
+     * Built-in tool equivalent for "BED Format" export dropdown option
+     */
+    async exportBEDFormat(parameters = {}) {
+        const { filename, includeScore = true, includeStrand = true } = parameters;
+        
+        console.log('📊 [ChatManager] Exporting BED format:', parameters);
+        
+        if (!this.app || !this.app.exportManager) {
+            throw new Error('Export manager not available');
+        }
+        
+        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentAnnotations) {
+            throw new Error('No annotation data loaded to export as BED');
+        }
+        
+        try {
+            // Use the existing export manager method
+            await this.app.exportManager.exportAsBED();
+            
+            // Count features
+            const chromosomes = Object.keys(this.app.genomeBrowser.currentAnnotations);
+            const featureCount = chromosomes.reduce((sum, chr) => {
+                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                return sum + features.length;
+            }, 0);
+            
+            return {
+                success: true,
+                tool: 'export_bed_format',
+                timestamp: new Date().toISOString(),
+                exported_format: 'BED',
+                filename: filename || 'features.bed',
+                chromosomes: chromosomes,
+                total_features: featureCount,
+                include_score: includeScore,
+                include_strand: includeStrand,
+                message: `Successfully exported ${featureCount} features as BED format`,
+                details: `Browser extensible data format from ${chromosomes.length} chromosome(s)`
+            };
+        } catch (error) {
+            console.error('❌ [ChatManager] BED export failed:', error);
+            throw new Error(`BED export failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Export current visible region as FASTA format
+     * Built-in tool equivalent for "Current View (FASTA)" export dropdown option
+     */
+    async exportCurrentViewFasta(parameters = {}) {
+        const { filename, includeCoordinates = true } = parameters;
+        
+        console.log('👁️ [ChatManager] Exporting current view as FASTA:', parameters);
+        
+        if (!this.app || !this.app.exportManager) {
+            throw new Error('Export manager not available');
+        }
+        
+        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentSequence) {
+            throw new Error('No genome data loaded to export current view');
+        }
+        
+        try {
+            // Get current view information
+            const currentState = this.getCurrentState();
+            const currentChr = currentState.currentChromosome;
+            const viewStart = currentState.currentPosition?.start || 1;
+            const viewEnd = currentState.currentPosition?.end || currentState.sequenceLength;
+            
+            if (!currentChr) {
+                throw new Error('No chromosome selected for current view export');
+            }
+            
+            // Use the existing export manager method
+            await this.app.exportManager.exportCurrentViewAsFasta();
+            
+            const regionLength = viewEnd - viewStart + 1;
+            const coordinates = `${currentChr}:${viewStart}-${viewEnd}`;
+            
+            return {
+                success: true,
+                tool: 'export_current_view_fasta',
+                timestamp: new Date().toISOString(),
+                exported_format: 'FASTA (Current View)',
+                filename: filename || `${currentChr}_${viewStart}-${viewEnd}.fasta`,
+                chromosome: currentChr,
+                region_start: viewStart,
+                region_end: viewEnd,
+                region_length: regionLength,
+                coordinates: coordinates,
+                include_coordinates: includeCoordinates,
+                message: `Successfully exported current view as FASTA format`,
+                details: `Region: ${coordinates} (${regionLength.toLocaleString()} bp)`
+            };
+        } catch (error) {
+            console.error('❌ [ChatManager] Current view FASTA export failed:', error);
+            throw new Error(`Current view FASTA export failed: ${error.message}`);
+        }
+    }
+
     getVisibleTracks() {
         const tracks = [];
         
@@ -5102,6 +5453,119 @@ InterPro domain analysis has been completed successfully.`;
                     return `InterPro domain analysis completed. ${result.result?.message || result.result?.error || 'Analysis finished.'}`;
                 }
             
+            case 'export_fasta_sequence':
+                if (result.result && result.result.success) {
+                    return `🧬 **FASTA Sequence Export Completed!**
+
+**Export Details:**
+- **Format:** ${result.result.exported_format}
+- **File:** ${result.result.filename}
+- **Chromosomes:** ${result.result.total_chromosomes}
+- **Total Length:** ${result.result.total_length?.toLocaleString()} bp
+
+✅ ${result.result.message}
+${result.result.details}`;
+                } else {
+                    return `FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
+                }
+                
+            case 'export_genbank_format':
+                if (result.result && result.result.success) {
+                    return `📄 **GenBank Format Export Completed!**
+
+**Export Details:**
+- **Format:** ${result.result.exported_format}
+- **File:** ${result.result.filename}
+- **Chromosomes:** ${result.result.total_chromosomes}
+- **Features:** ${result.result.total_features}
+- **Protein Sequences:** ${result.result.include_protein_sequences ? 'Included' : 'Not included'}
+
+✅ ${result.result.message}
+${result.result.details}`;
+                } else {
+                    return `GenBank export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
+                }
+                
+            case 'export_cds_fasta':
+                if (result.result && result.result.success) {
+                    return `🧬 **CDS FASTA Export Completed!**
+
+**Export Details:**
+- **Format:** ${result.result.exported_format}
+- **File:** ${result.result.filename}
+- **CDS Sequences:** ${result.result.total_cds_sequences}
+- **Gene Names:** ${result.result.include_gene_names ? 'Included' : 'Not included'}
+
+✅ ${result.result.message}
+${result.result.details}`;
+                } else {
+                    return `CDS FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
+                }
+                
+            case 'export_protein_fasta':
+                if (result.result && result.result.success) {
+                    return `🧬 **Protein FASTA Export Completed!**
+
+**Export Details:**
+- **Format:** ${result.result.exported_format}
+- **File:** ${result.result.filename}
+- **Protein Sequences:** ${result.result.total_protein_sequences}
+- **Translation Table:** ${result.result.translation_table}
+
+✅ ${result.result.message}
+${result.result.details}`;
+                } else {
+                    return `Protein FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
+                }
+                
+            case 'export_gff_annotations':
+                if (result.result && result.result.success) {
+                    return `📋 **GFF Annotations Export Completed!**
+
+**Export Details:**
+- **Format:** ${result.result.exported_format}
+- **File:** ${result.result.filename}
+- **Features:** ${result.result.total_features}
+- **Feature Types:** ${result.result.feature_types?.join(', ') || 'Various'}
+
+✅ ${result.result.message}
+${result.result.details}`;
+                } else {
+                    return `GFF export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
+                }
+                
+            case 'export_bed_format':
+                if (result.result && result.result.success) {
+                    return `📊 **BED Format Export Completed!**
+
+**Export Details:**
+- **Format:** ${result.result.exported_format}
+- **File:** ${result.result.filename}
+- **Features:** ${result.result.total_features}
+- **Score/Strand:** ${result.result.include_score && result.result.include_strand ? 'Included' : 'Basic format'}
+
+✅ ${result.result.message}
+${result.result.details}`;
+                } else {
+                    return `BED export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
+                }
+                
+            case 'export_current_view_fasta':
+                if (result.result && result.result.success) {
+                    return `👁️ **Current View FASTA Export Completed!**
+
+**Export Details:**
+- **Format:** ${result.result.exported_format}
+- **File:** ${result.result.filename}
+- **Region:** ${result.result.coordinates}
+- **Length:** ${result.result.region_length?.toLocaleString()} bp
+
+✅ ${result.result.message}
+${result.result.details}`;
+                } else {
+                    return `Current view export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
+                }
+            
             case 'search_gene_by_name':
                 if (result.result && result.result.length > 0) {
                     const gene = result.result[0]; // Get first result
@@ -5466,6 +5930,11 @@ Data Management:
                 'search_uniprot_database', 'advanced_uniprot_search', 'get_uniprot_entry',
                 'analyze_interpro_domains', 'search_interpro_entry', 'get_interpro_entry_details'
             ],
+            'DATA EXPORT': [
+                'export_fasta_sequence', 'export_genbank_format', 'export_cds_fasta',
+                'export_protein_fasta', 'export_gff_annotations', 'export_bed_format',
+                'export_current_view_fasta'
+            ],
             'BLAST & SIMILARITY': [
                 'blast_search', 'advanced_blast_search', 'batch_blast_search',
                 'blast_sequence_from_region'
@@ -5670,6 +6139,15 @@ ${coreTools}
             'search_pattern': () => this.searchPattern(parameters),
             'find_restriction_sites': () => this.findRestrictionSites(parameters),
             'virtual_digest': () => this.virtualDigest(parameters),
+            
+            // Export tools - built-in equivalents for Export As dropdown menu
+            'export_fasta_sequence': () => this.exportFastaSequence(parameters),
+            'export_genbank_format': () => this.exportGenBankFormat(parameters),
+            'export_cds_fasta': () => this.exportCDSFasta(parameters),
+            'export_protein_fasta': () => this.exportProteinFasta(parameters),
+            'export_gff_annotations': () => this.exportGFFAnnotations(parameters),
+            'export_bed_format': () => this.exportBEDFormat(parameters),
+            'export_current_view_fasta': () => this.exportCurrentViewFasta(parameters),
             
             // System tools
             'get_chromosome_list': () => this.getChromosomeList(),
@@ -5922,6 +6400,9 @@ CHROMOSOME NAMES:
 COMMON TASK PATTERNS:
 • Gene Analysis: search_gene_by_name → get_coding_sequence → analyze features
 • **Domain Analysis: analyze_interpro_domains → protein domain identification (use geneName parameter for gene names)**
+• **Data Export: export_fasta_sequence → export genome as FASTA, export_genbank_format → export as GenBank**
+• **Sequence Export: export_cds_fasta → export coding sequences, export_protein_fasta → export proteins**
+• **Annotation Export: export_gff_annotations → export features as GFF, export_bed_format → export as BED**
 • AlphaFold AI Predictions: search_alphafold_by_gene → open_alphafold_viewer
 • PDB Experimental Structures: search_protein_by_gene → open_protein_viewer
 • Sequence Analysis: get_sequence → compute_gc/translate_dna/find_orfs
@@ -5941,6 +6422,20 @@ For protein domain analysis requests:
 • Example: {"tool_name": "analyze_interpro_domains", "parameters": {"geneName": "lysC"}}
 • For sequence input: {"tool_name": "analyze_interpro_domains", "parameters": {"sequence": "PROTEIN_SEQUENCE"}}
 • For UniProt ID: {"tool_name": "analyze_interpro_domains", "parameters": {"uniprot_id": "P12345"}}
+
+===CRITICAL DATA EXPORT INSTRUCTIONS===
+For data export requests:
+• **"export genome as FASTA" → use export_fasta_sequence**
+• **"export as GenBank" → use export_genbank_format**
+• **"export coding sequences" → use export_cds_fasta**
+• **"export proteins" → use export_protein_fasta**
+• **"export annotations" → use export_gff_annotations for GFF or export_bed_format for BED**
+• **"export current view" → use export_current_view_fasta**
+• Examples: 
+  - {"tool_name": "export_fasta_sequence", "parameters": {}}
+  - {"tool_name": "export_genbank_format", "parameters": {"includeProteinSequences": true}}
+  - {"tool_name": "export_cds_fasta", "parameters": {"filename": "my_cds.fasta"}}
+  - {"tool_name": "export_current_view_fasta", "parameters": {}}
 
 SEARCH FUNCTIONS GUIDE:
 - Gene names/products: search_gene_by_name, search_features
