@@ -4597,6 +4597,8 @@ class ChatManager {
             // Search patterns
             'search for gene', 'find gene', 'locate gene', 'show me gene', 'get gene',
             'gene information', 'gene details',
+            // Navigation patterns
+            'jump to gene', 'go to gene', 'navigate to gene', 'find gene',
             // Analysis patterns  
             'codon usage analysis', 'codon analysis', 'analyze codon', 'codon frequency', 'codon bias',
             // File loading patterns
@@ -4611,6 +4613,7 @@ class ChatManager {
         // Check if we executed tools that typically complete tasks
         const taskCompletingTools = [
             'search_gene_by_name', 'search_sequence', 'find_feature', 'search_feature',
+            'jump_to_gene', 'jump_to_feature', 'focus_on_gene',
             'codon_usage_analysis', 'compute_gc', 'analyze_region',
             'load_genome_file', 'load_annotation_file', 'load_variant_file', 
             'load_reads_file', 'load_wig_tracks', 'load_operon_file',
@@ -4694,11 +4697,25 @@ class ChatManager {
                 }
             },
             
-            // Navigation operations - freely re-executable (different positions)
-            navigation: {
-                tools: ['navigate_to_position', 'jump_to_gene', 'scroll_left', 'scroll_right'],
+            // Navigation operations - position-based movements that can be repeated
+            position_navigation: {
+                tools: ['navigate_to_position', 'scroll_left', 'scroll_right', 'zoom_in', 'zoom_out'],
                 policy: 'always_allowed',
                 condition: () => true
+            },
+            
+            // Gene/feature navigation - single execution per gene/feature
+            feature_navigation: {
+                tools: ['jump_to_gene', 'jump_to_feature', 'focus_on_gene'],
+                policy: 'parameter_based',
+                condition: (tool, history, results) => {
+                    const existingExecution = this.findExistingExecution(toolKey, history);
+                    if (existingExecution && existingExecution.success) {
+                        console.log(`🚫 [Policy] Feature navigation already executed with same parameters: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
             },
             
             // Search operations - allow with different parameters or after reasonable delay
@@ -4716,9 +4733,39 @@ class ChatManager {
                 }
             },
             
-            // State operations - always allowed
+            // Analysis operations - single execution per analysis request
+            analysis: {
+                tools: ['codon_usage_analysis', 'compute_gc', 'analyze_region', 'translate_dna', 
+                       'reverse_complement', 'find_orfs', 'get_coding_sequence'],
+                policy: 'parameter_based',
+                condition: (tool, history, results) => {
+                    const existingExecution = this.findExistingExecution(toolKey, history);
+                    if (existingExecution && existingExecution.success) {
+                        console.log(`🚫 [Policy] Analysis already executed with same parameters: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
+            },
+            
+            // Display/UI state operations - once per round
+            display_operations: {
+                tools: ['toggle_track', 'show_hide_features', 'set_view_mode', 'refresh_view'],
+                policy: 'once_per_round',
+                condition: (tool, history, results, round) => {
+                    const executedInCurrentRound = results.some(r => r.tool === toolName);
+                    if (executedInCurrentRound) {
+                        console.log(`🚫 [Policy] Display operation already executed in current round: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
+            },
+            
+            // State operations - always allowed (read-only information)
             state: {
-                tools: ['get_current_state', 'get_genome_info', 'get_file_info'],
+                tools: ['get_current_state', 'get_genome_info', 'get_file_info', 'get_sequence',
+                       'get_current_region', 'get_visible_tracks'],
                 policy: 'always_allowed', 
                 condition: () => true
             },
@@ -4828,6 +4875,22 @@ class ChatManager {
         
         // Generate appropriate response based on tool type
         switch (tool.tool_name) {
+            case 'jump_to_gene':
+                if (result.result && result.result.success !== false) {
+                    const geneName = tool.parameters.geneName || tool.parameters.name || 'target gene';
+                    return `🎯 **Successfully jumped to gene ${geneName}!**
+
+**Navigation Details:**
+- **Gene:** ${geneName}
+- **Location:** ${result.result.location || result.result.position || 'Located'}
+- **Status:** Gene found and browser navigated to location
+
+The genome browser is now showing the ${geneName} gene region.`;
+                } else {
+                    const geneName = tool.parameters.geneName || tool.parameters.name || 'target gene';
+                    return `Gene navigation completed. ${result.result?.message || `Attempted to locate ${geneName}`}.`;
+                }
+                
             case 'open_new_tab':
                 if (result.result && result.result.success) {
                     return `🗂️ **New tab opened successfully!**
