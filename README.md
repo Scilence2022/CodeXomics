@@ -21,6 +21,14 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Zero Configuration** - Seamless LLM integration for new plugins
 - **Core Plugins** - Biological Networks, Comparative Genomics, Metabolic Pathways, and more
 
+### 🧪 **Benchmark Testing Interface**
+- **Comprehensive AI Evaluation** - 22 test cases across 6 genomic analysis categories
+- **Manual Test Interaction** - Interactive dialogs for human verification and scoring
+- **Triple Classification System** - Automatic/manual evaluation, simple/complex tasks, 5 task types
+- **Real-time Progress Tracking** - Live progress bars and statistics during test execution
+- **Detailed Reporting** - Export test results, LLM interactions, and performance metrics
+- **Professional Interface** - Full-screen testing environment with comprehensive configuration options
+
 ### 🤖 **AI-Powered Assistant**
 - **Natural Language Queries** - Ask questions about genes, functions, and genomic regions
 - **Dynamic Tool Registry** - Intelligent tool selection based on user intent and context
@@ -101,7 +109,14 @@ npm run build
 - Try **Tools → Bioinformatics Tools → STRING Protein Networks**
 - Use the enhanced Gene Details sidebar for database cross-references
 
-### **5. Install Plugins**
+### **5. Test AI Performance**
+- Access **Benchmark & Debug Tools** in the top menu
+- Click **"Open Benchmark"** under LLM Benchmark Suite
+- Configure test suites and run comprehensive evaluations
+- Complete manual tests with interactive verification dialogs
+- Export detailed reports and LLM interaction logs
+
+### **6. Install Plugins**
 - Access the Plugin Marketplace through the menu
 - Browse and install community-developed plugins
 - Plugins automatically integrate with the AI assistant
@@ -147,7 +162,25 @@ AI: [Launches STRING networks tool with gene context]
 
 User: "Load the lac operon pathway"
 AI: [Opens KGML viewer with relevant pathway]
+
+User: "run benchmark tests"
+AI: [Opens comprehensive benchmark interface for AI evaluation]
 ```
+
+### **Benchmark Testing System**
+Comprehensive AI evaluation with 22 test cases:
+- **Navigation Tests** - Browser navigation and position jumping
+- **Analysis Tests** - Sequence analysis and GC content calculation  
+- **Data Loading Tests** - File loading and parsing verification
+- **Search Tests** - Gene search and result validation
+- **External Database Tests** - API integration and data retrieval
+- **Workflow Tests** - Multi-step genomic analysis processes
+
+**Manual Test Features:**
+- Interactive verification dialogs with step-by-step checklists
+- Flexible scoring system (0-10 points based on complexity)
+- Real-time progress tracking and detailed reporting
+- Export capabilities for test results and LLM interactions
 
 ### **Visualization Tracks**
 - **🧬 Genes & Features** - Annotations with directional arrows and detailed information

@@ -167,6 +167,35 @@ class BenchmarkUI {
                     margin-bottom: 30px;
                     padding-bottom: 20px;
                     border-bottom: 3px solid #3498db;
+                    position: relative;
+                }
+
+                .header-content {
+                    width: 100%;
+                }
+
+                .close-benchmark-btn {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    width: 40px;
+                    height: 40px;
+                    border: none;
+                    background: #e74c3c;
+                    color: white;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    font-size: 18px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.3s ease;
+                    z-index: 10;
+                }
+
+                .close-benchmark-btn:hover {
+                    background: #c0392b;
+                    transform: scale(1.1);
                 }
 
                 .benchmark-title {
@@ -401,12 +430,17 @@ class BenchmarkUI {
 
             <div class="benchmark-container">
                 <div class="benchmark-header">
-                    <h1 class="benchmark-title">
-                        <span>🧪</span>
-                        LLM Instruction Following Benchmark
-                        <span>🧪</span>
-                    </h1>
-                    <p class="benchmark-subtitle">Comprehensive testing of LLM instruction following capabilities in Genome AI Studio</p>
+                    <div class="header-content">
+                        <h1 class="benchmark-title">
+                            <span>🧪</span>
+                            LLM Instruction Following Benchmark
+                            <span>🧪</span>
+                        </h1>
+                        <p class="benchmark-subtitle">Comprehensive testing of LLM instruction following capabilities in Genome AI Studio</p>
+                    </div>
+                    <button class="close-benchmark-btn" onclick="window.benchmarkUI.closeBenchmarkInterface()" title="Close Benchmark Interface">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
 
                 <!-- Configuration Section -->
@@ -629,6 +663,29 @@ class BenchmarkUI {
     }
 
     /**
+     * Close benchmark interface and restore main content
+     */
+    closeBenchmarkInterface() {
+        console.log('📜 Closing benchmark interface...');
+        
+        // Remove benchmark interface
+        const benchmarkInterface = document.getElementById('benchmarkInterface');
+        if (benchmarkInterface) {
+            benchmarkInterface.remove();
+        }
+        
+        // Show main content
+        this.showMainContent();
+        
+        // Stop any running benchmark
+        if (this.isRunning) {
+            this.stopMainWindowBenchmark();
+        }
+        
+        console.log('✅ Benchmark interface closed');
+    }
+
+    /**
      * Setup benchmark interface event handlers
      */
     setupBenchmarkInterfaceHandlers() {
@@ -636,6 +693,428 @@ class BenchmarkUI {
         document.getElementById('startBenchmark').onclick = () => this.startMainWindowBenchmark();
         document.getElementById('stopBenchmark').onclick = () => this.stopMainWindowBenchmark();
         document.getElementById('exportResults').onclick = () => this.exportMainWindowResults();
+        
+        // Add manual test interaction handlers
+        this.setupManualTestHandlers();
+    }
+
+    /**
+     * Setup handlers for manual test interactions
+     */
+    setupManualTestHandlers() {
+        // Listen for manual test events
+        document.addEventListener('manualTestRequired', (event) => {
+            this.handleManualTest(event.detail);
+        });
+        
+        // Listen for manual test completion
+        document.addEventListener('manualTestCompleted', (event) => {
+            this.handleManualTestCompletion(event.detail);
+        });
+    }
+
+    /**
+     * Handle manual test execution with user interaction
+     */
+    async handleManualTest(testData) {
+        console.log('🔍 Manual test required:', testData.testName);
+        
+        // Create manual test dialog
+        const dialog = this.createManualTestDialog(testData);
+        document.body.appendChild(dialog);
+        
+        // Show the dialog
+        dialog.style.display = 'flex';
+        
+        // Return a promise that resolves when user completes the test
+        return new Promise((resolve) => {
+            dialog.dataset.resolveCallback = resolve.toString();
+        });
+    }
+
+    /**
+     * Create interactive dialog for manual tests
+     */
+    createManualTestDialog(testData) {
+        const dialog = document.createElement('div');
+        dialog.className = 'manual-test-dialog';
+        dialog.id = `manual-test-${testData.testId}`;
+        
+        dialog.innerHTML = `
+            <style>
+                .manual-test-dialog {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: none;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                }
+                
+                .manual-test-content {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 30px;
+                    max-width: 800px;
+                    width: 90%;
+                    max-height: 80%;
+                    overflow-y: auto;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                }
+                
+                .manual-test-header {
+                    border-bottom: 2px solid #3498db;
+                    padding-bottom: 15px;
+                    margin-bottom: 20px;
+                }
+                
+                .manual-test-title {
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #2c3e50;
+                    margin: 0 0 10px 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                
+                .test-category {
+                    background: #3498db;
+                    color: white;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+                
+                .test-complexity {
+                    background: ${testData.complexity === 'simple' ? '#27ae60' : '#e74c3c'};
+                    color: white;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+                
+                .manual-test-instruction {
+                    background: #f8f9fa;
+                    border-left: 4px solid #3498db;
+                    padding: 20px;
+                    margin: 20px 0;
+                    border-radius: 8px;
+                }
+                
+                .manual-test-instruction h4 {
+                    margin: 0 0 10px 0;
+                    color: #2c3e50;
+                    font-size: 18px;
+                }
+                
+                .manual-test-instruction p {
+                    margin: 0;
+                    font-size: 16px;
+                    line-height: 1.5;
+                    color: #34495e;
+                }
+                
+                .verification-checklist {
+                    background: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin: 20px 0;
+                }
+                
+                .verification-checklist h4 {
+                    margin: 0 0 15px 0;
+                    color: #856404;
+                    font-size: 16px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .checklist-items {
+                    list-style: none;
+                    padding: 0;
+                    margin: 0;
+                }
+                
+                .checklist-item {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 10px;
+                    margin-bottom: 10px;
+                    padding: 8px;
+                    border-radius: 4px;
+                    transition: background 0.2s;
+                }
+                
+                .checklist-item:hover {
+                    background: rgba(255, 235, 59, 0.1);
+                }
+                
+                .checklist-item input[type="checkbox"] {
+                    margin-top: 2px;
+                    width: 18px;
+                    height: 18px;
+                    accent-color: #f39c12;
+                }
+                
+                .checklist-item label {
+                    flex: 1;
+                    cursor: pointer;
+                    line-height: 1.4;
+                    color: #5d4e75;
+                }
+                
+                .test-actions {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #dee2e6;
+                }
+                
+                .test-score-input {
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                }
+                
+                .test-score-input label {
+                    font-weight: 600;
+                    color: #495057;
+                }
+                
+                .test-score-input select {
+                    padding: 8px 12px;
+                    border: 2px solid #ced4da;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    background: white;
+                    min-width: 120px;
+                }
+                
+                .test-action-buttons {
+                    display: flex;
+                    gap: 10px;
+                }
+                
+                .btn-manual-test {
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .btn-manual-test:hover {
+                    transform: translateY(-1px);
+                }
+                
+                .btn-pass {
+                    background: #27ae60;
+                    color: white;
+                }
+                
+                .btn-pass:hover {
+                    background: #229954;
+                }
+                
+                .btn-fail {
+                    background: #e74c3c;
+                    color: white;
+                }
+                
+                .btn-fail:hover {
+                    background: #c0392b;
+                }
+                
+                .btn-skip {
+                    background: #95a5a6;
+                    color: white;
+                }
+                
+                .btn-skip:hover {
+                    background: #7f8c8d;
+                }
+                
+                .expected-result {
+                    background: #e8f5e8;
+                    border: 1px solid #c3e6cb;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin: 15px 0;
+                }
+                
+                .expected-result h4 {
+                    margin: 0 0 10px 0;
+                    color: #155724;
+                    font-size: 14px;
+                    font-weight: 600;
+                }
+                
+                .expected-result code {
+                    background: #f1f3f4;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    font-size: 13px;
+                    color: #2c3e50;
+                }
+            </style>
+            
+            <div class="manual-test-content">
+                <div class="manual-test-header">
+                    <h2 class="manual-test-title">
+                        <i class="fas fa-hand-paper"></i>
+                        ${testData.testName}
+                        <span class="test-category">${testData.category}</span>
+                        <span class="test-complexity">${testData.complexity}</span>
+                    </h2>
+                </div>
+                
+                <div class="manual-test-instruction">
+                    <h4><i class="fas fa-play-circle"></i> Test Instruction</h4>
+                    <p>${testData.instruction}</p>
+                </div>
+                
+                ${testData.expectedResult ? `
+                <div class="expected-result">
+                    <h4><i class="fas fa-bullseye"></i> Expected Tool & Parameters</h4>
+                    <p><strong>Tool:</strong> <code>${testData.expectedResult.tool_name || 'N/A'}</code></p>
+                    ${testData.expectedResult.parameters ? `
+                    <p><strong>Parameters:</strong> <code>${JSON.stringify(testData.expectedResult.parameters, null, 2)}</code></p>
+                    ` : ''}
+                </div>
+                ` : ''}
+                
+                ${testData.manualVerification ? `
+                <div class="verification-checklist">
+                    <h4><i class="fas fa-tasks"></i> Verification Checklist</h4>
+                    <ul class="checklist-items">
+                        ${this.parseVerificationItems(testData.manualVerification).map((item, index) => `
+                            <li class="checklist-item">
+                                <input type="checkbox" id="check-${testData.testId}-${index}" onchange="this.parentElement.classList.toggle('completed', this.checked)">
+                                <label for="check-${testData.testId}-${index}">${item}</label>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+                
+                <div class="test-actions">
+                    <div class="test-score-input">
+                        <label for="manual-score-${testData.testId}">Manual Score:</label>
+                        <select id="manual-score-${testData.testId}">
+                            <option value="${testData.maxScore}">Full Score (${testData.maxScore} pts)</option>
+                            <option value="${Math.floor(testData.maxScore * 0.75)}">Good (${Math.floor(testData.maxScore * 0.75)} pts)</option>
+                            <option value="${Math.floor(testData.maxScore * 0.5)}">Partial (${Math.floor(testData.maxScore * 0.5)} pts)</option>
+                            <option value="${Math.floor(testData.maxScore * 0.25)}">Minimal (${Math.floor(testData.maxScore * 0.25)} pts)</option>
+                            <option value="0">Failed (0 pts)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="test-action-buttons">
+                        <button class="btn-manual-test btn-pass" onclick="window.benchmarkUI.completeManualTest('${testData.testId}', 'pass')">
+                            <i class="fas fa-check"></i> Pass
+                        </button>
+                        <button class="btn-manual-test btn-fail" onclick="window.benchmarkUI.completeManualTest('${testData.testId}', 'fail')">
+                            <i class="fas fa-times"></i> Fail
+                        </button>
+                        <button class="btn-manual-test btn-skip" onclick="window.benchmarkUI.completeManualTest('${testData.testId}', 'skip')">
+                            <i class="fas fa-forward"></i> Skip
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return dialog;
+    }
+
+    /**
+     * Parse verification items from manualVerification string
+     */
+    parseVerificationItems(verificationText) {
+        if (!verificationText) return [];
+        
+        // Split by numbered items (1), 2), 3), etc.)
+        const items = verificationText.split(/\d+\)\s*/).filter(item => item.trim());
+        return items.map(item => item.trim());
+    }
+
+    /**
+     * Complete manual test with user input
+     */
+    completeManualTest(testId, result) {
+        const dialog = document.getElementById(`manual-test-${testId}`);
+        if (!dialog) return;
+        
+        // Get manual score
+        const scoreSelect = document.getElementById(`manual-score-${testId}`);
+        const manualScore = scoreSelect ? parseInt(scoreSelect.value) : 0;
+        
+        // Get verification checklist status
+        const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
+        const completedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const totalItems = checkboxes.length;
+        
+        // Create result data
+        const resultData = {
+            testId: testId,
+            result: result,
+            manualScore: manualScore,
+            verificationCompletion: totalItems > 0 ? (completedItems / totalItems) : 1,
+            completedVerifications: completedItems,
+            totalVerifications: totalItems,
+            timestamp: new Date().toISOString()
+        };
+        
+        // Close dialog
+        dialog.remove();
+        
+        // Dispatch completion event
+        document.dispatchEvent(new CustomEvent('manualTestCompleted', {
+            detail: resultData
+        }));
+        
+        console.log('✅ Manual test completed:', resultData);
+    }
+
+    /**
+     * Handle manual test completion
+     */
+    handleManualTestCompletion(resultData) {
+        // Store result for later use
+        if (!this.manualTestResults) {
+            this.manualTestResults = {};
+        }
+        this.manualTestResults[resultData.testId] = resultData;
+        
+        // Update progress display if visible
+        this.updateManualTestProgress(resultData);
+    }
+
+    /**
+     * Update progress display for manual tests
+     */
+    updateManualTestProgress(resultData) {
+        // This will be called to update any progress indicators
+        // Implementation depends on how progress is displayed
+        console.log('📊 Manual test progress updated:', resultData);
     }
 
     /**
@@ -2600,7 +3079,16 @@ class BenchmarkUI {
             }
 
             showAbout() {
-                alert(\`LLM Instruction Following Benchmark v1.0.0\\n\\nComprehensive testing framework for LLM instruction following capabilities.\\n\\n• 12 test suites\\n• 140+ individual tests\\n• Advanced statistical analysis\\n• Professional reporting\\n\\nIncludes comprehensive Edit operations testing:\`);
+                alert(\`LLM Instruction Following Benchmark v1.0.0
+
+Comprehensive testing framework for LLM instruction following capabilities.
+
+• 12 test suites
+• 140+ individual tests
+• Advanced statistical analysis
+• Professional reporting
+
+Includes comprehensive Edit operations testing:\`);
             }
 
             downloadJSON(data, filename) {

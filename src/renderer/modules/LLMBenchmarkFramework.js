@@ -39,6 +39,9 @@ class LLMBenchmarkFramework {
         // Basic Function Calling Tests
         this.registerTestSuite('basic_functions', new BasicFunctionCallingSuite());
         
+        // Comprehensive Genomic Analysis Tests (NEW)
+        this.registerTestSuite('comprehensive_genomic', new ComprehensiveBenchmarkSuite());
+        
         // Complex Analysis Tests
         this.registerTestSuite('complex_analysis', new ComplexAnalysisSuite());
         

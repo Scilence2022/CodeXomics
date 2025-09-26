@@ -1020,11 +1020,22 @@ class GenomeBrowser {
         modal.innerHTML = `
             <div class="modal-content debug-tools-modal">
                 <div class="modal-header">
-                    <h2><i class="fas fa-bug"></i> Debug Tools</h2>
+                    <h2><i class="fas fa-bug"></i> Benchmark & Debug Tools</h2>
                     <button class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="debug-tools-grid">
+                        <div class="debug-tool-card">
+                            <div class="debug-tool-icon">
+                                <i class="fas fa-vial"></i>
+                            </div>
+                            <h3>LLM Benchmark Suite</h3>
+                            <p>Comprehensive testing of AI agent performance across genomic analysis tasks</p>
+                            <button class="btn btn-primary" onclick="window.genomeBrowser.openBenchmarkInterface()">
+                                Open Benchmark
+                            </button>
+                        </div>
+                        
                         <div class="debug-tool-card">
                             <div class="debug-tool-icon">
                                 <i class="fas fa-search"></i>
@@ -1137,6 +1148,28 @@ class GenomeBrowser {
         });
 
         return modal;
+    }
+
+    async openBenchmarkInterface() {
+        // Close the debug tools modal
+        const modal = document.getElementById('debugToolsModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+
+        try {
+            console.log('🧪 Opening Benchmark Interface...');
+            
+            // Initialize benchmark manager if not already done
+            const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
+            
+            // Show the benchmark interface
+            await benchmarkManager.showBenchmarkInterface();
+            
+        } catch (error) {
+            console.error('❌ Failed to open benchmark interface:', error);
+            alert('Failed to open benchmark interface. Please check the console for details.');
+        }
     }
 
     async openDebugTool(toolType) {

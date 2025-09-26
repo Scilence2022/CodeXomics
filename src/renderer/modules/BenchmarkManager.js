@@ -219,6 +219,31 @@ class BenchmarkManager {
     }
 
     /**
+     * Show benchmark interface in main window
+     */
+    async showBenchmarkInterface() {
+        // Wait for initialization to complete
+        if (!this.isInitialized) {
+            console.log('⏳ Waiting for benchmark system initialization...');
+            try {
+                await this.initializationPromise;
+            } catch (error) {
+                this.showError('Failed to initialize benchmark system: ' + error.message);
+                return;
+            }
+        }
+
+        // Double-check that UI is available
+        if (!this.ui) {
+            console.error('❌ BenchmarkUI not available after initialization');
+            this.showError('Benchmark UI not properly initialized');
+            return;
+        }
+
+        await this.ui.showBenchmarkInterface();
+    }
+
+    /**
      * Run quick benchmark with default settings
      */
     async runQuickBenchmark() {
