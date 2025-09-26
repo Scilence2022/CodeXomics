@@ -736,7 +736,7 @@ class ToolDefinitionCreator {
      * Check if category requires data
      */
     requiresData(category) {
-        return ['navigation', 'sequence', 'sequence_editing', 'file_operations'].includes(category);
+        return ['navigation', 'sequence', 'sequence_editing'].includes(category);
     }
 
     /**
@@ -872,23 +872,6 @@ class ToolDefinitionCreator {
                     description: "Target database",
                     default: "nr"
                 }
-            },
-            'file_operations': {
-                filePath: {
-                    type: "string",
-                    description: "Absolute path to the file",
-                    examples: ["/path/to/genome.fasta", "/data/annotations.gff", "/output/export.bed"]
-                },
-                fileFormat: {
-                    type: "string",
-                    description: "File format",
-                    enum: ["auto", "fasta", "genbank", "gff", "bed", "vcf", "sam", "bam", "wig"]
-                },
-                overwrite: {
-                    type: "boolean",
-                    description: "Whether to overwrite existing file",
-                    default: false
-                }
             }
         };
 
@@ -908,8 +891,7 @@ class ToolDefinitionCreator {
             'sequence_editing': ['chromosome', 'start', 'end'],
             'plugin_management': [],
             'coordination': ['task'],
-            'external_apis': ['sequence', 'blastType', 'database'],
-            'file_operations': ['filePath']
+            'external_apis': ['sequence', 'blastType', 'database']
         };
 
         return required[category] || [];
@@ -996,13 +978,6 @@ class ToolDefinitionCreator {
             'external_apis': {
                 api_error: "Returns error if external API is unavailable",
                 network_timeout: "Returns error if request times out"
-            },
-            'file_operations': {
-                file_not_found: "Returns error if specified file does not exist",
-                invalid_path: "Returns error if file path is invalid or not writable",
-                permission_denied: "Returns error if file cannot be read/written due to permissions",
-                invalid_format: "Returns error if file format is not supported",
-                disk_space: "Returns error if insufficient disk space"
             }
         };
 
@@ -1058,13 +1033,6 @@ class ToolDefinitionCreator {
                 success: "boolean - Whether API call was successful",
                 results: "array - List of API results",
                 execution_time: "number - API call execution time"
-            },
-            'file_operations': {
-                success: "boolean - Whether file operation was successful",
-                file_path: "string - Path of the processed file",
-                file_size: "number - Size of the file in bytes",
-                operation_time: "number - Time taken for operation in milliseconds",
-                format_detected: "string - Detected or specified file format"
             }
         };
 

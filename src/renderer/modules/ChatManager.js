@@ -650,6 +650,387 @@ class ChatManager {
     }
 
     /**
+     * Load genome file (FASTA/GenBank) - Built-in function tool
+     * @param {Object} parameters - Tool parameters
+     * @param {string} parameters.filePath - Direct file path (optional)
+     * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
+     * @param {string} parameters.fileType - File type hint ('fasta', 'genbank', 'auto')
+     * @returns {Object} Load result
+     */
+    async loadGenomeFile(parameters = {}) {
+        try {
+            const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
+            
+            console.log('🧬 [ChatManager] Loading genome file:', { filePath, showFileDialog, fileType });
+            
+            // If direct file path is provided and showFileDialog is false, load directly
+            if (filePath && !showFileDialog) {
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                // Validate file exists (basic check)
+                if (typeof require !== 'undefined') {
+                    const fs = require('fs');
+                    if (!fs.existsSync(filePath)) {
+                        throw new Error(`File not found: ${filePath}`);
+                    }
+                }
+                
+                // Load file directly
+                await this.app.genomeBrowser.fileManager.loadFile(filePath);
+                
+                return {
+                    success: true,
+                    message: `Successfully loaded genome file: ${filePath}`,
+                    filePath: filePath,
+                    fileType: 'genome'
+                };
+            } else {
+                // Show file dialog for genome files
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                this.app.genomeBrowser.fileManager.openSpecificFileType('genome');
+                
+                return {
+                    success: true,
+                    message: 'File dialog opened for genome file selection',
+                    action: 'dialog_opened',
+                    fileType: 'genome'
+                };
+            }
+        } catch (error) {
+            console.error('❌ [ChatManager] Error loading genome file:', error);
+            return {
+                success: false,
+                error: error.message,
+                fileType: 'genome'
+            };
+        }
+    }
+
+    /**
+     * Load annotation file (GFF/BED) - Built-in function tool
+     * @param {Object} parameters - Tool parameters
+     * @param {string} parameters.filePath - Direct file path (optional)
+     * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
+     * @param {string} parameters.fileType - File type hint ('gff', 'bed', 'auto')
+     * @returns {Object} Load result
+     */
+    async loadAnnotationFile(parameters = {}) {
+        try {
+            const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
+            
+            console.log('📋 [ChatManager] Loading annotation file:', { filePath, showFileDialog, fileType });
+            
+            // If direct file path is provided and showFileDialog is false, load directly
+            if (filePath && !showFileDialog) {
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                // Validate file exists (basic check)
+                if (typeof require !== 'undefined') {
+                    const fs = require('fs');
+                    if (!fs.existsSync(filePath)) {
+                        throw new Error(`File not found: ${filePath}`);
+                    }
+                }
+                
+                // Load file directly
+                await this.app.genomeBrowser.fileManager.loadFile(filePath);
+                
+                return {
+                    success: true,
+                    message: `Successfully loaded annotation file: ${filePath}`,
+                    filePath: filePath,
+                    fileType: 'annotation'
+                };
+            } else {
+                // Show file dialog for annotation files
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                this.app.genomeBrowser.fileManager.openSpecificFileType('annotation');
+                
+                return {
+                    success: true,
+                    message: 'File dialog opened for annotation file selection',
+                    action: 'dialog_opened',
+                    fileType: 'annotation'
+                };
+            }
+        } catch (error) {
+            console.error('❌ [ChatManager] Error loading annotation file:', error);
+            return {
+                success: false,
+                error: error.message,
+                fileType: 'annotation'
+            };
+        }
+    }
+
+    /**
+     * Load variant file (VCF) - Built-in function tool
+     * @param {Object} parameters - Tool parameters
+     * @param {string} parameters.filePath - Direct file path (optional)
+     * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
+     * @returns {Object} Load result
+     */
+    async loadVariantFile(parameters = {}) {
+        try {
+            const { filePath, showFileDialog = false } = parameters;
+            
+            console.log('🧪 [ChatManager] Loading variant file:', { filePath, showFileDialog });
+            
+            // If direct file path is provided and showFileDialog is false, load directly
+            if (filePath && !showFileDialog) {
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                // Validate file exists (basic check)
+                if (typeof require !== 'undefined') {
+                    const fs = require('fs');
+                    if (!fs.existsSync(filePath)) {
+                        throw new Error(`File not found: ${filePath}`);
+                    }
+                }
+                
+                // Load file directly
+                await this.app.genomeBrowser.fileManager.loadFile(filePath);
+                
+                return {
+                    success: true,
+                    message: `Successfully loaded variant file: ${filePath}`,
+                    filePath: filePath,
+                    fileType: 'variant'
+                };
+            } else {
+                // Show file dialog for variant files
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                this.app.genomeBrowser.fileManager.openSpecificFileType('variant');
+                
+                return {
+                    success: true,
+                    message: 'File dialog opened for variant file selection',
+                    action: 'dialog_opened',
+                    fileType: 'variant'
+                };
+            }
+        } catch (error) {
+            console.error('❌ [ChatManager] Error loading variant file:', error);
+            return {
+                success: false,
+                error: error.message,
+                fileType: 'variant'
+            };
+        }
+    }
+
+    /**
+     * Load reads file (SAM/BAM) - Built-in function tool
+     * @param {Object} parameters - Tool parameters
+     * @param {string} parameters.filePath - Direct file path (optional)
+     * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
+     * @returns {Object} Load result
+     */
+    async loadReadsFile(parameters = {}) {
+        try {
+            const { filePath, showFileDialog = false } = parameters;
+            
+            console.log('📖 [ChatManager] Loading reads file:', { filePath, showFileDialog });
+            
+            // If direct file path is provided and showFileDialog is false, load directly
+            if (filePath && !showFileDialog) {
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                // Validate file exists (basic check)
+                if (typeof require !== 'undefined') {
+                    const fs = require('fs');
+                    if (!fs.existsSync(filePath)) {
+                        throw new Error(`File not found: ${filePath}`);
+                    }
+                }
+                
+                // Load file directly
+                await this.app.genomeBrowser.fileManager.loadFile(filePath);
+                
+                return {
+                    success: true,
+                    message: `Successfully loaded reads file: ${filePath}`,
+                    filePath: filePath,
+                    fileType: 'reads'
+                };
+            } else {
+                // Show file dialog for reads files
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                this.app.genomeBrowser.fileManager.openSpecificFileType('reads');
+                
+                return {
+                    success: true,
+                    message: 'File dialog opened for reads file selection',
+                    action: 'dialog_opened',
+                    fileType: 'reads'
+                };
+            }
+        } catch (error) {
+            console.error('❌ [ChatManager] Error loading reads file:', error);
+            return {
+                success: false,
+                error: error.message,
+                fileType: 'reads'
+            };
+        }
+    }
+
+    /**
+     * Load WIG tracks - Built-in function tool
+     * @param {Object} parameters - Tool parameters
+     * @param {string|string[]} parameters.filePaths - Direct file path(s) (optional)
+     * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
+     * @param {boolean} parameters.multiple - Allow multiple file selection (default: true)
+     * @returns {Object} Load result
+     */
+    async loadWigTracks(parameters = {}) {
+        try {
+            const { filePaths, showFileDialog = false, multiple = true } = parameters;
+            
+            console.log('📊 [ChatManager] Loading WIG tracks:', { filePaths, showFileDialog, multiple });
+            
+            // If direct file path(s) provided and showFileDialog is false, load directly
+            if (filePaths && !showFileDialog) {
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                const pathsArray = Array.isArray(filePaths) ? filePaths : [filePaths];
+                
+                // Validate files exist (basic check)
+                if (typeof require !== 'undefined') {
+                    const fs = require('fs');
+                    for (const filePath of pathsArray) {
+                        if (!fs.existsSync(filePath)) {
+                            throw new Error(`File not found: ${filePath}`);
+                        }
+                    }
+                }
+                
+                // Load multiple WIG files
+                if (pathsArray.length > 1) {
+                    await this.app.genomeBrowser.fileManager.loadMultipleWIGFiles(pathsArray);
+                } else {
+                    await this.app.genomeBrowser.fileManager.loadFile(pathsArray[0]);
+                }
+                
+                return {
+                    success: true,
+                    message: `Successfully loaded ${pathsArray.length} WIG track(s)`,
+                    filePaths: pathsArray,
+                    fileType: 'wig',
+                    count: pathsArray.length
+                };
+            } else {
+                // Show file dialog for WIG tracks
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                this.app.genomeBrowser.fileManager.openSpecificFileType('tracks');
+                
+                return {
+                    success: true,
+                    message: 'File dialog opened for WIG tracks selection',
+                    action: 'dialog_opened',
+                    fileType: 'wig',
+                    multiple: multiple
+                };
+            }
+        } catch (error) {
+            console.error('❌ [ChatManager] Error loading WIG tracks:', error);
+            return {
+                success: false,
+                error: error.message,
+                fileType: 'wig'
+            };
+        }
+    }
+
+    /**
+     * Load operon file - Built-in function tool
+     * @param {Object} parameters - Tool parameters
+     * @param {string} parameters.filePath - Direct file path (optional)
+     * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
+     * @param {string} parameters.format - File format hint ('json', 'csv', 'txt', 'auto')
+     * @returns {Object} Load result
+     */
+    async loadOperonFile(parameters = {}) {
+        try {
+            const { filePath, showFileDialog = false, format = 'auto' } = parameters;
+            
+            console.log('🔬 [ChatManager] Loading operon file:', { filePath, showFileDialog, format });
+            
+            // If direct file path is provided and showFileDialog is false, load directly
+            if (filePath && !showFileDialog) {
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                // Validate file exists (basic check)
+                if (typeof require !== 'undefined') {
+                    const fs = require('fs');
+                    if (!fs.existsSync(filePath)) {
+                        throw new Error(`File not found: ${filePath}`);
+                    }
+                }
+                
+                // Load operon file directly
+                await this.app.genomeBrowser.fileManager.loadOperonFile(filePath);
+                
+                return {
+                    success: true,
+                    message: `Successfully loaded operon file: ${filePath}`,
+                    filePath: filePath,
+                    fileType: 'operon',
+                    format: format
+                };
+            } else {
+                // Show file dialog for operon files
+                if (!this.app?.genomeBrowser?.fileManager) {
+                    throw new Error('FileManager not available');
+                }
+                
+                this.app.genomeBrowser.fileManager.openSpecificFileType('operon');
+                
+                return {
+                    success: true,
+                    message: 'File dialog opened for operon file selection',
+                    action: 'dialog_opened',
+                    fileType: 'operon'
+                };
+            }
+        } catch (error) {
+            console.error('❌ [ChatManager] Error loading operon file:', error);
+            return {
+                success: false,
+                error: error.message,
+                fileType: 'operon'
+            };
+        }
+    }
+
+    /**
      * Get current context for Dynamic Tools Registry
      */
     getCurrentContextForDynamicTools() {
@@ -4715,6 +5096,14 @@ ${coreTools}
      */
     async executeLocalTool(toolName, parameters) {
         const localTools = {
+            // File Loading tools
+            'load_genome_file': () => this.loadGenomeFile(parameters),
+            'load_annotation_file': () => this.loadAnnotationFile(parameters),
+            'load_variant_file': () => this.loadVariantFile(parameters),
+            'load_reads_file': () => this.loadReadsFile(parameters),
+            'load_wig_tracks': () => this.loadWigTracks(parameters),
+            'load_operon_file': () => this.loadOperonFile(parameters),
+            
             // Navigation and state tools
             'navigate_to_position': () => this.navigateToPosition(parameters),
             'open_new_tab': () => this.openNewTab(parameters),
@@ -6555,63 +6944,6 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.executeActionFunction('undoLastAction', parameters);
                     break;
                     
-                // File Operations tools
-                case 'load_genome_file':
-                    result = await this.executeFileOperationTool('load_genome_file', parameters);
-                    break;
-                    
-                case 'load_annotation_file':
-                    result = await this.executeFileOperationTool('load_annotation_file', parameters);
-                    break;
-                    
-                case 'load_variant_file':
-                    result = await this.executeFileOperationTool('load_variant_file', parameters);
-                    break;
-                    
-                case 'load_reads_file':
-                    result = await this.executeFileOperationTool('load_reads_file', parameters);
-                    break;
-                    
-                case 'load_operon_file':
-                    result = await this.executeFileOperationTool('load_operon_file', parameters);
-                    break;
-                    
-                case 'load_wig_tracks':
-                    result = await this.executeFileOperationTool('load_wig_tracks', parameters);
-                    break;
-                    
-                case 'export_fasta_sequence':
-                    result = await this.executeFileOperationTool('export_fasta_sequence', parameters);
-                    break;
-                    
-                case 'export_genbank_format':
-                    result = await this.executeFileOperationTool('export_genbank_format', parameters);
-                    break;
-                    
-                case 'export_gff_annotations':
-                    result = await this.executeFileOperationTool('export_gff_annotations', parameters);
-                    break;
-                    
-                case 'export_bed_format':
-                    result = await this.executeFileOperationTool('export_bed_format', parameters);
-                    break;
-                    
-                case 'export_cds_fasta':
-                    result = await this.executeFileOperationTool('export_cds_fasta', parameters);
-                    break;
-                    
-                case 'export_protein_fasta':
-                    result = await this.executeFileOperationTool('export_protein_fasta', parameters);
-                    break;
-                    
-                case 'export_current_view_fasta':
-                    result = await this.executeFileOperationTool('export_current_view_fasta', parameters);
-                    break;
-                    
-                case 'configure_export_settings':
-                    result = await this.executeFileOperationTool('configure_export_settings', parameters);
-                    break;
-                    
                 // Plugin system functions
                 default:
                     // Try to execute as plugin function
@@ -6886,204 +7218,6 @@ ${this.getPluginSystemInfo()}`;
             console.error(`❌ [ChatManager] Action function ${functionName} failed:`, error);
             throw error;
         }
-    }
-
-    /**
-     * Execute file operations tools
-     */
-    async executeFileOperationTool(toolName, parameters) {
-        console.log(`🗂️ [ChatManager] Executing file operation tool: ${toolName}`, parameters);
-        
-        try {
-            // File operations are client-side operations that interact with the browser
-            // and the file system through the Genome AI Studio interface
-            
-            const genomeBrowser = window.genomeBrowser;
-            if (!genomeBrowser) {
-                throw new Error('Genome browser not available for file operations');
-            }
-            
-            // Handle different file operation tools
-            switch (toolName) {
-                case 'load_genome_file':
-                    return await this.executeLoadGenomeFile(parameters);
-                    
-                case 'load_annotation_file':
-                    return await this.executeLoadAnnotationFile(parameters);
-                    
-                case 'load_variant_file':
-                    return await this.executeLoadVariantFile(parameters);
-                    
-                case 'load_reads_file':
-                    return await this.executeLoadReadsFile(parameters);
-                    
-                case 'load_operon_file':
-                    return await this.executeLoadOperonFile(parameters);
-                    
-                case 'load_wig_tracks':
-                    return await this.executeLoadWigTracks(parameters);
-                    
-                case 'export_fasta_sequence':
-                    return await this.executeExportFastaSequence(parameters);
-                    
-                case 'export_genbank_format':
-                    return await this.executeExportGenbankFormat(parameters);
-                    
-                case 'export_gff_annotations':
-                    return await this.executeExportGffAnnotations(parameters);
-                    
-                case 'export_bed_format':
-                    return await this.executeExportBedFormat(parameters);
-                    
-                case 'export_cds_fasta':
-                    return await this.executeExportCdsFasta(parameters);
-                    
-                case 'export_protein_fasta':
-                    return await this.executeExportProteinFasta(parameters);
-                    
-                case 'export_current_view_fasta':
-                    return await this.executeExportCurrentViewFasta(parameters);
-                    
-                case 'configure_export_settings':
-                    return await this.executeConfigureExportSettings(parameters);
-                    
-                default:
-                    throw new Error(`Unknown file operation tool: ${toolName}`);
-            }
-            
-        } catch (error) {
-            console.error(`❌ [ChatManager] File operation tool ${toolName} failed:`, error);
-            throw error;
-        }
-    }
-    
-    /**
-     * Execute load genome file operation
-     */
-    async executeLoadGenomeFile(parameters) {
-        console.log(`🧬 [ChatManager] executeLoadGenomeFile called with parameters:`, parameters);
-        
-        const { filePath, fileFormat = 'auto', replaceCurrent = true, validateFile = true } = parameters;
-        
-        if (!filePath) {
-            console.error(`❌ [ChatManager] Missing filePath parameter`);
-            throw new Error('filePath parameter is required for load_genome_file');
-        }
-        
-        try {
-            console.log(`📁 [ChatManager] Attempting to load file: ${filePath}`);
-            
-            const genomeBrowser = window.genomeBrowser;
-            if (!genomeBrowser) {
-                console.error(`❌ [ChatManager] window.genomeBrowser not available`);
-                throw new Error('Genome browser not available');
-            }
-            
-            if (!genomeBrowser.fileManager) {
-                console.error(`❌ [ChatManager] genomeBrowser.fileManager not available`);
-                throw new Error('FileManager not available in genome browser');
-            }
-            
-            console.log(`✅ [ChatManager] genomeBrowser and fileManager available`);
-            
-            // Use IPC-based file validation like FileManager does
-            console.log(`🔍 [ChatManager] Validating file using IPC: ${filePath}`);
-            const { ipcRenderer } = require('electron');
-            const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
-            
-            if (!fileInfo.success) {
-                console.error(`❌ [ChatManager] File validation failed:`, fileInfo.error);
-                throw new Error(`File not found or not accessible: ${fileInfo.error}`);
-            }
-            
-            console.log(`✅ [ChatManager] File validation successful:`, fileInfo.info);
-            
-            // Call the FileManager's loadFile method
-            console.log(`📋 [ChatManager] Calling fileManager.loadFile with path: ${filePath}`);
-            await genomeBrowser.fileManager.loadFile(filePath);
-            
-            // Get information about the loaded file
-            const currentFile = genomeBrowser.fileManager.currentFile;
-            console.log(`📊 [ChatManager] Current file after loading:`, currentFile);
-            
-            const result = {
-                success: true,
-                tool: 'load_genome_file',
-                filePath: filePath,
-                fileFormat: fileFormat,
-                replaceCurrent: replaceCurrent,
-                fileName: currentFile?.info?.name || fileInfo.info?.name || 'Unknown',
-                fileSize: currentFile?.info?.size || fileInfo.info?.size || 0,
-                fileExtension: currentFile?.info?.extension || fileInfo.info?.extension || 'Unknown',
-                loadTime: Date.now(),
-                message: `Genome file loaded successfully from ${filePath}`,
-                timestamp: new Date().toISOString()
-            };
-            
-            console.log(`✅ [ChatManager] Genome file loaded successfully:`, result);
-            return result;
-            
-        } catch (error) {
-            console.error(`❌ [ChatManager] executeLoadGenomeFile failed with error:`, error);
-            console.error(`❌ [ChatManager] Error stack:`, error.stack);
-            throw new Error(`Failed to load genome file: ${error.message}`);
-        }
-    }
-    
-    /**
-     * Stub implementations for other file operations
-     * These can be implemented as needed
-     */
-    async executeLoadAnnotationFile(parameters) {
-        throw new Error('load_annotation_file not yet implemented');
-    }
-    
-    async executeLoadVariantFile(parameters) {
-        throw new Error('load_variant_file not yet implemented');
-    }
-    
-    async executeLoadReadsFile(parameters) {
-        throw new Error('load_reads_file not yet implemented');
-    }
-    
-    async executeLoadOperonFile(parameters) {
-        throw new Error('load_operon_file not yet implemented');
-    }
-    
-    async executeLoadWigTracks(parameters) {
-        throw new Error('load_wig_tracks not yet implemented');
-    }
-    
-    async executeExportFastaSequence(parameters) {
-        throw new Error('export_fasta_sequence not yet implemented');
-    }
-    
-    async executeExportGenbankFormat(parameters) {
-        throw new Error('export_genbank_format not yet implemented');
-    }
-    
-    async executeExportGffAnnotations(parameters) {
-        throw new Error('export_gff_annotations not yet implemented');
-    }
-    
-    async executeExportBedFormat(parameters) {
-        throw new Error('export_bed_format not yet implemented');
-    }
-    
-    async executeExportCdsFasta(parameters) {
-        throw new Error('export_cds_fasta not yet implemented');
-    }
-    
-    async executeExportProteinFasta(parameters) {
-        throw new Error('export_protein_fasta not yet implemented');
-    }
-    
-    async executeExportCurrentViewFasta(parameters) {
-        throw new Error('export_current_view_fasta not yet implemented');
-    }
-    
-    async executeConfigureExportSettings(parameters) {
-        throw new Error('configure_export_settings not yet implemented');
     }
 
     getCurrentContext() {

@@ -11,7 +11,6 @@ const Evo2Tools = require('./evo2/Evo2Tools');
 const DataTools = require('./data/DataTools');
 const PathwayTools = require('./pathway/PathwayTools');
 const ActionTools = require('./action/ActionTools');
-const FileOperationsTools = require('./file_operations/FileOperationsTools');
 
 class ToolsIntegrator {
     constructor(server) {
@@ -26,7 +25,6 @@ class ToolsIntegrator {
         this.dataTools = new DataTools(server);
         this.pathwayTools = new PathwayTools(server);
         this.actionTools = new ActionTools(server);
-        this.fileOperationsTools = new FileOperationsTools(server);
         
         // Combine all tools
         this.allTools = this.combineAllTools();
@@ -41,8 +39,7 @@ class ToolsIntegrator {
             ...this.evo2Tools.getTools(),
             ...this.dataTools.getTools(),
             ...this.pathwayTools.getTools(),
-            ...this.actionTools.getTools(),
-            ...this.fileOperationsTools.getTools()
+            ...this.actionTools.getTools()
         };
     }
 
@@ -216,11 +213,6 @@ class ToolsIntegrator {
                 }
             }
             
-            // File Operations tools
-            if (this.fileOperationsTools.getTools()[toolName]) {
-                return await this.fileOperationsTools.executeTool(toolName, parameters, clientId);
-            }
-            
             // Special client-side tools that need browser execution
             if (toolName === 'search_alphafold_by_gene') {
                 return await this.executeClientSideTool(toolName, parameters, clientId);
@@ -271,11 +263,6 @@ class ToolsIntegrator {
                 name: 'Pathway & Search',
                 description: 'Tools for metabolic pathway analysis and sequence search',
                 tools: Object.keys(this.pathwayTools.getTools())
-            },
-            file_operations: {
-                name: 'File Operations',
-                description: 'Tools for loading and exporting various genomic file formats',
-                tools: Object.keys(this.fileOperationsTools.getTools())
             }
         };
     }

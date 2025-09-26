@@ -264,8 +264,7 @@ class ToolsRegistryManager {
             editing: ['edit', 'modify', 'change', 'replace', 'insert', 'delete'],
             pathway: ['pathway', 'metabolic', 'kegg', 'reaction', 'enzyme'],
             blast: ['blast', 'similarity', 'align', 'match', 'homolog'],
-            plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace'],
-            file_operations: ['load', 'export', 'save', 'import', 'file', 'open', 'read', 'write', 'download', 'upload']
+            plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace']
         };
 
         const detectedIntents = [];
@@ -390,8 +389,7 @@ class ToolsRegistryManager {
             editing: ['edit', 'modify', 'change', 'replace'],
             pathway: ['pathway', 'metabolic', 'kegg'],
             blast: ['blast', 'similarity', 'align'],
-            plugin: ['plugin', 'install', 'enable'],
-            file_operations: ['load', 'export', 'save', 'import', 'file', 'open', 'read', 'write', 'download', 'upload']
+            plugin: ['plugin', 'install', 'enable']
         };
 
         return intentKeywordMap[intent] || [];
