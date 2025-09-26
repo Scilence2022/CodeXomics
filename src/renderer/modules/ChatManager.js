@@ -658,35 +658,69 @@ class ChatManager {
      * @returns {Object} Load result
      */
     async loadGenomeFile(parameters = {}) {
+        console.log('🧬 [ChatManager] ==> loadGenomeFile ENTRY POINT <==');
+        console.log('🧬 [ChatManager] Parameters received:', JSON.stringify(parameters, null, 2));
+        
         try {
             const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
             
-            console.log('🧬 [ChatManager] Loading genome file:', { filePath, showFileDialog, fileType });
+            console.log('🧬 [ChatManager] Parsed parameters:', { filePath, showFileDialog, fileType });
+            console.log('🧬 [ChatManager] App structure check:', {
+                hasApp: !!this.app,
+                hasGenomeBrowser: !!this.app?.genomeBrowser,
+                hasFileManager: !!this.app?.genomeBrowser?.fileManager
+            });
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
+                console.log('🧬 [ChatManager] Direct file loading mode');
+                
                 if (!this.app?.genomeBrowser?.fileManager) {
-                    throw new Error('FileManager not available');
+                    const error = 'FileManager not available - app structure missing';
+                    console.error('❌ [ChatManager]', error);
+                    throw new Error(error);
                 }
+                
+                console.log('🧬 [ChatManager] FileManager available, checking file existence...');
                 
                 // Validate file exists (basic check)
                 if (typeof require !== 'undefined') {
-                    const fs = require('fs');
-                    if (!fs.existsSync(filePath)) {
-                        throw new Error(`File not found: ${filePath}`);
+                    try {
+                        const fs = require('fs');
+                        if (!fs.existsSync(filePath)) {
+                            throw new Error(`File not found: ${filePath}`);
+                        }
+                        console.log('✅ [ChatManager] File exists:', filePath);
+                    } catch (fsError) {
+                        console.error('❌ [ChatManager] File system error:', fsError);
+                        throw fsError;
                     }
+                } else {
+                    console.log('⚠️ [ChatManager] require() not available - skipping file existence check');
                 }
+                
+                console.log('🧬 [ChatManager] Calling fileManager.loadFile...');
                 
                 // Load file directly
                 await this.app.genomeBrowser.fileManager.loadFile(filePath);
                 
-                return {
+                console.log('✅ [ChatManager] fileManager.loadFile completed successfully');
+                
+                const result = {
                     success: true,
                     message: `Successfully loaded genome file: ${filePath}`,
                     filePath: filePath,
-                    fileType: 'genome'
+                    fileType: 'genome',
+                    tool: 'load_genome_file',
+                    timestamp: new Date().toISOString()
                 };
+                
+                console.log('🧬 [ChatManager] loadGenomeFile result:', result);
+                return result;
+                
             } else {
+                console.log('🧬 [ChatManager] File dialog mode');
+                
                 // Show file dialog for genome files
                 if (!this.app?.genomeBrowser?.fileManager) {
                     throw new Error('FileManager not available');
@@ -698,16 +732,26 @@ class ChatManager {
                     success: true,
                     message: 'File dialog opened for genome file selection',
                     action: 'dialog_opened',
-                    fileType: 'genome'
+                    fileType: 'genome',
+                    tool: 'load_genome_file',
+                    timestamp: new Date().toISOString()
                 };
             }
         } catch (error) {
-            console.error('❌ [ChatManager] Error loading genome file:', error);
-            return {
+            console.error('❌ [ChatManager] CRITICAL ERROR in loadGenomeFile:', error);
+            console.error('❌ [ChatManager] Error stack:', error.stack);
+            
+            const errorResult = {
                 success: false,
                 error: error.message,
-                fileType: 'genome'
+                fileType: 'genome',
+                tool: 'load_genome_file',
+                timestamp: new Date().toISOString(),
+                stack: error.stack
             };
+            
+            console.log('🧬 [ChatManager] Error result:', errorResult);
+            return errorResult;
         }
     }
 
@@ -6604,6 +6648,37 @@ ${this.getPluginSystemInfo()}`;
                     
                 case 'open_protein_viewer':
                     result = await this.openProteinViewer(parameters);
+                    break;
+                    
+                // File Loading tools (Built-in) - CRITICAL FIX FOR TOOL EXECUTION
+                case 'load_genome_file':
+                    console.log('🧬 [ChatManager] FIXED: Executing load_genome_file via executeToolByName');
+                    result = await this.loadGenomeFile(parameters);
+                    break;
+                    
+                case 'load_annotation_file':
+                    console.log('📋 [ChatManager] FIXED: Executing load_annotation_file via executeToolByName');
+                    result = await this.loadAnnotationFile(parameters);
+                    break;
+                    
+                case 'load_variant_file':
+                    console.log('🧪 [ChatManager] FIXED: Executing load_variant_file via executeToolByName');
+                    result = await this.loadVariantFile(parameters);
+                    break;
+                    
+                case 'load_reads_file':
+                    console.log('📖 [ChatManager] FIXED: Executing load_reads_file via executeToolByName');
+                    result = await this.loadReadsFile(parameters);
+                    break;
+                    
+                case 'load_wig_tracks':
+                    console.log('📈 [ChatManager] FIXED: Executing load_wig_tracks via executeToolByName');
+                    result = await this.loadWigTracks(parameters);
+                    break;
+                    
+                case 'load_operon_file':
+                    console.log('🔬 [ChatManager] FIXED: Executing load_operon_file via executeToolByName');
+                    result = await this.loadOperonFile(parameters);
                     break;
                     
                 // MicrobeGenomicsFunctions Integration
