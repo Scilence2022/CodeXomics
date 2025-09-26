@@ -50,7 +50,14 @@ class FunctionCallsOrganizer {
                     'search_pattern',
                     'search_motif',
                     'search_sequence_motif',
-                    'get_coding_sequence'
+                    'get_coding_sequence',
+                    // File loading tools - CRITICAL FIX
+                    'load_genome_file',
+                    'load_annotation_file',
+                    'load_variant_file',
+                    'load_reads_file',
+                    'load_wig_tracks',
+                    'load_operon_file'
                 ]
             },
             
