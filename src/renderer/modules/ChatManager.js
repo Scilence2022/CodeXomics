@@ -5462,6 +5462,10 @@ Data Management:
                 'search_protein_by_gene', 'open_protein_viewer', 'fetch_protein_structure',
                 'search_alphafold_by_gene', 'fetch_alphafold_structure', 'open_alphafold_viewer'
             ],
+            'DATABASE INTEGRATION': [
+                'search_uniprot_database', 'advanced_uniprot_search', 'get_uniprot_entry',
+                'analyze_interpro_domains', 'search_interpro_entry', 'get_interpro_entry_details'
+            ],
             'BLAST & SIMILARITY': [
                 'blast_search', 'advanced_blast_search', 'batch_blast_search',
                 'blast_sequence_from_region'
@@ -5917,6 +5921,7 @@ CHROMOSOME NAMES:
 
 COMMON TASK PATTERNS:
 • Gene Analysis: search_gene_by_name → get_coding_sequence → analyze features
+• **Domain Analysis: analyze_interpro_domains → protein domain identification (use geneName parameter for gene names)**
 • AlphaFold AI Predictions: search_alphafold_by_gene → open_alphafold_viewer
 • PDB Experimental Structures: search_protein_by_gene → open_protein_viewer
 • Sequence Analysis: get_sequence → compute_gc/translate_dna/find_orfs
@@ -5927,6 +5932,15 @@ COMMON TASK PATTERNS:
 • Gene Deletion: search_gene_by_name → deleteSequence → execute_actions
 • Sequence Insertion: insertSequence → execute_actions
 • Copy/Paste: copy_sequence → paste_sequence → execute_actions
+
+===CRITICAL DOMAIN ANALYSIS INSTRUCTIONS===
+For protein domain analysis requests:
+• **"domain analysis of [gene]" → use analyze_interpro_domains with geneName parameter**
+• **"analyze domains in [gene]" → use analyze_interpro_domains with geneName parameter**
+• **"find domains for [gene]" → use analyze_interpro_domains with geneName parameter**
+• Example: {"tool_name": "analyze_interpro_domains", "parameters": {"geneName": "lysC"}}
+• For sequence input: {"tool_name": "analyze_interpro_domains", "parameters": {"sequence": "PROTEIN_SEQUENCE"}}
+• For UniProt ID: {"tool_name": "analyze_interpro_domains", "parameters": {"uniprot_id": "P12345"}}
 
 SEARCH FUNCTIONS GUIDE:
 - Gene names/products: search_gene_by_name, search_features
