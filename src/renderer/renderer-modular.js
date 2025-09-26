@@ -1038,28 +1038,6 @@ class GenomeBrowser {
                         
                         <div class="debug-tool-card">
                             <div class="debug-tool-icon">
-                                <i class="fas fa-search"></i>
-                            </div>
-                            <h3>BAM Query Debugging</h3>
-                            <p>Debug BAM file queries and coordinate system issues</p>
-                            <button class="btn btn-primary" onclick="window.genomeBrowser.openDebugTool('bam-query')">
-                                Open Tool
-                            </button>
-                        </div>
-                        
-                        <div class="debug-tool-card">
-                            <div class="debug-tool-icon">
-                                <i class="fas fa-cog"></i>
-                            </div>
-                            <h3>BAM Coordinate Fix</h3>
-                            <p>Validate BAM coordinate conversion fixes</p>
-                            <button class="btn btn-primary" onclick="window.genomeBrowser.openDebugTool('bam-coordinate-fix')">
-                                Open Tool
-                            </button>
-                        </div>
-                        
-                        <div class="debug-tool-card">
-                            <div class="debug-tool-icon">
                                 <i class="fas fa-chart-line"></i>
                             </div>
                             <h3>Performance Monitor</h3>
@@ -1094,9 +1072,10 @@ class GenomeBrowser {
             
             .debug-tools-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
                 gap: 20px;
                 margin-top: 20px;
+                justify-content: center;
             }
             
             .debug-tool-card {
@@ -1189,96 +1168,9 @@ class GenomeBrowser {
             return;
         }
 
-        // For file-based tools, use IPC to open them
-        let fileName;
-        switch (toolType) {
-            case 'bam-query':
-                fileName = 'test-bam-query-debugging.html';
-                break;
-            case 'bam-coordinate-fix':
-                fileName = 'test-bam-coordinate-fix-validation.html';
-                break;
-            default:
-                console.error('Unknown debug tool:', toolType);
-                return;
-        }
-
-        try {
-            // Use IPC to open debug tool in new window
-            if (window.electronAPI && window.electronAPI.openDebugTool) {
-                await window.electronAPI.openDebugTool(fileName);
-            } else {
-                // Fallback: try direct file access
-                const toolPath = `../../${fileName}`;
-                const debugWindow = window.open(toolPath, 'debugTool', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-                if (debugWindow) {
-                    debugWindow.focus();
-                } else {
-                    // Final fallback: open in iframe modal
-                    this.openDebugToolInModal(toolPath, toolType);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to open debug tool:', error);
-            // Show error message to user
-            alert(`Failed to open debug tool: ${error.message}\n\nPlease check the console for more details.`);
-        }
-    }
-
-    openDebugToolInModal(toolPath, toolType) {
-        // Create iframe modal for debug tool
-        let modal = document.getElementById('debugToolIframeModal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'debugToolIframeModal';
-            modal.className = 'modal';
-            modal.innerHTML = `
-                <div class="modal-content debug-tool-iframe-modal">
-                    <div class="modal-header">
-                        <h2><i class="fas fa-bug"></i> Debug Tool</h2>
-                        <button class="modal-close">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <iframe id="debugToolIframe" style="width: 100%; height: 600px; border: none;"></iframe>
-                    </div>
-                </div>
-            `;
-
-            // Add styles
-            const style = document.createElement('style');
-            style.textContent = `
-                .debug-tool-iframe-modal {
-                    max-width: 95%;
-                    width: 1200px;
-                    max-height: 90%;
-                }
-                
-                .debug-tool-iframe-modal .modal-body {
-                    padding: 0;
-                }
-            `;
-            document.head.appendChild(style);
-
-            // Add event listeners
-            modal.querySelector('.modal-close').addEventListener('click', () => {
-                modal.classList.remove('show');
-            });
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('show');
-                }
-            });
-
-            document.body.appendChild(modal);
-        }
-
-        // Load the debug tool
-        const iframe = modal.querySelector('#debugToolIframe');
-        iframe.src = toolPath;
-        
-        // Show modal
-        modal.classList.add('show');
+        // Unknown tool type
+        console.error('Unknown debug tool:', toolType);
+        alert('Unknown debug tool: ' + toolType);
     }
 
     openPerformanceMonitor() {
