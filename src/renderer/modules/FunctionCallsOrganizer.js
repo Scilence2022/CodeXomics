@@ -367,7 +367,7 @@ class FunctionCallsOrganizer {
                 priority: priority,
                 phase: this.getPhaseName(priority),
                 tools: group,
-                parallelizable: this.isParallelizable(priority),
+                parallelizable: this.isParallelizable(priority, group),
                 estimatedTime: this.estimatePhaseTime(priority, group.length)
             });
         }
@@ -392,9 +392,23 @@ class FunctionCallsOrganizer {
     /**
      * 判断是否可以并行执行
      */
-    isParallelizable(priority) {
+    isParallelizable(priority, tools = []) {
         // 浏览器行为通常需要顺序执行
         if (priority === 1) return false;
+        
+        // File loading tools should be executed sequentially for proper dependency order
+        const fileLoadingTools = [
+            'load_genome_file', 'load_annotation_file', 'load_variant_file',
+            'load_reads_file', 'load_wig_tracks', 'load_operon_file'
+        ];
+        
+        // Check if any of the tools are file loading tools
+        const hasFileLoadingTools = tools.some(toolName => fileLoadingTools.includes(toolName));
+        if (hasFileLoadingTools) {
+            console.log('🔄 File loading tools detected - forcing sequential execution');
+            return false;
+        }
+        
         // 其他类型可以并行执行
         return true;
     }

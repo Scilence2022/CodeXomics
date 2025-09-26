@@ -249,10 +249,27 @@ ${sampleUsages}
 
 ## ⚡ Response Format
 
-When using tools, respond with ONLY a JSON object:
+**For Single Tool Calls:**
+Respond with ONLY a JSON object:
 ${'```'}json
 {"tool_name": "tool_name", "parameters": {"param1": "value1"}}
 ${'```'}
+
+**For Multiple Sequential Tool Calls:**
+When the user requests multiple operations (using words like "Then", "After", "Next", or lists multiple tasks), respond with multiple JSON objects, each in its own code block:
+${'```'}json
+{"tool_name": "first_tool", "parameters": {"param1": "value1"}}
+${'```'}
+
+${'```'}json
+{"tool_name": "second_tool", "parameters": {"param1": "value1"}}
+${'```'}
+
+${'```'}json
+{"tool_name": "third_tool", "parameters": {"param1": "value1"}}
+${'```'}
+
+**CRITICAL**: When users request multiple file loading operations or use sequential language ("Then", "After", "Next"), you MUST generate ALL requested tool calls, not just the first one.
 
 ## 🔄 Tool Categories & Relationships
 
