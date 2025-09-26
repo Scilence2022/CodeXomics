@@ -7306,43 +7306,92 @@ ${this.getPluginSystemInfo()}`;
                 cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
             }
             
-            // Remove code block markers
-            cleanResponse = cleanResponse.replace(/```json\s*|\s*```/gi, '').trim();
-            cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '').trim();
+            // Remove code block markers but preserve structure for multiple JSON objects
+            cleanResponse = cleanResponse.replace(/```json\s*/gi, '').replace(/\s*```/g, '');
             
-            // Try to parse as array first
+            // Clean up residual 'json' text that might remain between objects
+            // Handle cases like: }json{ and standalone 'json' strings
+            cleanResponse = cleanResponse.replace(/}\s*json\s*{/g, '}\n{');
+            cleanResponse = cleanResponse.replace(/^json\s*/, '').replace(/\s*json\s*$/, '');
+            cleanResponse = cleanResponse.replace(/}\s*json\s*/g, '}\n');
+            cleanResponse = cleanResponse.replace(/\s*json\s*{/g, '\n{');
+            
+            console.log('[parseMultipleToolCalls] Original response:', response);
+            console.log('[parseMultipleToolCalls] Cleaned response:', cleanResponse);
+            
+            // Try to parse as array first (if properly formatted)
             if (cleanResponse.startsWith('[')) {
                 try {
                     const parsedArray = JSON.parse(cleanResponse);
                     if (Array.isArray(parsedArray)) {
-                        return parsedArray.filter(item => 
+                        const validTools = parsedArray.filter(item => 
                             item && typeof item === 'object' && item.tool_name && item.parameters !== undefined
                         );
+                        console.log('[parseMultipleToolCalls] Parsed as array:', validTools.length, 'tools');
+                        return validTools;
                     }
                 } catch (e) {
+                    console.log('[parseMultipleToolCalls] Array parse failed:', e.message);
                     // Continue to other parsing methods
                 }
             }
             
-            // Find all JSON objects in the response
-            const jsonMatches = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/g);
-            if (jsonMatches) {
-                for (const match of jsonMatches) {
-                    try {
-                        const parsed = JSON.parse(match);
-                        if (parsed.tool_name && parsed.parameters !== undefined) {
-                            toolCalls.push(parsed);
-                        }
-                    } catch (e) {
-                        // Skip invalid JSON
+            // Find all JSON objects in the response using flexible regex
+            // This handles both simple and nested JSON objects
+            const jsonMatches = [];
+            let index = 0;
+            
+            while (index < cleanResponse.length) {
+                const start = cleanResponse.indexOf('{', index);
+                if (start === -1) break;
+                
+                let braceCount = 0;
+                let end = start;
+                
+                // Find matching closing brace
+                for (let i = start; i < cleanResponse.length; i++) {
+                    if (cleanResponse[i] === '{') braceCount++;
+                    if (cleanResponse[i] === '}') braceCount--;
+                    if (braceCount === 0) {
+                        end = i;
+                        break;
                     }
+                }
+                
+                if (braceCount === 0) {
+                    const jsonCandidate = cleanResponse.substring(start, end + 1);
+                    jsonMatches.push(jsonCandidate);
+                    index = end + 1;
+                } else {
+                    // Unmatched braces, move to next position
+                    index = start + 1;
+                }
+            }
+            
+            console.log('[parseMultipleToolCalls] Found', jsonMatches.length, 'JSON candidates');
+            
+            // Parse each JSON object and validate
+            for (let i = 0; i < jsonMatches.length; i++) {
+                const match = jsonMatches[i];
+                try {
+                    const parsed = JSON.parse(match);
+                    if (parsed.tool_name && parsed.parameters !== undefined) {
+                        toolCalls.push(parsed);
+                        console.log('[parseMultipleToolCalls] Valid tool call', i + 1, ':', parsed.tool_name);
+                    } else {
+                        console.log('[parseMultipleToolCalls] Invalid tool structure', i + 1, ':', parsed);
+                    }
+                } catch (e) {
+                    console.log('[parseMultipleToolCalls] JSON parse failed', i + 1, ':', e.message);
+                    // Skip invalid JSON
                 }
             }
             
         } catch (error) {
-            console.warn('Error parsing multiple tool calls:', error);
+            console.warn('[parseMultipleToolCalls] Error parsing multiple tool calls:', error);
         }
         
+        console.log('[parseMultipleToolCalls] Final result:', toolCalls.length, 'valid tool calls');
         return toolCalls;
     }
 
