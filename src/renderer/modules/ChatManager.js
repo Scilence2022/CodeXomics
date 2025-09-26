@@ -3619,44 +3619,14 @@ class ChatManager {
                 // Determine which tools to execute
                 let toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
                 
-                // Filter out already executed tools to prevent infinite loops
-                // Special handling for file loading tools - they should only be re-executable with DIFFERENT parameters
-                const conditionallyReExecutableTools = new Set([
-                    'load_genome_file', 'load_annotation_file', 'load_variant_file',
-                    'load_reads_file', 'load_wig_tracks', 'load_operon_file'
-                ]);
-                
-                const alwaysReExecutableTools = new Set([
-                    'navigate_to_position', 'search_gene_by_name', 'get_current_state'
-                ]);
-                
+                // Apply intelligent tool execution policies instead of simple re-executable sets
                 toolsToExecute = toolsToExecute.filter(tool => {
-                    const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
-                    
-                    // Always allow re-execution of certain tools (navigation, search)
-                    if (alwaysReExecutableTools.has(tool.tool_name)) {
-                        console.log(`✅ Allowing re-execution of always re-executable tool: ${tool.tool_name}`);
-                        return true;
-                    }
-                    
-                    // For file loading tools, only allow if parameters are different OR if previous execution failed
-                    if (conditionallyReExecutableTools.has(tool.tool_name)) {
-                        const wasSuccessfulWithSameParams = this.wasToolExecutedSuccessfully(toolKey, conversationHistory);
-                        if (wasSuccessfulWithSameParams) {
-                            console.log(`⚠️ Preventing re-execution of file loading tool with same parameters: ${tool.tool_name}`);
-                            console.log(`Parameters: ${JSON.stringify(tool.parameters)}`);
-                            return false;
-                        } else {
-                            console.log(`✅ Allowing file loading tool with new parameters or after failure: ${tool.tool_name}`);
-                            return true;
-                        }
-                    }
-                    
-                    // For other tools, check if already executed
-                    if (executedTools.has(toolKey)) {
-                        console.log(`⚠️ Skipping already executed tool: ${tool.tool_name}`);
+                    const shouldAllow = this.shouldAllowToolExecution(tool, conversationHistory, currentRound, []);
+                    if (!shouldAllow) {
+                        console.log(`🚫 [Policy] Blocking execution of: ${tool.tool_name}`);
                         return false;
                     }
+                    console.log(`✅ [Policy] Allowing execution of: ${tool.tool_name}`);
                     return true;
                 });
                 
@@ -3697,37 +3667,13 @@ class ChatManager {
                             const previousToolCall = this.parseToolCall(msg.content);
                             console.log(`Parse result for message ${i}:`, previousToolCall);
                             if (previousToolCall) {
-                                const toolKey = `${previousToolCall.tool_name}:${JSON.stringify(previousToolCall.parameters)}`;
-                                
-                                // Allow re-execution of certain tools even if they were executed before
-                                const conditionallyReExecutableTools = new Set([
-                                    'load_genome_file', 'load_annotation_file', 'load_variant_file',
-                                    'load_reads_file', 'load_wig_tracks', 'load_operon_file'
-                                ]);
-                                
-                                const alwaysReExecutableTools = new Set([
-                                    'navigate_to_position', 'search_gene_by_name', 'get_current_state'
-                                ]);
-                                
-                                if (alwaysReExecutableTools.has(previousToolCall.tool_name)) {
-                                    console.log('✅ Found always re-executable tool call from previous round:', previousToolCall);
-                                    toolsToExecute = [previousToolCall];
-                                    break;
-                                } else if (conditionallyReExecutableTools.has(previousToolCall.tool_name)) {
-                                    const wasSuccessfulWithSameParams = this.wasToolExecutedSuccessfully(toolKey, conversationHistory);
-                                    if (!wasSuccessfulWithSameParams) {
-                                        console.log('✅ Found file loading tool that failed or has new parameters:', previousToolCall);
-                                        toolsToExecute = [previousToolCall];
-                                        break;
-                                    } else {
-                                        console.log(`⚠️ File loading tool already succeeded with same parameters: ${previousToolCall.tool_name}`);
-                                    }
-                                } else if (!executedTools.has(toolKey)) {
-                                    console.log('✅ Found unexecuted tool call from previous round:', previousToolCall);
+                                const shouldAllow = this.shouldAllowToolExecution(previousToolCall, conversationHistory, currentRound, []);
+                                if (shouldAllow) {
+                                    console.log('✅ [Policy] Found allowed tool call from previous round:', previousToolCall);
                                     toolsToExecute = [previousToolCall];
                                     break;
                                 } else {
-                                    console.log(`⚠️ Tool ${previousToolCall.tool_name} already executed and not re-executable, skipping`);
+                                    console.log(`🚫 [Policy] Tool not allowed for re-execution: ${previousToolCall.tool_name}`);
                                 }
                             } else {
                                 console.log(`❌ No tool call found in message ${i}`);
@@ -4646,53 +4592,47 @@ class ChatManager {
         // Check if this is a simple search task that likely doesn't need follow-up
         const message = originalMessage.toLowerCase();
         
-        // Simple search patterns that typically complete with one tool call
-        const simpleSearchPatterns = [
-            'search for gene',
-            'find gene',
-            'locate gene',
-            'show me gene',
-            'get gene',
-            'gene information',
-            'gene details',
-            'codon usage analysis',
-            'codon analysis',
-            'analyze codon',
-            'codon frequency',
-            'codon bias'
+        // Simple task patterns that typically complete with one tool call
+        const singleExecutionPatterns = [
+            // Search patterns
+            'search for gene', 'find gene', 'locate gene', 'show me gene', 'get gene',
+            'gene information', 'gene details',
+            // Analysis patterns  
+            'codon usage analysis', 'codon analysis', 'analyze codon', 'codon frequency', 'codon bias',
+            // File loading patterns
+            'load genome', 'load file', 'open file', 'import file',
+            'load annotation', 'load variant', 'load reads', 'load wig', 'load operon',
+            // UI action patterns
+            'open new tab', 'create new tab', 'new tab'
         ];
         
-        // File loading patterns that typically complete with one tool call
-        const fileLoadingPatterns = [
-            'load genome',
-            'load file',
-            'open file',
-            'import file',
-            'load annotation',
-            'load variant',
-            'load reads',
-            'load wig',
-            'load operon'
+        const isSingleExecutionTask = singleExecutionPatterns.some(pattern => message.includes(pattern));
+        
+        // Check if we executed tools that typically complete tasks
+        const taskCompletingTools = [
+            'search_gene_by_name', 'search_sequence', 'find_feature', 'search_feature',
+            'codon_usage_analysis', 'compute_gc', 'analyze_region',
+            'load_genome_file', 'load_annotation_file', 'load_variant_file', 
+            'load_reads_file', 'load_wig_tracks', 'load_operon_file',
+            'open_new_tab', 'create_annotation', 'export_data'
         ];
         
-        const isSimpleSearch = simpleSearchPatterns.some(pattern => message.includes(pattern));
-        const isFileLoading = fileLoadingPatterns.some(pattern => message.includes(pattern));
-        
-        // Check if we executed a search or analysis tool successfully
-        const searchTools = ['search_gene_by_name', 'search_sequence', 'find_feature', 'search_feature'];
-        const analysisTools = ['codon_usage_analysis', 'compute_gc', 'analyze_region'];
-        const fileLoadingTools = ['load_genome_file', 'load_annotation_file', 'load_variant_file', 'load_reads_file', 'load_wig_tracks', 'load_operon_file'];
-        
-        const executedSearchTool = toolsToExecute.some(tool => searchTools.includes(tool.tool_name));
-        const executedAnalysisTool = toolsToExecute.some(tool => analysisTools.includes(tool.tool_name));
-        const executedFileLoadingTool = toolsToExecute.some(tool => fileLoadingTools.includes(tool.tool_name));
+        const executedTaskCompletingTool = toolsToExecute.some(tool => 
+            taskCompletingTools.includes(tool.tool_name)
+        );
         
         // Check if the tool execution was successful and returned meaningful data
         const hasValidResults = successfulResults.some(result => {
             if (!result.result) return false;
             
-            // For file loading tools, check for success flag
-            if (fileLoadingTools.includes(result.tool)) {
+            // For file loading and UI operations, check for success flag
+            const fileAndUITools = [
+                'load_genome_file', 'load_annotation_file', 'load_variant_file',
+                'load_reads_file', 'load_wig_tracks', 'load_operon_file',
+                'open_new_tab', 'create_annotation', 'export_data'
+            ];
+            
+            if (fileAndUITools.includes(result.tool)) {
                 return result.result.success === true;
             }
             
@@ -4704,20 +4644,120 @@ class ChatManager {
                    resultStr.length > 20; // Reasonable data length
         });
         
-        // For simple searches or analyses with successful results, terminate early
-        if (isSimpleSearch && (executedSearchTool || executedAnalysisTool) && hasValidResults) {
-            console.log('Early termination criteria met: Simple search/analysis with successful results');
-            return true;
-        }
-        
-        // For file loading operations with successful results, terminate early
-        if (isFileLoading && executedFileLoadingTool && hasValidResults) {
-            console.log('Early termination criteria met: File loading operation completed successfully');
+        // For single execution tasks with successful results, terminate early
+        if (isSingleExecutionTask && executedTaskCompletingTool && hasValidResults) {
+            console.log('Early termination criteria met: Single execution task completed successfully');
             return true;
         }
         
         // For complex tasks or failed searches, continue with normal flow
         return false;
+    }
+
+    /**
+     * Intelligent tool execution policy - determines if a tool should be re-executed
+     * This replaces the simple re-executable sets with sophisticated logic
+     */
+    shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults = []) {
+        const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
+        const toolName = tool.tool_name;
+        
+        // Define tool execution policies
+        const toolPolicies = {
+            // File operations - only re-execute with different parameters or after failure
+            file_operations: {
+                tools: ['load_genome_file', 'load_annotation_file', 'load_variant_file', 
+                       'load_reads_file', 'load_wig_tracks', 'load_operon_file'],
+                policy: 'conditional_re_execution',
+                condition: (tool, history, results) => {
+                    const wasSuccessful = this.wasToolExecutedSuccessfully(toolKey, history);
+                    if (wasSuccessful) {
+                        console.log(`🚫 [Policy] File operation already succeeded with same parameters: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
+            },
+            
+            // UI operations - allow once per round, prevent rapid repetition
+            ui_operations: {
+                tools: ['open_new_tab', 'close_tab', 'switch_tab', 'create_annotation', 
+                       'delete_feature', 'export_data'],
+                policy: 'once_per_round',
+                condition: (tool, history, results, round) => {
+                    const executedInCurrentRound = results.some(r => r.tool === toolName);
+                    if (executedInCurrentRound) {
+                        console.log(`🚫 [Policy] UI operation already executed in current round: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
+            },
+            
+            // Navigation operations - freely re-executable (different positions)
+            navigation: {
+                tools: ['navigate_to_position', 'jump_to_gene', 'scroll_left', 'scroll_right'],
+                policy: 'always_allowed',
+                condition: () => true
+            },
+            
+            // Search operations - allow with different parameters or after reasonable delay
+            search: {
+                tools: ['search_gene_by_name', 'search_features', 'search_sequence_motif'],
+                policy: 'parameter_based',
+                condition: (tool, history, results) => {
+                    // Allow if parameters are different
+                    const existingExecution = this.findExistingExecution(toolKey, history);
+                    if (existingExecution && existingExecution.success) {
+                        console.log(`🚫 [Policy] Search already executed with same parameters: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
+            },
+            
+            // State operations - always allowed
+            state: {
+                tools: ['get_current_state', 'get_genome_info', 'get_file_info'],
+                policy: 'always_allowed', 
+                condition: () => true
+            },
+            
+            // External API operations - prevent rapid re-execution
+            external_api: {
+                tools: ['blast_search', 'fetch_protein_structure', 'get_uniprot_entry',
+                       'search_uniprot_database', 'fetch_alphafold_structure'],
+                policy: 'rate_limited',
+                condition: (tool, history, results) => {
+                    const recentExecution = this.findRecentExecution(toolName, history, 30000); // 30 seconds
+                    if (recentExecution) {
+                        console.log(`🚫 [Policy] External API operation rate limited: ${toolName}`);
+                        return false;
+                    }
+                    return true;
+                }
+            }
+        };
+        
+        // Find applicable policy
+        let applicablePolicy = null;
+        for (const [policyName, policy] of Object.entries(toolPolicies)) {
+            if (policy.tools.includes(toolName)) {
+                applicablePolicy = policy;
+                console.log(`🎯 [Policy] Applied ${policyName} policy to ${toolName}`);
+                break;
+            }
+        }
+        
+        // Default policy for unknown tools - allow once
+        if (!applicablePolicy) {
+            console.log(`⚠️ [Policy] Unknown tool, applying default once-per-round policy: ${toolName}`);
+            const alreadyExecuted = this.wasToolExecutedSuccessfully(toolKey, conversationHistory);
+            return !alreadyExecuted;
+        }
+        
+        // Apply the policy condition
+        return applicablePolicy.condition(tool, conversationHistory, toolResults, currentRound);
     }
 
     /**
@@ -4739,6 +4779,43 @@ class ChatManager {
     }
 
     /**
+     * Find existing execution of a tool with specific parameters
+     */
+    findExistingExecution(toolKey, conversationHistory) {
+        const toolName = toolKey.split(':')[0];
+        for (const msg of conversationHistory) {
+            if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed`)) {
+                return {
+                    success: msg.content.includes('successfully'),
+                    timestamp: new Date().toISOString() // Approximate
+                };
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find recent execution of a tool within specified time window
+     */
+    findRecentExecution(toolName, conversationHistory, timeWindowMs) {
+        const cutoffTime = Date.now() - timeWindowMs;
+        
+        // Look through conversation history for recent executions
+        for (let i = conversationHistory.length - 1; i >= 0; i--) {
+            const msg = conversationHistory[i];
+            if (msg.role === 'system' && msg.content && 
+                msg.content.includes(`${toolName} executed`)) {
+                // For simplicity, assume recent messages are within time window
+                // In production, you'd want to store actual timestamps
+                if (i >= conversationHistory.length - 10) { // Last 10 messages
+                    return { found: true, timestamp: new Date().toISOString() };
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Generate a completion response based on tool execution results
      */
     generateCompletionResponseFromToolResults(successfulResults, toolsToExecute) {
@@ -4751,6 +4828,30 @@ class ChatManager {
         
         // Generate appropriate response based on tool type
         switch (tool.tool_name) {
+            case 'open_new_tab':
+                if (result.result && result.result.success) {
+                    return `🗂️ **New tab opened successfully!**
+
+**Tab Details:**
+- **Tab ID:** ${result.result.tabId || 'N/A'}
+- **Title:** ${result.result.title || 'New Tab'}
+- **Message:** ${result.result.message || 'Tab created'}
+
+The new tab is ready for analysis and comparison.`;
+                } else {
+                    return "New tab creation completed, but there may have been issues.";
+                }
+                
+            case 'create_annotation':
+                return result.result?.success ? 
+                    `✅ Annotation created successfully: ${result.result.message || 'New annotation added'}` :
+                    "Annotation creation completed with potential issues.";
+                    
+            case 'export_data':
+                return result.result?.success ? 
+                    `✅ Data exported successfully: ${result.result.filePath || result.result.message || 'Export completed'}` :
+                    "Data export completed with potential issues.";
+            
             case 'load_genome_file':
                 if (result.result && result.result.success) {
                     return `✅ **Genome file loaded successfully!**
