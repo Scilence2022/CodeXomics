@@ -706,6 +706,30 @@ class ChatManager {
     }
 
     /**
+     * Check if we're currently in benchmark mode
+     * @returns {boolean} True if in benchmark mode
+     */
+    isBenchmarkMode() {
+        // Check if benchmark interface is open
+        const benchmarkInterface = document.getElementById('benchmarkInterface');
+        if (benchmarkInterface && benchmarkInterface.style.display !== 'none') {
+            return true;
+        }
+        
+        // Check if any benchmark is currently running
+        if (window.benchmarkUI && window.benchmarkUI.isRunning) {
+            return true;
+        }
+        
+        // Check if we have an active benchmark manager
+        if (this.app?.benchmarkManager?.isRunning) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
      * Load genome file (FASTA/GenBank) - Built-in function tool
      * @param {Object} parameters - Tool parameters
      * @param {string} parameters.filePath - Direct file path (optional)
@@ -775,6 +799,20 @@ class ChatManager {
                 
             } else {
                 console.log('🧬 [ChatManager] File dialog mode');
+                
+                // Check if we're in benchmark mode and avoid showing file dialogs
+                if (this.isBenchmarkMode()) {
+                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating file dialog instead of showing actual dialog');
+                    return {
+                        success: true,
+                        message: 'File dialog simulation - would open genome file selection dialog in normal mode',
+                        action: 'dialog_simulated',
+                        fileType: 'genome',
+                        tool: 'load_genome_file',
+                        timestamp: new Date().toISOString(),
+                        benchmark_mode: true
+                    };
+                }
                 
                 // Show file dialog for genome files
                 if (!this.app?.fileManager) {
@@ -848,6 +886,20 @@ class ChatManager {
                     fileType: 'annotation'
                 };
             } else {
+                // Check if we're in benchmark mode and avoid showing file dialogs
+                if (this.isBenchmarkMode()) {
+                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating annotation file dialog');
+                    return {
+                        success: true,
+                        message: 'File dialog simulation - would open annotation file selection dialog in normal mode',
+                        action: 'dialog_simulated',
+                        fileType: 'annotation',
+                        tool: 'load_annotation_file',
+                        timestamp: new Date().toISOString(),
+                        benchmark_mode: true
+                    };
+                }
+                
                 // Show file dialog for annotation files
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
@@ -909,6 +961,18 @@ class ChatManager {
                     fileType: 'variant'
                 };
             } else {
+                // Check if we're in benchmark mode and avoid showing file dialogs
+                if (this.isBenchmarkMode()) {
+                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating variant file dialog');
+                    return {
+                        success: true,
+                        message: 'File dialog simulation - would open variant file selection dialog in normal mode',
+                        action: 'dialog_simulated',
+                        fileType: 'variant',
+                        benchmark_mode: true
+                    };
+                }
+                
                 // Show file dialog for variant files
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');

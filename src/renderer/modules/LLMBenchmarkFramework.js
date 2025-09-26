@@ -540,7 +540,13 @@ class LLMBenchmarkFramework {
     async executeTest(test) {
         const startTime = Date.now();
         
-        // Prepare test context
+        // Check if this is a manual evaluation test
+        if (test.evaluation === 'manual') {
+            console.log(`📋 Manual test detected: ${test.name}`);
+            return await this.executeManualTest(test);
+        }
+        
+        // Prepare test context for automated tests
         const context = {
             chatManager: this.chatManager,
             configManager: this.configManager,
@@ -556,6 +562,11 @@ class LLMBenchmarkFramework {
         try {
             // Calculate timeout for this test
             const timeoutMs = test.timeout || this.testTimeout;
+            
+            // Check for showFileDialog parameter and warn if found
+            if (test.expectedResult && test.expectedResult.parameters && test.expectedResult.parameters.showFileDialog) {
+                console.warn(`⚠️ Test ${test.id} uses showFileDialog which requires user activation. Consider marking as manual test.`);
+            }
             
             // Send the test instruction to the LLM with test information
             const instructionOptions = {
@@ -626,6 +637,98 @@ class LLMBenchmarkFramework {
                 }
             }
         }
+    }
+
+    /**
+     * Execute a manual test that requires user interaction
+     */
+    async executeManualTest(test) {
+        console.log(`📋 Executing manual test: ${test.name}`);
+        
+        return new Promise((resolve) => {
+            // Prepare test data for manual dialog
+            const testData = {
+                testId: test.id,
+                testName: test.name,
+                category: test.category || 'manual',
+                complexity: test.complexity || 'simple',
+                instruction: test.instruction,
+                expectedResult: test.expectedResult,
+                maxScore: test.maxScore || 100,
+                manualVerification: test.manualVerification,
+                timeout: test.timeout || this.testTimeout
+            };
+            
+            // Set up event listener for manual test completion
+            const handleManualCompletion = (event) => {
+                if (event.detail.testId === test.id) {
+                    // Remove event listener
+                    document.removeEventListener('manualTestCompleted', handleManualCompletion);
+                    
+                    // Process manual test result
+                    const manualResult = event.detail;
+                    console.log(`✅ Manual test completed:`, manualResult);
+                    
+                    // Create test result in expected format
+                    const testResult = {
+                        llmResponse: `Manual test completed: ${manualResult.result}`,
+                        actualResult: {
+                            tool_name: test.expectedResult?.tool_name || 'manual_verification',
+                            parameters: test.expectedResult?.parameters || {},
+                            manual_result: manualResult.result,
+                            manual_score: manualResult.manualScore,
+                            verification_completion: manualResult.verificationCompletion
+                        },
+                        metrics: {
+                            responseTime: Date.now() - startTime,
+                            manualScore: manualResult.manualScore,
+                            verificationCompletion: manualResult.verificationCompletion,
+                            completedVerifications: manualResult.completedVerifications,
+                            totalVerifications: manualResult.totalVerifications
+                        },
+                        details: {
+                            instruction: test.instruction,
+                            manualResult: manualResult
+                        },
+                        llmInteractionData: {
+                            request: {
+                                instruction: test.instruction,
+                                timestamp: new Date().toISOString(),
+                                requestId: `manual_${test.id}_${Date.now()}`,
+                                testContext: testData
+                            },
+                            response: {
+                                content: `Manual verification: ${manualResult.result}`,
+                                responseTime: Date.now() - startTime,
+                                timestamp: new Date().toISOString(),
+                                manualInput: true
+                            },
+                            analysis: {
+                                isManual: true,
+                                manualResult: manualResult.result,
+                                manualScore: manualResult.manualScore,
+                                verificationCompletion: manualResult.verificationCompletion
+                            }
+                        }
+                    };
+                    
+                    resolve(testResult);
+                }
+            };
+            
+            // Track start time
+            const startTime = Date.now();
+            
+            // Listen for manual test completion
+            document.addEventListener('manualTestCompleted', handleManualCompletion);
+            
+            // Dispatch manual test required event
+            document.dispatchEvent(new CustomEvent('manualTestRequired', {
+                detail: testData
+            }));
+            
+            console.log(`📡 Manual test event dispatched for: ${test.name}`);
+        });
     }
 
     /**
