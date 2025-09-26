@@ -131,22 +131,25 @@ class BenchmarkUI {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                    background: transparent;
                     z-index: 9999;
                     overflow-y: auto;
                     padding: 20px;
                     display: block !important;
                     visibility: visible !important;
+                    pointer-events: none;
                 }
 
                 .benchmark-container {
                     max-width: 1400px;
                     margin: 0 auto;
-                    background: rgba(255, 255, 255, 0.95);
+                    background: rgba(255, 255, 255, 0.98);
                     border-radius: 15px;
                     padding: 30px;
-                    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
                     backdrop-filter: blur(10px);
+                    border: 2px solid rgba(52, 152, 219, 0.3);
+                    pointer-events: auto;
                 }
 
                 .benchmark-header {
@@ -220,12 +223,14 @@ class BenchmarkUI {
                 .benchmark-interface.collapsed {
                     height: 80px !important;
                     overflow: hidden;
+                    background: transparent;
                 }
 
                 .benchmark-interface.collapsed .benchmark-container {
                     height: 80px;
                     padding: 10px 30px;
                     overflow: hidden;
+                    background: rgba(255, 255, 255, 0.95);
                 }
 
                 .benchmark-interface.collapsed .benchmark-section:not(.benchmark-header) {
