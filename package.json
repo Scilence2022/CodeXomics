@@ -132,20 +132,22 @@
     "dmg": {
       "title": "Install ${productName} ${version}",
       "icon": "build/icon.icns",
-      "iconSize": 80,
+      "iconSize": 90,
       "window": {
         "width": 660,
-        "height": 420
+        "height": 420,
+        "x": 200,
+        "y": 200
       },
       "contents": [
         {
           "x": 180,
-          "y": 170,
+          "y": 200,
           "type": "file"
         },
         {
           "x": 480,
-          "y": 170,
+          "y": 200,
           "type": "link",
           "path": "/Applications"
         }

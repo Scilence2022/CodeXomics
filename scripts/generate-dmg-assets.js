@@ -184,7 +184,7 @@ The package.json has been updated with:
 - Better icon positioning
 - Background image support
 - Improved title and naming
-\`;
+`;
 
 fs.writeFileSync(instructionsPath, instructions);
 
