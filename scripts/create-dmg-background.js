@@ -1,0 +1,75 @@
+#!/usr/bin/env node
+
+/**
+ * Create DMG Background Image programmatically
+ * Creates a simple PNG background for the DMG installer
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+// Simple SVG to PNG conversion approach
+const createSvgBackground = () => {
+    return `<svg width="660" height="420" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <pattern id="grain" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="5" cy="5" r="0.5" fill="white" opacity="0.1"/>
+      <circle cx="15" cy="15" r="0.5" fill="white" opacity="0.1"/>
+    </pattern>
+  </defs>
+  
+  <!-- Background gradient -->
+  <rect width="660" height="420" fill="url(#grad1)"/>
+  <rect width="660" height="420" fill="url(#grain)"/>
+  
+  <!-- App Name -->
+  <text x="330" y="80" text-anchor="middle" fill="white" font-family="SF Pro Display, -apple-system, sans-serif" font-size="32" font-weight="300" opacity="0.95">
+    Genome AI Studio
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="330" y="110" text-anchor="middle" fill="white" font-family="SF Pro Display, -apple-system, sans-serif" font-size="16" opacity="0.8">
+    AI-Powered Genome Analysis
+  </text>
+  
+  <!-- Installation instruction -->
+  <text x="330" y="360" text-anchor="middle" fill="white" font-family="SF Pro Display, -apple-system, sans-serif" font-size="18" opacity="0.9">
+    Drag the app icon to Applications folder to install
+  </text>
+  
+  <!-- Drag arrow -->
+  <text x="330" y="220" text-anchor="middle" fill="white" font-family="SF Pro Display, -apple-system, sans-serif" font-size="24" opacity="0.6">
+    ← Drag to Applications →
+  </text>
+  
+  <!-- DNA Helix decoration -->
+  <g transform="translate(580, 30)" opacity="0.3">
+    <path d="M0 0 Q10 10 20 0 Q10 20 0 30 Q10 20 20 30" stroke="white" stroke-width="2" fill="none"/>
+    <circle cx="5" cy="5" r="2" fill="white" opacity="0.6"/>
+    <circle cx="15" cy="5" r="2" fill="white" opacity="0.6"/>
+    <circle cx="5" cy="25" r="2" fill="white" opacity="0.6"/>
+    <circle cx="15" cy="25" r="2" fill="white" opacity="0.6"/>
+  </g>
+</svg>`;
+};
+
+const projectRoot = path.dirname(__dirname);
+const buildDir = path.join(projectRoot, 'build');
+
+// Create the SVG
+const svgContent = createSvgBackground();
+const svgPath = path.join(buildDir, 'dmg-background.svg');
+
+fs.writeFileSync(svgPath, svgContent);
+
+console.log('✅ DMG background SVG created:', svgPath);
+console.log('');
+console.log('📋 To convert to PNG (requires additional tools):');
+console.log('1. Install Inkscape: brew install inkscape');
+console.log('2. Convert: inkscape --export-type=png --export-filename=build/dmg-background.png build/dmg-background.svg');
+console.log('');
+console.log('Alternative: Open the SVG in any design tool and export as PNG (660x420)');
