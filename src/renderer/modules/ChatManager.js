@@ -5515,9 +5515,47 @@ class ChatManager {
             return "Task completed but no results were obtained.";
         }
         
-        const tool = toolsToExecute[0]; // Assume single tool for simple tasks
+        // Handle multiple tools - combine results
+        if (successfulResults.length > 1) {
+            console.log(`📋 [generateCompletionResponseFromToolResults] Processing ${successfulResults.length} tools`);
+            
+            let combinedResponse = '';
+            const processedResults = [];
+            
+            // Process each tool result individually
+            for (let i = 0; i < successfulResults.length; i++) {
+                const tool = toolsToExecute[i];
+                const result = successfulResults[i];
+                
+                console.log(`🔧 [generateCompletionResponseFromToolResults] Processing tool ${i + 1}: ${tool.tool_name}`);
+                
+                const singleToolResponse = this.generateSingleToolResponse(tool, result);
+                if (singleToolResponse) {
+                    processedResults.push({
+                        tool: tool.tool_name,
+                        response: singleToolResponse
+                    });
+                }
+            }
+            
+            // Combine all responses
+            if (processedResults.length > 0) {
+                combinedResponse = processedResults.map(r => r.response).join('\n\n---\n\n');
+                return combinedResponse;
+            }
+        }
+        
+        // Handle single tool (original logic)
+        const tool = toolsToExecute[0]; 
         const result = successfulResults[0];
         
+        return this.generateSingleToolResponse(tool, result) || "Task completed successfully.";
+    }
+    
+    /**
+     * Generate response for a single tool execution
+     */
+    generateSingleToolResponse(tool, result) {
         // Generate appropriate response based on tool type
         switch (tool.tool_name) {
             case 'jump_to_gene':
