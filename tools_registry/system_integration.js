@@ -4,16 +4,19 @@
  */
 
 const ToolsRegistryManager = require('./registry_manager');
+const BuiltInToolsIntegration = require('./builtin_tools_integration');
 const path = require('path');
 
 class SystemIntegration {
     constructor() {
         this.registryManager = new ToolsRegistryManager();
+        this.builtInTools = new BuiltInToolsIntegration();
         this.integrationStatus = {
             initialized: false,
             lastUpdate: null,
             toolsLoaded: 0,
-            categoriesLoaded: 0
+            categoriesLoaded: 0,
+            builtInToolsLoaded: 0
         };
     }
 
@@ -30,6 +33,9 @@ class SystemIntegration {
             this.integrationStatus.toolsLoaded = stats.total_tools;
             this.integrationStatus.categoriesLoaded = stats.total_categories;
             
+            const builtInStats = this.builtInTools.getBuiltInToolsStats();
+            this.integrationStatus.builtInToolsLoaded = builtInStats.total_builtin_tools;
+            
             console.log('✅ Dynamic Tools System integrated successfully');
             return true;
         } catch (error) {
@@ -39,8 +45,104 @@ class SystemIntegration {
     }
 
     /**
-     * Generate dynamic system prompt for ChatManager
+     * Generate system prompt for non-dynamic mode (emphasizing built-in tools)
      */
+    async generateNonDynamicSystemPrompt(context = {}) {
+        try {
+            console.log('🎯 [System Integration] Generating non-dynamic system prompt with built-in tools emphasis');
+            
+            const systemPrompt = this.builtInTools.generateNonDynamicSystemPrompt(context);
+            
+            return {
+                systemPrompt,
+                toolsUsed: Array.from(this.builtInTools.builtInToolsMap.keys()),
+                toolCount: this.builtInTools.builtInToolsMap.size,
+                generationTime: Date.now(),
+                mode: 'non-dynamic'
+            };
+        } catch (error) {
+            console.error('Failed to generate non-dynamic system prompt:', error);
+            return this.getFallbackSystemPrompt();
+        }
+    }
+
+    /**
+     * Enhanced tool execution with built-in tool detection and routing
+     */
+    async executeToolWithRouting(toolName, parameters, chatManagerInstance, clientId = null) {
+        const startTime = Date.now();
+        let success = false;
+        let result;
+        
+        try {
+            // Check if it's a built-in tool first
+            if (this.builtInTools.isBuiltInTool(toolName)) {
+                console.log(`🔧 [System Integration] Routing to built-in tool: ${toolName}`);
+                result = await this.builtInTools.executeBuiltInTool(toolName, parameters, chatManagerInstance);
+                success = true;
+            } else {
+                // Route to external tool execution (MCP, plugins, etc.)
+                console.log(`🌐 [System Integration] Routing to external tool: ${toolName}`);
+                if (chatManagerInstance && typeof chatManagerInstance.executeToolViaMCP === 'function') {
+                    result = await chatManagerInstance.executeToolViaMCP(toolName, parameters, clientId);
+                } else {
+                    throw new Error('External tool execution not available');
+                }
+                success = true;
+            }
+            
+            // Track tool usage
+            this.trackToolUsage(toolName, success, Date.now() - startTime);
+            
+            return result;
+            
+        } catch (error) {
+            console.error(`❌ [System Integration] Tool execution failed for ${toolName}:`, error);
+            this.trackToolUsage(toolName, success, Date.now() - startTime);
+            throw error;
+        }
+    }
+
+    /**
+     * Analyze user query and suggest optimal tool execution strategy
+     */
+    async analyzeToolExecutionStrategy(userQuery, context = {}) {
+        try {
+            // Analyze for built-in tool relevance
+            const builtInRelevance = this.builtInTools.analyzeBuiltInToolRelevance(userQuery);
+            
+            // Get dynamic tool suggestions
+            const dynamicRelevance = await this.registryManager.getRelevantTools(userQuery, context);
+            
+            // Combine and prioritize
+            const strategy = {
+                primaryTools: builtInRelevance.filter(t => t.confidence > 0.8),
+                secondaryTools: builtInRelevance.filter(t => t.confidence <= 0.8),
+                dynamicTools: dynamicRelevance.slice(0, 5), // Top 5 dynamic tools
+                executionMode: builtInRelevance.length > 0 ? 'hybrid' : 'dynamic',
+                confidence: Math.max(...builtInRelevance.map(t => t.confidence), 0)
+            };
+            
+            console.log('🎯 [System Integration] Execution strategy analysis:', {
+                primaryBuiltIn: strategy.primaryTools.length,
+                secondaryBuiltIn: strategy.secondaryTools.length,
+                dynamic: strategy.dynamicTools.length,
+                mode: strategy.executionMode
+            });
+            
+            return strategy;
+            
+        } catch (error) {
+            console.error('Failed to analyze tool execution strategy:', error);
+            return {
+                primaryTools: [],
+                secondaryTools: [],
+                dynamicTools: [],
+                executionMode: 'fallback',
+                confidence: 0
+            };
+        }
+    }
     async generateDynamicSystemPrompt(userQuery, context = {}) {
         try {
             if (!this.integrationStatus.initialized) {
@@ -66,10 +168,14 @@ class SystemIntegration {
     }
 
     /**
-     * Build the complete system prompt with dynamic tools
+     * Build the complete system prompt with dynamic tools and built-in tool integration
      */
     buildSystemPrompt(promptData, context) {
         const { tools, toolDescriptions, sampleUsages } = promptData;
+        
+        // Separate built-in tools from external tools
+        const builtInTools = tools.filter(tool => tool.execution_type === 'built-in' || tool.implementation?.type === 'built-in');
+        const externalTools = tools.filter(tool => tool.execution_type !== 'built-in' && tool.implementation?.type !== 'built-in');
         
         // Build detailed genome browser state information
         let genomeStateInfo = '';
@@ -86,8 +192,26 @@ class SystemIntegration {
         } else {
             genomeStateInfo = '- **Genome Browser**: No genome data loaded';
         }
+        
+        // Generate built-in tools section
+        const builtInToolDescriptions = builtInTools.map(tool => {
+            const params = Object.entries(tool.parameters?.properties || {})
+                .map(([name, param]) => `${name}: ${param.type} - ${param.description}`)
+                .join(', ');
 
-        return `# Genome AI Studio - Dynamic Tools System
+            return `- **${tool.name}** (Built-in): ${tool.description}\n  Parameters: ${params}\n  Implementation: ChatManager.${tool.implementation?.method || tool.name}`;
+        }).join('\n');
+        
+        // Generate external tools section
+        const externalToolDescriptions = externalTools.map(tool => {
+            const params = Object.entries(tool.parameters?.properties || {})
+                .map(([name, param]) => `${name}: ${param.type} - ${param.description}`)
+                .join(', ');
+
+            return `- **${tool.name}**: ${tool.description}\n  Parameters: ${params}`;
+        }).join('\n');
+
+        return `# Genome AI Studio - Enhanced Dynamic Tools System
 
 You are an advanced AI assistant for Genome AI Studio, equipped with ${tools.length} dynamically selected tools based on the user's query.
 
@@ -95,32 +219,44 @@ You are an advanced AI assistant for Genome AI Studio, equipped with ${tools.len
 ${genomeStateInfo}
 - **Network Status**: ${context.hasNetwork ? 'Connected' : 'Offline'}
 - **Authentication**: ${context.hasAuth ? 'Authenticated' : 'Not authenticated'}
-- **Active Tools**: ${tools.length} tools available
+- **Active Tools**: ${tools.length} tools available (${builtInTools.length} built-in, ${externalTools.length} external)
 
-## 🔧 Available Tools (Dynamically Selected)
+## 🔧 Built-in Tools (Directly Available)
 
-${toolDescriptions}
+${builtInToolDescriptions || 'No built-in tools selected for this query.'}
+
+## 🌐 External Tools (Via MCP/Plugin System)
+
+${externalToolDescriptions || 'No external tools selected for this query.'}
 
 ## 📚 Tool Usage Examples
 
 ${sampleUsages}
 
-## 🎯 Tool Selection Guidelines
+## 🎯 Enhanced Tool Selection Guidelines
 
-1. **Primary Tools**: Use the most specific tool for the task
-2. **Tool Chaining**: Combine tools for complex analyses
-3. **Error Handling**: Always check tool return values
-4. **Context Awareness**: Consider current genome state and loaded data
+1. **Built-in Tools Priority**: Built-in tools are faster and more reliable - use them when available
+2. **File Loading Operations**: Use built-in file loading tools for importing data:
+   - load_genome_file: For FASTA/GenBank genome files
+   - load_annotation_file: For GFF/BED/GTF annotation files
+   - load_variant_file: For VCF variant files
+   - load_reads_file: For SAM/BAM read alignment files
+   - load_wig_tracks: For WIG/BigWig track files
+   - load_operon_file: For operon/regulatory element files
+3. **Tool Chaining**: Combine tools for complex analyses
+4. **Error Handling**: Always check tool return values
+5. **Context Awareness**: Consider current genome state and loaded data
 
 ## ⚡ Response Format
 
 When using tools, respond with ONLY a JSON object:
-\`\`\`json
+${'```'}json
 {"tool_name": "tool_name", "parameters": {"param1": "value1"}}
-\`\`\`
+${'```'}
 
-## 🔄 Tool Relationships
+## 🔄 Tool Categories & Relationships
 
+- **File Loading Tools**: Use for importing various genomic data files
 - **Navigation Tools**: Use for genome browser movement
 - **Sequence Tools**: Use for DNA/RNA analysis
 - **Protein Tools**: Use for structure and function analysis
@@ -131,12 +267,13 @@ When using tools, respond with ONLY a JSON object:
 
 ## 📊 Performance Optimization
 
-- Tools are selected based on user intent analysis
+- Tools are selected based on advanced user intent analysis with file loading pattern recognition
+- Built-in tools are prioritized for better performance
 - Only relevant tools are loaded to reduce context size
 - Tool usage is tracked for continuous optimization
 - Failed tools are automatically retried with fallback options
 
-Remember: You have access to the most relevant tools for the user's specific query. Use them effectively to provide comprehensive genomic analysis and assistance.`;
+Remember: You have access to the most relevant tools for the user's specific query, with built-in tools prioritized for file loading and core operations. Use them effectively to provide comprehensive genomic analysis and assistance.`;
     }
 
     /**
@@ -183,10 +320,20 @@ Please use the available tools to assist with genomic analysis.`,
     }
 
     /**
-     * Get registry statistics
+     * Get comprehensive registry statistics including built-in tools
      */
     async getRegistryStats() {
-        return await this.registryManager.getRegistryStats();
+        const dynamicStats = await this.registryManager.getRegistryStats();
+        const builtInStats = this.builtInTools.getBuiltInToolsStats();
+        
+        return {
+            ...dynamicStats,
+            builtin_tools: builtInStats.total_builtin_tools,
+            builtin_categories: Object.keys(builtInStats.categories).length,
+            total_tools_including_builtin: dynamicStats.total_tools + builtInStats.total_builtin_tools,
+            builtin_breakdown: builtInStats.categories,
+            integration_status: this.integrationStatus
+        };
     }
 
     /**

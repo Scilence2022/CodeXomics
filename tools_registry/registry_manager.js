@@ -247,14 +247,23 @@ class ToolsRegistryManager {
     }
 
     /**
-     * Analyze user intent from query
+     * Analyze user intent from query with enhanced file loading detection
      */
     async analyzeUserIntent(userQuery) {
         const query = userQuery.toLowerCase();
         console.log('🔍 [Dynamic Tools] Analyzing intent for query:', query);
         
-        // Intent keywords mapping
+        // Enhanced intent keywords mapping with comprehensive file loading patterns
         const intentKeywords = {
+            file_loading: [
+                'load', 'open', 'import', 'read', 'load file', 'open file', 'import file',
+                'genome file', 'annotation file', 'variant file', 'reads file', 'wig file', 'operon file',
+                'fasta', 'genbank', 'gbk', 'gb', 'gff', 'gff3', 'bed', 'gtf',
+                'vcf', 'sam', 'bam', 'wig', 'bigwig', 'bedgraph',
+                'load genome', 'load annotation', 'load variant', 'load reads', 'load wig', 'load operon',
+                'import genome', 'import annotation', 'import variant', 'import reads',
+                'open genome', 'open annotation', 'open variant', 'open reads'
+            ],
             navigation: ['navigate', 'go to', 'jump', 'position', 'location', 'move', 'go', 'navigate to'],
             search: ['search', 'find', 'look for', 'query', 'locate'],
             analysis: ['analyze', 'calculate', 'compute', 'measure', 'count', 'analysis'],
@@ -269,7 +278,42 @@ class ToolsRegistryManager {
 
         const detectedIntents = [];
         
+        // Enhanced file loading detection with specific patterns
+        const fileLoadingPatterns = {
+            direct_path: /\/?(?:[\w\-\.]+\/)*[\w\-\.]+\.[a-z]{2,5}/i, // File path patterns
+            genome_loading: /(load|open|import)\s+(genome|fasta|genbank|gbk|gb)/i,
+            annotation_loading: /(load|open|import)\s+(annotation|gff|bed|gtf)/i,
+            variant_loading: /(load|open|import)\s+(variant|vcf|mutation)/i,
+            reads_loading: /(load|open|import)\s+(reads|sam|bam|alignment)/i,
+            wig_loading: /(load|open|import)\s+(wig|wiggle|bigwig|bedgraph|track)/i,
+            operon_loading: /(load|open|import)\s+(operon|operons|regulatory)/i,
+            file_extension: /\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)$/i
+        };
+        
+        // Check for file loading patterns first (highest priority)
+        let fileLoadingDetected = false;
+        for (const [patternType, regex] of Object.entries(fileLoadingPatterns)) {
+            if (regex.test(query)) {
+                detectedIntents.push({
+                    intent: 'file_loading',
+                    confidence: 0.9,
+                    keywords: [patternType],
+                    pattern: patternType,
+                    priority: 'high'
+                });
+                fileLoadingDetected = true;
+                console.log('🔍 [Dynamic Tools] File loading pattern detected:', patternType, 'in query');
+                break; // Use first matching pattern
+            }
+        }
+        
+        // Standard intent keyword matching (with file_loading having highest priority)
         for (const [intent, keywords] of Object.entries(intentKeywords)) {
+            // Skip file_loading in standard matching if already detected by patterns
+            if (intent === 'file_loading' && fileLoadingDetected) {
+                continue;
+            }
+            
             const matches = keywords.filter(keyword => {
                 // Handle multi-word keywords like "go to"
                 if (keyword.includes(' ')) {
@@ -278,13 +322,18 @@ class ToolsRegistryManager {
                     return query.includes(keyword);
                 }
             });
+            
             if (matches.length > 0) {
+                const confidence = matches.length / keywords.length;
+                // Boost confidence for file_loading intent
+                const adjustedConfidence = intent === 'file_loading' ? Math.min(confidence + 0.2, 1.0) : confidence;
+                
                 detectedIntents.push({
                     intent,
-                    confidence: matches.length / keywords.length,
+                    confidence: adjustedConfidence,
                     keywords: matches
                 });
-                console.log('🔍 [Dynamic Tools] Intent detected:', intent, 'matches:', matches, 'confidence:', matches.length / keywords.length);
+                console.log('🔍 [Dynamic Tools] Intent detected:', intent, 'matches:', matches, 'confidence:', adjustedConfidence);
             }
         }
 
@@ -376,10 +425,14 @@ class ToolsRegistryManager {
     }
 
     /**
-     * Get keywords for specific intent
+     * Get keywords for specific intent with enhanced file loading support
      */
     getIntentKeywords(intent) {
         const intentKeywordMap = {
+            file_loading: [
+                'load', 'open', 'import', 'read', 'file', 'genome', 'annotation', 'variant',
+                'reads', 'wig', 'operon', 'fasta', 'genbank', 'gff', 'bed', 'vcf', 'sam', 'bam'
+            ],
             navigation: ['navigate', 'position', 'location', 'jump', 'go', 'go to', 'navigate to', 'coordinates'],
             search: ['search', 'find', 'query', 'lookup'],
             analysis: ['analyze', 'calculate', 'compute', 'measure'],
@@ -428,8 +481,31 @@ class ToolsRegistryManager {
             ).length;
             score += keywordMatches * 15;
 
+            // Special handling for file loading tools with high priority scoring
+            if (tool.category === 'file_loading' && intent.primary === 'file_loading') {
+                score += 100; // Very high bonus for file loading tools when file loading intent detected
+                console.log('🔍 [Dynamic Tools] File loading tool bonus applied:', tool.name);
+                
+                // Additional bonus for specific file type matching
+                const queryLower = intent.query.toLowerCase();
+                if (tool.subcategory === 'genome_loading' && (queryLower.includes('genome') || queryLower.includes('fasta') || queryLower.includes('genbank'))) {
+                    score += 50;
+                } else if (tool.subcategory === 'annotation_loading' && (queryLower.includes('annotation') || queryLower.includes('gff') || queryLower.includes('bed'))) {
+                    score += 50;
+                } else if (tool.subcategory === 'variant_loading' && (queryLower.includes('variant') || queryLower.includes('vcf'))) {
+                    score += 50;
+                } else if (tool.subcategory === 'reads_loading' && (queryLower.includes('reads') || queryLower.includes('sam') || queryLower.includes('bam'))) {
+                    score += 50;
+                } else if (tool.subcategory === 'wig_loading' && (queryLower.includes('wig') || queryLower.includes('track'))) {
+                    score += 50;
+                } else if (tool.subcategory === 'operon_loading' && queryLower.includes('operon')) {
+                    score += 50;
+                }
+            }
+
+            
             // Special bonus for navigation tools when position patterns are detected
-            if (tool.category === 'navigation' && intent.query.match(/\d+-\d+/) || intent.query.match(/\d+:\d+/)) {
+            if (tool.category === 'navigation' && (intent.query.match(/\d+-\d+/) || intent.query.match(/\d+:\d+/))) {
                 score += 50; // High bonus for navigation tools with position patterns
                 console.log('🔍 [Dynamic Tools] Navigation tool bonus applied for position pattern:', tool.name);
             }
