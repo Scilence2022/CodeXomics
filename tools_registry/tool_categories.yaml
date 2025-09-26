@@ -2,12 +2,20 @@
 # Defines the hierarchical organization of all tools
 
 categories:
+  file_loading:
+    name: "File Loading Operations"
+    description: "Built-in tools for loading genomic files directly with path specification or file dialogs"
+    icon: "📁"
+    priority: 1
+    color: "#FF6B35"
     subcategories:
-      - "file_loading"
-      - "file_export"
-      - "format_conversion"
-      - "export_configuration"
-    tools_count: 14
+      - "genome_loading"
+      - "annotation_loading"
+      - "variant_loading"
+      - "reads_loading"
+      - "tracks_loading"
+      - "operon_loading"
+    tools_count: 6
 
   navigation:
     name: "Navigation & State Management"

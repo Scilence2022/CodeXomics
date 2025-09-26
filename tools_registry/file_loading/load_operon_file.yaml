@@ -1,0 +1,114 @@
+name: "load_operon_file"
+version: "2.0.0"
+description: "Load operon definition files (JSON/CSV/TXT) directly with file path specification or via file dialog"
+category: "file_loading"
+subcategory: "operon_loading"
+priority: 2
+keywords: ["operon", "operons", "json", "csv", "txt", "load", "file", "bacterial"]
+execution_type: "built-in"
+complexity: "simple"
+
+# Built-in tool implemented in ChatManager
+implementation:
+  type: "built-in"
+  method: "loadOperonFile"
+  class: "ChatManager"
+  
+# Tool parameters
+parameters:
+  type: "object"
+  properties:
+    filePath:
+      type: "string"
+      description: "Direct file path to operon file (JSON/CSV/TXT format)"
+      required: false
+      examples: ["/path/to/operons.json", "operons.csv", "/Users/user/data/operons.txt"]
+    showFileDialog:
+      type: "boolean"
+      description: "Whether to show file dialog regardless of filePath parameter"
+      required: false
+      default: false
+    format:
+      type: "string"
+      description: "File format hint for better parsing"
+      required: false
+      default: "auto"
+      enum: ["auto", "json", "csv", "txt"]
+  required: []
+
+# Return value specification
+returns:
+  type: "object"
+  properties:
+    success:
+      type: "boolean"
+      description: "Whether the operation succeeded"
+    message:
+      type: "string"
+      description: "Human-readable result message"
+    filePath:
+      type: "string"
+      description: "Path of loaded file (if applicable)"
+    fileType:
+      type: "string"
+      description: "Type of file loaded (operon)"
+    format:
+      type: "string"
+      description: "Format hint used"
+    action:
+      type: "string"
+      description: "Action taken (dialog_opened if file dialog was shown)"
+
+# Usage examples
+sample_usages:
+  - user_query: "Load operon file at /path/to/operons.json"
+    tool_call: '{"tool_name": "load_operon_file", "parameters": {"filePath": "/path/to/operons.json", "showFileDialog": false}}'
+    expected_result: "Successfully loads the JSON operon file directly"
+  
+  - user_query: "Open file dialog to select an operon file"
+    tool_call: '{"tool_name": "load_operon_file", "parameters": {"showFileDialog": true}}'
+    expected_result: "Opens file dialog for operon file selection"
+    
+  - user_query: "Load operons from operons.csv as CSV format"
+    tool_call: '{"tool_name": "load_operon_file", "parameters": {"filePath": "operons.csv", "format": "csv"}}'
+    expected_result: "Loads CSV operon file with format hint"
+
+# Tool relationships
+relationships:
+  depends_on: ["load_genome_file"]
+  enhances: ["search_features", "analyze_region", "get_operons"]
+  follow_up: ["get_current_state", "search_gene_by_name"]
+
+# Integration requirements
+integration_requirements: ["data"]
+
+# Usage patterns and optimization
+usage_patterns: "occasional"
+success_rate: 0.90
+average_execution_time: 1000
+
+# Tool metadata
+metadata:
+  author: "Genome AI Studio"
+  created: "2024-01-15"
+  last_updated: "2024-01-15"
+  tags: ["file-loading", "operon", "bacterial", "specialized", "built-in"]
+  
+# Performance considerations
+performance:
+  memory_usage: "low"
+  cpu_usage: "low"
+  network_required: false
+  file_access: true
+
+# Error handling
+error_handling:
+  common_errors:
+    - error: "File not found"
+      solution: "Check file path exists and is accessible"
+    - error: "Invalid file format" 
+      solution: "Ensure file is in JSON, CSV, or TXT format with proper structure"
+    - error: "FileManager not available"
+      solution: "Ensure genome browser is properly initialized"
+    - error: "Parsing error"
+      solution: "Check file format matches expected operon data structure"

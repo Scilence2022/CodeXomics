@@ -1,0 +1,105 @@
+name: "load_reads_file"
+version: "2.0.0"
+description: "Load sequencing reads files (SAM/BAM) directly with file path specification or via file dialog"
+category: "file_loading"
+subcategory: "reads_loading"
+priority: 1
+keywords: ["reads", "sam", "bam", "sequencing", "alignment", "load", "file"]
+execution_type: "built-in"
+complexity: "simple"
+
+# Built-in tool implemented in ChatManager
+implementation:
+  type: "built-in"
+  method: "loadReadsFile"
+  class: "ChatManager"
+  
+# Tool parameters
+parameters:
+  type: "object"
+  properties:
+    filePath:
+      type: "string"
+      description: "Direct file path to reads file (SAM/BAM format)"
+      required: false
+      examples: ["/path/to/aligned.bam", "reads.sam", "/Users/user/data/sequencing.bam"]
+    showFileDialog:
+      type: "boolean"
+      description: "Whether to show file dialog regardless of filePath parameter"
+      required: false
+      default: false
+  required: []
+
+# Return value specification
+returns:
+  type: "object"
+  properties:
+    success:
+      type: "boolean"
+      description: "Whether the operation succeeded"
+    message:
+      type: "string"
+      description: "Human-readable result message"
+    filePath:
+      type: "string"
+      description: "Path of loaded file (if applicable)"
+    fileType:
+      type: "string"
+      description: "Type of file loaded (reads)"
+    action:
+      type: "string"
+      description: "Action taken (dialog_opened if file dialog was shown)"
+
+# Usage examples
+sample_usages:
+  - user_query: "Load reads file at /path/to/aligned.bam"
+    tool_call: '{"tool_name": "load_reads_file", "parameters": {"filePath": "/path/to/aligned.bam", "showFileDialog": false}}'
+    expected_result: "Successfully loads the BAM reads file directly"
+  
+  - user_query: "Open file dialog to select a reads file"
+    tool_call: '{"tool_name": "load_reads_file", "parameters": {"showFileDialog": true}}'
+    expected_result: "Opens file dialog for reads file selection"
+    
+  - user_query: "Load sequencing data from reads.sam"
+    tool_call: '{"tool_name": "load_reads_file", "parameters": {"filePath": "reads.sam"}}'
+    expected_result: "Loads SAM file containing sequencing reads"
+
+# Tool relationships
+relationships:
+  depends_on: ["load_genome_file"]
+  enhances: ["analyze_region", "get_current_state"]
+  follow_up: ["navigate_to_position", "toggle_track"]
+
+# Integration requirements
+integration_requirements: ["data"]
+
+# Usage patterns and optimization
+usage_patterns: "common"
+success_rate: 0.90
+average_execution_time: 3000
+
+# Tool metadata
+metadata:
+  author: "Genome AI Studio"
+  created: "2024-01-15"
+  last_updated: "2024-01-15"
+  tags: ["file-loading", "reads", "sam", "bam", "built-in"]
+  
+# Performance considerations
+performance:
+  memory_usage: "medium"
+  cpu_usage: "medium"
+  network_required: false
+  file_access: true
+
+# Error handling
+error_handling:
+  common_errors:
+    - error: "File not found"
+      solution: "Check file path exists and is accessible"
+    - error: "Invalid file format" 
+      solution: "Ensure file is in SAM or BAM format"
+    - error: "FileManager not available"
+      solution: "Ensure genome browser is properly initialized"
+    - error: "Large file memory issues"
+      solution: "Use indexed BAM files for better performance"
