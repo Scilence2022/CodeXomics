@@ -605,9 +605,64 @@ class ChatManager {
         try {
             console.log('🔧 Initializing Dynamic Tools Registry System...');
             
-            // Load the SystemIntegration module from tools_registry
-            console.log('🔧 Loading SystemIntegration module...');
-            const SystemIntegration = require('../../tools_registry/system_integration');
+            // Debug: Check if we can access file system to verify tools_registry directory
+            if (window.require) {
+                try {
+                    const fs = window.require('fs');
+                    const path = window.require('path');
+                    
+                    // Check different possible locations
+                    const possibleDirs = [
+                        path.join(__dirname, '../../tools_registry'),
+                        path.join(__dirname, '../../../tools_registry'),
+                        path.join(process.cwd(), 'tools_registry'),
+                        path.join(process.resourcesPath, 'tools_registry')
+                    ];
+                    
+                    console.log('🔍 Checking tools_registry directory locations:');
+                    for (const dir of possibleDirs) {
+                        try {
+                            const exists = fs.existsSync(dir);
+                            console.log(`  ${exists ? '✅' : '❌'} ${dir}`);
+                            if (exists) {
+                                const files = fs.readdirSync(dir);
+                                console.log(`    Files: ${files.slice(0, 5).join(', ')}${files.length > 5 ? '...' : ''}`);
+                            }
+                        } catch (e) {
+                            console.log(`  ❌ ${dir} (error: ${e.message})`);
+                        }
+                    }
+                } catch (e) {
+                    console.log('🔍 Could not access filesystem for directory check:', e.message);
+                }
+            }
+            
+            // Try different path resolution strategies for packaged vs development
+            let SystemIntegration;
+            const possiblePaths = [
+                '../../tools_registry/system_integration',           // Development path
+                '../../../tools_registry/system_integration',       // Alternative dev path
+                './tools_registry/system_integration',              // Packaged relative path
+                'tools_registry/system_integration'                 // Direct path
+            ];
+            
+            let loadedPath = null;
+            for (const tryPath of possiblePaths) {
+                try {
+                    console.log(`🔧 Trying to load SystemIntegration from: ${tryPath}`);
+                    SystemIntegration = require(tryPath);
+                    loadedPath = tryPath;
+                    console.log(`✅ Successfully loaded SystemIntegration from: ${tryPath}`);
+                    break;
+                } catch (pathError) {
+                    console.log(`❌ Failed to load from ${tryPath}: ${pathError.message}`);
+                }
+            }
+            
+            if (!SystemIntegration) {
+                throw new Error('Could not load SystemIntegration from any path');
+            }
+            
             console.log('🔧 SystemIntegration loaded:', typeof SystemIntegration);
             
             if (SystemIntegration) {
@@ -619,6 +674,7 @@ class ChatManager {
                 
                 if (initialized) {
                     console.log('✅ Dynamic Tools Registry System initialized');
+                    console.log(`🔧 Loaded from path: ${loadedPath}`);
                 } else {
                     console.warn('⚠️ Dynamic Tools Registry System failed to initialize, using fallback');
                     this.dynamicToolsEnabled = false;

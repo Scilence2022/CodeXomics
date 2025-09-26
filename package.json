@@ -81,6 +81,7 @@
     "files": [
       "src/**/*",
       "assets/**/*",
+      "tools_registry/**/*",
       "node_modules/**/*",
       "!node_modules/.cache/**/*",
       "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
