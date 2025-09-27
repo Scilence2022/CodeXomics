@@ -248,29 +248,29 @@ class LLMBenchmarkFramework {
      */
     displayTestSuiteStart(testSuite, testCount) {
         this.chatManager.addThinkingMessage(
-            `👩‍🔬 **Dr. Sarah Chen** (Senior LLM Test Engineer)\n` +
-            `🏢 **GenomeAI Testing Laboratory** | 📅 ${new Date().toLocaleDateString()}\n` +
+            `👩‍🔬 CodeXomics Benchmark Tester </br>` +
+            `🏢 GenomeAI Testing Laboratory** | 📅 ${new Date().toLocaleDateString()}</br>` +
             `═══════════════════════════════════════════════════════════\n\n` +
-            `📋 **INITIATING TEST SUITE EXECUTION**\n\n` +
-            `**Suite Specification:**\n` +
-            `• Name: ${testSuite.getName()}\n` +
-            `• Suite ID: ${testSuite.suiteId || testSuite.getName().toLowerCase().replace(/\s+/g, '_')}\n` +
-            `• Description: ${testSuite.description || 'Comprehensive LLM capability assessment'}\n` +
-            `• Test Count: ${testCount} individual tests\n` +
-            `• Estimated Duration: ~${Math.ceil(testCount * 0.5)} minutes\n\n` +
-            `🎯 **Testing Objectives:**\n` +
-            `• Validate LLM instruction comprehension accuracy\n` +
-            `• Assess function calling precision and reliability\n` +
-            `• Measure response quality and consistency metrics\n` +
-            `• Evaluate computational efficiency and performance\n` +
-            `• Document behavioral patterns and edge cases\n\n` +
-            `🔬 **Quality Assurance Protocol:**\n` +
-            `• Each test scored on 100-point scale\n` +
-            `• Pass threshold: 70% minimum score\n` +
-            `• Automated function call detection\n` +
-            `• Parameter validation and compliance checking\n` +
-            `• Performance metrics collection\n\n` +
-            `⚡ **Status:** Beginning systematic test execution...`
+            `📋 INITIATING TEST SUITE EXECUTION</br></br>` +
+            `Suite Specification:</br>` +
+            `• Name: ${testSuite.getName()}</br>` +
+            `• Suite ID: ${testSuite.suiteId || testSuite.getName().toLowerCase().replace(/\s+/g, '_')}</br>` +
+            `• Description: ${testSuite.description || 'Comprehensive LLM capability assessment'}</br>` +
+            `• Test Count: ${testCount} individual tests</br>` +
+            `• Estimated Duration: ~${Math.ceil(testCount * 0.5)} minutes</br></br>` +
+            `🎯 Testing Objectives:</br>` +
+            `• Validate LLM instruction comprehension accuracy</br>` +
+            `• Assess function calling precision and reliability</br>` +
+            `• Measure response quality and consistency metrics</br>` +
+            `• Evaluate computational efficiency and performance</br>` +
+            `• Document behavioral patterns and edge cases</br>` +
+            `🔬 Quality Assurance Protocol:</br>` +
+            `• Each test scored on 100-point scale</br>` +
+            `• Pass threshold: 70% minimum score</br>` +
+            `• Automated function call detection</br>` +
+            `• Parameter validation and compliance checking</br>` +
+            `• Performance metrics collection</br></br>` +
+            `⚡ Status: Beginning systematic test execution...`
         );
     }
 
@@ -282,13 +282,13 @@ class LLMBenchmarkFramework {
         const progressBar = '█'.repeat(Math.floor(progressPercentage / 5)) + '░'.repeat(20 - Math.floor(progressPercentage / 5));
         
         this.chatManager.updateThinkingMessage(
-            `\n\n📍 **TEST PROGRESS: ${currentIndex}/${totalTests}** (${progressPercentage}%)\n` +
-            `${progressBar}\n\n` +
-            `👩‍🔬 **Dr. Sarah Chen:** "Proceeding with ${test.name}"\n` +
-            `**Test ID:** ${test.id} | **Type:** ${this.getTestTypeDescription(test.type)}\n` +
-            `**Estimated Completion:** ${Math.ceil((totalTests - currentIndex) * 0.5)} minutes remaining\n` +
+            `</br></br>📍 TEST PROGRESS: ${currentIndex}/${totalTests} (${progressPercentage}%)</br>\n` +
+            `${progressBar}</br></br>\n\n` +
+            `👩‍🔬 CodeXomics Benchmark Tester: "Proceeding with ${test.name}"</br></br>\n` +
+            `Test ID: ${test.id} | Type:${this.getTestTypeDescription(test.type)}</br>\n` +
+            `Estimated Completion: ${Math.ceil((totalTests - currentIndex) * 0.5)} minutes remaining</br>\n` +
             `═══════════════════════════════════════════════════════════` +
-            `👩‍🔬 LLM Response: ${test.llmResponse}"\n` 
+            `👩‍🔬 LLM Response: ${test.llmResponse}"</br>\n` 
 
         );
     }
@@ -323,7 +323,7 @@ class LLMBenchmarkFramework {
         }
 
         this.chatManager.updateThinkingMessage(
-            `<br><br>👩‍🔬 **Dr. Sarah Chen - FINAL SUITE REPORT**<br>` +
+            `<br><br>👩‍🔬 CodeXomics Benchmark Tester - FINAL SUITE REPORT<br>` +
             `═══════════════════════════════════════════════════════════<br><br>` +
             
             `${gradeEmoji} **TEST SUITE COMPLETED: ${testSuite.getName()}**<br><br>` +
@@ -628,42 +628,88 @@ class LLMBenchmarkFramework {
 
     /**
      * Execute a manual test that requires user interaction
+     * CRITICAL FIX: First send instruction to LLM, then show manual dialog with actual LLM response
      */
     async executeManualTest(test) {
         console.log(`📋 Executing manual test: ${test.name}`);
-        
-        // Prepare test data for manual dialog
-        const testData = {
-            testId: test.id,
-            testName: test.name,
-            category: test.category || 'manual',
-            complexity: test.complexity || 'simple',
-            instruction: test.instruction,
-            expectedResult: test.expectedResult,
-            maxScore: test.maxScore || 100,
-            manualVerification: test.manualVerification,
-            timeout: test.timeout || this.testTimeout
-        };
+        console.log(`🚀 STEP 1: Sending instruction to LLM first...`);
         
         const startTime = Date.now();
+        let llmResponse = null;
+        let llmInteractionData = null;
         
         try {
+            // STEP 1: Send instruction to LLM first (like automatic tests)
+            const instructionOptions = {
+                timeout: test.timeout || this.testTimeout,
+                testInfo: {
+                    id: test.id,
+                    name: test.name,
+                    type: test.type,
+                    expectedResult: test.expectedResult,
+                    maxScore: test.maxScore
+                }
+            };
+            
+            console.log(`📤 Sending instruction to LLM: "${test.instruction}"`);
+            const llmInteractionResult = await this.sendTestInstruction(test.instruction, instructionOptions);
+            
+            // Handle both old format (string) and new format (object with interactionData)
+            if (typeof llmInteractionResult === 'string') {
+                llmResponse = llmInteractionResult;
+            } else {
+                llmResponse = llmInteractionResult.response;
+                llmInteractionData = llmInteractionResult.interactionData;
+            }
+            
+            console.log(`📥 LLM Response received:`, llmResponse);
+            console.log(`🚀 STEP 2: Showing manual dialog with LLM response for user evaluation...`);
+            
+            // STEP 2: Prepare test data for manual dialog INCLUDING LLM response
+            const testData = {
+                testId: test.id,
+                testName: test.name,
+                category: test.category || 'manual',
+                complexity: test.complexity || 'simple',
+                instruction: test.instruction,
+                expectedResult: test.expectedResult,
+                maxScore: test.maxScore || 100,
+                manualVerification: test.manualVerification,
+                timeout: test.timeout || this.testTimeout,
+                // CRITICAL: Include actual LLM response for user evaluation
+                llmResponse: llmResponse,
+                llmInteractionData: llmInteractionData
+            };
+            
             // Check if BenchmarkUI is available
             if (!window.benchmarkUI || !window.benchmarkUI.handleManualTest) {
                 throw new Error('BenchmarkUI not available for manual test handling');
             }
             
-            console.log(`📡 Requesting manual test dialog for: ${test.name}`);
+            console.log(`📡 Requesting manual verification dialog with LLM response...`);
             
-            // Call BenchmarkUI's handleManualTest method and wait for result
+            // STEP 3: Call BenchmarkUI's handleManualTest method and wait for user result
             const manualResult = await window.benchmarkUI.handleManualTest(testData);
             
-            console.log(`✅ Manual test completed:`, manualResult);
+            console.log(`✅ Manual test completed with LLM interaction:`, manualResult);
             
-            // Create test result in expected format
+            // Parse the actual LLM response to extract tool calls
+            let actualResult = null;
+            try {
+                actualResult = await this.parseTestResponse(llmResponse, test);
+            } catch (parseError) {
+                console.warn(`Failed to parse LLM response for manual test ${test.id}:`, parseError);
+                actualResult = {
+                    tool_name: 'manual_test_response',
+                    parameters: {},
+                    rawResponse: llmResponse
+                };
+            }
+            
+            // STEP 4: Create comprehensive test result with both LLM and manual data
             const testResult = {
-                llmResponse: `Manual test completed: ${manualResult.result}`,
-                actualResult: {
+                llmResponse: llmResponse,
+                actualResult: actualResult || {
                     tool_name: test.expectedResult?.tool_name || 'manual_verification',
                     parameters: test.expectedResult?.parameters || {},
                     manual_result: manualResult.result,
@@ -675,13 +721,21 @@ class LLMBenchmarkFramework {
                     manualScore: manualResult.manualScore,
                     verificationCompletion: manualResult.verificationCompletion,
                     completedVerifications: manualResult.completedVerifications,
-                    totalVerifications: manualResult.totalVerifications
+                    totalVerifications: manualResult.totalVerifications,
+                    // Include LLM metrics
+                    llmResponseTime: llmInteractionData?.response?.responseTime || 0,
+                    tokenUsage: llmInteractionData?.response?.tokenUsage || {},
+                    confidence: llmInteractionData?.analysis?.confidence || null,
+                    ambiguity: llmInteractionData?.analysis?.ambiguity || null,
+                    contextRelevance: llmInteractionData?.analysis?.contextRelevance || null
                 },
                 details: {
                     instruction: test.instruction,
-                    manualResult: manualResult
+                    manualResult: manualResult,
+                    llmResponse: llmResponse
                 },
-                llmInteractionData: {
+                // CRITICAL ENHANCEMENT: Include complete LLM interaction data for manual tests
+                llmInteractionData: llmInteractionData || {
                     request: {
                         instruction: test.instruction,
                         timestamp: new Date().toISOString(),
@@ -689,7 +743,7 @@ class LLMBenchmarkFramework {
                         testContext: testData
                     },
                     response: {
-                        content: `Manual verification: ${manualResult.result}`,
+                        content: llmResponse,
                         responseTime: Date.now() - startTime,
                         timestamp: new Date().toISOString(),
                         manualInput: true
@@ -710,7 +764,7 @@ class LLMBenchmarkFramework {
             
             // Return error result
             return {
-                llmResponse: `Manual test failed: ${error.message}`,
+                llmResponse: llmResponse || `Manual test failed: ${error.message}`,
                 actualResult: {
                     tool_name: 'manual_test_error',
                     parameters: {},
@@ -723,17 +777,22 @@ class LLMBenchmarkFramework {
                 },
                 details: {
                     instruction: test.instruction,
-                    error: error.message
+                    error: error.message,
+                    llmResponse: llmResponse
                 },
-                llmInteractionData: {
+                llmInteractionData: llmInteractionData || {
                     request: {
                         instruction: test.instruction,
                         timestamp: new Date().toISOString(),
                         requestId: `manual_error_${test.id}_${Date.now()}`,
-                        testContext: testData
+                        testContext: {
+                            testId: test.id,
+                            testName: test.name,
+                            instruction: test.instruction
+                        }
                     },
                     response: {
-                        content: `Manual test error: ${error.message}`,
+                        content: llmResponse || `Manual test error: ${error.message}`,
                         responseTime: Date.now() - startTime,
                         timestamp: new Date().toISOString(),
                         manualInput: false,

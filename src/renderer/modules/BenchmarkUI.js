@@ -1135,6 +1135,42 @@ class BenchmarkUI {
                     color: #34495e;
                 }
                 
+                .llm-response-section {
+                    background: #f0f9ff;
+                    border-left: 4px solid #0ea5e9;
+                    padding: 20px;
+                    margin: 20px 0;
+                    border-radius: 8px;
+                }
+                
+                .llm-response-section h4 {
+                    margin: 0 0 15px 0;
+                    color: #0c4a6e;
+                    font-size: 18px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .llm-response-content {
+                    background: white;
+                    border: 1px solid #bae6fd;
+                    border-radius: 6px;
+                    padding: 15px;
+                    max-height: 300px;
+                    overflow-y: auto;
+                }
+                
+                .llm-response-content pre {
+                    margin: 0;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                    font-size: 14px;
+                    line-height: 1.4;
+                    color: #1e293b;
+                    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                }
+                
                 .verification-checklist {
                     background: #fff3cd;
                     border: 1px solid #ffeaa7;
@@ -1322,6 +1358,15 @@ class BenchmarkUI {
                     <p>${testData.instruction}</p>
                 </div>
                 
+                ${testData.llmResponse ? `
+                <div class="llm-response-section">
+                    <h4><i class="fas fa-robot"></i> LLM Response</h4>
+                    <div class="llm-response-content">
+                        <pre>${this.formatLLMResponse(testData.llmResponse)}</pre>
+                    </div>
+                </div>
+                ` : ''}
+                
                 ${testData.expectedResult ? `
                 <div class="expected-result">
                     <h4><i class="fas fa-bullseye"></i> Expected Tool & Parameters</h4>
@@ -1436,6 +1481,48 @@ class BenchmarkUI {
     /**
      * Parse verification items from manualVerification string
      */
+    /**
+     * Format LLM response for display in manual dialog
+     */
+    formatLLMResponse(response) {
+        if (!response) {
+            return 'No response received from LLM';
+        }
+        
+        // Handle string responses
+        if (typeof response === 'string') {
+            // Try to detect if it contains function calls or structured data
+            if (response.includes('{') && response.includes('}')) {
+                try {
+                    // Try to parse and pretty-print JSON
+                    const parsed = JSON.parse(response);
+                    return JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    // Not valid JSON, return as-is but escaped
+                    return this.escapeHtml(response);
+                }
+            }
+            return this.escapeHtml(response);
+        }
+        
+        // Handle object responses
+        if (typeof response === 'object') {
+            return JSON.stringify(response, null, 2);
+        }
+        
+        // Handle other types
+        return String(response);
+    }
+    
+    /**
+     * Escape HTML characters to prevent XSS
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     parseVerificationItems(verificationText) {
         if (!verificationText) return [];
         
