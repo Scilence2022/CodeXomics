@@ -35,7 +35,24 @@ class BenchmarkUI {
         try {
             console.log('🎯 Starting benchmark interface display...');
             
-            // Create benchmark interface
+            // CRITICAL FIX: Check if interface already exists
+            const existingInterface = document.getElementById('benchmarkInterface');
+            if (existingInterface) {
+                console.log('⚠️ Benchmark interface already exists, focusing existing one');
+                // Focus existing interface and ensure it's visible
+                existingInterface.style.display = 'block';
+                existingInterface.style.visibility = 'visible';
+                existingInterface.style.opacity = '1';
+                
+                // If collapsed, expand it
+                if (existingInterface.classList.contains('collapsed')) {
+                    this.toggleBenchmarkInterface();
+                }
+                
+                return; // Exit early - do not create duplicate
+            }
+            
+            // Create benchmark interface only if none exists
             const benchmarkInterface = this.createBenchmarkInterface();
             console.log('🔧 Benchmark interface created:', benchmarkInterface);
             
@@ -721,29 +738,53 @@ class BenchmarkUI {
             benchmarkInterface.remove();
         }
         
+        // Clean up drag styles
+        const dragStyles = document.getElementById('benchmark-drag-styles');
+        if (dragStyles) {
+            dragStyles.remove();
+        }
+        
+        // Reset handlers flag to allow fresh setup next time
+        this.handlersSetup = false;
+        
         // Stop any running benchmark
         if (this.isRunning) {
             this.stopMainWindowBenchmark();
         }
         
-        console.log('✅ Benchmark interface closed');
+        console.log('✅ Benchmark interface closed and cleaned up');
     }
 
     /**
      * Setup benchmark interface event handlers
      */
     setupBenchmarkInterfaceHandlers() {
+        // CRITICAL FIX: Prevent duplicate handler setup
+        if (this.handlersSetup) {
+            console.log('⚠️ Event handlers already setup, skipping duplicate setup');
+            return;
+        }
+        
         // Button handlers
-        document.getElementById('startBenchmark').onclick = () => this.startMainWindowBenchmark();
-        document.getElementById('stopBenchmark').onclick = () => this.stopMainWindowBenchmark();
-        document.getElementById('exportResults').onclick = () => this.exportMainWindowResults();
-        document.getElementById('testManualDialog').onclick = () => this.triggerTestManualDialog();
+        const startBtn = document.getElementById('startBenchmark');
+        const stopBtn = document.getElementById('stopBenchmark');
+        const exportBtn = document.getElementById('exportResults');
+        const testBtn = document.getElementById('testManualDialog');
+        
+        if (startBtn) startBtn.onclick = () => this.startMainWindowBenchmark();
+        if (stopBtn) stopBtn.onclick = () => this.stopMainWindowBenchmark();
+        if (exportBtn) exportBtn.onclick = () => this.exportMainWindowResults();
+        if (testBtn) testBtn.onclick = () => this.triggerTestManualDialog();
         
         // Setup drag functionality for the title bar
         this.setupDragFunctionality();
         
         // Add manual test interaction handlers
         this.setupManualTestHandlers();
+        
+        // Mark handlers as setup to prevent duplicates
+        this.handlersSetup = true;
+        console.log('✅ Event handlers setup complete (no duplicates)');
     }
 
     /**
@@ -816,19 +857,23 @@ class BenchmarkUI {
             }
         });
         
-        // Add CSS styles for dragging state
-        const style = document.createElement('style');
-        style.textContent = `
-            .benchmark-header.dragging {
-                cursor: grabbing !important;
-                user-select: none;
-            }
-            
-            .benchmark-header:hover {
-                background: rgba(52, 152, 219, 0.05);
-            }
-        `;
-        document.head.appendChild(style);
+        // Add CSS styles for dragging state (prevent duplicates)
+        const existingDragStyle = document.getElementById('benchmark-drag-styles');
+        if (!existingDragStyle) {
+            const style = document.createElement('style');
+            style.id = 'benchmark-drag-styles'; // Add ID to prevent duplicates
+            style.textContent = `
+                .benchmark-header.dragging {
+                    cursor: grabbing !important;
+                    user-select: none;
+                }
+                
+                .benchmark-header:hover {
+                    background: rgba(52, 152, 219, 0.05);
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
 
     /**
