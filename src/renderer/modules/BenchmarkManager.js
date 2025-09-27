@@ -70,14 +70,10 @@ class BenchmarkManager {
      */
     async loadTestSuites() {
         const suites = [
-            'BasicOperationsSuite',
-            'EditOperationsSuite',
-            'BasicFunctionCallingSuite',
-            'ComplexAnalysisSuite', 
-            'PluginIntegrationSuite',
-            'ParameterHandlingSuite',
-            'WorkflowTestSuite',
-            'PerformanceTestSuite'
+            'AutomaticSimpleSuite',
+            'AutomaticComplexSuite',
+            'ManualSimpleSuite',
+            'ManualComplexSuite'
         ];
 
         console.log('📦 Loading test suites...');
@@ -228,7 +224,7 @@ class BenchmarkManager {
 
         try {
             const quickOptions = {
-                suites: ['basic_functions', 'parameter_handling', 'performance_tests'],
+                suites: ['automatic_simple'],
                 generateReport: true,
                 includeCharts: false,
                 includeRawData: false,
@@ -354,16 +350,10 @@ class BenchmarkManager {
                         <div class="config-section">
                             <h3>Test Suites</h3>
                             <div class="suite-checkboxes">
-                                <label><input type="checkbox" value="basic_functions" checked> Basic Function Calls</label>
-                                <label><input type="checkbox" value="complex_analysis" checked> Complex Analysis</label>
-                                <label><input type="checkbox" value="plugin_integration"> Plugin Integration</label>
-                                <label><input type="checkbox" value="parameter_handling" checked> Parameter Handling</label>
-                                <label><input type="checkbox" value="workflow_tests"> Workflow Tests</label>
-                                <label><input type="checkbox" value="performance_tests" checked> Performance Tests</label>
-                                <label><input type="checkbox" value="contextual_understanding"> Contextual Understanding</label>
-                                <label><input type="checkbox" value="edge_cases"> Edge Cases</label>
-                                <label><input type="checkbox" value="performance_tests" checked> Performance Tests</label>
-                                <label><input type="checkbox" value="consistency_tests"> Consistency Tests</label>
+                                <label><input type="checkbox" value="automatic_simple" checked> ⚙️ Automatic Simple Tests</label>
+                                <label><input type="checkbox" value="automatic_complex"> 🔧 Automatic Complex Tests</label>
+                                <label><input type="checkbox" value="manual_simple"> 👥 Manual Simple Tests</label>
+                                <label><input type="checkbox" value="manual_complex"> 🧠 Manual Complex Tests</label>
                             </div>
                         </div>
                         <div class="config-section">

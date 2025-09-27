@@ -531,40 +531,20 @@ class BenchmarkUI {
                             <h3>📋 Test Suites</h3>
                             <div class="checkbox-grid">
                                 <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-comprehensive_genomic">
-                                    <span>🧬 Comprehensive Genomic Analysis</span>
+                                    <input type="checkbox" id="suite-automatic_simple" checked>
+                                    <span>⚙️ Automatic Simple Tests</span>
                                 </label>
                                 <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-basic_operations" checked>
-                                    <span>✂️ Basic Operations</span>
+                                    <input type="checkbox" id="suite-automatic_complex">
+                                    <span>🔧 Automatic Complex Tests</span>
                                 </label>
                                 <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-edit_operations" checked>
-                                    <span>📝 Edit Operations</span>
+                                    <input type="checkbox" id="suite-manual_simple">
+                                    <span>👥 Manual Simple Tests</span>
                                 </label>
                                 <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-basic_functions" checked>
-                                    <span>🔧 Basic Functions</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-parameter_handling" checked>
-                                    <span>📊 Parameter Handling</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-performance_tests" checked>
-                                    <span>⚡ Performance Tests</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-complex_analysis">
-                                    <span>🔬 Complex Analysis</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-plugin_integration">
-                                    <span>🔌 Plugin Integration</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" id="suite-workflow_tests">
-                                    <span>🔄 Workflow Tests</span>
+                                    <input type="checkbox" id="suite-manual_complex">
+                                    <span>🧠 Manual Complex Tests</span>
                                 </label>
                             </div>
                         </div>

@@ -30,32 +30,11 @@ class LLMBenchmarkFramework {
      * Initialize all test suites
      */
     initializeTestSuites() {
-        // Basic Operations Tests (Copy, Paste, Select All, etc.)
-        this.registerTestSuite('basic_operations', new BasicOperationsSuite());
-        
-        // Edit Operations Tests (Comprehensive Edit menu operations)
-        this.registerTestSuite('edit_operations', new EditOperationsSuite());
-        
-        // Basic Function Calling Tests
-        this.registerTestSuite('basic_functions', new BasicFunctionCallingSuite());
-        
-        // Comprehensive Genomic Analysis Tests (NEW)
-        this.registerTestSuite('comprehensive_genomic', new ComprehensiveBenchmarkSuite());
-        
-        // Complex Analysis Tests
-        this.registerTestSuite('complex_analysis', new ComplexAnalysisSuite());
-        
-        // Plugin Integration Tests
-        this.registerTestSuite('plugin_integration', new PluginIntegrationSuite());
-        
-        // Parameter Handling Tests
-        this.registerTestSuite('parameter_handling', new ParameterHandlingSuite());
-        
-        // Multi-step Workflow Tests
-        this.registerTestSuite('workflow_tests', new WorkflowTestSuite());
-        
-        // Performance Tests
-        this.registerTestSuite('performance_tests', new PerformanceTestSuite());
+        // Specialized Genomic Analysis Test Suites (4 suites organized by evaluation method and complexity)
+        this.registerTestSuite('automatic_simple', new AutomaticSimpleSuite());
+        this.registerTestSuite('automatic_complex', new AutomaticComplexSuite());
+        this.registerTestSuite('manual_simple', new ManualSimpleSuite());
+        this.registerTestSuite('manual_complex', new ManualComplexSuite());
         
         console.log(`Initialized ${this.testSuites.size} test suites with ${this.getTotalTestCount()} total tests`);
     }
