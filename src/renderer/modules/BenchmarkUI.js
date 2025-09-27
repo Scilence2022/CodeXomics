@@ -475,6 +475,17 @@ class BenchmarkUI {
                     margin-bottom: 25px;
                 }
 
+                .checkbox-item span small {
+                    color: #6c757d;
+                    font-weight: 500;
+                    font-size: 12px;
+                    margin-left: 5px;
+                    background: rgba(52, 152, 219, 0.1);
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                    border: 1px solid rgba(52, 152, 219, 0.2);
+                }
+
                 .summary-card {
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
@@ -531,19 +542,19 @@ class BenchmarkUI {
                             <div class="checkbox-grid">
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-automatic_simple" checked>
-                                    <span>⚙️ Automatic Simple Tests</span>
+                                    <span>⚙️ Automatic Simple Tests <small>(14 tests)</small></span>
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-automatic_complex">
-                                    <span>🔧 Automatic Complex Tests</span>
+                                    <span>🔧 Automatic Complex Tests <small>(1 test)</small></span>
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-manual_simple">
-                                    <span>👥 Manual Simple Tests</span>
+                                    <span>👥 Manual Simple Tests <small>(8 tests)</small></span>
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-manual_complex">
-                                    <span>🧠 Manual Complex Tests</span>
+                                    <span>🧠 Manual Complex Tests <small>(10 tests)</small></span>
                                 </label>
                             </div>
                         </div>
