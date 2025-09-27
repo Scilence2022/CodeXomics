@@ -69,7 +69,7 @@ class BenchmarkUI {
             benchmarkInterface.style.left = '0';
             benchmarkInterface.style.width = '100vw';
             benchmarkInterface.style.height = '100vh';
-            benchmarkInterface.style.zIndex = '999999';
+            benchmarkInterface.style.zIndex = '9999999'; // Maximum z-index
             
             // Force immediate rendering
             benchmarkInterface.offsetHeight;
@@ -151,7 +151,7 @@ class BenchmarkUI {
                     right: 0;
                     bottom: 0;
                     background: transparent;
-                    z-index: 999999; /* High z-index to stay above main interface tabs */
+                    z-index: 9999999 !important; /* MAXIMUM z-index to stay above all interface elements */
                     overflow-y: auto;
                     padding: 20px;
                     display: block !important;
@@ -239,20 +239,27 @@ class BenchmarkUI {
                     transform: scale(1.1);
                 }
 
-                /* Collapsed state styles */
+                /* Collapsed state styles - MILITARY-GRADE Z-INDEX FIX */
                 .benchmark-interface.collapsed {
                     height: 80px !important;
                     overflow: hidden;
                     background: transparent;
-                    z-index: 999999 !important; /* Ensure collapsed state stays above main tabs */
+                    z-index: 9999999 !important; /* MAXIMUM z-index - must be higher than any other element */
+                    position: fixed !important; /* Force fixed positioning */
+                    pointer-events: auto !important; /* Enable interaction with collapsed interface */
                 }
 
                 .benchmark-interface.collapsed .benchmark-container {
                     height: 80px;
                     padding: 10px 30px;
                     overflow: hidden;
-                    background: rgba(255, 255, 255, 0.95);
-                    z-index: 999999 !important; /* Maintain high z-index during dragging */
+                    background: rgba(255, 255, 255, 0.98) !important; /* More opaque for visibility */
+                    z-index: 9999999 !important; /* Maintain maximum z-index */
+                    position: relative !important;
+                    border: 3px solid rgba(52, 152, 219, 0.8) !important; /* Stronger border for visibility */
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.4) !important; /* Stronger shadow */
+                    backdrop-filter: blur(15px) !important; /* Enhanced blur effect */
+                    transform: translateZ(0) !important; /* Force hardware acceleration */
                 }
 
                 /* Hide sections but keep header visible */
@@ -823,9 +830,9 @@ class BenchmarkUI {
             // CRITICAL: Boost z-index for dragging to stay above main tabs
             const benchmarkInterface = document.getElementById('benchmarkInterface');
             if (benchmarkInterface) {
-                benchmarkInterface.style.zIndex = '9999999';
+                benchmarkInterface.style.zIndex = '99999999'; // Ultra-high z-index during dragging
             }
-            container.style.zIndex = '9999999';
+            container.style.zIndex = '99999999'; // Ultra-high z-index for container
             
             // Change container positioning to absolute for dragging
             container.style.position = 'absolute';
@@ -870,7 +877,7 @@ class BenchmarkUI {
                 // Restore normal z-index after dragging
                 const benchmarkInterface = document.getElementById('benchmarkInterface');
                 if (benchmarkInterface) {
-                    benchmarkInterface.style.zIndex = '999999'; // Back to normal high z-index
+                    benchmarkInterface.style.zIndex = '9999999'; // Back to normal maximum z-index
                 }
                 container.style.zIndex = ''; // Remove inline z-index, let CSS take over
             }
@@ -894,12 +901,12 @@ class BenchmarkUI {
                 /* Enhanced z-index during dragging to stay above main tabs */
                 .benchmark-header.dragging .benchmark-container,
                 .benchmark-header.dragging ~ * {
-                    z-index: 9999999 !important;
+                    z-index: 99999999 !important; /* ULTRA-HIGH z-index during dragging */
                 }
                 
                 /* Ensure entire interface has maximum z-index during drag */
                 .benchmark-interface:has(.benchmark-header.dragging) {
-                    z-index: 9999999 !important;
+                    z-index: 99999999 !important; /* ULTRA-HIGH z-index during dragging */
                 }
             `;
             document.head.appendChild(style);
