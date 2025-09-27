@@ -842,12 +842,12 @@ class LLMBenchmarkFramework {
             }
             
             // Capture system prompt and context
-            interactionData.request.systemPrompt = this.captureSystemPrompt();
+            interactionData.request.systemPrompt = await this.captureSystemPrompt();
             interactionData.request.contextLength = this.getChatContextLength();
             interactionData.request.availableTools = this.getAvailableTools();
             
             // Build full prompt for logging
-            interactionData.request.fullPrompt = this.buildFullPrompt(instruction);
+            interactionData.request.fullPrompt = await this.buildFullPrompt(instruction);
             
             // Display detailed test process as a simulated tester
             this.displayTestProcess(instruction, options);
@@ -1716,11 +1716,12 @@ class LLMBenchmarkFramework {
     /**
      * Capture system prompt from ChatManager
      */
-    captureSystemPrompt() {
+    async captureSystemPrompt() {
         try {
             // Try to get system prompt from ChatManager
             if (this.chatManager && this.chatManager.buildSystemMessage) {
-                return this.chatManager.buildSystemMessage();
+                const systemPrompt = await this.chatManager.buildSystemMessage();
+                return systemPrompt || 'System prompt not available';
             }
             return 'System prompt not available';
         } catch (error) {
@@ -1778,9 +1779,9 @@ class LLMBenchmarkFramework {
     /**
      * Build full prompt for logging
      */
-    buildFullPrompt(instruction) {
+    async buildFullPrompt(instruction) {
         try {
-            const systemPrompt = this.captureSystemPrompt();
+            const systemPrompt = await this.captureSystemPrompt();
             return `${systemPrompt}\n\nUser: ${instruction}`;
         } catch (error) {
             return instruction;

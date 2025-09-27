@@ -1026,12 +1026,17 @@ class BenchmarkUI {
     }
 
     /**
-     * Create interactive dialog for manual tests
+     * Create interactive dialog for manual tests with automatic scoring
      */
     createManualTestDialog(testData) {
         const dialog = document.createElement('div');
         dialog.className = 'manual-test-dialog';
         dialog.id = `manual-test-${testData.testId}`;
+        
+        // Parse verification items and assign scores
+        const verificationItems = this.parseVerificationItems(testData.manualVerification);
+        const itemScore = verificationItems.length > 0 ? Math.floor((testData.maxScore - 1) / verificationItems.length) : 0;
+        const bonusScore = 1; // Extra point for completion
         
         dialog.innerHTML = `
             <style>
@@ -1181,6 +1186,25 @@ class BenchmarkUI {
                     color: #5d4e75;
                 }
                 
+                .item-score {
+                    font-size: 11px;
+                    color: #6c757d;
+                    font-weight: normal;
+                    margin-left: 5px;
+                }
+                
+                .auto-score-display {
+                    border: 2px solid #28a745;
+                    color: #155724;
+                    font-weight: bold;
+                }
+                
+                .verification-checklist {
+                    transition: all 0.3s ease;
+                    border-left: 4px solid #3498db;
+                    padding-left: 15px;
+                }
+                
                 .test-actions {
                     display: flex;
                     justify-content: space-between;
@@ -1310,15 +1334,25 @@ class BenchmarkUI {
                 
                 ${testData.manualVerification ? `
                 <div class="verification-checklist">
-                    <h4><i class="fas fa-tasks"></i> Verification Checklist</h4>
+                    <h4><i class="fas fa-tasks"></i> Verification Checklist (Auto-Scoring)</h4>
+                    <div class="scoring-info" style="background: #e3f2fd; border: 1px solid #90caf9; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px;">
+                        <strong>Automatic Scoring:</strong> Each item = ${itemScore} pts, Completion bonus = ${bonusScore} pt, Total possible = ${testData.maxScore} pts
+                    </div>
                     <ul class="checklist-items">
                         ${this.parseVerificationItems(testData.manualVerification).map((item, index) => `
                             <li class="checklist-item">
-                                <input type="checkbox" id="check-${testData.testId}-${index}" onchange="this.parentElement.classList.toggle('completed', this.checked)">
-                                <label for="check-${testData.testId}-${index}">${item}</label>
+                                <input type="checkbox" id="check-${testData.testId}-${index}" 
+                                       data-score="${itemScore}" 
+                                       onchange="window.benchmarkUI.updateAutomaticScore('${testData.testId}', ${itemScore}, ${bonusScore}, ${testData.maxScore})">
+                                <label for="check-${testData.testId}-${index}">
+                                    ${item} <span class="item-score">(${itemScore} pts)</span>
+                                </label>
                             </li>
                         `).join('')}
                     </ul>
+                    <div class="auto-score-display" style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; text-align: center;">
+                        <strong>Current Score: <span id="auto-score-${testData.testId}">0</span> / ${testData.maxScore} pts</strong>
+                    </div>
                 </div>
                 ` : ''}
                 
@@ -1353,6 +1387,53 @@ class BenchmarkUI {
     }
 
     /**
+     * Update automatic score based on checklist verification
+     */
+    updateAutomaticScore(testId, itemScore, bonusScore, maxScore) {
+        const dialog = document.getElementById(`manual-test-${testId}`);
+        if (!dialog) return;
+        
+        // Count checked items
+        const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
+        const checkedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
+        
+        // Calculate score: (checked items * item score) + bonus if all completed
+        let autoScore = checkedItems * itemScore;
+        if (checkedItems === checkboxes.length && checkboxes.length > 0) {
+            autoScore += bonusScore; // Completion bonus
+        }
+        
+        // Cap at max score
+        autoScore = Math.min(autoScore, maxScore);
+        
+        // Update display
+        const scoreDisplay = document.getElementById(`auto-score-${testId}`);
+        if (scoreDisplay) {
+            scoreDisplay.textContent = autoScore;
+        }
+        
+        // Update manual score select to match auto score
+        const scoreSelect = document.getElementById(`manual-score-${testId}`);
+        if (scoreSelect) {
+            scoreSelect.value = autoScore;
+        }
+        
+        // Visual feedback for completion
+        const checklistContainer = dialog.querySelector('.verification-checklist');
+        if (checklistContainer) {
+            if (checkedItems === checkboxes.length && checkboxes.length > 0) {
+                checklistContainer.style.borderLeft = '4px solid #27ae60';
+                checklistContainer.style.background = '#f8fff8';
+            } else {
+                checklistContainer.style.borderLeft = '4px solid #3498db';
+                checklistContainer.style.background = '#f8f9fa';
+            }
+        }
+        
+        console.log(`📊 Auto-score updated for ${testId}: ${autoScore}/${maxScore} (${checkedItems}/${checkboxes.length} items checked)`);
+    }
+
+    /**
      * Parse verification items from manualVerification string
      */
     parseVerificationItems(verificationText) {
@@ -1376,7 +1457,7 @@ class BenchmarkUI {
     }
 
     /**
-     * Complete manual test with user input
+     * Complete manual test with user input and automatic scoring
      */
     completeManualTest(testId, result) {
         console.log('✅ Completing manual test:', testId, 'with result:', result);
@@ -1388,25 +1469,37 @@ class BenchmarkUI {
         }
         
         try {
-            // Get manual score
+            // Get automatic score (already calculated by updateAutomaticScore)
             const scoreSelect = document.getElementById(`manual-score-${testId}`);
-            const manualScore = scoreSelect ? parseInt(scoreSelect.value) : 0;
+            const automaticScore = scoreSelect ? parseInt(scoreSelect.value) : 0;
             
             // Get verification checklist status
             const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
             const completedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
             const totalItems = checkboxes.length;
             
-            // Create result data
+            // Calculate verification percentage
+            const verificationPercentage = totalItems > 0 ? (completedItems / totalItems) : 1;
+            
+            // Create result data with automatic scoring
             const resultData = {
                 testId: testId,
                 result: result,
-                manualScore: manualScore,
-                verificationCompletion: totalItems > 0 ? (completedItems / totalItems) : 1,
+                manualScore: automaticScore, // Use automatic score
+                automaticScore: automaticScore,
+                verificationCompletion: verificationPercentage,
                 completedVerifications: completedItems,
                 totalVerifications: totalItems,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                scoringMethod: 'automatic',
+                verificationDetails: Array.from(checkboxes).map((cb, index) => ({
+                    item: cb.nextElementSibling.textContent,
+                    completed: cb.checked,
+                    score: cb.checked ? parseInt(cb.dataset.score || '0') : 0
+                }))
             };
+            
+            console.log('📊 Manual test completed with automatic scoring:', resultData);
             
             // Close dialog with animation
             dialog.style.transition = 'opacity 0.3s ease';
@@ -1526,6 +1619,59 @@ class BenchmarkUI {
     }
 
     /**
+     * Safe JSON serialization that handles circular references
+     */
+    safeJSONStringify(obj, maxDepth = 10) {
+        const seen = new WeakSet();
+        const depthMap = new WeakMap();
+        
+        return JSON.stringify(obj, (key, value) => {
+            // Handle basic types
+            if (value === null || typeof value !== 'object') {
+                return value;
+            }
+            
+            // Check depth to prevent infinite recursion
+            const currentDepth = depthMap.get(value) || 0;
+            if (currentDepth > maxDepth) {
+                return '[Max Depth Reached]';
+            }
+            
+            // Handle circular references
+            if (seen.has(value)) {
+                return '[Circular Reference]';
+            }
+            
+            seen.add(value);
+            depthMap.set(value, currentDepth + 1);
+            
+            // Filter out problematic properties
+            if (value && typeof value === 'object') {
+                const filtered = {};
+                for (const [k, v] of Object.entries(value)) {
+                    // Skip known problematic properties
+                    if (k === 'genomeBrowser' || k === 'fileManager' || k === 'chatManager' || 
+                        k === 'configManager' || k === 'framework' || k === 'window' || 
+                        k === 'document' || k === 'parent' || k === 'constructor') {
+                        filtered[k] = '[Filtered: Circular Reference]';
+                    } else if (typeof v === 'function') {
+                        filtered[k] = '[Function]';
+                    } else if (v instanceof Promise) {
+                        filtered[k] = '[Promise]';
+                    } else if (v instanceof HTMLElement) {
+                        filtered[k] = '[DOM Element]';
+                    } else {
+                        filtered[k] = v;
+                    }
+                }
+                return filtered;
+            }
+            
+            return value;
+        }, 2);
+    }
+
+    /**
      * Export results from main window
      */
     exportMainWindowResults() {
@@ -1534,15 +1680,21 @@ class BenchmarkUI {
             return;
         }
         
-        const blob = new Blob([JSON.stringify(this.currentResults, null, 2)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'benchmark-results-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        console.log('📤 Results exported from main window');
+        try {
+            const safeJSON = this.safeJSONStringify(this.currentResults);
+            const blob = new Blob([safeJSON], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'benchmark-results-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log('📤 Results exported from main window');
+        } catch (error) {
+            console.error('Failed to export results:', error);
+            alert('Failed to export results: ' + error.message);
+        }
     }
 
     /**
@@ -1586,7 +1738,7 @@ class BenchmarkUI {
             };
 
             // Create and download JSON file
-            const jsonString = JSON.stringify(exportData, null, 2);
+            const jsonString = this.safeJSONStringify(exportData);
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             
