@@ -308,15 +308,28 @@ class BenchmarkUI {
                     padding-bottom: 0;
                     border-bottom: none;
                     display: block !important; /* Ensure header stays visible */
+                    z-index: 2147483647 !important; /* Nuclear z-index for header */
+                    position: relative !important;
+                }
+                
+                /* CRITICAL: Header content and controls must also have nuclear z-index */
+                .benchmark-interface.collapsed .benchmark-header .header-content,
+                .benchmark-interface.collapsed .benchmark-header .header-controls {
+                    z-index: 2147483647 !important; /* Nuclear z-index for header elements */
+                    position: relative !important;
                 }
 
                 .benchmark-interface.collapsed .benchmark-title {
                     font-size: 20px;
                     margin-bottom: 0;
+                    z-index: 2147483647 !important; /* Nuclear z-index for title */
+                    position: relative !important;
                 }
 
                 .benchmark-interface.collapsed .benchmark-subtitle {
                     font-size: 12px;
+                    z-index: 2147483647 !important; /* Nuclear z-index for subtitle */
+                    position: relative !important;
                 }
 
                 .expand-indicator {
@@ -984,6 +997,27 @@ class BenchmarkUI {
                 box-shadow: 0 25px 80px rgba(0,0,0,0.5) !important;
                 backdrop-filter: blur(20px) !important;
                 transform: translateZ(0) !important;
+            }
+            
+            /* CRITICAL: Ensure header specifically has nuclear z-index */
+            #benchmarkInterface.collapsed .benchmark-header {
+                z-index: 2147483647 !important; /* Maximum 32-bit integer for header */
+                position: relative !important;
+                background: transparent !important;
+            }
+            
+            /* CRITICAL: Ensure header content and controls have nuclear z-index */
+            #benchmarkInterface.collapsed .benchmark-header .header-content,
+            #benchmarkInterface.collapsed .benchmark-header .header-controls {
+                z-index: 2147483647 !important; /* Maximum z-index for all header elements */
+                position: relative !important;
+            }
+            
+            /* CRITICAL: Title and subtitle must have nuclear z-index */
+            #benchmarkInterface.collapsed .benchmark-title,
+            #benchmarkInterface.collapsed .benchmark-subtitle {
+                z-index: 2147483647 !important; /* Maximum z-index for title elements */
+                position: relative !important;
             }
             
             /* Force tab-bar to stay at correct level */
