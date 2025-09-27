@@ -302,7 +302,7 @@ class AutomaticSimpleSuite {
         const evaluation = {
             success: false,
             score: 0,
-            maxScore: testResult.maxScore || 100,
+            maxScore: testResult.maxScore || 5, // Use test's actual maxScore, default to 5 for simple
             errors: [],
             warnings: []
         };
@@ -312,18 +312,20 @@ class AutomaticSimpleSuite {
             return evaluation;
         }
 
-        // Check tool name
+        // Check tool name - award full points for correct tool
         const actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
         if (actualTool === expectedResult.tool_name) {
-            evaluation.score += Math.floor(evaluation.maxScore * 0.6); // 60% for correct tool
+            evaluation.score = evaluation.maxScore; // Full points for correct tool
         } else {
             evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool}'`);
+            evaluation.score = 0; // No points for wrong tool
+            evaluation.success = false;
+            return evaluation;
         }
 
-        // Check parameters
+        // Check parameters - deduct points for parameter issues
         const actualParams = Array.isArray(actualResult) ? actualResult[0]?.parameters : actualResult.parameters;
         if (actualParams && expectedResult.parameters) {
-            let paramScore = 0;
             const expectedKeys = Object.keys(expectedResult.parameters);
             const matchingKeys = expectedKeys.filter(key => 
                 key in actualParams && 
@@ -333,13 +335,15 @@ class AutomaticSimpleSuite {
                  expectedResult.parameters[key] === '<araA_protein_sequence>')
             );
             
-            if (expectedKeys.length > 0) {
-                paramScore = Math.floor(evaluation.maxScore * 0.4 * (matchingKeys.length / expectedKeys.length));
+            // Deduct 1 point for each missing/incorrect parameter
+            const missingParams = expectedKeys.length - matchingKeys.length;
+            if (missingParams > 0) {
+                evaluation.score = Math.max(0, evaluation.score - missingParams);
+                evaluation.warnings.push(`${missingParams} parameter(s) missing or incorrect`);
             }
-            evaluation.score += paramScore;
         }
 
-        evaluation.success = evaluation.score >= Math.floor(evaluation.maxScore * 0.6);
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
         return evaluation;
     }
 
@@ -367,13 +371,13 @@ class AutomaticSimpleSuite {
     async evaluateSequenceAnalysisCall(actualResult, expectedResult, testResult) {
         const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
         
-        // Add sequence-specific checks
+        // Add sequence-specific bonus
         if (actualResult && actualResult.parameters && actualResult.parameters.sequence) {
             const sequence = actualResult.parameters.sequence.toUpperCase();
             const validChars = /^[ATCGN]+$/;
             
             if (validChars.test(sequence)) {
-                evaluation.score += 5; // Bonus for valid DNA sequence
+                evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1)); // Add bonus points
             } else {
                 evaluation.warnings.push('Sequence contains invalid DNA characters');
             }
@@ -385,13 +389,13 @@ class AutomaticSimpleSuite {
     async evaluateSearchFunctionCall(actualResult, expectedResult, testResult) {
         const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
         
-        // Add search-specific checks
+        // Add search-specific bonus
         if (actualResult && actualResult.parameters) {
             const params = actualResult.parameters;
             
             // Check for case sensitivity handling
             if (params.caseSensitive === false || params.caseSensitive === true) {
-                evaluation.score += 2; // Bonus for explicit case sensitivity handling
+                evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1)); // Add bonus points
             }
         }
         

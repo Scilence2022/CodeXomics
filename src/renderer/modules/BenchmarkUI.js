@@ -510,8 +510,7 @@ class BenchmarkUI {
                             LLM Instruction Following Benchmark
                             <span>🧪</span>
                         </h1>
-                        <p class="benchmark-subtitle">Comprehensive testing of LLM instruction following capabilities in Genome AI Studio</p>
-                        <div class="expand-indicator">Click to expand ↕️</div>
+
                     </div>
                     <div class="header-controls">
                         <button class="minimize-benchmark-btn" onclick="event.stopPropagation(); window.benchmarkUI.toggleBenchmarkInterface()" title="Minimize/Expand Interface">

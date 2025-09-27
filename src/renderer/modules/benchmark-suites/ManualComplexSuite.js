@@ -234,7 +234,7 @@ class ManualComplexSuite {
         const evaluation = {
             success: false,
             score: 0,
-            maxScore: testResult.maxScore || 100,
+            maxScore: testResult.maxScore || 10, // Use test's actual maxScore, default to 10 for complex
             errors: [],
             warnings: []
         };
@@ -244,18 +244,20 @@ class ManualComplexSuite {
             return evaluation;
         }
 
-        // Check tool name
+        // Check tool name - award full points for correct tool
         const actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
         if (actualTool === expectedResult.tool_name) {
-            evaluation.score += Math.floor(evaluation.maxScore * 0.6); // 60% for correct tool
+            evaluation.score = evaluation.maxScore; // Full points for correct tool
         } else {
             evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool}'`);
+            evaluation.score = 0; // No points for wrong tool
+            evaluation.success = false;
+            return evaluation;
         }
 
-        // Check parameters
+        // Check parameters - deduct points for parameter issues
         const actualParams = Array.isArray(actualResult) ? actualResult[0]?.parameters : actualResult.parameters;
         if (actualParams && expectedResult.parameters) {
-            let paramScore = 0;
             const expectedKeys = Object.keys(expectedResult.parameters);
             const matchingKeys = expectedKeys.filter(key => 
                 key in actualParams && 
@@ -265,13 +267,15 @@ class ManualComplexSuite {
                  expectedResult.parameters[key] === '<araA_protein_sequence>')
             );
             
-            if (expectedKeys.length > 0) {
-                paramScore = Math.floor(evaluation.maxScore * 0.4 * (matchingKeys.length / expectedKeys.length));
+            // Deduct 1 point for each missing/incorrect parameter (up to 2 points for complex)
+            const missingParams = expectedKeys.length - matchingKeys.length;
+            if (missingParams > 0) {
+                evaluation.score = Math.max(0, evaluation.score - Math.min(2, missingParams));
+                evaluation.warnings.push(`${missingParams} parameter(s) missing or incorrect`);
             }
-            evaluation.score += paramScore;
         }
 
-        evaluation.success = evaluation.score >= Math.floor(evaluation.maxScore * 0.6);
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
         return evaluation;
     }
 
@@ -279,7 +283,7 @@ class ManualComplexSuite {
         const evaluation = {
             success: false,
             score: 0,
-            maxScore: testResult.maxScore || 100,
+            maxScore: testResult.maxScore || 10, // Use test's actual maxScore, default to 10 for complex
             errors: [],
             warnings: []
         };
@@ -289,9 +293,9 @@ class ManualComplexSuite {
             return evaluation;
         }
 
-        // For workflows, we expect multiple tool calls
+        // For workflows, award points based on completion
         if (Array.isArray(actualResult) && actualResult.length > 1) {
-            evaluation.score += Math.floor(evaluation.maxScore * 0.4); // 40% for multi-step execution
+            evaluation.score = Math.ceil(evaluation.maxScore * 0.5); // 50% for multi-step execution
             
             // Check if expected tools are present
             if (expectedResult.tool_sequence) {
@@ -306,7 +310,8 @@ class ManualComplexSuite {
                 });
                 
                 if (expectedTools.length > 0) {
-                    const toolScore = Math.floor(evaluation.maxScore * 0.6 * (toolMatches / expectedTools.length));
+                    const remainingPoints = evaluation.maxScore - evaluation.score;
+                    const toolScore = Math.floor(remainingPoints * (toolMatches / expectedTools.length));
                     evaluation.score += toolScore;
                 }
             }
@@ -321,7 +326,7 @@ class ManualComplexSuite {
             evaluation.warnings = singleStepEval.warnings;
         }
 
-        evaluation.success = evaluation.score >= Math.floor(evaluation.maxScore * 0.6);
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
         return evaluation;
     }
 

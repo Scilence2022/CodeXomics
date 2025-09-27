@@ -2304,7 +2304,7 @@ class LLMBenchmarkFramework {
         const evaluation = {
             success: false,
             score: 0,
-            maxScore: test.maxScore || 100,
+            maxScore: test.maxScore || 5, // Use test's actual maxScore, default to 5 for simple tests
             errors: [],
             warnings: []
         };
@@ -2318,7 +2318,23 @@ class LLMBenchmarkFramework {
             return evaluation;
         }
 
-        // Use test-specific evaluator if provided
+        // CRITICAL FIX: For manual tests, use the manual score directly
+        if (test.evaluation === 'manual' && testResult.actualResult.manual_score !== undefined) {
+            evaluation.score = testResult.actualResult.manual_score;
+            evaluation.maxScore = test.maxScore || 5; // Ensure correct maxScore for manual tests
+            evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
+            
+            // Add manual test specific information
+            if (testResult.actualResult.verification_completion !== undefined) {
+                const completionPercentage = (testResult.actualResult.verification_completion * 100).toFixed(1);
+                evaluation.warnings.push(`Manual verification completion: ${completionPercentage}%`);
+            }
+            
+            this.displayEvaluationResult(test, evaluation, testResult);
+            return evaluation;
+        }
+
+        // Use test-specific evaluator if provided (for automatic tests only)
         if (test.evaluator && typeof test.evaluator === 'function') {
             try {
                 const customEval = await test.evaluator(testResult.actualResult, test.expectedResult, testResult);
