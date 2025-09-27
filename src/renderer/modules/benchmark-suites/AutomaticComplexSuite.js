@@ -31,24 +31,29 @@ class AutomaticComplexSuite {
             // NAVIGATION TASKS - Automatic + Complex
             {
                 id: 'nav_auto_05',
-                name: 'Navigate Complex Range Analysis',
-                type: 'function_call',
+                name: 'Navigate and Zoom Complex Analysis',
+                type: 'workflow',
                 category: 'navigation',
                 complexity: 'complex',
                 evaluation: 'automatic',
-                instruction: 'Navigate to region 1130000 to 1300000 and analyze the genomic features in this range.',
+                instruction: 'Navigate to region 1230000 to 1300000 and then zoom out 10x to see the features.',
                 expectedResult: {
-                    tool_name: 'navigate_to_position',
-                    parameters: {
-                        chromosome: '<current_chromosome>',
-                        start: 1130000,
-                        end: 1300000
-                    }
+                    tool_sequence: ['navigate_to_position', 'zoom_out'],
+                    parameters: [
+                        {
+                            chromosome: '<current_chromosome>',
+                            start: 1230000,
+                            end: 1300000
+                        },
+                        {
+                            factor: 10
+                        }
+                    ]
                 },
                 maxScore: 10,
                 bonusScore: 2,
                 timeout: 60000,
-                evaluator: this.evaluateNavigationCall.bind(this)
+                evaluator: this.evaluateWorkflowCall.bind(this)
             }
         ];
     }
