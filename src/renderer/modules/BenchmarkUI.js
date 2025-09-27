@@ -7,6 +7,8 @@ class BenchmarkUI {
         this.currentResults = null;
         this.isRunning = false;
         this.window = null;
+        this.manualTestLock = false; // Prevent concurrent manual tests
+        this.manualTestResults = {};
         this.setupEventHandlers();
     }
 
@@ -819,13 +821,27 @@ class BenchmarkUI {
     async handleManualTest(testData) {
         console.log('🔍 Manual test required:', testData.testName);
         
+        // Check if another manual test is already running
+        if (this.manualTestLock) {
+            console.warn('⚠️ Another manual test is already running, waiting...');
+            
+            // Wait for the current manual test to complete
+            while (this.manualTestLock) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+        
+        // Set lock to prevent concurrent manual tests
+        this.manualTestLock = true;
+        console.log('🔒 Manual test lock acquired for:', testData.testId);
+        
         try {
             // Create manual test dialog
             const dialog = this.createManualTestDialog(testData);
             document.body.appendChild(dialog);
             
             // Show the dialog with animation
-            dialog.style.display = 'flex';
+            dialog.style.display = 'block';
             dialog.style.opacity = '0';
             dialog.offsetHeight; // Force reflow
             dialog.style.transition = 'opacity 0.3s ease';
@@ -838,12 +854,19 @@ class BenchmarkUI {
                 // Store resolve function globally for access from onclick handlers
                 window[`resolveManualTest_${testData.testId}`] = (resultData) => {
                     console.log('📝 Manual test completed, resolving promise:', resultData);
+                    
+                    // Release the lock
+                    this.manualTestLock = false;
+                    console.log('🔓 Manual test lock released for:', testData.testId);
+                    
                     resolve(resultData);
                 };
                 
                 console.log('⏳ Waiting for user to complete manual test:', testData.testId);
             });
         } catch (error) {
+            // Release lock on error
+            this.manualTestLock = false;
             console.error('❌ Error creating manual test dialog:', error);
             throw error;
         }
@@ -861,29 +884,29 @@ class BenchmarkUI {
             <style>
                 .manual-test-dialog {
                     position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.6);
+                    top: 50px;
+                    right: 50px;
+                    width: auto;
+                    height: auto;
+                    background: transparent;
                     display: none;
-                    justify-content: center;
-                    align-items: center;
                     z-index: 999999;
-                    backdrop-filter: blur(5px);
+                    pointer-events: none;
                 }
                 
                 .manual-test-content {
                     background: white;
                     border-radius: 15px;
                     padding: 30px;
-                    max-width: 900px;
-                    width: 90%;
-                    max-height: 80%;
+                    max-width: 500px;
+                    width: auto;
+                    max-height: 80vh;
                     overflow-y: auto;
                     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
                     border: 3px solid #3498db;
                     animation: modalAppear 0.3s ease;
+                    pointer-events: all;
+                    position: relative;
                 }
                 
                 @keyframes modalAppear {

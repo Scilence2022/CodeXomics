@@ -478,13 +478,21 @@ class LLMBenchmarkFramework {
                 }
             };
             
-            // Execute the test with timeout
-            const testResult = await Promise.race([
-                executeTestWithProgress(),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error(`Test timeout after ${timeoutMs}ms`)), timeoutMs)
-                )
-            ]);
+            // Execute the test with timeout (except for manual tests)
+            let testResult;
+            if (test.evaluation === 'manual') {
+                console.log(`📋 Manual test detected, removing timeout limit: ${test.id}`);
+                // Manual tests don't have timeout - wait indefinitely for user input
+                testResult = await executeTestWithProgress();
+            } else {
+                // Automated tests have timeout
+                testResult = await Promise.race([
+                    executeTestWithProgress(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error(`Test timeout after ${timeoutMs}ms`)), timeoutMs)
+                    )
+                ]);
+            }
 
             result.llmResponse = testResult.llmResponse;
             result.actualResult = testResult.actualResult;
