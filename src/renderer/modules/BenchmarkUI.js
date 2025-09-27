@@ -2112,7 +2112,7 @@ class BenchmarkUI {
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px;">
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getConfidenceColor(analysisData.confidence)};">
-                                        ${(analysisData.confidence !== null && analysisData.confidence !== undefined) ? analysisData.confidence.toFixed(1) + '%' : 'N/A'}
+                                        ${(analysisData.confidence !== null && analysisData.confidence !== undefined) ? analysisData.confidence.toFixed(1) : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Confidence</div>
                                 </div>
@@ -2130,7 +2130,7 @@ class BenchmarkUI {
                                 </div>
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getRelevanceColor(analysisData.contextRelevance)};">
-                                        ${(analysisData.contextRelevance !== null && analysisData.contextRelevance !== undefined) ? analysisData.contextRelevance.toFixed(1) + '%' : 'N/A'}
+                                        ${(analysisData.contextRelevance !== null && analysisData.contextRelevance !== undefined) ? analysisData.contextRelevance.toFixed(1) : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Relevance</div>
                                 </div>
@@ -2268,43 +2268,43 @@ class BenchmarkUI {
     }
 
     /**
-     * Get color for confidence score
+     * Get color for confidence score (5-point scale)
      */
     static getConfidenceColor(confidence) {
         if (confidence === null || confidence === undefined) return '#95a5a6';
-        if (confidence >= 80) return '#27ae60';
-        if (confidence >= 60) return '#f39c12';
-        return '#e74c3c';
+        if (confidence >= 4.0) return '#27ae60'; // High confidence (4.0-5.0)
+        if (confidence >= 3.0) return '#f39c12'; // Medium confidence (3.0-3.9)
+        return '#e74c3c'; // Low confidence (0-2.9)
     }
 
     /**
-     * Get color for complexity score
+     * Get color for complexity score (5-point scale)
      */
     static getComplexityColor(complexity) {
         if (complexity === null || complexity === undefined) return '#95a5a6';
-        if (complexity >= 70) return '#e74c3c';
-        if (complexity >= 40) return '#f39c12';
-        return '#27ae60';
+        if (complexity >= 7.0) return '#e74c3c'; // High complexity (7.0-10.0)
+        if (complexity >= 4.0) return '#f39c12'; // Medium complexity (4.0-6.9)
+        return '#27ae60'; // Low complexity (0-3.9)
     }
 
     /**
-     * Get color for ambiguity score
+     * Get color for ambiguity score (5-point scale)
      */
     static getAmbiguityColor(ambiguity) {
         if (ambiguity === null || ambiguity === undefined) return '#95a5a6';
-        if (ambiguity >= 50) return '#e74c3c';
-        if (ambiguity >= 25) return '#f39c12';
-        return '#27ae60';
+        if (ambiguity >= 2.5) return '#e74c3c'; // High ambiguity (2.5-5.0)
+        if (ambiguity >= 1.25) return '#f39c12'; // Medium ambiguity (1.25-2.4)
+        return '#27ae60'; // Low ambiguity (0-1.24)
     }
 
     /**
-     * Get color for relevance score
+     * Get color for relevance score (5-point scale)
      */
     static getRelevanceColor(relevance) {
         if (relevance === null || relevance === undefined) return '#95a5a6';
-        if (relevance >= 80) return '#27ae60';
-        if (relevance >= 60) return '#f39c12';
-        return '#e74c3c';
+        if (relevance >= 4.0) return '#27ae60'; // High relevance (4.0-5.0)
+        if (relevance >= 3.0) return '#f39c12'; // Medium relevance (3.0-3.9)
+        return '#e74c3c'; // Low relevance (0-2.9)
     }
 
     /**

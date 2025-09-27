@@ -1885,33 +1885,33 @@ class LLMBenchmarkFramework {
     }
 
     /**
-     * Calculate response confidence score
+     * Calculate response confidence score (5-point scale)
      */
     calculateResponseConfidence(response) {
         try {
-            let confidence = 50; // Base confidence
+            let confidence = 2.5; // Base confidence (middle of 5-point scale)
             
             // Higher confidence for JSON responses
             if (response.includes('{') && response.includes('}')) {
-                confidence += 20;
+                confidence += 1.0;
             }
             
             // Higher confidence for function calls
             if (response.includes('tool_name') && response.includes('parameters')) {
-                confidence += 20;
+                confidence += 1.0;
             }
             
             // Lower confidence for error messages
             if (this.isLLMErrorResponse(response)) {
-                confidence = Math.max(10, confidence - 40);
+                confidence = Math.max(0.5, confidence - 2.0);
             }
             
             // Lower confidence for very short responses
             if (response.length < 20) {
-                confidence -= 15;
+                confidence -= 0.75;
             }
             
-            return Math.max(0, Math.min(100, confidence));
+            return Math.max(0, Math.min(5, confidence));
         } catch (error) {
             return null;
         }
@@ -1944,7 +1944,7 @@ class LLMBenchmarkFramework {
     }
 
     /**
-     * Calculate instruction ambiguity score
+     * Calculate instruction ambiguity score (5-point scale)
      */
     calculateInstructionAmbiguity(instruction) {
         try {
@@ -1953,30 +1953,30 @@ class LLMBenchmarkFramework {
             // Vague terms increase ambiguity
             const vagueTerms = ['something', 'anything', 'maybe', 'perhaps', 'might', 'could', 'some'];
             const foundVague = vagueTerms.filter(term => instruction.toLowerCase().includes(term));
-            ambiguity += foundVague.length * 15;
+            ambiguity += foundVague.length * 0.75; // Scale to 5-point system
             
             // Questions increase ambiguity
             if (instruction.includes('?')) {
-                ambiguity += 10;
+                ambiguity += 0.5;
             }
             
             // Lack of specific parameters increases ambiguity
             if (!instruction.match(/["'][^"']+["']/) && !instruction.match(/\d+/)) {
-                ambiguity += 20;
+                ambiguity += 1.0;
             }
             
-            return Math.max(0, Math.min(100, ambiguity));
+            return Math.max(0, Math.min(5, ambiguity));
         } catch (error) {
             return null;
         }
     }
 
     /**
-     * Calculate context relevance score
+     * Calculate context relevance score (5-point scale)
      */
     calculateContextRelevance(instruction, response) {
         try {
-            let relevance = 50; // Base relevance
+            let relevance = 2.5; // Base relevance (middle of 5-point scale)
             
             // Check if response addresses the instruction
             const instructionWords = instruction.toLowerCase().split(/\s+/);
@@ -1986,18 +1986,18 @@ class LLMBenchmarkFramework {
                 word.length > 3 && responseWords.includes(word)
             );
             
-            relevance += Math.min(30, commonWords.length * 5);
+            relevance += Math.min(1.5, commonWords.length * 0.25); // Scale to 5-point system
             
             // Check for function call relevance
             if (instruction.toLowerCase().includes('search') && response.includes('search_')) {
-                relevance += 20;
+                relevance += 1.0;
             }
             
             if (instruction.toLowerCase().includes('navigate') && response.includes('navigate_')) {
-                relevance += 20;
+                relevance += 1.0;
             }
             
-            return Math.max(0, Math.min(100, relevance));
+            return Math.max(0, Math.min(5, relevance));
         } catch (error) {
             return null;
         }
