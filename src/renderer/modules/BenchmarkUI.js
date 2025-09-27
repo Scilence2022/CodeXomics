@@ -503,7 +503,7 @@ class BenchmarkUI {
             </style>
 
             <div class="benchmark-container">
-                <div class="benchmark-header" onclick="window.benchmarkUI.toggleBenchmarkInterface()">
+                <div class="benchmark-header" id="benchmarkHeader">
                     <div class="header-content">
                         <h1 class="benchmark-title">
                             <span>🧪</span>
@@ -728,8 +728,96 @@ class BenchmarkUI {
         document.getElementById('exportResults').onclick = () => this.exportMainWindowResults();
         document.getElementById('testManualDialog').onclick = () => this.triggerTestManualDialog();
         
+        // Setup drag functionality for the title bar
+        this.setupDragFunctionality();
+        
         // Add manual test interaction handlers
         this.setupManualTestHandlers();
+    }
+
+    /**
+     * Setup drag functionality for moving the benchmark interface
+     */
+    setupDragFunctionality() {
+        const header = document.getElementById('benchmarkHeader');
+        const container = header.closest('.benchmark-container');
+        
+        if (!header || !container) return;
+        
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+        
+        // Add draggable cursor style
+        header.style.cursor = 'move';
+        
+        header.addEventListener('mousedown', (e) => {
+            // Only start dragging if clicking directly on header (not controls)
+            if (e.target.closest('.header-controls')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            // Get current position of container
+            const rect = container.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            
+            // Change container positioning to absolute for dragging
+            container.style.position = 'absolute';
+            container.style.left = startLeft + 'px';
+            container.style.top = startTop + 'px';
+            container.style.margin = '0';
+            container.style.transform = 'none';
+            
+            // Add dragging class for visual feedback
+            header.classList.add('dragging');
+            
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const newLeft = startLeft + deltaX;
+            const newTop = startTop + deltaY;
+            
+            // Ensure the interface stays within viewport bounds
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const containerWidth = container.offsetWidth;
+            const containerHeight = container.offsetHeight;
+            
+            const boundedLeft = Math.max(0, Math.min(newLeft, viewportWidth - containerWidth));
+            const boundedTop = Math.max(0, Math.min(newTop, viewportHeight - containerHeight));
+            
+            container.style.left = boundedLeft + 'px';
+            container.style.top = boundedTop + 'px';
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                header.classList.remove('dragging');
+            }
+        });
+        
+        // Add CSS styles for dragging state
+        const style = document.createElement('style');
+        style.textContent = `
+            .benchmark-header.dragging {
+                cursor: grabbing !important;
+                user-select: none;
+            }
+            
+            .benchmark-header:hover {
+                background: rgba(52, 152, 219, 0.05);
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     /**
