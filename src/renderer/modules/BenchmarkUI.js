@@ -1959,25 +1959,25 @@ class BenchmarkUI {
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px;">
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getConfidenceColor(analysisData.confidence)};">
-                                        ${analysisData.confidence !== null ? analysisData.confidence.toFixed(1) + '%' : 'N/A'}
+                                        ${(analysisData.confidence !== null && analysisData.confidence !== undefined) ? analysisData.confidence.toFixed(1) + '%' : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Confidence</div>
                                 </div>
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getComplexityColor(analysisData.complexity)};">
-                                        ${analysisData.complexity !== null ? analysisData.complexity.toFixed(1) : 'N/A'}
+                                        ${(analysisData.complexity !== null && analysisData.complexity !== undefined) ? analysisData.complexity.toFixed(1) : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Complexity</div>
                                 </div>
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getAmbiguityColor(analysisData.ambiguity)};">
-                                        ${analysisData.ambiguity !== null ? analysisData.ambiguity.toFixed(1) : 'N/A'}
+                                        ${(analysisData.ambiguity !== null && analysisData.ambiguity !== undefined) ? analysisData.ambiguity.toFixed(1) : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Ambiguity</div>
                                 </div>
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getRelevanceColor(analysisData.contextRelevance)};">
-                                        ${analysisData.contextRelevance !== null ? analysisData.contextRelevance.toFixed(1) + '%' : 'N/A'}
+                                        ${(analysisData.contextRelevance !== null && analysisData.contextRelevance !== undefined) ? analysisData.contextRelevance.toFixed(1) + '%' : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Relevance</div>
                                 </div>
@@ -2118,7 +2118,7 @@ class BenchmarkUI {
      * Get color for confidence score
      */
     static getConfidenceColor(confidence) {
-        if (confidence === null) return '#95a5a6';
+        if (confidence === null || confidence === undefined) return '#95a5a6';
         if (confidence >= 80) return '#27ae60';
         if (confidence >= 60) return '#f39c12';
         return '#e74c3c';
@@ -2128,7 +2128,7 @@ class BenchmarkUI {
      * Get color for complexity score
      */
     static getComplexityColor(complexity) {
-        if (complexity === null) return '#95a5a6';
+        if (complexity === null || complexity === undefined) return '#95a5a6';
         if (complexity >= 70) return '#e74c3c';
         if (complexity >= 40) return '#f39c12';
         return '#27ae60';
@@ -2138,7 +2138,7 @@ class BenchmarkUI {
      * Get color for ambiguity score
      */
     static getAmbiguityColor(ambiguity) {
-        if (ambiguity === null) return '#95a5a6';
+        if (ambiguity === null || ambiguity === undefined) return '#95a5a6';
         if (ambiguity >= 50) return '#e74c3c';
         if (ambiguity >= 25) return '#f39c12';
         return '#27ae60';
@@ -2148,7 +2148,7 @@ class BenchmarkUI {
      * Get color for relevance score
      */
     static getRelevanceColor(relevance) {
-        if (relevance === null) return '#95a5a6';
+        if (relevance === null || relevance === undefined) return '#95a5a6';
         if (relevance >= 80) return '#27ae60';
         if (relevance >= 60) return '#f39c12';
         return '#e74c3c';
