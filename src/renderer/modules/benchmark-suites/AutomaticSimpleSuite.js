@@ -8,6 +8,7 @@ class AutomaticSimpleSuite {
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations';
         this.framework = null;
+        this.defaultDirectory = null; // Will be set when framework provides configuration
         this.tests = this.initializeTests();
     }
 
@@ -21,6 +22,50 @@ class AutomaticSimpleSuite {
 
     getTestCount() {
         return this.tests.length;
+    }
+
+    /**
+     * Set configuration including default directory
+     */
+    setConfiguration(config) {
+        if (config && config.defaultDirectory) {
+            this.defaultDirectory = config.defaultDirectory;
+            console.log(`📁 AutomaticSimpleSuite default directory set to: ${this.defaultDirectory}`);
+            
+            // Regenerate tests with updated paths
+            this.tests = this.initializeTests();
+        }
+    }
+
+    /**
+     * Get default file directory from configuration or fallback
+     */
+    getDefaultDirectory() {
+        // Try to get from current configuration
+        if (this.defaultDirectory) {
+            return this.defaultDirectory;
+        }
+        
+        // Try to get from BenchmarkUI if available
+        if (window.benchmarkUI && window.benchmarkUI.getDefaultDirectory) {
+            const uiDirectory = window.benchmarkUI.getDefaultDirectory();
+            if (uiDirectory) {
+                return uiDirectory;
+            }
+        }
+        
+        // Fallback to memory default
+        return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+    }
+
+    /**
+     * Build file path using default directory
+     */
+    buildFilePath(filename) {
+        const defaultDir = this.getDefaultDirectory();
+        // Ensure directory ends with slash
+        const normalizedDir = defaultDir.endsWith('/') ? defaultDir : defaultDir + '/';
+        return normalizedDir + filename;
     }
 
     /**
@@ -176,17 +221,17 @@ class AutomaticSimpleSuite {
                 category: 'data_loading',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Load genome file from path /data/ecoli.fasta',
+                instruction: `Load genome file ${this.buildFilePath('ECOLI.gbk')}`,
                 expectedResult: {
                     tool_name: 'load_genome_file',
                     parameters: {
-                        filePath: '/data/ecoli.fasta'
+                        filePath: this.buildFilePath('ECOLI.gbk')
                     }
                 },
                 maxScore: 5,
                 bonusScore: 1,
                 timeout: 30000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this)
+                evaluator: this.evaluateFileLoadingCall.bind(this)
             },
 
             // SEARCH TASKS - Automatic + Simple
@@ -363,6 +408,33 @@ class AutomaticSimpleSuite {
             if (params.start && params.end && (params.end - params.start) > 10000000) {
                 evaluation.warnings.push('Range is very large (>10Mb), verify this is intentional');
             }
+        }
+        
+        return evaluation;
+    }
+
+    async evaluateFileLoadingCall(actualResult, expectedResult, testResult) {
+        const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
+        
+        // Add file loading specific checks
+        if (actualResult && actualResult.parameters && actualResult.parameters.filePath) {
+            const actualFilePath = actualResult.parameters.filePath;
+            const expectedFilePath = expectedResult.parameters.filePath;
+            
+            // Check if filename matches (flexible path matching)
+            const expectedFileName = expectedFilePath.split('/').pop();
+            const actualFileName = actualFilePath.split('/').pop();
+            
+            if (actualFileName === expectedFileName || actualFilePath.includes(expectedFileName)) {
+                evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1));
+                console.log(`✅ File loading: correct file '${expectedFileName}'`);
+            } else {
+                evaluation.warnings.push(`Expected file '${expectedFileName}' but got '${actualFileName}'`);
+            }
+            
+            // Log current default directory for debugging
+            const currentDir = this.getDefaultDirectory();
+            console.log(`📁 File loading using directory: ${currentDir}`);
         }
         
         return evaluation;

@@ -2519,6 +2519,40 @@ ipcMain.handle('get-file-info', async (event, filePath) => {
   }
 });
 
+// Handle directory selection for benchmark default directory
+ipcMain.handle('show-directory-dialog', async (event, options = {}) => {
+  try {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(null, {
+      properties: ['openDirectory'],
+      title: options.title || 'Select Directory',
+      defaultPath: options.defaultPath || undefined
+    });
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      return { 
+        success: true, 
+        canceled: false,
+        filePaths: result.filePaths 
+      };
+    }
+    
+    return { 
+      success: true, 
+      canceled: true,
+      filePaths: [] 
+    };
+  } catch (error) {
+    console.error('Error in show-directory-dialog:', error);
+    return { 
+      success: false, 
+      error: error.message,
+      canceled: true,
+      filePaths: []
+    };
+  }
+});
+
 // Add Unified MCP Server IPC handlers
 ipcMain.handle('mcp-server-start', async () => {
   try {

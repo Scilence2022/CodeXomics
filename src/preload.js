@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectAndLoadFile: () => ipcRenderer.invoke('select-and-load-file'),
   getFileInfo: (filePath) => ipcRenderer.invoke('get-file-info', filePath),
   
+  // Directory selection for benchmark
+  showDirectoryDialog: (options) => ipcRenderer.invoke('show-directory-dialog', options),
+  
   // Project Manager APIs
   selectProjectDirectory: () => ipcRenderer.invoke('selectProjectDirectory'),
   selectProjectFile: () => ipcRenderer.invoke('selectProjectFile'),

@@ -104,6 +104,15 @@ class LLMBenchmarkFramework {
 
                 console.log(`Running test suite: ${suiteId}`);
                 
+                // Configure test suite with options (including default directory)
+                if (testSuite.setConfiguration && typeof testSuite.setConfiguration === 'function') {
+                    testSuite.setConfiguration(options);
+                    console.log(`🔧 Test suite ${suiteId} configured with options:`, {
+                        defaultDirectory: options.defaultDirectory,
+                        timeout: options.timeout
+                    });
+                }
+                
                 try {
                     const suiteResult = await this.runTestSuite(suiteId, options);
                     results.testSuiteResults.push(suiteResult);

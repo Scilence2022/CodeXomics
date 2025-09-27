@@ -8,6 +8,7 @@ class ComprehensiveBenchmarkSuite {
         this.suiteId = 'comprehensive_genomic';
         this.description = 'Comprehensive testing of AI agent performance across all genomic analysis categories';
         this.framework = null;
+        this.defaultDirectory = null; // Will be set when framework provides configuration
         this.tests = this.initializeTests();
     }
 
@@ -21,6 +22,50 @@ class ComprehensiveBenchmarkSuite {
 
     getTestCount() {
         return this.tests.length;
+    }
+
+    /**
+     * Set configuration including default directory
+     */
+    setConfiguration(config) {
+        if (config && config.defaultDirectory) {
+            this.defaultDirectory = config.defaultDirectory;
+            console.log(`📁 ComprehensiveBenchmarkSuite default directory set to: ${this.defaultDirectory}`);
+            
+            // Regenerate tests with updated paths
+            this.tests = this.initializeTests();
+        }
+    }
+
+    /**
+     * Get default file directory from configuration or fallback
+     */
+    getDefaultDirectory() {
+        // Try to get from current configuration
+        if (this.defaultDirectory) {
+            return this.defaultDirectory;
+        }
+        
+        // Try to get from BenchmarkUI if available
+        if (window.benchmarkUI && window.benchmarkUI.getDefaultDirectory) {
+            const uiDirectory = window.benchmarkUI.getDefaultDirectory();
+            if (uiDirectory) {
+                return uiDirectory;
+            }
+        }
+        
+        // Fallback to memory default
+        return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+    }
+
+    /**
+     * Build file path using default directory
+     */
+    buildFilePath(filename) {
+        const defaultDir = this.getDefaultDirectory();
+        // Ensure directory ends with slash
+        const normalizedDir = defaultDir.endsWith('/') ? defaultDir : defaultDir + '/';
+        return normalizedDir + filename;
     }
 
     /**
@@ -260,11 +305,11 @@ class ComprehensiveBenchmarkSuite {
                 category: 'data_loading',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Load genome file from path /data/ecoli.fasta',
+                instruction: `Load genome file ${this.buildFilePath('ECOLI.gbk')}`,
                 expectedResult: {
                     tool_name: 'load_genome_file',
                     parameters: {
-                        filePath: '/data/ecoli.fasta'
+                        filePath: this.buildFilePath('ECOLI.gbk')
                     }
                 },
                 maxScore: 5,

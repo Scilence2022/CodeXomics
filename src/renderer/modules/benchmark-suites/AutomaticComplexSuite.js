@@ -8,6 +8,7 @@ class AutomaticComplexSuite {
         this.suiteId = 'automatic_complex';
         this.description = 'Complex tests with automatic evaluation - Advanced genomic analysis operations';
         this.framework = null;
+        this.defaultDirectory = null; // Will be set when framework provides configuration
         this.tests = this.initializeTests();
     }
 
@@ -24,10 +25,89 @@ class AutomaticComplexSuite {
     }
 
     /**
+     * Set configuration including default directory
+     */
+    setConfiguration(config) {
+        if (config && config.defaultDirectory) {
+            this.defaultDirectory = config.defaultDirectory;
+            console.log(`📁 AutomaticComplexSuite default directory set to: ${this.defaultDirectory}`);
+            
+            // Regenerate tests with updated paths
+            this.tests = this.initializeTests();
+        }
+    }
+
+    /**
+     * Get default file directory from configuration or fallback
+     */
+    getDefaultDirectory() {
+        // Try to get from current configuration
+        if (this.defaultDirectory) {
+            return this.defaultDirectory;
+        }
+        
+        // Try to get from BenchmarkUI if available
+        if (window.benchmarkUI && window.benchmarkUI.getDefaultDirectory) {
+            const uiDirectory = window.benchmarkUI.getDefaultDirectory();
+            if (uiDirectory) {
+                return uiDirectory;
+            }
+        }
+        
+        // Fallback to memory default
+        return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+    }
+
+    /**
+     * Build file path using default directory
+     */
+    buildFilePath(filename) {
+        const defaultDir = this.getDefaultDirectory();
+        // Ensure directory ends with slash
+        const normalizedDir = defaultDir.endsWith('/') ? defaultDir : defaultDir + '/';
+        return normalizedDir + filename;
+    }
+
+    /**
      * Initialize automatic complex test cases
      */
     initializeTests() {
         return [
+            // FILE LOADING WORKFLOW - Automatic + Complex
+            {
+                id: 'file_auto_01',
+                name: 'Complete Genomic Data Loading Workflow',
+                type: 'workflow',
+                category: 'file_loading',
+                complexity: 'complex',
+                evaluation: 'automatic',
+                instruction: `Load genome file "${this.buildFilePath('ECOLI.gbk')}"; Load aligned read file "${this.buildFilePath('1655_C10.sorted.bam')}"; Load variant VCF "${this.buildFilePath('1655_C10.mutations.vcf')}"; Load WIG files "${this.buildFilePath('first_sample.wig')}", "${this.buildFilePath('another_sample.wig')}"`,
+                expectedResult: {
+                    tool_sequence: ['load_genome_file', 'load_reads_file', 'load_variant_file', 'load_wig_tracks'],
+                    parameters: [
+                        {
+                            filePath: this.buildFilePath('ECOLI.gbk')
+                        },
+                        {
+                            filePath: this.buildFilePath('1655_C10.sorted.bam')
+                        },
+                        {
+                            filePath: this.buildFilePath('1655_C10.mutations.vcf')
+                        },
+                        {
+                            filePaths: [
+                                this.buildFilePath('first_sample.wig'),
+                                this.buildFilePath('another_sample.wig')
+                            ]
+                        }
+                    ]
+                },
+                maxScore: 15,
+                bonusScore: 3,
+                timeout: 120000,
+                evaluator: this.evaluateFileLoadingWorkflow.bind(this)
+            },
+            
             // NAVIGATION TASKS - Automatic + Complex
             {
                 id: 'nav_auto_05',
@@ -54,41 +134,6 @@ class AutomaticComplexSuite {
                 bonusScore: 2,
                 timeout: 60000,
                 evaluator: this.evaluateWorkflowCall.bind(this)
-            },
-            
-            // FILE LOADING WORKFLOW - Automatic + Complex
-            {
-                id: 'file_auto_01',
-                name: 'Complete Genomic Data Loading Workflow',
-                type: 'workflow',
-                category: 'file_loading',
-                complexity: 'complex',
-                evaluation: 'automatic',
-                instruction: 'Load genome file "ECOLI.gbk"; Load aligned read file "1655_C10.sorted.bam"; Load variant VCF "1655_C10.mutations.vcf"; Load WIG files "first_sample.wig", "another_sample.wig"',
-                expectedResult: {
-                    tool_sequence: ['load_genome_file', 'load_reads_file', 'load_variant_file', 'load_wig_tracks'],
-                    parameters: [
-                        {
-                            filePath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/ECOLI.gbk'
-                        },
-                        {
-                            filePath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/1655_C10.sorted.bam'
-                        },
-                        {
-                            filePath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/1655_C10.mutations.vcf'
-                        },
-                        {
-                            filePaths: [
-                                '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/first_sample.wig',
-                                '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/another_sample.wig'
-                            ]
-                        }
-                    ]
-                },
-                maxScore: 15,
-                bonusScore: 3,
-                timeout: 120000,
-                evaluator: this.evaluateFileLoadingWorkflow.bind(this)
             }
         ];
     }
@@ -293,9 +338,14 @@ class AutomaticComplexSuite {
         // Check for proper sequencing (genome file should be loaded first)
         if (results.length > 0 && results[0].tool_name === 'load_genome_file') {
             evaluation.score += (testResult.bonusScore || 3); // Bonus for correct sequencing
+            console.log('✅ Correct file loading sequence: genome file first');
         } else {
             evaluation.warnings.push('Genome file should be loaded first for optimal workflow');
         }
+
+        // Log current default directory for debugging
+        const currentDir = this.getDefaultDirectory();
+        console.log(`📁 Current default directory: ${currentDir}`);
 
         evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
         return evaluation;

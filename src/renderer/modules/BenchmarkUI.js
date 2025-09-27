@@ -239,20 +239,12 @@ class BenchmarkUI {
                     transform: scale(1.1);
                 }
 
-                /* Collapsed state styles - MILITARY-GRADE Z-INDEX FIX */
-                .benchmark-interface.collapsed {
-                    height: 80px !important;
-                    overflow: hidden;
-                    background: transparent;
-                    z-index: 9999999 !important; /* MAXIMUM z-index - must be higher than any other element */
-                    position: fixed !important; /* Force fixed positioning */
-                    pointer-events: auto !important; /* Enable interaction with collapsed interface */
-                }
+               
 
                 .benchmark-interface.collapsed .benchmark-container {
                     height: 80px;
-                    padding: 10px 30px;
-                    overflow: hidden;
+                    padding: 20px 30px;
+                    
                     background: rgba(255, 255, 255, 0.98) !important; /* More opaque for visibility */
                     z-index: 9999999 !important; /* Maintain maximum z-index */
                     position: relative !important;
@@ -575,7 +567,7 @@ class BenchmarkUI {
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-automatic_complex">
-                                    <span>🔧 Automatic Complex Tests <small>(1 test)</small></span>
+                                    <span>🔧 Automatic Complex Tests <small>(2 tests)</small></span>
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-manual_simple">
@@ -638,6 +630,23 @@ class BenchmarkUI {
                                         <option value="2">2 parallel tests</option>
                                         <option value="3">3 parallel tests</option>
                                     </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">📁 Default File Directory:</label>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="text" id="defaultFileDirectory" 
+                                               value="/Users/song/Documents/Genome-AI-Studio-Projects/test_data/" 
+                                               style="flex: 1; padding: 8px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px; background: white;"
+                                               placeholder="Enter default directory path...">
+                                        <button type="button" id="browseDirectoryBtn" 
+                                                style="padding: 8px 12px; border: 2px solid #3498db; background: #3498db; color: white; border-radius: 6px; cursor: pointer; font-size: 12px;"
+                                                title="Browse for directory">
+                                            📁
+                                        </button>
+                                    </div>
+                                    <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
+                                        💡 Default directory for file loading and export operations
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -782,17 +791,22 @@ class BenchmarkUI {
         const stopBtn = document.getElementById('stopBenchmark');
         const exportBtn = document.getElementById('exportResults');
         const testBtn = document.getElementById('testManualDialog');
+        const browseBtn = document.getElementById('browseDirectoryBtn');
         
         if (startBtn) startBtn.onclick = () => this.startMainWindowBenchmark();
         if (stopBtn) stopBtn.onclick = () => this.stopMainWindowBenchmark();
         if (exportBtn) exportBtn.onclick = () => this.exportMainWindowResults();
         if (testBtn) testBtn.onclick = () => this.triggerTestManualDialog();
+        if (browseBtn) browseBtn.onclick = () => this.browseDefaultDirectory();
         
         // Setup drag functionality for the title bar
         this.setupDragFunctionality();
         
         // Add manual test interaction handlers
         this.setupManualTestHandlers();
+        
+        // Initialize default directory field
+        this.initializeDefaultDirectory();
         
         // Mark handlers as setup to prevent duplicates
         this.handlersSetup = true;
@@ -945,6 +959,300 @@ class BenchmarkUI {
         document.addEventListener('manualTestCompleted', this.manualTestCompletedHandler);
         
         console.log('✅ Manual test handlers setup complete');
+    }
+
+    /**
+     * Initialize default directory field with saved value
+     */
+    initializeDefaultDirectory() {
+        const directoryInput = document.getElementById('defaultFileDirectory');
+        if (directoryInput) {
+            const savedDirectory = this.loadDefaultDirectory();
+            directoryInput.value = savedDirectory;
+            
+            // Add change event listener to save automatically
+            directoryInput.addEventListener('change', (e) => {
+                const newPath = e.target.value.trim();
+                if (newPath) {
+                    const normalizedPath = newPath.endsWith('/') ? newPath : newPath + '/';
+                    e.target.value = normalizedPath;
+                    this.saveDefaultDirectory(normalizedPath);
+                }
+            });
+            
+            console.log('📁 Default directory initialized:', savedDirectory);
+        }
+    }
+
+    /**
+     * Browse for default directory
+     */
+    async browseDefaultDirectory() {
+        console.log('📁 Opening directory browser...');
+        
+        try {
+            // Try to use Electron's IPC for directory selection
+            if (window.electronAPI && window.electronAPI.showDirectoryDialog) {
+                console.log('🔌 Using Electron IPC for directory dialog...');
+                
+                const result = await window.electronAPI.showDirectoryDialog({
+                    title: 'Select Default File Directory',
+                    defaultPath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/',
+                    properties: ['openDirectory']
+                });
+                
+                if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+                    const selectedPath = result.filePaths[0];
+                    const directoryInput = document.getElementById('defaultFileDirectory');
+                    if (directoryInput) {
+                        // Ensure path ends with /
+                        const normalizedPath = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
+                        directoryInput.value = normalizedPath;
+                        
+                        // Save to configuration
+                        this.saveDefaultDirectory(normalizedPath);
+                        
+                        console.log('✅ Default directory updated via IPC:', normalizedPath);
+                        return;
+                    }
+                }
+            }
+            
+            // Try legacy Electron remote API (if available)
+            if (window.require) {
+                try {
+                    console.log('🔌 Attempting legacy Electron remote API...');
+                    
+                    let dialog;
+                    try {
+                        // Try electron.remote first
+                        dialog = window.require('electron').remote?.dialog;
+                    } catch (e) {
+                        // If that fails, try @electron/remote
+                        try {
+                            dialog = window.require('@electron/remote').dialog;
+                        } catch (e2) {
+                            console.warn('⚠️ Remote modules not available:', e2.message);
+                            throw new Error('Remote API not available');
+                        }
+                    }
+                    
+                    if (dialog) {
+                        const result = await dialog.showOpenDialog({
+                            title: 'Select Default File Directory',
+                            properties: ['openDirectory'],
+                            defaultPath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/'
+                        });
+                        
+                        if (!result.canceled && result.filePaths.length > 0) {
+                            const selectedPath = result.filePaths[0];
+                            const directoryInput = document.getElementById('defaultFileDirectory');
+                            if (directoryInput) {
+                                // Ensure path ends with /
+                                const normalizedPath = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
+                                directoryInput.value = normalizedPath;
+                                
+                                // Save to configuration
+                                this.saveDefaultDirectory(normalizedPath);
+                                
+                                console.log('✅ Default directory updated via remote:', normalizedPath);
+                                return;
+                            }
+                        }
+                    }
+                } catch (remoteError) {
+                    console.warn('⚠️ Legacy remote API failed:', remoteError.message);
+                }
+            }
+            
+            // Fallback: Show custom input dialog using DOM
+            this.showCustomDirectoryDialog();
+            
+        } catch (error) {
+            console.error('❌ Failed to browse directory:', error);
+            
+            // Final fallback: Show custom input dialog
+            this.showCustomDirectoryDialog();
+        }
+    }
+
+    /**
+     * Show custom directory input dialog using DOM
+     */
+    showCustomDirectoryDialog() {
+        console.log('📝 Showing custom directory input dialog...');
+        
+        // Create custom dialog overlay
+        const dialogOverlay = document.createElement('div');
+        dialogOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 99999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        const currentValue = document.getElementById('defaultFileDirectory')?.value || '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+        
+        dialogOverlay.innerHTML = `
+            <div style="
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                max-width: 600px;
+                width: 90%;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            ">
+                <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">
+                    📁 Set Default File Directory
+                </h3>
+                <p style="margin: 0 0 15px 0; color: #6c757d; font-size: 14px;">
+                    Enter the path to your default directory for benchmark file operations:
+                </p>
+                <input type="text" id="customDirectoryInput" value="${currentValue}" style="
+                    width: 100%;
+                    padding: 12px;
+                    border: 2px solid #e1e8ed;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-family: monospace;
+                    margin-bottom: 20px;
+                    box-sizing: border-box;
+                ">
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="cancelDirectoryDialog" style="
+                        padding: 10px 20px;
+                        border: 2px solid #6c757d;
+                        background: white;
+                        color: #6c757d;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                    ">Cancel</button>
+                    <button id="confirmDirectoryDialog" style="
+                        padding: 10px 20px;
+                        border: 2px solid #3498db;
+                        background: #3498db;
+                        color: white;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                    ">Confirm</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialogOverlay);
+        
+        // Focus the input
+        const input = document.getElementById('customDirectoryInput');
+        input.focus();
+        input.select();
+        
+        // Handle dialog actions
+        const handleConfirm = () => {
+            const newPath = input.value.trim();
+            if (newPath) {
+                const directoryInput = document.getElementById('defaultFileDirectory');
+                if (directoryInput) {
+                    const normalizedPath = newPath.endsWith('/') ? newPath : newPath + '/';
+                    directoryInput.value = normalizedPath;
+                    this.saveDefaultDirectory(normalizedPath);
+                    console.log('✅ Default directory updated via custom dialog:', normalizedPath);
+                }
+            }
+            document.body.removeChild(dialogOverlay);
+        };
+        
+        const handleCancel = () => {
+            document.body.removeChild(dialogOverlay);
+        };
+        
+        // Event listeners
+        document.getElementById('confirmDirectoryDialog').onclick = handleConfirm;
+        document.getElementById('cancelDirectoryDialog').onclick = handleCancel;
+        
+        // Handle Enter key
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                handleConfirm();
+            } else if (e.key === 'Escape') {
+                handleCancel();
+            }
+        });
+        
+        // Handle click outside to close
+        dialogOverlay.addEventListener('click', (e) => {
+            if (e.target === dialogOverlay) {
+                handleCancel();
+            }
+        });
+    }
+
+    /**
+     * Save default directory to configuration
+     */
+    saveDefaultDirectory(directoryPath) {
+        try {
+            // Save to localStorage as fallback
+            localStorage.setItem('benchmarkDefaultDirectory', directoryPath);
+            
+            // Try to save to app configuration if available
+            if (window.configManager) {
+                window.configManager.set('benchmark.defaultDirectory', directoryPath);
+                window.configManager.saveConfig();
+            }
+            
+            console.log('💾 Default directory saved to configuration:', directoryPath);
+        } catch (error) {
+            console.error('❌ Failed to save default directory:', error);
+        }
+    }
+
+    /**
+     * Load default directory from configuration
+     */
+    loadDefaultDirectory() {
+        try {
+            // Try to load from app configuration first
+            if (window.configManager) {
+                const configPath = window.configManager.get('benchmark.defaultDirectory');
+                if (configPath) {
+                    return configPath;
+                }
+            }
+            
+            // Fallback to localStorage
+            const storedPath = localStorage.getItem('benchmarkDefaultDirectory');
+            if (storedPath) {
+                return storedPath;
+            }
+            
+            // Default path
+            return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+        } catch (error) {
+            console.error('❌ Failed to load default directory:', error);
+            return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+        }
+    }
+
+    /**
+     * Get current default directory setting
+     */
+    getDefaultDirectory() {
+        const directoryInput = document.getElementById('defaultFileDirectory');
+        if (directoryInput && directoryInput.value.trim()) {
+            return directoryInput.value.trim();
+        }
+        return this.loadDefaultDirectory();
     }
 
     /**
@@ -2572,6 +2880,7 @@ class BenchmarkUI {
             verboseLogging: document.getElementById('verboseLogging')?.checked || false,
             timeout: parseInt(document.getElementById('testTimeout').value),
             concurrency: parseInt(document.getElementById('concurrency')?.value || '1'),
+            defaultDirectory: this.getDefaultDirectory(), // Add default directory to configuration
             onProgress: (progress, suiteId, suiteResult) => {
                 this.updateMainWindowProgress(progress, suiteId, suiteResult);
             },
