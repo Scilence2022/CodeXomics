@@ -36,9 +36,9 @@ class AutomaticComplexSuite {
                 category: 'navigation',
                 complexity: 'complex',
                 evaluation: 'automatic',
-                instruction: 'Navigate to region 1230000 to 1300000 and then zoom out 10x to see the features.',
+                instruction: 'Navigate to region 1230000 to 1300000 and then zoom in 10x to see the features.',
                 expectedResult: {
-                    tool_sequence: ['navigate_to_position', 'zoom_out'],
+                    tool_sequence: ['navigate_to_position', 'zoom_in'],
                     parameters: [
                         {
                             chromosome: '<current_chromosome>',
@@ -54,6 +54,41 @@ class AutomaticComplexSuite {
                 bonusScore: 2,
                 timeout: 60000,
                 evaluator: this.evaluateWorkflowCall.bind(this)
+            },
+            
+            // FILE LOADING WORKFLOW - Automatic + Complex
+            {
+                id: 'file_auto_01',
+                name: 'Complete Genomic Data Loading Workflow',
+                type: 'workflow',
+                category: 'file_loading',
+                complexity: 'complex',
+                evaluation: 'automatic',
+                instruction: 'Load genome file "ECOLI.gbk"; Load aligned read file "1655_C10.sorted.bam"; Load variant VCF "1655_C10.mutations.vcf"; Load WIG files "first_sample.wig", "another_sample.wig"',
+                expectedResult: {
+                    tool_sequence: ['load_genome_file', 'load_reads_file', 'load_variant_file', 'load_wig_tracks'],
+                    parameters: [
+                        {
+                            filePath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/ECOLI.gbk'
+                        },
+                        {
+                            filePath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/1655_C10.sorted.bam'
+                        },
+                        {
+                            filePath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/1655_C10.mutations.vcf'
+                        },
+                        {
+                            filePaths: [
+                                '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/first_sample.wig',
+                                '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/another_sample.wig'
+                            ]
+                        }
+                    ]
+                },
+                maxScore: 15,
+                bonusScore: 3,
+                timeout: 120000,
+                evaluator: this.evaluateFileLoadingWorkflow.bind(this)
             }
         ];
     }
@@ -184,6 +219,82 @@ class AutomaticComplexSuite {
             evaluation.score = singleStepEval.score;
             evaluation.errors = singleStepEval.errors;
             evaluation.warnings = singleStepEval.warnings;
+        }
+
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
+        return evaluation;
+    }
+
+    async evaluateFileLoadingWorkflow(actualResult, expectedResult, testResult) {
+        const evaluation = {
+            success: false,
+            score: 0,
+            maxScore: testResult.maxScore || 15,
+            errors: [],
+            warnings: []
+        };
+
+        if (!actualResult) {
+            evaluation.errors.push('No result obtained from file loading workflow');
+            return evaluation;
+        }
+
+        // Ensure we have an array of results
+        const results = Array.isArray(actualResult) ? actualResult : [actualResult];
+        
+        // Check if we have the expected number of file loading operations
+        const expectedToolCount = expectedResult.tool_sequence.length;
+        if (results.length < expectedToolCount) {
+            evaluation.errors.push(`Expected ${expectedToolCount} file loading operations, but got ${results.length}`);
+        }
+
+        // Points per successful file loading operation
+        const pointsPerOperation = Math.floor(evaluation.maxScore / expectedToolCount);
+        
+        // Evaluate each file loading operation
+        for (let i = 0; i < expectedToolCount && i < results.length; i++) {
+            const result = results[i];
+            const expectedTool = expectedResult.tool_sequence[i];
+            
+            if (result && result.tool_name === expectedTool) {
+                evaluation.score += pointsPerOperation;
+                
+                // Check file path parameters
+                if (result.parameters) {
+                    const expectedParams = expectedResult.parameters[i];
+                    
+                    // For single file operations
+                    if (expectedParams.filePath && result.parameters.filePath) {
+                        if (result.parameters.filePath.includes(expectedParams.filePath.split('/').pop())) {
+                            // Bonus for correct file name
+                            evaluation.score += 1;
+                        }
+                    }
+                    
+                    // For WIG tracks (multiple files)
+                    if (expectedParams.filePaths && result.parameters.filePaths) {
+                        const expectedFileNames = expectedParams.filePaths.map(path => path.split('/').pop());
+                        const actualFileNames = result.parameters.filePaths.map(path => path.split('/').pop());
+                        
+                        const matchingFiles = expectedFileNames.filter(name => 
+                            actualFileNames.some(actualName => actualName.includes(name))
+                        );
+                        
+                        if (matchingFiles.length === expectedFileNames.length) {
+                            evaluation.score += 2; // Bonus for all WIG files
+                        }
+                    }
+                }
+            } else {
+                evaluation.errors.push(`Expected tool '${expectedTool}' at step ${i + 1}, but got '${result?.tool_name || 'none'}'`);
+            }
+        }
+
+        // Check for proper sequencing (genome file should be loaded first)
+        if (results.length > 0 && results[0].tool_name === 'load_genome_file') {
+            evaluation.score += (testResult.bonusScore || 3); // Bonus for correct sequencing
+        } else {
+            evaluation.warnings.push('Genome file should be loaded first for optimal workflow');
         }
 
         evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
