@@ -69,7 +69,7 @@ class BenchmarkUI {
             benchmarkInterface.style.left = '0';
             benchmarkInterface.style.width = '100vw';
             benchmarkInterface.style.height = '100vh';
-            benchmarkInterface.style.zIndex = '9999999'; // Maximum z-index
+            benchmarkInterface.style.zIndex = '2147483647'; // Nuclear maximum z-index
             
             // Force immediate rendering
             benchmarkInterface.offsetHeight;
@@ -78,6 +78,10 @@ class BenchmarkUI {
             // Setup interface event handlers
             this.setupBenchmarkInterfaceHandlers();
             console.log('🎮 Event handlers setup complete');
+            
+            // NUCLEAR OVERRIDE: Inject final z-index override into document head
+            this.injectNuclearZIndexOverride();
+            console.log('☢️ Nuclear z-index override injected');
             
             // Verify interface is actually visible
             const isVisible = benchmarkInterface.offsetHeight > 0 && 
@@ -144,6 +148,38 @@ class BenchmarkUI {
         benchmarkInterface.className = 'benchmark-interface';
         benchmarkInterface.innerHTML = `
             <style>
+                /* NUCLEAR-LEVEL Z-INDEX OVERRIDE - CANNOT BE OVERRIDDEN BY ANY CSS FILE */
+                #benchmarkInterface {
+                    z-index: 2147483647 !important; /* Maximum 32-bit integer z-index */
+                    position: fixed !important;
+                }
+                
+                #benchmarkInterface.collapsed {
+                    z-index: 2147483647 !important; /* Maximum possible z-index */
+                    position: fixed !important;
+                    pointer-events: auto !important;
+                }
+                
+                #benchmarkInterface.collapsed .benchmark-container {
+                    z-index: 2147483647 !important; /* Maximum possible z-index */
+                    position: relative !important;
+                    background: rgba(255, 255, 255, 0.98) !important;
+                    border: 3px solid rgba(52, 152, 219, 0.9) !important;
+                    box-shadow: 0 25px 80px rgba(0,0,0,0.5) !important;
+                    backdrop-filter: blur(20px) !important;
+                    transform: translateZ(0) !important;
+                }
+                
+                /* Override ANY possible tab-bar z-index conflicts */
+                .tab-bar {
+                    z-index: 999 !important; /* Ensure tab-bar stays at its intended level */
+                }
+                
+                /* During dragging - use near-maximum z-index */
+                #benchmarkInterface:has(.benchmark-header.dragging) {
+                    z-index: 2147483646 !important; /* One less than maximum for dragging state */
+                }
+                
                 .benchmark-interface {
                     position: fixed;
                     top: 0;
@@ -151,7 +187,7 @@ class BenchmarkUI {
                     right: 0;
                     bottom: 0;
                     background: transparent;
-                    z-index: 9999999 !important; /* MAXIMUM z-index to stay above all interface elements */
+                    z-index: 2147483647 !important; /* Nuclear-level z-index - maximum 32-bit integer */
                     overflow-y: auto;
                     padding: 20px;
                     display: block !important;
@@ -244,7 +280,7 @@ class BenchmarkUI {
                     height: 80px !important;
                     overflow: hidden;
                     background: transparent;
-                    z-index: 9999999 !important; /* MAXIMUM z-index - must be higher than any other element */
+                    z-index: 2147483647 !important; /* Nuclear-level z-index - maximum possible */
                     position: fixed !important; /* Force fixed positioning */
                     pointer-events: auto !important; /* Enable interaction with collapsed interface */
                 }
@@ -254,7 +290,7 @@ class BenchmarkUI {
                     padding: 10px 30px;
                     overflow: hidden;
                     background: rgba(255, 255, 255, 0.98) !important; /* More opaque for visibility */
-                    z-index: 9999999 !important; /* Maintain maximum z-index */
+                    z-index: 2147483647 !important; /* Nuclear-level z-index for container */
                     position: relative !important;
                     border: 3px solid rgba(52, 152, 219, 0.8) !important; /* Stronger border for visibility */
                     box-shadow: 0 20px 60px rgba(0,0,0,0.4) !important; /* Stronger shadow */
@@ -830,9 +866,9 @@ class BenchmarkUI {
             // CRITICAL: Boost z-index for dragging to stay above main tabs
             const benchmarkInterface = document.getElementById('benchmarkInterface');
             if (benchmarkInterface) {
-                benchmarkInterface.style.zIndex = '99999999'; // Ultra-high z-index during dragging
+                benchmarkInterface.style.zIndex = '2147483646'; // Near-maximum z-index during dragging
             }
-            container.style.zIndex = '99999999'; // Ultra-high z-index for container
+            container.style.zIndex = '2147483646'; // Near-maximum z-index for container
             
             // Change container positioning to absolute for dragging
             container.style.position = 'absolute';
@@ -877,7 +913,7 @@ class BenchmarkUI {
                 // Restore normal z-index after dragging
                 const benchmarkInterface = document.getElementById('benchmarkInterface');
                 if (benchmarkInterface) {
-                    benchmarkInterface.style.zIndex = '9999999'; // Back to normal maximum z-index
+                    benchmarkInterface.style.zIndex = '2147483647'; // Back to nuclear maximum z-index
                 }
                 container.style.zIndex = ''; // Remove inline z-index, let CSS take over
             }
@@ -901,16 +937,70 @@ class BenchmarkUI {
                 /* Enhanced z-index during dragging to stay above main tabs */
                 .benchmark-header.dragging .benchmark-container,
                 .benchmark-header.dragging ~ * {
-                    z-index: 99999999 !important; /* ULTRA-HIGH z-index during dragging */
+                    z-index: 2147483646 !important; /* Near-maximum z-index during dragging */
                 }
                 
-                /* Ensure entire interface has maximum z-index during drag */
+                /* Ensure entire interface has nuclear z-index during drag */
                 .benchmark-interface:has(.benchmark-header.dragging) {
-                    z-index: 99999999 !important; /* ULTRA-HIGH z-index during dragging */
+                    z-index: 2147483646 !important; /* Near-maximum z-index during dragging */
                 }
             `;
             document.head.appendChild(style);
         }
+    }
+
+    /**
+     * Inject nuclear-level z-index override directly into document head
+     * This ensures our z-index values can NEVER be overridden by external CSS
+     */
+    injectNuclearZIndexOverride() {
+        // Remove any existing nuclear override
+        const existingOverride = document.getElementById('nuclear-benchmark-override');
+        if (existingOverride) {
+            existingOverride.remove();
+        }
+        
+        // Create nuclear override style element
+        const nuclearStyle = document.createElement('style');
+        nuclearStyle.id = 'nuclear-benchmark-override';
+        nuclearStyle.innerHTML = `
+            /* NUCLEAR Z-INDEX OVERRIDE - LOADED LAST TO OVERRIDE ALL CSS FILES */
+            #benchmarkInterface {
+                z-index: 2147483647 !important; /* Maximum 32-bit integer */
+                position: fixed !important;
+            }
+            
+            #benchmarkInterface.collapsed {
+                z-index: 2147483647 !important; /* Maximum 32-bit integer */
+                position: fixed !important;
+                pointer-events: auto !important;
+            }
+            
+            #benchmarkInterface.collapsed .benchmark-container {
+                z-index: 2147483647 !important; /* Maximum 32-bit integer */
+                position: relative !important;
+                background: rgba(255, 255, 255, 0.98) !important;
+                border: 3px solid rgba(52, 152, 219, 0.9) !important;
+                box-shadow: 0 25px 80px rgba(0,0,0,0.5) !important;
+                backdrop-filter: blur(20px) !important;
+                transform: translateZ(0) !important;
+            }
+            
+            /* Force tab-bar to stay at correct level */
+            .tab-bar {
+                z-index: 999 !important;
+            }
+            
+            /* Dragging state - near maximum */
+            #benchmarkInterface:has(.benchmark-header.dragging) {
+                z-index: 2147483646 !important;
+            }
+        `;
+        
+        // Append to document head - this loads LAST and overrides everything
+        document.head.appendChild(nuclearStyle);
+        
+        console.log('☢️ Nuclear z-index override successfully injected into document head');
     }
 
     /**
