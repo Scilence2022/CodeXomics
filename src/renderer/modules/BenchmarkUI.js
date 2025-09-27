@@ -151,7 +151,7 @@ class BenchmarkUI {
                     right: 0;
                     bottom: 0;
                     background: transparent;
-                    z-index: 9999;
+                    z-index: 999999; /* High z-index to stay above main interface tabs */
                     overflow-y: auto;
                     padding: 20px;
                     display: block !important;
@@ -169,6 +169,7 @@ class BenchmarkUI {
                     backdrop-filter: blur(10px);
                     border: 2px solid rgba(52, 152, 219, 0.3);
                     pointer-events: auto;
+                    z-index: inherit; /* Inherit high z-index from parent */
                 }
 
                 .benchmark-header {
@@ -243,6 +244,7 @@ class BenchmarkUI {
                     height: 80px !important;
                     overflow: hidden;
                     background: transparent;
+                    z-index: 999999 !important; /* Ensure collapsed state stays above main tabs */
                 }
 
                 .benchmark-interface.collapsed .benchmark-container {
@@ -250,9 +252,11 @@ class BenchmarkUI {
                     padding: 10px 30px;
                     overflow: hidden;
                     background: rgba(255, 255, 255, 0.95);
+                    z-index: 999999 !important; /* Maintain high z-index during dragging */
                 }
 
-                .benchmark-interface.collapsed .benchmark-section:not(.benchmark-header) {
+                /* Hide sections but keep header visible */
+                .benchmark-interface.collapsed .benchmark-section {
                     display: none !important;
                 }
 
@@ -260,6 +264,7 @@ class BenchmarkUI {
                     margin-bottom: 0;
                     padding-bottom: 0;
                     border-bottom: none;
+                    display: block !important; /* Ensure header stays visible */
                 }
 
                 .benchmark-interface.collapsed .benchmark-title {
@@ -815,6 +820,13 @@ class BenchmarkUI {
             startLeft = rect.left;
             startTop = rect.top;
             
+            // CRITICAL: Boost z-index for dragging to stay above main tabs
+            const benchmarkInterface = document.getElementById('benchmarkInterface');
+            if (benchmarkInterface) {
+                benchmarkInterface.style.zIndex = '9999999';
+            }
+            container.style.zIndex = '9999999';
+            
             // Change container positioning to absolute for dragging
             container.style.position = 'absolute';
             container.style.left = startLeft + 'px';
@@ -854,6 +866,13 @@ class BenchmarkUI {
             if (isDragging) {
                 isDragging = false;
                 header.classList.remove('dragging');
+                
+                // Restore normal z-index after dragging
+                const benchmarkInterface = document.getElementById('benchmarkInterface');
+                if (benchmarkInterface) {
+                    benchmarkInterface.style.zIndex = '999999'; // Back to normal high z-index
+                }
+                container.style.zIndex = ''; // Remove inline z-index, let CSS take over
             }
         });
         
@@ -870,6 +889,17 @@ class BenchmarkUI {
                 
                 .benchmark-header:hover {
                     background: rgba(52, 152, 219, 0.05);
+                }
+                
+                /* Enhanced z-index during dragging to stay above main tabs */
+                .benchmark-header.dragging .benchmark-container,
+                .benchmark-header.dragging ~ * {
+                    z-index: 9999999 !important;
+                }
+                
+                /* Ensure entire interface has maximum z-index during drag */
+                .benchmark-interface:has(.benchmark-header.dragging) {
+                    z-index: 9999999 !important;
                 }
             `;
             document.head.appendChild(style);
