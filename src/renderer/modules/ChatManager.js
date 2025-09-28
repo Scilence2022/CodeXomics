@@ -3012,7 +3012,8 @@ class ChatManager {
             throw new Error('Export manager not available');
         }
         
-        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentSequence) {
+        // Check for genome sequence data - use the correct path
+        if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
             throw new Error('No genome data loaded to export');
         }
         
@@ -3020,9 +3021,9 @@ class ChatManager {
             // Use the existing export manager method
             await this.app.exportManager.exportAsFasta();
             
-            const chromosomes = Object.keys(this.app.genomeBrowser.currentSequence);
+            const chromosomes = Object.keys(this.app.currentSequence);
             const totalLength = chromosomes.reduce((sum, chr) => {
-                return sum + this.app.genomeBrowser.currentSequence[chr].length;
+                return sum + this.app.currentSequence[chr].length;
             }, 0);
             
             return {
@@ -3056,7 +3057,8 @@ class ChatManager {
             throw new Error('Export manager not available');
         }
         
-        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentSequence) {
+        // Check for genome sequence data - use the correct path
+        if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
             throw new Error('No genome data loaded to export');
         }
         
@@ -3069,9 +3071,9 @@ class ChatManager {
             // Use the existing export manager method
             await this.app.exportManager.exportAsGenBank();
             
-            const chromosomes = Object.keys(this.app.genomeBrowser.currentSequence);
+            const chromosomes = Object.keys(this.app.currentSequence);
             const totalFeatures = chromosomes.reduce((sum, chr) => {
-                const features = this.app.genomeBrowser.currentAnnotations?.[chr] || [];
+                const features = this.app.currentAnnotations?.[chr] || [];
                 return sum + features.length;
             }, 0);
             
@@ -3107,7 +3109,8 @@ class ChatManager {
             throw new Error('Export manager not available');
         }
         
-        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentAnnotations) {
+        // Check for annotation data - use the correct path
+        if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
             throw new Error('No annotation data loaded to export CDS sequences');
         }
         
@@ -3115,10 +3118,10 @@ class ChatManager {
             // Use the existing export manager method
             await this.app.exportManager.exportCDSAsFasta();
             
-            // Count CDS features
-            const chromosomes = Object.keys(this.app.genomeBrowser.currentAnnotations);
+            // Count CDS features using correct data path
+            const chromosomes = Object.keys(this.app.currentAnnotations);
             const cdsCount = chromosomes.reduce((sum, chr) => {
-                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.filter(f => f.type === 'CDS' || f.type === 'gene').length;
             }, 0);
             
@@ -3153,7 +3156,8 @@ class ChatManager {
             throw new Error('Export manager not available');
         }
         
-        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentAnnotations) {
+        // Check for annotation data - use the correct path
+        if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
             throw new Error('No annotation data loaded to export protein sequences');
         }
         
@@ -3161,10 +3165,10 @@ class ChatManager {
             // Use the existing export manager method
             await this.app.exportManager.exportProteinAsFasta();
             
-            // Count protein-coding features
-            const chromosomes = Object.keys(this.app.genomeBrowser.currentAnnotations);
+            // Count protein-coding features using correct data path
+            const chromosomes = Object.keys(this.app.currentAnnotations);
             const proteinCount = chromosomes.reduce((sum, chr) => {
-                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.filter(f => {
                     return (f.type === 'CDS' || f.type === 'gene') && 
                            f.start && f.end && f.start < f.end;
@@ -3203,7 +3207,8 @@ class ChatManager {
             throw new Error('Export manager not available');
         }
         
-        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentAnnotations) {
+        // Check for annotation data - use the correct path
+        if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
             throw new Error('No annotation data loaded to export as GFF');
         }
         
@@ -3211,15 +3216,15 @@ class ChatManager {
             // Use the existing export manager method
             await this.app.exportManager.exportAsGFF();
             
-            // Count features
-            const chromosomes = Object.keys(this.app.genomeBrowser.currentAnnotations);
+            // Count features using correct data path
+            const chromosomes = Object.keys(this.app.currentAnnotations);
             const featureCount = chromosomes.reduce((sum, chr) => {
-                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.length;
             }, 0);
             
             const featureTypes = chromosomes.reduce((types, chr) => {
-                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                const features = this.app.currentAnnotations[chr] || [];
                 features.forEach(f => {
                     if (f.type && !types.includes(f.type)) {
                         types.push(f.type);
@@ -3261,7 +3266,8 @@ class ChatManager {
             throw new Error('Export manager not available');
         }
         
-        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentAnnotations) {
+        // Check for annotation data - use the correct path
+        if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
             throw new Error('No annotation data loaded to export as BED');
         }
         
@@ -3269,10 +3275,10 @@ class ChatManager {
             // Use the existing export manager method
             await this.app.exportManager.exportAsBED();
             
-            // Count features
-            const chromosomes = Object.keys(this.app.genomeBrowser.currentAnnotations);
+            // Count features using correct data path
+            const chromosomes = Object.keys(this.app.currentAnnotations);
             const featureCount = chromosomes.reduce((sum, chr) => {
-                const features = this.app.genomeBrowser.currentAnnotations[chr] || [];
+                const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.length;
             }, 0);
             
@@ -3308,7 +3314,8 @@ class ChatManager {
             throw new Error('Export manager not available');
         }
         
-        if (!this.app.genomeBrowser || !this.app.genomeBrowser.currentSequence) {
+        // Check for genome sequence data - use the correct path
+        if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
             throw new Error('No genome data loaded to export current view');
         }
         
