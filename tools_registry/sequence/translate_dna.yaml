@@ -14,7 +14,7 @@ execution:
 parameters:
   type: object
   properties:
-    sequence:
+    dna:
       type: string
       description: "DNA sequence to translate (must be multiple of 3 for complete translation)"
       pattern: "^[ATGCNatgcn]+$"
@@ -46,20 +46,20 @@ parameters:
       type: string
       description: "Browser client ID for multi-window support"
       default: "default"
-  required: ["sequence"]
+  required: ["dna"]
 sample_usages:
   - user_query: "Translate this DNA sequence to protein"
-    tool_call: "translate_dna(sequence='ATGCGCTATCGAAAG', reading_frame=1)"
+    tool_call: "translate_dna(dna='ATGCGCTATCGAAAG', reading_frame=1)"
     thought: "User wants to translate a DNA sequence starting from reading frame 1"
     expected_result: "Amino acid sequence: MRYRK (with start and stop codons if present)"
   
   - user_query: "Find all possible ORFs in this sequence"
-    tool_call: "translate_dna(sequence='TTGAAATAG', find_orfs=true, min_orf_length=10)"
+    tool_call: "translate_dna(dna='TTGAAATAG', find_orfs=true, min_orf_length=10)"
     thought: "User wants to find and translate all open reading frames above minimum length"
     expected_result: "List of ORFs with their positions, frames, and amino acid sequences"
   
   - user_query: "Translate using mitochondrial genetic code"
-    tool_call: "translate_dna(sequence='ATGAAAAAATAG', genetic_code='vertebrate_mitochondrial', include_stop_codons=false)"
+    tool_call: "translate_dna(dna='ATGAAAAAATAG', genetic_code='vertebrate_mitochondrial', include_stop_codons=false)"
     thought: "User wants translation using mitochondrial code without stop codons"
     expected_result: "Amino acid sequence using mitochondrial genetic code table"
 relationships:

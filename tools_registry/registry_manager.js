@@ -275,7 +275,7 @@ class ToolsRegistryManager {
             zoom: ['zoom', 'zoom in', 'zoom out', 'magnify', 'scale', 'focus', 'enlarge', 'reduce', 'view', 'detail', 'context'],
             search: ['search', 'find', 'look for', 'query', 'locate'],
             analysis: ['analyze', 'calculate', 'compute', 'measure', 'count', 'analysis'],
-            sequence: ['sequence', 'dna', 'rna', 'protein', 'amino acid'],
+            sequence: ['sequence', 'dna', 'rna', 'protein', 'amino acid', 'translate', 'translation', 'reverse complement', 'gc content', 'codon', 'orf', 'frame'],
             structure: ['structure', '3d', 'pdb', 'alphafold', 'protein structure'],
             database: ['database', 'uniprot', 'interpro', 'lookup', 'entry'],
             editing: ['edit', 'modify', 'change', 'replace', 'insert', 'delete'],
