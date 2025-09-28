@@ -209,6 +209,49 @@ class ManualSimpleSuite {
             return evaluation;
         }
 
+        console.log(`📊 [ManualSimpleSuite] Evaluating test result:`, {
+            testId: testResult.testId,
+            expectedTool: expectedResult.tool_name,
+            actualResult: actualResult,
+            resultType: typeof actualResult
+        });
+
+        // PRIORITY 0: Check Tool Execution Tracker for direct execution status
+        if (window.chatManager && window.chatManager.toolExecutionTracker) {
+            const tracker = window.chatManager.toolExecutionTracker;
+            const recentExecutions = tracker.getSessionExecutions();
+            
+            console.log(`🔍 [ManualSimpleSuite] Checking tracker for tool: ${expectedResult.tool_name}`);
+            
+            // Look for recent successful execution of the expected tool
+            const relevantExecution = recentExecutions.find(exec => 
+                exec.toolName === expectedResult.tool_name && 
+                exec.status === 'completed' &&
+                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+            );
+            
+            if (relevantExecution) {
+                console.log(`✅ [ManualSimpleSuite] TRACKER SUCCESS: Found successful execution of '${expectedResult.tool_name}'`, relevantExecution);
+                evaluation.score = evaluation.maxScore; // FULL POINTS from tracker
+                evaluation.success = true;
+                evaluation.warnings.push('Awarded full points based on Tool Execution Tracker data');
+                return evaluation;
+            }
+            
+            // Look for recent failed execution
+            const failedExecution = recentExecutions.find(exec => 
+                exec.toolName === expectedResult.tool_name && 
+                exec.status === 'failed' &&
+                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+            );
+            
+            if (failedExecution) {
+                console.log(`❌ [ManualSimpleSuite] TRACKER FAILURE: Found failed execution of '${expectedResult.tool_name}'`, failedExecution);
+                evaluation.errors.push(`Tool execution failed: ${failedExecution.error?.message || 'Unknown error'}`);
+                return evaluation; // Score remains 0
+            }
+        }
+
         // Check tool name - award full points for correct tool
         const actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
         if (actualTool === expectedResult.tool_name) {

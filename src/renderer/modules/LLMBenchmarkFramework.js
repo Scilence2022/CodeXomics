@@ -1466,41 +1466,58 @@ class LLMBenchmarkFramework {
     extractParametersFromResponse(response, toolName) {
         const parameters = {};
         
-        // Look for common parameter patterns
-        const paramPatterns = [
-            // Gene names in quotes
-            /(?:gene|name|query).*?["']([^"']+)["']/gi,
-            // Coordinates
-            /(?:position|start|from).*?(\d+)/gi,
-            /(?:end|to).*?(\d+)/gi,
-            // Chromosome names
-            /(?:chromosome|chr).*?["']?([A-Za-z0-9\-_]+)["']?/gi,
-            // Boolean flags
-            /(?:caseSensitive|case).*?(true|false)/gi
-        ];
+        console.log('🔍 [extractParametersFromResponse] Extracting parameters from:', {
+            response: response.substring(0, 200),
+            toolName: toolName
+        });
         
-        // Extract gene/query names
-        const geneMatch = response.match(/(?:gene|search|find|locate).*?["']([^"']+)["']/i);
-        if (geneMatch) {
-            parameters.name = geneMatch[1];
-            parameters.query = geneMatch[1];
-        }
-        
-        // Extract coordinates
-        const coordMatch = response.match(/(\d+)(?:\s*(?:to|-)?\s*(\d+))?/);
-        if (coordMatch) {
-            parameters.start = parseInt(coordMatch[1]);
-            if (coordMatch[2]) {
-                parameters.end = parseInt(coordMatch[2]);
+        // For navigation tools, look specifically for coordinates and chromosome information
+        if (toolName === 'navigate_to_position') {
+            // Extract coordinates - look for patterns like "100000", "1000-2000", "position 100000"
+            const coordMatch = response.match(/(?:position|start|from|to|navigate.*?to).*?(\d+)(?:\s*(?:to|-)\s*(\d+))?/i);
+            if (coordMatch) {
+                const firstNumber = parseInt(coordMatch[1]);
+                const secondNumber = coordMatch[2] ? parseInt(coordMatch[2]) : null;
+                
+                if (secondNumber && secondNumber > firstNumber) {
+                    // Range format: start-end
+                    parameters.start = firstNumber;
+                    parameters.end = secondNumber;
+                    console.log('🎯 [extractParametersFromResponse] Found coordinate range:', { start: firstNumber, end: secondNumber });
+                } else {
+                    // Single position format
+                    parameters.position = firstNumber;
+                    console.log('🎯 [extractParametersFromResponse] Found single position:', firstNumber);
+                }
+            }
+            
+            // Extract chromosome - look for patterns like "chr1", "U00096", "chromosome 1"
+            const chrMatch = response.match(/(?:chromosome|chr)\s*["']?([A-Za-z0-9\-_]+)["']?/i);
+            if (chrMatch && chrMatch[1]) {
+                parameters.chromosome = chrMatch[1];
+                console.log('🎯 [extractParametersFromResponse] Found chromosome:', chrMatch[1]);
             }
         }
         
-        // Extract chromosome
-        const chrMatch = response.match(/(?:chromosome|chr).*?([A-Za-z0-9\-_]+)/i);
-        if (chrMatch) {
-            parameters.chromosome = chrMatch[1];
+        // For search tools
+        else if (toolName.includes('search')) {
+            // Extract gene/query names
+            const geneMatch = response.match(/(?:gene|search|find|locate).*?["']([^"']+)["']/i);
+            if (geneMatch) {
+                parameters.name = geneMatch[1];
+                parameters.query = geneMatch[1];
+                console.log('🎯 [extractParametersFromResponse] Found search term:', geneMatch[1]);
+            }
+            
+            // Extract case sensitivity
+            const caseMatch = response.match(/(?:caseSensitive|case).*?(true|false)/i);
+            if (caseMatch) {
+                parameters.caseSensitive = caseMatch[1].toLowerCase() === 'true';
+                console.log('🎯 [extractParametersFromResponse] Found caseSensitive:', parameters.caseSensitive);
+            }
         }
         
+        console.log('📄 [extractParametersFromResponse] Extracted parameters:', parameters);
         return parameters;
     }
 
@@ -1668,15 +1685,35 @@ class LLMBenchmarkFramework {
             const inferredParams = this.extractParametersFromResponse(response, expectedResult.tool_name);
             
             // Merge with expected parameters for better accuracy
-            const finalParams = { ...expectedResult.parameters, ...inferredParams };
+            // CRITICAL: Don't override placeholders unless we have actual values
+            const finalParams = {};
             
-            return {
+            // Start with expected parameters
+            Object.assign(finalParams, expectedResult.parameters);
+            
+            // Only override with inferred parameters if they are not empty/undefined
+            for (const [key, value] of Object.entries(inferredParams)) {
+                if (value !== undefined && value !== null && value !== '') {
+                    finalParams[key] = value;
+                }
+            }
+            
+            console.log('🔍 [inferFunctionCallFromResponse] Parameter merging:', {
+                expectedParams: expectedResult.parameters,
+                inferredParams: inferredParams,
+                finalParams: finalParams
+            });
+            
+            const inferredResult = {
                 tool_name: expectedResult.tool_name,
                 parameters: finalParams,
                 confidence: hasExecutionEvidence ? 85 : 60, // Lower confidence without execution evidence
                 inferred: true,
                 evidence: `Response contains success indicators${hasExecutionEvidence ? ' and execution evidence' : ''} for function: ${expectedResult.tool_name}`
             };
+            
+            console.log('✅ [inferFunctionCallFromResponse] Successfully inferred function call:', inferredResult);
+            return inferredResult;
         }
 
         if (!hasSuccessIndicator) {

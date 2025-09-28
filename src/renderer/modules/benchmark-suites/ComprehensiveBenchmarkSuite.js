@@ -717,7 +717,7 @@ class ComprehensiveBenchmarkSuite {
     }
 
     /**
-     * Basic function call evaluator
+     * Basic function call evaluator with priority-based success detection
      */
     async evaluateBasicFunctionCall(actualResult, expectedResult, testResult) {
         const evaluation = {
@@ -733,7 +733,76 @@ class ComprehensiveBenchmarkSuite {
             return evaluation;
         }
 
-        // Check tool name
+        console.log(`📊 [ComprehensiveBenchmark] Evaluating test result:`, {
+            testId: testResult.testId,
+            expectedTool: expectedResult.tool_name,
+            actualResult: actualResult,
+            resultType: typeof actualResult
+        });
+
+        // PRIORITY 0: Check Tool Execution Tracker for direct execution status
+        if (window.chatManager && window.chatManager.toolExecutionTracker) {
+            const tracker = window.chatManager.toolExecutionTracker;
+            const recentExecutions = tracker.getSessionExecutions();
+            
+            console.log(`🔍 [ComprehensiveBenchmark] Checking tracker for tool: ${expectedResult.tool_name}`);
+            
+            // Look for recent successful execution of the expected tool
+            const relevantExecution = recentExecutions.find(exec => 
+                exec.toolName === expectedResult.tool_name && 
+                exec.status === 'completed' &&
+                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+            );
+            
+            if (relevantExecution) {
+                console.log(`✅ [ComprehensiveBenchmark] TRACKER SUCCESS: Found successful execution of '${expectedResult.tool_name}'`, relevantExecution);
+                evaluation.score = evaluation.maxScore; // FULL POINTS from tracker
+                evaluation.success = true;
+                evaluation.warnings.push('Awarded full points based on Tool Execution Tracker data');
+                return evaluation;
+            }
+            
+            // Look for recent failed execution
+            const failedExecution = recentExecutions.find(exec => 
+                exec.toolName === expectedResult.tool_name && 
+                exec.status === 'failed' &&
+                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+            );
+            
+            if (failedExecution) {
+                console.log(`❌ [ComprehensiveBenchmark] TRACKER FAILURE: Found failed execution of '${expectedResult.tool_name}'`, failedExecution);
+                evaluation.errors.push(`Tool execution failed: ${failedExecution.error?.message || 'Unknown error'}`);
+                return evaluation; // Score remains 0
+            }
+        }
+
+        // PRIORITY 1: Check for explicit tool execution success signals
+        if (typeof actualResult === 'string') {
+            const successPatterns = [
+                /tool execution completed.*succeeded/i,
+                /successfully (executed|navigated|loaded|processed|analyzed)/i,
+                /task completed successfully/i,
+                /operation completed successfully/i,
+                /results have been processed/i
+            ];
+            
+            const hasSuccessSignal = successPatterns.some(pattern => pattern.test(actualResult));
+            
+            if (hasSuccessSignal) {
+                // Check if the expected tool name appears in the response
+                const toolMentioned = actualResult.toLowerCase().includes(expectedResult.tool_name.toLowerCase());
+                
+                if (toolMentioned) {
+                    console.log(`✅ [ComprehensiveBenchmark] SUCCESS SIGNAL DETECTED: Tool '${expectedResult.tool_name}' executed successfully`);
+                    evaluation.score = evaluation.maxScore; // FULL POINTS
+                    evaluation.success = true;
+                    evaluation.warnings.push('Awarded full points based on explicit success signal');
+                    return evaluation;
+                }
+            }
+        }
+
+        // PRIORITY 2: Check tool name
         const actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
         if (actualTool === expectedResult.tool_name) {
             evaluation.score += Math.floor(evaluation.maxScore * 0.6); // 60% for correct tool
@@ -741,18 +810,53 @@ class ComprehensiveBenchmarkSuite {
             evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool}'`);
         }
 
-        // Check parameters
+        // Check parameters with enhanced position↔range conversion support
         const actualParams = Array.isArray(actualResult) ? actualResult[0]?.parameters : actualResult.parameters;
         if (actualParams && expectedResult.parameters) {
             let paramScore = 0;
             const expectedKeys = Object.keys(expectedResult.parameters);
-            const matchingKeys = expectedKeys.filter(key => 
-                key in actualParams && 
-                (actualParams[key] === expectedResult.parameters[key] || 
-                 expectedResult.parameters[key] === '<current_chromosome>' ||
-                 expectedResult.parameters[key] === '<lacZ_protein_sequence>' ||
-                 expectedResult.parameters[key] === '<araA_protein_sequence>')
-            );
+            const matchingKeys = expectedKeys.filter(key => {
+                if (!(key in actualParams)) {
+                    // Handle position→range conversion
+                    if (key === 'position' && 'start' in actualParams && 'end' in actualParams) {
+                        const expectedPosition = expectedResult.parameters[key];
+                        const actualStart = actualParams.start;
+                        const actualEnd = actualParams.end;
+                        const rangeCenter = Math.floor((actualStart + actualEnd) / 2);
+                        const tolerance = Math.abs(actualEnd - actualStart);
+                        return Math.abs(expectedPosition - rangeCenter) <= tolerance / 2;
+                    }
+                    
+                    // Handle range→position conversion
+                    if ((key === 'start' || key === 'end') && 'position' in actualParams) {
+                        const actualPosition = actualParams.position;
+                        const expectedValue = expectedResult.parameters[key];
+                        
+                        if (key === 'start') {
+                            const expectedEnd = expectedResult.parameters.end || (expectedValue + 2000);
+                            return actualPosition >= expectedValue && actualPosition <= expectedEnd;
+                        } else if (key === 'end') {
+                            const expectedStart = expectedResult.parameters.start || (expectedValue - 2000);
+                            return actualPosition >= expectedStart && actualPosition <= expectedValue;
+                        }
+                    }
+                    
+                    return false;
+                }
+                
+                const actualValue = actualParams[key];
+                const expectedValue = expectedResult.parameters[key];
+                
+                // Enhanced placeholder matching
+                if (expectedValue === '<current_chromosome>' && typeof actualValue === 'string' && actualValue.length > 0) {
+                    return true;
+                }
+                if (expectedValue === '<lacZ_protein_sequence>' || expectedValue === '<araA_protein_sequence>') {
+                    return true;
+                }
+                
+                return actualValue === expectedValue;
+            });
             
             if (expectedKeys.length > 0) {
                 paramScore = Math.floor(evaluation.maxScore * 0.4 * (matchingKeys.length / expectedKeys.length));

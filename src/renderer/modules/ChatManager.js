@@ -90,6 +90,10 @@ class ChatManager {
         this.dynamicToolsEnabled = true;
         this.initializeDynamicTools();
         
+        // Initialize Tool Execution Tracker
+        this.toolExecutionTracker = null;
+        this.initializeToolExecutionTracker();
+        
         // Set global reference for copy button functionality
         window.chatManager = this;
         
@@ -687,6 +691,33 @@ class ChatManager {
             console.error('❌ Failed to initialize Dynamic Tools Registry System:', error);
             console.error('❌ Error details:', error.message, error.stack);
             this.dynamicToolsEnabled = false;
+        }
+    }
+
+    /**
+     * Initialize Tool Execution Tracker
+     */
+    async initializeToolExecutionTracker() {
+        try {
+            console.log('🔍 Initializing Tool Execution Tracker...');
+            
+            // Check if ToolExecutionTracker is available globally
+            if (typeof ToolExecutionTracker !== 'undefined') {
+                this.toolExecutionTracker = new ToolExecutionTracker();
+                console.log('✅ Tool Execution Tracker initialized successfully');
+            } else {
+                // Try to load the module
+                await this.loadScript('modules/ToolExecutionTracker.js');
+                
+                if (typeof ToolExecutionTracker !== 'undefined') {
+                    this.toolExecutionTracker = new ToolExecutionTracker();
+                    console.log('✅ Tool Execution Tracker loaded and initialized successfully');
+                } else {
+                    console.warn('⚠️ ToolExecutionTracker not available');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Failed to initialize Tool Execution Tracker:', error);
         }
     }
 
@@ -8242,6 +8273,12 @@ ${this.getPluginSystemInfo()}`;
         
         const startTime = Date.now();
         let success = false;
+        let executionId = null;
+        
+        // Record execution start in tracker
+        if (this.toolExecutionTracker) {
+            executionId = this.toolExecutionTracker.recordExecutionStart(toolName, parameters);
+        }
         
         // Check if multi-agent system is enabled
         const multiAgentEnabled = this.configManager.get('multiAgentSettings.multiAgentSystemEnabled', false);
@@ -8972,6 +9009,11 @@ ${this.getPluginSystemInfo()}`;
                 this.dynamicTools.trackToolUsage(toolName, true, executionTime);
             }
             
+            // Record successful execution in tracker
+            if (this.toolExecutionTracker && executionId) {
+                this.toolExecutionTracker.recordExecutionSuccess(executionId, result);
+            }
+            
             success = true;
             return result;
             
@@ -9001,6 +9043,11 @@ ${this.getPluginSystemInfo()}`;
             if (this.dynamicToolsEnabled && this.dynamicTools) {
                 const executionTime = Date.now() - startTime;
                 this.dynamicTools.trackToolUsage(toolName, false, executionTime);
+            }
+            
+            // Record failed execution in tracker
+            if (this.toolExecutionTracker && executionId) {
+                this.toolExecutionTracker.recordExecutionFailure(executionId, error);
             }
             
             return errorResult;

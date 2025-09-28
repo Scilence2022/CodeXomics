@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Execution Tracker Test</title>
+</head>
+<body>
+    <h1>Tool Execution Tracker Test</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Load ToolExecutionTracker
+        const script = document.createElement('script');
+        script.src = 'src/renderer/modules/ToolExecutionTracker.js';
+        script.onload = function() {
+            runTest();
+        };
+        document.head.appendChild(script);
+        
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+        
+        function runTest() {
+            log('🔍 Starting Tool Execution Tracker Test...');
+            
+            try {
+                // Test 1: Create tracker instance
+                const tracker = new ToolExecutionTracker();
+                log('✅ Test 1: ToolExecutionTracker instance created successfully');
+                
+                // Test 2: Start a session
+                const sessionId = tracker.startSession({
+                    source: 'test',
+                    timestamp: Date.now()
+                });
+                log(`✅ Test 2: Session started with ID: ${sessionId}`);
+                
+                // Test 3: Record tool execution start
+                const executionId = tracker.recordExecutionStart('navigate_to_position', {
+                    chromosome: 'U00096',
+                    position: 100000
+                });
+                log(`✅ Test 3: Tool execution started with ID: ${executionId}`);
+                
+                // Test 4: Record successful execution
+                setTimeout(() => {
+                    tracker.recordExecutionSuccess(executionId, {
+                        success: true,
+                        message: 'Tool execution completed: 1 succeeded'
+                    });
+                    log('✅ Test 4: Tool execution success recorded');
+                    
+                    // Test 5: Get session executions
+                    const executions = tracker.getSessionExecutions();
+                    log(`✅ Test 5: Retrieved ${executions.length} execution(s)`);
+                    
+                    if (executions.length > 0) {
+                        const exec = executions[0];
+                        log(`   - Tool: ${exec.toolName}`);
+                        log(`   - Status: ${exec.status}`);
+                        log(`   - Duration: ${exec.duration}ms`);
+                    }
+                    
+                    // Test 6: Generate session summary
+                    const summary = tracker.generateSessionSummary();
+                    log(`✅ Test 6: Session summary generated`);
+                    log(`   - Total executions: ${summary.totalExecutions}`);
+                    log(`   - Successful: ${summary.successfulExecutions}`);
+                    log(`   - Failed: ${summary.failedExecutions}`);
+                    log(`   - Success rate: ${(summary.successRate * 100).toFixed(1)}%`);
+                    
+                    log('🎉 All tests completed successfully!');
+                    
+                }, 100);
+                
+            } catch (error) {
+                log('❌ Test failed: ' + error.message);
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
