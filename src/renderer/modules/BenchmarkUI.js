@@ -3178,22 +3178,19 @@ class BenchmarkUI {
                         <h3 style="color: #34495e; font-size: 14px; margin-bottom: 12px;">Test Suites</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-basic_operations" checked> Basic Operations
+                                <input type="checkbox" id="suite-automatic_simple" checked> ⚙️ Automatic Simple Tests
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-edit_operations" checked> Edit Operations
+                                <input type="checkbox" id="suite-automatic_complex"> 🔧 Automatic Complex Tests
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-basic_functions" checked> Basic Functions
+                                <input type="checkbox" id="suite-manual_simple"> 👥 Manual Simple Tests
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-parameter_handling" checked> Parameter Handling
+                                <input type="checkbox" id="suite-manual_complex"> 🧠 Manual Complex Tests
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-performance_tests" checked> Performance Tests
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                                <input type="checkbox" id="suite-complex_analysis"> Complex Analysis
+                                <input type="checkbox" id="suite-comprehensive_genomic"> 📋 Comprehensive Tests
                             </label>
                         </div>
                     </div>
@@ -3386,9 +3383,7 @@ class BenchmarkUI {
                 
                 // Reset configuration
                 document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                    cb.checked = cb.id.includes('basic_operations') || 
-                                cb.id.includes('edit_operations') ||
-                                cb.id.includes('basic_functions') || 
+                    cb.checked = cb.id.includes('automatic_simple') || 
                                 cb.id === 'generateReport' ||
                                 cb.id === 'includeCharts';
                 });
@@ -3834,19 +3829,15 @@ class BenchmarkUI {
             // Benchmark Menu Actions
             runQuickBenchmark() {
                 document.querySelectorAll('input[id^="suite-"]').forEach(cb => {
-                    cb.checked = cb.id.includes('basic_operations') || 
-                                cb.id.includes('edit_operations') ||
-                                cb.id.includes('performance_tests');
+                    cb.checked = cb.id.includes('automatic_simple') || 
+                                cb.id.includes('automatic_complex');
                 });
                 this.startBenchmark();
             }
 
             runEditOperationsTest() {
-                document.querySelectorAll('input[id^="suite-"]').forEach(cb => {
-                    cb.checked = cb.id.includes('basic_operations') || 
-                                cb.id.includes('edit_operations');
-                });
-                this.startBenchmark();
+                // Method removed as edit operations suite no longer exists
+                alert('Edit Operations test suite has been removed. Please use Quick Benchmark instead.');
             }
 
             async startBenchmark() {
@@ -3972,12 +3963,17 @@ class BenchmarkUI {
 
 Comprehensive testing framework for LLM instruction following capabilities.
 
-• 12 test suites
-• 140+ individual tests
+• 5 active test suites
+• 50+ individual tests
 • Advanced statistical analysis
 • Professional reporting
 
-Includes comprehensive Edit operations testing:\`);
+Active Test Suites:
+- Automatic Simple Tests (14 tests)
+- Automatic Complex Tests (2 tests) 
+- Manual Simple Tests (8 tests)
+- Manual Complex Tests (3 tests)
+- Comprehensive Genomic Tests (20+ tests)\`);
             }
 
             downloadJSON(data, filename) {
