@@ -3018,10 +3018,33 @@ class ChatManager {
         }
         
         try {
-            // Use the existing export manager method
-            await this.app.exportManager.exportAsFasta();
-            
             const chromosomes = Object.keys(this.app.currentSequence);
+            let fastaContent = '';
+
+            chromosomes.forEach(chr => {
+                const sequence = this.app.currentSequence[chr];
+                fastaContent += `>${chr}\n`;
+                
+                // Split sequence into lines of 80 characters
+                for (let i = 0; i < sequence.length; i += 80) {
+                    fastaContent += sequence.substring(i, i + 80) + '\n';
+                }
+            });
+            
+            // Check if filename is user-provided (not default value)
+            const isUserProvidedFilename = filename && 
+                filename.trim() && 
+                filename !== 'sequences.fasta' && 
+                filename !== 'genome.fasta';
+            
+            if (isUserProvidedFilename) {
+                // Direct file export without dialog
+                await this.writeFileDirectly(fastaContent, filename, 'FASTA sequence');
+            } else {
+                // Use ExportManager to show file dialog with default filename
+                await this.app.exportManager.exportAsFasta();
+            }
+            
             const totalLength = chromosomes.reduce((sum, chr) => {
                 return sum + this.app.currentSequence[chr].length;
             }, 0);
@@ -3035,6 +3058,7 @@ class ChatManager {
                 chromosomes: chromosomes,
                 total_chromosomes: chromosomes.length,
                 total_length: totalLength,
+                export_method: isUserProvidedFilename ? 'direct' : 'dialog',
                 message: `Successfully exported ${chromosomes.length} chromosome(s) as FASTA format`,
                 details: `Total sequence length: ${totalLength.toLocaleString()} bp`
             };
@@ -3063,15 +3087,68 @@ class ChatManager {
         }
         
         try {
-            // Configure protein sequence inclusion if specified
-            if (this.app.exportManager.exportConfig) {
-                this.app.exportManager.exportConfig.includeProteinSequences = includeProteinSequences;
+            const chromosomes = Object.keys(this.app.currentSequence);
+            let genbankContent = '';
+
+            chromosomes.forEach(chr => {
+                const sequence = this.app.currentSequence[chr];
+                const features = this.app.currentAnnotations[chr] || [];
+                
+                // GenBank header
+                genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10).replace(/-/g, '-')}\n`;
+                genbankContent += `DEFINITION  ${chr}\n`;
+                genbankContent += `ACCESSION   ${chr}\n`;
+                genbankContent += `VERSION     ${chr}\n`;
+                genbankContent += `KEYWORDS    .\n`;
+                genbankContent += `SOURCE      .\n`;
+                genbankContent += `  ORGANISM  .\n`;
+                genbankContent += `FEATURES             Location/Qualifiers\n`;
+                genbankContent += `     source          1..${sequence.length}\n`;
+                
+                // Add features with comprehensive qualifier support
+                features.forEach(feature => {
+                    const location = feature.strand === '-' ? 
+                        `complement(${feature.start}..${feature.end})` : 
+                        `${feature.start}..${feature.end}`;
+                    
+                    genbankContent += `     ${feature.type.padEnd(15)} ${location}\n`;
+                    
+                    // Export qualifiers using ExportManager's method
+                    if (this.app.exportManager.exportFeatureQualifiers) {
+                        genbankContent += this.app.exportManager.exportFeatureQualifiers(feature);
+                    }
+                });
+                
+                genbankContent += `ORIGIN\n`;
+                
+                // Add sequence in GenBank format (60 chars per line, numbered)
+                for (let i = 0; i < sequence.length; i += 60) {
+                    const lineNum = (i + 1).toString().padStart(9);
+                    const seqLine = sequence.substring(i, i + 60).toLowerCase();
+                    const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
+                    genbankContent += `${lineNum} ${formattedSeq}\n`;
+                }
+                
+                genbankContent += `//\n\n`;
+            });
+            
+            // Check if filename is user-provided (not default value)
+            const isUserProvidedFilename = filename && 
+                filename.trim() && 
+                filename !== 'genome.gbk';
+            
+            if (isUserProvidedFilename) {
+                // Direct file export without dialog
+                await this.writeFileDirectly(genbankContent, filename, 'GenBank format');
+            } else {
+                // Use ExportManager to show file dialog with default filename
+                // Configure protein sequence inclusion if specified
+                if (this.app.exportManager.exportConfig) {
+                    this.app.exportManager.exportConfig.includeProteinSequences = includeProteinSequences;
+                }
+                await this.app.exportManager.exportAsGenBank();
             }
             
-            // Use the existing export manager method
-            await this.app.exportManager.exportAsGenBank();
-            
-            const chromosomes = Object.keys(this.app.currentSequence);
             const totalFeatures = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations?.[chr] || [];
                 return sum + features.length;
@@ -3087,6 +3164,7 @@ class ChatManager {
                 total_chromosomes: chromosomes.length,
                 total_features: totalFeatures,
                 include_protein_sequences: includeProteinSequences,
+                export_method: isUserProvidedFilename ? 'direct' : 'dialog',
                 message: `Successfully exported ${chromosomes.length} chromosome(s) as GenBank format`,
                 details: `Included ${totalFeatures} features${includeProteinSequences ? ' with protein translations' : ''}`
             };
@@ -3115,11 +3193,55 @@ class ChatManager {
         }
         
         try {
-            // Use the existing export manager method
-            await this.app.exportManager.exportCDSAsFasta();
+            let cdsContent = '';
+            const chromosomes = Object.keys(this.app.currentAnnotations);
+            const processedFeatures = new Set(); // Track processed features to avoid duplicates
+
+            chromosomes.forEach(chr => {
+                const sequence = this.app.currentSequence[chr];
+                const features = this.app.currentAnnotations[chr] || [];
+                
+                features.forEach(feature => {
+                    // Only process CDS features to avoid duplicates with gene features
+                    if (feature.type === 'CDS') {
+                        // Create unique identifier to avoid duplicates
+                        const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
+                        
+                        if (!processedFeatures.has(featureId)) {
+                            processedFeatures.add(featureId);
+                            
+                            const cdsSequence = this.app.exportManager.extractFeatureSequence(sequence, feature);
+                            const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+                            
+                            cdsContent += `>${header}\n`;
+                            
+                            // Split sequence into lines of 80 characters
+                            for (let i = 0; i < cdsSequence.length; i += 80) {
+                                cdsContent += cdsSequence.substring(i, i + 80) + '\n';
+                            }
+                        }
+                    }
+                });
+            });
+
+            if (!cdsContent) {
+                throw new Error('No CDS features found to export');
+            }
+            
+            // Check if filename is user-provided (not default value)
+            const isUserProvidedFilename = filename && 
+                filename.trim() && 
+                filename !== 'cds_sequences.fasta';
+            
+            if (isUserProvidedFilename) {
+                // Direct file export without dialog
+                await this.writeFileDirectly(cdsContent, filename, 'CDS FASTA');
+            } else {
+                // Use ExportManager to show file dialog with default filename
+                await this.app.exportManager.exportCDSAsFasta();
+            }
             
             // Count CDS features using correct data path
-            const chromosomes = Object.keys(this.app.currentAnnotations);
             const cdsCount = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.filter(f => f.type === 'CDS' || f.type === 'gene').length;
@@ -3134,6 +3256,7 @@ class ChatManager {
                 chromosomes: chromosomes,
                 total_cds_sequences: cdsCount,
                 include_gene_names: includeGeneNames,
+                export_method: isUserProvidedFilename ? 'direct' : 'dialog',
                 message: `Successfully exported ${cdsCount} CDS sequences as FASTA format`,
                 details: `Exported from ${chromosomes.length} chromosome(s)`
             };
@@ -3162,11 +3285,61 @@ class ChatManager {
         }
         
         try {
-            // Use the existing export manager method
-            await this.app.exportManager.exportProteinAsFasta();
+            let proteinContent = '';
+            const chromosomes = Object.keys(this.app.currentAnnotations);
+            const processedFeatures = new Set(); // Track processed features to avoid duplicates
+
+            chromosomes.forEach(chr => {
+                const sequence = this.app.currentSequence[chr];
+                const features = this.app.currentAnnotations[chr] || [];
+                
+                features.forEach(feature => {
+                    // Only process CDS features, skip gene features to avoid duplication
+                    if (feature.type === 'CDS') {
+                        // Create unique identifier to avoid duplicates
+                        const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
+                        
+                        if (!processedFeatures.has(featureId)) {
+                            processedFeatures.add(featureId);
+                            
+                            const cdsSequence = this.app.exportManager.extractFeatureSequence(sequence, feature);
+                            // ExtractFeatureSequence already handles reverse complement, so translate directly
+                            const proteinSequence = this.app.exportManager.translateDNA(cdsSequence);
+                            
+                            // Remove trailing asterisks (stop codons) from protein sequence
+                            const cleanProteinSequence = proteinSequence.replace(/\*+$/, '');
+                            
+                            const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+                            
+                            proteinContent += `>${header}\n`;
+                            
+                            // Split sequence into lines of 80 characters
+                            for (let i = 0; i < cleanProteinSequence.length; i += 80) {
+                                proteinContent += cleanProteinSequence.substring(i, i + 80) + '\n';
+                            }
+                        }
+                    }
+                });
+            });
+
+            if (!proteinContent) {
+                throw new Error('No protein-coding features found to export');
+            }
+            
+            // Check if filename is user-provided (not default value)
+            const isUserProvidedFilename = filename && 
+                filename.trim() && 
+                filename !== 'protein_sequences.fasta';
+            
+            if (isUserProvidedFilename) {
+                // Direct file export without dialog
+                await this.writeFileDirectly(proteinContent, filename, 'Protein FASTA');
+            } else {
+                // Use ExportManager to show file dialog with default filename
+                await this.app.exportManager.exportProteinAsFasta();
+            }
             
             // Count protein-coding features using correct data path
-            const chromosomes = Object.keys(this.app.currentAnnotations);
             const proteinCount = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.filter(f => {
@@ -3185,6 +3358,7 @@ class ChatManager {
                 total_protein_sequences: proteinCount,
                 translation_table: translationTable,
                 include_gene_names: includeGeneNames,
+                export_method: isUserProvidedFilename ? 'direct' : 'dialog',
                 message: `Successfully exported ${proteinCount} protein sequences as FASTA format`,
                 details: `Translated from CDS features using genetic code table ${translationTable}`
             };
@@ -3213,11 +3387,49 @@ class ChatManager {
         }
         
         try {
-            // Use the existing export manager method
-            await this.app.exportManager.exportAsGFF();
+            let gffContent = `##gff-version ${gffVersion}\n`;
+            const chromosomes = Object.keys(this.app.currentAnnotations);
+
+            chromosomes.forEach(chr => {
+                const features = this.app.currentAnnotations[chr] || [];
+                
+                features.forEach((feature, index) => {
+                    const id = feature.id || feature.name || `feature_${index + 1}`;
+                    const name = feature.name || id;
+                    const type = feature.type || 'misc_feature';
+                    const strand = feature.strand || '+';
+                    const score = feature.score || '.';
+                    const phase = feature.phase || '.';
+                    
+                    let attributes = `ID=${id}`;
+                    if (feature.name && feature.name !== id) {
+                        attributes += `;Name=${feature.name}`;
+                    }
+                    if (feature.product) {
+                        attributes += `;product=${feature.product}`;
+                    }
+                    if (feature.note) {
+                        attributes += `;Note=${feature.note}`;
+                    }
+                    
+                    gffContent += `${chr}\t.\t${type}\t${feature.start}\t${feature.end}\t${score}\t${strand}\t${phase}\t${attributes}\n`;
+                });
+            });
+            
+            // Check if filename is user-provided (not default value)
+            const isUserProvidedFilename = filename && 
+                filename.trim() && 
+                filename !== 'features.gff3';
+            
+            if (isUserProvidedFilename) {
+                // Direct file export without dialog
+                await this.writeFileDirectly(gffContent, filename, 'GFF annotations');
+            } else {
+                // Use ExportManager to show file dialog with default filename
+                await this.app.exportManager.exportAsGFF();
+            }
             
             // Count features using correct data path
-            const chromosomes = Object.keys(this.app.currentAnnotations);
             const featureCount = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.length;
@@ -3244,6 +3456,7 @@ class ChatManager {
                 feature_types: featureTypes,
                 gff_version: gffVersion,
                 include_sequences: includeSequences,
+                export_method: isUserProvidedFilename ? 'direct' : 'dialog',
                 message: `Successfully exported ${featureCount} features as GFF${gffVersion} format`,
                 details: `Feature types: ${featureTypes.join(', ')}`
             };
@@ -3272,11 +3485,36 @@ class ChatManager {
         }
         
         try {
-            // Use the existing export manager method
-            await this.app.exportManager.exportAsBED();
+            let bedContent = 'track name="Genome Features" description="Exported genome features"\n';
+            const chromosomes = Object.keys(this.app.currentAnnotations);
+
+            chromosomes.forEach(chr => {
+                const features = this.app.currentAnnotations[chr] || [];
+                
+                features.forEach(feature => {
+                    const name = feature.name || feature.id || 'feature';
+                    const score = feature.score || 1000;
+                    const strand = feature.strand || '+';
+                    
+                    // BED format: chrom, chromStart (0-based), chromEnd, name, score, strand
+                    bedContent += `${chr}\t${feature.start - 1}\t${feature.end}\t${name}\t${score}\t${strand}\n`;
+                });
+            });
+            
+            // Check if filename is user-provided (not default value)
+            const isUserProvidedFilename = filename && 
+                filename.trim() && 
+                filename !== 'features.bed';
+            
+            if (isUserProvidedFilename) {
+                // Direct file export without dialog
+                await this.writeFileDirectly(bedContent, filename, 'BED format');
+            } else {
+                // Use ExportManager to show file dialog with default filename
+                await this.app.exportManager.exportAsBED();
+            }
             
             // Count features using correct data path
-            const chromosomes = Object.keys(this.app.currentAnnotations);
             const featureCount = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.length;
@@ -3292,6 +3530,7 @@ class ChatManager {
                 total_features: featureCount,
                 include_score: includeScore,
                 include_strand: includeStrand,
+                export_method: isUserProvidedFilename ? 'direct' : 'dialog',
                 message: `Successfully exported ${featureCount} features as BED format`,
                 details: `Browser extensible data format from ${chromosomes.length} chromosome(s)`
             };
@@ -3330,8 +3569,34 @@ class ChatManager {
                 throw new Error('No chromosome selected for current view export');
             }
             
-            // Use the existing export manager method
-            await this.app.exportManager.exportCurrentViewAsFasta();
+            const sequence = this.app.currentSequence[currentChr];
+            if (!sequence) {
+                throw new Error(`Sequence not found for chromosome: ${currentChr}`);
+            }
+            
+            const viewSequence = sequence.substring(viewStart - 1, viewEnd);
+            const header = `${currentChr}:${viewStart}-${viewEnd}`;
+            
+            let fastaContent = `>${header}\n`;
+            
+            // Split sequence into lines of 80 characters
+            for (let i = 0; i < viewSequence.length; i += 80) {
+                fastaContent += viewSequence.substring(i, i + 80) + '\n';
+            }
+            
+            // Check if filename is user-provided (not default value) 
+            const defaultCurrentViewFilename = `${currentChr}_${viewStart}-${viewEnd}.fasta`;
+            const isUserProvidedFilename = filename && 
+                filename.trim() && 
+                filename !== defaultCurrentViewFilename;
+            
+            if (isUserProvidedFilename) {
+                // Direct file export without dialog
+                await this.writeFileDirectly(fastaContent, filename, 'Current view FASTA');
+            } else {
+                // Use ExportManager to show file dialog with default filename
+                await this.app.exportManager.exportCurrentViewAsFasta();
+            }
             
             const regionLength = viewEnd - viewStart + 1;
             const coordinates = `${currentChr}:${viewStart}-${viewEnd}`;
@@ -3348,12 +3613,101 @@ class ChatManager {
                 region_length: regionLength,
                 coordinates: coordinates,
                 include_coordinates: includeCoordinates,
+                export_method: isUserProvidedFilename ? 'direct' : 'dialog',
                 message: `Successfully exported current view as FASTA format`,
                 details: `Region: ${coordinates} (${regionLength.toLocaleString()} bp)`
             };
         } catch (error) {
             console.error('❌ [ChatManager] Current view FASTA export failed:', error);
             throw new Error(`Current view FASTA export failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Helper method to write file directly without showing dialog
+     * Uses Electron IPC for secure file system access
+     */
+    async writeFileDirectly(content, filename, formatType) {
+        try {
+            // Use Electron IPC for secure file operations
+            if (window.electronAPI && window.electronAPI.writeFile) {
+                // Primary method: Use Electron IPC
+                const result = await window.electronAPI.writeFile(filename, content);
+                
+                console.log(`✅ [ChatManager] File written via Electron IPC: ${result.filePath}`);
+                
+                // Show success notification
+                if (this.app && this.app.showNotification) {
+                    this.app.showNotification(
+                        `${formatType} exported successfully to: ${result.fileName}`,
+                        'success'
+                    );
+                }
+                
+                return {
+                    success: true,
+                    filePath: result.filePath,
+                    fileSize: content.length,
+                    method: 'ipc'
+                };
+                
+            } else {
+                // Fallback method: Direct Node.js access (if available)
+                const fs = require('fs').promises;
+                const path = require('path');
+                
+                // Ensure filename has proper extension if not provided
+                let finalFilename = filename;
+                if (!path.extname(finalFilename)) {
+                    const extensions = {
+                        'FASTA sequence': '.fasta',
+                        'GenBank format': '.gbk',
+                        'CDS FASTA': '.fasta',
+                        'Protein FASTA': '.fasta',
+                        'GFF annotations': '.gff3',
+                        'BED format': '.bed',
+                        'Current view FASTA': '.fasta'
+                    };
+                    const ext = extensions[formatType] || '.txt';
+                    finalFilename += ext;
+                }
+                
+                // Resolve to absolute path if relative path provided
+                const absolutePath = path.resolve(finalFilename);
+                
+                // Write file directly
+                await fs.writeFile(absolutePath, content, 'utf8');
+                
+                console.log(`✅ [ChatManager] File written directly: ${absolutePath}`);
+                
+                // Show success notification
+                if (this.app && this.app.showNotification) {
+                    this.app.showNotification(
+                        `${formatType} exported successfully to: ${path.basename(absolutePath)}`,
+                        'success'
+                    );
+                }
+                
+                return {
+                    success: true,
+                    filePath: absolutePath,
+                    fileSize: content.length,
+                    method: 'direct'
+                };
+            }
+            
+        } catch (error) {
+            console.error(`❌ [ChatManager] Direct file write failed:`, error);
+            
+            // Show error notification
+            if (this.app && this.app.showNotification) {
+                this.app.showNotification(
+                    `Failed to export ${formatType}: ${error.message}`,
+                    'error'
+                );
+            }
+            
+            throw new Error(`Failed to write file directly: ${error.message}`);
         }
     }
 
