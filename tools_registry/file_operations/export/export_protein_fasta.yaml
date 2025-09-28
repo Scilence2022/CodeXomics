@@ -1,0 +1,151 @@
+name: export_protein_fasta
+version: 1.0.0
+description: Export protein sequences translated from CDS in FASTA format
+category: file_operations
+subcategory: export
+keywords:
+  - export
+  - protein
+  - amino
+  - acid
+  - translation
+  - fasta
+  - cds
+priority: 3
+execution:
+  type: client
+  timeout: 30000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filename:
+      type: string
+      description: Output filename for the exported protein FASTA file
+      default: "proteins.fasta"
+      examples:
+        - "all_proteins.fasta"
+        - "selected_proteins.fasta"
+        - "chromosome_proteins.fasta"
+    genetic_code:
+      type: string
+      description: Genetic code table for translation
+      enum: ["standard", "vertebrate_mitochondrial", "yeast_mitochondrial", "mold_mitochondrial", "bacterial"]
+      default: "standard"
+    include_gene_names:
+      type: boolean
+      description: Include gene names in FASTA headers
+      default: true
+    include_locus_tags:
+      type: boolean
+      description: Include locus tags in FASTA headers
+      default: true
+    include_products:
+      type: boolean
+      description: Include product descriptions in FASTA headers
+      default: true
+    include_ec_numbers:
+      type: boolean
+      description: Include EC numbers in FASTA headers if available
+      default: true
+    selection_type:
+      type: string
+      description: Which proteins to export
+      enum: ["all", "selected", "current_view", "by_gene_name", "by_locus_tag", "by_function"]
+      default: "all"
+    gene_names:
+      type: array
+      description: Specific gene names to export (when selection_type is by_gene_name)
+      items:
+        type: string
+      examples:
+        - ["lacZ", "araA", "trpA"]
+        - ["gyrA", "rpoB"]
+    locus_tags:
+      type: array
+      description: Specific locus tags to export (when selection_type is by_locus_tag)
+      items:
+        type: string
+      examples:
+        - ["b0001", "b0002", "b0003"]
+        - ["EC_0001", "EC_0002"]
+    function_keywords:
+      type: array
+      description: Keywords to search in product descriptions (when selection_type is by_function)
+      items:
+        type: string
+      examples:
+        - ["kinase", "dehydrogenase"]
+        - ["transcriptional regulator"]
+    wrap_length:
+      type: integer
+      description: Number of characters per line (0 = no wrapping)
+      minimum: 0
+      maximum: 200
+      default: 80
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Export all proteins as FASTA
+    tool_call: export_protein_fasta(filename="all_proteins.fasta", selection_type="all", include_gene_names=true)
+    thought: User wants to export all protein sequences in FASTA format
+    expected_result: FASTA file containing all translated proteins with gene names
+  - user_query: Export proteins for specific genes
+    tool_call: export_protein_fasta(filename="selected_proteins.fasta", selection_type="by_gene_name", gene_names=["lacZ", "araA"])
+    thought: User wants protein sequences for specific genes
+    expected_result: FASTA file containing proteins for lacZ and araA genes
+  - user_query: Export kinase proteins
+    tool_call: export_protein_fasta(filename="kinases.fasta", selection_type="by_function", function_keywords=["kinase"])
+    thought: User wants proteins with kinase function
+    expected_result: FASTA file containing proteins with kinase in their description
+relationships:
+  depends_on: ["export_cds_fasta"]
+  conflicts_with: []
+  enhances: ["load_genome_file"]
+  alternatives: ["export_cds_fasta", "export_fasta_sequence"]
+  prerequisites: ["genome_data_loaded", "cds_annotations"]
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - export
+    - protein
+    - fasta
+    - translation
+    - dataExport
+  complexity: moderate
+  usage_pattern: common
+error_handling:
+  no_cds_found:
+    error: "No CDS sequences found for translation"
+    solution: "Load genome with CDS annotations"
+    retry: false
+  translation_failed:
+    error: "Failed to translate CDS to protein"
+    solution: "Check genetic code and CDS sequence validity"
+    retry: true
+  export_failed:
+    error: "Failed to export protein FASTA file"
+    solution: "Check file permissions and disk space"
+    retry: true
+returns:
+  success: "boolean - Whether export was successful"
+  result: "object - Export results including:
+    - filename: string - Name of exported file
+    - proteinCount: number - Number of protein sequences exported
+    - totalLength: number - Total length of all protein sequences
+    - fileSize: number - Size of exported file in bytes
+    - geneticCode: string - Genetic code used for translation
+    - selectionType: string - Type of selection used"
+  error: "string - Error message if success is false"
+  error_type: "string - Type of error for proper handling"

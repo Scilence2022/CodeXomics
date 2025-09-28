@@ -1,0 +1,110 @@
+name: export_fasta_sequence
+version: 1.0.0
+description: Export sequences in FASTA format
+category: file_operations
+subcategory: export
+keywords:
+  - export
+  - fasta
+  - sequence
+  - file
+  - download
+priority: 3
+execution:
+  type: client
+  timeout: 30000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filename:
+      type: string
+      description: Output filename for the exported FASTA file
+      default: "sequences.fasta"
+      examples:
+        - "genome_sequences.fasta"
+        - "selected_genes.fasta"
+        - "chromosome_1.fasta"
+    format:
+      type: string
+      description: FASTA format variant
+      enum: ["standard", "wrapped", "single_line"]
+      default: "standard"
+    include_description:
+      type: boolean
+      description: Include sequence descriptions in FASTA headers
+      default: true
+    sequence_type:
+      type: string
+      description: Type of sequences to export
+      enum: ["all", "genes", "cds", "selected", "current_view"]
+      default: "all"
+    wrap_length:
+      type: integer
+      description: Number of characters per line (0 = no wrapping)
+      minimum: 0
+      maximum: 200
+      default: 80
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Export all sequences as FASTA
+    tool_call: export_fasta_sequence(filename="genome.fasta", sequence_type="all", include_description=true)
+    thought: User wants to export all sequences in FASTA format
+    expected_result: FASTA file containing all sequences with descriptions
+  - user_query: Export current view as FASTA file
+    tool_call: export_fasta_sequence(filename="current_view.fasta", sequence_type="current_view", wrap_length=80)
+    thought: User wants to export currently visible sequences as FASTA
+    expected_result: FASTA file containing sequences from current view
+  - user_query: Export selected genes to FASTA format
+    tool_call: export_fasta_sequence(filename="selected_genes.fasta", sequence_type="selected", format="standard")
+    thought: User wants to export selected gene sequences as FASTA
+    expected_result: FASTA file containing selected gene sequences
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["load_genome_file"]
+  alternatives: ["export_genbank_format", "export_cds_fasta"]
+  prerequisites: ["genome_data_loaded"]
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - export
+    - fasta
+    - dataExport
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  no_sequences:
+    error: "No sequences available for export"
+    solution: "Load genome data first or select sequences to export"
+    retry: false
+  export_failed:
+    error: "Failed to export FASTA file"
+    solution: "Check file permissions and disk space"
+    retry: true
+  invalid_format:
+    error: "Invalid FASTA format specified"
+    solution: "Use one of: standard, wrapped, single_line"
+    retry: true
+returns:
+  success: "boolean - Whether export was successful"
+  result: "object - Export results including:
+    - filename: string - Name of exported file
+    - sequenceCount: number - Number of sequences exported
+    - fileSize: number - Size of exported file in bytes
+    - exportType: string - Type of sequences exported
+    - format: string - FASTA format used"
+  error: "string - Error message if success is false"
+  error_type: "string - Type of error for proper handling"

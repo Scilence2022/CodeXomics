@@ -1,0 +1,143 @@
+name: export_current_view_fasta
+version: 1.0.0
+description: Export sequences from the current genome view in FASTA format
+category: file_operations
+subcategory: export
+keywords:
+  - export
+  - current
+  - view
+  - fasta
+  - visible
+  - region
+priority: 3
+execution:
+  type: client
+  timeout: 30000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filename:
+      type: string
+      description: Output filename for the exported FASTA file
+      default: "current_view.fasta"
+      examples:
+        - "visible_region.fasta"
+        - "current_chromosome.fasta"
+        - "view_sequences.fasta"
+    sequence_type:
+      type: string
+      description: Type of sequences to export from current view
+      enum: ["all", "genes", "cds", "intergenic", "features_only", "background_only"]
+      default: "all"
+    include_coordinates:
+      type: boolean
+      description: Include genome coordinates in FASTA headers
+      default: true
+    include_strand:
+      type: boolean
+      description: Include strand information in FASTA headers
+      default: true
+    include_features:
+      type: boolean
+      description: Include feature annotations in FASTA headers
+      default: true
+    coordinate_format:
+      type: string
+      description: Format for coordinate display
+      enum: ["1_based", "0_based", "range"]
+      default: "1_based"
+    feature_types:
+      type: array
+      description: Specific feature types to include (when sequence_type is features_only)
+      items:
+        type: string
+        enum: ["gene", "CDS", "tRNA", "rRNA", "misc_feature", "regulatory"]
+      default: ["gene", "CDS"]
+    wrap_length:
+      type: integer
+      description: Number of characters per line (0 = no wrapping)
+      minimum: 0
+      maximum: 200
+      default: 80
+    extend_region:
+      type: integer
+      description: Extend view region by this many bases on each side
+      minimum: 0
+      default: 0
+    minimum_length:
+      type: integer
+      description: Minimum sequence length to include
+      minimum: 1
+      default: 1
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Export current view as FASTA
+    tool_call: export_current_view_fasta(filename="current_view.fasta", sequence_type="all", include_coordinates=true)
+    thought: User wants to export all sequences from the current genome view
+    expected_result: FASTA file containing sequences from current view with coordinates
+  - user_query: Export genes in current view
+    tool_call: export_current_view_fasta(filename="current_genes.fasta", sequence_type="genes", include_features=true)
+    thought: User wants gene sequences from current view with feature information
+    expected_result: FASTA file containing gene sequences from current view
+  - user_query: Export current view with extended region
+    tool_call: export_current_view_fasta(filename="extended_view.fasta", extend_region=1000, include_coordinates=true)
+    thought: User wants current view extended by 1000 bp on each side
+    expected_result: FASTA file with extended region sequences and coordinates
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["load_genome_file", "navigation_tools"]
+  alternatives: ["export_fasta_sequence", "export_cds_fasta"]
+  prerequisites: ["genome_data_loaded", "current_view_available"]
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - export
+    - current_view
+    - fasta
+    - dataExport
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  no_current_view:
+    error: "No current view available"
+    solution: "Navigate to a genome region first"
+    retry: false
+  empty_view:
+    error: "Current view is empty or contains no sequences"
+    solution: "Navigate to a region with sequence data"
+    retry: false
+  export_failed:
+    error: "Failed to export current view FASTA file"
+    solution: "Check file permissions and disk space"
+    retry: true
+  invalid_coordinates:
+    error: "Invalid view coordinates"
+    solution: "Ensure current view has valid genome coordinates"
+    retry: false
+returns:
+  success: "boolean - Whether export was successful"
+  result: "object - Export results including:
+    - filename: string - Name of exported file
+    - sequenceCount: number - Number of sequences exported
+    - viewCoordinates: object - Current view coordinates (start, end, chromosome)
+    - totalLength: number - Total length of exported sequences
+    - fileSize: number - Size of exported file in bytes
+    - sequenceType: string - Type of sequences exported
+    - extendedRegion: number - Extension applied to view region"
+  error: "string - Error message if success is false"
+  error_type: "string - Type of error for proper handling"

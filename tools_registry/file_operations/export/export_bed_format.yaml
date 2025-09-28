@@ -1,0 +1,162 @@
+name: export_bed_format
+version: 1.0.0
+description: Export genome features in BED format for visualization and analysis
+category: file_operations
+subcategory: export
+keywords:
+  - export
+  - bed
+  - format
+  - features
+  - coordinates
+  - visualization
+priority: 3
+execution:
+  type: client
+  timeout: 30000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filename:
+      type: string
+      description: Output filename for the exported BED file
+      default: "features.bed"
+      examples:
+        - "genes.bed"
+        - "selected_features.bed"
+        - "chromosome_1.bed"
+    bed_format:
+      type: string
+      description: BED format variant
+      enum: ["bed3", "bed6", "bed9", "bed12"]
+      default: "bed6"
+    feature_types:
+      type: array
+      description: Types of features to include
+      items:
+        type: string
+        enum: ["gene", "CDS", "exon", "tRNA", "rRNA", "misc_feature", "regulatory", "repeat_region", "all"]
+      default: ["gene"]
+    export_range:
+      type: string
+      description: Range of genome to export
+      enum: ["all", "current_view", "selected_features", "custom_range", "by_chromosome"]
+      default: "all"
+    chromosome:
+      type: string
+      description: Specific chromosome to export (when export_range is by_chromosome)
+      examples:
+        - "chromosome"
+        - "chr1"
+        - "U00096"
+    start_position:
+      type: integer
+      description: Start position for custom range export
+      minimum: 1
+    end_position:
+      type: integer
+      description: End position for custom range export
+      minimum: 1
+    include_strand:
+      type: boolean
+      description: Include strand information (for bed6+ formats)
+      default: true
+    include_scores:
+      type: boolean
+      description: Include feature scores (for bed6+ formats)
+      default: false
+    score_method:
+      type: string
+      description: Method to calculate feature scores
+      enum: ["length", "expression", "conservation", "fixed"]
+      default: "length"
+    fixed_score:
+      type: integer
+      description: Fixed score value (when score_method is fixed)
+      minimum: 0
+      maximum: 1000
+      default: 500
+    color_scheme:
+      type: string
+      description: Color scheme for features (for bed9+ formats)
+      enum: ["default", "by_type", "by_strand", "custom"]
+      default: "by_type"
+    track_name:
+      type: string
+      description: Track name for BED header
+      default: "Genome Features"
+    track_description:
+      type: string
+      description: Track description for BED header
+      default: "Exported genome features"
+    sort_by:
+      type: string
+      description: Sort features by position or name
+      enum: ["position", "name", "none"]
+      default: "position"
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Export genes as BED format
+    tool_call: export_bed_format(filename="genes.bed", feature_types=["gene"], bed_format="bed6", include_strand=true)
+    thought: User wants to export gene features in BED6 format
+    expected_result: BED file containing gene coordinates with strand information
+  - user_query: Export all features as BED12
+    tool_call: export_bed_format(filename="all_features.bed", feature_types=["all"], bed_format="bed12", color_scheme="by_type")
+    thought: User wants comprehensive BED export with all features
+    expected_result: BED12 file with all features colored by type
+  - user_query: Export current view as BED
+    tool_call: export_bed_format(filename="current_view.bed", export_range="current_view", bed_format="bed6")
+    thought: User wants BED export of currently visible region
+    expected_result: BED file containing features from current view
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["load_genome_file"]
+  alternatives: ["export_gff_annotations", "export_genbank_format"]
+  prerequisites: ["genome_data_loaded", "annotations_available"]
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - export
+    - bed
+    - visualization
+    - dataExport
+  complexity: simple
+  usage_pattern: common
+error_handling:
+  no_features:
+    error: "No features available for export"
+    solution: "Load genome file with annotations"
+    retry: false
+  invalid_format:
+    error: "Invalid BED format specified"
+    solution: "Use one of: bed3, bed6, bed9, bed12"
+    retry: true
+  export_failed:
+    error: "Failed to export BED file"
+    solution: "Check file permissions and disk space"
+    retry: true
+returns:
+  success: "boolean - Whether export was successful"
+  result: "object - Export results including:
+    - filename: string - Name of exported file
+    - featureCount: number - Number of features exported
+    - bedFormat: string - BED format version used
+    - fileSize: number - Size of exported file in bytes
+    - trackName: string - Track name used
+    - exportRange: string - Range of genome exported"
+  error: "string - Error message if success is false"
+  error_type: "string - Type of error for proper handling"

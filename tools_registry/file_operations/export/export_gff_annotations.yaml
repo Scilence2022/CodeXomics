@@ -1,0 +1,141 @@
+name: export_gff_annotations
+version: 1.0.0
+description: Export genome annotations in GFF3 format
+category: file_operations
+subcategory: export
+keywords:
+  - export
+  - gff
+  - gff3
+  - annotation
+  - features
+  - format
+priority: 3
+execution:
+  type: client
+  timeout: 30000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filename:
+      type: string
+      description: Output filename for the exported GFF file
+      default: "annotations.gff3"
+      examples:
+        - "genome_annotations.gff3"
+        - "selected_features.gff3"
+        - "chromosome_1.gff3"
+    gff_version:
+      type: string
+      description: GFF format version
+      enum: ["gff3", "gtf"]
+      default: "gff3"
+    feature_types:
+      type: array
+      description: Types of features to include
+      items:
+        type: string
+        enum: ["gene", "CDS", "exon", "tRNA", "rRNA", "misc_feature", "regulatory", "repeat_region", "all"]
+      default: ["all"]
+    include_sequences:
+      type: boolean
+      description: Include FASTA sequences at the end of GFF file
+      default: false
+    export_range:
+      type: string
+      description: Range of genome to export
+      enum: ["all", "current_view", "selected_features", "custom_range", "by_chromosome"]
+      default: "all"
+    chromosome:
+      type: string
+      description: Specific chromosome to export (when export_range is by_chromosome)
+      examples:
+        - "chromosome"
+        - "chr1"
+        - "U00096"
+    start_position:
+      type: integer
+      description: Start position for custom range export
+      minimum: 1
+    end_position:
+      type: integer
+      description: End position for custom range export
+      minimum: 1
+    include_attributes:
+      type: array
+      description: Specific attributes to include in GFF output
+      items:
+        type: string
+        enum: ["ID", "Name", "gene", "locus_tag", "product", "protein_id", "db_xref", "ec_number", "all"]
+      default: ["all"]
+    sort_by:
+      type: string
+      description: Sort features by position or type
+      enum: ["position", "type", "none"]
+      default: "position"
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Export all annotations as GFF3
+    tool_call: export_gff_annotations(filename="genome.gff3", feature_types=["all"], include_sequences=false)
+    thought: User wants to export all genome annotations in GFF3 format
+    expected_result: GFF3 file containing all genome features and annotations
+  - user_query: Export genes and CDS as GFF
+    tool_call: export_gff_annotations(filename="genes.gff3", feature_types=["gene", "CDS"], sort_by="position")
+    thought: User wants only gene and CDS features in GFF format
+    expected_result: GFF3 file with gene and CDS features sorted by position
+  - user_query: Export current view annotations
+    tool_call: export_gff_annotations(filename="current_view.gff3", export_range="current_view", include_sequences=true)
+    thought: User wants annotations from current view with sequences
+    expected_result: GFF3 file containing features from current view with FASTA sequences
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["load_genome_file"]
+  alternatives: ["export_genbank_format", "export_bed_format"]
+  prerequisites: ["genome_data_loaded", "annotations_available"]
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - export
+    - gff
+    - annotation
+    - dataExport
+  complexity: moderate
+  usage_pattern: common
+error_handling:
+  no_annotations:
+    error: "No annotations available for export"
+    solution: "Load genome file with annotations"
+    retry: false
+  invalid_range:
+    error: "Invalid export range specified"
+    solution: "Check start and end positions are valid"
+    retry: true
+  export_failed:
+    error: "Failed to export GFF file"
+    solution: "Check file permissions and disk space"
+    retry: true
+returns:
+  success: "boolean - Whether export was successful"
+  result: "object - Export results including:
+    - filename: string - Name of exported file
+    - featureCount: number - Number of features exported
+    - featureTypes: array - Types of features included
+    - fileSize: number - Size of exported file in bytes
+    - gffVersion: string - GFF format version used
+    - exportRange: string - Range of genome exported"
+  error: "string - Error message if success is false"
+  error_type: "string - Type of error for proper handling"

@@ -1,0 +1,118 @@
+name: export_genbank_format
+version: 1.0.0
+description: Export genome data in GenBank format
+category: file_operations
+subcategory: export
+keywords:
+  - export
+  - genbank
+  - gbk
+  - format
+  - annotation
+priority: 3
+execution:
+  type: client
+  timeout: 45000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    filename:
+      type: string
+      description: Output filename for the exported GenBank file
+      default: "genome.gbk"
+      examples:
+        - "annotated_genome.gbk"
+        - "chromosome_1.gbk"
+        - "selected_region.gbk"
+    include_features:
+      type: boolean
+      description: Include feature annotations in GenBank format
+      default: true
+    include_sequence:
+      type: boolean
+      description: Include DNA sequence in GenBank format
+      default: true
+    feature_types:
+      type: array
+      description: Types of features to include
+      items:
+        type: string
+        enum: ["gene", "CDS", "tRNA", "rRNA", "misc_feature", "regulatory", "all"]
+      default: ["all"]
+    export_range:
+      type: string
+      description: Range of genome to export
+      enum: ["all", "current_view", "selected_features", "custom_range"]
+      default: "all"
+    start_position:
+      type: integer
+      description: Start position for custom range export
+      minimum: 1
+    end_position:
+      type: integer
+      description: End position for custom range export
+      minimum: 1
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Export genome as GenBank format
+    tool_call: export_genbank_format(filename="genome.gbk", include_features=true, include_sequence=true)
+    thought: User wants to export complete genome in GenBank format
+    expected_result: GenBank file with features and sequence
+  - user_query: Export current view as GenBank
+    tool_call: export_genbank_format(filename="current_view.gbk", export_range="current_view", include_features=true)
+    thought: User wants to export currently visible region as GenBank
+    expected_result: GenBank file containing current view region
+  - user_query: Export genes only in GenBank format
+    tool_call: export_genbank_format(filename="genes.gbk", feature_types=["gene", "CDS"], include_sequence=true)
+    thought: User wants GenBank export with only gene features
+    expected_result: GenBank file containing gene and CDS features
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["load_genome_file"]
+  alternatives: ["export_fasta_sequence", "export_gff_annotations"]
+  prerequisites: ["genome_data_loaded"]
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - export
+    - genbank
+    - dataExport
+  complexity: moderate
+  usage_pattern: common
+error_handling:
+  no_data:
+    error: "No genome data available for export"
+    solution: "Load genome file first"
+    retry: false
+  export_failed:
+    error: "Failed to export GenBank file"
+    solution: "Check file permissions and available disk space"
+    retry: true
+  invalid_range:
+    error: "Invalid export range specified"
+    solution: "Check start and end positions are valid"
+    retry: true
+returns:
+  success: "boolean - Whether export was successful"
+  result: "object - Export results including:
+    - filename: string - Name of exported file
+    - featureCount: number - Number of features exported
+    - sequenceLength: number - Length of exported sequence
+    - fileSize: number - Size of exported file in bytes
+    - exportRange: string - Range of genome exported"
+  error: "string - Error message if success is false"
+  error_type: "string - Type of error for proper handling"
