@@ -1,0 +1,100 @@
+name: zoom_out
+version: 1.0.0
+description: Zoom out the current view by a specified factor to see broader genomic context
+category: navigation
+subcategory: view_control
+keywords:
+  - zoom
+  - zoom out
+  - reduce
+  - shrink
+  - overview
+  - scale
+  - view
+  - context
+  - wide view
+priority: 2
+execution:
+  type: client
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    factor:
+      type: number
+      description: Zoom factor to apply (default 2x, maximum 10x)
+      default: 2
+      minimum: 1.1
+      maximum: 10
+      examples:
+        - 2
+        - 3
+        - 5
+        - 10
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: zoom out 2x
+    tool_call: zoom_out(factor=2)
+    thought: User wants to zoom out by 2x for broader view
+    expected_result: View is zoomed out by 2x showing more context
+  - user_query: zoom out to see more context
+    tool_call: zoom_out(factor=3)
+    thought: User wants broader context view
+    expected_result: View is zoomed out by 3x for wider context
+  - user_query: reduce the zoom level
+    tool_call: zoom_out(factor=2)
+    thought: User wants to reduce zoom using default factor
+    expected_result: View is zoomed out by default 2x factor
+  - user_query: show me the bigger picture
+    tool_call: zoom_out(factor=5)
+    thought: User wants much broader view of the genomic region
+    expected_result: View is zoomed out by 5x for overview perspective
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["navigate_to_position", "jump_to_gene"]
+  alternatives: ["zoom_in"]
+  prerequisites: ["genome_data_loaded"]
+  follow_up: ["zoom_in"]
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - navigation
+    - view_control
+    - zoom
+    - overview
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  no_data:
+    error: "No genome data loaded for zooming"
+    solution: "Load genome data first before zooming"
+    retry: false
+  invalid_factor:
+    error: "Invalid zoom factor specified"
+    solution: "Use zoom factor between 1.1 and 10"
+    retry: true
+  zoom_limit:
+    error: "Cannot zoom beyond minimum resolution"
+    solution: "Current zoom level is at maximum overview"
+    retry: false
+returns:
+  success: "boolean - Whether zoom operation was successful"
+  result: "object - Zoom operation results including:
+    - factor: number - Applied zoom factor
+    - newRange: object - New view range after zoom
+    - oldRange: object - Previous view range
+    - currentPosition: object - Current position after zoom"
+  error: "string - Error message if success is false"
+  error_type: "string - Type of error for proper handling"

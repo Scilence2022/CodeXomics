@@ -247,7 +247,7 @@ class ToolsRegistryManager {
     }
 
     /**
-     * Analyze user intent from query with enhanced file loading detection
+     * Analyze user intent from query with enhanced file loading detection and multi-step support
      */
     async analyzeUserIntent(userQuery) {
         const query = userQuery.toLowerCase();
@@ -272,6 +272,7 @@ class ToolsRegistryManager {
                 'save fasta', 'save genbank', 'download sequences', 'extract data'
             ],
             navigation: ['navigate', 'go to', 'jump', 'position', 'location', 'move', 'go', 'navigate to'],
+            zoom: ['zoom', 'zoom in', 'zoom out', 'magnify', 'scale', 'focus', 'enlarge', 'reduce', 'view', 'detail', 'context'],
             search: ['search', 'find', 'look for', 'query', 'locate'],
             analysis: ['analyze', 'calculate', 'compute', 'measure', 'count', 'analysis'],
             sequence: ['sequence', 'dna', 'rna', 'protein', 'amino acid'],
@@ -375,19 +376,33 @@ class ToolsRegistryManager {
         
         // Extract query keywords for direct matching
         const queryKeywords = intent.query.toLowerCase().split(/\s+/).filter(word => 
-            word.length > 2 && !['the', 'and', 'or', 'of', 'in', 'to', 'for', 'with', 'by'].includes(word)
+            word.length > 2 && !['the', 'and', 'or', 'of', 'in', 'to', 'for', 'with', 'by', 'step'].includes(word)
         );
         console.log('🔍 [Dynamic Tools] Query keywords:', queryKeywords);
         
-        // Filter by intent
-        const intentKeywords = this.getIntentKeywords(intent.primary);
-        console.log('🔍 [Dynamic Tools] Intent keywords:', intentKeywords);
+        // Get intent keywords for ALL detected intents, not just primary
+        const allIntentKeywords = new Set();
+        
+        // Add primary intent keywords
+        const primaryIntentKeywords = this.getIntentKeywords(intent.primary);
+        primaryIntentKeywords.forEach(keyword => allIntentKeywords.add(keyword));
+        console.log('🔍 [Dynamic Tools] Primary intent keywords:', primaryIntentKeywords);
+        
+        // Add keywords from all detected intents
+        for (const detectedIntent of intent.all) {
+            const intentKeywords = this.getIntentKeywords(detectedIntent.intent);
+            intentKeywords.forEach(keyword => allIntentKeywords.add(keyword));
+            console.log('🔍 [Dynamic Tools] Added keywords for intent:', detectedIntent.intent, 'keywords:', intentKeywords);
+        }
+        
+        const combinedIntentKeywords = Array.from(allIntentKeywords);
+        console.log('🔍 [Dynamic Tools] Combined intent keywords:', combinedIntentKeywords);
         
         const intentFiltered = allTools.filter(tool => {
             const toolKeywords = tool.keywords || [];
             
-            // Check intent keyword matches
-            const intentMatches = intentKeywords.some(keyword => 
+            // Check intent keyword matches (using combined keywords from all intents)
+            const intentMatches = combinedIntentKeywords.some(keyword => 
                 toolKeywords.some(toolKeyword => 
                     toolKeyword.toLowerCase().includes(keyword.toLowerCase())
                 )
@@ -402,7 +417,7 @@ class ToolsRegistryManager {
             
             const matches = intentMatches || queryMatches;
             if (matches) {
-                console.log('🔍 [Dynamic Tools] Tool matched by intent:', tool.name, 'keywords:', toolKeywords, 'query matches:', queryMatches);
+                console.log('🔍 [Dynamic Tools] Tool matched by intent:', tool.name, 'keywords:', toolKeywords, 'query matches:', queryMatches, 'intent matches:', intentMatches);
             }
             return matches;
         });
@@ -444,7 +459,12 @@ class ToolsRegistryManager {
                 'export', 'save', 'download', 'write', 'output', 'extract', 'convert',
                 'fasta', 'genbank', 'gff', 'bed', 'protein', 'sequences', 'annotations'
             ],
-            navigation: ['navigate', 'position', 'location', 'jump', 'go', 'go to', 'navigate to', 'coordinates'],
+            navigation: [
+                'navigate', 'position', 'location', 'jump', 'go', 'go to', 'navigate to', 'coordinates'
+            ],
+            zoom: [
+                'zoom', 'zoom in', 'zoom out', 'magnify', 'scale', 'focus', 'enlarge', 'reduce', 'view', 'detail', 'context'
+            ],
             search: ['search', 'find', 'query', 'lookup'],
             analysis: ['analyze', 'calculate', 'compute', 'measure'],
             sequence: ['sequence', 'dna', 'rna', 'protein'],
@@ -483,14 +503,29 @@ class ToolsRegistryManager {
             ).length;
             score += queryMatches * 25; // Higher weight for direct query matches
 
-            // Intent matching score
-            const intentKeywords = this.getIntentKeywords(intent.primary);
-            const keywordMatches = intentKeywords.filter(keyword =>
+            // Intent matching score - check against all detected intents
+            let totalIntentScore = 0;
+            const primaryIntentKeywords = this.getIntentKeywords(intent.primary);
+            const primaryMatches = primaryIntentKeywords.filter(keyword =>
                 toolKeywords.some(toolKeyword =>
                     toolKeyword.toLowerCase().includes(keyword.toLowerCase())
                 )
             ).length;
-            score += keywordMatches * 15;
+            totalIntentScore += primaryMatches * 15; // Primary intent gets full weight
+            
+            // Add scoring for all detected intents
+            for (const detectedIntent of intent.all) {
+                if (detectedIntent.intent !== intent.primary) {
+                    const intentKeywords = this.getIntentKeywords(detectedIntent.intent);
+                    const matches = intentKeywords.filter(keyword =>
+                        toolKeywords.some(toolKeyword =>
+                            toolKeyword.toLowerCase().includes(keyword.toLowerCase())
+                        )
+                    ).length;
+                    totalIntentScore += matches * 10 * detectedIntent.confidence; // Secondary intents weighted by confidence
+                }
+            }
+            score += totalIntentScore;
 
             // Special handling for file loading tools with high priority scoring
             if (tool.category === 'file_loading' && intent.primary === 'file_loading') {
@@ -536,6 +571,15 @@ class ToolsRegistryManager {
                 }
             }
 
+            
+            // Special bonus for zoom tools when zoom keywords are detected
+            if ((tool.name === 'zoom_in' || tool.name === 'zoom_out') && 
+                (intent.query.toLowerCase().includes('zoom') || 
+                 intent.query.toLowerCase().includes('magnify') || 
+                 intent.query.toLowerCase().includes('scale'))) {
+                score += 80; // High bonus for zoom tools with zoom keywords
+                console.log('🔍 [Dynamic Tools] Zoom tool bonus applied:', tool.name);
+            }
             
             // Special bonus for navigation tools when position patterns are detected
             if (tool.category === 'navigation' && (intent.query.match(/\d+-\d+/) || intent.query.match(/\d+:\d+/))) {
