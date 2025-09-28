@@ -1591,8 +1591,14 @@ class LLMBenchmarkFramework {
             // Extract DNA sequence
             const seqMatch = response.match(/(?:sequence|dna|translate).*?["']?([ATCGN]+)["']?/i);
             if (seqMatch) {
-                parameters.sequence = seqMatch[1];
+                parameters.dna = seqMatch[1];  // Use 'dna' parameter name
                 console.log('🎯 [extractParametersFromResponse] Found DNA sequence for translation:', seqMatch[1]);
+            }
+            // Look for reading frame
+            const frameMatch = response.match(/(?:frame|reading).*?(\d+)/i);
+            if (frameMatch) {
+                parameters.frame = parseInt(frameMatch[1]);
+                console.log('🎯 [extractParametersFromResponse] Found reading frame:', parameters.frame);
             }
         }
         
@@ -1757,14 +1763,17 @@ class LLMBenchmarkFramework {
                     'nucleotide composition',
                     'base composition'
                 ],
-                'reverse_complement': [
-                    'reverse complement',
-                    'complementary sequence',
-                    'reversed sequence',
-                    'complement sequence',
-                    'dna complement',
-                    'reverse strand'
-                ]
+                'translate_dna': [
+                    'dna sequence.*translates',
+                    'protein sequence',
+                    'amino acid sequence',
+                    'translation',
+                    'methionine.*arginine.*serine',
+                    'start codon.*stop codon',
+                    'reading frame',
+                    'genetic code',
+                    'codon'
+                ],
             };
             
             const patterns = toolPatterns[toolName];

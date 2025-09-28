@@ -204,7 +204,7 @@ class AutomaticSimpleSuite {
                 expectedResult: {
                     tool_name: 'translate_dna',
                     parameters: {
-                        sequence: 'ATGCGATCGTAGC'
+                        dna: 'ATGCGATCGTAGC'  // FIXED: Use 'dna' parameter name instead of 'sequence'
                     }
                 },
                 maxScore: 5,
