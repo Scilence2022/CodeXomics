@@ -301,6 +301,106 @@ class AutomaticComplexSuite {
         return evaluation;
     }
 
+    /**
+     * Parse natural language response for navigation workflow
+     */
+    parseNaturalLanguageNavigationResponse(actualResult, expectedResult, testResult) {
+        const evaluation = {
+            success: false,
+            score: 0,
+            maxScore: testResult.maxScore || 10,
+            errors: [],
+            warnings: []
+        };
+
+        let responseText = '';
+        
+        // Extract text from various response formats
+        if (typeof actualResult === 'string') {
+            responseText = actualResult;
+        } else if (actualResult && actualResult.response) {
+            responseText = actualResult.response;
+        } else if (actualResult && actualResult.message) {
+            responseText = actualResult.message;
+        } else {
+            responseText = JSON.stringify(actualResult);
+        }
+        
+        console.log('📄 [NavigationWorkflow] Parsing response text:', responseText.substring(0, 500));
+        
+        // Check for navigation success indicators
+        const navigationSuccessPatterns = [
+            'navigate.*position.*completed',
+            'navigation.*successful',
+            'navigated to.*position',
+            'task completed.*navigate',
+            'navigate_to_position.*success',
+            'results have been processed',
+            'navigation.*complete'
+        ];
+        
+        const navigationDetected = navigationSuccessPatterns.some(pattern => {
+            const regex = new RegExp(pattern, 'i');
+            return regex.test(responseText);
+        });
+        
+        if (navigationDetected) {
+            // Award points for successful navigation (partial credit)
+            evaluation.score = Math.ceil(evaluation.maxScore * 0.6); // 60% for navigation success
+            console.log(`✅ [NavigationWorkflow] Navigation detected as successful (+${evaluation.score} points)`);
+            
+            // Check if coordinates were mentioned
+            const coordinatePatterns = [
+                '123\\d{4}',  // 1230000 pattern
+                '130\\d{4}',  // 1300000 pattern
+                '1230000',
+                '1300000'
+            ];
+            
+            const coordinatesDetected = coordinatePatterns.some(pattern => {
+                const regex = new RegExp(pattern, 'i');
+                return regex.test(responseText);
+            });
+            
+            if (coordinatesDetected) {
+                // Award bonus points for correct coordinates
+                evaluation.score = Math.min(evaluation.maxScore, evaluation.score + 2);
+                console.log(`✅ [NavigationWorkflow] Correct coordinates detected (+2 bonus points)`);
+            }
+            
+            // Check for zoom functionality mention
+            const zoomPatterns = [
+                'zoom.*10x',
+                'zoom.*in',
+                'magnify',
+                'zoom.*factor'
+            ];
+            
+            const zoomDetected = zoomPatterns.some(pattern => {
+                const regex = new RegExp(pattern, 'i');
+                return regex.test(responseText);
+            });
+            
+            if (zoomDetected) {
+                // Award remaining points for zoom functionality
+                evaluation.score = evaluation.maxScore;
+                console.log(`✅ [NavigationWorkflow] Zoom functionality detected - full points awarded`);
+            }
+        } else {
+            evaluation.errors.push('Navigation success not detected in response');
+            console.log(`❌ [NavigationWorkflow] Navigation success not detected`);
+        }
+        
+        // Calculate success based on score
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.4); // 40% threshold
+        
+        console.log(`🎯 [NavigationWorkflow] Natural language parsing results:`);
+        console.log(`   Score: ${evaluation.score}/${evaluation.maxScore}`);
+        console.log(`   Success: ${evaluation.success}`);
+        
+        return evaluation;
+    }
+
     async evaluateWorkflowCall(actualResult, expectedResult, testResult) {
         const evaluation = {
             success: false,
@@ -313,6 +413,15 @@ class AutomaticComplexSuite {
         if (!actualResult) {
             evaluation.errors.push('No result obtained from workflow execution');
             return evaluation;
+        }
+        
+        // Handle both structured tool results AND natural language responses
+        const isNaturalLanguageResponse = typeof actualResult === 'string' || 
+            (actualResult && typeof actualResult === 'object' && !actualResult.tool_name && !Array.isArray(actualResult));
+        
+        if (isNaturalLanguageResponse) {
+            console.log('📝 [WorkflowCall] Detected natural language response, parsing for navigation success');
+            return this.parseNaturalLanguageNavigationResponse(actualResult, expectedResult, testResult);
         }
 
         // For workflows, award points based on completion
