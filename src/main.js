@@ -2422,6 +2422,39 @@ ipcMain.handle('show-save-dialog', async (event, options) => {
   }
 });
 
+// Handle direct file write requests
+ipcMain.handle('write-file', async (event, filePath, content) => {
+  try {
+    const path = require('path');
+    
+    // Ensure directory exists
+    const directory = path.dirname(filePath);
+    if (!fs.existsSync(directory)) {
+      fs.mkdirSync(directory, { recursive: true });
+    }
+    
+    // Write the file
+    fs.writeFileSync(filePath, content, 'utf8');
+    
+    // Verify file was written
+    if (fs.existsSync(filePath)) {
+      const stats = fs.statSync(filePath);
+      console.log(`✅ File written successfully: ${filePath} (${stats.size} bytes)`);
+      return {
+        success: true,
+        filePath: filePath,
+        fileName: path.basename(filePath),
+        fileSize: stats.size
+      };
+    } else {
+      throw new Error('File was not created successfully');
+    }
+  } catch (error) {
+    console.error('Error writing file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // BAM file handling has been moved to renderer process using direct @gmod/bam API
 // This eliminates IPC overhead and provides better performance
 // The BamReader class in renderer/modules/BamReader.js now handles all BAM operations directly

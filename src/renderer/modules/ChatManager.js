@@ -3041,8 +3041,8 @@ class ChatManager {
                 // Direct file export without dialog
                 await this.writeFileDirectly(fastaContent, filename, 'FASTA sequence');
             } else {
-                // Use ExportManager to show file dialog with default filename
-                await this.app.exportManager.exportAsFasta();
+                // Show file save dialog for user to choose location
+                await this.showExportSaveDialog(fastaContent, 'genome.fasta', 'FASTA sequence', 'text/plain');
             }
             
             const totalLength = chromosomes.reduce((sum, chr) => {
@@ -3141,12 +3141,8 @@ class ChatManager {
                 // Direct file export without dialog
                 await this.writeFileDirectly(genbankContent, filename, 'GenBank format');
             } else {
-                // Use ExportManager to show file dialog with default filename
-                // Configure protein sequence inclusion if specified
-                if (this.app.exportManager.exportConfig) {
-                    this.app.exportManager.exportConfig.includeProteinSequences = includeProteinSequences;
-                }
-                await this.app.exportManager.exportAsGenBank();
+                // Show file save dialog for user to choose location
+                await this.showExportSaveDialog(genbankContent, 'genome.gbk', 'GenBank format', 'text/plain');
             }
             
             const totalFeatures = chromosomes.reduce((sum, chr) => {
@@ -3237,8 +3233,8 @@ class ChatManager {
                 // Direct file export without dialog
                 await this.writeFileDirectly(cdsContent, filename, 'CDS FASTA');
             } else {
-                // Use ExportManager to show file dialog with default filename
-                await this.app.exportManager.exportCDSAsFasta();
+                // Show file save dialog for user to choose location
+                await this.showExportSaveDialog(cdsContent, 'cds_sequences.fasta', 'CDS FASTA', 'text/plain');
             }
             
             // Count CDS features using correct data path
@@ -3335,8 +3331,8 @@ class ChatManager {
                 // Direct file export without dialog
                 await this.writeFileDirectly(proteinContent, filename, 'Protein FASTA');
             } else {
-                // Use ExportManager to show file dialog with default filename
-                await this.app.exportManager.exportProteinAsFasta();
+                // Show file save dialog for user to choose location
+                await this.showExportSaveDialog(proteinContent, 'protein_sequences.fasta', 'Protein FASTA', 'text/plain');
             }
             
             // Count protein-coding features using correct data path
@@ -3425,8 +3421,8 @@ class ChatManager {
                 // Direct file export without dialog
                 await this.writeFileDirectly(gffContent, filename, 'GFF annotations');
             } else {
-                // Use ExportManager to show file dialog with default filename
-                await this.app.exportManager.exportAsGFF();
+                // Show file save dialog for user to choose location
+                await this.showExportSaveDialog(gffContent, 'features.gff3', 'GFF annotations', 'text/plain');
             }
             
             // Count features using correct data path
@@ -3510,8 +3506,8 @@ class ChatManager {
                 // Direct file export without dialog
                 await this.writeFileDirectly(bedContent, filename, 'BED format');
             } else {
-                // Use ExportManager to show file dialog with default filename
-                await this.app.exportManager.exportAsBED();
+                // Show file save dialog for user to choose location
+                await this.showExportSaveDialog(bedContent, 'features.bed', 'BED format', 'text/plain');
             }
             
             // Count features using correct data path
@@ -3594,8 +3590,9 @@ class ChatManager {
                 // Direct file export without dialog
                 await this.writeFileDirectly(fastaContent, filename, 'Current view FASTA');
             } else {
-                // Use ExportManager to show file dialog with default filename
-                await this.app.exportManager.exportCurrentViewAsFasta();
+                // Show file save dialog for user to choose location
+                const defaultFilename = `${currentChr}_${viewStart}-${viewEnd}.fasta`;
+                await this.showExportSaveDialog(fastaContent, defaultFilename, 'Current view FASTA', 'text/plain');
             }
             
             const regionLength = viewEnd - viewStart + 1;
@@ -3621,6 +3618,114 @@ class ChatManager {
             console.error('❌ [ChatManager] Current view FASTA export failed:', error);
             throw new Error(`Current view FASTA export failed: ${error.message}`);
         }
+    }
+
+    /**
+     * Helper method to show save dialog for export operations
+     * Uses Electron's native save dialog for file selection
+     */
+    async showExportSaveDialog(content, defaultFilename, formatType, mimeType = 'text/plain') {
+        try {
+            // Use Electron's save dialog via IPC
+            if (window.electronAPI && window.electronAPI.showSaveDialog) {
+                // Determine appropriate file extensions based on format type
+                const extensionMap = {
+                    'FASTA sequence': [{ name: 'FASTA Files', extensions: ['fasta', 'fa', 'fas'] }],
+                    'GenBank format': [{ name: 'GenBank Files', extensions: ['gbk', 'gb', 'genbank'] }],
+                    'CDS FASTA': [{ name: 'FASTA Files', extensions: ['fasta', 'fa', 'fas'] }],
+                    'Protein FASTA': [{ name: 'FASTA Files', extensions: ['fasta', 'fa', 'fas'] }],
+                    'GFF annotations': [{ name: 'GFF Files', extensions: ['gff3', 'gff', 'gtf'] }],
+                    'BED format': [{ name: 'BED Files', extensions: ['bed'] }],
+                    'Current view FASTA': [{ name: 'FASTA Files', extensions: ['fasta', 'fa', 'fas'] }]
+                };
+                
+                const filters = extensionMap[formatType] || [{ name: 'Text Files', extensions: ['txt'] }];
+                filters.push({ name: 'All Files', extensions: ['*'] });
+                
+                const result = await window.electronAPI.showSaveDialog({
+                    title: `Save ${formatType}`,
+                    defaultPath: defaultFilename,
+                    filters: filters
+                });
+                
+                if (!result.canceled && result.filePath) {
+                    // Write the file using IPC
+                    const writeResult = await window.electronAPI.writeFile(result.filePath, content);
+                    
+                    if (writeResult.success) {
+                        console.log(`✅ [ChatManager] File saved via dialog: ${result.filePath}`);
+                        
+                        // Show success notification
+                        if (this.app && this.app.showNotification) {
+                            this.app.showNotification(
+                                `${formatType} saved successfully`,
+                                'success'
+                            );
+                        }
+                        
+                        return {
+                            success: true,
+                            filePath: result.filePath,
+                            fileSize: content.length,
+                            method: 'dialog',
+                            canceled: false
+                        };
+                    } else {
+                        throw new Error(`Failed to write file: ${writeResult.error}`);
+                    }
+                } else {
+                    // User canceled the dialog
+                    console.log('🚫 [ChatManager] Save dialog canceled by user');
+                    return {
+                        success: false,
+                        canceled: true,
+                        method: 'dialog'
+                    };
+                }
+                
+            } else {
+                // Fallback: Use browser download method
+                console.log('🔄 [ChatManager] Falling back to browser download');
+                this.downloadFileAsBrowser(content, defaultFilename, mimeType);
+                
+                return {
+                    success: true,
+                    filename: defaultFilename,
+                    fileSize: content.length,
+                    method: 'browser_download'
+                };
+            }
+            
+        } catch (error) {
+            console.error(`❌ [ChatManager] Save dialog failed:`, error);
+            
+            // Show error notification
+            if (this.app && this.app.showNotification) {
+                this.app.showNotification(
+                    `Failed to save ${formatType}: ${error.message}`,
+                    'error'
+                );
+            }
+            
+            throw new Error(`Save dialog failed: ${error.message}`);
+        }
+    }
+    /**
+     * Helper method for browser-based file download (fallback)
+     */
+    downloadFileAsBrowser(content, filename, mimeType = 'text/plain') {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+        console.log(`💾 [ChatManager] Browser download triggered: ${filename}`);
     }
 
     /**

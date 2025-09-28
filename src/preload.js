@@ -17,6 +17,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Directory selection for benchmark
   showDirectoryDialog: (options) => ipcRenderer.invoke('show-directory-dialog', options),
   
+  // File save dialog for exports
+  showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
+  writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
+  
   // Project Manager APIs
   selectProjectDirectory: () => ipcRenderer.invoke('selectProjectDirectory'),
   selectProjectFile: () => ipcRenderer.invoke('selectProjectFile'),
