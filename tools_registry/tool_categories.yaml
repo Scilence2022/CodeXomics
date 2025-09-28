@@ -92,7 +92,20 @@ categories:
       - "data_export"
       - "codon_analysis"
       - "region_analysis"
-    tools_count: 4
+    tools_count: 3
+
+  file_operations:
+    name: "File Operations"
+    description: "Tools for file input/output operations including data export and file format conversion"
+    icon: "💾"
+    priority: 2
+    color: "#FF6B35"
+    subcategories:
+      - "export"
+      - "import"
+      - "conversion"
+      - "validation"
+    tools_count: 7
 
   pathway:
     name: "Pathway & BLAST"

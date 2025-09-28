@@ -7906,6 +7906,35 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.exportData(parameters);
                     break;
                     
+                // Built-in Export Tools - NEW ADDITIONS
+                case 'export_fasta_sequence':
+                    result = await this.exportFastaSequence(parameters);
+                    break;
+                    
+                case 'export_genbank_format':
+                    result = await this.exportGenBankFormat(parameters);
+                    break;
+                    
+                case 'export_cds_fasta':
+                    result = await this.exportCDSFasta(parameters);
+                    break;
+                    
+                case 'export_protein_fasta':
+                    result = await this.exportProteinFasta(parameters);
+                    break;
+                    
+                case 'export_gff_annotations':
+                    result = await this.exportGFFAnnotations(parameters);
+                    break;
+                    
+                case 'export_bed_format':
+                    result = await this.exportBEDFormat(parameters);
+                    break;
+                    
+                case 'export_current_view_fasta':
+                    result = await this.exportCurrentViewFasta(parameters);
+                    break;
+                    
                 case 'get_gene_details':
                     result = await this.getGeneDetails(parameters);
                     break;

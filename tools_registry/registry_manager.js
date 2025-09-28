@@ -264,6 +264,13 @@ class ToolsRegistryManager {
                 'import genome', 'import annotation', 'import variant', 'import reads',
                 'open genome', 'open annotation', 'open variant', 'open reads'
             ],
+            file_operations: [
+                'export', 'save', 'download', 'write', 'output', 'extract', 'convert',
+                'export file', 'save file', 'download file', 'export data', 'save data',
+                'export fasta', 'export genbank', 'export gff', 'export bed', 'export protein',
+                'export sequences', 'export annotations', 'export features', 'export current view',
+                'save fasta', 'save genbank', 'download sequences', 'extract data'
+            ],
             navigation: ['navigate', 'go to', 'jump', 'position', 'location', 'move', 'go', 'navigate to'],
             search: ['search', 'find', 'look for', 'query', 'locate'],
             analysis: ['analyze', 'calculate', 'compute', 'measure', 'count', 'analysis'],
@@ -433,6 +440,10 @@ class ToolsRegistryManager {
                 'load', 'open', 'import', 'read', 'file', 'genome', 'annotation', 'variant',
                 'reads', 'wig', 'operon', 'fasta', 'genbank', 'gff', 'bed', 'vcf', 'sam', 'bam'
             ],
+            file_operations: [
+                'export', 'save', 'download', 'write', 'output', 'extract', 'convert',
+                'fasta', 'genbank', 'gff', 'bed', 'protein', 'sequences', 'annotations'
+            ],
             navigation: ['navigate', 'position', 'location', 'jump', 'go', 'go to', 'navigate to', 'coordinates'],
             search: ['search', 'find', 'query', 'lookup'],
             analysis: ['analyze', 'calculate', 'compute', 'measure'],
@@ -499,6 +510,28 @@ class ToolsRegistryManager {
                 } else if (tool.subcategory === 'wig_loading' && (queryLower.includes('wig') || queryLower.includes('track'))) {
                     score += 50;
                 } else if (tool.subcategory === 'operon_loading' && queryLower.includes('operon')) {
+                    score += 50;
+                }
+            }
+
+            // Special handling for file operations (export) tools with high priority scoring
+            if (tool.category === 'file_operations' && intent.primary === 'file_operations') {
+                score += 100; // Very high bonus for export tools when export intent detected
+                console.log('🔍 [Dynamic Tools] File operations tool bonus applied:', tool.name);
+                
+                // Additional bonus for specific export type matching
+                const queryLower = intent.query.toLowerCase();
+                if (tool.name.includes('fasta') && (queryLower.includes('fasta') || queryLower.includes('sequence'))) {
+                    score += 50;
+                } else if (tool.name.includes('genbank') && (queryLower.includes('genbank') || queryLower.includes('genome'))) {
+                    score += 50;
+                } else if (tool.name.includes('gff') && (queryLower.includes('gff') || queryLower.includes('annotation'))) {
+                    score += 50;
+                } else if (tool.name.includes('bed') && (queryLower.includes('bed') || queryLower.includes('feature'))) {
+                    score += 50;
+                } else if (tool.name.includes('protein') && queryLower.includes('protein')) {
+                    score += 50;
+                } else if (tool.name.includes('current_view') && queryLower.includes('current')) {
                     score += 50;
                 }
             }
