@@ -423,7 +423,7 @@ class ToolsRegistryManager {
         });
         console.log('🔍 [Dynamic Tools] Intent filtered tools count:', intentFiltered.length);
 
-        // Filter by context
+        // Filter by context with intelligent sequence tool handling
         const contextFiltered = intentFiltered.filter(tool => {
             // Check if tool requires specific context
             if (tool.execution?.requires_auth && !context.hasAuth) {
@@ -431,8 +431,18 @@ class ToolsRegistryManager {
                 return false;
             }
             if (tool.execution?.requires_data && !context.hasData) {
-                console.log('🔍 [Dynamic Tools] Tool filtered out (requires data):', tool.name);
-                return false;
+                // BENCHMARK FIX: Allow sequence analysis tools even without genome data 
+                // if the query contains sequence data directly
+                const isSequenceTool = tool.category === 'sequence' && 
+                    ['translate_dna', 'reverse_complement', 'compute_gc'].includes(tool.name);
+                const queryContainsSequence = /[ATCGN]{6,}/i.test(intent.query);
+                
+                if (isSequenceTool && queryContainsSequence) {
+                    console.log('🔍 [Dynamic Tools] Allowing sequence tool with inline sequence data:', tool.name);
+                } else {
+                    console.log('🔍 [Dynamic Tools] Tool filtered out (requires data):', tool.name);
+                    return false;
+                }
             }
             if (tool.execution?.requires_network && !context.hasNetwork) {
                 console.log('🔍 [Dynamic Tools] Tool filtered out (requires network):', tool.name);
