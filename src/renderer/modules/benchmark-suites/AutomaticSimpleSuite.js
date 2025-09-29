@@ -413,58 +413,39 @@ class AutomaticSimpleSuite {
             return evaluation;
         }
 
-        // 🔍 SONG'S ENHANCED DEBUGGING: More comprehensive tool detection logging
+        // 🔍 SONG'S DEBUGGING: Log detected tools for analysis
         console.log(`🎯 [SONG DEBUG] evaluateBasicFunctionCall called for test: ${testResult.testId || 'unknown'}`);
-        console.log(`🎯 [SONG DEBUG] Test name: ${testResult.name || 'unknown'}`);
         console.log(`🎯 [SONG DEBUG] actualResult type:`, typeof actualResult);
         console.log(`🎯 [SONG DEBUG] actualResult content:`, actualResult);
         console.log(`🎯 [SONG DEBUG] expectedResult:`, expectedResult);
         
-        // IMPROVED: Handle multiple tool calls - check all tools in array
-        let actualTools = [];
-        let actualTool = null;
+        // Extract tool name from actualResult - SONG DEBUG
+        let actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
+        console.log(`🎯 [SONG DEBUG] Extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);
         
-        if (Array.isArray(actualResult)) {
-            actualTools = actualResult.map(call => call?.tool_name).filter(Boolean);
-            actualTool = actualTools[0]; // Primary tool for backward compatibility
-            console.log(`🎯 [SONG DEBUG] Multiple tools detected:`, actualTools);
-            console.log(`🎯 [SONG DEBUG] Checking if expected tool '${expectedResult.tool_name}' is in:`, actualTools);
-            
-            // Check if expected tool is in the array
-            if (actualTools.includes(expectedResult.tool_name)) {
-                actualTool = expectedResult.tool_name; // Use the expected tool for evaluation
-                console.log(`✅ [SONG DEBUG] Expected tool '${expectedResult.tool_name}' found in tool array!`);
-            } else {
-                console.log(`❌ [SONG DEBUG] Expected tool '${expectedResult.tool_name}' NOT found in tool array`);
-            }
-        } else {
-            actualTool = actualResult?.tool_name;
-            actualTools = actualTool ? [actualTool] : [];
-            console.log(`🎯 [SONG DEBUG] Single tool detected: '${actualTool}'`);
-        }
-        
-        console.log(`🎯 [SONG DEBUG] Final extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);
-        
-        // ENHANCED: Record detected tools for Song's analysis with more detail
-        const debugEntry = {
-            testId: testResult.testId,
-            testName: testResult.testName || testResult.name || 'unknown',
-            expectedTool: expectedResult.tool_name,
-            actualTool: actualTool,
-            allDetectedTools: actualTools,
-            actualResultType: typeof actualResult,
-            actualResult: actualResult,
-            isMultipleTools: Array.isArray(actualResult) && actualResult.length > 1,
-            toolFoundInArray: actualTools.includes(expectedResult.tool_name),
-            timestamp: new Date().toISOString()
-        };
-        
+        // Record detected tool for Song's analysis
         if (window.songBenchmarkDebug) {
             window.songBenchmarkDebug.detectedTools = window.songBenchmarkDebug.detectedTools || [];
-            window.songBenchmarkDebug.detectedTools.push(debugEntry);
+            window.songBenchmarkDebug.detectedTools.push({
+                testId: testResult.testId,
+                testName: testResult.testName || 'unknown',
+                expectedTool: expectedResult.tool_name,
+                actualTool: actualTool,
+                actualResultType: typeof actualResult,
+                actualResult: actualResult,
+                timestamp: new Date().toISOString()
+            });
         } else {
             window.songBenchmarkDebug = {
-                detectedTools: [debugEntry]
+                detectedTools: [{
+                    testId: testResult.testId,
+                    testName: testResult.testName || 'unknown', 
+                    expectedTool: expectedResult.tool_name,
+                    actualTool: actualTool,
+                    actualResultType: typeof actualResult,
+                    actualResult: actualResult,
+                    timestamp: new Date().toISOString()
+                }]
             };
         }
 
@@ -472,8 +453,7 @@ class AutomaticSimpleSuite {
             testId: testResult.testId,
             expectedTool: expectedResult.tool_name,
             actualResult: actualResult,
-            resultType: typeof actualResult,
-            multipleTools: actualTools.length > 1
+            resultType: typeof actualResult
         });
 
         // PRIORITY 0: Check Tool Execution Tracker for direct execution status
@@ -519,9 +499,7 @@ class AutomaticSimpleSuite {
                 /successfully (executed|navigated|loaded|processed|analyzed)/i,
                 /task completed successfully/i,
                 /operation completed successfully/i,
-                /results have been processed/i,
-                /(file|reads|genome|annotation|variant).*loaded successfully/i,
-                /I've successfully loaded/i
+                /results have been processed/i
             ];
             
             const hasSuccessSignal = successPatterns.some(pattern => pattern.test(actualResult));
@@ -533,15 +511,6 @@ class AutomaticSimpleSuite {
                     evaluation.score = evaluation.maxScore; // FULL POINTS
                     evaluation.success = true;
                     evaluation.warnings.push('Awarded full points based on explicit tool execution success');
-                    return evaluation;
-                }
-                
-                // For file loading success patterns
-                if (/(file|reads|genome|annotation|variant).*loaded successfully|I've successfully loaded/i.test(actualResult)) {
-                    console.log(`✅ [evaluateBasicFunctionCall] FILE LOADING SUCCESS: Success pattern detected in response`);
-                    evaluation.score = evaluation.maxScore; // FULL POINTS
-                    evaluation.success = true;
-                    evaluation.warnings.push('Awarded full points based on file loading success message');
                     return evaluation;
                 }
                 
@@ -558,35 +527,22 @@ class AutomaticSimpleSuite {
             }
         }
 
-        // PRIORITY 2: Enhanced tool detection for multiple tools
-        // Check if expected tool is found in the detected tools array
-        if (actualTools.includes(expectedResult.tool_name)) {
-            console.log(`✅ [evaluateBasicFunctionCall] EXPECTED TOOL FOUND: '${expectedResult.tool_name}' detected in tools array`);
-            evaluation.score = evaluation.maxScore; // FULL POINTS for correct tool detection
-            actualTool = expectedResult.tool_name; // Set for parameter evaluation
-        } else if (actualTool === expectedResult.tool_name) {
+        // PRIORITY 2: Standard structured result evaluation
+        actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
+        
+        if (actualTool === expectedResult.tool_name) {
             console.log(`✅ [evaluateBasicFunctionCall] Correct tool name detected: ${actualTool}`);
             evaluation.score = evaluation.maxScore; // Full points for correct tool
         } else {
             console.log(`❌ [evaluateBasicFunctionCall] Tool mismatch: expected '${expectedResult.tool_name}', got '${actualTool}'`);
-            console.log(`❌ [evaluateBasicFunctionCall] Available tools were:`, actualTools);
-            evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool || 'none'}'. Available tools: [${actualTools.join(', ')}]`);
+            evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool}'`);
             evaluation.score = 0; // No points for wrong tool
             evaluation.success = false;
             return evaluation;
         }
 
         // PRIORITY 3: Enhanced parameter validation with position↔range conversion support
-        // Find the correct tool call in the array for parameter validation
-        let relevantToolCall = actualResult;
-        if (Array.isArray(actualResult)) {
-            relevantToolCall = actualResult.find(call => call?.tool_name === expectedResult.tool_name);
-            if (!relevantToolCall) {
-                relevantToolCall = actualResult[0]; // Fallback to first call
-            }
-        }
-        
-        const actualParams = relevantToolCall?.parameters;
+        const actualParams = Array.isArray(actualResult) ? actualResult[0]?.parameters : actualResult.parameters;
         if (actualParams && expectedResult.parameters) {
             const expectedKeys = Object.keys(expectedResult.parameters);
             const matchingKeys = expectedKeys.filter(key => {
@@ -704,17 +660,13 @@ class AutomaticSimpleSuite {
             warnings: evaluation.warnings
         });
         
-        // 📊 SONG'S ENHANCED TOOL DETECTION SUMMARY
+        // 📊 SONG'S TOOL DETECTION SUMMARY
         console.log(`📊 [SONG SUMMARY] Tool Detection Result for ${testResult.testName || testResult.testId}:`);
         console.log(`   Expected: ${expectedResult.tool_name}`);
-        console.log(`   Primary Detected: ${actualTool}`);
-        console.log(`   All Detected: [${actualTools.join(', ')}]`);
-        console.log(`   Multiple Tools: ${actualTools.length > 1 ? '✅ YES' : '❌ NO'}`);
-        console.log(`   Expected Tool Found: ${actualTools.includes(expectedResult.tool_name) ? '✅ YES' : '❌ NO'}`);
+        console.log(`   Detected: ${actualTool}`);
         console.log(`   Match: ${actualTool === expectedResult.tool_name ? '✅ YES' : '❌ NO'}`);
         console.log(`   Score: ${evaluation.score}/${evaluation.maxScore}`);
         console.log(`📋 [SONG TIP] Use 'window.songBenchmarkDebug.detectedTools' in console to see all detected tools`);
-        console.log(`📋 [SONG TIP] Use 'window.songBenchmarkDebug.detectedTools.filter(t => t.isMultipleTools)' to see multi-tool cases`);
         
         return evaluation;
     }
@@ -807,119 +759,6 @@ class AutomaticSimpleSuite {
 
     async cleanup(context) {
         console.log('Cleaning up Automatic Simple test suite');
-    }
-
-    /**
-     * SONG'S DEBUGGING HELPER: Get summary of detected tools across all tests
-     */
-    static getToolDetectionSummary() {
-        if (!window.songBenchmarkDebug || !window.songBenchmarkDebug.detectedTools) {
-            console.log('📊 No tool detection data available. Run some benchmark tests first.');
-            return null;
-        }
-        
-        const tools = window.songBenchmarkDebug.detectedTools;
-        const summary = {
-            totalTests: tools.length,
-            successfulMatches: tools.filter(t => t.actualTool === t.expectedTool).length,
-            multipleToolCases: tools.filter(t => t.isMultipleTools).length,
-            failedMatches: tools.filter(t => t.actualTool !== t.expectedTool).length,
-            byTestType: {},
-            byExpectedTool: {},
-            byActualTool: {},
-            problemCases: []
-        };
-        
-        // Analyze by test patterns
-        tools.forEach(tool => {
-            // By expected tool
-            if (!summary.byExpectedTool[tool.expectedTool]) {
-                summary.byExpectedTool[tool.expectedTool] = { total: 0, matches: 0, mismatches: 0 };
-            }
-            summary.byExpectedTool[tool.expectedTool].total++;
-            if (tool.actualTool === tool.expectedTool) {
-                summary.byExpectedTool[tool.expectedTool].matches++;
-            } else {
-                summary.byExpectedTool[tool.expectedTool].mismatches++;
-            }
-            
-            // By actual tool
-            if (tool.actualTool) {
-                if (!summary.byActualTool[tool.actualTool]) {
-                    summary.byActualTool[tool.actualTool] = { count: 0, tests: [] };
-                }
-                summary.byActualTool[tool.actualTool].count++;
-                summary.byActualTool[tool.actualTool].tests.push(tool.testName);
-            }
-            
-            // Identify problem cases
-            if (tool.actualTool !== tool.expectedTool) {
-                summary.problemCases.push({
-                    testName: tool.testName,
-                    expected: tool.expectedTool,
-                    actual: tool.actualTool,
-                    allTools: tool.allDetectedTools,
-                    isMultiple: tool.isMultipleTools,
-                    foundInArray: tool.toolFoundInArray
-                });
-            }
-        });
-        
-        // Calculate success rate
-        summary.successRate = tools.length > 0 ? (summary.successfulMatches / tools.length * 100).toFixed(1) : 0;
-        
-        // Display formatted summary
-        console.log('\n🎯 ======= SONG\'S TOOL DETECTION ANALYSIS =======');
-        console.log(`📊 Total Tests Analyzed: ${summary.totalTests}`);
-        console.log(`✅ Successful Matches: ${summary.successfulMatches} (${summary.successRate}%)`);
-        console.log(`❌ Failed Matches: ${summary.failedMatches}`);
-        console.log(`🔧 Multiple Tool Cases: ${summary.multipleToolCases}`);
-        
-        console.log('\n📋 Expected Tool Performance:');
-        Object.entries(summary.byExpectedTool).forEach(([tool, stats]) => {
-            const rate = (stats.matches / stats.total * 100).toFixed(1);
-            console.log(`  ${tool}: ${stats.matches}/${stats.total} (${rate}%) - ${stats.mismatches} mismatches`);
-        });
-        
-        console.log('\n🔍 Actually Detected Tools:');
-        Object.entries(summary.byActualTool).forEach(([tool, stats]) => {
-            console.log(`  ${tool}: ${stats.count} times - in tests: [${stats.tests.slice(0,3).join(', ')}${stats.tests.length > 3 ? '...' : ''}]`);
-        });
-        
-        if (summary.problemCases.length > 0) {
-            console.log('\n⚠️  Problem Cases to Investigate:');
-            summary.problemCases.forEach((problem, index) => {
-                console.log(`  ${index + 1}. ${problem.testName}:`);
-                console.log(`     Expected: ${problem.expected}`);
-                console.log(`     Got: ${problem.actual}`);
-                if (problem.isMultiple && problem.allTools) {
-                    console.log(`     All Tools: [${problem.allTools.join(', ')}]`);
-                    console.log(`     Expected Found in Array: ${problem.foundInArray ? '✅ YES' : '❌ NO'}`);
-                }
-            });
-        }
-        
-        console.log('\n💡 RECOMMENDATIONS:');
-        if (summary.multipleToolCases > 0) {
-            console.log('  • Multiple tool calls detected - evaluation logic improved to handle these');
-        }
-        if (summary.failedMatches > 0) {
-            console.log('  • Some tool mismatches found - check LLM tool selection logic');
-            console.log('  • Consider improving prompts to select correct tools');
-        }
-        if (summary.successRate < 80) {
-            console.log('  • Success rate below 80% - review tool selection criteria');
-        } else {
-            console.log('  • Good tool detection performance!');
-        }
-        
-        console.log('\n🔧 Advanced Analysis Commands:');
-        console.log('  window.songBenchmarkDebug.detectedTools.filter(t => t.isMultipleTools)');
-        console.log('  window.songBenchmarkDebug.detectedTools.filter(t => t.actualTool !== t.expectedTool)');
-        console.log('  AutomaticSimpleSuite.getToolDetectionSummary()');
-        console.log('================================================\n');
-        
-        return summary;
     }
 }
 
