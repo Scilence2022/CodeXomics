@@ -1984,8 +1984,40 @@ class BenchmarkUI {
             
         } catch (error) {
             console.error('❌ Benchmark failed:', error);
-            // Status update removed - no menu manager
-            alert('Benchmark failed: ' + error.message);
+            
+            // Enhanced error handling with specific LLM configuration guidance
+            let errorMessage = error.message || 'Unknown error occurred';
+            let detailedGuidance = '';
+            
+            if (errorMessage.includes('LLM not configured') || errorMessage.includes('LLM provider')) {
+                detailedGuidance = '\n\nTo fix this:\n' +
+                    '1. Go to Options → Configure LLMs\n' +
+                    '2. Set up your preferred AI provider\n' +
+                    '3. Enable at least one provider\n' +
+                    '4. Test the connection\n' +
+                    '5. Try running the benchmark again';
+                    
+                // Also show in results area if available
+                const resultsArea = document.getElementById('resultsContent');
+                if (resultsArea) {
+                    resultsArea.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #e74c3c;">
+                            <h3>❌ LLM Configuration Required</h3>
+                            <p>Please configure an LLM provider before running benchmarks.</p>
+                            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; text-align: left;">
+                                <strong>Setup Steps:</strong><br>
+                                1. Go to Options → Configure LLMs<br>
+                                2. Choose a provider (OpenAI, Anthropic, Google, etc.)<br>
+                                3. Enter your API key<br>
+                                4. Enable the provider<br>
+                                5. Test the connection<br>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            alert('Benchmark failed: ' + errorMessage + detailedGuidance);
         } finally {
             this.isRunning = false;
             document.getElementById('startBenchmark').disabled = false;

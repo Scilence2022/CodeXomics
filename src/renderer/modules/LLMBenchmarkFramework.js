@@ -90,6 +90,38 @@ class LLMBenchmarkFramework {
             throw new Error('Benchmark is already running');
         }
 
+        // CRITICAL FIX: Validate LLM configuration before starting any tests
+        if (!this.chatManager || !this.chatManager.llmConfigManager) {
+            throw new Error('ChatManager or LLMConfigManager not available. Cannot run benchmarks without LLM integration.');
+        }
+        
+        if (!this.chatManager.llmConfigManager.isConfigured()) {
+            const errorMessage = 'LLM not configured. Please configure an LLM provider first.';
+            console.error('❌ [Benchmark] LLM Configuration Error:', errorMessage);
+            
+            // Show user-friendly error message
+            if (this.chatManager.addThinkingMessage) {
+                this.chatManager.addThinkingMessage(
+                    '❌ **Benchmark Configuration Error**\n\n' +
+                    'LLM provider is not configured. To run benchmarks, please:\n\n' +
+                    '• Go to Options → Configure LLMs\n' +
+                    '• Set up your preferred AI provider (OpenAI, Anthropic, Google, etc.)\n' +
+                    '• Enable at least one provider\n' +
+                    '• Test the connection to ensure it works\n\n' +
+                    'Once configured, you can run benchmarks to evaluate AI performance.'
+                );
+            }
+            
+            throw new Error(errorMessage);
+        }
+        
+        // Log successful configuration validation
+        const enabledProviders = Object.entries(this.chatManager.llmConfigManager.providers)
+            .filter(([key, provider]) => provider.enabled)
+            .map(([key, provider]) => `${key} (${provider.model})`);
+        
+        console.log('✅ [Benchmark] LLM Configuration validated:', enabledProviders.join(', '));
+        
         this.isRunning = true;
         const startTime = Date.now();
         
