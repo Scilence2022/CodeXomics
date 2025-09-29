@@ -2562,7 +2562,8 @@ class LLMBenchmarkFramework {
             parseSteps: [],
             jsonParseAttempts: [],
             directParseResults: [],
-            toolCallDetection: []
+            toolCallDetection: [],
+            detectedTools: [] // SONG'S REQUEST: Track detected tools
         };
         
         logs.forEach(log => {
@@ -2574,12 +2575,51 @@ class LLMBenchmarkFramework {
                 parseInfo.jsonParseAttempts.push(msg);
             } else if (msg.includes('Direct parse successful:')) {
                 parseInfo.directParseResults.push(msg);
+                
+                // SONG'S REQUEST: Extract tool name from direct parse success
+                try {
+                    const toolMatch = msg.match(/Direct parse successful:\s*({.*})/s);
+                    if (toolMatch) {
+                        const toolData = JSON.parse(toolMatch[1]);
+                        if (toolData.tool_name) {
+                            parseInfo.detectedTools.push({
+                                tool: toolData.tool_name,
+                                method: 'direct_parse',
+                                parameters: toolData.parameters || {},
+                                timestamp: log.timestamp
+                            });
+                        }
+                    }
+                } catch (e) {
+                    // Ignore parsing errors for tool extraction
+                }
             } else if (msg.includes('Valid tool call found')) {
                 parseInfo.toolCallDetection.push(msg);
+                
+                // SONG'S REQUEST: Extract tool name from validation messages
+                const toolMatch = msg.match(/Valid tool call found.*tool_name["']?\s*:\s*["']?([^"',}\s]+)/i);
+                if (toolMatch) {
+                    parseInfo.detectedTools.push({
+                        tool: toolMatch[1],
+                        method: 'validation',
+                        timestamp: log.timestamp
+                    });
+                }
             } else if (msg.includes('Multiple tool calls found:')) {
                 parseInfo.toolCallDetection.push(msg);
             }
         });
+        
+        // SONG'S REQUEST: Deduplicate detected tools
+        const uniqueTools = [];
+        const seenTools = new Set();
+        parseInfo.detectedTools.forEach(tool => {
+            if (!seenTools.has(tool.tool)) {
+                seenTools.add(tool.tool);
+                uniqueTools.push(tool);
+            }
+        });
+        parseInfo.detectedTools = uniqueTools;
         
         return parseInfo;
     }

@@ -2828,11 +2828,36 @@ class BenchmarkUI {
                 <details style="margin-bottom: 10px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #dc3545;">🔍 Response Parse Debug (Click to expand)</summary>
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
-                        ${detailedLogs.parseDebugInfo.parseSteps.map(step => `
-                            <div style="background: #fff; padding: 6px; margin: 3px 0; border-radius: 3px; font-size: 10px; font-family: monospace;">
-                                ${step}
+                        <!-- SONG'S REQUEST: Show detected tools prominently -->
+                        ${detailedLogs.parseDebugInfo.detectedTools?.length > 0 ? `
+                        <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; padding: 10px; margin-bottom: 12px;">
+                            <strong style="color: #155724;">🎯 DETECTED TOOLS (${detailedLogs.parseDebugInfo.detectedTools.length}):</strong>
+                            <div style="margin-top: 8px;">
+                                ${detailedLogs.parseDebugInfo.detectedTools.map(tool => `
+                                    <div style="background: #fff; padding: 6px; margin: 3px 0; border-radius: 3px; font-size: 11px; border-left: 3px solid #28a745;">
+                                        <strong style="color: #28a745;">📋 ${tool.tool}</strong> 
+                                        <span style="color: #6c757d;">(via ${tool.method})</span>
+                                        ${tool.parameters ? `<br><span style="font-size: 10px; color: #495057;">Parameters: ${JSON.stringify(tool.parameters)}</span>` : ''}
+                                    </div>
+                                `).join('')}
                             </div>
-                        `).join('')}
+                        </div>
+                        ` : `
+                        <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 10px; margin-bottom: 12px;">
+                            <strong style="color: #721c24;">⚠️ NO TOOLS DETECTED</strong>
+                            <div style="font-size: 11px; color: #721c24; margin-top: 4px;">No valid tool calls were found in the parsing process</div>
+                        </div>
+                        `}
+                        
+                        <!-- Parse Steps -->
+                        <div style="margin-top: 8px;">
+                            <strong style="color: #495057;">Parse Steps:</strong>
+                            ${detailedLogs.parseDebugInfo.parseSteps.map(step => `
+                                <div style="background: #fff; padding: 6px; margin: 3px 0; border-radius: 3px; font-size: 10px; font-family: monospace;">
+                                    ${step}
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 </details>
                 ` : ''}
