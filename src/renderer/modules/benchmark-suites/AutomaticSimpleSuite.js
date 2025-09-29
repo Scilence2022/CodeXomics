@@ -357,6 +357,42 @@ class AutomaticSimpleSuite {
             return evaluation;
         }
 
+        // 🔍 SONG'S DEBUGGING: Log detected tools for analysis
+        console.log(`🎯 [SONG DEBUG] evaluateBasicFunctionCall called for test: ${testResult.testId || 'unknown'}`);
+        console.log(`🎯 [SONG DEBUG] actualResult type:`, typeof actualResult);
+        console.log(`🎯 [SONG DEBUG] actualResult content:`, actualResult);
+        console.log(`🎯 [SONG DEBUG] expectedResult:`, expectedResult);
+        
+        // Extract tool name from actualResult - SONG DEBUG
+        let actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
+        console.log(`🎯 [SONG DEBUG] Extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);
+        
+        // Record detected tool for Song's analysis
+        if (window.songBenchmarkDebug) {
+            window.songBenchmarkDebug.detectedTools = window.songBenchmarkDebug.detectedTools || [];
+            window.songBenchmarkDebug.detectedTools.push({
+                testId: testResult.testId,
+                testName: testResult.testName || 'unknown',
+                expectedTool: expectedResult.tool_name,
+                actualTool: actualTool,
+                actualResultType: typeof actualResult,
+                actualResult: actualResult,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            window.songBenchmarkDebug = {
+                detectedTools: [{
+                    testId: testResult.testId,
+                    testName: testResult.testName || 'unknown', 
+                    expectedTool: expectedResult.tool_name,
+                    actualTool: actualTool,
+                    actualResultType: typeof actualResult,
+                    actualResult: actualResult,
+                    timestamp: new Date().toISOString()
+                }]
+            };
+        }
+
         console.log(`📊 [evaluateBasicFunctionCall] Evaluating test result:`, {
             testId: testResult.testId,
             expectedTool: expectedResult.tool_name,
@@ -436,7 +472,7 @@ class AutomaticSimpleSuite {
         }
 
         // PRIORITY 2: Standard structured result evaluation
-        const actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
+        actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
         
         if (actualTool === expectedResult.tool_name) {
             console.log(`✅ [evaluateBasicFunctionCall] Correct tool name detected: ${actualTool}`);
@@ -567,6 +603,14 @@ class AutomaticSimpleSuite {
             errors: evaluation.errors,
             warnings: evaluation.warnings
         });
+        
+        // 📊 SONG'S TOOL DETECTION SUMMARY
+        console.log(`📊 [SONG SUMMARY] Tool Detection Result for ${testResult.testName || testResult.testId}:`);
+        console.log(`   Expected: ${expectedResult.tool_name}`);
+        console.log(`   Detected: ${actualTool}`);
+        console.log(`   Match: ${actualTool === expectedResult.tool_name ? '✅ YES' : '❌ NO'}`);
+        console.log(`   Score: ${evaluation.score}/${evaluation.maxScore}`);
+        console.log(`📋 [SONG TIP] Use 'window.songBenchmarkDebug.detectedTools' in console to see all detected tools`);
         
         return evaluation;
     }
