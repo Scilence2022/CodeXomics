@@ -701,13 +701,29 @@ class NavigationManager {
                         console.log('  - Found match:', { geneName, locusTag, product, searchFields });
                         // Find which term(s) matched for highlighting
                         const matchedTerms = searchTerms.filter(term => fieldToSearch.includes(term));
+                        
+                        // CRITICAL FIX: Create streamlined annotation without verbose note field to prevent token overflow
+                        const streamlinedAnnotation = {
+                            start: annotation.start,
+                            end: annotation.end,
+                            type: annotation.type,
+                            strand: annotation.strand,
+                            qualifiers: {
+                                gene: geneName,
+                                locus_tag: locusTag,
+                                product: product
+                                // NOTE: Intentionally excluding 'note' field to prevent token overflow
+                                // as note fields can contain thousands of characters and cause LLM token limits
+                            }
+                        };
+                        
                         results.push({
                             type: 'gene',
                             position: annotation.start,
                             end: annotation.end,
                             name: geneName || locusTag || annotation.type,
                             details: `${annotation.type}: ${product || 'No description'}`,
-                            annotation: annotation,
+                            annotation: streamlinedAnnotation, // Use streamlined version instead of full annotation
                             matchedTerms: matchedTerms
                         });
                     }

@@ -2477,6 +2477,10 @@ class ChatManager {
     async searchFeatures(params) {
         const { query, caseSensitive } = params;
         
+        // Log tool detection as requested by Song
+        console.log('🔍 [Tool Detection] search_features tool called with params:', params);
+        console.log('🔍 [Tool Detection] Detected tool: search_features, parameters: query="' + query + '", caseSensitive=' + (caseSensitive || false));
+        
         console.log('searchFeatures called with params:', params);
         
         // Use existing search functionality from NavigationManager
@@ -2514,11 +2518,37 @@ class ChatManager {
             
             console.log('Search completed, results:', searchResults);
             
+            // CRITICAL FIX: Filter results to remove verbose data and prevent token overflow
+            const optimizedResults = searchResults.map(result => {
+                if (result.annotation) {
+                    // Return only essential annotation data, excluding verbose note field
+                    return {
+                        ...result,
+                        annotation: {
+                            start: result.annotation.start,
+                            end: result.annotation.end,
+                            type: result.annotation.type,
+                            strand: result.annotation.strand,
+                            qualifiers: {
+                                gene: result.annotation.qualifiers?.gene,
+                                locus_tag: result.annotation.qualifiers?.locus_tag,
+                                product: result.annotation.qualifiers?.product
+                                // NOTE: Intentionally excluding 'note' field to prevent token overflow
+                            }
+                        }
+                    };
+                }
+                return result;
+            });
+            
+            console.log('🔍 [Tool Detection] search_features completed, returning', optimizedResults.length, 'optimized results (note fields excluded)');
+            
             return {
                 query: query,
                 caseSensitive: caseSensitive || false,
-                results: searchResults,
-                count: searchResults.length
+                results: optimizedResults, // Return optimized results instead of raw results
+                count: optimizedResults.length,
+                optimization_note: 'Results optimized to exclude verbose note fields for token efficiency'
             };
         }
         
