@@ -560,10 +560,32 @@ class LLMBenchmarkFramework {
     async executeTest(test) {
         const startTime = Date.now();
         
+        // CRITICAL FIX: Initialize Tool Execution Tracker session for benchmark test
+        let benchmarkSessionId = null;
+        if (this.chatManager && this.chatManager.toolExecutionTracker) {
+            benchmarkSessionId = `benchmark_${test.id}_${Date.now()}`;
+            this.chatManager.toolExecutionTracker.startSession(benchmarkSessionId, {
+                testId: test.id,
+                testName: test.name,
+                testType: test.type,
+                benchmark: true,
+                startTime: startTime
+            });
+            console.log(`🔬 [Benchmark] Started tracker session: ${benchmarkSessionId}`);
+        }
+        
         // Check if this is a manual evaluation test
         if (test.evaluation === 'manual') {
             console.log(`📋 Manual test detected: ${test.name}`);
-            return await this.executeManualTest(test);
+            try {
+                return await this.executeManualTest(test);
+            } finally {
+                // End tracker session for manual tests
+                if (benchmarkSessionId && this.chatManager.toolExecutionTracker) {
+                    this.chatManager.toolExecutionTracker.endSession(benchmarkSessionId);
+                    console.log(`🔬 [Benchmark] Ended tracker session for manual test: ${benchmarkSessionId}`);
+                }
+            }
         }
         
         // Prepare test context for automated tests
@@ -655,6 +677,12 @@ class LLMBenchmarkFramework {
                 } catch (cleanupError) {
                     console.warn(`Cleanup failed for test ${test.id}:`, cleanupError);
                 }
+            }
+            
+            // CRITICAL FIX: End Tool Execution Tracker session for benchmark test
+            if (benchmarkSessionId && this.chatManager && this.chatManager.toolExecutionTracker) {
+                this.chatManager.toolExecutionTracker.endSession(benchmarkSessionId);
+                console.log(`🔬 [Benchmark] Ended tracker session: ${benchmarkSessionId}`);
             }
         }
     }
@@ -991,7 +1019,17 @@ class LLMBenchmarkFramework {
                 originalConsoleLog.apply(console, args);
             };
             
+            // CRITICAL FIX: Save original context mode before any potential errors
+            // This ensures only the current test instruction is sent, not the entire conversation history
+            const originalContextMode = this.chatManager.contextModeEnabled;
+                    
             try {
+                // CRITICAL FIX: Enable context mode for benchmark tests to prevent token overflow
+                this.chatManager.contextModeEnabled = true;
+                        
+                console.log('🔧 [Benchmark] Enabled context mode to prevent token overflow');
+                console.log('🔧 [Benchmark] Original context mode:', originalContextMode);
+                        
                 // Use ChatManager's sendToLLM method which handles all the configuration,
                 // function calling, plugin integration, and system prompts automatically
                 response = await this.chatManager.sendToLLM(instruction);
@@ -1041,6 +1079,10 @@ class LLMBenchmarkFramework {
             } finally {
                 // Restore original console.log
                 console.log = originalConsoleLog;
+                
+                // CRITICAL FIX: Restore original context mode after benchmark test
+                this.chatManager.contextModeEnabled = originalContextMode;
+                console.log('🔧 [Benchmark] Restored context mode to:', originalContextMode);
                 
                 // MEMORY SAFETY: Check memory usage and cleanup if needed
                 this.checkMemoryUsage();
@@ -2114,24 +2156,64 @@ class LLMBenchmarkFramework {
     }
 
     /**
-     * Capture token usage information
+     * Capture token usage information with enhanced tracking
      */
     captureTokenUsage() {
         try {
-            // This would need to be integrated with LLM provider's token tracking
-            // For now, return default structure
+            // Get token usage from ChatManager if available
+            if (this.chatManager && this.chatManager.lastExecutionData) {
+                const executionData = this.chatManager.lastExecutionData;
+                if (executionData.tokenUsage) {
+                    return executionData.tokenUsage;
+                }
+            }
+            
+            // Get token usage from LLM config manager if available
+            if (this.chatManager && this.chatManager.llmConfigManager) {
+                const llmManager = this.chatManager.llmConfigManager;
+                if (llmManager.lastTokenUsage) {
+                    return llmManager.lastTokenUsage;
+                }
+            }
+            
+            // Fallback to estimation based on conversation history size
+            let estimatedTokens = 0;
+            if (this.chatManager && this.chatManager.configManager) {
+                const chatHistory = this.chatManager.configManager.getChatHistory();
+                if (chatHistory && chatHistory.length > 0) {
+                    const totalTextLength = chatHistory.reduce((sum, msg) => {
+                        return sum + (msg.message ? msg.message.length : 0);
+                    }, 0);
+                    estimatedTokens = Math.ceil(totalTextLength / 4); // Rough estimation: 4 chars per token
+                    
+                    console.log(`📊 [Benchmark] Estimated tokens from chat history: ${estimatedTokens} (${totalTextLength} chars)`);
+                    
+                    return {
+                        promptTokens: Math.ceil(estimatedTokens * 0.7), // Estimate 70% for prompts
+                        completionTokens: Math.ceil(estimatedTokens * 0.3), // Estimate 30% for completions
+                        totalTokens: estimatedTokens,
+                        estimated: true,
+                        note: 'Token usage estimated from conversation history'
+                    };
+                }
+            }
+            
+            // Default fallback structure
             return {
                 promptTokens: 0,
                 completionTokens: 0,
                 totalTokens: 0,
-                note: 'Token usage tracking not implemented for this provider'
+                estimated: false,
+                note: 'Token usage tracking not available for this provider'
             };
         } catch (error) {
+            console.warn('Failed to capture token usage:', error);
             return {
                 promptTokens: 0,
                 completionTokens: 0,
                 totalTokens: 0,
-                error: error.message
+                error: error.message,
+                note: 'Token usage capture failed'
             };
         }
     }
@@ -3507,30 +3589,57 @@ class LLMBenchmarkFramework {
         
         this.memoryMonitor.lastCheck = now;
         
-        try {
-            // Check if performance.memory is available (Chrome/Chromium)
-            if (performance.memory) {
-                const usedMemory = performance.memory.usedJSHeapSize;
-                const totalMemory = performance.memory.totalJSHeapSize;
-                
-                console.log(`🔍 [Memory Monitor] Used: ${(usedMemory / 1024 / 1024).toFixed(2)}MB, Total: ${(totalMemory / 1024 / 1024).toFixed(2)}MB`);
-                
-                if (usedMemory > this.memoryMonitor.maxMemoryUsage) {
-                    console.warn('⚠️ [Memory Monitor] Memory limit exceeded! Triggering cleanup...');
-                    this.triggerMemoryCleanup();
-                } else if (usedMemory > this.memoryMonitor.warningThreshold) {
-                    console.warn('⚠️ [Memory Monitor] Memory usage high, monitoring closely...');
-                }
+        // Get current memory usage
+        const memoryInfo = performance.memory ? {
+            used: performance.memory.usedJSHeapSize,
+            total: performance.memory.totalJSHeapSize,
+            limit: performance.memory.jsHeapSizeLimit
+        } : {
+            used: 0,
+            total: 0,
+            limit: this.memoryMonitor.maxMemoryUsage
+        };
+        
+        const usedMB = Math.round(memoryInfo.used / 1024 / 1024);
+        const totalMB = Math.round(memoryInfo.total / 1024 / 1024);
+        const warningMB = Math.round(this.memoryMonitor.warningThreshold / 1024 / 1024);
+        const maxMB = Math.round(this.memoryMonitor.maxMemoryUsage / 1024 / 1024);
+        
+        console.log(`🔍 [Memory Monitor] Used: ${usedMB}MB, Total: ${totalMB}MB`);
+        
+        // Check if memory usage is too high
+        if (memoryInfo.used > this.memoryMonitor.warningThreshold) {
+            console.warn(`⚠️ [Memory Monitor] High memory usage detected: ${usedMB}MB (warning threshold: ${warningMB}MB)`);
+            
+            // Perform cleanup if memory usage exceeds limit
+            if (memoryInfo.used > this.memoryMonitor.maxMemoryUsage) {
+                console.error(`🚨 [Memory Monitor] Memory limit exceeded: ${usedMB}MB (max: ${maxMB}MB) - performing emergency cleanup`);
+                this.performMemoryCleanup();
+            } else {
+                console.log(`🧹 [Memory Monitor] Performing preventive cleanup...`);
+                this.performMemoryCleanup();
             }
-        } catch (error) {
-            console.warn('⚠️ [Memory Monitor] Memory check failed:', error.message);
+        }
+        
+        // Check for memory leaks (gradually increasing memory usage)
+        if (!this.memoryMonitor.previousUsage) {
+            this.memoryMonitor.previousUsage = memoryInfo.used;
+        } else {
+            const growth = memoryInfo.used - this.memoryMonitor.previousUsage;
+            const growthMB = Math.round(growth / 1024 / 1024);
+            
+            if (growth > 50 * 1024 * 1024) { // More than 50MB growth
+                console.warn(`📈 [Memory Monitor] Significant memory growth detected: +${growthMB}MB`);
+            }
+            
+            this.memoryMonitor.previousUsage = memoryInfo.used;
         }
     }
 
     /**
      * MEMORY SAFETY: Trigger memory cleanup
      */
-    triggerMemoryCleanup() {
+    performMemoryCleanup() {
         console.log('🧹 [Memory Monitor] Starting memory cleanup...');
         
         try {
