@@ -73,6 +73,103 @@ class AutomaticSimpleSuite {
      */
     initializeTests() {
         return [
+            // DATA LOADING TASKS - Automatic + Simple (FIRST - Data must be loaded before other tests)
+            {
+                id: 'load_auto_01',
+                name: 'Load Genome File Path',
+                type: 'function_call',
+                category: 'data_loading',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: `Load genome file ${this.buildFilePath('ECOLI.gbk')}`,
+                expectedResult: {
+                    tool_name: 'load_genome_file',
+                    parameters: {
+                        filePath: this.buildFilePath('ECOLI.gbk')
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateFileLoadingCall.bind(this)
+            },
+            {
+                id: 'load_auto_02',
+                name: 'Load BED Annotation File',
+                type: 'function_call',
+                category: 'data_loading',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: `Load BED annotation file ${this.buildFilePath('CHOPCHOP-Design.bed')}`,
+                expectedResult: {
+                    tool_name: 'load_annotation_file',
+                    parameters: {
+                        filePath: this.buildFilePath('CHOPCHOP-Design.bed')
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateFileLoadingCall.bind(this)
+            },
+            {
+                id: 'load_auto_03',
+                name: 'Load Aligned Reads File',
+                type: 'function_call',
+                category: 'data_loading',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: `Load aligned reads file ${this.buildFilePath('1655_C10.sorted.bam')}`,
+                expectedResult: {
+                    tool_name: 'load_reads_file',
+                    parameters: {
+                        filePath: this.buildFilePath('1655_C10.sorted.bam')
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateFileLoadingCall.bind(this)
+            },
+            {
+                id: 'load_auto_04',
+                name: 'Load Variant VCF File',
+                type: 'function_call',
+                category: 'data_loading',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: `Load variant VCF file ${this.buildFilePath('1655_C10.mutations.vcf')}`,
+                expectedResult: {
+                    tool_name: 'load_variant_file',
+                    parameters: {
+                        filePath: this.buildFilePath('1655_C10.mutations.vcf')
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateFileLoadingCall.bind(this)
+            },
+            {
+                id: 'load_auto_05',
+                name: 'Load WIG Track File',
+                type: 'function_call',
+                category: 'data_loading',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: `Load WIG track file ${this.buildFilePath('another_sample.wig')}`,
+                expectedResult: {
+                    tool_name: 'load_wig_tracks',
+                    parameters: {
+                        filePath: this.buildFilePath('another_sample.wig')
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateFileLoadingCall.bind(this)
+            },
+
             // NAVIGATION TASKS - Automatic + Simple
             {
                 id: 'nav_auto_01',
@@ -211,27 +308,6 @@ class AutomaticSimpleSuite {
                 bonusScore: 1,
                 timeout: 30000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
-            },
-
-            // DATA LOADING TASKS - Automatic + Simple
-            {
-                id: 'load_auto_01',
-                name: 'Load Genome File Path',
-                type: 'function_call',
-                category: 'data_loading',
-                complexity: 'simple',
-                evaluation: 'automatic',
-                instruction: `Load genome file ${this.buildFilePath('ECOLI.gbk')}`,
-                expectedResult: {
-                    tool_name: 'load_genome_file',
-                    parameters: {
-                        filePath: this.buildFilePath('ECOLI.gbk')
-                    }
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 30000,
-                evaluator: this.evaluateFileLoadingCall.bind(this)
             },
 
             // SEARCH TASKS - Automatic + Simple

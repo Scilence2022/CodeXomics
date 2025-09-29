@@ -22,7 +22,11 @@ class LLMBenchmarkFramework {
             enabled: true
         };
         
-        this.initializeTestSuites();
+        // Wait a short time for all classes to be loaded before initializing test suites
+        setTimeout(() => {
+            this.initializeTestSuites();
+        }, 100);
+        
         this.setupEventHandlers();
     }
 
@@ -30,13 +34,29 @@ class LLMBenchmarkFramework {
      * Initialize all test suites
      */
     initializeTestSuites() {
+        // Check if all required test suite classes are available
+        const requiredClasses = ['AutomaticSimpleSuite', 'AutomaticComplexSuite', 'ManualSimpleSuite', 'ManualComplexSuite'];
+        const missingClasses = requiredClasses.filter(className => !window[className]);
+        
+        if (missingClasses.length > 0) {
+            console.warn('⚠️ Missing test suite classes:', missingClasses);
+            console.log('🔍 Available classes:', requiredClasses.filter(className => window[className]));
+            
+            // Retry after a short delay (allow for async script loading)
+            console.log('🔄 Retrying test suite initialization in 500ms...');
+            setTimeout(() => {
+                this.initializeTestSuites();
+            }, 500);
+            return;
+        }
+        
         // Specialized Genomic Analysis Test Suites (4 suites organized by evaluation method and complexity)
         this.registerTestSuite('automatic_simple', new AutomaticSimpleSuite());
         this.registerTestSuite('automatic_complex', new AutomaticComplexSuite());
         this.registerTestSuite('manual_simple', new ManualSimpleSuite());
         this.registerTestSuite('manual_complex', new ManualComplexSuite());
         
-        console.log(`Initialized ${this.testSuites.size} test suites with ${this.getTotalTestCount()} total tests`);
+        console.log(`✅ Initialized ${this.testSuites.size} test suites with ${this.getTotalTestCount()} total tests`);
     }
 
     /**
@@ -51,6 +71,10 @@ class LLMBenchmarkFramework {
      * Get total number of tests across all suites
      */
     getTotalTestCount() {
+        if (this.testSuites.size === 0) {
+            return 0; // Return 0 if test suites not yet loaded
+        }
+        
         let total = 0;
         for (const suite of this.testSuites.values()) {
             total += suite.getTestCount();
