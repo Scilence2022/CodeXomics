@@ -9,7 +9,7 @@ class LLMBenchmarkFramework {
         this.benchmarkResults = [];
         this.currentTest = null;
         this.isRunning = false;
-        this.testTimeout = 30000; // 30 seconds default timeout
+        this.testTimeout = 120000; // 2 minutes default timeout
         this.statisticsEngine = new BenchmarkStatistics();
         this.reportGenerator = new BenchmarkReportGenerator();
         

@@ -615,9 +615,9 @@ class BenchmarkUI {
                                     <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Test Timeout:</label>
                                     <select id="testTimeout">
                                         <option value="15000">15 seconds</option>
-                                        <option value="30000" selected>30 seconds</option>
+                                        <option value="30000">30 seconds</option>
                                         <option value="60000">60 seconds</option>
-                                        <option value="120000">2 minutes</option>
+                                        <option value="120000" selected>2 minutes</option>
                                         <option value="180000">3 minutes</option>
                                         <option value="240000">4 minutes</option>
                                         <option value="300000">5 minutes</option>
@@ -3246,9 +3246,9 @@ class BenchmarkUI {
                             <label style="color: #34495e; font-size: 14px; margin-bottom: 8px; display: block;">Timeout:</label>
                             <select id="testTimeout" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                                 <option value="15000">15 seconds</option>
-                                <option value="30000" selected>30 seconds</option>
+                                <option value="30000">30 seconds</option>
                                 <option value="60000">60 seconds</option>
-                                <option value="120000">2 minutes</option>
+                                <option value="120000" selected>2 minutes</option>
                                 <option value="180000">3 minutes</option>
                                 <option value="240000">4 minutes</option>
                                 <option value="300000">5 minutes</option>
