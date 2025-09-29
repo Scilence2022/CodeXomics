@@ -90,7 +90,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
             {
@@ -109,7 +109,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
             {
@@ -128,7 +128,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
             {
@@ -147,7 +147,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
             {
@@ -166,7 +166,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
 
@@ -188,7 +188,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateNavigationCall.bind(this)
             },
             {
@@ -208,7 +208,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateNavigationCall.bind(this)
             },
             {
@@ -229,7 +229,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateNavigationCall.bind(this)
             },
             {
@@ -246,7 +246,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
 
@@ -268,7 +268,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateSequenceAnalysisCall.bind(this)
             },
             {
@@ -287,7 +287,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
             {
@@ -306,7 +306,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
 
@@ -327,7 +327,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
             {
@@ -347,7 +347,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateSearchFunctionCall.bind(this)
             },
             {
@@ -366,7 +366,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
 
@@ -390,7 +390,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             }
         ];
