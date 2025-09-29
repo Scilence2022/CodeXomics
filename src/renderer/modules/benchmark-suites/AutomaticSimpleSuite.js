@@ -337,7 +337,7 @@ class AutomaticSimpleSuite {
                 category: 'search',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Find genes related to \'ribosome\' function.',
+                instruction: 'Find genes related to ribosome function.',
                 expectedResult: {
                     tool_name: 'search_features',
                     parameters: {
@@ -371,27 +371,7 @@ class AutomaticSimpleSuite {
             },
 
             // EXTERNAL DATABASE TASKS - Automatic + Simple
-            {
-                id: 'ext_auto_01',
-                name: 'Search UniProt for lacZ',
-                type: 'function_call',
-                category: 'external_database',
-                complexity: 'simple',
-                evaluation: 'automatic',
-                instruction: 'Search UniProt database for protein lacZ.',
-                expectedResult: {
-                    tool_name: 'uniprot_search',
-                    parameters: {
-                        sequence: '<lacZ_protein_sequence>',
-                        blastType: 'blastp',
-                        database: 'nr'
-                    }
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 30000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this)
-            },
+            // Note: ext_auto_01 (UniProt lacZ search) test removed as requested
             {
                 id: 'ext_auto_02',
                 name: 'Get AlphaFold Structure for araA',
