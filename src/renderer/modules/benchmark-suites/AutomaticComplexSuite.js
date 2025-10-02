@@ -280,31 +280,55 @@ class AutomaticComplexSuite {
             }
         }
 
-        // Check tool name - ENHANCED extraction with fallback mechanisms
+        // Check tool name - PRIORITIZE ChatManager's parseToolCall results
         let actualTool = null;
         
-        // Method 1: Standard extraction
-        if (Array.isArray(actualResult)) {
-            actualTool = actualResult[0]?.tool_name;
-        } else if (actualResult && typeof actualResult === 'object') {
-            actualTool = actualResult.tool_name;
+        // PRIORITY 1: Use ChatManager's reliable parseToolCall results from testResult
+        if (testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools && testResult.parseDebugInfo.detectedTools.length > 0) {
+            const detectedTools = testResult.parseDebugInfo.detectedTools;
+            console.log(`🎯 [ComplexSuite PRIORITY 1] Using ChatManager's detected tools:`, detectedTools);
+            
+            // Find the first detected tool that matches our expected tool
+            const matchingTool = detectedTools.find(tool => 
+                tool.tool === expectedResult.tool_name || 
+                tool.tool.toLowerCase().includes(expectedResult.tool_name.toLowerCase()) ||
+                expectedResult.tool_name.toLowerCase().includes(tool.tool.toLowerCase())
+            );
+            
+            if (matchingTool) {
+                actualTool = matchingTool.tool;
+                console.log(`✅ [ComplexSuite PRIORITY 1] Found matching tool from ChatManager: '${actualTool}'`);
+            } else {
+                // If no exact match, use the first detected tool (ChatManager is usually reliable)
+                actualTool = detectedTools[0].tool;
+                console.log(`🔄 [ComplexSuite PRIORITY 1] Using first detected tool from ChatManager: '${actualTool}'`);
+            }
         }
         
-        // Method 2: Fallback - Parse from string if it contains tool call JSON
+        // PRIORITY 2: Standard extraction if no parseDebugInfo available
+        if (!actualTool) {
+            if (Array.isArray(actualResult)) {
+                actualTool = actualResult[0]?.tool_name;
+            } else if (actualResult && typeof actualResult === 'object') {
+                actualTool = actualResult.tool_name;
+            }
+        }
+        
+        // PRIORITY 3: Fallback - Parse from string if it contains tool call JSON
         if (!actualTool && typeof actualResult === 'string') {
             try {
                 const jsonMatch = actualResult.match(/\{[^{}]*"tool_name"[^{}]*\}/);
                 if (jsonMatch) {
                     const parsedTool = JSON.parse(jsonMatch[0]);
                     actualTool = parsedTool.tool_name;
-                    console.log(`🔄 [ComplexSuite] Extracted tool name from string JSON: '${actualTool}'`);
+                    console.log(`🔄 [ComplexSuite PRIORITY 3] Extracted tool name from string JSON: '${actualTool}'`);
                 }
             } catch (e) {
                 // JSON parsing failed, continue with other methods
             }
         }
         
-        // Method 3: Fallback - Check alternative property names
+        // PRIORITY 4: Fallback - Check alternative property names
         if (!actualTool && actualResult && typeof actualResult === 'object') {
             actualTool = actualResult.function_call?.name || 
                         actualResult.tool_call?.name || 
@@ -312,16 +336,20 @@ class AutomaticComplexSuite {
                         actualResult.name;
         }
         
-        // Method 4: Emergency fallback - check if expected tool name appears in string
+        // PRIORITY 5: Emergency fallback - check if expected tool name appears in string
         if (!actualTool && typeof actualResult === 'string') {
             const expectedToolLower = expectedResult.tool_name.toLowerCase();
             if (actualResult.toLowerCase().includes(expectedToolLower)) {
                 actualTool = expectedResult.tool_name;
-                console.log(`🔄 [ComplexSuite] Emergency fallback: using expected tool name`);
+                console.log(`🔄 [ComplexSuite PRIORITY 5] Emergency fallback: using expected tool name`);
             }
         }
         
-        console.log(`🎯 [ComplexSuite] Extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);
+        console.log(`🎯 [ComplexSuite FINAL] Extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);
+        console.log(`🔍 [ComplexSuite DEBUG] parseDebugInfo available: ${!!(testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools)}`);
+        if (testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools) {
+            console.log(`🔍 [ComplexSuite DEBUG] ChatManager detected tools:`, testResult.parseDebugInfo.detectedTools.map(t => t.tool));
+        }
         if (actualTool === expectedResult.tool_name) {
             evaluation.score = evaluation.maxScore; // Full points for correct tool
         } else {

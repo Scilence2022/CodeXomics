@@ -419,32 +419,55 @@ class AutomaticSimpleSuite {
         // console.log(`🎯 [SONG DEBUG] actualResult content:`, actualResult);
         // console.log(`🎯 [SONG DEBUG] expectedResult:`, expectedResult);
         
-        // Extract tool name from actualResult - ENHANCED with fallback mechanisms
+        // Extract tool name from actualResult - PRIORITIZE ChatManager's parseToolCall results
         let actualTool = null;
         
-        // Method 1: Standard extraction
-        if (Array.isArray(actualResult)) {
-            actualTool = actualResult[0]?.tool_name;
-        } else if (actualResult && typeof actualResult === 'object') {
-            actualTool = actualResult.tool_name;
+        // PRIORITY 1: Use ChatManager's reliable parseToolCall results from testResult
+        if (testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools && testResult.parseDebugInfo.detectedTools.length > 0) {
+            const detectedTools = testResult.parseDebugInfo.detectedTools;
+            console.log(`🎯 [PRIORITY 1] Using ChatManager's detected tools:`, detectedTools);
+            
+            // Find the first detected tool that matches our expected tool or is the expected tool
+            const matchingTool = detectedTools.find(tool => 
+                tool.tool === expectedResult.tool_name || 
+                tool.tool.toLowerCase().includes(expectedResult.tool_name.toLowerCase()) ||
+                expectedResult.tool_name.toLowerCase().includes(tool.tool.toLowerCase())
+            );
+            
+            if (matchingTool) {
+                actualTool = matchingTool.tool;
+                console.log(`✅ [PRIORITY 1] Found matching tool from ChatManager: '${actualTool}'`);
+            } else {
+                // If no exact match, use the first detected tool (ChatManager is usually reliable)
+                actualTool = detectedTools[0].tool;
+                console.log(`🔄 [PRIORITY 1] Using first detected tool from ChatManager: '${actualTool}'`);
+            }
         }
         
-        // Method 2: Fallback - Parse from string if it contains tool call JSON
+        // PRIORITY 2: Standard extraction if no parseDebugInfo available
+        if (!actualTool) {
+            if (Array.isArray(actualResult)) {
+                actualTool = actualResult[0]?.tool_name;
+            } else if (actualResult && typeof actualResult === 'object') {
+                actualTool = actualResult.tool_name;
+            }
+        }
+        
+        // PRIORITY 3: Fallback - Parse from string if it contains tool call JSON
         if (!actualTool && typeof actualResult === 'string') {
             try {
-                // Look for JSON-like tool call patterns in the string
                 const jsonMatch = actualResult.match(/\{[^{}]*"tool_name"[^{}]*\}/);
                 if (jsonMatch) {
                     const parsedTool = JSON.parse(jsonMatch[0]);
                     actualTool = parsedTool.tool_name;
-                    console.log(`🔄 [FALLBACK] Extracted tool name from string JSON: '${actualTool}'`);
+                    console.log(`🔄 [PRIORITY 3] Extracted tool name from string JSON: '${actualTool}'`);
                 }
             } catch (e) {
                 // JSON parsing failed, continue with other methods
             }
         }
         
-        // Method 3: Fallback - Check if actualResult has function_call or tool_call properties
+        // PRIORITY 4: Fallback - Check alternative property names
         if (!actualTool && actualResult && typeof actualResult === 'object') {
             actualTool = actualResult.function_call?.name || 
                         actualResult.tool_call?.name || 
@@ -452,11 +475,10 @@ class AutomaticSimpleSuite {
                         actualResult.name;
         }
         
-        // Method 4: Fallback - Check for tool execution success patterns that mention the expected tool
+        // PRIORITY 5: Emergency fallback - Check for tool execution success patterns
         if (!actualTool && typeof actualResult === 'string') {
             const expectedToolLower = expectedResult.tool_name.toLowerCase();
             if (actualResult.toLowerCase().includes(expectedToolLower)) {
-                // Check if this looks like a success message mentioning the tool
                 const successPatterns = [
                     new RegExp(`(successfully|completed|executed).*${expectedToolLower}`, 'i'),
                     new RegExp(`${expectedToolLower}.*(successfully|completed|executed)`, 'i'),
@@ -465,14 +487,17 @@ class AutomaticSimpleSuite {
                 
                 if (successPatterns.some(pattern => pattern.test(actualResult))) {
                     actualTool = expectedResult.tool_name;
-                    console.log(`🔄 [FALLBACK] Detected tool from success pattern: '${actualTool}'`);
+                    console.log(`🔄 [PRIORITY 5] Detected tool from success pattern: '${actualTool}'`);
                 }
             }
         }
         
-        console.log(`🎯 [ENHANCED DEBUG] Extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);
-        console.log(`🔍 [ENHANCED DEBUG] actualResult type: ${typeof actualResult}, isArray: ${Array.isArray(actualResult)}`);
-        console.log(`🔍 [ENHANCED DEBUG] actualResult content:`, actualResult);
+        console.log(`🎯 [FINAL RESULT] Extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);
+        console.log(`🔍 [DEBUG INFO] actualResult type: ${typeof actualResult}, isArray: ${Array.isArray(actualResult)}`);
+        console.log(`🔍 [DEBUG INFO] parseDebugInfo available: ${!!(testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools)}`);
+        if (testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools) {
+            console.log(`🔍 [DEBUG INFO] ChatManager detected tools:`, testResult.parseDebugInfo.detectedTools.map(t => t.tool));
+        }
         
         // Record detected tool for Song's analysis with enhanced debugging info
         const debugInfo = {
