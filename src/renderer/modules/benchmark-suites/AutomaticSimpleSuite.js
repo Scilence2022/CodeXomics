@@ -413,11 +413,11 @@ class AutomaticSimpleSuite {
             return evaluation;
         }
 
-        // 🔍 SONG'S DEBUGGING: Log detected tools for analysis
-        console.log(`🎯 [SONG DEBUG] evaluateBasicFunctionCall called for test: ${testResult.testId || 'unknown'}`);
-        console.log(`🎯 [SONG DEBUG] actualResult type:`, typeof actualResult);
-        console.log(`🎯 [SONG DEBUG] actualResult content:`, actualResult);
-        console.log(`🎯 [SONG DEBUG] expectedResult:`, expectedResult);
+        // // 🔍 SONG'S DEBUGGING: Log detected tools for analysis
+        // console.log(`🎯 [SONG DEBUG] evaluateBasicFunctionCall called for test: ${testResult.testId || 'unknown'}`);
+        // console.log(`🎯 [SONG DEBUG] actualResult type:`, typeof actualResult);
+        // console.log(`🎯 [SONG DEBUG] actualResult content:`, actualResult);
+        // console.log(`🎯 [SONG DEBUG] expectedResult:`, expectedResult);
         
         // Extract tool name from actualResult - SONG DEBUG
         let actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;

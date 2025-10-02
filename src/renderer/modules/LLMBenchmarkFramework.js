@@ -1186,7 +1186,7 @@ class LLMBenchmarkFramework {
         const expectedResult = testInfo.expectedResult || {};
         
         // Create professional test engineer persona
-        const testerName = "Genome AI Studio";
+        const testerName = "CodeXomics";
         const testerRole = "Benchmark Tester";
         
         // Show test initiation with improved formatting
