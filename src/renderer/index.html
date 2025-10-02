@@ -1094,7 +1094,7 @@
                             <small class="help-text">Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="openaiModel">Model:</label>
+                            <label for="openaiModel">Default Model:</label>
                             <select id="openaiModel" class="select">
                                 <option value="gpt-5">GPT-5 (Latest - requires BYOK)</option>
                                 <option value="gpt-4o" selected>GPT-4o</option>
@@ -1106,6 +1106,11 @@
                         <div class="form-group">
                             <label for="openaiBaseUrl">Base URL (optional):</label>
                             <input type="text" id="openaiBaseUrl" placeholder="https://api.openai.com/v1" class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="saveOpenaiProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
                         </div>
                     </div>
                     
@@ -1122,7 +1127,7 @@
                             <small class="help-text">Get your API key from <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="anthropicModel">Model:</label>
+                            <label for="anthropicModel">Default Model:</label>
                             <select id="anthropicModel" class="select">
                                 <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
                                 <option value="claude-3-opus-20240229">Claude 3 Opus</option>
@@ -1132,6 +1137,11 @@
                         <div class="form-group">
                             <label for="anthropicBaseUrl">Base URL (optional):</label>
                             <input type="text" id="anthropicBaseUrl" placeholder="https://api.anthropic.com" class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="saveAnthropicProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
                         </div>
                     </div>
                     
@@ -1148,7 +1158,7 @@
                             <small class="help-text">Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="googleModel">Model:</label>
+                            <label for="googleModel">Default Model:</label>
                             <select id="googleModel" class="select">
                                 <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash (Latest - Multimodal)</option>
                                 <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
@@ -1162,6 +1172,11 @@
                         <div class="form-group">
                             <label for="googleBaseUrl">Base URL (optional):</label>
                             <input type="text" id="googleBaseUrl" placeholder="https://generativelanguage.googleapis.com" class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="saveGoogleProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
                         </div>
                     </div>
                     
@@ -1178,7 +1193,7 @@
                             <small class="help-text">Get your API key from <a href="https://platform.deepseek.com/" target="_blank">DeepSeek Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="deepseekModel">Model:</label>
+                            <label for="deepseekModel">Default Model:</label>
                             <select id="deepseekModel" class="select">
                                 <option value="deepseek-chat">DeepSeek Chat</option>
                                 <option value="deepseek-coder">DeepSeek Coder</option>
@@ -1188,6 +1203,11 @@
                         <div class="form-group">
                             <label for="deepseekBaseUrl">Base URL (optional):</label>
                             <input type="text" id="deepseekBaseUrl" placeholder="https://api.deepseek.com/v1" class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="saveDeepseekProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
                         </div>
                     </div>
                     
@@ -1204,7 +1224,7 @@
                             <small class="help-text">Get your API key from <a href="https://siliconflow.cn/" target="_blank">SiliconFlow Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="siliconflowModel">Model:</label>
+                            <label for="siliconflowModel">Default Model:</label>
                             <select id="siliconflowModel" class="select">
                                 <!-- DeepSeek Models -->
                                 <optgroup label="DeepSeek Models">
@@ -1277,6 +1297,11 @@
                             <input type="text" id="siliconflowBaseUrl" value="https://api.siliconflow.cn/v1" class="input-full" readonly>
                             <small class="help-text">SiliconFlow API endpoint (read-only)</small>
                         </div>
+                        <div class="form-group">
+                            <button type="button" id="saveSiliconflowProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- OpenRouter Configuration -->
@@ -1292,7 +1317,7 @@
                             <small class="help-text">Get your API key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="openrouterModel">Model:</label>
+                            <label for="openrouterModel">Default Model:</label>
                             <select id="openrouterModel" class="select">
                                 <!-- OpenAI GPT-5 Series (Latest - Aug 2025) -->
                                 <optgroup label="OpenAI GPT-5 Series (Latest - Aug 2025)">
@@ -1424,6 +1449,11 @@
                             <input type="text" id="openrouterBaseUrl" value="https://openrouter.ai/api/v1" class="input-full" readonly>
                             <small class="help-text">OpenRouter API endpoint (read-only)</small>
                         </div>
+                        <div class="form-group">
+                            <button type="button" id="saveOpenrouterProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Local LLM Configuration -->
@@ -1434,7 +1464,7 @@
                             <small class="help-text">Local LLM endpoint (Ollama, LMStudio, etc.)</small>
                         </div>
                         <div class="form-group">
-                            <label for="localModel">Model Name:</label>
+                            <label for="localModel">Default Model:</label>
                             <select id="localModel" class="select input-full">
                                 <!-- Qwen3 Series (Latest Generation) -->
                                 <optgroup label="Qwen3 Series (Latest)">
@@ -1490,26 +1520,31 @@
                                 <input type="checkbox" id="localStreamingSupport"> Streaming Support
                             </label>
                         </div>
+                        <div class="form-group">
+                            <button type="button" id="saveLocalProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Model Selection Configuration -->
                     <div id="models-config" class="provider-config">
                         <div class="model-selection-header">
-                            <h4><i class="fas fa-brain"></i> Model Type Selection</h4>
-                            <p class="help-text">Configure different model types for various tasks. Each type can use different providers and models.</p>
+                            <h4><i class="fas fa-brain"></i> Model Selection</h4>
+                            <p class="help-text">Configure the default model for general tasks, reasoning, and code generation.</p>
                         </div>
                         
-                        <div class="model-type-grid">
-                            <!-- Reasoning Model -->
-                            <div class="model-type-card">
-                                <div class="model-type-header">
-                                    <h5><i class="fas fa-lightbulb"></i> Reasoning Model</h5>
-                                    <small>For complex reasoning and analysis tasks</small>
+                        <div class="simplified-model-selection">
+                            <!-- Main Model Selection -->
+                            <div class="model-selection-card">
+                                <div class="model-selection-header">
+                                    <h5><i class="fas fa-robot"></i> Main Model</h5>
+                                    <small>For general tasks, reasoning, and code generation</small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="reasoningProvider">Provider:</label>
-                                    <select id="reasoningProvider" class="select">
-                                        <option value="auto">Auto (Use main LLM)</option>
+                                    <label for="mainProvider">Provider:</label>
+                                    <select id="mainProvider" class="select">
+                                        <option value="auto">Auto (Use enabled provider)</option>
                                         <option value="openai">OpenAI</option>
                                         <option value="anthropic">Anthropic (Claude)</option>
                                         <option value="google">Google (Gemini)</option>
@@ -1520,66 +1555,22 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="reasoningModel">Model:</label>
-                                    <select id="reasoningModel" class="select">
+                                    <label for="mainModel">Model:</label>
+                                    <select id="mainModel" class="select">
                                         <option value="auto">Auto (Use provider default)</option>
+                                        <option value="custom">Custom Model Name</option>
                                     </select>
+                                </div>
+                                <div class="form-group" id="mainCustomModelGroup" style="display: none;">
+                                    <label for="mainCustomModel">Custom Model Name:</label>
+                                    <input type="text" id="mainCustomModel" placeholder="Enter custom model name" class="input-full">
                                 </div>
                             </div>
-                            
-                            <!-- Task Model -->
-                            <div class="model-type-card">
-                                <div class="model-type-header">
-                                    <h5><i class="fas fa-tasks"></i> Task Model</h5>
-                                    <small>For general task execution and completion</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="taskProvider">Provider:</label>
-                                    <select id="taskProvider" class="select">
-                                        <option value="auto">Auto (Use main LLM)</option>
-                                        <option value="openai">OpenAI</option>
-                                        <option value="anthropic">Anthropic (Claude)</option>
-                                        <option value="google">Google (Gemini)</option>
-                                        <option value="deepseek">DeepSeek</option>
-                                        <option value="siliconflow">SiliconFlow</option>
-                                        <option value="openrouter">OpenRouter</option>
-                                        <option value="local">Local LLM</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="taskModel">Model:</label>
-                                    <select id="taskModel" class="select">
-                                        <option value="auto">Auto (Use provider default)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <!-- Code Model -->
-                            <div class="model-type-card">
-                                <div class="model-type-header">
-                                    <h5><i class="fas fa-code"></i> Code Model</h5>
-                                    <small>For code generation and programming tasks</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="codeProvider">Provider:</label>
-                                    <select id="codeProvider" class="select">
-                                        <option value="auto">Auto (Use main LLM)</option>
-                                        <option value="openai">OpenAI</option>
-                                        <option value="anthropic">Anthropic (Claude)</option>
-                                        <option value="google">Google (Gemini)</option>
-                                        <option value="deepseek">DeepSeek</option>
-                                        <option value="siliconflow">SiliconFlow</option>
-                                        <option value="openrouter">OpenRouter</option>
-                                        <option value="local">Local LLM</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="codeModel">Model:</label>
-                                    <select id="codeModel" class="select">
-                                        <option value="auto">Auto (Use provider default)</option>
-                                    </select>
-                                </div>
-                            </div>
+                        </div>
+                        
+                        <div class="specialized-models">
+                            <h5><i class="fas fa-cog"></i> Specialized Models (Optional)</h5>
+                            <p class="help-text">Configure specialized models for specific tasks. Leave as "Auto" to use the main model.</p>
                             
                             <!-- Voice Model - TTS -->
                             <div class="model-type-card">
@@ -1601,7 +1592,12 @@
                                     <label for="voiceTTSModel">Model:</label>
                                     <select id="voiceTTSModel" class="select">
                                         <option value="auto">Auto (Use provider default)</option>
+                                        <option value="custom">Custom Model Name</option>
                                     </select>
+                                </div>
+                                <div class="form-group" id="voiceTTSCustomModelGroup" style="display: none;">
+                                    <label for="voiceTTSCustomModel">Custom Model Name:</label>
+                                    <input type="text" id="voiceTTSCustomModel" placeholder="Enter custom model name" class="input-full">
                                 </div>
                             </div>
                             
@@ -1625,7 +1621,12 @@
                                     <label for="voiceSTTModel">Model:</label>
                                     <select id="voiceSTTModel" class="select">
                                         <option value="auto">Auto (Use provider default)</option>
+                                        <option value="custom">Custom Model Name</option>
                                     </select>
+                                </div>
+                                <div class="form-group" id="voiceSTTCustomModelGroup" style="display: none;">
+                                    <label for="voiceSTTCustomModel">Custom Model Name:</label>
+                                    <input type="text" id="voiceSTTCustomModel" placeholder="Enter custom model name" class="input-full">
                                 </div>
                             </div>
                             
@@ -1649,7 +1650,12 @@
                                     <label for="imageModel">Model:</label>
                                     <select id="imageModel" class="select">
                                         <option value="auto">Auto (Use provider default)</option>
+                                        <option value="custom">Custom Model Name</option>
                                     </select>
+                                </div>
+                                <div class="form-group" id="imageCustomModelGroup" style="display: none;">
+                                    <label for="imageCustomModel">Custom Model Name:</label>
+                                    <input type="text" id="imageCustomModel" placeholder="Enter custom model name" class="input-full">
                                 </div>
                             </div>
                             
@@ -1673,7 +1679,12 @@
                                     <label for="multimodalModel">Model:</label>
                                     <select id="multimodalModel" class="select">
                                         <option value="auto">Auto (Use provider default)</option>
+                                        <option value="custom">Custom Model Name</option>
                                     </select>
+                                </div>
+                                <div class="form-group" id="multimodalCustomModelGroup" style="display: none;">
+                                    <label for="multimodalCustomModel">Custom Model Name:</label>
+                                    <input type="text" id="multimodalCustomModel" placeholder="Enter custom model name" class="input-full">
                                 </div>
                             </div>
                         </div>

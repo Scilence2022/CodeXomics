@@ -344,6 +344,43 @@ class ChatBoxSettingsManager {
     }
 
     /**
+     * Get current main model configuration from LLM Config Manager
+     */
+    getCurrentMainModelConfig() {
+        if (window.llmConfigManager && window.llmConfigManager.modelTypes && window.llmConfigManager.modelTypes.main) {
+            const mainConfig = window.llmConfigManager.modelTypes.main;
+            const provider = window.llmConfigManager.providers[mainConfig.provider];
+            
+            if (provider && provider.enabled) {
+                return {
+                    provider: mainConfig.provider,
+                    model: mainConfig.model === 'auto' ? provider.model : mainConfig.model,
+                    apiKey: provider.apiKey,
+                    baseUrl: provider.baseUrl,
+                    enabled: true
+                };
+            }
+        }
+        
+        // Fallback to first enabled provider
+        if (window.llmConfigManager && window.llmConfigManager.providers) {
+            for (const [providerName, provider] of Object.entries(window.llmConfigManager.providers)) {
+                if (provider.enabled) {
+                    return {
+                        provider: providerName,
+                        model: provider.model,
+                        apiKey: provider.apiKey,
+                        baseUrl: provider.baseUrl,
+                        enabled: true
+                    };
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
      * Simple event emitter functionality
      */
     emit(eventName, data) {
