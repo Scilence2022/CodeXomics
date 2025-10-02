@@ -279,8 +279,24 @@ class LLMConfigManager {
     }
 
     setupModelSelectionEventListeners() {
-        // Provider change handlers for each model type
-        const modelTypes = ['reasoning', 'task', 'code', 'voiceTTS', 'voiceSTT', 'image', 'multimodal'];
+        // Main model selection
+        const mainProviderSelect = document.getElementById('mainProvider');
+        const mainModelSelect = document.getElementById('mainModel');
+        
+        if (mainProviderSelect) {
+            mainProviderSelect.addEventListener('change', () => {
+                this.updateModelTypeOptions('main');
+            });
+        }
+        
+        if (mainModelSelect) {
+            mainModelSelect.addEventListener('change', () => {
+                this.toggleCustomModelInput('main');
+            });
+        }
+        
+        // Specialized model types
+        const modelTypes = ['voiceTTS', 'voiceSTT', 'image', 'multimodal'];
         
         modelTypes.forEach(type => {
             const providerSelect = document.getElementById(`${type}Provider`);
@@ -289,6 +305,12 @@ class LLMConfigManager {
             if (providerSelect) {
                 providerSelect.addEventListener('change', () => {
                     this.updateModelTypeOptions(type);
+                });
+            }
+            
+            if (modelSelect) {
+                modelSelect.addEventListener('change', () => {
+                    this.toggleCustomModelInput(type);
                 });
             }
         });
@@ -560,34 +582,107 @@ class LLMConfigManager {
     }
 
     loadModelTypeSelectionToUI() {
-        Object.keys(this.modelTypes).forEach(type => {
+        // Load main model configuration
+        const mainProviderSelect = document.getElementById('mainProvider');
+        const mainModelSelect = document.getElementById('mainModel');
+        const mainCustomModelInput = document.getElementById('mainCustomModel');
+        
+        if (mainProviderSelect && this.modelTypes.main) {
+            mainProviderSelect.value = this.modelTypes.main.provider || 'auto';
+            this.updateModelTypeOptions('main');
+        }
+        
+        if (mainModelSelect && this.modelTypes.main) {
+            if (this.modelTypes.main.model && this.modelTypes.main.model !== 'auto') {
+                // Check if it's a custom model name
+                const isCustomModel = !this.isKnownModel(this.modelTypes.main.model, this.modelTypes.main.provider);
+                if (isCustomModel) {
+                    mainModelSelect.value = 'custom';
+                    if (mainCustomModelInput) {
+                        mainCustomModelInput.value = this.modelTypes.main.model;
+                    }
+                    this.toggleCustomModelInput('main');
+                } else {
+                    mainModelSelect.value = this.modelTypes.main.model;
+                }
+            } else {
+                mainModelSelect.value = 'auto';
+            }
+        }
+        
+        // Load specialized model configurations
+        const modelTypes = ['voiceTTS', 'voiceSTT', 'image', 'multimodal'];
+        
+        modelTypes.forEach(type => {
             const providerSelect = document.getElementById(`${type}Provider`);
             const modelSelect = document.getElementById(`${type}Model`);
+            const customModelInput = document.getElementById(`${type}CustomModel`);
             
-            if (providerSelect) {
-                providerSelect.value = this.modelTypes[type].provider;
+            if (providerSelect && this.modelTypes[type]) {
+                providerSelect.value = this.modelTypes[type].provider || 'auto';
                 this.updateModelTypeOptions(type);
             }
             
-            if (modelSelect) {
-                modelSelect.value = this.modelTypes[type].model;
+            if (modelSelect && this.modelTypes[type]) {
+                if (this.modelTypes[type].model && this.modelTypes[type].model !== 'auto') {
+                    // Check if it's a custom model name
+                    const isCustomModel = !this.isKnownModel(this.modelTypes[type].model, this.modelTypes[type].provider);
+                    if (isCustomModel) {
+                        modelSelect.value = 'custom';
+                        if (customModelInput) {
+                            customModelInput.value = this.modelTypes[type].model;
+                        }
+                        this.toggleCustomModelInput(type);
+                    } else {
+                        modelSelect.value = this.modelTypes[type].model;
+                    }
+                } else {
+                    modelSelect.value = 'auto';
+                }
             }
         });
     }
 
     saveModelTypeSelection() {
-        const modelTypes = ['reasoning', 'task', 'code', 'voiceTTS', 'voiceSTT', 'image', 'multimodal'];
+        // Save main model configuration
+        const mainProviderSelect = document.getElementById('mainProvider');
+        const mainModelSelect = document.getElementById('mainModel');
+        const mainCustomModelInput = document.getElementById('mainCustomModel');
+        
+        if (mainProviderSelect) {
+            this.modelTypes.main = this.modelTypes.main || {};
+            this.modelTypes.main.provider = mainProviderSelect.value;
+        }
+        
+        if (mainModelSelect) {
+            this.modelTypes.main = this.modelTypes.main || {};
+            if (mainModelSelect.value === 'custom' && mainCustomModelInput) {
+                this.modelTypes.main.model = mainCustomModelInput.value;
+            } else {
+                this.modelTypes.main.model = mainModelSelect.value;
+            }
+        }
+        
+        // Save specialized model configurations
+        const modelTypes = ['voiceTTS', 'voiceSTT', 'image', 'multimodal'];
         
         modelTypes.forEach(type => {
             const providerSelect = document.getElementById(`${type}Provider`);
             const modelSelect = document.getElementById(`${type}Model`);
+            const customModelInput = document.getElementById(`${type}CustomModel`);
             
             if (providerSelect) {
+                this.modelTypes[type] = this.modelTypes[type] || {};
                 this.modelTypes[type].provider = providerSelect.value;
             }
             
             if (modelSelect) {
-                this.modelTypes[type].model = modelSelect.value;
+                this.modelTypes[type] = this.modelTypes[type] || {};
+                if (modelSelect.value === 'custom' && customModelInput) {
+                    this.modelTypes[type].model = customModelInput.value;
+                } else {
+                    this.modelTypes[type].model = modelSelect.value;
+                }
             }
         });
     }
@@ -652,6 +747,17 @@ class LLMConfigManager {
                 this.testConnection();
             });
         }
+
+        // Save Provider Info buttons
+        const providerNames = ['openai', 'anthropic', 'google', 'deepseek', 'siliconflow', 'openrouter', 'local'];
+        providerNames.forEach(provider => {
+            const saveBtn = document.getElementById(`save${provider.charAt(0).toUpperCase() + provider.slice(1)}ProviderBtn`);
+            if (saveBtn) {
+                saveBtn.addEventListener('click', () => {
+                    this.saveProviderInfo(provider);
+                });
+            }
+        });
 
         // System prompt controls
         const resetSystemPromptBtn = document.getElementById('resetSystemPrompt');
@@ -845,6 +951,116 @@ class LLMConfigManager {
             console.error('Error loading LLM configuration:', error);
         }
         console.log('=== LLMConfigManager.loadConfiguration Debug End ===');
+    }
+
+    /**
+     * Save individual provider information without closing the modal
+     */
+    async saveProviderInfo(providerName) {
+        try {
+            const provider = this.providers[providerName];
+            if (!provider) {
+                console.error(`Provider ${providerName} not found`);
+                return;
+            }
+
+            const prefix = providerName;
+            
+            // Update provider configuration from form fields
+            const apiKeyField = document.getElementById(`${prefix}ApiKey`);
+            if (apiKeyField) {
+                provider.apiKey = apiKeyField.value;
+            }
+
+            if (providerName === 'local') {
+                const localModelSelect = document.getElementById('localModel');
+                if (localModelSelect && localModelSelect.value === 'other') {
+                    provider.model = document.getElementById('localModelOther').value;
+                } else if (localModelSelect) {
+                    provider.model = localModelSelect.value;
+                }
+                provider.baseUrl = document.getElementById('localEndpoint').value;
+                provider.streamingSupport = document.getElementById('localStreamingSupport').checked;
+            } else {
+                const modelField = document.getElementById(`${prefix}Model`);
+                if (modelField) {
+                    provider.model = modelField.value;
+                }
+                const baseUrlField = document.getElementById(`${prefix}BaseUrl`);
+                if (baseUrlField) {
+                    provider.baseUrl = baseUrlField.value;
+                }
+            }
+            
+            // Set as enabled if it has required fields
+            provider.enabled = !!(provider.apiKey || providerName === 'local') && provider.model;
+
+            // Save to ConfigManager or localStorage
+            if (this.configManager) {
+                await this.configManager.set('llm.providers', this.providers);
+                await this.configManager.set('llm.modelTypes', this.modelTypes);
+                await this.configManager.saveConfig();
+            } else {
+                localStorage.setItem('llmConfiguration', JSON.stringify({
+                    providers: this.providers,
+                    modelTypes: this.modelTypes
+                }));
+            }
+
+            this.showNotification(`${provider.name} configuration saved successfully!`, 'success');
+            console.log(`${provider.name} configuration saved:`, provider);
+            
+        } catch (error) {
+            console.error(`Error saving ${providerName} configuration:`, error);
+            this.showNotification(`Error saving ${providerName} configuration`, 'error');
+        }
+    }
+
+    /**
+     * Toggle custom model input visibility
+     */
+    toggleCustomModelInput(type) {
+        const modelSelect = document.getElementById(`${type}Model`);
+        const customGroup = document.getElementById(`${type}CustomModelGroup`);
+        
+        if (modelSelect && customGroup) {
+            if (modelSelect.value === 'custom') {
+                customGroup.style.display = 'block';
+            } else {
+                customGroup.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Check if a model is a known model for a given provider
+     */
+    isKnownModel(modelName, providerName) {
+        if (!modelName || modelName === 'auto' || modelName === 'custom') {
+            return true;
+        }
+        
+        const provider = this.providers[providerName];
+        if (!provider) {
+            return false;
+        }
+        
+        // Check if model is in provider's available models
+        if (provider.availableModels && provider.availableModels.includes(modelName)) {
+            return true;
+        }
+        
+        // Check if model is in provider's models object
+        if (provider.models && Object.values(provider.models).includes(modelName)) {
+            return true;
+        }
+        
+        // Check if model matches provider's default model
+        if (provider.model === modelName) {
+            return true;
+        }
+        
+        return false;
     }
 
     async saveConfiguration() {
@@ -2323,15 +2539,31 @@ Current context summary:
      * @returns {string|null} - The provider key or null if not configured
      */
     getProviderForModelType(modelType) {
-        const modelTypeConfig = this.modelTypes[modelType];
-        
-        // Check if model type is configured and not set to 'auto'
-        if (modelTypeConfig && modelTypeConfig.provider !== 'auto') {
-            const providerKey = modelTypeConfig.provider;
-            if (this.providers[providerKey] && this.providers[providerKey].enabled) {
-                return providerKey;
-            } else {
-                console.warn(`Configured provider '${providerKey}' for model type '${modelType}' is not enabled`);
+        // For general tasks, reasoning, and code, use the main model configuration
+        if (modelType === 'task' || modelType === 'reasoning' || modelType === 'code') {
+            const mainConfig = this.modelTypes.main;
+            
+            // Check if main model is configured and not set to 'auto'
+            if (mainConfig && mainConfig.provider !== 'auto') {
+                const providerKey = mainConfig.provider;
+                if (this.providers[providerKey] && this.providers[providerKey].enabled) {
+                    return providerKey;
+                } else {
+                    console.warn(`Configured provider '${providerKey}' for main model is not enabled`);
+                }
+            }
+        } else {
+            // For specialized model types, check their specific configuration
+            const modelTypeConfig = this.modelTypes[modelType];
+            
+            // Check if model type is configured and not set to 'auto'
+            if (modelTypeConfig && modelTypeConfig.provider !== 'auto') {
+                const providerKey = modelTypeConfig.provider;
+                if (this.providers[providerKey] && this.providers[providerKey].enabled) {
+                    return providerKey;
+                } else {
+                    console.warn(`Configured provider '${providerKey}' for model type '${modelType}' is not enabled`);
+                }
             }
         }
         
@@ -2360,9 +2592,17 @@ Current context summary:
         const providerKey = this.getProviderForModelType(modelType);
         if (!providerKey) return null;
         
-        // Check if model type has specific model configured
-        if (this.modelTypes[modelType] && this.modelTypes[modelType].model !== 'auto') {
-            return this.modelTypes[modelType].model;
+        // For general tasks, reasoning, and code, use the main model configuration
+        if (modelType === 'task' || modelType === 'reasoning' || modelType === 'code') {
+            const mainConfig = this.modelTypes.main;
+            if (mainConfig && mainConfig.model !== 'auto') {
+                return mainConfig.model;
+            }
+        } else {
+            // For specialized model types, check their specific configuration
+            if (this.modelTypes[modelType] && this.modelTypes[modelType].model !== 'auto') {
+                return this.modelTypes[modelType].model;
+            }
         }
         
         // Fallback to provider's default model
