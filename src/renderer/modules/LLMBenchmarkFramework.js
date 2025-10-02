@@ -698,7 +698,10 @@ class LLMBenchmarkFramework {
                 },
                 
                 // CRITICAL ENHANCEMENT: Include complete LLM interaction data
-                llmInteractionData: interactionData
+                llmInteractionData: interactionData,
+                
+                // CRITICAL FIX: Include parseDebugInfo for tool evaluation
+                parseDebugInfo: actualResult?.parseDebugInfo || null
             };
 
         } finally {
@@ -1403,16 +1406,21 @@ class LLMBenchmarkFramework {
             expectedResult: test.expectedResult
         });
 
+        // Extract parseDebugInfo from console logs (ChatManager's parseToolCall results)
+        const parseDebugInfo = this.extractParseDebugInfoFromLogs(this.capturedLogs || []);
+
         // ChatManager returns text responses after handling function calls internally
         // We need to analyze the response to understand what happened
         const parsedResponse = {
             content: response,
             functionCalls: this.extractFunctionCallsFromResponse(response),
             completionIndicators: this.findCompletionIndicators(response),
-            steps: this.extractWorkflowSteps(response)
+            steps: this.extractWorkflowSteps(response),
+            parseDebugInfo: parseDebugInfo // Include parse debug info
         };
 
         console.log('📊 Parsed response structure:', parsedResponse);
+        console.log('🔍 ParseDebugInfo extracted:', parseDebugInfo);
 
         // Pass test context to parsing methods for better inference
         const parsingOptions = {
@@ -2059,10 +2067,12 @@ class LLMBenchmarkFramework {
             lowerResponse.includes(pattern)
         );
         
-        // Also check for specific error message patterns
+        // Also check for specific error message patterns (but be more precise)
         const isErrorMessage = lowerResponse.includes('**model not found**') ||
-                              lowerResponse.includes('**error**') ||
-                              lowerResponse.includes('please:') && lowerResponse.includes('configure llms');
+                              (lowerResponse.includes('**error**') && 
+                               !lowerResponse.includes('successfully') && 
+                               !lowerResponse.includes('navigated to')) ||
+                              (lowerResponse.includes('please:') && lowerResponse.includes('configure llms'));
         
         return hasErrorPattern || isErrorMessage;
     }
