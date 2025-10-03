@@ -1445,8 +1445,13 @@ class LLMBenchmarkFramework {
     /**
      * Extract function calls from ChatManager response
      * Since ChatManager handles function calls internally, we look for evidence in the response
+     * ENHANCED: Add comprehensive tool detection logging as requested by Song
      */
     extractFunctionCallsFromResponse(response) {
+        console.log('🔍 [Tool Detection] Starting function call extraction from response');
+        console.log('📝 [Tool Detection] Response length:', response ? response.length : 0);
+        console.log('📝 [Tool Detection] Response preview:', response ? response.substring(0, 200) + '...' : 'No response');
+        
         const functionCalls = [];
         
         // PRIORITY 1: Enhanced patterns to detect function calls from ChatManager responses
@@ -1476,6 +1481,8 @@ class LLMBenchmarkFramework {
             /(?:successfully|completed)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+(?:operation|function|tool|search|navigation)/gi
         ];
 
+        console.log('🔍 [Tool Detection] Testing', patterns.length, 'detection patterns');
+
         // PRIORITY 2: Tool-specific response content detection
         const toolContentPatterns = {
             'get_current_state': [
@@ -1495,29 +1502,54 @@ class LLMBenchmarkFramework {
                 /reverse complement/i,
                 /complementary sequence/i,
                 /dna complement/i
+            ],
+            'translate_dna': [
+                /protein sequence/i,
+                /amino acid sequence/i,
+                /translation/i,
+                /methionine.*arginine.*serine/i,
+                /start codon.*stop codon/i,
+                /reading frame/i,
+                /genetic code/i,
+                /codon/i
             ]
         };
 
+        console.log('🔍 [Tool Detection] Testing tool-specific content patterns for', Object.keys(toolContentPatterns).length, 'tools');
+
         // Check for tool-specific content patterns first
         for (const [toolName, contentPatterns] of Object.entries(toolContentPatterns)) {
-            const hasContent = contentPatterns.some(pattern => pattern.test(response));
+            console.log(`🔍 [Tool Detection] Testing ${toolName} with ${contentPatterns.length} patterns`);
+            const hasContent = contentPatterns.some(pattern => {
+                const matches = pattern.test(response);
+                if (matches) {
+                    console.log(`✅ [Tool Detection] Pattern match for ${toolName}:`, pattern.toString());
+                }
+                return matches;
+            });
+            
             if (hasContent) {
-                console.log(`🎯 Found content pattern for tool: ${toolName}`);
+                console.log(`🎯 [Tool Detection] Found content pattern for tool: ${toolName}`);
                 functionCalls.push({
                     tool_name: toolName,
                     parameters: {},
                     evidence: `Response contains ${toolName} content patterns`,
                     confidence: 95,
-                    contentMatch: true
+                    contentMatch: true,
+                    detectionMethod: 'content_pattern'
                 });
             }
         }
 
         // If we found content-based matches, return those first
         if (functionCalls.length > 0) {
-            console.log(`🔍 Extracted ${functionCalls.length} function calls from content patterns:`, functionCalls);
-            return this.deduplicateFunctionCalls(functionCalls);
+            console.log(`✅ [Tool Detection] Extracted ${functionCalls.length} function calls from content patterns:`, functionCalls);
+            const deduped = this.deduplicateFunctionCalls(functionCalls);
+            console.log(`📋 [Tool Detection] After deduplication: ${deduped.length} unique tools detected`);
+            return deduped;
         }
+
+        console.log('⚠️ [Tool Detection] No content patterns matched, trying text-based detection...');
 
         // Common genome browser function names to look for
         const knownFunctions = [
@@ -1531,12 +1563,17 @@ class LLMBenchmarkFramework {
             'translate_dna', 'find_orfs', 'codon_usage_analysis'
         ];
 
+        console.log('🔍 [Tool Detection] Known functions list:', knownFunctions.length, 'functions');
+
         for (const pattern of patterns) {
             let match;
             pattern.lastIndex = 0; // Reset regex state
+            console.log('🔍 [Tool Detection] Testing pattern:', pattern.toString());
+            
             while ((match = pattern.exec(response)) !== null) {
                 if (match[1]) {
                     const toolName = match[1].toLowerCase();
+                    console.log(`🔍 [Tool Detection] Pattern matched tool name: ${toolName}`);
                     
                     // Validate against known functions or common patterns
                     if (knownFunctions.includes(toolName) || 
@@ -1554,12 +1591,16 @@ class LLMBenchmarkFramework {
                         toolName.includes('zoom_') ||
                         toolName.includes('set_')) {
                         
+                        console.log(`✅ [Tool Detection] Valid tool detected: ${toolName}`);
                         functionCalls.push({
                             tool_name: toolName,
                             parameters: match[2] ? this.safeParseJSON(match[2]) : {},
                             evidence: match[0],
-                            confidence: this.calculateConfidence(match[0], toolName)
+                            confidence: this.calculateConfidence(match[0], toolName),
+                            detectionMethod: 'text_pattern'
                         });
+                    } else {
+                        console.log(`❌ [Tool Detection] Invalid/unknown tool: ${toolName}`);
                     }
                 }
             }
@@ -1567,13 +1608,19 @@ class LLMBenchmarkFramework {
 
         // Look for parameter patterns in the response
         functionCalls.forEach(call => {
+            console.log(`🔧 [Tool Detection] Extracting parameters for ${call.tool_name}`);
             call.parameters = this.extractParametersFromResponse(response, call.tool_name);
+            console.log(`📝 [Tool Detection] Extracted parameters for ${call.tool_name}:`, call.parameters);
         });
 
         // Remove duplicates and sort by confidence
         const uniqueCalls = this.deduplicateFunctionCalls(functionCalls);
         
-        console.log(`🔍 Extracted ${uniqueCalls.length} function calls from response:`, uniqueCalls);
+        console.log(`🔍 [Tool Detection] FINAL RESULT: Extracted ${uniqueCalls.length} function calls from response`);
+        uniqueCalls.forEach((call, index) => {
+            console.log(`📋 [Tool Detection] Tool ${index + 1}: ${call.tool_name} (confidence: ${call.confidence}%, method: ${call.detectionMethod})`);
+        });
+        
         return uniqueCalls;
     }
 
@@ -1614,17 +1661,19 @@ class LLMBenchmarkFramework {
 
     /**
      * Extract parameters from response context for a given tool
+     * ENHANCED: Add comprehensive logging and fix translate_dna parameter handling
      */
     extractParametersFromResponse(response, toolName) {
         const parameters = {};
         
-        console.log('🔍 [extractParametersFromResponse] Extracting parameters from:', {
-            response: response.substring(0, 200),
+        console.log('🔍 [Parameter Extraction] Starting parameter extraction for:', {
+            response: response.substring(0, 200) + '...',
             toolName: toolName
         });
         
         // For navigation tools, look specifically for coordinates and chromosome information
         if (toolName === 'navigate_to_position') {
+            console.log('🧭 [Parameter Extraction] Processing navigation tool');
             // Extract coordinates - look for patterns like "100000", "1000-2000", "position 100000"
             const coordMatch = response.match(/(?:position|start|from|to|navigate.*?to).*?(\d+)(?:\s*(?:to|-)\s*(\d+))?/i);
             if (coordMatch) {
@@ -1635,11 +1684,11 @@ class LLMBenchmarkFramework {
                     // Range format: start-end
                     parameters.start = firstNumber;
                     parameters.end = secondNumber;
-                    console.log('🎯 [extractParametersFromResponse] Found coordinate range:', { start: firstNumber, end: secondNumber });
+                    console.log('🎯 [Parameter Extraction] Found coordinate range:', { start: firstNumber, end: secondNumber });
                 } else {
                     // Single position format
                     parameters.position = firstNumber;
-                    console.log('🎯 [extractParametersFromResponse] Found single position:', firstNumber);
+                    console.log('🎯 [Parameter Extraction] Found single position:', firstNumber);
                 }
             }
             
@@ -1647,74 +1696,93 @@ class LLMBenchmarkFramework {
             const chrMatch = response.match(/(?:chromosome|chr)\s*["']?([A-Za-z0-9\-_]+)["']?/i);
             if (chrMatch && chrMatch[1]) {
                 parameters.chromosome = chrMatch[1];
-                console.log('🎯 [extractParametersFromResponse] Found chromosome:', chrMatch[1]);
+                console.log('🎯 [Parameter Extraction] Found chromosome:', chrMatch[1]);
             }
         }
         
         // For search tools
         else if (toolName.includes('search')) {
+            console.log('🔍 [Parameter Extraction] Processing search tool');
             // Extract gene/query names
             const geneMatch = response.match(/(?:gene|search|find|locate).*?["']([^"']+)["']/i);
             if (geneMatch) {
                 parameters.name = geneMatch[1];
                 parameters.query = geneMatch[1];
-                console.log('🎯 [extractParametersFromResponse] Found search term:', geneMatch[1]);
+                console.log('🎯 [Parameter Extraction] Found search term:', geneMatch[1]);
             }
             
             // Extract case sensitivity
             const caseMatch = response.match(/(?:caseSensitive|case).*?(true|false)/i);
             if (caseMatch) {
                 parameters.caseSensitive = caseMatch[1].toLowerCase() === 'true';
-                console.log('🎯 [extractParametersFromResponse] Found caseSensitive:', parameters.caseSensitive);
+                console.log('🎯 [Parameter Extraction] Found caseSensitive:', parameters.caseSensitive);
             }
         }
         
         // For sequence analysis tools
         else if (toolName === 'compute_gc') {
+            console.log('🧬 [Parameter Extraction] Processing GC computation tool');
             // Extract DNA sequence
             const seqMatch = response.match(/(?:sequence|dna).*?["']?([ATCGN]+)["']?/i);
             if (seqMatch) {
                 parameters.sequence = seqMatch[1];
-                console.log('🎯 [extractParametersFromResponse] Found DNA sequence:', seqMatch[1]);
+                console.log('🎯 [Parameter Extraction] Found DNA sequence:', seqMatch[1]);
             }
             // Look for include_statistics parameter
             if (response.toLowerCase().includes('statistics') || response.toLowerCase().includes('detailed')) {
                 parameters.include_statistics = true;
-                console.log('🎯 [extractParametersFromResponse] Added include_statistics: true');
+                console.log('🎯 [Parameter Extraction] Added include_statistics: true');
             }
         }
         
         else if (toolName === 'reverse_complement') {
+            console.log('🔄 [Parameter Extraction] Processing reverse complement tool');
             // Extract DNA sequence
             const seqMatch = response.match(/(?:sequence|dna|complement).*?["']?([ATCGN]+)["']?/i);
             if (seqMatch) {
                 parameters.sequence = seqMatch[1];
-                console.log('🎯 [extractParametersFromResponse] Found DNA sequence for reverse complement:', seqMatch[1]);
+                console.log('🎯 [Parameter Extraction] Found DNA sequence for reverse complement:', seqMatch[1]);
             }
         }
         
+        // CRITICAL FIX: translate_dna tool parameter handling (from memory)
         else if (toolName === 'translate_dna') {
-            // Extract DNA sequence
+            console.log('🧬➡️🧪 [Parameter Extraction] Processing DNA translation tool');
+            // Extract DNA sequence - CRITICAL: Use 'dna' parameter name, not 'sequence'
             const seqMatch = response.match(/(?:sequence|dna|translate).*?["']?([ATCGN]+)["']?/i);
             if (seqMatch) {
-                parameters.dna = seqMatch[1];  // Use 'dna' parameter name
-                console.log('🎯 [extractParametersFromResponse] Found DNA sequence for translation:', seqMatch[1]);
+                parameters.dna = seqMatch[1];  // FIXED: Use 'dna' parameter name as per memory
+                console.log('🎯 [Parameter Extraction] Found DNA sequence for translation (using dna param):', seqMatch[1]);
             }
             // Look for reading frame
             const frameMatch = response.match(/(?:frame|reading).*?(\d+)/i);
             if (frameMatch) {
                 parameters.frame = parseInt(frameMatch[1]);
-                console.log('🎯 [extractParametersFromResponse] Found reading frame:', parameters.frame);
+                console.log('🎯 [Parameter Extraction] Found reading frame:', parameters.frame);
+            }
+            // Set default frame if not found
+            if (!parameters.frame) {
+                parameters.frame = 1;
+                console.log('🎯 [Parameter Extraction] Using default reading frame: 1');
             }
         }
         
         // For get_current_state - no parameters needed
         else if (toolName === 'get_current_state') {
-            // This tool typically has no parameters or just clientId
-            console.log('🎯 [extractParametersFromResponse] get_current_state requires no parameters');
+            console.log('📊 [Parameter Extraction] get_current_state requires no parameters');
         }
         
-        console.log('📄 [extractParametersFromResponse] Extracted parameters:', parameters);
+        else {
+            console.log('❓ [Parameter Extraction] Unknown tool type, using generic extraction');
+            // Generic parameter extraction for unknown tools
+            const genericSeqMatch = response.match(/["']?([ATCGN]{10,})["']?/i);
+            if (genericSeqMatch) {
+                parameters.sequence = genericSeqMatch[1];
+                console.log('🎯 [Parameter Extraction] Found generic DNA sequence:', genericSeqMatch[1]);
+            }
+        }
+        
+        console.log('📄 [Parameter Extraction] FINAL extracted parameters for', toolName, ':', parameters);
         return parameters;
     }
 
@@ -2330,26 +2398,40 @@ class LLMBenchmarkFramework {
     }
 
     /**
-     * Calculate instruction complexity score
+     * Calculate instruction complexity score (5-point scale)
+     * CRITICAL FIX: Enforce 5-point scale as per memory requirements
      */
     calculateInstructionComplexity(instruction) {
         try {
-            let complexity = 0;
+            let complexity = 1.0; // Base complexity (low end of 5-point scale)
             
-            // Base complexity from length
-            complexity += Math.min(30, instruction.length / 20);
+            // Base complexity from length (scale to 5-point system)
+            const lengthFactor = Math.min(1.5, instruction.length / 100); // Cap at 1.5 points
+            complexity += lengthFactor;
             
-            // Technical terms increase complexity
+            // Technical terms increase complexity (scale to 5-point system)
             const technicalTerms = ['gene', 'protein', 'sequence', 'analysis', 'search', 'navigate', 'position'];
             const foundTerms = technicalTerms.filter(term => instruction.toLowerCase().includes(term));
-            complexity += foundTerms.length * 5;
+            complexity += Math.min(1.5, foundTerms.length * 0.3); // Cap at 1.5 points
             
-            // Multiple actions increase complexity
+            // Multiple actions increase complexity (scale to 5-point system)
             const actionWords = ['and', 'then', 'also', 'additionally', 'furthermore'];
             const foundActions = actionWords.filter(word => instruction.toLowerCase().includes(word));
-            complexity += foundActions.length * 10;
+            complexity += Math.min(1.0, foundActions.length * 0.25); // Cap at 1.0 point
             
-            return Math.max(0, Math.min(100, complexity));
+            // Complex sentence structures
+            const sentences = instruction.split(/[.!?]+/).length;
+            if (sentences > 2) {
+                complexity += Math.min(0.5, (sentences - 2) * 0.1);
+            }
+            
+            // Parameter specifications
+            const parameterPatterns = instruction.match(/["'][^"']+["']/g);
+            if (parameterPatterns && parameterPatterns.length > 0) {
+                complexity += Math.min(0.5, parameterPatterns.length * 0.1);
+            }
+            
+            return Math.max(0, Math.min(5, complexity));
         } catch (error) {
             return null;
         }
@@ -2752,7 +2834,16 @@ class LLMBenchmarkFramework {
     /**
      * Evaluate test result against expectations
      */
+    /**
+     * Evaluate test result
+     * ENHANCED: Add comprehensive logging for tool detection scoring as requested by Song
+     */
     async evaluateTestResult(test, testResult) {
+        console.log('⚙️ [Test Evaluation] Starting evaluation for test:', test.id);
+        console.log('📝 [Test Evaluation] Test type:', test.type);
+        console.log('📝 [Test Evaluation] Expected result:', test.expectedResult);
+        console.log('📝 [Test Evaluation] Actual result:', testResult.actualResult);
+        
         const evaluation = {
             success: false,
             score: 0,
@@ -2763,8 +2854,36 @@ class LLMBenchmarkFramework {
 
         // Display evaluation start
         this.displayEvaluationStart(test, testResult);
+        
+        // CRITICAL: Log detected tools for scoring verification (Song's request)
+        if (testResult.actualResult && testResult.actualResult.tool_name) {
+            console.log('✅ [Test Evaluation] Detected tool from actualResult:', testResult.actualResult.tool_name);
+            console.log('📊 [Test Evaluation] Tool parameters:', testResult.actualResult.parameters);
+            console.log('📈 [Test Evaluation] Tool confidence:', testResult.actualResult.confidence);
+            console.log('🔍 [Test Evaluation] Detection method:', testResult.actualResult.detectionMethod);
+        } else {
+            console.log('❌ [Test Evaluation] No tool detected in actualResult');
+        }
+        
+        // Additional logging for function calls array if present
+        if (testResult.actualResult && testResult.actualResult.functionCalls) {
+            console.log('📦 [Test Evaluation] Function calls array detected:', testResult.actualResult.functionCalls.length);
+            testResult.actualResult.functionCalls.forEach((call, index) => {
+                console.log(`📝 [Test Evaluation] Function call ${index + 1}:`, {
+                    tool_name: call.tool_name,
+                    confidence: call.confidence,
+                    detectionMethod: call.detectionMethod
+                });
+            });
+        }
+        
+        // Log parseDebugInfo if available for debugging tool detection
+        if (testResult.parseDebugInfo) {
+            console.log('🔍 [Test Evaluation] Parse debug info available:', testResult.parseDebugInfo);
+        }
 
         if (!testResult.actualResult) {
+            console.log('❌ [Test Evaluation] No result obtained from test execution');
             evaluation.errors.push('No result obtained from test execution');
             this.displayEvaluationResult(test, evaluation, testResult);
             return evaluation;
@@ -2772,6 +2891,7 @@ class LLMBenchmarkFramework {
 
         // CRITICAL FIX: For manual tests, use the manual score directly
         if (test.evaluation === 'manual' && testResult.actualResult.manual_score !== undefined) {
+            console.log('📋 [Test Evaluation] Processing manual test with score:', testResult.actualResult.manual_score);
             evaluation.score = testResult.actualResult.manual_score;
             evaluation.maxScore = test.maxScore || 5; // Ensure correct maxScore for manual tests
             evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
@@ -2780,6 +2900,7 @@ class LLMBenchmarkFramework {
             if (testResult.actualResult.verification_completion !== undefined) {
                 const completionPercentage = (testResult.actualResult.verification_completion * 100).toFixed(1);
                 evaluation.warnings.push(`Manual verification completion: ${completionPercentage}%`);
+                console.log('📊 [Test Evaluation] Manual verification completion:', completionPercentage + '%');
             }
             
             this.displayEvaluationResult(test, evaluation, testResult);
@@ -2788,12 +2909,15 @@ class LLMBenchmarkFramework {
 
         // Use test-specific evaluator if provided (for automatic tests only)
         if (test.evaluator && typeof test.evaluator === 'function') {
+            console.log('🔧 [Test Evaluation] Using custom evaluator for test:', test.id);
             try {
                 const customEval = await test.evaluator(testResult.actualResult, test.expectedResult, testResult);
                 Object.assign(evaluation, customEval);
+                console.log('✅ [Test Evaluation] Custom evaluator completed with score:', evaluation.score);
                 this.displayEvaluationResult(test, evaluation, testResult);
                 return evaluation;
             } catch (error) {
+                console.error('❌ [Test Evaluation] Custom evaluator failed:', error);
                 evaluation.errors.push(`Custom evaluator failed: ${error.message}`);
                 this.displayEvaluationResult(test, evaluation, testResult);
                 return evaluation;
@@ -2801,23 +2925,38 @@ class LLMBenchmarkFramework {
         }
 
         // Default evaluation based on test type
+        console.log('🎯 [Test Evaluation] Using default evaluation for type:', test.type);
         let finalEvaluation;
         switch (test.type) {
             case 'function_call':
+                console.log('🔧 [Test Evaluation] Evaluating function call test');
                 finalEvaluation = this.evaluateFunctionCallTest(test, testResult, evaluation);
                 break;
             case 'text_analysis':
+                console.log('📄 [Test Evaluation] Evaluating text analysis test');
                 finalEvaluation = this.evaluateTextAnalysisTest(test, testResult, evaluation);
                 break;
             case 'json_output':
+                console.log('🗂️ [Test Evaluation] Evaluating JSON output test');
                 finalEvaluation = this.evaluateJSONOutputTest(test, testResult, evaluation);
                 break;
             case 'workflow':
+                console.log('🔄 [Test Evaluation] Evaluating workflow test');
                 finalEvaluation = this.evaluateWorkflowTest(test, testResult, evaluation);
                 break;
             default:
+                console.log('❓ [Test Evaluation] Evaluating generic test');
                 finalEvaluation = this.evaluateGenericTest(test, testResult, evaluation);
         }
+
+        console.log('🏁 [Test Evaluation] Final evaluation completed:', {
+            testId: test.id,
+            success: finalEvaluation.success,
+            score: finalEvaluation.score,
+            maxScore: finalEvaluation.maxScore,
+            errors: finalEvaluation.errors.length,
+            warnings: finalEvaluation.warnings.length
+        });
 
         // Display final evaluation result
         this.displayEvaluationResult(test, finalEvaluation, testResult);
@@ -2969,44 +3108,96 @@ class LLMBenchmarkFramework {
 
     /**
      * Evaluate function call test
+     * ENHANCED: Add comprehensive tool detection logging for scoring verification
      */
     evaluateFunctionCallTest(test, testResult, evaluation) {
         const actualResult = testResult.actualResult;
         const expectedResult = test.expectedResult;
 
+        console.log('🔍 [Function Call Eval] Starting function call evaluation for test:', test.id);
+        console.log('📝 [Function Call Eval] Expected:', expectedResult);
+        console.log('📝 [Function Call Eval] Actual:', actualResult);
+        
+        // CRITICAL: Detailed logging for tool detection scoring verification (Song's request)
+        if (actualResult && actualResult.tool_name) {
+            console.log('✅ [Function Call Eval] Tool detected successfully!');
+            console.log('🎯 [Function Call Eval] Detected tool name:', actualResult.tool_name);
+            console.log('📈 [Function Call Eval] Tool confidence level:', actualResult.confidence);
+            console.log('🔧 [Function Call Eval] Detection method used:', actualResult.detectionMethod);
+            console.log('📊 [Function Call Eval] Tool parameters found:', Object.keys(actualResult.parameters || {}).length);
+            
+            // Detailed parameter analysis
+            if (actualResult.parameters && Object.keys(actualResult.parameters).length > 0) {
+                console.log('📄 [Function Call Eval] Parameter details:');
+                Object.entries(actualResult.parameters).forEach(([key, value]) => {
+                    console.log(`  • ${key}: ${typeof value === 'string' ? value.substring(0, 50) + (value.length > 50 ? '...' : '') : JSON.stringify(value)}`);
+                });
+            } else {
+                console.log('⚠️ [Function Call Eval] No parameters detected in tool call');
+            }
+        } else {
+            console.log('❌ [Function Call Eval] No tool detected in actualResult');
+            console.log('🔍 [Function Call Eval] ActualResult structure:', Object.keys(actualResult || {}));
+        }
+        
+        // Expected vs Actual comparison logging
+        if (expectedResult && expectedResult.tool_name) {
+            console.log('🎯 [Function Call Eval] Expected tool:', expectedResult.tool_name);
+            console.log('📅 [Function Call Eval] Expected parameters:', expectedResult.parameters);
+            
+            if (actualResult && actualResult.tool_name === expectedResult.tool_name) {
+                console.log('✅ [Function Call Eval] TOOL MATCH: Expected and actual tools match!');
+            } else {
+                console.log('❌ [Function Call Eval] TOOL MISMATCH: Expected', expectedResult.tool_name, 'but got', actualResult?.tool_name || 'none');
+            }
+        }
+
         console.log('🔍 Evaluating function call test:', {
             testId: test.id,
-            actualResult: actualResult,
-            expectedResult: expectedResult
+            hasActualResult: !!actualResult,
+            hasExpectedResult: !!expectedResult,
+            actualToolName: actualResult?.tool_name,
+            expectedToolName: expectedResult?.tool_name
         });
 
         // Handle case where no function call was detected
         if (!actualResult || actualResult.error === 'No function calls detected') {
+            console.log('❌ [Function Call Eval] No function call detected - scoring 0 points');
             evaluation.errors.push('No function call detected in LLM response');
             evaluation.success = false;
+            evaluation.score = 0; // Explicit 0 score for no detection
+            console.log('📋 [Function Call Eval] Final score for no detection: 0/', evaluation.maxScore);
             return evaluation;
         }
 
         // Handle parsing errors
         if (actualResult.error && actualResult.error !== 'No function calls detected') {
+            console.log('❌ [Function Call Eval] Parsing error detected:', actualResult.error);
             evaluation.errors.push(actualResult.error);
             evaluation.success = false;
+            evaluation.score = 0; // Explicit 0 score for parsing errors
+            console.log('📋 [Function Call Eval] Final score for parsing error: 0/', evaluation.maxScore);
             return evaluation;
         }
 
         if (Array.isArray(actualResult)) {
             // Multiple function calls expected
+            console.log('📦 [Function Call Eval] Multiple function calls detected:', actualResult.length);
             evaluation.score = 0;
             
             for (let i = 0; i < actualResult.length; i++) {
                 const call = actualResult[i];
                 const expected = Array.isArray(expectedResult) ? expectedResult[i] : expectedResult;
                 
+                console.log(`🔍 [Function Call Eval] Evaluating call ${i + 1}:`, call.tool_name);
+                
                 if (expected) {
                     const functionScore = this.evaluateSingleFunctionCall(call, expected);
                     evaluation.score += functionScore.score;
                     evaluation.errors.push(...functionScore.errors);
                     evaluation.warnings.push(...functionScore.warnings);
+                    
+                    console.log(`📋 [Function Call Eval] Call ${i + 1} scored:`, functionScore.score, 'points');
                 }
             }
             
@@ -3015,25 +3206,36 @@ class LLMBenchmarkFramework {
             
         } else {
             // Single function call
+            console.log('🎯 [Function Call Eval] Single function call evaluation');
             const functionScore = this.evaluateSingleFunctionCall(actualResult, expectedResult);
             evaluation.score = functionScore.score;
             evaluation.success = functionScore.success;
             evaluation.errors.push(...functionScore.errors);
             evaluation.warnings.push(...functionScore.warnings);
+            
+            console.log('📋 [Function Call Eval] Single call scored:', functionScore.score, 'points');
         }
 
-        console.log('📊 Function call evaluation result:', {
-            score: evaluation.score,
-            success: evaluation.success,
-            errors: evaluation.errors,
-            warnings: evaluation.warnings
-        });
+        console.log('🏁 [Function Call Eval] FINAL EVALUATION RESULT:');
+        console.log('📋 [Function Call Eval] Score:', evaluation.score, '/', evaluation.maxScore);
+        console.log('🎯 [Function Call Eval] Success:', evaluation.success);
+        console.log('🚫 [Function Call Eval] Errors:', evaluation.errors.length);
+        console.log('⚠️ [Function Call Eval] Warnings:', evaluation.warnings.length);
+        
+        if (evaluation.errors.length > 0) {
+            console.log('📄 [Function Call Eval] Error details:', evaluation.errors);
+        }
+        
+        if (evaluation.warnings.length > 0) {
+            console.log('📄 [Function Call Eval] Warning details:', evaluation.warnings);
+        }
 
         return evaluation;
     }
 
     /**
      * Evaluate a single function call
+     * ENHANCED: Add comprehensive parameter scoring logging
      */
     evaluateSingleFunctionCall(actualCall, expectedCall) {
         const result = {
@@ -3043,51 +3245,79 @@ class LLMBenchmarkFramework {
             warnings: []
         };
 
+        console.log('🎯 [Single Call Eval] Starting single function call evaluation');
+        console.log('📝 [Single Call Eval] Actual call:', {
+            tool_name: actualCall?.tool_name,
+            hasParameters: !!(actualCall?.parameters),
+            paramCount: Object.keys(actualCall?.parameters || {}).length
+        });
+        console.log('📝 [Single Call Eval] Expected call:', {
+            tool_name: expectedCall?.tool_name,
+            hasParameters: !!(expectedCall?.parameters),
+            paramCount: Object.keys(expectedCall?.parameters || {}).length
+        });
+
         if (!actualCall || !actualCall.tool_name) {
+            console.log('❌ [Single Call Eval] Invalid function call format - no tool_name found');
             result.errors.push('Invalid function call format');
             return result;
         }
 
-        console.log('🎯 Comparing function calls:', {
+        console.log('🎯 [Single Call Eval] Comparing function calls:', {
             actual: actualCall.tool_name,
             expected: expectedCall.tool_name,
             actualParams: actualCall.parameters,
             expectedParams: expectedCall.parameters
         });
 
-        // Check function name (50 points)
+        // Check function name (50 points out of 100)
+        console.log('🔍 [Single Call Eval] Checking function name match...');
         if (actualCall.tool_name === expectedCall.tool_name) {
             result.score += 50;
-            console.log('✅ Function name matches');
+            console.log('✅ [Single Call Eval] Function name matches! +50 points (Total:', result.score, '/100)');
         } else {
             result.errors.push(`Expected function ${expectedCall.tool_name}, got ${actualCall.tool_name}`);
-            console.log('❌ Function name mismatch');
+            console.log('❌ [Single Call Eval] Function name mismatch! +0 points (Total:', result.score, '/100)');
         }
 
-        // Check parameters (50 points)
+        // Check parameters (50 points out of 100)
+        console.log('🔍 [Single Call Eval] Checking parameter match...');
         if (actualCall.parameters && expectedCall.parameters) {
+            console.log('📊 [Single Call Eval] Both actual and expected have parameters, comparing...');
             const paramScore = this.compareParameters(actualCall.parameters, expectedCall.parameters);
             result.score += paramScore;
             
+            console.log('📋 [Single Call Eval] Parameter comparison score:', paramScore, '/50 points');
+            
             if (paramScore >= 40) {
-                console.log('✅ Parameters match well');
+                console.log('✅ [Single Call Eval] Parameters match well! (40+ points)');
             } else if (paramScore >= 20) {
                 result.warnings.push('Parameters partially match expected values');
-                console.log('⚠️ Parameters partially match');
+                console.log('⚠️ [Single Call Eval] Parameters partially match (20-39 points)');
             } else {
                 result.errors.push('Parameters do not match expected values');
-                console.log('❌ Parameters do not match');
+                console.log('❌ [Single Call Eval] Parameters do not match (<20 points)');
             }
         } else if (!expectedCall.parameters) {
             // No parameters expected
             result.score += 50;
-            console.log('✅ No parameters expected');
+            console.log('✅ [Single Call Eval] No parameters expected - perfect match! +50 points');
         } else {
             result.errors.push('Missing required parameters');
-            console.log('❌ Missing parameters');
+            console.log('❌ [Single Call Eval] Missing required parameters! +0 points');
         }
+        
+        console.log('📋 [Single Call Eval] Final score calculation:', result.score, '/100');
+        console.log('📊 [Single Call Eval] Success threshold: 70 points');
 
         result.success = result.score >= 70;
+        
+        console.log('🏁 [Single Call Eval] FINAL SINGLE CALL RESULT:');
+        console.log('📋 [Single Call Eval] Score:', result.score, '/100');
+        console.log('🎯 [Single Call Eval] Success:', result.success);
+        console.log('🚫 [Single Call Eval] Errors:', result.errors.length);
+        console.log('⚠️ [Single Call Eval] Warnings:', result.warnings.length);
+        
         return result;
     }
 
