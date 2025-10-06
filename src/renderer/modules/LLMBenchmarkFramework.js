@@ -596,6 +596,12 @@ class LLMBenchmarkFramework {
     async executeTest(test) {
         const startTime = Date.now();
         
+        // CRITICAL FIX: Clear previous execution data to prevent contamination
+        if (this.chatManager && this.chatManager.clearExecutionData) {
+            this.chatManager.clearExecutionData();
+            console.log('🧽 [Benchmark] Cleared previous execution data to prevent test contamination');
+        }
+        
         // CRITICAL FIX: Initialize Tool Execution Tracker session for benchmark test
         let benchmarkSessionId = null;
         if (this.chatManager && this.chatManager.toolExecutionTracker) {
@@ -2485,7 +2491,7 @@ class LLMBenchmarkFramework {
             expectedFunction: options.expectedResult?.tool_name
         });
 
-        // ENHANCED: Check for actual execution data first
+        // CRITICAL FIX: Check for actual execution data first but validate it's current
         if (parsedResponse && parsedResponse.actualExecutionData) {
             const executionData = parsedResponse.actualExecutionData;
             console.log('🎯 Using actual execution data:', executionData);
@@ -2503,6 +2509,43 @@ class LLMBenchmarkFramework {
                     confidence: 100, // Actual execution = 100% confidence
                     actualResult: true
                 };
+            }
+        }
+
+        // ENHANCED: Check current ChatManager execution data but validate timestamp
+        if (this.chatManager && this.chatManager.getLastExecutionData) {
+            const currentExecutionData = this.chatManager.getLastExecutionData();
+            if (currentExecutionData && currentExecutionData.functionCalls && currentExecutionData.functionCalls.length > 0) {
+                // CRITICAL: Check if this execution data is recent (within last 2 minutes)
+                const dataAge = Date.now() - (currentExecutionData.startTime || 0);
+                const maxAge = 2 * 60 * 1000; // 2 minutes
+                
+                if (dataAge < maxAge) {
+                    console.log('✅ Using recent ChatManager execution data:', {
+                        functionCalls: currentExecutionData.functionCalls.length,
+                        age: Math.round(dataAge / 1000) + 's',
+                        tools: currentExecutionData.functionCalls.map(c => c.tool_name)
+                    });
+                    
+                    // Return the most recent function call
+                    const latestCall = currentExecutionData.functionCalls[currentExecutionData.functionCalls.length - 1];
+                    return {
+                        tool_name: latestCall.tool_name,
+                        parameters: latestCall.parameters,
+                        executed: true,
+                        round: latestCall.round,
+                        timestamp: latestCall.timestamp,
+                        confidence: 100, // Actual execution = 100% confidence
+                        actualResult: true,
+                        detectionMethod: 'chatmanager_execution'
+                    };
+                } else {
+                    console.log('⚠️ Ignoring stale ChatManager execution data:', {
+                        age: Math.round(dataAge / 1000) + 's',
+                        maxAge: Math.round(maxAge / 1000) + 's',
+                        tools: currentExecutionData.functionCalls.map(c => c.tool_name)
+                    });
+                }
             }
         }
 
@@ -3552,6 +3595,25 @@ class LLMBenchmarkFramework {
         // Log parseDebugInfo if available for debugging tool detection
         if (testResult.parseDebugInfo) {
             console.log('🔍 [Test Evaluation] Parse debug info available:', testResult.parseDebugInfo);
+        }
+
+        // CRITICAL FIX: Add debugging for ChatManager execution data state  
+        if (this.chatManager && this.chatManager.getLastExecutionData) {
+            const currentExecutionData = this.chatManager.getLastExecutionData();
+            if (currentExecutionData) {
+                console.log('📄 [Test Evaluation] ChatManager execution data available:');
+                console.log('   Function calls:', currentExecutionData.functionCalls?.length || 0);
+                if (currentExecutionData.functionCalls && currentExecutionData.functionCalls.length > 0) {
+                    currentExecutionData.functionCalls.forEach((call, index) => {
+                        console.log(`   ${index + 1}. ${call.tool_name} (round: ${call.round}, timestamp: ${call.timestamp})`);
+                    });
+                }
+                console.log('   Tool results:', currentExecutionData.toolResults?.length || 0);
+                console.log('   Start time:', new Date(currentExecutionData.startTime || 0).toISOString());
+                console.log('   End time:', currentExecutionData.endTime ? new Date(currentExecutionData.endTime).toISOString() : 'Not finished');
+            } else {
+                console.log('📄 [Test Evaluation] No ChatManager execution data available');
+            }
         }
 
         if (!testResult.actualResult) {
