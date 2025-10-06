@@ -99,6 +99,7 @@ class LLMConfigManager {
                     'tencent/Hunyuan-A13B-Instruct',
                     'zai-org/GLM-4.5',
                     'zai-org/GLM-4.5-Air',
+                    'zai-org/GLM-4.6',
                     'MiniMaxAI/MiniMax-M1-80k',
                     'Tongyi-Zhiwen/QwenLong-L1-32B',
                     'TeleAI/TeleChat2',
@@ -2608,4 +2609,4 @@ Current context summary:
         // Fallback to provider's default model
         return this.providers[providerKey].model;
     }
-} 
+}
