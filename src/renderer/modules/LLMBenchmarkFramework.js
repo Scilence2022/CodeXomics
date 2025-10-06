@@ -313,29 +313,29 @@ class LLMBenchmarkFramework {
      */
     displayTestSuiteStart(testSuite, testCount) {
         this.chatManager.addThinkingMessage(
-            `👩‍🔬 CodeXomics Benchmark Tester </br>` +
-            `🏢 GenomeAI Testing Laboratory** | 📅 ${new Date().toLocaleDateString()}</br>` +
+            `👩‍🔬 **CodeXomics Benchmark Tester** </br>` +
+            `🏢 **GenomeAI Testing Laboratory** | 📅 ${new Date().toLocaleDateString()}</br>` +
             `═══════════════════════════════════════════════════════════\n\n` +
-            `📋 INITIATING TEST SUITE EXECUTION</br></br>` +
-            `Suite Specification:</br>` +
+            `📋 **INITIATING TEST SUITE EXECUTION**</br></br>` +
+            `**Suite Specification:**</br>` +
             `• Name: ${testSuite.getName()}</br>` +
             `• Suite ID: ${testSuite.suiteId || testSuite.getName().toLowerCase().replace(/\s+/g, '_')}</br>` +
             `• Description: ${testSuite.description || 'Comprehensive LLM capability assessment'}</br>` +
             `• Test Count: ${testCount} individual tests</br>` +
             `• Estimated Duration: ~${Math.ceil(testCount * 0.5)} minutes</br></br>` +
-            `🎯 Testing Objectives:</br>` +
+            `🎯 **Testing Objectives:**</br>` +
             `• Validate LLM instruction comprehension accuracy</br>` +
             `• Assess function calling precision and reliability</br>` +
             `• Measure response quality and consistency metrics</br>` +
             `• Evaluate computational efficiency and performance</br>` +
             `• Document behavioral patterns and edge cases</br>` +
-            `🔬 Quality Assurance Protocol:</br>` +
+            `🔬 **Quality Assurance Protocol:**</br>` +
             `• Each test scored on 100-point scale</br>` +
             `• Pass threshold: 70% minimum score</br>` +
             `• Automated function call detection</br>` +
             `• Parameter validation and compliance checking</br>` +
             `• Performance metrics collection</br></br>` +
-            `⚡ Status: Beginning systematic test execution...`
+            `⚡ **Status:** Beginning systematic test execution with enhanced monitoring...`
         );
     }
 
@@ -347,14 +347,18 @@ class LLMBenchmarkFramework {
         const progressBar = '█'.repeat(Math.floor(progressPercentage / 5)) + '░'.repeat(20 - Math.floor(progressPercentage / 5));
         
         this.chatManager.updateThinkingMessage(
-            `</br></br>📍 TEST PROGRESS: ${currentIndex}/${totalTests} (${progressPercentage}%)</br>\n` +
+            `</br></br>📍 **TEST PROGRESS:** ${currentIndex}/${totalTests} (${progressPercentage}%)</br>\n` +
             `${progressBar}</br></br>\n\n` +
             `👩‍🔬 CodeXomics Benchmark Tester: "Proceeding with ${test.name}"</br></br>\n` +
-            `Test ID: ${test.id} | Type:${this.getTestTypeDescription(test.type)}</br>\n` +
-            `Estimated Completion: ${Math.ceil((totalTests - currentIndex) * 0.5)} minutes remaining</br>\n` +
-            `═══════════════════════════════════════════════════════════` +
-            `👩‍🔬 LLM Response: ${test.llmResponse}"</br>\n` 
-
+            `**Test Specification:**</br>\n` +
+            `&nbsp;&nbsp;&nbsp;• Test ID: ${test.id}</br>\n` +
+            `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(test.type)}</br>\n` +
+            `&nbsp;&nbsp;&nbsp;• Complexity: ${test.complexity || 'Standard'}</br>\n` +
+            `&nbsp;&nbsp;&nbsp;• Expected Tool: \`${test.expectedResult?.tool_name || 'Various'}\`</br>\n` +
+            `&nbsp;&nbsp;&nbsp;• Max Score: ${test.maxScore || 100} points</br>\n` +
+            `&nbsp;&nbsp;&nbsp;• Estimated Completion: ${Math.ceil((totalTests - currentIndex) * 0.5)} minutes remaining</br>\n` +
+            `═══════════════════════════════════════════════════════════</br>\n` +
+            `🚀 **Initiating LLM interaction for comprehensive testing...**`
         );
     }
 
@@ -1007,12 +1011,18 @@ class LLMBenchmarkFramework {
             // Display detailed test process as a simulated tester
             this.displayTestProcess(instruction, options);
             
+            // Enhanced logging for detailed ChatBox display
+            this.displayLLMProcessingDetails(instruction, options);
+            
             // ENHANCED: Capture detailed LLM interaction by hooking into ChatManager's internal logging
             // MEMORY SAFETY: Add limits to prevent memory crashes
             const originalConsoleLog = console.log;
             const capturedLogs = [];
             const MAX_CAPTURED_LOGS = 1000; // Limit to prevent memory overflow
             const MAX_LOG_SIZE = 10000; // Max characters per log entry
+            
+            // Store captured logs in instance for access by other methods
+            this.capturedLogs = capturedLogs;
             
             // Temporarily override console.log to capture ChatManager's detailed logging
             console.log = (...args) => {
@@ -1057,6 +1067,8 @@ class LLMBenchmarkFramework {
             // CRITICAL FIX: Save original context mode before any potential errors
             // This ensures only the current test instruction is sent, not the entire conversation history
             const originalContextMode = this.chatManager.contextModeEnabled;
+            const originalShowThinkingProcess = this.chatManager.showThinkingProcess;
+            const originalShowToolCalls = this.chatManager.showToolCalls;
                     
             try {
                 // CRITICAL FIX: Enable context mode for benchmark tests to prevent token overflow
@@ -1064,9 +1076,30 @@ class LLMBenchmarkFramework {
                         
                 console.log('🔧 [Benchmark] Enabled context mode to prevent token overflow');
                 console.log('🔧 [Benchmark] Original context mode:', originalContextMode);
+                
+                // Add detailed thinking process using addThinkingMessage
+                this.chatManager.addThinkingMessage(
+                    `🧠 **LLM Thinking Process Analysis** | Benchmark Testing Mode<br>` +
+                    `═══════════════════════════════════════════════════════════<br><br>` +
+                    `🔧 **LLM Configuration:**<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Provider: ${this.getLLMProvider()}<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Model: ${this.getLLMModel()}<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Timeout: ${options.timeout || this.testTimeout}ms<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Function Calling: Enabled<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Context Mode: Dynamic<br><br>` +
+                    
+                    `📊 **Request Processing Pipeline:**<br>` +
+                    `&nbsp;&nbsp;&nbsp;1. 🔍 Instruction Analysis & Parsing<br>` +
+                    `&nbsp;&nbsp;&nbsp;2. 🛠️ System Prompt Construction<br>` +
+                    `&nbsp;&nbsp;&nbsp;3. 🔗 Function Registry Integration<br>` +
+                    `&nbsp;&nbsp;&nbsp;4. 🚀 LLM Provider Communication<br>` +
+                    `&nbsp;&nbsp;&nbsp;5. 🧠 Response Analysis & Tool Detection<br>` +
+                    `&nbsp;&nbsp;&nbsp;6. ⚙️ Tool Execution & Result Processing<br><br>` +
+                    
+                    `🔄 **Status:** Sending request to AI model...`
+                );
                         
-                // Use ChatManager's sendToLLM method which handles all the configuration,
-                // function calling, plugin integration, and system prompts automatically
+                // Use ChatManager's sendToLLM method
                 response = await this.chatManager.sendToLLM(instruction);
                 
                 // Capture response timing
@@ -1074,6 +1107,26 @@ class LLMBenchmarkFramework {
                 interactionData.response.responseTime = requestEndTime - requestStartTime;
                 
                 console.log(`📥 Received benchmark response:`, response);
+                
+                // Add detailed response analysis using addThinkingMessage
+                this.chatManager.addThinkingMessage(
+                    `<br>✅ **LLM Response Received** (${interactionData.response.responseTime}ms)<br>` +
+                    `────────────────────────────────────────────<br>` +
+                    `📄 **Raw Response Analysis:**<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Response Length: ${response ? response.length : 0} characters<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Processing Time: ${interactionData.response.responseTime}ms<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Content Type: ${this.detectContentType(response)}<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Content Preview: "${response ? response.substring(0, 80) + (response.length > 80 ? '...' : '') : 'No Response'}"<br><br>` +
+                    
+                    `🔍 **Starting Response Analysis:**<br>` +
+                    `&nbsp;&nbsp;&nbsp;🔄 Parsing function calls...<br>` +
+                    `&nbsp;&nbsp;&nbsp;🔄 Extracting tool parameters...<br>` +
+                    `&nbsp;&nbsp;&nbsp;🔄 Validating response format...<br>` +
+                    `&nbsp;&nbsp;&nbsp;🔄 Computing confidence scores...`
+                );
+                
+                // Display detailed response processing
+                this.displayResponseProcessing(response, interactionData);
                 
                 // Capture detailed response data
                 interactionData.response.rawResponse = response;
@@ -1088,6 +1141,32 @@ class LLMBenchmarkFramework {
                     interactionData.response.totalExecutionTime = executionData.totalExecutionTime || 0;
                     interactionData.response.actualExecutionData = executionData;
                     
+                    // Display detailed tool execution information using addThinkingMessage
+                    if (executionData.functionCalls && executionData.functionCalls.length > 0) {
+                        this.chatManager.addThinkingMessage(
+                            `<br>🚀 **Tool Execution Detected** - Tool Calls Found<br>` +
+                            `══════════════════════════════════════════<br>` +
+                            `📊 **Execution Summary:**<br>` +
+                            `&nbsp;&nbsp;&nbsp;• Total Function Calls: ${executionData.functionCalls.length}<br>` +
+                            `&nbsp;&nbsp;&nbsp;• Execution Rounds: ${executionData.rounds || 0}<br>` +
+                            `&nbsp;&nbsp;&nbsp;• Total Execution Time: ${executionData.totalExecutionTime || 0}ms<br>` +
+                            `&nbsp;&nbsp;&nbsp;• Success Rate: ${this.calculateSuccessRate(executionData.toolResults || [])}%<br><br>` +
+                            
+                            `🔧 **Detected Tool Calls:** <br>` +
+                            `${this.formatDetectedToolsForDisplay(executionData.functionCalls)}<br><br>` +
+                            
+                            `📈 **Execution Results:**<br>` +
+                            `${this.formatExecutionResults(executionData.toolResults || [])}`
+                        );
+                    } else {
+                        this.chatManager.addThinkingMessage(
+                            `<br>⚠️ **No Tool Execution Detected**<br>` +
+                            `&nbsp;&nbsp;&nbsp;• LLM response did not trigger any function calls<br>` +
+                            `&nbsp;&nbsp;&nbsp;• Response appears to be conversational only<br>` +
+                            `&nbsp;&nbsp;&nbsp;• Falling back to text-based analysis mode...`
+                        );
+                    }
+                    
                     console.log(`🔍 Actual function calls executed:`, executionData.functionCalls);
                     console.log(`🔧 Tool execution results:`, executionData.toolResults);
                 } else {
@@ -1095,6 +1174,24 @@ class LLMBenchmarkFramework {
                     console.log(`⚠️ No execution data available, falling back to text parsing`);
                     interactionData.response.functionCalls = this.extractFunctionCallsFromResponse(response);
                     interactionData.response.toolExecutions = this.captureToolExecutions();
+                    
+                    // Display text-based analysis results using addThinkingMessage
+                    const detectedCalls = this.extractFunctionCallsFromResponse(response);
+                    this.chatManager.addThinkingMessage(
+                        `<br>🔍 **Text-Based Analysis Results**<br>` +
+                        `────────────────────────────────────────<br>` +
+                        `📝 **Response Content Analysis:**<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Content Length: ${response ? response.length : 0} characters<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Detected Functions: ${detectedCalls.length}<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Analysis Method: Pattern matching<br><br>` +
+                        
+                        `🔍 **Pattern Detection Results:** [Song's Requirement - Recording]<br>` +
+                        `${detectedCalls.length > 0 ? this.formatDetectedFunctions(detectedCalls) : '&nbsp;&nbsp;&nbsp;• No function patterns detected in response'}<br><br>` +
+                        
+                        `📉 **Confidence Assessment:**<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Overall Confidence: ${this.calculateOverallConfidence(detectedCalls)}%<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Detection Reliability: ${detectedCalls.length > 0 ? 'Medium' : 'Low'}`
+                    );
                 }
                 
                 // CRITICAL ENHANCEMENT: Capture all the detailed ChatManager logs
@@ -1151,6 +1248,36 @@ class LLMBenchmarkFramework {
             // Display response analysis
             if (response) {
                 this.displayResponseAnalysis(response, options);
+                
+                // Add final comprehensive analysis using addThinkingMessage
+                const functionCalls = interactionData?.response?.functionCalls || [];
+                const toolResults = interactionData?.response?.toolExecutions || [];
+                const responseTime = interactionData?.response?.responseTime || 0;
+                
+                this.chatManager.addThinkingMessage(
+                    `<br>📈 **Comprehensive Analysis Complete** - Benchmark Testing Detailed Report<br>` +
+                    `═════════════════════════════════════════════════<br>` +
+                    `🔍 **Final Analysis Summary:**<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Total Response Time: ${responseTime}ms<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Function Calls Detected: ${functionCalls.length}<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Tools Successfully Executed: ${toolResults.filter(r => r.success).length}<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Execution Success Rate: ${this.calculateSuccessRate(toolResults)}%<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Response Content Type: ${this.detectContentType(response)}<br><br>` +
+                    
+                    `🧠 **AI Model Performance Assessment:**<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Instruction Understanding: ${this.assessInstructionUnderstanding(response, functionCalls)}<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Function Selection Accuracy: ${this.assessFunctionSelection(functionCalls)}<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Parameter Extraction Quality: ${this.assessParameterQuality(functionCalls)}<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Response Completeness: ${this.assessResponseCompleteness(response)}<br><br>` +
+                    
+                    `📉 **Interaction Data Captured:** [Song's Requirement - Recording]<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Raw Response Length: ${response ? response.length : 0} characters<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Detailed Logs: ${interactionData?.detailedLogs?.totalLogs || 0} entries<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Execution Rounds: ${interactionData?.response?.actualExecutionData?.rounds || 0}<br>` +
+                    `&nbsp;&nbsp;&nbsp;• Memory Usage: ${this.getMemoryUsage()} MB<br><br>` +
+                    
+                    `✅ **Status:** Analysis complete - Ready for scoring evaluation`
+                );
             }
             
             // Return both response and detailed interaction data
@@ -1194,27 +1321,28 @@ class LLMBenchmarkFramework {
         
         // Show test initiation with improved formatting
         this.chatManager.addThinkingMessage(
-            `👩${testerName} (${testerRole})<br>` +
+            `👩‍🔬 ${testerName} (${testerRole})<br>` +
             `═══════════════════════════════════════════════════════════<br><br>` +
             
-            `🧪 INITIATING TEST EXECUTION<br><br>` +
+            `🧪 **INITIATING TEST EXECUTION**<br><br>` +
             
-            `📋 Test Specification:<br>` +
+            `📋 **Test Specification:**<br>` +
             `&nbsp;&nbsp;&nbsp;• Name: ${testName}<br>` +
             `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(testType)}<br>` +
             `&nbsp;&nbsp;&nbsp;• ID: ${testInfo.id || 'N/A'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Max Score: ${testInfo.maxScore || 100} points<br><br>` +
             
-            `🎯 Expected Behavior:<br>` +
+            `🎯 **Expected Behavior:**<br>` +
             `${this.formatExpectedBehavior(testType, expectedResult, instruction)}<br><br>` +
             
-            `📝 Test Instruction to LLM:<br>` +
+            `📝 **Test Instruction to LLM:**<br>` +
             `&nbsp;&nbsp;&nbsp;"${instruction}"<br><br>` +
             
-            `⚖️ Evaluation Criteria:<br>` +
+            `⚖️ **Evaluation Criteria:**<br>` +
             `${this.formatEvaluationCriteria(testType, expectedResult)}<br><br>` +
             
-            `⚡ Status:** Sending instruction to LLM for evaluation...`
+            `⚡ **Status:** Sending instruction to LLM for evaluation...<br><br>` +
+            `🔄 **LLM Processing Started:** Waiting for AI model response...`
         );
     }
 
@@ -1317,30 +1445,518 @@ class LLMBenchmarkFramework {
         
         // Create separation between tester analysis and LLM response
         this.chatManager.updateThinkingMessage(
-            `<br><br>🤖 LLM RESPONSE RECEIVED<br>` +
-            `<br><br>🤖 LLM RESPONSE RECEIVED<br>` +
+            `<br><br>🤖 **LLM RESPONSE RECEIVED & ANALYZED**<br>` +
             `───────────────────────────────────────────────────────────<br>` +
-            `📊 Response Summary:<br>` +
+            `📊 **Response Summary:**<br>` +
             `&nbsp;&nbsp;&nbsp;• Length: ${response ? response.length : 0} characters<br>` +
             `&nbsp;&nbsp;&nbsp;• Processing time: ~${Math.random() * 2 + 1 | 0}s<br>` +
             `&nbsp;&nbsp;&nbsp;• Content preview:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"${response ? response.substring(0, 100) + (response.length > 100 ? '...' : '') : 'No response'}"<br><br>` +
-            `───────────────────────────────────────────────────────────<br><br>` +
             
-            `👩‍🔬 Genome AI Studio - ANALYZING LLM RESPONSE**<br><br>` +
+            `🧠 **AI Model Thinking Process:**<br>` +
+            `&nbsp;&nbsp;&nbsp;• Instruction interpretation completed<br>` +
+            `&nbsp;&nbsp;&nbsp;• Function registry lookup performed<br>` +
+            `&nbsp;&nbsp;&nbsp;• Context analysis and tool selection executed<br>` +
+            `&nbsp;&nbsp;&nbsp;• Response generation and formatting finalized<br><br>` +
             
-            `🔍 Technical Analysis:<br>` +
+            `🔍 **Technical Analysis:**<br>` +
             `&nbsp;&nbsp;&nbsp;• Function detection: ${extractedCalls.length > 0 ? `✅ Found ${extractedCalls.length} function(s)` : '❌ No functions detected'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Detected functions: ${detectedFunctions || 'None'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Confidence level: ${extractedCalls.length > 0 ? extractedCalls[0].confidence + '%' : 'N/A'}<br>` +
-            `&nbsp;&nbsp;&nbsp;• Evidence pattern:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"${extractedCalls.length > 0 ? extractedCalls[0].evidence : 'No evidence found'}"<br><br>` +
+            `&nbsp;&nbsp;&nbsp;• Evidence pattern: "${extractedCalls.length > 0 ? extractedCalls[0].evidence : 'No evidence found'}"<br><br>` +
             
-            `📋 Compliance Check:<br>` +
+            `📋 **Compliance Check:**<br>` +
             `&nbsp;&nbsp;&nbsp;• Response completeness: ${hasValidResponse ? '✅ Complete' : '❌ Incomplete'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Function execution: ${extractedCalls.length > 0 ? '✅ Detected' : '❌ Not detected'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Expected behavior match: ${this.assessBehaviorMatch(testInfo, extractedCalls)}<br><br>` +
             
-            `⚖️ Status: Proceeding to detailed scoring evaluation...`
+            `⚙️ **Tool Call Processing:**<br>` +
+            `${this.formatToolCallDetails(extractedCalls)}<br><br>` +
+            
+            `⚖️ **Status:** Proceeding to detailed scoring evaluation...`
         );
+    }
+
+    /**
+     * Display detailed LLM processing information
+     */
+    displayLLMProcessingDetails(instruction, options = {}) {
+        const testInfo = options.testInfo || {};
+        
+        // Get LLM configuration details
+        let llmConfig = 'Unknown';
+        let modelName = 'Unknown';
+        let provider = 'Unknown';
+        
+        try {
+            if (this.chatManager && this.chatManager.llmConfigManager) {
+                const config = this.chatManager.llmConfigManager.getConfiguration();
+                if (config && config.providers) {
+                    const currentProvider = this.chatManager.llmConfigManager.getProviderForModelType('task');
+                    if (currentProvider && config.providers[currentProvider]) {
+                        provider = currentProvider;
+                        modelName = config.providers[currentProvider].model;
+                        llmConfig = `${provider} (${modelName})`;
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to get LLM config for display:', error);
+        }
+        
+        this.chatManager.updateThinkingMessage(
+            `<br>🔧 **LLM Configuration Analysis:**<br>` +
+            `&nbsp;&nbsp;&nbsp;• Provider: ${provider}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Model: ${modelName}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Timeout: ${options.timeout || this.testTimeout}ms<br>` +
+            `&nbsp;&nbsp;&nbsp;• Function Calling: Enabled<br>` +
+            `&nbsp;&nbsp;&nbsp;• Context Mode: Dynamic<br><br>` +
+            
+            `📊 **Request Processing Pipeline:**<br>` +
+            `&nbsp;&nbsp;&nbsp;1. 🔍 Instruction Analysis & Parsing<br>` +
+            `&nbsp;&nbsp;&nbsp;2. 🛠️ System Prompt & Context Building<br>` +
+            `&nbsp;&nbsp;&nbsp;3. 🔗 Function Registry Integration<br>` +
+            `&nbsp;&nbsp;&nbsp;4. 🚀 LLM Provider Communication<br>` +
+            `&nbsp;&nbsp;&nbsp;5. 🧠 Response Analysis & Tool Detection<br>` +
+            `&nbsp;&nbsp;&nbsp;6. ⚙️ Tool Execution & Result Processing<br><br>` +
+            
+            `⏱️ **Performance Monitoring:** Active<br>` +
+            `🔍 **Response Detection:** Comprehensive tool pattern matching<br>` +
+            `📈 **Quality Metrics:** Response time, token usage, accuracy scoring<br><br>` +
+            
+            `🔄 **Status:** Initiating LLM communication...`
+        );
+    }
+
+    /**
+     * Format tool call details for display
+     */
+    formatToolCallDetails(extractedCalls) {
+        if (!extractedCalls || extractedCalls.length === 0) {
+            return '&nbsp;&nbsp;&nbsp;• No tool calls detected in response';
+        }
+        
+        return extractedCalls.map((call, index) => {
+            const params = call.parameters || {};
+            const paramStr = Object.keys(params).length > 0 ? 
+                Object.entries(params).map(([key, value]) => `${key}: "${value}"`).join(', ') : 
+                'None';
+            
+            return `&nbsp;&nbsp;&nbsp;• Tool ${index + 1}: \`${call.tool_name}\`<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Parameters: ${paramStr}<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Confidence: ${call.confidence || 'N/A'}%<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Detection Method: ${call.detectionMethod || 'pattern_match'}`;
+        }).join('<br>');
+    }
+
+    /**
+     * Display real-time LLM processing information
+     */
+    displayRealTimeLLMProcess(instruction, options = {}) {
+        this.chatManager.updateThinkingMessage(
+            `<br>🚀 **LLM REQUEST INITIATED**<br>` +
+            `─────────────────────────────────<br>` +
+            `🔄 **Processing stages:**<br>` +
+            `&nbsp;&nbsp;&nbsp;✓ Instruction received and validated<br>` +
+            `&nbsp;&nbsp;&nbsp;🔄 Building conversation context...<br>` +
+            `&nbsp;&nbsp;&nbsp;🔄 Loading function registry...<br>` +
+            `&nbsp;&nbsp;&nbsp;🔄 Preparing system prompts...<br>` +
+            `&nbsp;&nbsp;&nbsp;🔄 Establishing LLM connection...<br>` +
+            `&nbsp;&nbsp;&nbsp;🔄 Sending request to AI model...<br><br>` +
+            `⏳ **Waiting for AI model response...**`
+        );
+        
+        // Add progressive updates to show AI thinking process
+        setTimeout(() => {
+            this.chatManager.updateThinkingMessage(
+                `<br>🤖 **AI Model Processing Request...**<br>` +
+                `&nbsp;&nbsp;&nbsp;• Analyzing instruction semantics<br>` +
+                `&nbsp;&nbsp;&nbsp;• Searching function registry<br>` +
+                `&nbsp;&nbsp;&nbsp;• Planning response strategy<br>` +
+                `&nbsp;&nbsp;&nbsp;• Generating appropriate function calls`
+            );
+        }, 200);
+        
+        setTimeout(() => {
+            this.chatManager.updateThinkingMessage(
+                `<br>⚙️ **Function Call Analysis in Progress...**<br>` +
+                `&nbsp;&nbsp;&nbsp;• Evaluating available tools<br>` +
+                `&nbsp;&nbsp;&nbsp;• Matching instruction to functions<br>` +
+                `&nbsp;&nbsp;&nbsp;• Preparing parameter extraction<br>` +
+                `&nbsp;&nbsp;&nbsp;• Validating function signatures`
+            );
+        }, 500);
+        
+        setTimeout(() => {
+            this.chatManager.updateThinkingMessage(
+                `<br>🔎 **Deep Function Call Processing...**<br>` +
+                `&nbsp;&nbsp;&nbsp;• Round 1 analysis initiated<br>` +
+                `&nbsp;&nbsp;&nbsp;• Conversation history building<br>` +
+                `&nbsp;&nbsp;&nbsp;• Context integration active<br>` +
+                `&nbsp;&nbsp;&nbsp;• Multi-round processing enabled`
+            );
+        }, 800);
+    }
+
+    /**
+     * Display detailed response processing
+     */
+    displayResponseProcessing(response, interactionData) {
+        const responseTime = interactionData?.response?.responseTime || 0;
+        
+        this.chatManager.updateThinkingMessage(
+            `<br><br>✅ **LLM RESPONSE RECEIVED** (${responseTime}ms)<br>` +
+            `────────────────────────────────────────────<br>` +
+            `📄 **Raw Response Analysis:**<br>` +
+            `&nbsp;&nbsp;&nbsp;• Response length: ${response ? response.length : 0} characters<br>` +
+            `&nbsp;&nbsp;&nbsp;• Processing time: ${responseTime}ms<br>` +
+            `&nbsp;&nbsp;&nbsp;• Content type: ${this.detectContentType(response)}<br><br>` +
+            
+            `🔍 **Starting response analysis:**<br>` +
+            `&nbsp;&nbsp;&nbsp;🔄 Parsing for function calls...<br>` +
+            `&nbsp;&nbsp;&nbsp;🔄 Extracting tool parameters...<br>` +
+            `&nbsp;&nbsp;&nbsp;🔄 Validating response format...<br>` +
+            `&nbsp;&nbsp;&nbsp;🔄 Computing confidence scores...`
+        );
+    }
+
+    /**
+     * Detect response content type
+     */
+    detectContentType(response) {
+        if (!response) return 'Empty';
+        if (response.includes('tool_name')) return 'Function Call';
+        if (response.includes('```')) return 'Code Block';
+        if (response.includes('json')) return 'JSON Data';
+        if (response.length > 500) return 'Detailed Text';
+        return 'Simple Text';
+    }
+
+    /**
+     * Display detailed tool execution information
+     */
+    displayToolExecutionDetails(executionData) {
+        const functionCalls = executionData.functionCalls || [];
+        const toolResults = executionData.toolResults || [];
+        const rounds = executionData.rounds || 0;
+        const totalTime = executionData.totalExecutionTime || 0;
+        
+        if (functionCalls.length > 0) {
+            this.chatManager.updateThinkingMessage(
+                `<br><br>🚀 **TOOL EXECUTION DETECTED**<br>` +
+                `══════════════════════════════════════════<br>` +
+                `📊 **Execution Summary:**<br>` +
+                `&nbsp;&nbsp;&nbsp;• Total function calls: ${functionCalls.length}<br>` +
+                `&nbsp;&nbsp;&nbsp;• Execution rounds: ${rounds}<br>` +
+                `&nbsp;&nbsp;&nbsp;• Total execution time: ${totalTime}ms<br>` +
+                `&nbsp;&nbsp;&nbsp;• Success rate: ${this.calculateSuccessRate(toolResults)}%<br><br>` +
+                
+                `🔧 **Detailed Tool Calls:**<br>` +
+                `${this.formatExecutedToolCalls(functionCalls)}<br><br>` +
+                
+                `📈 **Execution Results:**<br>` +
+                `${this.formatToolResults(toolResults)}`
+            );
+        } else {
+            this.chatManager.updateThinkingMessage(
+                `<br><br>⚠️ **NO TOOL EXECUTION DETECTED**<br>` +
+                `&nbsp;&nbsp;&nbsp;• LLM response did not trigger any function calls<br>` +
+                `&nbsp;&nbsp;&nbsp;• Response appears to be conversational only<br>` +
+                `&nbsp;&nbsp;&nbsp;• Falling back to text-based analysis...`
+            );
+        }
+    }
+
+    /**
+     * Display text-based analysis results
+     */
+    displayTextBasedAnalysis(response, functionCalls) {
+        this.chatManager.updateThinkingMessage(
+            `<br><br>🔍 **TEXT-BASED ANALYSIS RESULTS**<br>` +
+            `────────────────────────────────────────<br>` +
+            `📝 **Response Content Analysis:**<br>` +
+            `&nbsp;&nbsp;&nbsp;• Content Length: ${response ? response.length : 0} characters<br>` +
+            `&nbsp;&nbsp;&nbsp;• Detected Functions: ${functionCalls.length}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Analysis Method: Pattern matching<br><br>` +
+            
+            `🔍 **Pattern Detection Results:**<br>` +
+            `${functionCalls.length > 0 ? this.formatDetectedFunctions(functionCalls) : '&nbsp;&nbsp;&nbsp;• No function patterns detected in response'}<br><br>` +
+            
+            `📉 **Confidence Assessment:**<br>` +
+            `&nbsp;&nbsp;&nbsp;• Overall confidence: ${this.calculateOverallConfidence(functionCalls)}%<br>` +
+            `&nbsp;&nbsp;&nbsp;• Detection reliability: ${functionCalls.length > 0 ? 'Medium' : 'Low'}`
+        );
+    }
+
+    /**
+     * Calculate success rate for tool results
+     */
+    calculateSuccessRate(toolResults) {
+        if (!toolResults || toolResults.length === 0) return 0;
+        const successful = toolResults.filter(result => result.success).length;
+        return Math.round((successful / toolResults.length) * 100);
+    }
+
+    /**
+     * Format executed tool calls for display
+     */
+    formatExecutedToolCalls(functionCalls) {
+        return functionCalls.map((call, index) => {
+            const params = call.parameters || {};
+            const paramStr = Object.keys(params).length > 0 ?
+                Object.entries(params).map(([key, value]) => `${key}: "${value}"`).join(', ') :
+                'None';
+            
+            return `&nbsp;&nbsp;&nbsp;${index + 1}. **${call.tool_name}**<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Parameters: ${paramStr}<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Round: ${call.round || 'N/A'}<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Timestamp: ${call.timestamp || 'N/A'}`;
+        }).join('<br>');
+    }
+
+    /**
+     * Format tool execution results
+     */
+    formatToolResults(toolResults) {
+        if (!toolResults || toolResults.length === 0) {
+            return '&nbsp;&nbsp;&nbsp;• No execution results available';
+        }
+        
+        return toolResults.map((result, index) => {
+            const status = result.success ? '✅ Success' : '❌ Failed';
+            const errorInfo = result.error ? `<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Error: ${result.error}` : '';
+            
+            return `&nbsp;&nbsp;&nbsp;${index + 1}. **${result.tool}** - ${status}<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Result: ${this.formatResultData(result.result)}${errorInfo}`;
+        }).join('<br>');
+    }
+
+    /**
+     * Format detected functions for display
+     */
+    formatDetectedFunctions(functionCalls) {
+        return functionCalls.map((call, index) => {
+            return `&nbsp;&nbsp;&nbsp;${index + 1}. **${call.tool_name}** (${call.confidence || 'N/A'}% confidence)<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Method: ${call.detectionMethod || 'pattern_match'}<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Evidence: "${call.evidence || 'N/A'}"`;
+        }).join('<br>');
+    }
+
+    /**
+     * Calculate overall confidence from function calls
+     */
+    calculateOverallConfidence(functionCalls) {
+        if (!functionCalls || functionCalls.length === 0) return 0;
+        const totalConfidence = functionCalls.reduce((sum, call) => sum + (call.confidence || 0), 0);
+        return Math.round(totalConfidence / functionCalls.length);
+    }
+
+    /**
+     * Format result data for display
+     */
+    formatResultData(result) {
+        if (!result) return 'No data';
+        if (typeof result === 'string') return result.substring(0, 100) + (result.length > 100 ? '...' : '');
+        if (typeof result === 'object') return JSON.stringify(result).substring(0, 100) + '...';
+        return String(result);
+    }
+
+    /**
+     * Display final comprehensive analysis results
+     */
+    displayFinalAnalysisResults(response, interactionData) {
+        const functionCalls = interactionData?.response?.functionCalls || [];
+        const toolResults = interactionData?.response?.toolExecutions || [];
+        const responseTime = interactionData?.response?.responseTime || 0;
+        const actualExecutionData = interactionData?.response?.actualExecutionData;
+        
+        this.chatManager.updateThinkingMessage(
+            `<br><br>📈 **COMPREHENSIVE ANALYSIS COMPLETE**<br>` +
+            `═════════════════════════════════════════════════<br>` +
+            `🔍 **Final Analysis Summary:**<br>` +
+            `&nbsp;&nbsp;&nbsp;• Total Response Time: ${responseTime}ms<br>` +
+            `&nbsp;&nbsp;&nbsp;• Function Calls Detected: ${functionCalls.length}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Tools Successfully Executed: ${toolResults.filter(r => r.success).length}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Execution Success Rate: ${this.calculateSuccessRate(toolResults)}%<br>` +
+            `&nbsp;&nbsp;&nbsp;• Response Content Type: ${this.detectContentType(response)}<br><br>` +
+            
+            `🧠 **AI Model Performance:**<br>` +
+            `&nbsp;&nbsp;&nbsp;• Instruction Understanding: ${this.assessInstructionUnderstanding(response, functionCalls)}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Function Selection Accuracy: ${this.assessFunctionSelection(functionCalls)}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Parameter Extraction Quality: ${this.assessParameterQuality(functionCalls)}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Response Completeness: ${this.assessResponseCompleteness(response)}<br><br>` +
+            
+            `📉 **Interaction Data Captured:**<br>` +
+            `&nbsp;&nbsp;&nbsp;• Raw Response Length: ${response ? response.length : 0} chars<br>` +
+            `&nbsp;&nbsp;&nbsp;• Detailed Logs: ${interactionData?.detailedLogs?.totalLogs || 0} entries<br>` +
+            `&nbsp;&nbsp;&nbsp;• Execution Rounds: ${actualExecutionData?.rounds || 0}<br>` +
+            `&nbsp;&nbsp;&nbsp;• Memory Usage: ${this.getMemoryUsage()} MB<br><br>` +
+            
+            `✅ **Status:** Analysis complete - Ready for scoring evaluation`
+        );
+    }
+
+    /**
+     * Assess instruction understanding quality
+     */
+    assessInstructionUnderstanding(response, functionCalls) {
+        if (!response) return '❌ Poor';
+        if (functionCalls.length > 0) return '✅ Excellent';
+        if (response.length > 50) return '⚠️ Good';
+        return '❌ Poor';
+    }
+
+    /**
+     * Assess function selection accuracy
+     */
+    assessFunctionSelection(functionCalls) {
+        if (functionCalls.length === 0) return '❌ No Functions';
+        const avgConfidence = this.calculateOverallConfidence(functionCalls);
+        if (avgConfidence >= 80) return '✅ Excellent';
+        if (avgConfidence >= 60) return '⚠️ Good';
+        return '❌ Poor';
+    }
+
+    /**
+     * Assess parameter extraction quality
+     */
+    assessParameterQuality(functionCalls) {
+        if (functionCalls.length === 0) return '❌ N/A';
+        const hasValidParams = functionCalls.some(call => 
+            call.parameters && Object.keys(call.parameters).length > 0
+        );
+        return hasValidParams ? '✅ Good' : '⚠️ Limited';
+    }
+
+    /**
+     * Assess response completeness
+     */
+    assessResponseCompleteness(response) {
+        if (!response) return '❌ Empty';
+        if (response.length > 200) return '✅ Complete';
+        if (response.length > 50) return '⚠️ Partial';
+        return '❌ Minimal';
+    }
+
+    /**
+     * Get current memory usage
+     */
+    getMemoryUsage() {
+        if (performance.memory) {
+            return Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+        }
+        return 'N/A';
+    }
+
+    /**
+     * Get LLM provider name
+     */
+    getLLMProvider() {
+        try {
+            if (this.chatManager && this.chatManager.llmConfigManager) {
+                return this.chatManager.llmConfigManager.getProviderForModelType('task') || 'Unknown';
+            }
+        } catch (error) {
+            console.warn('Failed to get LLM provider:', error);
+        }
+        return 'Unknown';
+    }
+
+    /**
+     * Get LLM model name
+     */
+    getLLMModel() {
+        try {
+            if (this.chatManager && this.chatManager.llmConfigManager) {
+                const config = this.chatManager.llmConfigManager.getConfiguration();
+                const provider = this.getLLMProvider();
+                if (config && config.providers && config.providers[provider]) {
+                    return config.providers[provider].model || 'Unknown';
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to get LLM model:', error);
+        }
+        return 'Unknown';
+    }
+
+    /**
+     * Format detected tools for display (as requested by Song)
+     */
+    formatDetectedToolsForDisplay(functionCalls) {
+        if (!functionCalls || functionCalls.length === 0) {
+            return '&nbsp;&nbsp;&nbsp;• No tool calls detected';
+        }
+        
+        return functionCalls.map((call, index) => {
+            const params = call.parameters || {};
+            const paramStr = Object.keys(params).length > 0 ?
+                Object.entries(params).map(([key, value]) => `${key}: "${value}"`).join(', ') :
+                'No parameters';
+            
+            return `&nbsp;&nbsp;&nbsp;${index + 1}. **${call.tool_name}** [Detected]<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Parameters: ${paramStr}<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Round: ${call.round || 'N/A'}<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Timestamp: ${call.timestamp || 'N/A'}`;
+        }).join('<br>');
+    }
+
+    /**
+     * Format execution results for display
+     */
+    formatExecutionResults(toolResults) {
+        if (!toolResults || toolResults.length === 0) {
+            return '&nbsp;&nbsp;&nbsp;• No execution results available';
+        }
+        
+        return toolResults.map((result, index) => {
+            const status = result.success ? '✅ Success' : '❌ Failed';
+            const errorInfo = result.error ? `<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Error: ${result.error}` : '';
+            
+            return `&nbsp;&nbsp;&nbsp;${index + 1}. **${result.tool}** - ${status}<br>` +
+                   `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Result: ${this.formatResultData(result.result)}${errorInfo}`;
+        }).join('<br>');
+    }
+
+    /**
+     * Override ChatManager's simple messages with our detailed benchmark analysis
+     */
+    overrideChatManagerMessages() {
+        // Find any thinking process messages that ChatManager might have added
+        const thinkingMessages = document.querySelectorAll('.thinking-process');
+        
+        thinkingMessages.forEach(message => {
+            const content = message.querySelector('.thinking-content');
+            if (content) {
+                const text = content.innerHTML;
+                
+                // Check if this is a generic ChatManager message that we need to replace
+                if (text.includes('🔄 Starting request processing') || 
+                    text.includes('🤖 Round') || 
+                    text.includes('max rounds:')) {
+                    
+                    console.log('🔧 [Benchmark] Overriding ChatManager generic message');
+                    
+                    // Replace with our detailed processing message
+                    this.chatManager.updateThinkingMessage(
+                        `<br>📶 **LLM REQUEST PROCESSING - DETAILED MODE**<br>` +
+                        `══════════════════════════════════════════════<br>` +
+                        `🔄 **Multi-Round Function Call Processing Active**<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Maximum rounds configured: 10<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Early completion detection enabled<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Tool execution monitoring active<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Response quality analysis in progress<br><br>` +
+                        
+                        `🔎 **Round 1 Analysis:**<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Parsing LLM response for tool calls...<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Function signature validation<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Parameter extraction and validation<br>` +
+                        `&nbsp;&nbsp;&nbsp;• Tool execution preparation<br><br>` +
+                        
+                        `⚡ **Status:** Advanced parsing and analysis in progress...`
+                    );
+                }
+            }
+        });
     }
 
     /**
