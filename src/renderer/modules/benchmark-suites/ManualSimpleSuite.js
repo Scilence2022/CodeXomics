@@ -56,7 +56,7 @@ class ManualSimpleSuite {
                 category: 'navigation',
                 complexity: 'simple',
                 evaluation: 'manual',
-                instruction: 'Open a new tab for genome browsing.',
+                instruction: 'Open a new tab.',
                 expectedResult: {
                     tool_name: 'open_new_tab',
                     parameters: {}
