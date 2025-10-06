@@ -1189,7 +1189,14 @@ class UIManager {
             
             const currentX = e.clientX || (e.touches && e.touches[0].clientX);
             const deltaX = currentX - startX;
-            const newWidth = Math.max(200, Math.min(600, startWidth + deltaX));
+            const requestedWidth = startWidth + deltaX;
+            const maxWidth = window.innerWidth * 0.5;
+            const newWidth = Math.max(200, Math.min(maxWidth, requestedWidth));
+            
+            // Debug logging for resize operations
+            if (requestedWidth !== newWidth) {
+                console.log(`🔧 Sidebar resize constrained: ${requestedWidth}px -> ${newWidth}px (max: ${maxWidth}px, screen: ${window.innerWidth}px)`);
+            }
             
             // Update sidebar width
             sidebar.style.width = `${newWidth}px`;
@@ -1274,7 +1281,14 @@ class UIManager {
             
             // Apply keyboard movement
             const currentWidth = sidebar.offsetWidth;
-            const newWidth = Math.max(200, Math.min(600, currentWidth + deltaX));
+            const requestedWidth = currentWidth + deltaX;
+            const maxWidth = window.innerWidth * 0.5;
+            const newWidth = Math.max(200, Math.min(maxWidth, requestedWidth));
+            
+            // Debug logging for keyboard resize
+            if (requestedWidth !== newWidth) {
+                console.log(`⌨️ Sidebar keyboard resize constrained: ${requestedWidth}px -> ${newWidth}px (max: ${maxWidth}px, screen: ${window.innerWidth}px)`);
+            }
             
             sidebar.style.width = `${newWidth}px`;
             localStorage.setItem('sidebarWidth', sidebar.style.width);
@@ -1283,6 +1297,20 @@ class UIManager {
 
         // Restore saved width on initialization
         this.restoreSidebarWidth();
+        
+        // Handle window resize to adjust sidebar constraints dynamically
+        window.addEventListener('resize', () => {
+            const currentSidebarWidth = sidebar.offsetWidth;
+            const newMaxWidth = window.innerWidth * 0.5;
+            
+            // If current sidebar width exceeds new screen constraints, adjust it
+            if (currentSidebarWidth > newMaxWidth) {
+                const constrainedWidth = Math.max(200, newMaxWidth);
+                sidebar.style.width = `${constrainedWidth}px`;
+                localStorage.setItem('sidebarWidth', `${constrainedWidth}px`);
+                console.log(`📺 Screen resized: Sidebar adjusted from ${currentSidebarWidth}px to ${constrainedWidth}px`);
+            }
+        });
     }
 
     // Restore sidebar width from localStorage
@@ -1292,8 +1320,18 @@ class UIManager {
         
         if (savedWidth && sidebar) {
             const width = parseInt(savedWidth);
-            if (width >= 200 && width <= 600) {
+            const maxWidth = window.innerWidth * 0.5;
+            
+            // Check if saved width is valid for current screen size
+            if (width >= 200 && width <= maxWidth) {
                 sidebar.style.width = savedWidth;
+            } else {
+                // If saved width exceeds current limits, use the maximum allowed
+                const constrainedWidth = Math.max(200, Math.min(maxWidth, width));
+                sidebar.style.width = `${constrainedWidth}px`;
+                // Update localStorage with the new constrained value
+                localStorage.setItem('sidebarWidth', `${constrainedWidth}px`);
+                console.log(`🔧 Sidebar width adjusted from ${width}px to ${constrainedWidth}px for current screen (${window.innerWidth}px)`);
             }
         }
     }

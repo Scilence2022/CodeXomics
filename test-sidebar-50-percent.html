@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sidebar 50% Width Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            flex-shrink: 0;
+            position: relative;
+        }
+        
+        .sidebar-content {
+            padding: 1rem;
+        }
+        
+        .sidebar-splitter {
+            width: 8px;
+            background: linear-gradient(to right, #e9ecef, #dee2e6, #e9ecef);
+            cursor: col-resize;
+            position: relative;
+            border-left: 1px solid #ced4da;
+            border-right: 1px solid #ced4da;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-splitter:hover {
+            background: linear-gradient(to right, #dee2e6, #ced4da, #dee2e6);
+            width: 10px;
+        }
+        
+        .sidebar-splitter::before {
+            content: '';
+            height: 40px;
+            width: 3px;
+            background: #6c757d;
+            border-radius: 2px;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-splitter:hover::before {
+            opacity: 1;
+            height: 60px;
+            width: 4px;
+        }
+        
+        .viewer-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            background: white;
+        }
+        
+        .info-panel {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-bottom: 1px solid #bbdefb;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 1rem;
+            overflow: auto;
+        }
+        
+        .status-bar {
+            background: #263238;
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .log-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 Sidebar 50% Width Test</h1>
+        <p>Test that the sidebar can be resized to 50% of the screen width</p>
+    </div>
+    
+    <div class="main-content">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-content">
+                <h3>Sidebar Content</h3>
+                <p>Current width: <span id="currentWidth">280px</span></p>
+                <p>Max allowed: <span id="maxAllowed">--</span></p>
+                <p>Screen width: <span id="screenWidth">--</span></p>
+                
+                <div class="test-buttons">
+                    <button class="btn btn-primary" onclick="testResize(25)">25%</button>
+                    <button class="btn btn-primary" onclick="testResize(35)">35%</button>
+                    <button class="btn btn-primary" onclick="testResize(45)">45%</button>
+                    <button class="btn btn-primary" onclick="testResize(50)">50%</button>
+                    <button class="btn btn-secondary" onclick="testResize(55)">55% (Should Fail)</button>
+                    <button class="btn btn-secondary" onclick="testResize(60)">60% (Should Fail)</button>
+                </div>
+                
+                <button class="btn btn-secondary" onclick="clearLog()">Clear Log</button>
+                <button class="btn btn-secondary" onclick="resetWidth()">Reset Width</button>
+            </div>
+        </div>
+        
+        <div class="sidebar-splitter" id="sidebarSplitter"></div>
+        
+        <div class="viewer-container">
+            <div class="info-panel">
+                <h3>📊 Resize Test Results</h3>
+                <p>Drag the splitter or click the test buttons to verify the 50% limit works correctly.</p>
+            </div>
+            
+            <div class="content-area">
+                <div class="log-area" id="logArea">Ready to test sidebar resizing...\n</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        Screen: <span id="statusScreenWidth">--</span> | 
+        Sidebar: <span id="statusSidebarWidth">--</span> | 
+        Ratio: <span id="statusRatio">--</span>
+    </div>
+
+    <script>
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        // Initialize splitter functionality
+        function initializeSplitter() {
+            const splitter = document.getElementById('sidebarSplitter');
+            const sidebar = document.getElementById('sidebar');
+            
+            const startResize = (e) => {
+                isResizing = true;
+                startX = e.clientX || (e.touches && e.touches[0].clientX);
+                startWidth = sidebar.offsetWidth;
+                
+                splitter.style.background = 'linear-gradient(to right, #ced4da, #adb5bd, #ced4da)';
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                
+                e.preventDefault();
+            };
+
+            const doResize = (e) => {
+                if (!isResizing) return;
+                
+                const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+                const deltaX = currentX - startX;
+                const requestedWidth = startWidth + deltaX;
+                const maxWidth = window.innerWidth * 0.5;
+                const newWidth = Math.max(200, Math.min(maxWidth, requestedWidth));
+                
+                // Log constraint information
+                if (requestedWidth !== newWidth) {
+                    log(`🔧 Resize constrained: ${requestedWidth}px -> ${newWidth}px (max: ${maxWidth}px)`);
+                }
+                
+                sidebar.style.width = `${newWidth}px`;
+                updateDisplay();
+                
+                e.preventDefault();
+            };
+
+            const stopResize = () => {
+                if (!isResizing) return;
+                
+                isResizing = false;
+                splitter.style.background = '';
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            };
+
+            // Mouse events
+            splitter.addEventListener('mousedown', startResize);
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
+
+            // Touch events
+            splitter.addEventListener('touchstart', startResize, { passive: false });
+            document.addEventListener('touchmove', doResize, { passive: false });
+            document.addEventListener('touchend', stopResize);
+        }
+        
+        // Test resize to specific percentage
+        function testResize(percentage) {
+            const sidebar = document.getElementById('sidebar');
+            const targetWidth = Math.floor(window.innerWidth * (percentage / 100));
+            const maxWidth = window.innerWidth * 0.5;
+            const constrainedWidth = Math.max(200, Math.min(maxWidth, targetWidth));
+            
+            log(`🎯 Testing ${percentage}% width (${targetWidth}px)...`);
+            
+            sidebar.style.width = `${constrainedWidth}px`;
+            
+            setTimeout(() => {
+                const actualWidth = sidebar.offsetWidth;
+                const success = Math.abs(actualWidth - constrainedWidth) < 5;
+                const actualPercentage = ((actualWidth / window.innerWidth) * 100).toFixed(1);
+                
+                if (targetWidth === constrainedWidth) {
+                    log(`✅ SUCCESS: Set to ${actualWidth}px (${actualPercentage}%)`);
+                } else {
+                    log(`⚠️ CONSTRAINED: Requested ${targetWidth}px, got ${actualWidth}px (${actualPercentage}%)`);
+                }
+                
+                updateDisplay();
+            }, 50);
+        }
+        
+        // Reset to default width
+        function resetWidth() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.style.width = '280px';
+            log('🔄 Reset to default width (280px)');
+            updateDisplay();
+        }
+        
+        // Update display information
+        function updateDisplay() {
+            const sidebar = document.getElementById('sidebar');
+            const currentWidth = sidebar.offsetWidth;
+            const screenWidth = window.innerWidth;
+            const maxAllowed = Math.floor(screenWidth * 0.5);
+            const ratio = ((currentWidth / screenWidth) * 100).toFixed(1);
+            
+            document.getElementById('currentWidth').textContent = `${currentWidth}px`;
+            document.getElementById('maxAllowed').textContent = `${maxAllowed}px`;
+            document.getElementById('screenWidth').textContent = `${screenWidth}px`;
+            
+            document.getElementById('statusScreenWidth').textContent = `${screenWidth}px`;
+            document.getElementById('statusSidebarWidth').textContent = `${currentWidth}px`;
+            document.getElementById('statusRatio').textContent = `${ratio}%`;
+        }
+        
+        // Log messages
+        function log(message) {
+            const logArea = document.getElementById('logArea');
+            const timestamp = new Date().toLocaleTimeString();
+            logArea.textContent += `[${timestamp}] ${message}\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+        
+        // Clear log
+        function clearLog() {
+            document.getElementById('logArea').textContent = 'Log cleared...\n';
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            updateDisplay();
+            log(`📺 Window resized to ${window.innerWidth}px`);
+        });
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initializeSplitter();
+            updateDisplay();
+            log('🚀 Sidebar test initialized');
+            log(`📏 Current max width: ${Math.floor(window.innerWidth * 0.5)}px (50% of ${window.innerWidth}px)`);
+        });
+    </script>
+</body>
+</html>
