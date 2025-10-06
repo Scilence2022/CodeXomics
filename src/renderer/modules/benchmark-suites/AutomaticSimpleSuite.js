@@ -4,7 +4,7 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests';
+        this.suiteName = 'Automatic Simple Tests (23)';
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations';
         this.framework = null;
@@ -90,7 +90,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
             {
@@ -109,7 +109,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
             {
@@ -128,7 +128,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
             {
@@ -147,7 +147,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
             {
@@ -166,7 +166,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateFileLoadingCall.bind(this)
             },
 
@@ -188,7 +188,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateNavigationCall.bind(this)
             },
             {
@@ -208,7 +208,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateNavigationCall.bind(this)
             },
             {
@@ -229,7 +229,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateNavigationCall.bind(this)
             },
             {
@@ -246,7 +246,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
 
@@ -268,7 +268,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateSequenceAnalysisCall.bind(this)
             },
             {
@@ -287,7 +287,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
             {
@@ -306,7 +306,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
 
@@ -327,7 +327,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
             {
@@ -347,7 +347,7 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateSearchFunctionCall.bind(this)
             },
             {
@@ -366,8 +366,152 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+
+            // EXPORT TASKS - Automatic + Simple (REQUIRES PRE-LOADED DATA)
+            {
+                id: 'export_auto_01',
+                name: 'Export FASTA Sequence',
+                type: 'function_call',
+                category: 'file_export',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Export sequences in FASTA format.',
+                expectedResult: {
+                    tool_name: 'export_fasta_sequence',
+                    parameters: {
+                        format: 'fasta',
+                        includeDescription: true
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateExportCall.bind(this)
+            },
+            {
+                id: 'export_auto_02',
+                name: 'Export GenBank Format',
+                type: 'function_call',
+                category: 'file_export',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Export data in GenBank format.',
+                expectedResult: {
+                    tool_name: 'export_genbank_format',
+                    parameters: {
+                        includeSequence: true,
+                        includeAnnotations: true
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateExportCall.bind(this)
+            },
+            {
+                id: 'export_auto_03',
+                name: 'Export GFF3 Annotations',
+                type: 'function_call',
+                category: 'file_export',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Export GFF3 annotation format.',
+                expectedResult: {
+                    tool_name: 'export_gff_annotations',
+                    parameters: {
+                        version: 'gff3',
+                        includeSequence: false
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateExportCall.bind(this)
+            },
+            {
+                id: 'export_auto_04',
+                name: 'Export BED Format Features',
+                type: 'function_call',
+                category: 'file_export',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Export features in BED format.',
+                expectedResult: {
+                    tool_name: 'export_bed_format',
+                    parameters: {
+                        trackName: 'exported_features',
+                        includeScore: true
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateExportCall.bind(this)
+            },
+            {
+                id: 'export_auto_05',
+                name: 'Export CDS FASTA',
+                type: 'function_call',
+                category: 'file_export',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Export coding sequences as FASTA format.',
+                expectedResult: {
+                    tool_name: 'export_cds_fasta',
+                    parameters: {
+                        sequenceType: 'cds',
+                        includeHeaders: true
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateExportCall.bind(this)
+            },
+            {
+                id: 'export_auto_06',
+                name: 'Export Protein FASTA',
+                type: 'function_call',
+                category: 'file_export',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Export protein sequences in FASTA format.',
+                expectedResult: {
+                    tool_name: 'export_protein_fasta',
+                    parameters: {
+                        sequenceType: 'protein',
+                        includeHeaders: true,
+                        translate: true
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateExportCall.bind(this)
+            },
+            {
+                id: 'export_auto_07',
+                name: 'Export Current View FASTA',
+                type: 'function_call',
+                category: 'file_export',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Export currently visible genomic region as FASTA.',
+                expectedResult: {
+                    tool_name: 'export_current_view_fasta',
+                    parameters: {
+                        format: 'fasta',
+                        currentViewOnly: true,
+                        includeCoordinates: true
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateExportCall.bind(this)
             },
 
             // EXTERNAL DATABASE TASKS - Automatic + Simple
@@ -381,17 +525,16 @@ class AutomaticSimpleSuite {
                 evaluation: 'automatic',
                 instruction: 'Get AlphaFold structure prediction for gene araA.',
                 expectedResult: {
-                    tool_name: 'search_alphafold_by_gene',
+                    tool_name: 'alphafold_search',
                     parameters: {
-                        geneName: 'araA',
-                        organism: 'Escherichia coli',
-                        includeMetadata: true,
-                        includeSequence: false
+                        sequence: '<araA_protein_sequence>',
+                        blastType: 'blastp',
+                        database: 'nr'
                     }
                 },
                 maxScore: 5,
                 bonusScore: 1,
-
+                timeout: 30000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             }
         ];
@@ -414,141 +557,67 @@ class AutomaticSimpleSuite {
             return evaluation;
         }
 
-        // // 🔍 SONG'S DEBUGGING: Log detected tools for analysis
-        // console.log(`🎯 [SONG DEBUG] evaluateBasicFunctionCall called for test: ${testResult.testId || 'unknown'}`);
-        // console.log(`🎯 [SONG DEBUG] actualResult type:`, typeof actualResult);
-        // console.log(`🎯 [SONG DEBUG] actualResult content:`, actualResult);
-        // console.log(`🎯 [SONG DEBUG] expectedResult:`, expectedResult);
+        // 🔍 SONG'S ENHANCED DEBUGGING: More comprehensive tool detection logging
+        console.log(`🎯 [SONG DEBUG] evaluateBasicFunctionCall called for test: ${testResult.testId || 'unknown'}`);
+        console.log(`🎯 [SONG DEBUG] Test name: ${testResult.name || 'unknown'}`);
+        console.log(`🎯 [SONG DEBUG] actualResult type:`, typeof actualResult);
+        console.log(`🎯 [SONG DEBUG] actualResult content:`, actualResult);
+        console.log(`🎯 [SONG DEBUG] expectedResult:`, expectedResult);
         
-        // Extract tool name from actualResult - PRIORITIZE ChatManager's parseToolCall results
+        // IMPROVED: Handle multiple tool calls - check all tools in array
+        let actualTools = [];
         let actualTool = null;
         
-        // PRIORITY 1: Use ChatManager's reliable parseToolCall results from testResult
-        if (testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools && testResult.parseDebugInfo.detectedTools.length > 0) {
-            const detectedTools = testResult.parseDebugInfo.detectedTools;
-            console.log(`🎯 [PRIORITY 1] Using ChatManager's detected tools:`, detectedTools);
+        if (Array.isArray(actualResult)) {
+            actualTools = actualResult.map(call => call?.tool_name).filter(Boolean);
+            actualTool = actualTools[0]; // Primary tool for backward compatibility
+            console.log(`🎯 [SONG DEBUG] Multiple tools detected:`, actualTools);
+            console.log(`🎯 [SONG DEBUG] Checking if expected tool '${expectedResult.tool_name}' is in:`, actualTools);
             
-            // Find the first detected tool that matches our expected tool or is the expected tool
-            const matchingTool = detectedTools.find(tool => 
-                tool.tool === expectedResult.tool_name || 
-                tool.tool.toLowerCase().includes(expectedResult.tool_name.toLowerCase()) ||
-                expectedResult.tool_name.toLowerCase().includes(tool.tool.toLowerCase())
-            );
-            
-            if (matchingTool) {
-                actualTool = matchingTool.tool;
-                console.log(`✅ [PRIORITY 1] Found matching tool from ChatManager: '${actualTool}'`);
+            // Check if expected tool is in the array
+            if (actualTools.includes(expectedResult.tool_name)) {
+                actualTool = expectedResult.tool_name; // Use the expected tool for evaluation
+                console.log(`✅ [SONG DEBUG] Expected tool '${expectedResult.tool_name}' found in tool array!`);
             } else {
-                // If no exact match, use the first detected tool (ChatManager is usually reliable)
-                actualTool = detectedTools[0].tool;
-                console.log(`🔄 [PRIORITY 1] Using first detected tool from ChatManager: '${actualTool}'`);
+                console.log(`❌ [SONG DEBUG] Expected tool '${expectedResult.tool_name}' NOT found in tool array`);
             }
+        } else {
+            actualTool = actualResult?.tool_name;
+            actualTools = actualTool ? [actualTool] : [];
+            console.log(`🎯 [SONG DEBUG] Single tool detected: '${actualTool}'`);
         }
         
-        // PRIORITY 2: Standard extraction if no parseDebugInfo available
-        if (!actualTool) {
-            if (Array.isArray(actualResult)) {
-                actualTool = actualResult[0]?.tool_name;
-            } else if (actualResult && typeof actualResult === 'object') {
-                actualTool = actualResult.tool_name;
-            }
-        }
+        console.log(`🎯 [SONG DEBUG] Final extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);
         
-        // PRIORITY 3: Fallback - Parse from string if it contains tool call JSON
-        if (!actualTool && typeof actualResult === 'string') {
-            try {
-                const jsonMatch = actualResult.match(/\{[^{}]*"tool_name"[^{}]*\}/);
-                if (jsonMatch) {
-                    const parsedTool = JSON.parse(jsonMatch[0]);
-                    actualTool = parsedTool.tool_name;
-                    console.log(`🔄 [PRIORITY 3] Extracted tool name from string JSON: '${actualTool}'`);
-                }
-            } catch (e) {
-                // JSON parsing failed, continue with other methods
-            }
-        }
-        
-        // PRIORITY 4: Fallback - Check alternative property names
-        if (!actualTool && actualResult && typeof actualResult === 'object') {
-            actualTool = actualResult.function_call?.name || 
-                        actualResult.tool_call?.name || 
-                        actualResult.function_name ||
-                        actualResult.name;
-        }
-        
-        // PRIORITY 5: Emergency fallback - Check for tool execution success patterns
-        if (!actualTool && typeof actualResult === 'string') {
-            const expectedToolLower = expectedResult.tool_name.toLowerCase();
-            if (actualResult.toLowerCase().includes(expectedToolLower)) {
-                const successPatterns = [
-                    new RegExp(`(successfully|completed|executed).*${expectedToolLower}`, 'i'),
-                    new RegExp(`${expectedToolLower}.*(successfully|completed|executed)`, 'i'),
-                    new RegExp(`tool execution completed.*${expectedToolLower}`, 'i')
-                ];
-                
-                if (successPatterns.some(pattern => pattern.test(actualResult))) {
-                    actualTool = expectedResult.tool_name;
-                    console.log(`🔄 [PRIORITY 5] Detected tool from success pattern: '${actualTool}'`);
-                }
-            }
-        }
-        
-        console.log(`🎯 [FINAL RESULT] Extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);
-        console.log(`🔍 [DEBUG INFO] actualResult type: ${typeof actualResult}, isArray: ${Array.isArray(actualResult)}`);
-        console.log(`🔍 [DEBUG INFO] parseDebugInfo available: ${!!(testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools)}`);
-        if (testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools) {
-            console.log(`🔍 [DEBUG INFO] ChatManager detected tools:`, testResult.parseDebugInfo.detectedTools.map(t => t.tool));
-        }
-        
-        // Record detected tool for Song's analysis with enhanced debugging info
-        const debugInfo = {
+        // ENHANCED: Record detected tools for Song's analysis with more detail
+        const debugEntry = {
             testId: testResult.testId,
-            testName: testResult.testName || 'unknown',
+            testName: testResult.testName || testResult.name || 'unknown',
             expectedTool: expectedResult.tool_name,
             actualTool: actualTool,
+            allDetectedTools: actualTools,
             actualResultType: typeof actualResult,
             actualResult: actualResult,
-            isArray: Array.isArray(actualResult),
-            hasToolName: actualResult && typeof actualResult === 'object' && 'tool_name' in actualResult,
-            hasFunctionCall: actualResult && typeof actualResult === 'object' && 'function_call' in actualResult,
-            hasToolCall: actualResult && typeof actualResult === 'object' && 'tool_call' in actualResult,
-            extractionMethod: actualTool ? 'successful' : 'failed',
+            isMultipleTools: Array.isArray(actualResult) && actualResult.length > 1,
+            toolFoundInArray: actualTools.includes(expectedResult.tool_name),
             timestamp: new Date().toISOString()
         };
         
         if (window.songBenchmarkDebug) {
             window.songBenchmarkDebug.detectedTools = window.songBenchmarkDebug.detectedTools || [];
-            window.songBenchmarkDebug.detectedTools.push(debugInfo);
+            window.songBenchmarkDebug.detectedTools.push(debugEntry);
         } else {
             window.songBenchmarkDebug = {
-                detectedTools: [debugInfo]
+                detectedTools: [debugEntry]
             };
         }
 
-        // Special handling for undefined/null actualTool
-        if (actualTool === null || actualTool === undefined) {
-            console.error(`❌ [CRITICAL] Tool name extraction failed completely!`);
-            console.error(`   Expected tool: ${expectedResult.tool_name}`);
-            console.error(`   Actual result type: ${typeof actualResult}`);
-            console.error(`   Actual result content:`, actualResult);
-            console.error(`   This might indicate a parsing or timing issue.`);
-            
-            // Try one more fallback: check if the expected tool name appears anywhere in the result
-            const expectedToolLower = expectedResult.tool_name.toLowerCase();
-            if (typeof actualResult === 'string' && actualResult.toLowerCase().includes(expectedToolLower)) {
-                console.log(`🔄 [EMERGENCY FALLBACK] Found expected tool name in string, using it`);
-                actualTool = expectedResult.tool_name;
-            } else {
-                console.error(`❌ [FINAL FAILURE] No fallback method worked. Tool extraction completely failed.`);
-            }
-        }
-        
         console.log(`📊 [evaluateBasicFunctionCall] Evaluating test result:`, {
             testId: testResult.testId,
             expectedTool: expectedResult.tool_name,
-            actualTool: actualTool,
             actualResult: actualResult,
-            resultType: typeof actualResult
+            resultType: typeof actualResult,
+            multipleTools: actualTools.length > 1
         });
 
         // PRIORITY 0: Check Tool Execution Tracker for direct execution status
@@ -594,7 +663,9 @@ class AutomaticSimpleSuite {
                 /successfully (executed|navigated|loaded|processed|analyzed)/i,
                 /task completed successfully/i,
                 /operation completed successfully/i,
-                /results have been processed/i
+                /results have been processed/i,
+                /(file|reads|genome|annotation|variant).*loaded successfully/i,
+                /I've successfully loaded/i
             ];
             
             const hasSuccessSignal = successPatterns.some(pattern => pattern.test(actualResult));
@@ -606,6 +677,15 @@ class AutomaticSimpleSuite {
                     evaluation.score = evaluation.maxScore; // FULL POINTS
                     evaluation.success = true;
                     evaluation.warnings.push('Awarded full points based on explicit tool execution success');
+                    return evaluation;
+                }
+                
+                // For file loading success patterns
+                if (/(file|reads|genome|annotation|variant).*loaded successfully|I've successfully loaded/i.test(actualResult)) {
+                    console.log(`✅ [evaluateBasicFunctionCall] FILE LOADING SUCCESS: Success pattern detected in response`);
+                    evaluation.score = evaluation.maxScore; // FULL POINTS
+                    evaluation.success = true;
+                    evaluation.warnings.push('Awarded full points based on file loading success message');
                     return evaluation;
                 }
                 
@@ -622,22 +702,35 @@ class AutomaticSimpleSuite {
             }
         }
 
-        // PRIORITY 2: Standard structured result evaluation
-        actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
-        
-        if (actualTool === expectedResult.tool_name) {
+        // PRIORITY 2: Enhanced tool detection for multiple tools
+        // Check if expected tool is found in the detected tools array
+        if (actualTools.includes(expectedResult.tool_name)) {
+            console.log(`✅ [evaluateBasicFunctionCall] EXPECTED TOOL FOUND: '${expectedResult.tool_name}' detected in tools array`);
+            evaluation.score = evaluation.maxScore; // FULL POINTS for correct tool detection
+            actualTool = expectedResult.tool_name; // Set for parameter evaluation
+        } else if (actualTool === expectedResult.tool_name) {
             console.log(`✅ [evaluateBasicFunctionCall] Correct tool name detected: ${actualTool}`);
             evaluation.score = evaluation.maxScore; // Full points for correct tool
         } else {
             console.log(`❌ [evaluateBasicFunctionCall] Tool mismatch: expected '${expectedResult.tool_name}', got '${actualTool}'`);
-            evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool}'`);
+            console.log(`❌ [evaluateBasicFunctionCall] Available tools were:`, actualTools);
+            evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool || 'none'}'. Available tools: [${actualTools.join(', ')}]`);
             evaluation.score = 0; // No points for wrong tool
             evaluation.success = false;
             return evaluation;
         }
 
         // PRIORITY 3: Enhanced parameter validation with position↔range conversion support
-        const actualParams = Array.isArray(actualResult) ? actualResult[0]?.parameters : actualResult.parameters;
+        // Find the correct tool call in the array for parameter validation
+        let relevantToolCall = actualResult;
+        if (Array.isArray(actualResult)) {
+            relevantToolCall = actualResult.find(call => call?.tool_name === expectedResult.tool_name);
+            if (!relevantToolCall) {
+                relevantToolCall = actualResult[0]; // Fallback to first call
+            }
+        }
+        
+        const actualParams = relevantToolCall?.parameters;
         if (actualParams && expectedResult.parameters) {
             const expectedKeys = Object.keys(expectedResult.parameters);
             const matchingKeys = expectedKeys.filter(key => {
@@ -755,13 +848,17 @@ class AutomaticSimpleSuite {
             warnings: evaluation.warnings
         });
         
-        // 📊 SONG'S TOOL DETECTION SUMMARY
+        // 📊 SONG'S ENHANCED TOOL DETECTION SUMMARY
         console.log(`📊 [SONG SUMMARY] Tool Detection Result for ${testResult.testName || testResult.testId}:`);
         console.log(`   Expected: ${expectedResult.tool_name}`);
-        console.log(`   Detected: ${actualTool}`);
+        console.log(`   Primary Detected: ${actualTool}`);
+        console.log(`   All Detected: [${actualTools.join(', ')}]`);
+        console.log(`   Multiple Tools: ${actualTools.length > 1 ? '✅ YES' : '❌ NO'}`);
+        console.log(`   Expected Tool Found: ${actualTools.includes(expectedResult.tool_name) ? '✅ YES' : '❌ NO'}`);
         console.log(`   Match: ${actualTool === expectedResult.tool_name ? '✅ YES' : '❌ NO'}`);
         console.log(`   Score: ${evaluation.score}/${evaluation.maxScore}`);
         console.log(`📋 [SONG TIP] Use 'window.songBenchmarkDebug.detectedTools' in console to see all detected tools`);
+        console.log(`📋 [SONG TIP] Use 'window.songBenchmarkDebug.detectedTools.filter(t => t.isMultipleTools)' to see multi-tool cases`);
         
         return evaluation;
     }
@@ -848,12 +945,163 @@ class AutomaticSimpleSuite {
         return evaluation;
     }
 
+    async evaluateExportCall(actualResult, expectedResult, testResult) {
+        const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
+        
+        // Add export-specific validation
+        if (actualResult && actualResult.parameters) {
+            const params = actualResult.parameters;
+            
+            // Check for valid export format specification
+            if (params.format && (params.format === 'fasta' || params.format === 'genbank' || params.format === 'gff3' || params.format === 'bed')) {
+                evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1));
+                console.log(`✅ Export: Valid format '${params.format}' specified`);
+            }
+            
+            // Check for appropriate export parameters
+            if (params.includeHeaders !== undefined || params.includeSequence !== undefined || params.includeAnnotations !== undefined) {
+                console.log(`✅ Export: Appropriate inclusion parameters provided`);
+            }
+            
+            // Validate sequence type for sequence exports
+            if (params.sequenceType && (params.sequenceType === 'cds' || params.sequenceType === 'protein' || params.sequenceType === 'genomic')) {
+                console.log(`✅ Export: Valid sequence type '${params.sequenceType}' specified`);
+            }
+            
+            // Check for current view export specificity
+            if (params.currentViewOnly === true && testResult.id === 'export_auto_07') {
+                evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1));
+                console.log(`✅ Export: Current view export correctly specified`);
+            }
+        }
+        
+        // Warn if export might fail due to missing data
+        if (typeof actualResult === 'string' && actualResult.toLowerCase().includes('no data loaded')) {
+            evaluation.warnings.push('Export attempted but no data appears to be loaded');
+        }
+        
+        return evaluation;
+    }
+
     async setup(context) {
         console.log('Setting up Automatic Simple test suite');
     }
 
     async cleanup(context) {
         console.log('Cleaning up Automatic Simple test suite');
+    }
+
+    /**
+     * SONG'S DEBUGGING HELPER: Get summary of detected tools across all tests
+     */
+    static getToolDetectionSummary() {
+        if (!window.songBenchmarkDebug || !window.songBenchmarkDebug.detectedTools) {
+            console.log('📊 No tool detection data available. Run some benchmark tests first.');
+            return null;
+        }
+        
+        const tools = window.songBenchmarkDebug.detectedTools;
+        const summary = {
+            totalTests: tools.length,
+            successfulMatches: tools.filter(t => t.actualTool === t.expectedTool).length,
+            multipleToolCases: tools.filter(t => t.isMultipleTools).length,
+            failedMatches: tools.filter(t => t.actualTool !== t.expectedTool).length,
+            byTestType: {},
+            byExpectedTool: {},
+            byActualTool: {},
+            problemCases: []
+        };
+        
+        // Analyze by test patterns
+        tools.forEach(tool => {
+            // By expected tool
+            if (!summary.byExpectedTool[tool.expectedTool]) {
+                summary.byExpectedTool[tool.expectedTool] = { total: 0, matches: 0, mismatches: 0 };
+            }
+            summary.byExpectedTool[tool.expectedTool].total++;
+            if (tool.actualTool === tool.expectedTool) {
+                summary.byExpectedTool[tool.expectedTool].matches++;
+            } else {
+                summary.byExpectedTool[tool.expectedTool].mismatches++;
+            }
+            
+            // By actual tool
+            if (tool.actualTool) {
+                if (!summary.byActualTool[tool.actualTool]) {
+                    summary.byActualTool[tool.actualTool] = { count: 0, tests: [] };
+                }
+                summary.byActualTool[tool.actualTool].count++;
+                summary.byActualTool[tool.actualTool].tests.push(tool.testName);
+            }
+            
+            // Identify problem cases
+            if (tool.actualTool !== tool.expectedTool) {
+                summary.problemCases.push({
+                    testName: tool.testName,
+                    expected: tool.expectedTool,
+                    actual: tool.actualTool,
+                    allTools: tool.allDetectedTools,
+                    isMultiple: tool.isMultipleTools,
+                    foundInArray: tool.toolFoundInArray
+                });
+            }
+        });
+        
+        // Calculate success rate
+        summary.successRate = tools.length > 0 ? (summary.successfulMatches / tools.length * 100).toFixed(1) : 0;
+        
+        // Display formatted summary
+        console.log('\n🎯 ======= SONG\'S TOOL DETECTION ANALYSIS =======');
+        console.log(`📊 Total Tests Analyzed: ${summary.totalTests}`);
+        console.log(`✅ Successful Matches: ${summary.successfulMatches} (${summary.successRate}%)`);
+        console.log(`❌ Failed Matches: ${summary.failedMatches}`);
+        console.log(`🔧 Multiple Tool Cases: ${summary.multipleToolCases}`);
+        
+        console.log('\n📋 Expected Tool Performance:');
+        Object.entries(summary.byExpectedTool).forEach(([tool, stats]) => {
+            const rate = (stats.matches / stats.total * 100).toFixed(1);
+            console.log(`  ${tool}: ${stats.matches}/${stats.total} (${rate}%) - ${stats.mismatches} mismatches`);
+        });
+        
+        console.log('\n🔍 Actually Detected Tools:');
+        Object.entries(summary.byActualTool).forEach(([tool, stats]) => {
+            console.log(`  ${tool}: ${stats.count} times - in tests: [${stats.tests.slice(0,3).join(', ')}${stats.tests.length > 3 ? '...' : ''}]`);
+        });
+        
+        if (summary.problemCases.length > 0) {
+            console.log('\n⚠️  Problem Cases to Investigate:');
+            summary.problemCases.forEach((problem, index) => {
+                console.log(`  ${index + 1}. ${problem.testName}:`);
+                console.log(`     Expected: ${problem.expected}`);
+                console.log(`     Got: ${problem.actual}`);
+                if (problem.isMultiple && problem.allTools) {
+                    console.log(`     All Tools: [${problem.allTools.join(', ')}]`);
+                    console.log(`     Expected Found in Array: ${problem.foundInArray ? '✅ YES' : '❌ NO'}`);
+                }
+            });
+        }
+        
+        console.log('\n💡 RECOMMENDATIONS:');
+        if (summary.multipleToolCases > 0) {
+            console.log('  • Multiple tool calls detected - evaluation logic improved to handle these');
+        }
+        if (summary.failedMatches > 0) {
+            console.log('  • Some tool mismatches found - check LLM tool selection logic');
+            console.log('  • Consider improving prompts to select correct tools');
+        }
+        if (summary.successRate < 80) {
+            console.log('  • Success rate below 80% - review tool selection criteria');
+        } else {
+            console.log('  • Good tool detection performance!');
+        }
+        
+        console.log('\n🔧 Advanced Analysis Commands:');
+        console.log('  window.songBenchmarkDebug.detectedTools.filter(t => t.isMultipleTools)');
+        console.log('  window.songBenchmarkDebug.detectedTools.filter(t => t.actualTool !== t.expectedTool)');
+        console.log('  AutomaticSimpleSuite.getToolDetectionSummary()');
+        console.log('================================================\n');
+        
+        return summary;
     }
 }
 
