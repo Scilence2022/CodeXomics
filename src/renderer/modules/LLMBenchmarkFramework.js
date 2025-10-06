@@ -3915,28 +3915,65 @@ class LLMBenchmarkFramework {
         }
 
         if (Array.isArray(actualResult)) {
-            // Multiple function calls expected
+            // Multiple function calls detected
             console.log('📦 [Function Call Eval] Multiple function calls detected:', actualResult.length);
-            evaluation.score = 0;
             
-            for (let i = 0; i < actualResult.length; i++) {
-                const call = actualResult[i];
-                const expected = Array.isArray(expectedResult) ? expectedResult[i] : expectedResult;
+            // CRITICAL FIX: Handle single expected tool with multiple detected tools
+            if (!Array.isArray(expectedResult)) {
+                console.log('🎯 [Function Call Eval] Single expected tool vs multiple detected tools - checking if expected tool is present');
                 
-                console.log(`🔍 [Function Call Eval] Evaluating call ${i + 1}:`, call.tool_name);
+                // Look for the expected tool among the detected tools
+                const matchingCall = actualResult.find(call => call.tool_name === expectedResult.tool_name);
                 
-                if (expected) {
-                    const functionScore = this.evaluateSingleFunctionCall(call, expected);
-                    evaluation.score += functionScore.score;
+                if (matchingCall) {
+                    console.log('✅ [Function Call Eval] Expected tool found among multiple calls:', matchingCall.tool_name);
+                    const functionScore = this.evaluateSingleFunctionCall(matchingCall, expectedResult);
+                    evaluation.score = functionScore.score;
+                    evaluation.success = functionScore.success;
                     evaluation.errors.push(...functionScore.errors);
                     evaluation.warnings.push(...functionScore.warnings);
                     
-                    console.log(`📋 [Function Call Eval] Call ${i + 1} scored:`, functionScore.score, 'points');
+                    // Add bonus for additional tool usage
+                    const bonusTools = actualResult.filter(call => call.tool_name !== expectedResult.tool_name);
+                    if (bonusTools.length > 0) {
+                        const bonusPoints = Math.min(bonusTools.length * 5, 10); // Max 10 bonus points
+                        evaluation.score = Math.min(evaluation.score + bonusPoints, evaluation.maxScore);
+                        evaluation.warnings.push(`Bonus: ${bonusPoints} points for additional tool usage: ${bonusTools.map(t => t.tool_name).join(', ')}`);
+                        console.log('🎆 [Function Call Eval] Bonus points for additional tools:', bonusPoints);
+                    }
+                    
+                    console.log('📋 [Function Call Eval] Expected tool among multiple scored:', evaluation.score, 'points');
+                } else {
+                    console.log('❌ [Function Call Eval] Expected tool not found among multiple calls');
+                    const detectedTools = actualResult.map(call => call.tool_name).join(', ');
+                    evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' not found. Detected: ${detectedTools}`);
+                    evaluation.success = false;
+                    evaluation.score = 0;
                 }
+            } else {
+                // Multiple expected tools - original logic
+                console.log('📦 [Function Call Eval] Multiple expected tools - evaluating sequence');
+                evaluation.score = 0;
+                
+                for (let i = 0; i < actualResult.length; i++) {
+                    const call = actualResult[i];
+                    const expected = expectedResult[i];
+                    
+                    console.log(`🔍 [Function Call Eval] Evaluating call ${i + 1}:`, call.tool_name);
+                    
+                    if (expected) {
+                        const functionScore = this.evaluateSingleFunctionCall(call, expected);
+                        evaluation.score += functionScore.score;
+                        evaluation.errors.push(...functionScore.errors);
+                        evaluation.warnings.push(...functionScore.warnings);
+                        
+                        console.log(`📋 [Function Call Eval] Call ${i + 1} scored:`, functionScore.score, 'points');
+                    }
+                }
+                
+                evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
+                evaluation.success = evaluation.score >= (evaluation.maxScore * 0.7);
             }
-            
-            evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
-            evaluation.success = evaluation.score >= (evaluation.maxScore * 0.7);
             
         } else {
             // Single function call
