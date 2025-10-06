@@ -1200,10 +1200,10 @@ class LLMBenchmarkFramework {
                         `&nbsp;&nbsp;&nbsp;• Detected Functions: ${detectedCalls.length}<br>` +
                         `&nbsp;&nbsp;&nbsp;• Analysis Method: Pattern matching<br><br>` +
                         
-                        `🔍 **Pattern Detection Results:** [Song's Requirement - Recording]<br>` +
+                        `🔍 **Pattern Detection Results:** <br>` +
                         `${detectedCalls.length > 0 ? this.formatDetectedFunctions(detectedCalls) : '&nbsp;&nbsp;&nbsp;• No function patterns detected in response'}<br><br>` +
                         
-                        `📉 **Confidence Assessment:**<br>` +
+                        `📉 Confidence Assessment:<br>` +
                         `&nbsp;&nbsp;&nbsp;• Overall Confidence: ${this.calculateOverallConfidence(detectedCalls)}%<br>` +
                         `&nbsp;&nbsp;&nbsp;• Detection Reliability: ${detectedCalls.length > 0 ? 'Medium' : 'Low'}`
                     );
@@ -1270,28 +1270,28 @@ class LLMBenchmarkFramework {
                 const responseTime = interactionData?.response?.responseTime || 0;
                 
                 this.chatManager.addThinkingMessage(
-                    `<br>📈 **Comprehensive Analysis Complete** - Benchmark Testing Detailed Report<br>` +
+                    `<br>📈 Comprehensive Analysis Complete - Benchmark Testing Detailed Report<br>` +
                     `═════════════════════════════════════════════════<br>` +
-                    `🔍 **Final Analysis Summary:**<br>` +
+                    `🔍 Final Analysis Summary:<br>` +
                     `&nbsp;&nbsp;&nbsp;• Total Response Time: ${responseTime}ms<br>` +
                     `&nbsp;&nbsp;&nbsp;• Function Calls Detected: ${functionCalls.length}<br>` +
                     `&nbsp;&nbsp;&nbsp;• Tools Successfully Executed: ${toolResults.filter(r => r.success).length}<br>` +
                     `&nbsp;&nbsp;&nbsp;• Execution Success Rate: ${this.calculateSuccessRate(toolResults)}%<br>` +
                     `&nbsp;&nbsp;&nbsp;• Response Content Type: ${this.detectContentType(response)}<br><br>` +
                     
-                    `🧠 **AI Model Performance Assessment:**<br>` +
+                    `🧠 AI Model Performance Assessment:<br>` +
                     `&nbsp;&nbsp;&nbsp;• Instruction Understanding: ${this.assessInstructionUnderstanding(response, functionCalls)}<br>` +
                     `&nbsp;&nbsp;&nbsp;• Function Selection Accuracy: ${this.assessFunctionSelection(functionCalls)}<br>` +
                     `&nbsp;&nbsp;&nbsp;• Parameter Extraction Quality: ${this.assessParameterQuality(functionCalls)}<br>` +
                     `&nbsp;&nbsp;&nbsp;• Response Completeness: ${this.assessResponseCompleteness(response)}<br><br>` +
                     
-                    `📉 **Interaction Data Captured:** [Song's Requirement - Recording]<br>` +
+                    `📉 Interaction Data Captured: <br>` +
                     `&nbsp;&nbsp;&nbsp;• Raw Response Length: ${response ? response.length : 0} characters<br>` +
                     `&nbsp;&nbsp;&nbsp;• Detailed Logs: ${interactionData?.detailedLogs?.totalLogs || 0} entries<br>` +
                     `&nbsp;&nbsp;&nbsp;• Execution Rounds: ${interactionData?.response?.actualExecutionData?.rounds || 0}<br>` +
                     `&nbsp;&nbsp;&nbsp;• Memory Usage: ${this.getMemoryUsage()} MB<br><br>` +
                     
-                    `✅ **Status:** Analysis complete - Ready for scoring evaluation`
+                    `✅ Status: Analysis complete - Ready for scoring evaluation`
                 );
             }
             
@@ -1321,7 +1321,7 @@ class LLMBenchmarkFramework {
         }
     }
 
-    /**
+    /** 
      * Display detailed test process as a simulated tester
      */
     displayTestProcess(instruction, options = {}) {
@@ -1339,25 +1339,25 @@ class LLMBenchmarkFramework {
             `👩‍🔬 ${testerName} (${testerRole})<br>` +
             `═══════════════════════════════════════════════════════════<br><br>` +
             
-            `🧪 **INITIATING TEST EXECUTION**<br><br>` +
+            `🧪 INITIATING TEST EXECUTION<br><br>` +
             
-            `📋 **Test Specification:**<br>` +
+            `📋 Test Specification:<br>` +
             `&nbsp;&nbsp;&nbsp;• Name: ${testName}<br>` +
             `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(testType)}<br>` +
             `&nbsp;&nbsp;&nbsp;• ID: ${testInfo.id || 'N/A'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Max Score: ${testInfo.maxScore || 100} points<br><br>` +
             
-            `🎯 **Expected Behavior:**<br>` +
+            `🎯 Expected Behavior:<br>` +
             `${this.formatExpectedBehavior(testType, expectedResult, instruction)}<br><br>` +
             
-            `📝 **Test Instruction to LLM:**<br>` +
+            `📝 Test Instruction to LLM:<br>` +
             `&nbsp;&nbsp;&nbsp;"${instruction}"<br><br>` +
             
-            `⚖️ **Evaluation Criteria:**<br>` +
+            `⚖️ Evaluation Criteria:<br>` +
             `${this.formatEvaluationCriteria(testType, expectedResult)}<br><br>` +
             
-            `⚡ **Status:** Sending instruction to LLM for evaluation...<br><br>` +
-            `🔄 **LLM Processing Started:** Waiting for AI model response...`
+            `⚡ Status: Sending instruction to LLM for evaluation...<br><br>` +
+            `🔄 LLM Processing Started: Waiting for AI model response...`
         );
     }
 
@@ -1460,34 +1460,34 @@ class LLMBenchmarkFramework {
         
         // Create separation between tester analysis and LLM response
         this.chatManager.updateThinkingMessage(
-            `<br><br>🤖 **LLM RESPONSE RECEIVED & ANALYZED**<br>` +
+            `<br><br>🤖 LLM RESPONSE RECEIVED & ANALYZED<br>` +
             `───────────────────────────────────────────────────────────<br>` +
-            `📊 **Response Summary:**<br>` +
+            `📊 Response Summary:<br>` +
             `&nbsp;&nbsp;&nbsp;• Length: ${response ? response.length : 0} characters<br>` +
             `&nbsp;&nbsp;&nbsp;• Processing time: ~${Math.random() * 2 + 1 | 0}s<br>` +
             `&nbsp;&nbsp;&nbsp;• Content preview:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"${response ? response.substring(0, 100) + (response.length > 100 ? '...' : '') : 'No response'}"<br><br>` +
             
-            `🧠 **AI Model Thinking Process:**<br>` +
+            `🧠 AI Model Thinking Process:<br>` +
             `&nbsp;&nbsp;&nbsp;• Instruction interpretation completed<br>` +
             `&nbsp;&nbsp;&nbsp;• Function registry lookup performed<br>` +
             `&nbsp;&nbsp;&nbsp;• Context analysis and tool selection executed<br>` +
             `&nbsp;&nbsp;&nbsp;• Response generation and formatting finalized<br><br>` +
             
-            `🔍 **Technical Analysis:**<br>` +
+            `🔍 Technical Analysis:<br>` +
             `&nbsp;&nbsp;&nbsp;• Function detection: ${extractedCalls.length > 0 ? `✅ Found ${extractedCalls.length} function(s)` : '❌ No functions detected'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Detected functions: ${detectedFunctions || 'None'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Confidence level: ${extractedCalls.length > 0 ? extractedCalls[0].confidence + '%' : 'N/A'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Evidence pattern: "${extractedCalls.length > 0 ? extractedCalls[0].evidence : 'No evidence found'}"<br><br>` +
             
-            `📋 **Compliance Check:**<br>` +
+            `📋 Compliance Check:<br>` +
             `&nbsp;&nbsp;&nbsp;• Response completeness: ${hasValidResponse ? '✅ Complete' : '❌ Incomplete'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Function execution: ${extractedCalls.length > 0 ? '✅ Detected' : '❌ Not detected'}<br>` +
             `&nbsp;&nbsp;&nbsp;• Expected behavior match: ${this.assessBehaviorMatch(testInfo, extractedCalls)}<br><br>` +
             
-            `⚙️ **Tool Call Processing:**<br>` +
+            `⚙️ Tool Call Processing:<br>` +
             `${this.formatToolCallDetails(extractedCalls)}<br><br>` +
             
-            `⚖️ **Status:** Proceeding to detailed scoring evaluation...`
+            `⚖️ Status: Proceeding to detailed scoring evaluation...`
         );
     }
 
@@ -1519,14 +1519,14 @@ class LLMBenchmarkFramework {
         }
         
         this.chatManager.updateThinkingMessage(
-            `<br>🔧 **LLM Configuration Analysis:**<br>` +
+            `<br>🔧 LLM Configuration Analysis:<br>` +
             `&nbsp;&nbsp;&nbsp;• Provider: ${provider}<br>` +
             `&nbsp;&nbsp;&nbsp;• Model: ${modelName}<br>` +
             `&nbsp;&nbsp;&nbsp;• Timeout: ${options.timeout || this.testTimeout}ms<br>` +
             `&nbsp;&nbsp;&nbsp;• Function Calling: Enabled<br>` +
             `&nbsp;&nbsp;&nbsp;• Context Mode: Dynamic<br><br>` +
             
-            `📊 **Request Processing Pipeline:**<br>` +
+            `📊 Request Processing Pipeline:<br>` +
             `&nbsp;&nbsp;&nbsp;1. 🔍 Instruction Analysis & Parsing<br>` +
             `&nbsp;&nbsp;&nbsp;2. 🛠️ System Prompt & Context Building<br>` +
             `&nbsp;&nbsp;&nbsp;3. 🔗 Function Registry Integration<br>` +
@@ -1534,11 +1534,11 @@ class LLMBenchmarkFramework {
             `&nbsp;&nbsp;&nbsp;5. 🧠 Response Analysis & Tool Detection<br>` +
             `&nbsp;&nbsp;&nbsp;6. ⚙️ Tool Execution & Result Processing<br><br>` +
             
-            `⏱️ **Performance Monitoring:** Active<br>` +
-            `🔍 **Response Detection:** Comprehensive tool pattern matching<br>` +
-            `📈 **Quality Metrics:** Response time, token usage, accuracy scoring<br><br>` +
+            `⏱️ Performance Monitoring: Active<br>` +
+            `🔍 Response Detection: Comprehensive tool pattern matching<br>` +
+            `📈 Quality Metrics: Response time, token usage, accuracy scoring<br><br>` +
             
-            `🔄 **Status:** Initiating LLM communication...`
+            `🔄 Status: Initiating LLM communication...`
         );
     }
 
@@ -1568,22 +1568,22 @@ class LLMBenchmarkFramework {
      */
     displayRealTimeLLMProcess(instruction, options = {}) {
         this.chatManager.updateThinkingMessage(
-            `<br>🚀 **LLM REQUEST INITIATED**<br>` +
+            `<br>🚀 LLM REQUEST INITIATED<br>` +
             `─────────────────────────────────<br>` +
-            `🔄 **Processing stages:**<br>` +
+            `🔄 Processing stages:<br>` +
             `&nbsp;&nbsp;&nbsp;✓ Instruction received and validated<br>` +
             `&nbsp;&nbsp;&nbsp;🔄 Building conversation context...<br>` +
             `&nbsp;&nbsp;&nbsp;🔄 Loading function registry...<br>` +
             `&nbsp;&nbsp;&nbsp;🔄 Preparing system prompts...<br>` +
             `&nbsp;&nbsp;&nbsp;🔄 Establishing LLM connection...<br>` +
             `&nbsp;&nbsp;&nbsp;🔄 Sending request to AI model...<br><br>` +
-            `⏳ **Waiting for AI model response...**`
+            `⏳ Waiting for AI model response...`
         );
         
         // Add progressive updates to show AI thinking process
         setTimeout(() => {
             this.chatManager.updateThinkingMessage(
-                `<br>🤖 **AI Model Processing Request...**<br>` +
+                `<br>🤖 AI Model Processing Request...<br>` +
                 `&nbsp;&nbsp;&nbsp;• Analyzing instruction semantics<br>` +
                 `&nbsp;&nbsp;&nbsp;• Searching function registry<br>` +
                 `&nbsp;&nbsp;&nbsp;• Planning response strategy<br>` +
@@ -1593,7 +1593,7 @@ class LLMBenchmarkFramework {
         
         setTimeout(() => {
             this.chatManager.updateThinkingMessage(
-                `<br>⚙️ **Function Call Analysis in Progress...**<br>` +
+                `<br>⚙️ Function Call Analysis in Progress...<br>` +
                 `&nbsp;&nbsp;&nbsp;• Evaluating available tools<br>` +
                 `&nbsp;&nbsp;&nbsp;• Matching instruction to functions<br>` +
                 `&nbsp;&nbsp;&nbsp;• Preparing parameter extraction<br>` +
@@ -1603,7 +1603,7 @@ class LLMBenchmarkFramework {
         
         setTimeout(() => {
             this.chatManager.updateThinkingMessage(
-                `<br>🔎 **Deep Function Call Processing...**<br>` +
+                `<br>🔎 Deep Function Call Processing...<br>` +
                 `&nbsp;&nbsp;&nbsp;• Round 1 analysis initiated<br>` +
                 `&nbsp;&nbsp;&nbsp;• Conversation history building<br>` +
                 `&nbsp;&nbsp;&nbsp;• Context integration active<br>` +
@@ -1619,14 +1619,14 @@ class LLMBenchmarkFramework {
         const responseTime = interactionData?.response?.responseTime || 0;
         
         this.chatManager.updateThinkingMessage(
-            `<br><br>✅ **LLM RESPONSE RECEIVED** (${responseTime}ms)<br>` +
+            `<br><br>✅ LLM RESPONSE RECEIVED (${responseTime}ms)<br>` +
             `────────────────────────────────────────────<br>` +
-            `📄 **Raw Response Analysis:**<br>` +
+            `📄 Raw Response Analysis:<br>` +
             `&nbsp;&nbsp;&nbsp;• Response length: ${response ? response.length : 0} characters<br>` +
             `&nbsp;&nbsp;&nbsp;• Processing time: ${responseTime}ms<br>` +
             `&nbsp;&nbsp;&nbsp;• Content type: ${this.detectContentType(response)}<br><br>` +
             
-            `🔍 **Starting response analysis:**<br>` +
+            `🔍 Starting response analysis:<br>` +
             `&nbsp;&nbsp;&nbsp;🔄 Parsing for function calls...<br>` +
             `&nbsp;&nbsp;&nbsp;🔄 Extracting tool parameters...<br>` +
             `&nbsp;&nbsp;&nbsp;🔄 Validating response format...<br>` +
@@ -1657,18 +1657,18 @@ class LLMBenchmarkFramework {
         
         if (functionCalls.length > 0) {
             this.chatManager.updateThinkingMessage(
-                `<br><br>🚀 **TOOL EXECUTION DETECTED**<br>` +
+                `<br><br>🚀 TOOL EXECUTION DETECTED<br>` +
                 `══════════════════════════════════════════<br>` +
-                `📊 **Execution Summary:**<br>` +
+                `📊 Execution Summary:<br>` +
                 `&nbsp;&nbsp;&nbsp;• Total function calls: ${functionCalls.length}<br>` +
                 `&nbsp;&nbsp;&nbsp;• Execution rounds: ${rounds}<br>` +
                 `&nbsp;&nbsp;&nbsp;• Total execution time: ${totalTime}ms<br>` +
                 `&nbsp;&nbsp;&nbsp;• Success rate: ${this.calculateSuccessRate(toolResults)}%<br><br>` +
                 
-                `🔧 **Detailed Tool Calls:**<br>` +
+                `🔧 Detailed Tool Calls:<br>` +
                 `${this.formatExecutedToolCalls(functionCalls)}<br><br>` +
                 
-                `📈 **Execution Results:**<br>` +
+                `📈 Execution Results:<br>` +
                 `${this.formatToolResults(toolResults)}`
             );
         } else {
@@ -1686,17 +1686,17 @@ class LLMBenchmarkFramework {
      */
     displayTextBasedAnalysis(response, functionCalls) {
         this.chatManager.updateThinkingMessage(
-            `<br><br>🔍 **TEXT-BASED ANALYSIS RESULTS**<br>` +
+            `<br><br>🔍 TEXT-BASED ANALYSIS RESULTS<br>` +
             `────────────────────────────────────────<br>` +
-            `📝 **Response Content Analysis:**<br>` +
+            `📝 Response Content Analysis:<br>` +
             `&nbsp;&nbsp;&nbsp;• Content Length: ${response ? response.length : 0} characters<br>` +
             `&nbsp;&nbsp;&nbsp;• Detected Functions: ${functionCalls.length}<br>` +
             `&nbsp;&nbsp;&nbsp;• Analysis Method: Pattern matching<br><br>` +
             
-            `🔍 **Pattern Detection Results:**<br>` +
+            `🔍 Pattern Detection Results:<br>` +
             `${functionCalls.length > 0 ? this.formatDetectedFunctions(functionCalls) : '&nbsp;&nbsp;&nbsp;• No function patterns detected in response'}<br><br>` +
             
-            `📉 **Confidence Assessment:**<br>` +
+            `📉 Confidence Assessment:<br>` +
             `&nbsp;&nbsp;&nbsp;• Overall confidence: ${this.calculateOverallConfidence(functionCalls)}%<br>` +
             `&nbsp;&nbsp;&nbsp;• Detection reliability: ${functionCalls.length > 0 ? 'Medium' : 'Low'}`
         );
@@ -1799,28 +1799,28 @@ class LLMBenchmarkFramework {
         const actualExecutionData = interactionData?.response?.actualExecutionData;
         
         this.chatManager.updateThinkingMessage(
-            `<br><br>📈 **COMPREHENSIVE ANALYSIS COMPLETE**<br>` +
+            `<br><br>📈 COMPREHENSIVE ANALYSIS COMPLETE<br>` +
             `═════════════════════════════════════════════════<br>` +
-            `🔍 **Final Analysis Summary:**<br>` +
+            `🔍 Final Analysis Summary:<br>` +
             `&nbsp;&nbsp;&nbsp;• Total Response Time: ${responseTime}ms<br>` +
             `&nbsp;&nbsp;&nbsp;• Function Calls Detected: ${functionCalls.length}<br>` +
             `&nbsp;&nbsp;&nbsp;• Tools Successfully Executed: ${toolResults.filter(r => r.success).length}<br>` +
             `&nbsp;&nbsp;&nbsp;• Execution Success Rate: ${this.calculateSuccessRate(toolResults)}%<br>` +
             `&nbsp;&nbsp;&nbsp;• Response Content Type: ${this.detectContentType(response)}<br><br>` +
             
-            `🧠 **AI Model Performance:**<br>` +
+            `🧠 AI Model Performance:<br>` +
             `&nbsp;&nbsp;&nbsp;• Instruction Understanding: ${this.assessInstructionUnderstanding(response, functionCalls)}<br>` +
             `&nbsp;&nbsp;&nbsp;• Function Selection Accuracy: ${this.assessFunctionSelection(functionCalls)}<br>` +
             `&nbsp;&nbsp;&nbsp;• Parameter Extraction Quality: ${this.assessParameterQuality(functionCalls)}<br>` +
             `&nbsp;&nbsp;&nbsp;• Response Completeness: ${this.assessResponseCompleteness(response)}<br><br>` +
             
-            `📉 **Interaction Data Captured:**<br>` +
+            `📉 Interaction Data Captured:<br>` +
             `&nbsp;&nbsp;&nbsp;• Raw Response Length: ${response ? response.length : 0} chars<br>` +
             `&nbsp;&nbsp;&nbsp;• Detailed Logs: ${interactionData?.detailedLogs?.totalLogs || 0} entries<br>` +
             `&nbsp;&nbsp;&nbsp;• Execution Rounds: ${actualExecutionData?.rounds || 0}<br>` +
             `&nbsp;&nbsp;&nbsp;• Memory Usage: ${this.getMemoryUsage()} MB<br><br>` +
             
-            `✅ **Status:** Analysis complete - Ready for scoring evaluation`
+            `✅ Status: Analysis complete - Ready for scoring evaluation`
         );
     }
 
@@ -1983,21 +1983,21 @@ class LLMBenchmarkFramework {
                     
                     // Replace with our detailed processing message
                     this.chatManager.updateThinkingMessage(
-                        `<br>📶 **LLM REQUEST PROCESSING - DETAILED MODE**<br>` +
+                        `<br>📶 LLM REQUEST PROCESSING - DETAILED MODE<br>` +
                         `══════════════════════════════════════════════<br>` +
-                        `🔄 **Multi-Round Function Call Processing Active**<br>` +
+                        `🔄 Multi-Round Function Call Processing Active<br>` +
                         `&nbsp;&nbsp;&nbsp;• Maximum rounds configured: 10<br>` +
                         `&nbsp;&nbsp;&nbsp;• Early completion detection enabled<br>` +
                         `&nbsp;&nbsp;&nbsp;• Tool execution monitoring active<br>` +
                         `&nbsp;&nbsp;&nbsp;• Response quality analysis in progress<br><br>` +
                         
-                        `🔎 **Round 1 Analysis:**<br>` +
+                        `🔎 Round 1 Analysis:<br>` +
                         `&nbsp;&nbsp;&nbsp;• Parsing LLM response for tool calls...<br>` +
                         `&nbsp;&nbsp;&nbsp;• Function signature validation<br>` +
                         `&nbsp;&nbsp;&nbsp;• Parameter extraction and validation<br>` +
                         `&nbsp;&nbsp;&nbsp;• Tool execution preparation<br><br>` +
                         
-                        `⚡ **Status:** Advanced parsing and analysis in progress...`
+                        `⚡ Status: Advanced parsing and analysis in progress...`
                     );
                 }
             }
@@ -2039,11 +2039,11 @@ class LLMBenchmarkFramework {
         const testInfo = options.testInfo || {};
         
         this.chatManager.updateThinkingMessage(
-            `\n\n❌ **Test Execution Error:**\n` +
-            `**Error Type:** ${error.name || 'Unknown Error'}\n` +
-            `**Error Message:** ${error.message}\n` +
-            `**Test Status:** FAILED (Error during execution)\n\n` +
-            `🔧 **Troubleshooting:**\n` +
+            `\n\n❌ Test Execution Error:\n` +
+            `Error Type: ${error.name || 'Unknown Error'}\n` +
+            `Error Message: ${error.message}\n` +
+            `Test Status: FAILED (Error during execution)\n\n` +
+            `🔧 Troubleshooting:\n` +
             `• Check LLM configuration\n` +
             `• Verify network connectivity\n` +
             `• Check function calling setup\n` +

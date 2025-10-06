@@ -4,7 +4,7 @@
  * Test script to verify fixed dynamic tool selection
  */
 
-const ToolsRegistryManager = require('./tools_registry/registry_manager.js');
+const ToolsRegistryManager = require('../../tools_registry/registry_manager.js');
 
 async function testDynamicToolSelection() {
     console.log('🧪 Testing Dynamic Tool Selection After Fix\n');

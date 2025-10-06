@@ -4,7 +4,7 @@
  * Test script to verify translate_dna tool selection for translation queries
  */
 
-const ToolsRegistryManager = require('./tools_registry/registry_manager.js');
+const ToolsRegistryManager = require('../../tools_registry/registry_manager.js');
 
 async function testTranslateToolSelection() {
     console.log('🧪 Testing translate_dna Tool Selection for Translation Queries\n');
