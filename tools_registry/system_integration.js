@@ -49,16 +49,68 @@ class SystemIntegration {
      */
     async generateNonDynamicSystemPrompt(context = {}) {
         try {
-            console.log('🎯 [System Integration] Generating non-dynamic system prompt with built-in tools emphasis');
+            console.log('🎯 [System Integration] Generating non-dynamic system prompt with comprehensive tools integration');
             
-            const systemPrompt = this.builtInTools.generateNonDynamicSystemPrompt(context);
+            // Get all tools from registry for comprehensive integration
+            const allRegistryTools = await this.registryManager.getAllTools();
+            const builtInToolsInfo = this.builtInTools.getBuiltInToolsStats();
+            
+            // Organize tools by category
+            const toolsByCategory = {};
+            const builtInToolNames = new Set(this.builtInTools.builtInToolsMap.keys());
+            
+            // Add built-in tools first (highest priority)
+            for (const [toolName, toolInfo] of this.builtInTools.builtInToolsMap.entries()) {
+                if (!toolsByCategory[toolInfo.category]) {
+                    toolsByCategory[toolInfo.category] = [];
+                }
+                toolsByCategory[toolInfo.category].push({
+                    name: toolName,
+                    type: 'built-in',
+                    priority: 1,
+                    description: `Built-in ${toolInfo.category} tool`,
+                    method: toolInfo.method
+                });
+            }
+            
+            // Add registry tools (especially missing export and other tools)
+            for (const tool of allRegistryTools) {
+                // Skip if it's already included as built-in
+                if (builtInToolNames.has(tool.name)) {
+                    continue;
+                }
+                
+                if (!toolsByCategory[tool.category]) {
+                    toolsByCategory[tool.category] = [];
+                }
+                
+                toolsByCategory[tool.category].push({
+                    name: tool.name,
+                    type: 'registry',
+                    priority: tool.priority || 2,
+                    description: tool.description || `${tool.category} tool`,
+                    category: tool.category
+                });
+            }
+            
+            // Generate comprehensive system prompt
+            const systemPrompt = this.generateComprehensiveNonDynamicPrompt(context, toolsByCategory, builtInToolsInfo);
+            
+            // Collect all tool names
+            const allToolNames = [];
+            for (const category of Object.values(toolsByCategory)) {
+                allToolNames.push(...category.map(tool => tool.name));
+            }
+            
+            console.log(`🎯 [System Integration] Non-dynamic prompt generated with ${allToolNames.length} tools across ${Object.keys(toolsByCategory).length} categories`);
             
             return {
                 systemPrompt,
-                toolsUsed: Array.from(this.builtInTools.builtInToolsMap.keys()),
-                toolCount: this.builtInTools.builtInToolsMap.size,
+                toolsUsed: allToolNames,
+                toolCount: allToolNames.length,
+                toolsByCategory,
                 generationTime: Date.now(),
-                mode: 'non-dynamic'
+                mode: 'non-dynamic-comprehensive'
             };
         } catch (error) {
             console.error('Failed to generate non-dynamic system prompt:', error);
@@ -291,6 +343,134 @@ ${'```'}
 - Failed tools are automatically retried with fallback options
 
 Remember: You have access to the most relevant tools for the user's specific query, with built-in tools prioritized for file loading and core operations. Use them effectively to provide comprehensive genomic analysis and assistance.`;
+    }
+
+    /**
+     * Generate comprehensive non-dynamic system prompt with all tools
+     */
+    generateComprehensiveNonDynamicPrompt(context, toolsByCategory, builtInToolsInfo) {
+        const totalTools = Object.values(toolsByCategory).reduce((sum, tools) => sum + tools.length, 0);
+        
+        let prompt = `# Genome AI Studio - Comprehensive Tools System (Non-Dynamic Mode)
+
+You are an advanced AI assistant for Genome AI Studio with access to ${totalTools} tools across ${Object.keys(toolsByCategory).length} categories.
+
+## 🧬 Current Context
+- **Network Status**: ${context.hasNetwork ? 'Connected' : 'Offline'}
+- **Authentication**: ${context.hasAuth ? 'Authenticated' : 'Not authenticated'}
+- **Loaded Files**: ${context.loadedFiles || 0} files
+- **Current Position**: ${context.currentPosition || 'None'}
+- **Data Available**: ${context.hasData !== false ? 'Yes' : 'No'}
+
+`;
+        
+        // Add tools by category with proper prioritization
+        const priorityOrder = ['file_loading', 'file_operations', 'navigation', 'sequence', 'protein', 'database', 'ai_analysis', 'data_management', 'pathway', 'sequence_editing', 'plugin_management', 'coordination', 'external_apis'];
+        
+        const sortedCategories = priorityOrder.filter(cat => toolsByCategory[cat]);
+        const remainingCategories = Object.keys(toolsByCategory).filter(cat => !priorityOrder.includes(cat));
+        const allCategories = [...sortedCategories, ...remainingCategories];
+        
+        for (const categoryName of allCategories) {
+            const tools = toolsByCategory[categoryName];
+            if (!tools || tools.length === 0) continue;
+            
+            const categoryIcon = this.getCategoryIcon(categoryName);
+            const builtInTools = tools.filter(t => t.type === 'built-in');
+            const registryTools = tools.filter(t => t.type === 'registry');
+            
+            prompt += `## ${categoryIcon} ${this.getCategoryDisplayName(categoryName)} (${tools.length} tools)\n\n`;
+            
+            // Show built-in tools first
+            if (builtInTools.length > 0) {
+                prompt += `### Built-in Tools (Highest Priority):\n`;
+                for (const tool of builtInTools) {
+                    prompt += `- **${tool.name}**: ${tool.description}\n`;
+                }
+                prompt += `\n`;
+            }
+            
+            // Show registry tools
+            if (registryTools.length > 0) {
+                prompt += `### Registry Tools:\n`;
+                for (const tool of registryTools) {
+                    prompt += `- **${tool.name}**: ${tool.description}\n`;
+                }
+                prompt += `\n`;
+            }
+        }
+        
+        // Add comprehensive instructions
+        prompt += `## 🎯 Tool Usage Guidelines
+
+1. **Built-in Tools Priority**: Always prefer built-in tools for core functionality
+2. **File Operations**: Use file_loading tools for importing data, file_operations tools for exporting
+3. **Export Tools Available**: ${Object.values(toolsByCategory.file_operations || []).filter(t => t.name.includes('export_')).length} export tools for various formats (FASTA, GenBank, GFF, BED, etc.)
+4. **Context Awareness**: Tools are available based on current context and data availability
+5. **Performance**: Built-in tools execute directly, registry tools may have additional requirements
+
+## ⚡ Response Format
+
+Respond with JSON tool calls:
+\`\`\`json
+{"tool_name": "tool_name", "parameters": {"param1": "value1"}}
+\`\`\`
+
+## 📊 System Status
+
+- **Total Tools**: ${totalTools}
+- **Built-in Tools**: ${builtInToolsInfo.total_builtin_tools}
+- **Registry Tools**: ${totalTools - builtInToolsInfo.total_builtin_tools}
+- **Categories**: ${Object.keys(toolsByCategory).length}
+- **Mode**: Non-Dynamic Comprehensive
+
+All tools are statically available in this system prompt for maximum reliability and performance.`;
+        
+        return prompt;
+    }
+    
+    /**
+     * Get category display name
+     */
+    getCategoryDisplayName(categoryName) {
+        const displayNames = {
+            'file_loading': 'File Loading',
+            'file_operations': 'File Operations & Export',
+            'navigation': 'Navigation & State',
+            'sequence': 'Sequence Analysis',
+            'protein': 'Protein Structure',
+            'database': 'Database Integration',
+            'ai_analysis': 'AI-Powered Analysis',
+            'data_management': 'Data Management',
+            'pathway': 'Pathway & BLAST',
+            'sequence_editing': 'Sequence Editing',
+            'plugin_management': 'Plugin Management',
+            'coordination': 'Multi-Agent Coordination',
+            'external_apis': 'External APIs'
+        };
+        return displayNames[categoryName] || categoryName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+    
+    /**
+     * Get category icon
+     */
+    getCategoryIcon(categoryName) {
+        const icons = {
+            'file_loading': '📁',
+            'file_operations': '💾',
+            'navigation': '🧭',
+            'sequence': '🧬',
+            'protein': '🔬',
+            'database': '🗄️',
+            'ai_analysis': '🤖',
+            'data_management': '📊',
+            'pathway': '🔄',
+            'sequence_editing': '✏️',
+            'plugin_management': '🔌',
+            'coordination': '🎯',
+            'external_apis': '🌐'
+        };
+        return icons[categoryName] || '🔧';
     }
 
     /**

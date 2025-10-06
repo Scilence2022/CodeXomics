@@ -430,20 +430,32 @@ class ToolsRegistryManager {
                 console.log('🔍 [Dynamic Tools] Tool filtered out (requires auth):', tool.name);
                 return false;
             }
-            if (tool.execution?.requires_data && !context.hasData) {
-                // BENCHMARK FIX: Allow sequence analysis tools even without genome data 
-                // if the query contains sequence data directly
-                const isSequenceTool = tool.category === 'sequence' && 
-                    ['translate_dna', 'reverse_complement', 'compute_gc'].includes(tool.name);
-                const queryContainsSequence = /[ATCGN]{6,}/i.test(intent.query);
+            
+            if (tool.execution?.requires_data) {
+                // Enhanced data availability check
+                const hasDataAvailable = context.hasData || 
+                                        context.loadedFiles > 0 || 
+                                        context.loadedGenome || 
+                                        context.genomeBrowser?.hasData;
                 
-                if (isSequenceTool && queryContainsSequence) {
-                    console.log('🔍 [Dynamic Tools] Allowing sequence tool with inline sequence data:', tool.name);
+                if (!hasDataAvailable) {
+                    // BENCHMARK FIX: Allow sequence analysis tools even without genome data 
+                    // if the query contains sequence data directly
+                    const isSequenceTool = tool.category === 'sequence' && 
+                        ['translate_dna', 'reverse_complement', 'compute_gc'].includes(tool.name);
+                    const queryContainsSequence = /[ATCGN]{6,}/i.test(intent.query);
+                    
+                    if (isSequenceTool && queryContainsSequence) {
+                        console.log('🔍 [Dynamic Tools] Allowing sequence tool with inline sequence data:', tool.name);
+                    } else {
+                        console.log('🔍 [Dynamic Tools] Tool filtered out (requires data):', tool.name, 'hasData:', hasDataAvailable);
+                        return false;
+                    }
                 } else {
-                    console.log('🔍 [Dynamic Tools] Tool filtered out (requires data):', tool.name);
-                    return false;
+                    console.log('🔍 [Dynamic Tools] Tool allowed (data available):', tool.name, 'hasData:', hasDataAvailable);
                 }
             }
+            
             if (tool.execution?.requires_network && !context.hasNetwork) {
                 console.log('🔍 [Dynamic Tools] Tool filtered out (requires network):', tool.name);
                 return false;
