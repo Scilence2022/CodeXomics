@@ -126,138 +126,8 @@ class BamReader {
                 }
                 
             // Try multiple ways to get references
-            this.references = this.header.references || [];
-            
-            // Alternative: Try to get references directly from bamFile
-            if (this.references.length === 0) {
-                console.log('🔍 Attempting alternative methods to get references...');
-                try {
-                    // Method 1: Check if bamFile has references directly
-                    if (this.bamFile.references) {
-                        console.log('🔍 Found references directly on bamFile object');
-                        this.references = this.bamFile.references;
-                    }
-                    
-                    // Method 2: Try getHeader with different parameters
-                    if (this.references.length === 0) {
-                        console.log('🔍 Trying alternative header access...');
-                        const altHeader = await this.bamFile.getHeader(0);
-                        if (altHeader && altHeader.references) {
-                            console.log('🔍 Found references in alternative header');
-                            this.references = altHeader.references;
-                        }
-                    }
-                    
-                    // Method 3: Check for indexed references
-                    if (this.references.length === 0 && this.hasIndex) {
-                        console.log('🔍 Trying to get references from index...');
-                        // Some BAM readers can get references from the index
-                        try {
-                            // Check if getIndex method exists before calling it
-                            if (typeof this.bamFile.getIndex === 'function') {
-                                const indexStats = await this.bamFile.getIndex();
-                                if (indexStats && indexStats.refStats) {
-                                    console.log('🔍 Found reference stats in index');
-                                    this.references = Object.entries(indexStats.refStats).map(([name, stats]) => ({
-                                        name: name,
-                                        length: stats.end || stats.length || 0
-                                    }));
-                                }
-                            } else {
-                                console.log('🔍 getIndex method not available on this bamFile instance');
-                                // Try alternative index access methods
-                                if (this.bamFile.index) {
-                                    console.log('🔍 Trying direct index property access');
-                                    const indexObj = this.bamFile.index;
-                                    if (indexObj.references) {
-                                        this.references = indexObj.references;
-                                    }
-                                }
-                            }
-                        } catch (indexError) {
-                            console.log('Could not get references from index:', indexError.message);
-                        }
-                    }
-                } catch (altError) {
-                    console.log('Alternative reference methods failed:', altError.message);
-                }
-            }
+            await this.extractReferencesFromHeader();
                 
-            // Final attempt: Try to get references through the reader API differently
-            if (this.references.length === 0) {
-                console.log('🔍 Final attempt: Probing BAM file structure...');
-                try {
-                    // Try multiple approaches to find records and infer references
-                    console.log('🔍 Trying to find any readable records...');
-                    
-                    let firstRecord = null;
-                    
-                    // Method 1: Try reading with wildcard
-                    try {
-                        const wildcardRecords = await this.bamFile.getRecordsForRange('*', 0, 1);
-                        if (wildcardRecords && wildcardRecords.length > 0) {
-                            firstRecord = wildcardRecords[0];
-                            console.log('🔍 Found record via wildcard query');
-                        }
-                    } catch (wildcardError) {
-                        console.log('Wildcard query failed:', wildcardError.message);
-                    }
-                    
-                    // Method 2: Try reading without specifying chromosome
-                    if (!firstRecord) {
-                        try {
-                            const anyRecords = await this.bamFile.getRecordsForRange();
-                            if (anyRecords && anyRecords.length > 0) {
-                                firstRecord = anyRecords[0];
-                                console.log('🔍 Found record via unspecified query');
-                            }
-                        } catch (anyError) {
-                            console.log('Unspecified query failed:', anyError.message);
-                        }
-                    }
-                    
-                    // Method 3: Try common chromosome names
-                    if (!firstRecord) {
-                        const commonChrNames = ['1', 'chr1', 'I', 'chrI', 'chromosome1', 'scaffold1', 'contig1'];
-                        for (const chrName of commonChrNames) {
-                            try {
-                                const chrRecords = await this.bamFile.getRecordsForRange(chrName, 0, 1000);
-                                if (chrRecords && chrRecords.length > 0) {
-                                    firstRecord = chrRecords[0];
-                                    console.log(`🔍 Found record via common name query: ${chrName}`);
-                                    break;
-                                }
-                            } catch (chrError) {
-                                // Continue to next chromosome name
-                            }
-                        }
-                    }
-                    
-                    if (firstRecord) {
-                        console.log('🔍 Found first record, attempting to infer references...');
-                        console.log('First record info:', {
-                            refName: firstRecord.refName,
-                            start: firstRecord.start,
-                            end: firstRecord.end,
-                            refId: firstRecord.refId
-                        });
-                        
-                        // If we found a record with a reference name, we can at least create a minimal reference
-                        if (firstRecord.refName && firstRecord.refName !== '*') {
-                            console.log('🔍 Creating minimal reference from first record');
-                            this.references = [{
-                                name: firstRecord.refName,
-                                length: Math.max(firstRecord.end || 0, 1000000) // Estimate length
-                            }];
-                        }
-                    } else {
-                        console.warn('🔍 Could not find any readable records in BAM file');
-                    }
-                } catch (probeError) {
-                    console.log('Could not probe BAM records:', probeError.message);
-                }
-            }
-            
             if (this.references.length === 0) {
                     console.error('❌ CRITICAL ISSUE: BAM file has no accessible references!');
                     console.error('This could indicate:');
@@ -468,6 +338,365 @@ class BamReader {
             console.warn('⚠️ Could not get index file size:', error.message);
             this.indexSize = 0;
         }
+    }
+
+    /**
+     * Extract references from BAM header using multiple strategies
+     * @private
+     */
+    async extractReferencesFromHeader() {
+        console.log('🔍 Starting comprehensive reference extraction...');
+        
+        // Strategy 1: Direct header.references access (standard)
+        this.references = this.header.references || [];
+        if (this.references.length > 0) {
+            console.log(`✅ Found ${this.references.length} references in header.references`);
+            return;
+        }
+        
+        // Strategy 2: Check alternative header properties
+        console.log('🔍 Checking alternative header properties...');
+        const alternativeProps = ['refs', 'refSeqs', 'chromosomes', 'contigs', 'sequences'];
+        for (const prop of alternativeProps) {
+            if (this.header[prop] && Array.isArray(this.header[prop]) && this.header[prop].length > 0) {
+                console.log(`✅ Found references in header.${prop}`);
+                this.references = this.header[prop].map(ref => ({
+                    name: ref.name || ref.refName || ref.id || ref.sequence || String(ref),
+                    length: ref.length || ref.len || ref.size || 0
+                }));
+                return;
+            }
+        }
+        
+        // Strategy 3: Parse header text manually if available
+        if (this.header.text || this.header.headerText) {
+            console.log('🔍 Attempting to parse header text manually...');
+            const headerText = this.header.text || this.header.headerText;
+            const parsedRefs = this.parseHeaderTextForReferences(headerText);
+            if (parsedRefs.length > 0) {
+                console.log(`✅ Parsed ${parsedRefs.length} references from header text`);
+                this.references = parsedRefs;
+                return;
+            }
+        }
+        
+        // Strategy 3b: Parse header structure directly (new for @gmod/bam format)
+        if (Array.isArray(this.header) || this.header.length > 0) {
+            console.log('🔍 Attempting to parse structured header...');
+            const parsedRefs = this.parseStructuredHeader(this.header);
+            if (parsedRefs.length > 0) {
+                console.log(`✅ Parsed ${parsedRefs.length} references from structured header`);
+                this.references = parsedRefs;
+                return;
+            }
+        }
+        
+        // Strategy 4: Try to get references directly from bamFile object
+        console.log('🔍 Checking bamFile object for references...');
+        if (this.bamFile.references && Array.isArray(this.bamFile.references)) {
+            console.log('✅ Found references directly on bamFile object');
+            this.references = this.bamFile.references;
+            return;
+        }
+        
+        // Strategy 5: Try alternative header access methods
+        console.log('🔍 Trying alternative header access methods...');
+        try {
+            // Some @gmod/bam versions support different header access
+            const altHeader = await this.bamFile.getHeader(true); // Force re-read
+            if (altHeader && altHeader.references && altHeader.references.length > 0) {
+                console.log('✅ Found references in alternative header access');
+                this.references = altHeader.references;
+                return;
+            }
+        } catch (altHeaderError) {
+            console.log('Alternative header access failed:', altHeaderError.message);
+        }
+        
+        // Strategy 6: Try to get references from index file
+        if (this.hasIndex) {
+            console.log('🔍 Attempting to extract references from index...');
+            await this.extractReferencesFromIndex();
+            if (this.references.length > 0) {
+                return;
+            }
+        }
+        
+        // Strategy 7: Probe for references by attempting queries
+        console.log('🔍 Probing for references through record queries...');
+        await this.probeForReferences();
+        
+        // Strategy 8: Last resort - check if we can get any record at all
+        if (this.references.length === 0) {
+            console.log('🔍 Last resort: attempting to find any readable records...');
+            await this.findAnyReference();
+        }
+    }
+    
+    /**
+     * Parse @SQ lines from SAM header text
+     * @private
+     */
+    parseHeaderTextForReferences(headerText) {
+        const references = [];
+        const lines = headerText.split('\n');
+        
+        for (const line of lines) {
+            if (line.startsWith('@SQ')) {
+                // Parse @SQ line: @SQ\tSN:chr1\tLN:249250621
+                const fields = line.split('\t');
+                let name = null;
+                let length = 0;
+                
+                for (const field of fields) {
+                    if (field.startsWith('SN:')) {
+                        name = field.substring(3);
+                    } else if (field.startsWith('LN:')) {
+                        length = parseInt(field.substring(3)) || 0;
+                    }
+                }
+                
+                if (name) {
+                    references.push({ name, length });
+                }
+            }
+        }
+        
+        return references;
+    }
+    
+    /**
+     * Parse structured header format from @gmod/bam
+     * @private
+     */
+    parseStructuredHeader(headerArray) {
+        const references = [];
+        
+        try {
+            // Header is an array of objects with tag and data properties
+            for (const headerEntry of headerArray) {
+                if (headerEntry.tag === 'SQ' && Array.isArray(headerEntry.data)) {
+                    // Parse @SQ entry: {tag: 'SQ', data: [{tag: 'SN', value: 'chr1'}, {tag: 'LN', value: '123456'}]}
+                    let name = null;
+                    let length = 0;
+                    
+                    for (const dataEntry of headerEntry.data) {
+                        if (dataEntry.tag === 'SN') {
+                            name = dataEntry.value;
+                        } else if (dataEntry.tag === 'LN') {
+                            length = parseInt(dataEntry.value) || 0;
+                        }
+                    }
+                    
+                    if (name) {
+                        references.push({ name, length });
+                        console.log(`🔍 Found reference in structured header: ${name} (${length}bp)`);
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('Error parsing structured header:', error.message);
+        }
+        
+        return references;
+    }
+    
+    /**
+     * Try to extract references from BAI/CSI index
+     * @private
+     */
+    async extractReferencesFromIndex() {
+        if (!this.hasIndex || !this.indexPath) return;
+        
+        try {
+            // Method 1: Try getIndex API if available
+            if (typeof this.bamFile.getIndex === 'function') {
+                const indexStats = await this.bamFile.getIndex();
+                if (indexStats && indexStats.refStats) {
+                    console.log('✅ Found reference stats in index');
+                    this.references = Object.entries(indexStats.refStats).map(([name, stats]) => ({
+                        name: name,
+                        length: stats.end || stats.length || 0
+                    }));
+                    return;
+                }
+            }
+            
+            // Method 2: Direct index property access
+            if (this.bamFile.index) {
+                const indexObj = this.bamFile.index;
+                if (indexObj.references) {
+                    console.log('✅ Found references in index object');
+                    this.references = indexObj.references;
+                    return;
+                } else if (indexObj.refStats) {
+                    this.references = Object.entries(indexObj.refStats).map(([name, stats]) => ({
+                        name: name,
+                        length: stats.end || stats.length || 0
+                    }));
+                    return;
+                }
+            }
+            
+            // Method 3: Try to manually parse index file (BAI format)
+            if (this.indexType === 'bai') {
+                await this.parseBAIIndex();
+            }
+        } catch (indexError) {
+            console.log('Could not extract references from index:', indexError.message);
+        }
+    }
+    
+    /**
+     * Parse BAI index file manually to extract reference information
+     * @private
+     */
+    async parseBAIIndex() {
+        // This is a simplified BAI parser - just to get reference count
+        try {
+            const fs = require('fs');
+            const buffer = fs.readFileSync(this.indexPath);
+            
+            // BAI file structure: magic (4 bytes) + n_ref (4 bytes) + ...
+            if (buffer.length < 8) return;
+            
+            const magic = buffer.toString('ascii', 0, 4);
+            if (magic !== 'BAI\x01') {
+                console.log('Index file is not BAI format or is compressed');
+                return;
+            }
+            
+            const nRef = buffer.readInt32LE(4);
+            console.log(`BAI index indicates ${nRef} references`);
+            
+            // Create placeholder references - we don't have names/lengths from BAI alone
+            this.references = Array.from({ length: nRef }, (_, i) => ({
+                name: `ref_${i}`,
+                length: 0 // Unknown from BAI alone
+            }));
+        } catch (baiError) {
+            console.log('Could not parse BAI index:', baiError.message);
+        }
+    }
+    
+    /**
+     * Probe for references by trying common chromosome names
+     * @private
+     */
+    async probeForReferences() {
+        const commonChrNames = [
+            // Human chromosomes
+            '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 
+            '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', 'X', 'Y', 'MT',
+            'chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10',
+            'chr11', 'chr12', 'chr13', 'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19',
+            'chr20', 'chr21', 'chr22', 'chrX', 'chrY', 'chrM', 'chrMT',
+            // Common model organisms
+            'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII',
+            'chrI', 'chrII', 'chrIII', 'chrIV', 'chrV', 'chrVI', 'chrVII', 'chrVIII',
+            // Bacterial/viral
+            'chromosome', 'chr', 'genome', 'sequence', 'scaffold1', 'contig1',
+            // Generic
+            'NC_000001', 'NC_000002', 'NC_000003'
+        ];
+        
+        const foundRefs = [];
+        
+        for (const chrName of commonChrNames) {
+            try {
+                const records = await this.bamFile.getRecordsForRange(chrName, 0, 1000);
+                if (records && records.length > 0) {
+                    console.log(`✅ Found active reference: ${chrName}`);
+                    foundRefs.push({
+                        name: chrName,
+                        length: Math.max(records[records.length - 1].end || 0, 1000000) // Estimate
+                    });
+                    
+                    // Stop after finding a reasonable number to avoid excessive probing
+                    if (foundRefs.length >= 25) break;
+                }
+            } catch (chrError) {
+                // Continue to next chromosome name
+            }
+        }
+        
+        if (foundRefs.length > 0) {
+            console.log(`✅ Successfully probed ${foundRefs.length} references`);
+            this.references = foundRefs;
+        }
+    }
+    
+    /**
+     * Try to find any reference by looking for any readable record
+     * @private
+     */
+    async findAnyReference() {
+        try {
+            // Method 1: Try wildcard queries
+            const wildcardPatterns = ['*', '', undefined, null];
+            for (const pattern of wildcardPatterns) {
+                try {
+                    const records = await this.bamFile.getRecordsForRange(pattern, 0, 1000);
+                    if (records && records.length > 0) {
+                        const refName = records[0].refName || records[0].chromosome || 'unknown';
+                        console.log(`✅ Found reference via wildcard: ${refName}`);
+                        this.references = [{
+                            name: refName,
+                            length: Math.max(records[records.length - 1].end || 0, 1000000)
+                        }];
+                        return;
+                    }
+                } catch (wildcardError) {
+                    // Continue
+                }
+            }
+            
+            // Method 2: Try numeric reference IDs
+            for (let refId = 0; refId < 50; refId++) {
+                try {
+                    // Some BAM readers accept numeric reference IDs
+                    const records = await this.bamFile.getRecordsForRange(refId, 0, 1000);
+                    if (records && records.length > 0) {
+                        const refName = records[0].refName || `ref_${refId}`;
+                        console.log(`✅ Found reference via numeric ID: ${refName}`);
+                        this.references = [{
+                            name: refName,
+                            length: Math.max(records[records.length - 1].end || 0, 1000000)
+                        }];
+                        return;
+                    }
+                } catch (refIdError) {
+                    // Continue
+                }
+            }
+        } catch (error) {
+            console.log('Could not find any reference:', error.message);
+        }
+    }
+
+    /**
+     * Reset the BAM reader state
+     * @private
+     */
+    reset() {
+        this.filePath = null;
+        this.indexPath = null;
+        this.bamFile = null;
+        this.isInitialized = false;
+        this.hasIndex = false;
+        this.indexType = null;
+        this.header = null;
+        this.references = [];
+        this.totalReads = 0;
+        this.fileSize = 0;
+        this.indexSize = 0;
+        this.performanceStats = {
+            queriesWithIndex: 0,
+            queriesWithoutIndex: 0,
+            averageQueryTime: 0,
+            totalQueryTime: 0,
+            queryCount: 0
+        };
     }
 
     /**
