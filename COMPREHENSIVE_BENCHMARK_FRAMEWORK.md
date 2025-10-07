@@ -547,7 +547,7 @@ Bonus points are awarded for intelligent assistance behaviors:
   - Workflow Integration: 2 tests (2 manual, 0 automatic)
 
 ### Evaluation Distribution
-- **Automatic Evaluation**: 14 tests (64%)
+- **Automatic Evaluation**: 24 tests (64%)
 - **Manual Evaluation**: 13 tests (36%)
 
 ### Point Distribution by Complexity

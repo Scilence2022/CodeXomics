@@ -563,7 +563,7 @@ class BenchmarkUI {
                             <div class="checkbox-grid">
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-automatic_simple" checked>
-                                    <span>⚙️ Automatic Simple Tests <small>(14 tests)</small></span>
+                                    <span>⚙️ Automatic Simple Tests <small>(24 tests)</small></span>
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-automatic_complex">
@@ -2927,7 +2927,7 @@ class BenchmarkUI {
             selectedSuites.push(cb.id.replace('suite-', ''));
         });
 
-        return {
+        const config = {
             suites: selectedSuites,
             generateReport: document.getElementById('generateReport').checked,
             includeCharts: document.getElementById('includeCharts').checked,
@@ -2937,7 +2937,7 @@ class BenchmarkUI {
             verboseLogging: document.getElementById('verboseLogging')?.checked || false,
             timeout: parseInt(document.getElementById('testTimeout').value),
             concurrency: parseInt(document.getElementById('concurrency')?.value || '1'),
-            defaultDirectory: this.getDefaultDirectory(), // Add default directory to configuration
+            defaultDirectory: this.getDefaultDirectory(), // CRITICAL: Include default directory
             onProgress: (progress, suiteId, suiteResult) => {
                 this.updateMainWindowProgress(progress, suiteId, suiteResult);
             },
@@ -2945,6 +2945,15 @@ class BenchmarkUI {
                 this.updateMainWindowTestProgress(progress, testId, testResult, suiteId);
             }
         };
+        
+        console.log('🔧 [BenchmarkUI] Generated benchmark configuration:', {
+            suites: config.suites,
+            defaultDirectory: config.defaultDirectory,
+            timeout: config.timeout,
+            otherOptions: Object.keys(config).filter(key => !['suites', 'defaultDirectory', 'timeout', 'onProgress', 'onTestProgress'].includes(key))
+        });
+        
+        return config;
     }
 
     /**
@@ -4026,7 +4035,7 @@ Comprehensive testing framework for LLM instruction following capabilities.
 • Professional reporting
 
 Active Test Suites:
-- Automatic Simple Tests (14 tests)
+- Automatic Simple Tests (24 tests)
 - Automatic Complex Tests (2 tests) 
 - Manual Simple Tests (8 tests)
 - Manual Complex Tests (3 tests)

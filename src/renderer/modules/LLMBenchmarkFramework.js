@@ -169,6 +169,9 @@ class LLMBenchmarkFramework {
                     });
                 }
                 
+                // CRITICAL: Set ChatBox working directory before starting ANY test suite
+                await this.setupBenchmarkWorkingDirectory(options.defaultDirectory || '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/');
+                
                 try {
                     const suiteResult = await this.runTestSuite(suiteId, options);
                     results.testSuiteResults.push(suiteResult);
@@ -225,6 +228,80 @@ class LLMBenchmarkFramework {
             
         } finally {
             this.isRunning = false;
+        }
+    }
+
+    /**
+     * Setup benchmark working directory
+     * CRITICAL: This must be called before any file operations in benchmark tests
+     * Ensures ChatBox uses the correct directory for all file operations
+     */
+    async setupBenchmarkWorkingDirectory(directoryPath) {
+        console.log('📁 [LLMBenchmarkFramework] Setting up benchmark working directory:', directoryPath);
+        
+        try {
+            // Ensure directory path is absolute and normalized
+            const path = require('path');
+            const normalizedPath = path.resolve(directoryPath);
+            
+            // Call ChatManager's setWorkingDirectory method directly
+            if (this.chatManager && typeof this.chatManager.setWorkingDirectory === 'function') {
+                console.log('🔧 [LLMBenchmarkFramework] Calling ChatManager.setWorkingDirectory...');
+                
+                const result = await this.chatManager.setWorkingDirectory({
+                    directory_path: normalizedPath,
+                    validate_permissions: true,
+                    create_if_missing: false // Don't create directory in benchmark mode
+                });
+                
+                if (result && result.success) {
+                    console.log('✅ [LLMBenchmarkFramework] Working directory set successfully:', result.current_directory);
+                    
+                    // Add to thinking message to show users what happened
+                    this.chatManager.addThinkingMessage(
+                        `📁 **Benchmark Environment Setup**</br>` +
+                        `• Working Directory: \`${result.current_directory}\`</br>` +
+                        `• Previous Directory: \`${result.previous_directory}\`</br>` +
+                        `• Status: ✅ Successfully configured</br>` +
+                        `• All file operations will use this directory as base path</br></br>`
+                    );
+                } else {
+                    console.warn('⚠️ [LLMBenchmarkFramework] Working directory setup returned non-success result:', result);
+                    
+                    // Show warning but continue
+                    this.chatManager.addThinkingMessage(
+                        `⚠️ **Working Directory Warning**</br>` +
+                        `• Attempted Directory: \`${normalizedPath}\`</br>` +
+                        `• Result: ${result?.message || 'Unknown error'}</br>` +
+                        `• Continuing with current working directory</br></br>`
+                    );
+                }
+            } else {
+                console.error('❌ [LLMBenchmarkFramework] ChatManager.setWorkingDirectory method not available');
+                
+                // Show error message to user
+                this.chatManager.addThinkingMessage(
+                    `❌ **Working Directory Setup Failed**</br>` +
+                    `• Reason: setWorkingDirectory method not available on ChatManager</br>` +
+                    `• This may cause file operation tests to fail</br>` +
+                    `• Please ensure ChatManager has working directory tool implemented</br></br>`
+                );
+                
+                throw new Error('ChatManager working directory tool not available');
+            }
+        } catch (error) {
+            console.error('❌ [LLMBenchmarkFramework] Failed to setup working directory:', error);
+            
+            // Add error to thinking message
+            this.chatManager.addThinkingMessage(
+                `❌ **Working Directory Setup Error**</br>` +
+                `• Directory: \`${directoryPath}\`</br>` +
+                `• Error: ${error.message}</br>` +
+                `• File operation tests may fail due to incorrect working directory</br></br>`
+            );
+            
+            // Don't throw - allow benchmark to continue with warning
+            console.warn('⚠️ [LLMBenchmarkFramework] Continuing benchmark despite working directory setup failure');
         }
     }
 

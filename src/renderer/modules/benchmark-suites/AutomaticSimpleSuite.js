@@ -4,7 +4,7 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests (25)'; // Updated count to include working directory tests
+        this.suiteName = 'Automatic Simple Tests (24)'; // Updated count after removing system_auto_02
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
         this.framework = null;
@@ -90,25 +90,6 @@ class AutomaticSimpleSuite {
                 },
                 maxScore: 10, // High score as this is critical for other tests
                 bonusScore: 2,
-                timeout: 15000,
-                evaluator: this.evaluateWorkingDirectoryCall.bind(this)
-            },
-            {
-                id: 'system_auto_02',
-                name: 'Set Working Directory with Home Directory Flag',
-                type: 'function_call',
-                category: 'system_setup',
-                complexity: 'simple',
-                evaluation: 'automatic',
-                instruction: 'Set working directory to user home directory using the home directory flag.',
-                expectedResult: {
-                    tool_name: 'set_working_directory',
-                    parameters: {
-                        use_home_directory: true
-                    }
-                },
-                maxScore: 8,
-                bonusScore: 1,
                 timeout: 15000,
                 evaluator: this.evaluateWorkingDirectoryCall.bind(this)
             },
@@ -417,12 +398,13 @@ class AutomaticSimpleSuite {
                 category: 'file_export',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Export sequences in FASTA format.',
+                instruction: `Export sequences in FASTA format to file: ${this.buildFilePath('exported_sequences.fasta')}`,
                 expectedResult: {
                     tool_name: 'export_fasta_sequence',
                     parameters: {
                         format: 'fasta',
-                        includeDescription: true
+                        includeDescription: true,
+                        filePath: this.buildFilePath('exported_sequences.fasta')
                     }
                 },
                 maxScore: 5,
@@ -437,12 +419,13 @@ class AutomaticSimpleSuite {
                 category: 'file_export',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Export data in GenBank format.',
+                instruction: `Export data in GenBank format to file: ${this.buildFilePath('exported_data.gbk')}`,
                 expectedResult: {
                     tool_name: 'export_genbank_format',
                     parameters: {
                         includeSequence: true,
-                        includeAnnotations: true
+                        includeAnnotations: true,
+                        filePath: this.buildFilePath('exported_data.gbk')
                     }
                 },
                 maxScore: 5,
@@ -457,12 +440,13 @@ class AutomaticSimpleSuite {
                 category: 'file_export',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Export GFF3 annotation format.',
+                instruction: `Export GFF3 annotation format to file: ${this.buildFilePath('exported_annotations.gff3')}`,
                 expectedResult: {
                     tool_name: 'export_gff_annotations',
                     parameters: {
                         version: 'gff3',
-                        includeSequence: false
+                        includeSequence: false,
+                        filePath: this.buildFilePath('exported_annotations.gff3')
                     }
                 },
                 maxScore: 5,
@@ -477,12 +461,13 @@ class AutomaticSimpleSuite {
                 category: 'file_export',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Export features in BED format.',
+                instruction: `Export features in BED format to file: ${this.buildFilePath('exported_features.bed')}`,
                 expectedResult: {
                     tool_name: 'export_bed_format',
                     parameters: {
                         trackName: 'exported_features',
-                        includeScore: true
+                        includeScore: true,
+                        filePath: this.buildFilePath('exported_features.bed')
                     }
                 },
                 maxScore: 5,
@@ -497,12 +482,13 @@ class AutomaticSimpleSuite {
                 category: 'file_export',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Export coding sequences as FASTA format.',
+                instruction: `Export coding sequences as FASTA format to file: ${this.buildFilePath('exported_cds.fasta')}`,
                 expectedResult: {
                     tool_name: 'export_cds_fasta',
                     parameters: {
                         sequenceType: 'cds',
-                        includeHeaders: true
+                        includeHeaders: true,
+                        filePath: this.buildFilePath('exported_cds.fasta')
                     }
                 },
                 maxScore: 5,
@@ -517,13 +503,14 @@ class AutomaticSimpleSuite {
                 category: 'file_export',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Export protein sequences in FASTA format.',
+                instruction: `Export protein sequences in FASTA format to file: ${this.buildFilePath('exported_proteins.fasta')}`,
                 expectedResult: {
                     tool_name: 'export_protein_fasta',
                     parameters: {
                         sequenceType: 'protein',
                         includeHeaders: true,
-                        translate: true
+                        translate: true,
+                        filePath: this.buildFilePath('exported_proteins.fasta')
                     }
                 },
                 maxScore: 5,
@@ -538,13 +525,14 @@ class AutomaticSimpleSuite {
                 category: 'file_export',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Export currently visible genomic region as FASTA.',
+                instruction: `Export currently visible genomic region as FASTA to file: ${this.buildFilePath('exported_region.fasta')}`,
                 expectedResult: {
                     tool_name: 'export_current_view_fasta',
                     parameters: {
                         format: 'fasta',
                         currentViewOnly: true,
-                        includeCoordinates: true
+                        includeCoordinates: true,
+                        filePath: this.buildFilePath('exported_region.fasta')
                     }
                 },
                 maxScore: 5,
