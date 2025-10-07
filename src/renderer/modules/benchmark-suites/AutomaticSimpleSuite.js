@@ -408,7 +408,7 @@ class AutomaticSimpleSuite {
                     }
                 },
                 maxScore: 5,
-                bonusScore: 1,
+                bonusScore: 0, // Song's new evaluation: Fixed 5-point scale
                 timeout: 30000,
                 evaluator: this.evaluateExportCall.bind(this)
             },
@@ -429,7 +429,7 @@ class AutomaticSimpleSuite {
                     }
                 },
                 maxScore: 5,
-                bonusScore: 1,
+                bonusScore: 0, // Song's new evaluation: Fixed 5-point scale
                 timeout: 30000,
                 evaluator: this.evaluateExportCall.bind(this)
             },
@@ -450,7 +450,7 @@ class AutomaticSimpleSuite {
                     }
                 },
                 maxScore: 5,
-                bonusScore: 1,
+                bonusScore: 0, // Song's new evaluation: Fixed 5-point scale
                 timeout: 30000,
                 evaluator: this.evaluateExportCall.bind(this)
             },
@@ -471,7 +471,7 @@ class AutomaticSimpleSuite {
                     }
                 },
                 maxScore: 5,
-                bonusScore: 1,
+                bonusScore: 0, // Song's new evaluation: Fixed 5-point scale
                 timeout: 30000,
                 evaluator: this.evaluateExportCall.bind(this)
             },
@@ -492,7 +492,7 @@ class AutomaticSimpleSuite {
                     }
                 },
                 maxScore: 5,
-                bonusScore: 1,
+                bonusScore: 0, // Song's new evaluation: Fixed 5-point scale
                 timeout: 30000,
                 evaluator: this.evaluateExportCall.bind(this)
             },
@@ -514,7 +514,7 @@ class AutomaticSimpleSuite {
                     }
                 },
                 maxScore: 5,
-                bonusScore: 1,
+                bonusScore: 0, // Song's new evaluation: Fixed 5-point scale
                 timeout: 30000,
                 evaluator: this.evaluateExportCall.bind(this)
             },
@@ -536,7 +536,7 @@ class AutomaticSimpleSuite {
                     }
                 },
                 maxScore: 5,
-                bonusScore: 1,
+                bonusScore: 0, // Song's new evaluation: Fixed 5-point scale
                 timeout: 30000,
                 evaluator: this.evaluateExportCall.bind(this)
             },
@@ -981,52 +981,187 @@ class AutomaticSimpleSuite {
         return evaluation;
     }
 
+    /**
+     * Song's new Export evaluation criteria:
+     * 1) Tool call correct: +3 points
+     * 2) Tool execution success: +1 point  
+     * 3) Target file exists: +1 point
+     * Total: 5 points max, 4+ points = pass
+     */
     async evaluateExportCall(actualResult, expectedResult, testResult) {
-        const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
+        const evaluation = {
+            success: false,
+            score: 0,
+            maxScore: 5, // Fixed 5-point scale per Song's requirements
+            errors: [],
+            warnings: []
+        };
         
-        // Add export-specific validation
-        if (actualResult && actualResult.parameters) {
-            const params = actualResult.parameters;
-            
-            // Check for valid export format specification
-            if (params.format && (params.format === 'fasta' || params.format === 'genbank' || params.format === 'gff3' || params.format === 'bed')) {
-                evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1));
-                console.log(`✅ Export: Valid format '${params.format}' specified`);
-            }
-            
-            // Check for appropriate export parameters
-            if (params.includeHeaders !== undefined || params.includeSequence !== undefined || params.includeAnnotations !== undefined) {
-                console.log(`✅ Export: Appropriate inclusion parameters provided`);
-            }
-            
-            // Validate sequence type for sequence exports
-            if (params.sequenceType && (params.sequenceType === 'cds' || params.sequenceType === 'protein' || params.sequenceType === 'genomic')) {
-                console.log(`✅ Export: Valid sequence type '${params.sequenceType}' specified`);
-            }
-            
-            // Check for current view export specificity
-            if (params.currentViewOnly === true && testResult.id === 'export_auto_07') {
-                evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1));
-                console.log(`✅ Export: Current view export correctly specified`);
-            }
+        console.log('📊 [evaluateExportCall] Starting Song\'s new 3-criteria evaluation:', {
+            testId: testResult.id,
+            expectedTool: expectedResult.tool_name,
+            actualResult: actualResult
+        });
+        
+        if (!actualResult) {
+            evaluation.errors.push('No result obtained from test execution');
+            return evaluation;
         }
         
-        // Warn if export might fail due to missing data
-        if (typeof actualResult === 'string' && actualResult.toLowerCase().includes('no data loaded')) {
-            evaluation.warnings.push('Export attempted but no data appears to be loaded');
+        // CRITERION 1: Tool call correct (+3 points)
+        const actualTool = Array.isArray(actualResult) 
+            ? actualResult.find(call => call?.tool_name)?.tool_name
+            : actualResult.tool_name;
+            
+        if (actualTool === expectedResult.tool_name) {
+            evaluation.score += 3;
+            console.log(`✅ [Criterion 1] Tool call correct: ${actualTool} (+3 points)`);
+        } else {
+            evaluation.errors.push(`Wrong tool - Expected: ${expectedResult.tool_name}, Got: ${actualTool || 'none'}`);
+            console.log(`❌ [Criterion 1] Tool call incorrect: expected ${expectedResult.tool_name}, got ${actualTool || 'none'} (+0 points)`);
         }
         
-        // 🔥 CRITICAL FIX: Recalculate success field after adding bonus points
-        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
+        // CRITERION 2: Tool execution success (+1 point)
+        const hasSuccessSignal = this.checkToolExecutionSuccess(actualResult, expectedResult.tool_name);
+        if (hasSuccessSignal) {
+            evaluation.score += 1;
+            console.log(`✅ [Criterion 2] Tool execution success detected (+1 point)`);
+        } else {
+            console.log(`❌ [Criterion 2] No tool execution success signal (+0 points)`);
+        }
         
-        console.log(`📊 [evaluateExportCall] Final evaluation after bonus:`, {
+        // CRITERION 3: Target file exists (+1 point)
+        const fileExists = this.checkTargetFileExists(actualResult, expectedResult);
+        if (fileExists) {
+            evaluation.score += 1;
+            console.log(`✅ [Criterion 3] Target file exists (+1 point)`);
+        } else {
+            console.log(`❌ [Criterion 3] Target file not found or not verified (+0 points)`);
+        }
+        
+        // FINAL EVALUATION: 4+ points = pass
+        evaluation.success = evaluation.score >= 4;
+        
+        console.log(`📈 [evaluateExportCall] Final Song's evaluation:`, {
             score: evaluation.score,
             maxScore: evaluation.maxScore,
             success: evaluation.success,
-            testId: testResult.id
+            status: evaluation.success ? 'PASS' : 'FAIL',
+            criteria: {
+                toolCorrect: actualTool === expectedResult.tool_name,
+                executionSuccess: hasSuccessSignal,
+                fileExists: fileExists
+            }
         });
         
         return evaluation;
+    }
+    
+    /**
+     * Helper method: Check if tool execution was successful
+     * Looks for success patterns in response or tool execution tracker
+     */
+    checkToolExecutionSuccess(actualResult, expectedToolName) {
+        // Method 1: Check Tool Execution Tracker
+        if (window.chatManager && window.chatManager.toolExecutionTracker) {
+            const tracker = window.chatManager.toolExecutionTracker;
+            const recentExecutions = tracker.getSessionExecutions();
+            
+            const relevantExecution = recentExecutions.find(exec => 
+                exec.toolName === expectedToolName && 
+                exec.status === 'completed' &&
+                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+            );
+            
+            if (relevantExecution) {
+                console.log(`🔍 [checkToolExecutionSuccess] Tracker shows successful execution:`, relevantExecution);
+                return true;
+            }
+        }
+        
+        // Method 2: Check for success patterns in response text
+        if (typeof actualResult === 'string') {
+            const successPatterns = [
+                /tool execution completed.*succeeded/i,
+                /successfully (executed|exported|created|generated)/i,
+                /export.*completed successfully/i,
+                /file.*created successfully/i,
+                /operation completed successfully/i
+            ];
+            
+            const hasSuccessPattern = successPatterns.some(pattern => pattern.test(actualResult));
+            if (hasSuccessPattern) {
+                console.log(`🔍 [checkToolExecutionSuccess] Success pattern found in response`);
+                return true;
+            }
+        }
+        
+        // Method 3: Check if actualResult indicates successful tool execution
+        if (actualResult && typeof actualResult === 'object' && actualResult.success === true) {
+            console.log(`🔍 [checkToolExecutionSuccess] Result object indicates success`);
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Helper method: Check if target export file exists
+     * Attempts to verify file existence through various methods
+     */
+    checkTargetFileExists(actualResult, expectedResult) {
+        // Extract target file path
+        let targetFilePath = null;
+        
+        // Method 1: From actualResult parameters
+        if (actualResult && actualResult.parameters && actualResult.parameters.filePath) {
+            targetFilePath = actualResult.parameters.filePath;
+        }
+        // Method 2: From expectedResult parameters as fallback
+        else if (expectedResult && expectedResult.parameters && expectedResult.parameters.filePath) {
+            targetFilePath = expectedResult.parameters.filePath;
+        }
+        
+        if (!targetFilePath) {
+            console.log(`⚠️ [checkTargetFileExists] No target file path found`);
+            return false;
+        }
+        
+        console.log(`🔍 [checkTargetFileExists] Checking file: ${targetFilePath}`);
+        
+        // Method 1: Try Node.js fs module (if available)
+        try {
+            if (typeof require !== 'undefined') {
+                const fs = require('fs');
+                const exists = fs.existsSync(targetFilePath);
+                console.log(`🔍 [checkTargetFileExists] fs.existsSync result: ${exists}`);
+                return exists;
+            }
+        } catch (error) {
+            console.log(`⚠️ [checkTargetFileExists] fs check failed:`, error.message);
+        }
+        
+        // Method 2: Check if response mentions file creation
+        if (typeof actualResult === 'string') {
+            const fileName = targetFilePath.split('/').pop();
+            const fileCreationPatterns = [
+                new RegExp(`${fileName}.*created`, 'i'),
+                new RegExp(`created.*${fileName}`, 'i'),
+                new RegExp(`exported.*${fileName}`, 'i'),
+                new RegExp(`saved.*${fileName}`, 'i')
+            ];
+            
+            const mentionsFileCreation = fileCreationPatterns.some(pattern => pattern.test(actualResult));
+            if (mentionsFileCreation) {
+                console.log(`🔍 [checkTargetFileExists] Response mentions file creation`);
+                return true;
+            }
+        }
+        
+        // Method 3: Assume success if tool executed successfully (conservative approach)
+        // This is a fallback when we can't verify file existence directly
+        console.log(`⚠️ [checkTargetFileExists] Cannot verify file existence directly`);
+        return false;
     }
 
     async setup(context) {
