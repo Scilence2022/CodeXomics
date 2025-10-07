@@ -131,6 +131,18 @@ categories:
       - "clipboard_operations"
     tools_count: 10
 
+  system:
+    name: "System Management"
+    description: "Tools for system operations, working directory management, and environment setup"
+    icon: "⚙️"
+    priority: 1
+    color: "#795548"
+    subcategories:
+      - "directory_management"
+      - "environment_setup"
+      - "system_configuration"
+    tools_count: 1
+
   plugin_management:
     name: "Plugin Management"
     description: "Tools for plugin installation, execution, and development"
