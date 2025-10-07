@@ -78,9 +78,8 @@ class LLMConfigManager {
                     'Qwen/QwQ-32B',
                     'Qwen/QwQ-32B-Preview',
                     // GLM Models (Latest Series)
-                    'THUDM/GLM-4.6',
-                    'THUDM/GLM-4.5',
-                    'THUDM/GLM-4.5-Air',
+                    'zai-org/GLM-4.5',        // Available on SiliconFlow
+                    'zai-org/GLM-4.5-Air',    // Available on SiliconFlow
                     'THUDM/GLM-Z1-32B-0414',
                     'THUDM/GLM-4-32B-0414',
                     'THUDM/GLM-Z1-Rumination-32B-0414',
@@ -92,9 +91,8 @@ class LLMConfigManager {
                     'moonshotai/Kimi-K2-Instruct',
                     'ascend-tribe/pangu-pro-moe',
                     'tencent/Hunyuan-A13B-Instruct',
-                    'z-ai/GLM-4.6',        // Updated format
-                    'z-ai/GLM-4.5',        // Updated format
-                    'z-ai/GLM-4.5-Air',    // Updated format
+                    'zai-org/GLM-4.5',        // Available on SiliconFlow
+                    'zai-org/GLM-4.5-Air',    // Available on SiliconFlow
                     'MiniMaxAI/MiniMax-M1-80k',
                     'Tongyi-Zhiwen/QwenLong-L1-32B',
                     'TeleAI/TeleChat2',
@@ -2182,11 +2180,25 @@ class LLMConfigManager {
             if (model.includes('claude-3-opus')) return 'anthropic/claude-3-sonnet-20240229';
         }
         
-        // GLM fallbacks
+        // GLM fallbacks (different for different providers)
         if (model.startsWith('z-ai/')) {
+            // OpenRouter GLM models
             if (model.includes('glm-4.6')) return 'z-ai/glm-4.5';
             if (model.includes('glm-4.5') && !model.includes('air')) return 'z-ai/glm-4.5-air:free';
             if (model.includes('glm-4.5-air')) return 'openai/gpt-4o-mini';
+        }
+        
+        if (model.startsWith('zai-org/')) {
+            // SiliconFlow GLM models
+            if (model.includes('GLM-4.5') && !model.includes('Air')) return 'zai-org/GLM-4.5-Air';
+            if (model.includes('GLM-4.5-Air')) return 'THUDM/GLM-4-9B-0414';
+        }
+        
+        if (model.startsWith('THUDM/')) {
+            // SiliconFlow THUDM models
+            if (model.includes('GLM-4.6')) return 'zai-org/GLM-4.5';  // GLM-4.6 doesn't exist on SiliconFlow
+            if (model.includes('GLM-4.5') && !model.includes('Air')) return 'zai-org/GLM-4.5-Air';
+            if (model.includes('GLM-Z1')) return 'THUDM/GLM-4-32B-0414';
         }
         
         return null;

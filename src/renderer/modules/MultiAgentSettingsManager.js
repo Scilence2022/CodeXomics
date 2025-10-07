@@ -197,10 +197,9 @@ class MultiAgentSettingsManager {
                     'Pro/Qwen/Qwen2-1.5B-Instruct': 'Qwen2-1.5B-Instruct (Pro)',
                     'Vendor-A/Qwen/Qwen2.5-72B-Instruct': 'Qwen2.5-72B-Instruct (Vendor-A)',
                     
-                    // GLM Models (Latest)
-                    'THUDM/GLM-4.6': 'GLM-4.6 (Latest Flagship)',
-                    'THUDM/GLM-4.5': 'GLM-4.5 (Previous Flagship)', 
-                    'THUDM/GLM-4.5-Air': 'GLM-4.5-Air (Lightweight)',
+                    // GLM Models (Available on SiliconFlow)
+                    'zai-org/GLM-4.5': 'GLM-4.5 (Previous Flagship)', 
+                    'zai-org/GLM-4.5-Air': 'GLM-4.5-Air (Lightweight)',
                     'THUDM/GLM-Z1-32B-0414': 'GLM-Z1-32B-0414 (Latest)',
                     'THUDM/GLM-4-32B-0414': 'GLM-4-32B-0414 (Latest)',
                     'THUDM/GLM-Z1-Rumination-32B-0414': 'GLM-Z1-Rumination-32B-0414 (Rumination)',
@@ -213,9 +212,8 @@ class MultiAgentSettingsManager {
                     'moonshotai/Kimi-K2-Instruct': 'Kimi-K2-Instruct',
                     'ascend-tribe/pangu-pro-moe': 'pangu-pro-moe',
                     'tencent/Hunyuan-A13B-Instruct': 'Hunyuan-A13B-Instruct',
-                    'z-ai/GLM-4.6': 'GLM-4.6 (Latest)',
-                    'z-ai/GLM-4.5': 'GLM-4.5',
-                    'z-ai/GLM-4.5-Air': 'GLM-4.5-Air',
+                    'zai-org/GLM-4.5': 'GLM-4.5',
+                    'zai-org/GLM-4.5-Air': 'GLM-4.5-Air',
                     'MiniMaxAI/MiniMax-M1-80k': 'MiniMax-M1-80k (Long Context)',
                     'Tongyi-Zhiwen/QwenLong-L1-32B': 'QwenLong-L1-32B (Long Context)',
                     'TeleAI/TeleChat2': 'TeleChat2 (Latest)',
