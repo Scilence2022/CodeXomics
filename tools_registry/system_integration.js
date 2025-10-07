@@ -201,16 +201,66 @@ class SystemIntegration {
                 await this.initialize();
             }
 
-            // Get relevant tools based on user intent
-            const promptData = await this.registryManager.generateSystemPrompt(userQuery, context);
+            console.log('🎯 [System Integration] Generating dynamic system prompt for query:', userQuery);
+            
+            // Get relevant tools from registry
+            const registryPromptData = await this.registryManager.generateSystemPrompt(userQuery, context);
+            console.log('📋 [System Integration] Registry tools found:', registryPromptData.tools.length);
+            
+            // Get built-in tool relevance analysis
+            const builtInRelevance = this.builtInTools.analyzeBuiltInToolRelevance(userQuery);
+            console.log('🔧 [System Integration] Built-in tools analysis:', builtInRelevance.length, 'relevant tools');
+            
+            // Create built-in tool objects for high-confidence matches
+            const relevantBuiltInTools = [];
+            for (const relevantTool of builtInRelevance) {
+                if (relevantTool.confidence >= 0.7) { // Include high-confidence built-in tools
+                    const builtInToolInfo = this.builtInTools.getBuiltInToolInfo(relevantTool.name);
+                    if (builtInToolInfo) {
+                        // Create a tool object that matches the registry format
+                        const builtInToolObject = {
+                            name: relevantTool.name,
+                            description: `Built-in ${builtInToolInfo.category} tool for ${relevantTool.reason}`,
+                            category: builtInToolInfo.category,
+                            execution_type: 'built-in',
+                            implementation: {
+                                type: 'built-in',
+                                method: builtInToolInfo.method
+                            },
+                            priority: builtInToolInfo.priority,
+                            confidence: relevantTool.confidence,
+                            parameters: await this.getBuiltInToolParameters(relevantTool.name),
+                            sample_usages: await this.getBuiltInToolSampleUsages(relevantTool.name)
+                        };
+                        relevantBuiltInTools.push(builtInToolObject);
+                        console.log(`✅ [System Integration] Added built-in tool: ${relevantTool.name} (confidence: ${relevantTool.confidence})`);
+                    }
+                }
+            }
+            
+            // Merge built-in tools with registry tools (built-in tools first for priority)
+            const combinedTools = [...relevantBuiltInTools, ...registryPromptData.tools];
+            
+            // Create enhanced prompt data
+            const enhancedPromptData = {
+                tools: combinedTools,
+                toolDescriptions: registryPromptData.toolDescriptions,
+                sampleUsages: registryPromptData.sampleUsages,
+                totalTools: combinedTools.length
+            };
+            
+            console.log('🎯 [System Integration] Final tool count:', enhancedPromptData.totalTools, 
+                       '(Built-in:', relevantBuiltInTools.length, '+ Registry:', registryPromptData.tools.length, ')');
             
             // Generate the enhanced system prompt
-            const systemPrompt = this.buildSystemPrompt(promptData, context);
+            const systemPrompt = this.buildSystemPrompt(enhancedPromptData, context);
             
             return {
                 systemPrompt,
-                toolsUsed: promptData.tools,
-                toolCount: promptData.totalTools,
+                toolsUsed: enhancedPromptData.tools,
+                toolCount: enhancedPromptData.totalTools,
+                builtInToolsIncluded: relevantBuiltInTools.length,
+                registryToolsIncluded: registryPromptData.tools.length,
                 generationTime: Date.now()
             };
         } catch (error) {
@@ -609,6 +659,90 @@ Please use the available tools to assist with genomic analysis.`,
         };
         await this.initialize();
     }
+
+    /**
+     * Get parameters for a built-in tool (from YAML definition if available)
+     */
+    async getBuiltInToolParameters(toolName) {
+        try {
+            // Try to get the YAML definition first
+            const yamlTool = await this.registryManager.getToolDefinition(toolName);
+            if (yamlTool && yamlTool.parameters) {
+                return yamlTool.parameters;
+            }
+            
+            // Fallback to basic parameter definitions for known built-in tools
+            const basicParameters = {
+                'set_working_directory': {
+                    type: 'object',
+                    properties: {
+                        directory_path: {
+                            type: 'string',
+                            description: 'The absolute or relative path to set as working directory'
+                        },
+                        use_home_directory: {
+                            type: 'boolean',
+                            description: 'Set to true to use user home directory as working directory'
+                        },
+                        create_if_missing: {
+                            type: 'boolean',
+                            description: 'Create the directory if it does not exist',
+                            default: false
+                        }
+                    }
+                },
+                'load_genome_file': {
+                    type: 'object',
+                    properties: {
+                        file_path: {
+                            type: 'string',
+                            description: 'Path to the genome file (FASTA or GenBank format)'
+                        },
+                        file_type: {
+                            type: 'string',
+                            description: 'Type of genome file (auto-detected if not specified)'
+                        }
+                    }
+                }
+            };
+            
+            return basicParameters[toolName] || { type: 'object', properties: {} };
+        } catch (error) {
+            console.warn(`Could not get parameters for built-in tool ${toolName}:`, error.message);
+            return { type: 'object', properties: {} };
+        }
+    }
+    
+    /**
+     * Get sample usages for a built-in tool
+     */
+    async getBuiltInToolSampleUsages(toolName) {
+        try {
+            // Try to get the YAML definition first
+            const yamlTool = await this.registryManager.getToolDefinition(toolName);
+            if (yamlTool && yamlTool.sample_usages) {
+                return yamlTool.sample_usages;
+            }
+            
+            // Fallback to basic sample usages
+            const basicSamples = {
+                'set_working_directory': [{
+                    user_query: 'Set working directory to /Users/data/genome-files',
+                    tool_call: 'set_working_directory(directory_path="/Users/data/genome-files")'
+                }],
+                'load_genome_file': [{
+                    user_query: 'Load genome file from /path/to/genome.fasta',
+                    tool_call: 'load_genome_file(file_path="/path/to/genome.fasta")'
+                }]
+            };
+            
+            return basicSamples[toolName] || [];
+        } catch (error) {
+            console.warn(`Could not get sample usages for built-in tool ${toolName}:`, error.message);
+            return [];
+        }
+    }
+
 }
 
 module.exports = SystemIntegration;
