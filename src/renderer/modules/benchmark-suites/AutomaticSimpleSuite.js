@@ -88,8 +88,8 @@ class AutomaticSimpleSuite {
                         directory_path: this.getDefaultDirectory()
                     }
                 },
-                maxScore: 10, // High score as this is critical for other tests
-                bonusScore: 2,
+                maxScore: 5, // Standard 5-point scale for consistency
+                bonusScore: 0, // Simplified scoring
                 timeout: 15000,
                 evaluator: this.evaluateWorkingDirectoryCall.bind(this)
             },
@@ -1141,8 +1141,8 @@ class AutomaticSimpleSuite {
     async evaluateWorkingDirectoryCall(actualResult, expectedResult, testResult) {
         let score = 0;
         let bonusScore = 0;
-        const maxScore = testResult.maxScore || 10;
-        const maxBonusScore = testResult.bonusScore || 2;
+        const maxScore = testResult.maxScore || 5; // Use 5-point scale
+        const maxBonusScore = testResult.bonusScore || 0; // No bonus for simplified scoring
         const feedback = [];
         
         console.log('📁 [AutomaticSimpleSuite] Evaluating working directory call:', {
@@ -1150,12 +1150,12 @@ class AutomaticSimpleSuite {
             expectedResult
         });
         
-        // Check if tool name matches
+        // Check if tool name matches (60% of score)
         if (actualResult && actualResult.tool_name === expectedResult.tool_name) {
-            score += Math.round(maxScore * 0.6); // 60% for correct tool
+            score += Math.round(maxScore * 0.6); // 60% = 3 points for tool
             feedback.push(`✅ Correct tool: ${actualResult.tool_name}`);
             
-            // Parameter validation
+            // Parameter validation (40% of score)
             if (actualResult.parameters) {
                 const actualParams = actualResult.parameters;
                 const expectedParams = expectedResult.parameters;
@@ -1163,35 +1163,22 @@ class AutomaticSimpleSuite {
                 // Check for directory_path parameter
                 if (expectedParams.directory_path && actualParams.directory_path) {
                     if (actualParams.directory_path === expectedParams.directory_path) {
-                        score += Math.round(maxScore * 0.4); // 40% for correct path
-                        bonusScore += Math.round(maxBonusScore * 0.5); // 50% bonus
+                        score += Math.round(maxScore * 0.4); // 40% = 2 points for correct path
                         feedback.push(`✅ Correct directory path: ${actualParams.directory_path}`);
                     } else {
-                        score += Math.round(maxScore * 0.2); // 20% for having path parameter
+                        score += Math.round(maxScore * 0.2); // 20% = 1 point for having path
                         feedback.push(`⚠️ Directory path mismatch - Expected: ${expectedParams.directory_path}, Got: ${actualParams.directory_path}`);
                     }
                 }
                 
-                // Check for use_home_directory flag
+                // Check for use_home_directory flag  
                 if (expectedParams.use_home_directory !== undefined) {
                     if (actualParams.use_home_directory === expectedParams.use_home_directory) {
-                        score += Math.round(maxScore * 0.4); // 40% for correct flag
-                        bonusScore += Math.round(maxBonusScore * 0.5); // 50% bonus
+                        score += Math.round(maxScore * 0.4); // 40% = 2 points for correct flag
                         feedback.push(`✅ Correct home directory flag: ${actualParams.use_home_directory}`);
                     } else {
                         feedback.push(`❌ Home directory flag mismatch - Expected: ${expectedParams.use_home_directory}, Got: ${actualParams.use_home_directory}`);
                     }
-                }
-                
-                // Bonus for additional useful parameters
-                if (actualParams.create_if_missing !== undefined) {
-                    bonusScore += Math.round(maxBonusScore * 0.25); // 25% bonus
-                    feedback.push(`🎯 Bonus: Included create_if_missing parameter: ${actualParams.create_if_missing}`);
-                }
-                
-                if (actualParams.validate_permissions !== undefined) {
-                    bonusScore += Math.round(maxBonusScore * 0.25); // 25% bonus
-                    feedback.push(`🎯 Bonus: Included validate_permissions parameter: ${actualParams.validate_permissions}`);
                 }
                 
             } else {
@@ -1199,20 +1186,6 @@ class AutomaticSimpleSuite {
             }
         } else {
             feedback.push(`❌ Wrong tool - Expected: ${expectedResult.tool_name}, Got: ${actualResult?.tool_name || 'none'}`);
-        }
-        
-        // Enhanced evaluation for directory management understanding
-        if (actualResult && actualResult.tool_name === 'set_working_directory') {
-            // Award bonus for showing understanding of working directory concept
-            if (actualResult.parameters) {
-                const params = actualResult.parameters;
-                
-                // Check if it's a reasonable approach to directory setting
-                if (params.directory_path || params.use_home_directory) {
-                    bonusScore += Math.round(maxBonusScore * 0.3); // 30% bonus for logical approach
-                    feedback.push(`🎯 Bonus: Demonstrated understanding of directory setting`);
-                }
-            }
         }
         
         // Ensure scores don't exceed maximum
@@ -1223,7 +1196,7 @@ class AutomaticSimpleSuite {
         
         // Record for Song's tool detection analysis
         this.recordToolDetection(testResult.testName, expectedResult.tool_name, actualResult?.tool_name, 
-                               actualResult, expectedResult, finalScore > 0);
+                               actualResult, expectedResult, finalScore >= (maxScore * 0.6));
         
         return {
             ...testResult,
@@ -1231,7 +1204,8 @@ class AutomaticSimpleSuite {
             maxScore: maxScore + maxBonusScore,
             baseScore: score,
             bonusScore: bonusScore,
-            passed: finalScore > 0,
+            success: finalScore >= (maxScore * 0.6), // 60% threshold for success - CRITICAL FIX
+            passed: finalScore > 0, // Keep for compatibility
             feedback: feedback.join('\n'),
             evaluationDetails: {
                 correctTool: actualResult?.tool_name === expectedResult.tool_name,
