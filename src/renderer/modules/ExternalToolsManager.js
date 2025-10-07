@@ -387,7 +387,6 @@ class ExternalToolsManager {
                 key: key,
                 name: tool.name,
                 url: tool.url,
-                icon: tool.icon,
                 accelerator: tool.accelerator
             });
         });
@@ -398,8 +397,7 @@ class ExternalToolsManager {
                 type: 'custom',
                 id: tool.id,
                 name: tool.name,
-                url: tool.url,
-                icon: 'fas fa-external-link-alt'
+                url: tool.url
             });
         });
         

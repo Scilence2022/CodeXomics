@@ -1487,7 +1487,6 @@ function getCustomExternalToolsMenuItems() {
     customOnlyTools.forEach(tool => {
       menuItems.push({
         label: tool.name,
-        icon: tool.icon || 'fas fa-external-link-alt',
         click: () => {
           createCustomExternalToolWindow(tool);
         }
