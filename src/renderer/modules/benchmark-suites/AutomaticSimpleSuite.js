@@ -1241,6 +1241,50 @@ class AutomaticSimpleSuite {
             }
         };
     }
+    
+    /**
+     * Record tool detection for Song's benchmark analysis
+     * @param {string} testName - Name of the test
+     * @param {string} expectedTool - Expected tool name
+     * @param {string} actualTool - Actually detected tool name
+     * @param {Object} actualResult - Full actual result object
+     * @param {Object} expectedResult - Full expected result object
+     * @param {boolean} success - Whether the tool detection was successful
+     */
+    recordToolDetection(testName, expectedTool, actualTool, actualResult, expectedResult, success) {
+        // Initialize global debug object if not exists
+        if (!window.songBenchmarkDebug) {
+            window.songBenchmarkDebug = {
+                toolDetectionLog: [],
+                detectedTools: [],
+                finalToolSelections: []
+            };
+        }
+        
+        // Record detailed tool detection information
+        const detectionRecord = {
+            timestamp: new Date().toISOString(),
+            testName: testName,
+            expectedTool: expectedTool,
+            actualTool: actualTool,
+            success: success,
+            actualResult: actualResult,
+            expectedResult: expectedResult,
+            resultType: typeof actualResult,
+            hasParameters: actualResult && actualResult.parameters && Object.keys(actualResult.parameters).length > 0,
+            detectionSource: 'AutomaticSimpleSuite.evaluateWorkingDirectoryCall'
+        };
+        
+        window.songBenchmarkDebug.toolDetectionLog.push(detectionRecord);
+        
+        console.log('📊 [Tool Detection Recording] Added record for Song\'s analysis:', {
+            testName,
+            expectedTool,
+            actualTool,
+            success,
+            totalRecords: window.songBenchmarkDebug.toolDetectionLog.length
+        });
+    }
 }
 
 // Make the class available globally

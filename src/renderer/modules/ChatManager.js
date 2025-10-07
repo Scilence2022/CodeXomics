@@ -8427,7 +8427,24 @@ ${this.getPluginSystemInfo()}`;
             try {
                 const parsed = JSON.parse(cleanResponse);
                 console.log('Direct parse successful:', parsed);
+                
+                // ENHANCED: Fix malformed parameters if needed
                 if (parsed.tool_name && parsed.parameters !== undefined) {
+                    // Fix malformed parameters for set_working_directory
+                    if (parsed.tool_name === 'set_working_directory' && typeof parsed.parameters === 'object') {
+                        const paramKeys = Object.keys(parsed.parameters);
+                        if (paramKeys.length === 1 && !paramKeys.includes('directory_path') && !paramKeys.includes('use_home_directory')) {
+                            const pathValue = paramKeys[0];
+                            if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
+                                console.log('🔧 [parseToolCall] Fixing malformed parameters (direct parse)');
+                                parsed.parameters = {
+                                    directory_path: pathValue
+                                };
+                                console.log('🔧 [parseToolCall] Fixed parameters:', parsed.parameters);
+                            }
+                        }
+                    }
+                    
                     console.log('Valid tool call found via direct parse');
                     console.log('=== parseToolCall DEBUG END (SUCCESS - DIRECT) ===');
                     return parsed;
@@ -8446,7 +8463,24 @@ ${this.getPluginSystemInfo()}`;
                 try {
                     const parsed = JSON.parse(jsonMatches[0]);
                     console.log('Regex parse successful:', parsed);
+                    
+                    // ENHANCED: Fix malformed parameters if needed
                     if (parsed.tool_name && parsed.parameters !== undefined) {
+                        // Fix malformed parameters for set_working_directory
+                        if (parsed.tool_name === 'set_working_directory' && typeof parsed.parameters === 'object') {
+                            const paramKeys = Object.keys(parsed.parameters);
+                            if (paramKeys.length === 1 && !paramKeys.includes('directory_path') && !paramKeys.includes('use_home_directory')) {
+                                const pathValue = paramKeys[0];
+                                if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
+                                    console.log('🔧 [parseToolCall] Fixing malformed parameters (regex parse)');
+                                    parsed.parameters = {
+                                        directory_path: pathValue
+                                    };
+                                    console.log('🔧 [parseToolCall] Fixed parameters:', parsed.parameters);
+                                }
+                            }
+                        }
+                        
                         console.log('Valid tool call found via regex');
                         console.log('=== parseToolCall DEBUG END (SUCCESS - REGEX) ===');
                         return parsed;
@@ -8479,7 +8513,26 @@ ${this.getPluginSystemInfo()}`;
                     try {
                         const parsed = JSON.parse(jsonCandidate);
                         console.log('Flexible extraction parse successful:', parsed);
+                        
+                        // ENHANCED: Fix malformed parameters if needed
                         if (parsed.tool_name && parsed.parameters !== undefined) {
+                            // Fix malformed parameters for set_working_directory
+                            if (parsed.tool_name === 'set_working_directory' && typeof parsed.parameters === 'object') {
+                                // If parameters is an object but doesn't have proper keys, try to fix it
+                                const paramKeys = Object.keys(parsed.parameters);
+                                if (paramKeys.length === 1 && !paramKeys.includes('directory_path') && !paramKeys.includes('use_home_directory')) {
+                                    // The parameter seems to be a path value without proper key
+                                    const pathValue = paramKeys[0];
+                                    if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
+                                        console.log('🔧 [parseToolCall] Fixing malformed parameters for set_working_directory');
+                                        parsed.parameters = {
+                                            directory_path: pathValue
+                                        };
+                                        console.log('🔧 [parseToolCall] Fixed parameters:', parsed.parameters);
+                                    }
+                                }
+                            }
+                            
                             console.log('Valid tool call found via flexible extraction');
                             console.log('=== parseToolCall DEBUG END (SUCCESS - FLEXIBLE) ===');
                             return parsed;
