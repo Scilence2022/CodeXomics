@@ -935,6 +935,9 @@ class AutomaticSimpleSuite {
             console.log(`📁 File loading using directory: ${currentDir}`);
         }
         
+        // 🔥 CRITICAL FIX: Recalculate success field after adding bonus points
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
+        
         return evaluation;
     }
 
@@ -953,6 +956,9 @@ class AutomaticSimpleSuite {
             }
         }
         
+        // 🔥 CRITICAL FIX: Recalculate success field after adding bonus points
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
+        
         return evaluation;
     }
 
@@ -968,6 +974,9 @@ class AutomaticSimpleSuite {
                 evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1)); // Add bonus points
             }
         }
+        
+        // 🔥 CRITICAL FIX: Recalculate success field after adding bonus points
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
         
         return evaluation;
     }
@@ -1006,6 +1015,16 @@ class AutomaticSimpleSuite {
         if (typeof actualResult === 'string' && actualResult.toLowerCase().includes('no data loaded')) {
             evaluation.warnings.push('Export attempted but no data appears to be loaded');
         }
+        
+        // 🔥 CRITICAL FIX: Recalculate success field after adding bonus points
+        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
+        
+        console.log(`📊 [evaluateExportCall] Final evaluation after bonus:`, {
+            score: evaluation.score,
+            maxScore: evaluation.maxScore,
+            success: evaluation.success,
+            testId: testResult.id
+        });
         
         return evaluation;
     }
