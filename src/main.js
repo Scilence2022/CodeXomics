@@ -1485,10 +1485,18 @@ function getCustomExternalToolsMenuItems() {
     
     // Add each custom tool as a menu item
     customOnlyTools.forEach(tool => {
+      // Create a copy of the tool data to avoid closure issues
+      const toolData = {
+        type: tool.type,
+        id: tool.id,
+        name: tool.name,
+        url: tool.url
+      };
+      
       menuItems.push({
         label: tool.name,
         click: () => {
-          createCustomExternalToolWindow(tool);
+          createCustomExternalToolWindow(toolData);
         }
       });
     });
@@ -4889,7 +4897,14 @@ async function createChopchopWindow() {
 // Create custom external tool window
 async function createCustomExternalToolWindow(toolData) {
   try {
-    console.log('🔧 Creating custom external tool window:', toolData);
+    console.log('🔧 [CustomTool] Creating custom external tool window:', toolData.name);
+    
+    // Validate tool data
+    if (!toolData || !toolData.name || !toolData.url) {
+      console.error('❌ [CustomTool] Invalid tool data:', toolData);
+      showSettingsError('Invalid Tool Configuration', 'Tool data is missing required properties (name or url)');
+      return;
+    }
     
     const customToolWindow = new BrowserWindow({
       width: 1400,
