@@ -85,7 +85,7 @@ class ManualSimpleSuite {
                 bonusScore: 1,
                 timeout: 30000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) Browser switches to the first tab successfully, 2) Tab content loads properly, 3) Tab switching is smooth and responsive, 4) Current tab indicator updates correctly.'
+                manualVerification: 'Please verify: 1) Browser switches to the first tab successfully, 2) Tab content loads properly, 3) Tab switching does not affect the current genomic view state.'
             },
             {
                 id: 'nav_manual_04',
