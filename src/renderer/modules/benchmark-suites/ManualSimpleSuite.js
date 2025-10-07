@@ -67,6 +67,46 @@ class ManualSimpleSuite {
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please confirm: 1) New browser tab opens successfully, 2) New tab is ready for genome visualization, 3) Original tab remains functional.'
             },
+            {
+                id: 'nav_manual_03',
+                name: 'Switch to First Tab',
+                type: 'function_call',
+                category: 'navigation',
+                complexity: 'simple',
+                evaluation: 'manual',
+                instruction: 'Switch to the first tab (tab index 0).',
+                expectedResult: {
+                    tool_name: 'switch_to_tab',
+                    parameters: {
+                        tab_index: 0
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this),
+                manualVerification: 'Please verify: 1) Browser switches to the first tab successfully, 2) Tab content loads properly, 3) Tab switching is smooth and responsive, 4) Current tab indicator updates correctly.'
+            },
+            {
+                id: 'nav_manual_04',
+                name: 'Switch Tab by Name',
+                type: 'function_call',
+                category: 'navigation',
+                complexity: 'simple',
+                evaluation: 'manual',
+                instruction: 'Switch to a tab named "Genome Browser" (partial name matching).',
+                expectedResult: {
+                    tool_name: 'switch_to_tab',
+                    parameters: {
+                        tab_name: 'Genome Browser'
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateTabSwitchCall.bind(this),
+                manualVerification: 'Please verify: 1) Browser finds and switches to tab containing "Genome Browser" in the name, 2) Partial name matching works correctly, 3) Tab switching preserves the current genomic view state, 4) Tab focus indicator is properly updated.'
+            },
 
             // ANALYSIS TASKS - Manual + Simple
             {
@@ -338,6 +378,52 @@ class ManualSimpleSuite {
                 evaluation.score += 2; // Bonus for explicit case sensitivity handling
             }
         }
+        
+        return evaluation;
+    }
+
+    async evaluateTabSwitchCall(actualResult, expectedResult, testResult) {
+        const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
+        
+        console.log(`🔄 [ManualSimpleSuite] Evaluating tab switch call:`, {
+            testId: testResult.testId,
+            expectedTool: expectedResult.tool_name,
+            actualResult: actualResult
+        });
+        
+        // Add tab switching-specific checks
+        if (actualResult && actualResult.parameters) {
+            const params = actualResult.parameters;
+            
+            // Validate tab switching parameters
+            if (params.tab_id || params.tab_name || params.tab_index !== undefined) {
+                evaluation.score += 1; // Bonus for providing valid tab identification
+                
+                // Bonus for using appropriate parameter types
+                if (params.tab_index !== undefined && typeof params.tab_index === 'number') {
+                    evaluation.score += 1; // Bonus for correct index type
+                }
+                
+                if (params.tab_name && typeof params.tab_name === 'string') {
+                    evaluation.score += 1; // Bonus for string tab name
+                }
+                
+                if (params.tab_id && typeof params.tab_id === 'string') {
+                    evaluation.score += 1; // Bonus for string tab ID
+                }
+            } else {
+                evaluation.warnings.push('No valid tab identification parameter provided (tab_id, tab_name, or tab_index required)');
+            }
+            
+            // Check for invalid combinations
+            const providedParams = [params.tab_id, params.tab_name, params.tab_index].filter(p => p !== undefined && p !== null);
+            if (providedParams.length > 1) {
+                evaluation.warnings.push('Multiple tab identification parameters provided - tool will use the first valid one');
+            }
+        }
+        
+        // Cap the score at maxScore to prevent over-scoring
+        evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
         
         return evaluation;
     }
