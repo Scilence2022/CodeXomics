@@ -1226,12 +1226,32 @@
                         <div class="form-group">
                             <label for="siliconflowModel">Default Model:</label>
                             <select id="siliconflowModel" class="select">
+                                <!-- Models arranged by size (high to low parameters) -->
+                                
+                                <!-- Qwen3 Coder Series (Largest - 480B total) -->
+                                <optgroup label="Qwen3 Coder Series (Largest)">
+                                    <option value="Qwen/Qwen3-Coder-480B-A35B-Instruct">Qwen3-Coder-480B-A35B-Instruct (480B total, 35B active)</option>
+                                </optgroup>
+                                
+                                <!-- Qwen3 235B Series -->
+                                <optgroup label="Qwen3 235B Series">
+                                    <option value="Qwen/Qwen3-235B-A22B-Thinking-2507">Qwen3-235B-A22B-Thinking-2507 (235B total, 22B active)</option>
+                                    <option value="Qwen/Qwen3-235B-A22B-Instruct-2507">Qwen3-235B-A22B-Instruct-2507 (235B total, 22B active)</option>
+                                </optgroup>
+                                
+                                <!-- Qwen3 Next 80B Series (New) -->
+                                <optgroup label="Qwen3 Next 80B Series (New)">
+                                    <option value="Qwen/Qwen3-Next-80B-A3B-Instruct">Qwen3-Next-80B-A3B-Instruct (80B total, 3B active)</option>
+                                    <option value="Qwen/Qwen3-Next-80B-A3B-Thinking">Qwen3-Next-80B-A3B-Thinking (80B total, 3B active)</option>
+                                </optgroup>
+                                
                                 <!-- DeepSeek Models -->
                                 <optgroup label="DeepSeek Models">
                                     <option value="Pro/deepseek-ai/DeepSeek-R1">DeepSeek-R1 (Pro)</option>
                                     <option value="Pro/deepseek-ai/DeepSeek-V3">DeepSeek-V3 (Pro)</option>
                                     <option value="deepseek-ai/DeepSeek-R1">DeepSeek-R1</option>
                                     <option value="deepseek-ai/DeepSeek-V3">DeepSeek-V3</option>
+                                    <option value="deepseek-ai/DeepSeek-V3.1-Terminus">DeepSeek-V3.1-Terminus (New)</option>
                                     <option value="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B">DeepSeek-R1-0528-Qwen3-8B</option>
                                     <option value="deepseek-ai/DeepSeek-R1-Distill-Qwen-32B">DeepSeek-R1-Distill-Qwen-32B</option>
                                     <option value="deepseek-ai/DeepSeek-R1-Distill-Qwen-14B">DeepSeek-R1-Distill-Qwen-14B</option>
@@ -1240,24 +1260,25 @@
                                     <option value="deepseek-ai/DeepSeek-V2.5">DeepSeek-V2.5</option>
                                 </optgroup>
                                 
-                                <!-- Qwen Models -->
-                                <optgroup label="Qwen Models">
-                                    <option value="Qwen/Qwen3-Coder-480B-A35B-Instruct">Qwen3-Coder-480B-A35B-Instruct</option>
-                                    <option value="Qwen/Qwen3-235B-A22B-Thinking-2507">Qwen3-235B-A22B-Thinking-2507</option>
-                                    <option value="Qwen/Qwen3-235B-A22B-Instruct-2507">Qwen3-235B-A22B-Instruct-2507</option>
-                                    <option value="Qwen/Qwen3-32B">Qwen3-32B</option>
-                                    <option value="Qwen/Qwen3-14B">Qwen3-14B</option>
-                                    <option value="Qwen/Qwen3-8B">Qwen3-8B</option>
-                                    <option value="Qwen/QwQ-32B">QwQ-32B</option>
-                                    <option value="Qwen/QwQ-32B-Preview">QwQ-32B-Preview</option>
-                                    <option value="Pro/Qwen/Qwen2.5-7B-Instruct">Qwen2.5-7B-Instruct (Pro)</option>
-                                    <option value="Pro/Qwen/Qwen2-7B-Instruct">Qwen2-7B-Instruct (Pro)</option>
-                                    <option value="Pro/Qwen/Qwen2-1.5B-Instruct">Qwen2-1.5B-Instruct (Pro)</option>
-                                    <option value="Vendor-A/Qwen/Qwen2.5-72B-Instruct">Qwen2.5-72B-Instruct (Vendor-A)</option>
+                                <!-- Qwen3 30B Series (New) -->
+                                <optgroup label="Qwen3 30B Series (New)">
+                                    <option value="Qwen/Qwen3-30B-A3B-Thinking-2507">Qwen3-30B-A3B-Thinking-2507 (30B total, 3B active)</option>
+                                    <option value="Qwen/Qwen3-30B-A3B-Instruct-2507">Qwen3-30B-A3B-Instruct-2507 (30B total, 3B active)</option>
+                                    <option value="Qwen/Qwen3-Coder-30B-A3B-Instruct">Qwen3-Coder-30B-A3B-Instruct (30B total, 3B active)</option>
                                 </optgroup>
                                 
-                                <!-- GLM Models -->
-                                <optgroup label="GLM Models">
+                                <!-- Qwen3 Standard Series -->
+                                <optgroup label="Qwen3 Standard Series">
+                                    <option value="Qwen/Qwen3-32B">Qwen3-32B</option>
+                                    <option value="Qwen/QwQ-32B">QwQ-32B</option>
+                                    <option value="Qwen/QwQ-32B-Preview">QwQ-32B-Preview</option>
+                                    <option value="Qwen/Qwen3-14B">Qwen3-14B</option>
+                                    <option value="Qwen/Qwen3-8B">Qwen3-8B</option>
+                                </optgroup>
+                                
+                                <!-- GLM Models (Latest Series) -->
+                                <optgroup label="GLM Models (Latest Series)">
+                                    <option value="zai-org/GLM-4.6">GLM-4.6 (New Model)</option>
                                     <option value="zai-org/GLM-4.5">GLM-4.5 (Previous Flagship)</option>
                                     <option value="zai-org/GLM-4.5-Air">GLM-4.5-Air (Lightweight)</option>
                                     <option value="THUDM/GLM-Z1-32B-0414">GLM-Z1-32B-0414</option>
@@ -1268,19 +1289,23 @@
                                     <option value="Pro/THUDM/glm-4-9b-chat">GLM-4-9B-Chat (Pro)</option>
                                 </optgroup>
                                 
-                                <!-- Other Models -->
-                                <optgroup label="Other Models">
+                                <!-- Qwen2.5 Coder Series (Legacy) -->
+                                <optgroup label="Qwen2.5 Coder Series (Legacy)">
+                                    <option value="Qwen/Qwen2.5-Coder-32B-Instruct">Qwen2.5-Coder-32B-Instruct</option>
+                                    <option value="Qwen/Qwen2.5-Coder-7B-Instruct">Qwen2.5-Coder-7B-Instruct</option>
+                                </optgroup>
+                                
+                                <!-- Other Large Models -->
+                                <optgroup label="Other Large Models">
                                     <option value="baidu/ERNIE-4.5-300B-A47B">ERNIE-4.5-300B-A47B</option>
                                     <option value="moonshotai/Kimi-K2-Instruct">Kimi-K2-Instruct</option>
                                     <option value="ascend-tribe/pangu-pro-moe">pangu-pro-moe</option>
                                     <option value="tencent/Hunyuan-A13B-Instruct">Hunyuan-A13B-Instruct</option>
-                                    <option value="zai-org/GLM-4.5">GLM-4.5</option>
-                                    <option value="zai-org/GLM-4.5-Air">GLM-4.5-Air</option>
                                     <option value="MiniMaxAI/MiniMax-M1-80k">MiniMax-M1-80k</option>
                                     <option value="Tongyi-Zhiwen/QwenLong-L1-32B">QwenLong-L1-32B</option>
                                     <option value="TeleAI/TeleChat2">TeleChat2</option>
-                                    <option value="internlm/internlm2_5-7b-chat">InternLM2.5-7B-Chat</option>
                                     <option value="internlm/internlm2_5-20b-chat">InternLM2.5-20B-Chat</option>
+                                    <option value="internlm/internlm2_5-7b-chat">InternLM2.5-7B-Chat</option>
                                 </optgroup>
                             </select>
                         </div>

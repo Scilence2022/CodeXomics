@@ -50,54 +50,73 @@ class LLMConfigManager {
             siliconflow: {
                 name: 'SiliconFlow',
                 apiKey: '',
-                model: 'Qwen/Qwen3-32B',
+                model: 'Qwen/Qwen3-Next-80B-A3B-Instruct',
                 baseUrl: 'https://api.siliconflow.cn/v1',
                 enabled: false,
                 availableModels: [
+                    // Models arranged by size (high to low parameters)
+                    
+                    // Qwen3 Coder Series (Largest)
+                    'Qwen/Qwen3-Coder-480B-A35B-Instruct',      // 480B total, 35B active
+                    
+                    // Qwen3 235B Series  
+                    'Qwen/Qwen3-235B-A22B-Thinking-2507',       // 235B total, 22B active
+                    'Qwen/Qwen3-235B-A22B-Instruct-2507',       // 235B total, 22B active
+                    
+                    // Qwen3 Next 80B Series (New)
+                    'Qwen/Qwen3-Next-80B-A3B-Instruct',         // 80B total, 3B active
+                    'Qwen/Qwen3-Next-80B-A3B-Thinking',         // 80B total, 3B active
+                    
                     // DeepSeek Models (Latest)
                     'Pro/deepseek-ai/DeepSeek-R1',
                     'Pro/deepseek-ai/DeepSeek-V3',
                     'deepseek-ai/DeepSeek-R1',
                     'deepseek-ai/DeepSeek-V3',
+                    'deepseek-ai/DeepSeek-V3.1-Terminus',       // New model
                     'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B',
                     'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B',
                     'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B',
                     'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
                     'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
                     'deepseek-ai/DeepSeek-V2.5',
-                    // Qwen Models (Code Specialized First)
-                    'Qwen/Qwen3-Coder-480B-A35B-Instruct',
-                    'Qwen/Qwen2.5-Coder-32B-Instruct',
-                    'Qwen/Qwen2.5-Coder-7B-Instruct',
-                    // Qwen General Models (Latest Qwen 3 Series Only)
-                    'Qwen/Qwen3-235B-A22B-Thinking-2507',
-                    'Qwen/Qwen3-235B-A22B-Instruct-2507',
+                    
+                    // Qwen3 30B Series (New)
+                    'Qwen/Qwen3-30B-A3B-Thinking-2507',         // 30B total, 3B active
+                    'Qwen/Qwen3-30B-A3B-Instruct-2507',         // 30B total, 3B active
+                    'Qwen/Qwen3-Coder-30B-A3B-Instruct',        // 30B total, 3B active (Coder)
+                    
+                    // Qwen3 Standard Series
                     'Qwen/Qwen3-32B',
-                    'Qwen/Qwen3-14B',
-                    'Qwen/Qwen3-8B',
                     'Qwen/QwQ-32B',
                     'Qwen/QwQ-32B-Preview',
+                    'Qwen/Qwen3-14B',
+                    'Qwen/Qwen3-8B',
+                    
                     // GLM Models (Latest Series)
-                    'zai-org/GLM-4.5',        // Available on SiliconFlow
-                    'zai-org/GLM-4.5-Air',    // Available on SiliconFlow
+                    'zai-org/GLM-4.6',           // New GLM-4.6 model
+                    'zai-org/GLM-4.5',           // Available on SiliconFlow
+                    'zai-org/GLM-4.5-Air',       // Available on SiliconFlow
                     'THUDM/GLM-Z1-32B-0414',
                     'THUDM/GLM-4-32B-0414',
                     'THUDM/GLM-Z1-Rumination-32B-0414',
                     'THUDM/GLM-4-9B-0414',
                     'THUDM/glm-4-9b-chat',
                     'Pro/THUDM/glm-4-9b-chat',
-                    // Other Models
+                    
+                    // Qwen2.5 Coder Series (Legacy)
+                    'Qwen/Qwen2.5-Coder-32B-Instruct',
+                    'Qwen/Qwen2.5-Coder-7B-Instruct',
+                    
+                    // Other Large Models
                     'baidu/ERNIE-4.5-300B-A47B',
                     'moonshotai/Kimi-K2-Instruct',
                     'ascend-tribe/pangu-pro-moe',
                     'tencent/Hunyuan-A13B-Instruct',
-                    'zai-org/GLM-4.5',        // Available on SiliconFlow
-                    'zai-org/GLM-4.5-Air',    // Available on SiliconFlow
                     'MiniMaxAI/MiniMax-M1-80k',
                     'Tongyi-Zhiwen/QwenLong-L1-32B',
                     'TeleAI/TeleChat2',
-                    'internlm/internlm2_5-7b-chat',
-                    'internlm/internlm2_5-20b-chat'
+                    'internlm/internlm2_5-20b-chat',
+                    'internlm/internlm2_5-7b-chat'
                 ]
             },
             // OpenRouter - Access to GPT-5 series via OpenRouter API
@@ -155,7 +174,7 @@ class LLMConfigManager {
                     'openai': 'gpt-4o',
                     'google': 'gemini-2.0-flash',
                     'deepseek': 'deepseek-chat',
-                    'siliconflow': 'Qwen/Qwen3-235B-A22B-Thinking-2507',
+                    'siliconflow': 'Qwen/Qwen3-Next-80B-A3B-Thinking',
                     'openrouter': 'openai/gpt-5'
                 }
             },
@@ -167,7 +186,7 @@ class LLMConfigManager {
                 preferredModels: {
                     'openai': 'gpt-4o',
                     'anthropic': 'claude-3-5-sonnet-20241022',
-                    'siliconflow': 'Qwen/Qwen3-32B',
+                    'siliconflow': 'Qwen/Qwen3-Next-80B-A3B-Instruct',
                     'google': 'gemini-2.0-flash',
                     'deepseek': 'deepseek-chat',
                     'openrouter': 'openai/gpt-4o'
@@ -179,7 +198,7 @@ class LLMConfigManager {
                 description: 'For code generation and programming tasks',
                 preferredProviders: ['siliconflow', 'deepseek', 'openai', 'anthropic'],
                 preferredModels: {
-                    'siliconflow': 'Qwen/Qwen3-Coder-480B-A35B-Instruct',
+                    'siliconflow': 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
                     'deepseek': 'deepseek-coder',
                     'openai': 'gpt-4o',
                     'anthropic': 'claude-3-5-sonnet-20241022',

@@ -213,7 +213,7 @@ class ConfigManager {
                     siliconflow: {
                         name: 'SiliconFlow',
                         apiKey: '',
-                        model: 'Qwen/Qwen3-32B',
+                        model: 'Qwen/Qwen3-Next-80B-A3B-Instruct',
                         baseUrl: 'https://api.siliconflow.cn/v1',
                         enabled: false,
                         maxTokens: 4096,
