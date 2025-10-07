@@ -211,6 +211,33 @@ class SystemIntegration {
             const builtInRelevance = this.builtInTools.analyzeBuiltInToolRelevance(userQuery);
             console.log('🔧 [System Integration] Built-in tools analysis:', builtInRelevance.length, 'relevant tools');
             
+            // Add tool detection logging for Song's benchmark system
+            if (builtInRelevance.length > 0) {
+                console.log('📋 [Tool Detection Recording] Built-in tools detected:');
+                builtInRelevance.forEach(tool => {
+                    console.log(`   ✅ ${tool.name} (confidence: ${tool.confidence.toFixed(2)}) - ${tool.reason}`);
+                });
+                
+                // Record for benchmark analysis if system is available
+                if (typeof window !== 'undefined' && window.songBenchmarkDebug) {
+                    if (!window.songBenchmarkDebug.toolDetectionLog) {
+                        window.songBenchmarkDebug.toolDetectionLog = [];
+                    }
+                    window.songBenchmarkDebug.toolDetectionLog.push({
+                        timestamp: new Date().toISOString(),
+                        query: userQuery,
+                        detectedBuiltInTools: builtInRelevance.map(t => ({
+                            name: t.name,
+                            confidence: t.confidence,
+                            reason: t.reason,
+                            category: this.builtInTools.getBuiltInToolInfo(t.name)?.category
+                        })),
+                        context: context,
+                        detection_source: 'built-in-analysis'
+                    });
+                }
+            }
+            
             // Create built-in tool objects for high-confidence matches
             const relevantBuiltInTools = [];
             for (const relevantTool of builtInRelevance) {
@@ -251,6 +278,36 @@ class SystemIntegration {
             
             console.log('🎯 [System Integration] Final tool count:', enhancedPromptData.totalTools, 
                        '(Built-in:', relevantBuiltInTools.length, '+ Registry:', registryPromptData.tools.length, ')');
+            
+            // Comprehensive tool detection recording for Song's benchmark evaluation system
+            if (typeof window !== 'undefined' && window.songBenchmarkDebug) {
+                if (!window.songBenchmarkDebug.finalToolSelections) {
+                    window.songBenchmarkDebug.finalToolSelections = [];
+                }
+                window.songBenchmarkDebug.finalToolSelections.push({
+                    timestamp: new Date().toISOString(),
+                    query: userQuery,
+                    systemPromptGenerated: true,
+                    toolSelection: {
+                        totalTools: enhancedPromptData.totalTools,
+                        builtInTools: relevantBuiltInTools.map(t => ({
+                            name: t.name,
+                            category: t.category,
+                            confidence: t.confidence,
+                            executionType: t.execution_type
+                        })),
+                        registryTools: registryPromptData.tools.map(t => ({
+                            name: t.name,
+                            category: t.category || 'unknown',
+                            executionType: 'external'
+                        }))
+                    },
+                    context: context,
+                    detection_source: 'dynamic-prompt-generation'
+                });
+                
+                console.log('📊 [Tool Detection Recording] Logged final tool selection for benchmark analysis');
+            }
             
             // Generate the enhanced system prompt
             const systemPrompt = this.buildSystemPrompt(enhancedPromptData, context);
