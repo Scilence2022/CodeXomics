@@ -35,11 +35,15 @@ class ExternalToolsManager {
             // Load settings from storage
             await this.loadSettings();
             
+            // Update main menu with loaded tools (including custom tools)
+            this.updateMainMenu();
+            
             // Setup event handlers
             this.setupEventHandlers();
             
             this.isInitialized = true;
             console.log('✅ [ExternalTools] ExternalToolsManager initialized');
+            console.log('📊 [ExternalTools] Loaded custom tools:', this.customTools.length);
         } catch (error) {
             console.error('❌ [ExternalTools] Failed to initialize ExternalToolsManager:', error);
             this.isInitialized = true; // Mark as initialized to prevent retry loops
@@ -282,6 +286,11 @@ class ExternalToolsManager {
             // Collect current form data
             this.collectFormData();
             
+            console.log('💾 [ExternalTools] Saving', this.customTools.length, 'custom tools to storage...');
+            this.customTools.forEach((tool, index) => {
+                console.log(`   ${index + 1}. ${tool.name} - ${tool.url}`);
+            });
+            
             // Save to config manager
             if (this.genomeBrowser.configManager) {
                 // Save custom tools
@@ -312,7 +321,7 @@ class ExternalToolsManager {
             // Show success notification
             this.showNotification('External tools settings saved successfully!', 'success');
             
-            console.log('✅ [ExternalTools] Settings saved successfully');
+            console.log('✅ [ExternalTools] Settings saved successfully to local configuration');
         } catch (error) {
             console.error('❌ [ExternalTools] Failed to save settings:', error);
             this.showNotification('Failed to save external tools settings. Please try again.', 'error');
@@ -338,10 +347,16 @@ class ExternalToolsManager {
                 const savedCustomTools = await this.genomeBrowser.configManager.get('externalTools.customTools');
                 if (savedCustomTools && Array.isArray(savedCustomTools)) {
                     this.customTools = savedCustomTools;
+                    console.log('✅ [ExternalTools] Loaded', savedCustomTools.length, 'custom tools from storage');
+                    savedCustomTools.forEach((tool, index) => {
+                        console.log(`   ${index + 1}. ${tool.name} - ${tool.url}`);
+                    });
+                } else {
+                    console.log('📊 [ExternalTools] No saved custom tools found');
                 }
             }
             
-            console.log('✅ [ExternalTools] Settings loaded');
+            console.log('✅ [ExternalTools] Settings loaded successfully');
         } catch (error) {
             console.error('❌ [ExternalTools] Failed to load settings:', error);
         }
