@@ -30,7 +30,8 @@ class FunctionCallsOrganizer {
                     'jump_to_gene',
                     'get_current_region',
                     'open_new_tab',
-                    'switch_to_tab'
+                    'switch_to_tab',
+                    'set_working_directory'
                 ]
             },
             
@@ -318,7 +319,7 @@ class FunctionCallsOrganizer {
      */
     extractKeywords(message) {
         const keywords = {
-            navigation: ['navigate', 'go to', 'jump to', 'zoom', 'scroll', 'move to', 'position', 'switch', 'tab', 'change tab', 'open tab'],
+            navigation: ['navigate', 'go to', 'jump to', 'zoom', 'scroll', 'move to', 'position', 'switch', 'tab', 'change tab', 'open tab', 'directory', 'folder', 'working', 'set', 'cd'],
             search: ['search', 'find', 'look for', 'locate', 'get'],
             analysis: ['analyze', 'calculate', 'compute', 'predict', 'statistics'],
             blast: ['blast', 'similarity', 'homology', 'compare with database'],

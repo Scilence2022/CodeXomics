@@ -111,6 +111,9 @@ class ChatManager {
         this.checkAndSetupMCPConnection();
         this.initializeUI();
         
+        // Initialize working directory
+        this.initializeWorkingDirectory();
+        
         // Load chat history AFTER UI is initialized
         setTimeout(() => {
             this.loadChatHistory();
@@ -1205,6 +1208,176 @@ class ChatManager {
                 error: error.message,
                 fileType: 'operon'
             };
+        }
+    }
+
+    /**
+     * Set working directory - Built-in function tool
+     * @param {Object} parameters - Tool parameters
+     * @param {string} parameters.directory_path - Absolute or relative path to set as working directory
+     * @param {boolean} parameters.use_home_directory - Set to true to use user home directory
+     * @param {boolean} parameters.create_if_missing - Create directory if it doesn't exist (default: false)
+     * @param {boolean} parameters.validate_permissions - Validate read/write permissions (default: true)
+     * @returns {Object} Set directory result
+     */
+    async setWorkingDirectory(parameters = {}) {
+        const { directory_path, use_home_directory = false, create_if_missing = false, validate_permissions = true } = parameters;
+        
+        console.log('📁 [ChatManager] Setting working directory:', { directory_path, use_home_directory, create_if_missing, validate_permissions });
+        
+        try {
+            let targetPath;
+            let previousDirectory = this.getCurrentWorkingDirectory();
+            
+            // Determine target directory
+            if (use_home_directory) {
+                const os = require('os');
+                targetPath = os.homedir();
+                console.log('🏠 [ChatManager] Using home directory:', targetPath);
+            } else if (directory_path) {
+                const path = require('path');
+                // Handle both absolute and relative paths
+                targetPath = path.isAbsolute(directory_path) ? directory_path : path.resolve(process.cwd(), directory_path);
+                console.log('📂 [ChatManager] Target directory:', targetPath);
+            } else {
+                throw new Error('Either directory_path or use_home_directory must be provided');
+            }
+            
+            // Validate and setup directory
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Check if directory exists
+            if (!fs.existsSync(targetPath)) {
+                if (create_if_missing) {
+                    console.log('📁 [ChatManager] Creating directory:', targetPath);
+                    fs.mkdirSync(targetPath, { recursive: true });
+                } else {
+                    throw new Error(`Directory '${targetPath}' does not exist`);
+                }
+            }
+            
+            // Validate it's actually a directory
+            const stats = fs.statSync(targetPath);
+            if (!stats.isDirectory()) {
+                throw new Error(`Path '${targetPath}' is not a directory`);
+            }
+            
+            // Check permissions if requested
+            let permissions = { readable: false, writable: false };
+            if (validate_permissions) {
+                try {
+                    fs.accessSync(targetPath, fs.constants.R_OK);
+                    permissions.readable = true;
+                } catch (e) {
+                    console.warn('⚠️ [ChatManager] Directory not readable:', targetPath);
+                }
+                
+                try {
+                    fs.accessSync(targetPath, fs.constants.W_OK);
+                    permissions.writable = true;
+                } catch (e) {
+                    console.warn('⚠️ [ChatManager] Directory not writable:', targetPath);
+                }
+                
+                if (!permissions.readable) {
+                    throw new Error(`Permission denied: Cannot read directory '${targetPath}'`);
+                }
+            }
+            
+            // Set the working directory
+            process.chdir(targetPath);
+            
+            // Store in ChatManager state for persistence
+            this.currentWorkingDirectory = targetPath;
+            
+            // Save to config for persistence across sessions
+            if (this.configManager) {
+                this.configManager.set('workingDirectory', targetPath);
+            }
+            
+            const result = {
+                success: true,
+                message: create_if_missing && !fs.existsSync(targetPath) ? 
+                    `Working directory set to ${targetPath} (created)` : 
+                    `Working directory set to ${targetPath}`,
+                current_directory: targetPath,
+                previous_directory: previousDirectory,
+                permissions: permissions,
+                tool: 'set_working_directory',
+                timestamp: new Date().toISOString()
+            };
+            
+            // Enhanced logging for benchmark tool detection recording
+            console.log('📋 [ChatManager] TOOL EXECUTED: set_working_directory - Directory changed', {
+                tool_name: 'set_working_directory',
+                parameters: parameters,
+                result: result,
+                benchmark_mode: this.isBenchmarkMode(),
+                timestamp: new Date().toISOString()
+            });
+            
+            return result;
+            
+        } catch (error) {
+            console.error('❌ [ChatManager] Error setting working directory:', error);
+            
+            const errorResult = {
+                success: false,
+                error: error.message,
+                attempted_path: directory_path || (use_home_directory ? 'user home directory' : 'undefined'),
+                tool: 'set_working_directory',
+                timestamp: new Date().toISOString()
+            };
+            
+            // Log error for benchmark tool detection recording
+            console.log('📋 [ChatManager] TOOL ERROR: set_working_directory - Failed', {
+                tool_name: 'set_working_directory',
+                parameters: parameters,
+                error: errorResult,
+                benchmark_mode: this.isBenchmarkMode(),
+                timestamp: new Date().toISOString()
+            });
+            
+            return errorResult;
+        }
+    }
+
+    /**
+     * Get current working directory
+     * @returns {string} Current working directory path
+     */
+    getCurrentWorkingDirectory() {
+        return this.currentWorkingDirectory || process.cwd();
+    }
+
+    /**
+     * Initialize working directory on startup
+     */
+    initializeWorkingDirectory() {
+        try {
+            // Check if there's a saved working directory
+            let savedDirectory = null;
+            if (this.configManager) {
+                savedDirectory = this.configManager.get('workingDirectory', null);
+            }
+            
+            if (savedDirectory && require('fs').existsSync(savedDirectory)) {
+                this.currentWorkingDirectory = savedDirectory;
+                process.chdir(savedDirectory);
+                console.log('📁 [ChatManager] Restored working directory:', savedDirectory);
+            } else {
+                // Default to user home directory
+                const os = require('os');
+                const homeDir = os.homedir();
+                this.currentWorkingDirectory = homeDir;
+                process.chdir(homeDir);
+                console.log('🏠 [ChatManager] Initialized working directory to home:', homeDir);
+            }
+        } catch (error) {
+            console.error('❌ [ChatManager] Error initializing working directory:', error);
+            // Fallback to current process directory
+            this.currentWorkingDirectory = process.cwd();
         }
     }
 
@@ -7210,6 +7383,7 @@ ${coreTools}
             // System tools
             'get_chromosome_list': () => this.getChromosomeList(),
             'export_data': () => this.exportData(parameters),
+            'set_working_directory': () => this.setWorkingDirectory(parameters),
             
             // Action system tools (if available)
             'copy_sequence': () => this.executeActionTool('copy_sequence', parameters),

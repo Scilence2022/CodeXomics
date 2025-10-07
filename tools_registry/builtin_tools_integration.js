@@ -104,6 +104,13 @@ class BuiltInToolsIntegration {
             priority: 1
         });
 
+        this.builtInToolsMap.set('set_working_directory', {
+            method: 'setWorkingDirectory',
+            category: 'system',
+            type: 'built-in',
+            priority: 1
+        });
+
         console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
     }
 

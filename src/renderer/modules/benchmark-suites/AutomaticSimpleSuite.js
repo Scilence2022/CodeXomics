@@ -4,9 +4,9 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests (23)';
+        this.suiteName = 'Automatic Simple Tests (25)'; // Updated count to include working directory tests
         this.suiteId = 'automatic_simple';
-        this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations';
+        this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
         this.framework = null;
         this.defaultDirectory = null; // Will be set when framework provides configuration
         this.tests = this.initializeTests();
@@ -73,6 +73,45 @@ class AutomaticSimpleSuite {
      */
     initializeTests() {
         return [
+            // SYSTEM SETUP TASKS - Automatic + Simple (HIGHEST PRIORITY - Must be first)
+            {
+                id: 'system_auto_01',
+                name: 'Set Working Directory to Test Data',
+                type: 'function_call',
+                category: 'system_setup',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: `Set working directory to test data directory: ${this.getDefaultDirectory()}`,
+                expectedResult: {
+                    tool_name: 'set_working_directory',
+                    parameters: {
+                        directory_path: this.getDefaultDirectory()
+                    }
+                },
+                maxScore: 10, // High score as this is critical for other tests
+                bonusScore: 2,
+                timeout: 15000,
+                evaluator: this.evaluateWorkingDirectoryCall.bind(this)
+            },
+            {
+                id: 'system_auto_02',
+                name: 'Set Working Directory with Home Directory Flag',
+                type: 'function_call',
+                category: 'system_setup',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Set working directory to user home directory using the home directory flag.',
+                expectedResult: {
+                    tool_name: 'set_working_directory',
+                    parameters: {
+                        use_home_directory: true
+                    }
+                },
+                maxScore: 8,
+                bonusScore: 1,
+                timeout: 15000,
+                evaluator: this.evaluateWorkingDirectoryCall.bind(this)
+            },
             // DATA LOADING TASKS - Automatic + Simple (FIRST - Data must be loaded before other tests)
             {
                 id: 'load_auto_01',
@@ -1102,6 +1141,117 @@ class AutomaticSimpleSuite {
         console.log('================================================\n');
         
         return summary;
+    }
+
+    /**
+     * Evaluate working directory tool calls
+     * @param {Object} actualResult - The actual function call result
+     * @param {Object} expectedResult - The expected function call result
+     * @param {Object} testResult - The test result object to populate
+     * @returns {Promise<Object>} Enhanced test result
+     */
+    async evaluateWorkingDirectoryCall(actualResult, expectedResult, testResult) {
+        let score = 0;
+        let bonusScore = 0;
+        const maxScore = testResult.maxScore || 10;
+        const maxBonusScore = testResult.bonusScore || 2;
+        const feedback = [];
+        
+        console.log('📁 [AutomaticSimpleSuite] Evaluating working directory call:', {
+            actualResult,
+            expectedResult
+        });
+        
+        // Check if tool name matches
+        if (actualResult && actualResult.tool_name === expectedResult.tool_name) {
+            score += Math.round(maxScore * 0.6); // 60% for correct tool
+            feedback.push(`✅ Correct tool: ${actualResult.tool_name}`);
+            
+            // Parameter validation
+            if (actualResult.parameters) {
+                const actualParams = actualResult.parameters;
+                const expectedParams = expectedResult.parameters;
+                
+                // Check for directory_path parameter
+                if (expectedParams.directory_path && actualParams.directory_path) {
+                    if (actualParams.directory_path === expectedParams.directory_path) {
+                        score += Math.round(maxScore * 0.4); // 40% for correct path
+                        bonusScore += Math.round(maxBonusScore * 0.5); // 50% bonus
+                        feedback.push(`✅ Correct directory path: ${actualParams.directory_path}`);
+                    } else {
+                        score += Math.round(maxScore * 0.2); // 20% for having path parameter
+                        feedback.push(`⚠️ Directory path mismatch - Expected: ${expectedParams.directory_path}, Got: ${actualParams.directory_path}`);
+                    }
+                }
+                
+                // Check for use_home_directory flag
+                if (expectedParams.use_home_directory !== undefined) {
+                    if (actualParams.use_home_directory === expectedParams.use_home_directory) {
+                        score += Math.round(maxScore * 0.4); // 40% for correct flag
+                        bonusScore += Math.round(maxBonusScore * 0.5); // 50% bonus
+                        feedback.push(`✅ Correct home directory flag: ${actualParams.use_home_directory}`);
+                    } else {
+                        feedback.push(`❌ Home directory flag mismatch - Expected: ${expectedParams.use_home_directory}, Got: ${actualParams.use_home_directory}`);
+                    }
+                }
+                
+                // Bonus for additional useful parameters
+                if (actualParams.create_if_missing !== undefined) {
+                    bonusScore += Math.round(maxBonusScore * 0.25); // 25% bonus
+                    feedback.push(`🎯 Bonus: Included create_if_missing parameter: ${actualParams.create_if_missing}`);
+                }
+                
+                if (actualParams.validate_permissions !== undefined) {
+                    bonusScore += Math.round(maxBonusScore * 0.25); // 25% bonus
+                    feedback.push(`🎯 Bonus: Included validate_permissions parameter: ${actualParams.validate_permissions}`);
+                }
+                
+            } else {
+                feedback.push(`❌ Missing parameters object`);
+            }
+        } else {
+            feedback.push(`❌ Wrong tool - Expected: ${expectedResult.tool_name}, Got: ${actualResult?.tool_name || 'none'}`);
+        }
+        
+        // Enhanced evaluation for directory management understanding
+        if (actualResult && actualResult.tool_name === 'set_working_directory') {
+            // Award bonus for showing understanding of working directory concept
+            if (actualResult.parameters) {
+                const params = actualResult.parameters;
+                
+                // Check if it's a reasonable approach to directory setting
+                if (params.directory_path || params.use_home_directory) {
+                    bonusScore += Math.round(maxBonusScore * 0.3); // 30% bonus for logical approach
+                    feedback.push(`🎯 Bonus: Demonstrated understanding of directory setting`);
+                }
+            }
+        }
+        
+        // Ensure scores don't exceed maximum
+        score = Math.min(score, maxScore);
+        bonusScore = Math.min(bonusScore, maxBonusScore);
+        
+        const finalScore = score + bonusScore;
+        
+        // Record for Song's tool detection analysis
+        this.recordToolDetection(testResult.testName, expectedResult.tool_name, actualResult?.tool_name, 
+                               actualResult, expectedResult, finalScore > 0);
+        
+        return {
+            ...testResult,
+            score: finalScore,
+            maxScore: maxScore + maxBonusScore,
+            baseScore: score,
+            bonusScore: bonusScore,
+            passed: finalScore > 0,
+            feedback: feedback.join('\n'),
+            evaluationDetails: {
+                correctTool: actualResult?.tool_name === expectedResult.tool_name,
+                hasParameters: !!actualResult?.parameters,
+                toolMatches: actualResult?.tool_name === expectedResult.tool_name,
+                parameterAnalysis: actualResult?.parameters || {}
+            }
+        };
     }
 }
 

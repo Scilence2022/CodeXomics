@@ -1,0 +1,158 @@
+name: "set_working_directory"
+description: "Set the current working directory for the application. Defaults to user home directory when not set."
+version: "1.0.0"
+author: "Genome AI Studio"
+category: "system"
+intent: "system_management"
+priority: 1
+keywords: ["directory", "folder", "path", "working", "current", "set", "change", "cd"]
+aliases: ["change_directory", "cd", "set_dir", "change_working_dir"]
+enabled: true
+
+parameters:
+  anyOf:
+    - required: ["directory_path"]
+    - required: ["use_home_directory"]
+  properties:
+    directory_path:
+      type: "string"
+      description: "The absolute or relative path to set as working directory"
+      example: "/Users/song/test-data"
+    use_home_directory:
+      type: "boolean"
+      description: "Set to true to use user home directory as working directory"
+      example: true
+    create_if_missing:
+      type: "boolean"
+      description: "Create the directory if it doesn't exist (default: false)"
+      default: false
+      example: false
+    validate_permissions:
+      type: "boolean"
+      description: "Validate read/write permissions for the directory (default: true)"
+      default: true
+      example: true
+
+responses:
+  success:
+    type: "object"
+    properties:
+      success:
+        type: "boolean"
+        example: true
+      message:
+        type: "string"
+        example: "Working directory set successfully"
+      current_directory:
+        type: "string"
+        example: "/Users/song/test-data"
+      previous_directory:
+        type: "string"
+        example: "/Users/song"
+      permissions:
+        type: "object"
+        properties:
+          readable:
+            type: "boolean"
+          writable:
+            type: "boolean"
+        example:
+          readable: true
+          writable: true
+  error:
+    type: "object"
+    properties:
+      success:
+        type: "boolean"
+        example: false
+      error:
+        type: "string"
+        example: "Directory not found or access denied"
+      attempted_path:
+        type: "string"
+        example: "/invalid/path"
+
+usage_examples:
+  - description: "Set working directory to specific path"
+    input:
+      directory_path: "/Users/song/genome-data"
+    expected_output:
+      success: true
+      message: "Working directory set to /Users/song/genome-data"
+      current_directory: "/Users/song/genome-data"
+      previous_directory: "/Users/song"
+      permissions:
+        readable: true
+        writable: true
+  
+  - description: "Set working directory to user home"
+    input:
+      use_home_directory: true
+    expected_output:
+      success: true
+      message: "Working directory set to user home directory"
+      current_directory: "/Users/song"
+      previous_directory: "/some/previous/path"
+      permissions:
+        readable: true
+        writable: true
+  
+  - description: "Set with directory creation"
+    input:
+      directory_path: "/Users/song/new-test-dir"
+      create_if_missing: true
+    expected_output:
+      success: true
+      message: "Working directory set to /Users/song/new-test-dir (created)"
+      current_directory: "/Users/song/new-test-dir"
+      previous_directory: "/Users/song"
+      permissions:
+        readable: true
+        writable: true
+
+error_handling:
+  - condition: "Directory does not exist"
+    response:
+      success: false
+      error: "Directory '/path/to/nonexistent' does not exist"
+      attempted_path: "/path/to/nonexistent"
+  
+  - condition: "Permission denied"
+    response:
+      success: false
+      error: "Permission denied accessing directory '/restricted/path'"
+      attempted_path: "/restricted/path"
+  
+  - condition: "Invalid path format"
+    response:
+      success: false
+      error: "Invalid path format provided"
+      attempted_path: "invalid-path"
+  
+  - condition: "No parameters provided"
+    response:
+      success: false
+      error: "Either directory_path or use_home_directory must be provided"
+
+security_considerations:
+  - "Validates directory existence and permissions before setting"
+  - "Prevents setting directories outside allowed system boundaries"
+  - "Logs all directory changes for audit purposes"
+  - "Handles cross-platform path normalization"
+
+integration:
+  mcp_tools: true
+  dynamic_registry: true
+  builtin_tools: true
+  benchmark_framework: true
+  
+compatibility:
+  min_version: "1.0.0"
+  platforms: ["desktop", "web"]
+  
+benchmark_usage:
+  description: "Benchmarks should use this tool to set test directories"
+  examples:
+    - "Set benchmark test directory before running file loading tests"
+    - "Create isolated test environment for each benchmark suite"
+    - "Reset to home directory after benchmark completion"
