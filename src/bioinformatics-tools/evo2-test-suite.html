@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evo2 Core Module Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-result { margin-top: 15px; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px; }
+        button:hover { background: #0056b3; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; border: 1px solid #e9ecef; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Evo2 Core Module Test Suite</h1>
+        <p>This page tests the refactored Evo2 Core Module with direct function calls (no MCP dependency).</p>
+        
+        <div class="test-section">
+            <h3>Module Initialization Test</h3>
+            <p>Tests if the Evo2 Core Module loads and initializes correctly.</p>
+            <button onclick="testModuleInit()">Test Module Init</button>
+            <div id="init-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Sequence Generation Test</h3>
+            <p>Tests DNA sequence generation functionality in simulation mode.</p>
+            <button onclick="testSequenceGeneration()">Test Generation</button>
+            <div id="generation-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>All Functions Test</h3>
+            <p>Tests all core functions in sequence.</p>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <div id="all-results" class="test-result info">
+                <strong>Click to run comprehensive test suite</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Evo2 Core Module -->
+    <script src="evo2-core-module.js"></script>
+    
+    <script>
+        let evo2Module = null;
+        let testResults = {};
+
+        async function initializeModule() {
+            try {
+                evo2Module = new Evo2CoreModule();
+                await evo2Module.initialize();
+                return true;
+            } catch (error) {
+                console.error('Failed to initialize Evo2 module:', error);
+                return false;
+            }
+        }
+
+        async function testModuleInit() {
+            const resultDiv = document.getElementById('init-result');
+            resultDiv.innerHTML = '⏳ Testing module initialization...';
+            
+            try {
+                const success = await initializeModule();
+                
+                if (success && evo2Module) {
+                    resultDiv.innerHTML = '<div class="success">PASS - <strong>Module Initialization: PASS</strong><br>• Evo2CoreModule loaded successfully<br>• Module initialized in simulation mode<br>• Ready for testing</div>';
+                    testResults.init = true;
+                } else {
+                    throw new Error('Module failed to initialize');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error">FAIL - <strong>Module Initialization: FAIL</strong><br>Error: ' + error.message + '</div>';
+                testResults.init = false;
+            }
+        }
+
+        async function testSequenceGeneration() {
+            const resultDiv = document.getElementById('generation-result');
+            resultDiv.innerHTML = '⏳ Testing sequence generation...';
+            
+            if (!evo2Module) await initializeModule();
+            
+            try {
+                const result = await evo2Module.generateSequence({
+                    prompt: 'ATGAAGTCG',
+                    maxTokens: 100,
+                    temperature: 1.0
+                });
+                
+                if (result.success && result.sequence) {
+                    resultDiv.innerHTML = '<div class="success">PASS - <strong>Sequence Generation: PASS</strong><br>• Generated sequence length: ' + result.sequence.length + ' bp<br>• Using simulation: ' + result.metadata.usingSimulation + '<br>• Model: ' + result.metadata.model + '<div class="code">Sequence: ' + result.sequence.substring(0, 60) + '...</div></div>';
+                    testResults.generation = true;
+                } else {
+                    throw new Error('Generation failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error">FAIL - <strong>Sequence Generation: FAIL</strong><br>Error: ' + error.message + '</div>';
+                testResults.generation = false;
+            }
+        }
+
+        async function runAllTests() {
+            const resultDiv = document.getElementById('all-results');
+            resultDiv.innerHTML = '⏳ Running comprehensive test suite...';
+            
+            if (!evo2Module) await initializeModule();
+            
+            let passed = 0;
+            let total = 0;
+            let output = '<h4>Test Results:</h4>';
+            
+            // Test all functions
+            const tests = [
+                { name: 'generateSequence', params: { prompt: 'ATGAAGTCG', maxTokens: 50 } },
+                { name: 'predictFunction', params: { sequence: 'ATGAAGTCGCGTACGTACGTACGTAG', analysisType: 'function' } },
+                { name: 'designCrispr', params: { targetSequence: 'ATGAAGTCGCGTACGTACGTACGTAG', casType: 'Cas9' } },
+                { name: 'optimizeSequence', params: { sequence: 'ATGAAGTCGCGTACGTACGTACGTAG', optimizationGoal: 'expression' } },
+                { name: 'analyzeEssentiality', params: { sequence: 'ATGAAGTCGCGTACGTACGTACGTAG', resolution: 'nucleotide' } }
+            ];
+            
+            for (const test of tests) {
+                total++;
+                try {
+                    const result = await evo2Module[test.name](test.params);
+                    if (result.success) {
+                        output += '<div class="success">PASS - ' + test.name + ': PASS</div>';
+                        passed++;
+                    } else {
+                        output += '<div class="error">FAIL - ' + test.name + ': FAIL - No success flag</div>';
+                    }
+                } catch (error) {
+                    output += '<div class="error">FAIL - ' + test.name + ': FAIL - ' + error.message + '</div>';
+                }
+            }
+            
+            output += '<br><strong>Overall: ' + passed + '/' + total + ' tests passed</strong>';
+            
+            if (passed === total) {
+                resultDiv.innerHTML = '<div class="success">' + output + '<br><br>SUCCESS - All tests passed! Evo2 refactoring is successful.</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="error">' + output + '</div>';
+            }
+        }
+
+        // Auto-run initialization test on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(testModuleInit, 1000);
+        });
+    </script>
+</body>
+</html>

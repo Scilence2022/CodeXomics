@@ -626,7 +626,7 @@
                                 <div class="mcp-server-info" id="mcpServerInfo">Server: localhost:3000</div>
                             </div>
                         </div>
-                        <button class="mcp-toggle-btn" onclick="toggleMCPConnection()" id="mcpToggleBtn">
+                        <button class="mcp-toggle-btn" onclick="toggleEvo2Connection()" id="mcpToggleBtn">
                             🔌 Connect
                         </button>
                     </div>
@@ -638,7 +638,7 @@
                         <div class="config-summary">
                             <div class="status-indicator status-unconfigured" id="compactConfigStatus"></div>
                             <div>
-                                <div style="font-weight: 600; font-size: 14px;" id="compactConfigText">API Not Configured</div>
+                                <div style="font-weight: 600; font-size: 14px;" id="compactConfigText">Evo2 Not Configured</div>
                                 <div style="font-size: 12px; color: #6c757d;" id="compactConfigDetail">Click to setup NVIDIA API</div>
                             </div>
                         </div>
@@ -871,17 +871,21 @@
         </div>
     </div>
 
+    <!-- Load Evo2 Core Module -->
+    <script src="evo2-core-module.js"></script>
+    
     <script>
         // Global variables
         let currentMode = 'generate';
         let analysisHistory = [];
+        let evo2Module = null;
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', async function() {
             await loadApiConfig();
             await loadAnalysisHistory();
             setupMenuEventListeners();
-            initializeMCPConnection();
+            await initializeEvo2Module();
         });
 
         // Setup menu event listeners
@@ -1200,6 +1204,19 @@
                 await updateCompactConfigDisplay();
                 updateModalConfigStatus();
                 
+                // Update Evo2 module configuration
+                if (evo2Module && apiKey) {
+                    const moduleConfig = {
+                        apiKey: apiKey,
+                        url: apiUrl,
+                        timeout: parseInt(timeout),
+                        maxRetries: parseInt(maxRetries),
+                        debugMode: debugMode
+                    };
+                    evo2Module.setApiConfig(moduleConfig);
+                    updateEvo2Status();
+                }
+                
                 showNotification('Configuration saved successfully!', 'success');
                 
                 // Auto-close modal after successful save
@@ -1437,44 +1454,55 @@
             }
         });
 
-        // MCP Connection Management
-        let mcpConnected = false;
-        let mcpConnectionAttempts = 0;
-
-        async function toggleMCPConnection() {
-            const toggleBtn = document.getElementById('mcpToggleBtn');
+        // Evo2 Module Management
+        async function initializeEvo2Module() {
+            try {
+                evo2Module = new Evo2CoreModule();
+                const apiConfig = getApiConfig();
+                await evo2Module.initialize(apiConfig);
+                
+                // Update status display
+                updateEvo2Status();
+                showNotification('Evo2 Module initialized successfully', 'success');
+                console.log('✅ Evo2 Core Module initialized');
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize Evo2 Module:', error);
+                showNotification('Failed to initialize Evo2 Module', 'error');
+            }
+        }
+        
+        function updateEvo2Status() {
             const statusIndicator = document.getElementById('mcpStatusIndicator');
             const statusText = document.getElementById('mcpStatusText');
+            const toggleBtn = document.getElementById('mcpToggleBtn');
+            const serverInfo = document.getElementById('mcpServerInfo');
             
-            if (mcpConnected) {
-                // Disconnect MCP
-                mcpConnected = false;
-                updateMCPStatus('disconnected', 'MCP Disconnected', '🔌 Connect');
-                showNotification('Disconnected from MCP Server', 'info');
-            } else {
-                // Attempt to connect to MCP
-                toggleBtn.textContent = '⏳ Connecting...';
+            if (evo2Module && evo2Module.apiConfig?.apiKey) {
+                statusIndicator.className = 'mcp-status-indicator mcp-status-connected';
+                statusText.textContent = 'Evo2 Ready';
+                toggleBtn.textContent = '✅ Configured';
                 toggleBtn.disabled = true;
-                statusIndicator.className = 'mcp-status-indicator mcp-status-connecting';
-                statusText.textContent = 'Connecting...';
-                
-                try {
-                    const connected = await attemptMCPConnection();
-                    if (connected) {
-                        mcpConnected = true;
-                        updateMCPStatus('connected', 'MCP Connected', '🔌 Disconnect');
-                        showNotification('Successfully connected to MCP Server', 'success');
-                    } else {
-                        updateMCPStatus('disconnected', 'Connection Failed', '🔌 Retry');
-                        showNotification('Failed to connect to MCP Server', 'error');
-                    }
-                } catch (error) {
-                    updateMCPStatus('disconnected', 'Connection Error', '🔌 Retry');
-                    showNotification(`MCP Connection Error: ${error.message}`, 'error');
-                }
-                
+                serverInfo.textContent = 'Direct API Mode';
+            } else {
+                statusIndicator.className = 'mcp-status-indicator mcp-status-disconnected';
+                statusText.textContent = 'Evo2 Simulation Mode';
+                toggleBtn.textContent = '⚙️ Configure';
                 toggleBtn.disabled = false;
+                serverInfo.textContent = 'API Key Required';
             }
+        }
+        
+        async function toggleEvo2Connection() {
+            openConfigModal();
+        }
+        
+        function checkEvo2Module() {
+            if (!evo2Module) {
+                showNotification('Evo2 Module not initialized', 'error');
+                return false;
+            }
+            return true;
         }
 
         async function attemptMCPConnection() {
@@ -1601,29 +1629,25 @@
 
         // Main analysis functions
         async function generateSequenceMain() {
-            if (!checkMCPConnection()) return;
+            if (!checkEvo2Module()) return;
             
             const prompt = document.getElementById('generatePrompt').value;
             const taxonomy = document.getElementById('taxonomy').value;
             const maxTokens = parseInt(document.getElementById('maxTokens').value);
             const temperature = parseFloat(document.getElementById('temperature').value);
             
-            // Get API configuration
-            const apiConfig = getApiConfig();
-            
             const params = {
                 prompt: prompt,
                 maxTokens: maxTokens,
                 temperature: temperature,
-                taxonomy: taxonomy || null,
-                apiConfig: apiConfig
+                taxonomy: taxonomy || null
             };
             
             await executeAnalysis('evo2_generate_sequence', params, 'Generating DNA sequence...');
         }
 
         async function predictFunctionMain() {
-            if (!checkMCPConnection()) return;
+            if (!checkEvo2Module()) return;
             
             const sequence = document.getElementById('predictSequence').value;
             const analysisType = document.getElementById('analysisType').value;
@@ -1634,21 +1658,17 @@
                 return;
             }
             
-            // Get API configuration
-            const apiConfig = getApiConfig();
-            
             const params = {
                 sequence: sequence,
                 analysisType: analysisType,
-                taxonomy: taxonomy || null,
-                apiConfig: apiConfig
+                taxonomy: taxonomy || null
             };
             
             await executeAnalysis('evo2_predict_function', params, 'Predicting function...');
         }
 
         async function designCrisprMain() {
-            if (!checkMCPConnection()) return;
+            if (!checkEvo2Module()) return;
             
             const targetSequence = document.getElementById('crisprTarget').value;
             const casType = document.getElementById('casType').value;
@@ -1659,21 +1679,17 @@
                 return;
             }
             
-            // Get API configuration
-            const apiConfig = getApiConfig();
-            
             const params = {
                 targetSequence: targetSequence,
                 casType: casType,
-                guideLength: guideLength,
-                apiConfig: apiConfig
+                guideLength: guideLength
             };
             
             await executeAnalysis('evo2_design_crispr', params, 'Designing CRISPR system...');
         }
 
         async function optimizeSequenceMain() {
-            if (!checkMCPConnection()) return;
+            if (!checkEvo2Module()) return;
             
             const sequence = document.getElementById('optimizeSequence').value;
             const optimizationGoal = document.getElementById('optimizationGoal').value;
@@ -1684,21 +1700,17 @@
                 return;
             }
             
-            // Get API configuration
-            const apiConfig = getApiConfig();
-            
             const params = {
                 sequence: sequence,
                 optimizationGoal: optimizationGoal,
-                targetOrganism: targetOrganism || null,
-                apiConfig: apiConfig
+                targetOrganism: targetOrganism || null
             };
             
             await executeAnalysis('evo2_optimize_sequence', params, 'Optimizing sequence...');
         }
 
         async function analyzeEssentialityMain() {
-            if (!checkMCPConnection()) return;
+            if (!checkEvo2Module()) return;
             
             const sequence = document.getElementById('essentialitySequence').value;
             const resolution = document.getElementById('resolution').value;
@@ -1709,14 +1721,10 @@
                 return;
             }
             
-            // Get API configuration
-            const apiConfig = getApiConfig();
-            
             const params = {
                 sequence: sequence,
                 resolution: resolution,
-                organism: organism || null,
-                apiConfig: apiConfig
+                organism: organism || null
             };
             
             await executeAnalysis('evo2_analyze_essentiality', params, 'Analyzing essentiality...');
@@ -1727,7 +1735,7 @@
             showLoading(loadingMessage);
             
             try {
-                const result = await callMCPTool(toolName, params);
+                const result = await callEvo2Tool(toolName, params);
                 
                 hideLoading();
                 displayResults(result, toolName);
@@ -1739,11 +1747,36 @@
                 
                 // Show appropriate error message
                 let errorMessage = `Analysis failed: ${error.message}`;
-                if (error.message.includes('not configured')) {
+                
+                // Check for specific API issues
+                if (error.message.includes('not configured') || error.message.includes('API key')) {
                     errorMessage += '\n\nPlease configure your NVIDIA API key first.';
                     setTimeout(() => {
                         openConfigModal();
                     }, 2000);
+                } else if (error.message.includes('404') || error.message.includes('Not Found')) {
+                    errorMessage = 'API endpoint not accessible. This could be due to:\n' +
+                                 '1. Evo2 model not available with your API key\n' +
+                                 '2. API requires NVIDIA\'s SDK instead of direct calls\n' +
+                                 '3. Model not available in your region\n\n' +
+                                 'The tool will use simulation mode for now. Check NVIDIA documentation for SDK integration.';
+                } else if (error.message.includes('401') || error.message.includes('Unauthorized') || error.message.includes('Authentication failed')) {
+                    errorMessage = 'Authentication failed. Please verify:\n' +
+                                 '1. Your NVIDIA API key is correct\n' +
+                                 '2. The key has access to Evo2 model\n' +
+                                 '3. Your account has sufficient credits';
+                    setTimeout(() => {
+                        openConfigModal();
+                    }, 2000);
+                } else if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
+                    errorMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+                } else if (error.message.includes('All NVIDIA API endpoints failed')) {
+                    errorMessage = 'Could not access NVIDIA Evo2 API. Possible causes:\n' +
+                                 '1. API requires proprietary SDK (@api/nim package)\n' +
+                                 '2. Network connectivity issues\n' +
+                                 '3. API service temporarily unavailable\n' +
+                                 '4. Evo2 model not available with your account\n\n' +
+                                 'Using simulation mode. Consider using NVIDIA\'s official SDK for production.';
                 }
                 
                 showNotification(errorMessage, 'error');
@@ -1751,45 +1784,43 @@
             }
         }
 
-        // MCP Tool calling
-        async function callMCPTool(toolName, parameters) {
-            // Debug logging
-            console.log('=== EVO2 FRONTEND: CALLING MCP TOOL ===');
-            console.log('Tool name:', toolName);
+        // Direct Evo2 tool calling
+        async function callEvo2Tool(toolName, parameters) {
+            console.log('🧬 Evo2: Direct tool call:', toolName);
             console.log('Parameters:', parameters);
-            console.log('API Config present:', !!parameters.apiConfig);
-            if (parameters.apiConfig) {
-                console.log('API Config details:', {
-                    hasKey: !!parameters.apiConfig.key,
-                    hasUrl: !!parameters.apiConfig.url,
-                    url: parameters.apiConfig.url
-                });
+            
+            if (!evo2Module) {
+                throw new Error('Evo2 module not initialized');
             }
             
-            const response = await fetch('http://localhost:3000/execute-tool', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    toolName: toolName,
-                    parameters: parameters,
-                    clientId: 'evo2-designer'
-                })
-            });
+            // Map tool names to module methods
+            const toolMethods = {
+                'evo2_generate_sequence': 'generateSequence',
+                'evo2_predict_function': 'predictFunction', 
+                'evo2_design_crispr': 'designCrispr',
+                'evo2_optimize_sequence': 'optimizeSequence',
+                'evo2_analyze_essentiality': 'analyzeEssentiality'
+            };
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            const methodName = toolMethods[toolName];
+            if (!methodName) {
+                throw new Error(`Unknown tool: ${toolName}`);
             }
             
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.error);
+            // Update API config if needed
+            const currentApiConfig = getApiConfig();
+            if (currentApiConfig && currentApiConfig.apiKey) {
+                evo2Module.setApiConfig(currentApiConfig);
             }
             
-            console.log('=== EVO2 FRONTEND: MCP TOOL CALL COMPLETE ===');
-            return data.result;
+            try {
+                const result = await evo2Module[methodName](parameters);
+                console.log('✅ Evo2 tool call completed:', methodName);
+                return result;
+            } catch (error) {
+                console.error('❌ Evo2 tool call failed:', error);
+                throw error;
+            }
         }
 
         // Results display

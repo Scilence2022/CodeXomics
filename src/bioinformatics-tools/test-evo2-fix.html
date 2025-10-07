@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Evo2 Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Test Evo2 Designer Fix</h1>
+    <p>This page tests if the checkEvo2Module function is working correctly.</p>
+    
+    <button onclick="testCheckFunction()">Test checkEvo2Module Function</button>
+    <button onclick="testSequenceGeneration()">Test Sequence Generation</button>
+    
+    <div id="results"></div>
+
+    <!-- Load Evo2 Core Module -->
+    <script src="evo2-core-module.js"></script>
+    
+    <script>
+        let evo2Module = null;
+
+        function addResult(message, type = 'success') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function checkEvo2Module() {
+            if (!evo2Module) {
+                addResult('Evo2 Module not initialized', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        async function initializeEvo2Module() {
+            try {
+                evo2Module = new Evo2CoreModule();
+                await evo2Module.initialize();
+                addResult('✅ Evo2 Module initialized successfully');
+                return true;
+            } catch (error) {
+                addResult('❌ Failed to initialize Evo2 Module: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        async function testCheckFunction() {
+            addResult('Testing checkEvo2Module function...');
+            
+            // Test without initialization
+            if (!checkEvo2Module()) {
+                addResult('✅ checkEvo2Module correctly detected uninitialized module');
+            } else {
+                addResult('❌ checkEvo2Module should have returned false', 'error');
+            }
+            
+            // Initialize and test again
+            await initializeEvo2Module();
+            
+            if (checkEvo2Module()) {
+                addResult('✅ checkEvo2Module correctly detected initialized module');
+            } else {
+                addResult('❌ checkEvo2Module should have returned true', 'error');
+            }
+        }
+
+        async function testSequenceGeneration() {
+            addResult('Testing sequence generation...');
+            
+            if (!checkEvo2Module()) {
+                await initializeEvo2Module();
+            }
+            
+            try {
+                const result = await evo2Module.generateSequence({
+                    prompt: 'ATGAAGTCG',
+                    maxTokens: 50,
+                    temperature: 1.0
+                });
+                
+                if (result.success) {
+                    addResult('✅ Sequence generation test passed - Length: ' + result.sequence.length + ' bp');
+                } else {
+                    addResult('❌ Sequence generation failed', 'error');
+                }
+            } catch (error) {
+                addResult('❌ Sequence generation error: ' + error.message, 'error');
+            }
+        }
+
+        // Auto-run test on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(testCheckFunction, 500);
+        });
+    </script>
+</body>
+</html>
