@@ -831,19 +831,9 @@ class ChatManager {
             } else {
                 console.log('🧬 [ChatManager] File dialog mode');
                 
-                // Check if we're in benchmark mode and avoid showing file dialogs
-                if (this.isBenchmarkMode()) {
-                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating file dialog instead of showing actual dialog');
-                    return {
-                        success: true,
-                        message: 'File dialog simulation - would open genome file selection dialog in normal mode',
-                        action: 'dialog_simulated',
-                        fileType: 'genome',
-                        tool: 'load_genome_file',
-                        timestamp: new Date().toISOString(),
-                        benchmark_mode: true
-                    };
-                }
+                // Note: Remove benchmark mode special handling for consistent behavior
+                // Tool should behave the same way in benchmark mode as in normal mode
+                // This ensures accurate benchmark testing and tool detection recording
                 
                 // Show file dialog for genome files
                 if (!this.app?.fileManager) {
@@ -851,6 +841,15 @@ class ChatManager {
                 }
                 
                 this.app.fileManager.openSpecificFileType('genome');
+                
+                // Enhanced logging for benchmark tool detection recording
+                console.log('📋 [ChatManager] TOOL EXECUTED: load_genome_file - File dialog opened', {
+                    tool_name: 'load_genome_file',
+                    parameters: parameters,
+                    action: 'dialog_opened',
+                    benchmark_mode: this.isBenchmarkMode(),
+                    timestamp: new Date().toISOString()
+                });
                 
                 return {
                     success: true,
@@ -917,19 +916,8 @@ class ChatManager {
                     fileType: 'annotation'
                 };
             } else {
-                // Check if we're in benchmark mode and avoid showing file dialogs
-                if (this.isBenchmarkMode()) {
-                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating annotation file dialog');
-                    return {
-                        success: true,
-                        message: 'File dialog simulation - would open annotation file selection dialog in normal mode',
-                        action: 'dialog_simulated',
-                        fileType: 'annotation',
-                        tool: 'load_annotation_file',
-                        timestamp: new Date().toISOString(),
-                        benchmark_mode: true
-                    };
-                }
+                // Note: Remove benchmark mode special handling for consistent behavior
+                // Tool should behave the same way in benchmark mode as in normal mode
                 
                 // Show file dialog for annotation files
                 if (!this.app?.fileManager) {
@@ -992,17 +980,7 @@ class ChatManager {
                     fileType: 'variant'
                 };
             } else {
-                // Check if we're in benchmark mode and avoid showing file dialogs
-                if (this.isBenchmarkMode()) {
-                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating variant file dialog');
-                    return {
-                        success: true,
-                        message: 'File dialog simulation - would open variant file selection dialog in normal mode',
-                        action: 'dialog_simulated',
-                        fileType: 'variant',
-                        benchmark_mode: true
-                    };
-                }
+                // Note: Remove benchmark mode special handling for consistent behavior
                 
                 // Show file dialog for variant files
                 if (!this.app?.fileManager) {
@@ -1065,19 +1043,7 @@ class ChatManager {
                     fileType: 'reads'
                 };
             } else {
-                // Check if we're in benchmark mode and avoid showing file dialogs
-                if (this.isBenchmarkMode()) {
-                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating reads file dialog');
-                    return {
-                        success: true,
-                        message: 'File dialog simulation - would open reads file selection dialog in normal mode',
-                        action: 'dialog_simulated',
-                        fileType: 'reads',
-                        tool: 'load_reads_file',
-                        timestamp: new Date().toISOString(),
-                        benchmark_mode: true
-                    };
-                }
+                // Note: Remove benchmark mode special handling for consistent behavior
                 
                 // Show file dialog for reads files
                 if (!this.app?.fileManager) {
@@ -1150,20 +1116,7 @@ class ChatManager {
                     count: pathsArray.length
                 };
             } else {
-                // Check if we're in benchmark mode and avoid showing file dialogs
-                if (this.isBenchmarkMode()) {
-                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating WIG tracks dialog');
-                    return {
-                        success: true,
-                        message: 'File dialog simulation - would open WIG tracks selection dialog in normal mode',
-                        action: 'dialog_simulated',
-                        fileType: 'wig',
-                        tool: 'load_wig_tracks',
-                        timestamp: new Date().toISOString(),
-                        benchmark_mode: true,
-                        multiple: multiple
-                    };
-                }
+                // Note: Remove benchmark mode special handling for consistent behavior
                 
                 // Show file dialog for WIG tracks
                 if (!this.app?.fileManager) {
@@ -1229,19 +1182,7 @@ class ChatManager {
                     format: format
                 };
             } else {
-                // Check if we're in benchmark mode and avoid showing file dialogs
-                if (this.isBenchmarkMode()) {
-                    console.warn('⚠️ [ChatManager] Benchmark mode detected - simulating operon file dialog');
-                    return {
-                        success: true,
-                        message: 'File dialog simulation - would open operon file selection dialog in normal mode',
-                        action: 'dialog_simulated',
-                        fileType: 'operon',
-                        tool: 'load_operon_file',
-                        timestamp: new Date().toISOString(),
-                        benchmark_mode: true
-                    };
-                }
+                // Note: Remove benchmark mode special handling for consistent behavior
                 
                 // Show file dialog for operon files
                 if (!this.app?.fileManager) {
