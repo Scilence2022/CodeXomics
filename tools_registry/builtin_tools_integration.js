@@ -69,6 +69,20 @@ class BuiltInToolsIntegration {
             priority: 1
         });
 
+        this.builtInToolsMap.set('open_new_tab', {
+            method: 'openNewTab',
+            category: 'navigation',
+            type: 'built-in',
+            priority: 1
+        });
+
+        this.builtInToolsMap.set('switch_to_tab', {
+            method: 'switchToTab',
+            category: 'navigation',
+            type: 'built-in',
+            priority: 1
+        });
+
         this.builtInToolsMap.set('get_current_state', {
             method: 'getCurrentState',
             category: 'navigation',
@@ -285,6 +299,26 @@ class BuiltInToolsIntegration {
             });
         }
 
+        // Check for tab management patterns
+        if (/\b(switch|change|activate|select|goto)\s+(tab|window)\b/i.test(query) || 
+            /\b(tab\s+(switch|change|activate|select))\b/i.test(query)) {
+            relevantTools.push({
+                name: 'switch_to_tab',
+                confidence: 0.85,
+                reason: 'Tab switching keywords detected'
+            });
+        }
+
+        // Check for new tab patterns
+        if (/\b(open|new|create)\s+(tab|window)\b/i.test(query) || 
+            /\b(new\s+tab)\b/i.test(query)) {
+            relevantTools.push({
+                name: 'open_new_tab',
+                confidence: 0.85,
+                reason: 'New tab keywords detected'
+            });
+        }
+
         // Check for sequence analysis patterns
         if (/\b(sequence|gc|content|analyze)\b/i.test(query)) {
             relevantTools.push({
@@ -358,9 +392,14 @@ ${fileLoadingTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} to
 - Use load_wig_tracks for track files (.wig, .bigwig, .bedgraph)
 - Use load_operon_file for operon/regulatory files (.json, .csv, .txt)
 
-## 🧭 Built-in Navigation Tools
+## 🧭 Built-in Navigation & Tab Management Tools
 
 ${navigationTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+
+**Tab Management Instructions:**
+- Use open_new_tab to create new analysis tabs for parallel workflows
+- Use switch_to_tab to navigate between existing tabs by ID, name, or index
+- Use navigate_to_position to move within the current tab to specific genomic locations
 
 ## 🧬 Built-in Sequence Analysis Tools
 

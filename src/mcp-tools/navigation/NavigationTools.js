@@ -43,6 +43,25 @@ class NavigationTools {
                 }
             },
 
+            switch_to_tab: {
+                name: 'switch_to_tab', 
+                description: 'Switch to a specific tab by ID, name, or index. Use this to navigate between different analysis tabs.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        tab_id: { type: 'string', description: 'Specific tab ID to switch to (e.g. "tab1", "tab2")' },
+                        tab_name: { type: 'string', description: 'Tab name/title to search for and switch to' },
+                        tab_index: { type: 'number', description: 'Tab index (0-based) to switch to', minimum: 0 },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    anyOf: [
+                        { required: ['tab_id'] },
+                        { required: ['tab_name'] },
+                        { required: ['tab_index'] }
+                    ]
+                }
+            },
+
             search_features: {
                 name: 'search_features',
                 description: 'Search for genomic features',

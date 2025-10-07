@@ -1,0 +1,118 @@
+name: "switch_to_tab"
+description: "Switch to a specific tab in the browser interface by tab ID, name, or index position"
+version: "1.0.0"
+author: "Genome AI Studio"
+category: "navigation"
+intent: "tab_navigation"
+priority: 1
+keywords: ["switch", "tab", "navigate", "goto", "select", "activate", "change"]
+aliases: ["goto_tab", "select_tab", "activate_tab", "change_tab"]
+enabled: true
+
+parameters:
+  anyOf:
+    - required: ["tab_id"]
+    - required: ["tab_name"] 
+    - required: ["tab_index"]
+  properties:
+    tab_id:
+      type: "string"
+      description: "The unique identifier of the tab to switch to"
+      example: "tab_12345"
+    tab_name:
+      type: "string"
+      description: "The name/title of the tab to switch to (supports partial matching)"
+      example: "Genome Browser"
+    tab_index:
+      type: "integer"
+      description: "The zero-based index position of the tab to switch to"
+      minimum: 0
+      example: 1
+    clientId:
+      type: "string"
+      description: "Optional client identifier for the request"
+      example: "browser_client_001"
+
+responses:
+  success:
+    type: "object"
+    properties:
+      success:
+        type: "boolean"
+        example: true
+      message:
+        type: "string"
+        example: "Successfully switched to tab"
+      tab_id:
+        type: "string"
+        example: "tab_12345"
+      tab_title:
+        type: "string"
+        example: "Genome Browser"
+  error:
+    type: "object"
+    properties:
+      success:
+        type: "boolean"
+        example: false
+      error:
+        type: "string"
+        example: "Tab not found"
+
+usage_examples:
+  - description: "Switch to tab by ID"
+    input:
+      tab_id: "tab_12345"
+    expected_output:
+      success: true
+      message: "Successfully switched to tab"
+      tab_id: "tab_12345"
+      tab_title: "Genome Browser"
+  
+  - description: "Switch to tab by name"
+    input:
+      tab_name: "Genome Browser"
+    expected_output:
+      success: true
+      message: "Successfully switched to tab"
+      tab_id: "tab_12345"
+      tab_title: "Genome Browser"
+  
+  - description: "Switch to tab by index"
+    input:
+      tab_index: 1
+    expected_output:
+      success: true
+      message: "Successfully switched to tab"
+      tab_id: "tab_67890"
+      tab_title: "Data Analysis"
+
+error_handling:
+  - condition: "Tab ID not found"
+    response:
+      success: false
+      error: "Tab with ID 'tab_12345' not found"
+  
+  - condition: "Tab name not found"
+    response:
+      success: false
+      error: "No tab found matching name 'Unknown Tab'"
+  
+  - condition: "Tab index out of range"
+    response:
+      success: false
+      error: "Tab index 5 is out of range (0-2)"
+  
+  - condition: "No parameters provided"
+    response:
+      success: false
+      error: "At least one parameter (tab_id, tab_name, or tab_index) must be provided"
+
+integration:
+  mcp_tools: true
+  dynamic_registry: true
+  builtin_tools: true
+  
+compatibility:
+  min_version: "1.0.0"
+  platforms: ["desktop", "web"]

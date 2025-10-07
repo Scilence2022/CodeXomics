@@ -4954,6 +4954,20 @@ class ActionManager {
                         title: { type: 'string', description: 'Custom title for the new tab (optional)' }
                     }
                 }
+            },
+
+            // Switch to tab function - ADDED FOR AI INTEGRATION  
+            switchToTab: {
+                name: 'switchToTab',
+                description: 'Switch to a specific tab by ID, name, or index',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        tab_id: { type: 'string', description: 'Specific tab ID to switch to' },
+                        tab_name: { type: 'string', description: 'Tab name/title to search for and switch to' },
+                        tab_index: { type: 'number', description: 'Tab index (0-based) to switch to' }
+                    }
+                }
             }
         };
     }
@@ -5001,6 +5015,9 @@ class ActionManager {
 
                 case 'openNewTab':
                     return await this.functionOpenNewTab(parameters);
+                    
+                case 'switchToTab':
+                    return await this.functionSwitchToTab(parameters);
 
                 default:
                     throw new Error(`Unknown action function: ${functionName}`);
@@ -5543,6 +5560,249 @@ class ActionManager {
             console.error('❌ [ActionManager] Error opening new tab:', error);
             console.error('❌ [ActionManager] Error stack:', error.stack);
             console.log('🔧 [ActionManager] ===== FUNCTION OPEN NEW TAB ERROR =====');
+            throw error;
+        }
+    }
+
+    /**
+     * Switch to a specific tab by ID, name, or index
+     * @param {Object} params - Switch parameters
+     * @param {string} params.tab_id - Specific tab ID to switch to
+     * @param {string} params.tab_name - Tab name/title to search for (partial matching)
+     * @param {number} params.tab_index - Zero-based index of tab to switch to
+     * @param {string} params.clientId - Optional client identifier
+     * @returns {Object} Switch result
+     */
+    async functionSwitchToTab(params) {
+        console.log('🔧 [ActionManager] ===== FUNCTION SWITCH TO TAB START =====');
+        console.log('🔧 [ActionManager] Received params:', params);
+        console.log('🔧 [ActionManager] Params type:', typeof params);
+        console.log('🔧 [ActionManager] Params keys:', Object.keys(params || {}));
+        
+        const { tab_id, tab_name, tab_index, clientId } = params || {};
+        
+        console.log('🔧 [ActionManager] Destructured params:');
+        console.log('  - tab_id:', tab_id);
+        console.log('  - tab_name:', tab_name);
+        console.log('  - tab_index:', tab_index);
+        console.log('  - clientId:', clientId);
+        
+        try {
+            // Check if genome browser and tab manager are available
+            console.log('🔧 [ActionManager] Checking genome browser availability...');
+            console.log('🔧 [ActionManager] this.genomeBrowser available:', !!this.genomeBrowser);
+            
+            if (!this.genomeBrowser) {
+                throw new Error('Genome browser not available');
+            }
+
+            console.log('🔧 [ActionManager] Checking tab manager availability...');
+            console.log('🔧 [ActionManager] this.genomeBrowser.tabManager available:', !!this.genomeBrowser.tabManager);
+
+            if (!this.genomeBrowser.tabManager) {
+                throw new Error('Tab manager not available');
+            }
+
+            let targetTabId = null;
+            let targetTabTitle = null;
+            const tabEntries = Array.from(this.genomeBrowser.tabManager.tabs.entries());
+            
+            console.log('🔧 [ActionManager] Current tabs count:', tabEntries.length);
+            console.log('🔧 [ActionManager] Available tab IDs:', tabEntries.map(([id]) => id));
+            
+            // Strategy 1: Switch by specific tab ID
+            if (tab_id) {
+                console.log(`🔧 [ActionManager] Strategy 1: Searching for tab by ID: ${tab_id}`);
+                if (this.genomeBrowser.tabManager.tabs.has(tab_id)) {
+                    targetTabId = tab_id;
+                    const tabState = this.genomeBrowser.tabManager.tabs.get(tab_id);
+                    targetTabTitle = tabState.title || `Tab ${tab_id}`;
+                    console.log(`🎯 [ActionManager] Found tab by ID: ${tab_id} - ${targetTabTitle}`);
+                } else {
+                    throw new Error(`Tab with ID '${tab_id}' not found`);
+                }
+            }
+            // Strategy 2: Switch by tab name/title (case-insensitive partial matching)
+            else if (tab_name) {
+                console.log(`🔧 [ActionManager] Strategy 2: Searching for tab by name: ${tab_name}`);
+                const foundTab = tabEntries.find(([tabId, tabState]) => {
+                    if (tabState.title) {
+                        const matches = tabState.title.toLowerCase().includes(tab_name.toLowerCase());
+                        console.log(`🔍 [ActionManager] Checking tab "${tabState.title}" against "${tab_name}": ${matches}`);
+                        return matches;
+                    }
+                    return false;
+                });
+                
+                if (foundTab) {
+                    targetTabId = foundTab[0];
+                    targetTabTitle = foundTab[1].title;
+                    console.log(`🎯 [ActionManager] Found tab by name '${tab_name}': ${targetTabId} - ${targetTabTitle}`);
+                } else {
+                    throw new Error(`No tab found matching name '${tab_name}'`);
+                }
+            }
+            // Strategy 3: Switch by tab index (zero-based)
+            else if (tab_index !== undefined) {
+                console.log(`🔧 [ActionManager] Strategy 3: Searching for tab by index: ${tab_index}`);
+                const tabIds = Array.from(this.genomeBrowser.tabManager.tabs.keys());
+                console.log(`🔧 [ActionManager] Available tab indices: 0-${tabIds.length - 1}`);
+                
+                if (tab_index >= 0 && tab_index < tabIds.length) {
+                    targetTabId = tabIds[tab_index];
+                    const tabState = this.genomeBrowser.tabManager.tabs.get(targetTabId);
+                    targetTabTitle = tabState.title || `Tab ${targetTabId}`;
+                    console.log(`🎯 [ActionManager] Found tab by index ${tab_index}: ${targetTabId} - ${targetTabTitle}`);
+                } else {
+                    throw new Error(`Tab index ${tab_index} is out of range (0-${tabIds.length - 1})`);
+                }
+            }
+            else {
+                throw new Error('At least one parameter (tab_id, tab_name, or tab_index) must be provided');
+            }
+            
+            // Perform the tab switch
+            if (targetTabId) {
+                console.log(`🔧 [ActionManager] Attempting to switch to tab: ${targetTabId}`);
+                
+                // Use the TabManager's switchTab method
+                this.genomeBrowser.tabManager.switchTab(targetTabId);
+                
+                console.log(`✅ [ActionManager] Successfully switched to tab: ${targetTabId} - ${targetTabTitle}`);
+                console.log('🔧 [ActionManager] ===== FUNCTION SWITCH TO TAB END =====');
+                
+                return {
+                    success: true,
+                    tab_id: targetTabId,
+                    tab_title: targetTabTitle,
+                    message: `Successfully switched to tab: ${targetTabTitle}`,
+                    clientId: clientId
+                };
+            } else {
+                throw new Error('Failed to identify target tab');
+            }
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error switching tab:', error);
+            console.error('❌ [ActionManager] Error stack:', error.stack);
+            console.log('🔧 [ActionManager] ===== FUNCTION SWITCH TO TAB ERROR =====');
+            
+            return {
+                success: false,
+                error: error.message,
+                clientId: clientId
+            };
+        }
+    }
+
+    /**
+     * Switch to tab function for AI integration
+     */
+    async functionSwitchToTab(params) {
+        console.log('🔧 [ActionManager] ===== FUNCTION SWITCH TO TAB START =====');
+        console.log('🔧 [ActionManager] Received params:', params);
+        console.log('🔧 [ActionManager] Params type:', typeof params);
+        console.log('🔧 [ActionManager] Params keys:', Object.keys(params || {}));
+        
+        const { tab_id, tab_name, tab_index } = params || {};
+        
+        console.log('🔧 [ActionManager] Destructured params:');
+        console.log('  - tab_id:', tab_id);
+        console.log('  - tab_name:', tab_name);
+        console.log('  - tab_index:', tab_index);
+        
+        try {
+            // Check if genome browser and tab manager are available
+            console.log('🔧 [ActionManager] Checking genome browser availability...');
+            console.log('🔧 [ActionManager] this.genomeBrowser available:', !!this.genomeBrowser);
+            
+            if (!this.genomeBrowser) {
+                throw new Error('Genome browser not available');
+            }
+
+            console.log('🔧 [ActionManager] Checking tab manager availability...');
+            console.log('🔧 [ActionManager] this.genomeBrowser.tabManager available:', !!this.genomeBrowser.tabManager);
+            
+            if (!this.genomeBrowser.tabManager) {
+                throw new Error('Tab manager not available - check TabManager initialization');
+            }
+            
+            // Get current active tab for reference
+            const previousTabId = this.genomeBrowser.tabManager.activeTabId;
+            let targetTabId = null;
+            let targetTabTitle = null;
+            
+            console.log('🔧 [ActionManager] Current active tab:', previousTabId);
+            console.log('🔧 [ActionManager] Available tabs:', Array.from(this.genomeBrowser.tabManager.tabs.keys()));
+            
+            // Strategy 1: Switch by specific tab ID
+            if (tab_id) {
+                console.log('🔧 [ActionManager] Switching by tab ID:', tab_id);
+                if (this.genomeBrowser.tabManager.tabs.has(tab_id)) {
+                    targetTabId = tab_id;
+                    const tabState = this.genomeBrowser.tabManager.tabStates.get(tab_id);
+                    targetTabTitle = tabState?.title || 'Unknown';
+                    console.log('🔧 [ActionManager] Found tab by ID:', targetTabId, 'with title:', targetTabTitle);
+                } else {
+                    throw new Error(`Tab with ID '${tab_id}' not found`);
+                }
+            }
+            // Strategy 2: Switch by tab name/title
+            else if (tab_name) {
+                console.log('🔧 [ActionManager] Switching by tab name:', tab_name);
+                const tabEntries = Array.from(this.genomeBrowser.tabManager.tabStates.entries());
+                console.log('🔧 [ActionManager] Available tab states:', tabEntries.map(([id, state]) => ({id, title: state.title})));
+                
+                const foundTab = tabEntries.find(([tabId, tabState]) => 
+                    tabState.title && tabState.title.toLowerCase().includes(tab_name.toLowerCase())
+                );
+                
+                if (foundTab) {
+                    targetTabId = foundTab[0];
+                    targetTabTitle = foundTab[1].title;
+                    console.log('🔧 [ActionManager] Found tab by name:', targetTabId, 'with title:', targetTabTitle);
+                } else {
+                    throw new Error(`Tab with name containing '${tab_name}' not found`);
+                }
+            }
+            // Strategy 3: Switch by tab index
+            else if (tab_index !== undefined) {
+                console.log('🔧 [ActionManager] Switching by tab index:', tab_index);
+                const tabIds = Array.from(this.genomeBrowser.tabManager.tabs.keys());
+                console.log('🔧 [ActionManager] Available tab IDs:', tabIds);
+                
+                if (tab_index >= 0 && tab_index < tabIds.length) {
+                    targetTabId = tabIds[tab_index];
+                    const tabState = this.genomeBrowser.tabManager.tabStates.get(targetTabId);
+                    targetTabTitle = tabState?.title || 'Unknown';
+                    console.log('🔧 [ActionManager] Found tab by index:', targetTabId, 'with title:', targetTabTitle);
+                } else {
+                    throw new Error(`Tab index ${tab_index} is out of range (0-${tabIds.length - 1})`);
+                }
+            }
+            else {
+                throw new Error('Must provide either tab_id, tab_name, or tab_index');
+            }
+            
+            // Perform the tab switch
+            console.log('🔧 [ActionManager] Switching to tab:', targetTabId);
+            this.genomeBrowser.tabManager.switchToTab(targetTabId);
+            
+            console.log(`✅ [ActionManager] Successfully switched to tab: ${targetTabId} - ${targetTabTitle}`);
+            console.log('🔧 [ActionManager] ===== FUNCTION SWITCH TO TAB END =====');
+            
+            return {
+                success: true,
+                tab_id: targetTabId,
+                tab_title: targetTabTitle,
+                previous_tab_id: previousTabId,
+                message: `Switched to tab: ${targetTabTitle}`
+            };
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error switching tab:', error);
+            console.error('❌ [ActionManager] Error stack:', error.stack);
+            console.log('🔧 [ActionManager] ===== FUNCTION SWITCH TO TAB ERROR =====');
             throw error;
         }
     }

@@ -482,7 +482,10 @@ class ToolsRegistryManager {
                 'fasta', 'genbank', 'gff', 'bed', 'protein', 'sequences', 'annotations'
             ],
             navigation: [
-                'navigate', 'position', 'location', 'jump', 'go', 'go to', 'navigate to', 'coordinates'
+                'navigate', 'position', 'location', 'jump', 'go', 'go to', 'navigate to', 'coordinates',
+                'open', 'new', 'tab', 'window', 'browser', 'switch', 'switch to', 'change',
+                'activate', 'select', 'goto', 'change tab', 'select tab', 'switch tab',
+                'tab switching', 'tab navigation', 'tab management'
             ],
             zoom: [
                 'zoom', 'zoom in', 'zoom out', 'magnify', 'scale', 'focus', 'enlarge', 'reduce', 'view', 'detail', 'context'

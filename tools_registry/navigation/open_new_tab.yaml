@@ -3,6 +3,7 @@ version: 1.0.0
 description: "Open a new browser tab for parallel genome analysis. Use this to compare different genomic regions or analyze multiple locations simultaneously."
 category: navigation
 keywords:
+  - open
   - new
   - tab
   - window
@@ -10,7 +11,9 @@ keywords:
   - analysis
   - compare
   - multiple
-priority: 3
+  - browser
+  - create
+priority: 2
 execution:
   type: client
   timeout: 15000
