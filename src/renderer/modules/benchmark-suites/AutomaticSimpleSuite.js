@@ -982,11 +982,12 @@ class AutomaticSimpleSuite {
     }
 
     /**
-     * Song's new Export evaluation criteria:
-     * 1) Tool call correct: +3 points
-     * 2) Tool execution success: +1 point  
-     * 3) Target file exists: +1 point
-     * Total: 5 points max, 4+ points = pass
+     * Song's NEW Export evaluation criteria (Updated):
+     * PRIMARY: If target file exists → Full score (5 points) - file export successful
+     * FALLBACK: If file doesn't exist → 2-criteria scoring:
+     *   1) Tool call correct: +3 points
+     *   2) Tool execution success: +1 point
+     * Pass threshold: 4+ points (achievable only with correct tool + success, or file exists)
      */
     async evaluateExportCall(actualResult, expectedResult, testResult) {
         const evaluation = {
@@ -997,7 +998,7 @@ class AutomaticSimpleSuite {
             warnings: []
         };
         
-        console.log('📊 [evaluateExportCall] Starting Song\'s new 3-criteria evaluation:', {
+        console.log('📊 [evaluateExportCall] Starting Song\'s NEW file-priority evaluation:', {
             testId: testResult.id,
             expectedTool: expectedResult.tool_name,
             actualResult: actualResult
@@ -1007,6 +1008,20 @@ class AutomaticSimpleSuite {
             evaluation.errors.push('No result obtained from test execution');
             return evaluation;
         }
+        
+        // PRIORITY CHECK: Target file exists → FULL SCORE (5 points)
+        const fileExists = this.checkTargetFileExists(actualResult, expectedResult);
+        if (fileExists) {
+            evaluation.score = 5; // FULL SCORE - file export successful
+            evaluation.success = true;
+            console.log(`🎯 [FILE EXISTS] Target file found - FULL SCORE awarded (5/5 points)`);
+            console.log(`✅ [evaluateExportCall] Export successful - file created successfully`);
+            return evaluation;
+        }
+        
+        console.log(`⚠️ [FILE NOT EXISTS] Target file not found - using fallback 2-criteria scoring`);
+        
+        // FALLBACK CRITERIA: File doesn't exist - use 2-criteria scoring
         
         // CRITERION 1: Tool call correct (+3 points)
         const actualTool = Array.isArray(actualResult) 
@@ -1030,28 +1045,21 @@ class AutomaticSimpleSuite {
             console.log(`❌ [Criterion 2] No tool execution success signal (+0 points)`);
         }
         
-        // CRITERION 3: Target file exists (+1 point)
-        const fileExists = this.checkTargetFileExists(actualResult, expectedResult);
-        if (fileExists) {
-            evaluation.score += 1;
-            console.log(`✅ [Criterion 3] Target file exists (+1 point)`);
-        } else {
-            console.log(`❌ [Criterion 3] Target file not found or not verified (+0 points)`);
-        }
-        
-        // FINAL EVALUATION: 4+ points = pass
+        // FINAL EVALUATION: 4+ points = pass (only achievable with correct tool + success)
         evaluation.success = evaluation.score >= 4;
         
-        console.log(`📈 [evaluateExportCall] Final Song's evaluation:`, {
+        console.log(`📈 [evaluateExportCall] Final Song's NEW evaluation:`, {
             score: evaluation.score,
             maxScore: evaluation.maxScore,
             success: evaluation.success,
             status: evaluation.success ? 'PASS' : 'FAIL',
+            fileExists: fileExists,
             criteria: {
+                fileExists: fileExists,
                 toolCorrect: actualTool === expectedResult.tool_name,
-                executionSuccess: hasSuccessSignal,
-                fileExists: fileExists
-            }
+                executionSuccess: hasSuccessSignal
+            },
+            evaluationMethod: fileExists ? 'FILE_EXISTS_FULL_SCORE' : 'FALLBACK_2_CRITERIA'
         });
         
         return evaluation;
