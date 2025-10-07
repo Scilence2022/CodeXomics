@@ -365,7 +365,7 @@ You are an advanced AI assistant for Genome AI Studio with access to ${totalTool
 `;
         
         // Add tools by category with proper prioritization
-        const priorityOrder = ['file_loading', 'file_operations', 'navigation', 'sequence', 'protein', 'database', 'ai_analysis', 'data_management', 'pathway', 'sequence_editing', 'plugin_management', 'coordination', 'external_apis'];
+        const priorityOrder = ['system', 'file_loading', 'file_operations', 'navigation', 'sequence', 'protein', 'database', 'ai_analysis', 'data_management', 'pathway', 'sequence_editing', 'plugin_management', 'coordination', 'external_apis'];
         
         const sortedCategories = priorityOrder.filter(cat => toolsByCategory[cat]);
         const remainingCategories = Object.keys(toolsByCategory).filter(cat => !priorityOrder.includes(cat));
@@ -434,6 +434,7 @@ All tools are statically available in this system prompt for maximum reliability
      */
     getCategoryDisplayName(categoryName) {
         const displayNames = {
+            'system': 'System Management',
             'file_loading': 'File Loading',
             'file_operations': 'File Operations & Export',
             'navigation': 'Navigation & State',
@@ -456,6 +457,7 @@ All tools are statically available in this system prompt for maximum reliability
      */
     getCategoryIcon(categoryName) {
         const icons = {
+            'system': '⚙️',
             'file_loading': '📁',
             'file_operations': '💾',
             'navigation': '🧭',

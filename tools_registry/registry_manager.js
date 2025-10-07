@@ -264,6 +264,12 @@ class ToolsRegistryManager {
                 'import genome', 'import annotation', 'import variant', 'import reads',
                 'open genome', 'open annotation', 'open variant', 'open reads'
             ],
+            system: [
+                'set', 'change', 'working directory', 'current directory', 'working dir', 'current dir',
+                'directory', 'folder', 'path', 'cd', 'change directory', 'set directory',
+                'set working directory', 'change working directory', 'working', 'current',
+                'set working', 'change working', 'set current', 'change current'
+            ],
             file_operations: [
                 'export', 'save', 'download', 'write', 'output', 'extract', 'convert',
                 'export file', 'save file', 'download file', 'export data', 'save data',
@@ -476,6 +482,11 @@ class ToolsRegistryManager {
             file_loading: [
                 'load', 'open', 'import', 'read', 'file', 'genome', 'annotation', 'variant',
                 'reads', 'wig', 'operon', 'fasta', 'genbank', 'gff', 'bed', 'vcf', 'sam', 'bam'
+            ],
+            system: [
+                'set', 'change', 'working', 'directory', 'folder', 'path', 'cd', 'current',
+                'working directory', 'current directory', 'set directory', 'change directory',
+                'set working directory', 'change working directory'
             ],
             file_operations: [
                 'export', 'save', 'download', 'write', 'output', 'extract', 'convert',

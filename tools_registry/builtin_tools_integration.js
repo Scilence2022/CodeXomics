@@ -225,6 +225,17 @@ class BuiltInToolsIntegration {
         const patterns = this.getFileLoadingIntentPatterns();
         const relevantTools = [];
 
+        // Check for system management patterns (working directory, etc.)
+        if (/\b(set|change|working|directory|folder|path|cd|current)\b/i.test(query) &&
+            (/\b(working\s+directory|current\s+directory|set\s+directory|change\s+directory)\b/i.test(query) ||
+             /\b(working\s+dir|current\s+dir|set\s+working|change\s+working)\b/i.test(query))) {
+            relevantTools.push({
+                name: 'set_working_directory',
+                confidence: 0.9,
+                reason: 'Working directory management keywords detected'
+            });
+        }
+
         // Check for file loading patterns
         for (const [patternName, regex] of Object.entries(patterns)) {
             if (regex.test(query)) {
