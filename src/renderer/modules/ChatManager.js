@@ -1221,9 +1221,11 @@ class ChatManager {
      * @returns {Object} Set directory result
      */
     async setWorkingDirectory(parameters = {}) {
-        const { directory_path, use_home_directory = false, create_if_missing = false, validate_permissions = true } = parameters;
+        // Support both parameter names for compatibility
+        const directory_path = parameters.directory_path || parameters.working_directory;
+        const { use_home_directory = false, create_if_missing = false, validate_permissions = true } = parameters;
         
-        console.log('📁 [ChatManager] Setting working directory:', { directory_path, use_home_directory, create_if_missing, validate_permissions });
+        console.log('📁 [ChatManager] Setting working directory:', { directory_path, working_directory: parameters.working_directory, use_home_directory, create_if_missing, validate_permissions });
         
         try {
             let targetPath;
@@ -3164,6 +3166,12 @@ class ChatManager {
             sequenceLength: this.app.sequenceLength || 0,
             annotationsCount: (this.app.currentAnnotations || []).length,
             userDefinedFeaturesCount: Object.keys(this.app.userDefinedFeatures || {}).length,
+            
+            // Enhanced: Add working directory information
+            workingDirectory: {
+                current: this.getCurrentWorkingDirectory(),
+                timestamp: new Date().toISOString()
+            },
             
             // Enhanced: Add selected gene information
             selectedGene: this.app.selectedGene ? {
@@ -8938,6 +8946,15 @@ ${this.getPluginSystemInfo()}`;
                     break;
                     
                 case 'load_reads_file':
+                    console.log('🧪 [ChatManager] FIXED: Executing load_reads_file via executeToolByName');
+                    result = await this.loadReadsFile(parameters);
+                    break;
+                    
+                // System Management Tools (Built-in) - CRITICAL FIX FOR set_working_directory
+                case 'set_working_directory':
+                    console.log('📁 [ChatManager] FIXED: Executing set_working_directory via executeToolByName');
+                    result = await this.setWorkingDirectory(parameters);
+                    break;
                     console.log('📖 [ChatManager] FIXED: Executing load_reads_file via executeToolByName');
                     result = await this.loadReadsFile(parameters);
                     break;
