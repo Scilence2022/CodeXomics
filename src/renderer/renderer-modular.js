@@ -409,7 +409,22 @@ class GenomeBrowser {
             this.globalDraggingEnabled = true; // Default to true when initialization fails
         }
         
-        // Step 5.7: Initialize Visualization Tools Manager
+        // Step 5.7: Initialize External Tools Manager
+        console.log('🔧 About to initialize ExternalToolsManager...');
+        try {
+            this.externalToolsManager = new ExternalToolsManager(this);
+            this.externalToolsManager.init().then(() => {
+                console.log('✅ ExternalToolsManager initialized successfully');
+            }).catch((error) => {
+                console.error('❌ Error initializing ExternalToolsManager:', error);
+            });
+            
+            window.externalToolsManager = this.externalToolsManager; // Make globally available
+        } catch (error) {
+            console.error('❌ Error initializing ExternalToolsManager:', error);
+        }
+        
+        // Step 5.8: Initialize Visualization Tools Manager
         try {
             this.initializeVisualizationToolsManager();
             console.log('✅ VisualizationToolsManager initialized successfully');
@@ -998,6 +1013,28 @@ class GenomeBrowser {
             console.log('✅ [GeneralSettings] Modal shown');
         } else {
             console.error('❌ [GeneralSettings] General Settings modal not found');
+        }
+    }
+
+    showExternalToolsModal() {
+        if (this.externalToolsManager) {
+            console.log('🔄 [ExternalTools] Showing external tools configuration modal...');
+            this.externalToolsManager.showConfigurationModal();
+        } else {
+            console.error('❌ [ExternalTools] ExternalToolsManager not available');
+            // Try to create it on-demand
+            try {
+                this.externalToolsManager = new ExternalToolsManager(this);
+                window.externalToolsManager = this.externalToolsManager;
+                this.externalToolsManager.init().then(() => {
+                    console.log('✅ [ExternalTools] ExternalToolsManager initialized successfully');
+                    this.externalToolsManager.showConfigurationModal();
+                }).catch(error => {
+                    console.error('❌ [ExternalTools] Error initializing ExternalToolsManager:', error);
+                });
+            } catch (error) {
+                console.error('❌ [ExternalTools] Failed to create ExternalToolsManager:', error);
+            }
         }
     }
 
@@ -2625,6 +2662,10 @@ class GenomeBrowser {
             if (configureLLMBtn) {
                 configureLLMBtn.click();
             }
+        });
+
+        ipcRenderer.on('configure-external-tools', () => {
+            this.showExternalToolsModal();
         });
 
         ipcRenderer.on('configure-search', () => {

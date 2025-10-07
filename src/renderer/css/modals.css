@@ -376,6 +376,101 @@
     opacity: 0.9;
 }
 
+/* External Tools Modal Specific Styles */
+.custom-tool-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 15px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.custom-tool-item .form-group {
+    margin-bottom: 10px;
+}
+
+.custom-tool-item .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.custom-tool-item .tool-remove-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s ease;
+}
+
+.custom-tool-item .tool-remove-btn:hover {
+    background: #c82333;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.help-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    display: block;
+}
+
+#customToolsList {
+    margin-bottom: 15px;
+}
+
+#customToolsList:empty::before {
+    content: "No custom tools configured yet.";
+    color: var(--text-secondary);
+    font-style: italic;
+    display: block;
+    text-align: center;
+    padding: 20px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+/* External Tools Modal Responsive Design */
+@media (max-width: 768px) {
+    #externalToolsModal .modal-content {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        min-width: 320px !important;
+    }
+    
+    .custom-tool-item {
+        padding: 10px;
+    }
+    
+    .custom-tool-item .tool-remove-btn {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin-top: 10px;
+        width: 100%;
+        border-radius: var(--radius-md);
+    }
+}
+
 .supported-formats {
     margin-top: 20px;
     font-size: 0.9rem;

@@ -3113,6 +3113,70 @@ Supported formats:
         </div>
     </div>
 
+    <!-- External Tools Configuration Modal -->
+    <div id="externalToolsModal" class="modal">
+        <div class="modal-content resizable" style="max-width: none; width: 800px; min-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-external-link-alt"></i> Configure External Tools</h3>
+                <div class="modal-controls">
+                    <button class="reset-position-btn" title="Reset Position">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    <button class="reset-defaults-btn" title="Reset to Defaults">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="modal-close">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- Built-in External Tools -->
+                <div class="settings-section">
+                    <h4><i class="fas fa-tools"></i> Built-in External Tools</h4>
+                    <div class="form-group">
+                        <label for="extToolDeepGeneUrl">Deep Gene Research URL:</label>
+                        <input type="url" id="extToolDeepGeneUrl" value="http://localhost:3000/" class="input-full">
+                        <small class="help-text">URL for the Deep Gene Research web interface</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="extToolChopchopUrl">CHOPCHOP CRISPR Toolbox URL:</label>
+                        <input type="url" id="extToolChopchopUrl" value="https://chopchop.cbu.uib.no/" class="input-full">
+                        <small class="help-text">URL for the CHOPCHOP CRISPR Toolbox web interface</small>
+                    </div>
+                </div>
+
+                <!-- Custom External Tools -->
+                <div class="settings-section">
+                    <h4><i class="fas fa-plus-circle"></i> Custom External Tools</h4>
+                    <p class="help-text">Add your own external tools that will appear in the Tools menu</p>
+                    
+                    <div id="customToolsList">
+                        <!-- Custom tools will be dynamically inserted here -->
+                    </div>
+                    
+                    <button id="addCustomToolBtn" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i> Add Custom Tool
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveExternalTools" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    Save Settings
+                </button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+            <!-- Resize handles -->
+            <div class="resize-handle resize-handle-n"></div>
+            <div class="resize-handle resize-handle-s"></div>
+            <div class="resize-handle resize-handle-e"></div>
+            <div class="resize-handle resize-handle-w"></div>
+            <div class="resize-handle resize-handle-ne"></div>
+            <div class="resize-handle resize-handle-nw"></div>
+            <div class="resize-handle resize-handle-se"></div>
+            <div class="resize-handle resize-handle-sw"></div>
+        </div>
+    </div>
+
     <!-- Action List Management Modal -->
     <div id="actionListModal" class="modal">
         <div class="modal-content action-list-modal resizable">
@@ -4067,6 +4131,8 @@ Supported formats:
     <script src="modules/LLMConfigManager.js"></script>
     <script src="modules/MultiAgentSettingsManager.js"></script>
 <script src="modules/GeneralSettingsManager.js"></script>
+    <script src="modules/ExternalToolsManager.js"></script>
+    <script src="modules/ExternalToolsSystemTest.js"></script>
     <script src="modules/MCPServerManager.js"></script>
     <script src="modules/ChatManager.js"></script>
     

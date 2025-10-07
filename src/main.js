@@ -1471,6 +1471,33 @@ function sendToCurrentMainWindow(channel, ...args) {
   }
 }
 
+// Helper function to generate custom external tools menu items
+function getCustomExternalToolsMenuItems() {
+  const customTools = global.customExternalTools || [];
+  const menuItems = [];
+  
+  // Filter custom tools only
+  const customOnlyTools = customTools.filter(tool => tool.type === 'custom');
+  
+  if (customOnlyTools.length > 0) {
+    // Add separator before custom tools if there are any
+    menuItems.push({ type: 'separator' });
+    
+    // Add each custom tool as a menu item
+    customOnlyTools.forEach(tool => {
+      menuItems.push({
+        label: tool.name,
+        icon: tool.icon || 'fas fa-external-link-alt',
+        click: () => {
+          createCustomExternalToolWindow(tool);
+        }
+      });
+    });
+  }
+  
+  return menuItems;
+}
+
 // Create menu
 function createMenu() {
   const template = [
@@ -1998,6 +2025,16 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Alt+B',
           click: () => {
             createBlastInstallerWindow();
+          }
+        },
+        // Add custom external tools dynamically
+        ...(global.customExternalTools ? getCustomExternalToolsMenuItems() : []),
+        { type: 'separator' },
+        {
+          label: 'Configure External Tools',
+          accelerator: 'CmdOrCtrl+Alt+T',
+          click: () => {
+            sendToCurrentMainWindow('configure-external-tools');
           }
         }
       ]
@@ -4847,6 +4884,65 @@ async function createChopchopWindow() {
     console.error('❌ Error stack:', error.stack);
     showSettingsError('Error opening CHOPCHOP CRISPR Toolbox', 
       `Failed to open CHOPCHOP window: ${error.message}`);
+  }
+}
+
+// Create custom external tool window
+async function createCustomExternalToolWindow(toolData) {
+  try {
+    console.log('🔧 Creating custom external tool window:', toolData);
+    
+    const customToolWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 1000,
+      minHeight: 700,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        webSecurity: false,
+        allowRunningInsecureContent: true,
+        experimentalFeatures: true,
+        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
+      },
+      title: `${toolData.name} - Genome AI Studio`,
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false,
+      resizable: true,
+      minimizable: true,
+      maximizable: true,
+      closable: true
+    });
+
+    // Load the tool URL
+    await customToolWindow.loadURL(toolData.url);
+    
+    // Show the window when ready
+    customToolWindow.once('ready-to-show', () => {
+      customToolWindow.show();
+      customToolWindow.focus();
+      console.log(`✅ Custom external tool opened: ${toolData.name}`);
+    });
+
+    // Handle window closed
+    customToolWindow.on('closed', () => {
+      console.log(`🔒 Custom external tool window closed: ${toolData.name}`);
+    });
+
+    // Handle navigation errors
+    customToolWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error(`❌ Custom external tool failed to load: ${errorDescription}`);
+      showSettingsError(`Failed to load ${toolData.name}`, 
+        `Could not load ${validatedURL}. Please check the URL configuration.`);
+    });
+
+    console.log(`✅ Custom external tool window created: ${toolData.name}`);
+    
+  } catch (error) {
+    console.error(`❌ Error creating custom external tool window for ${toolData.name}:`, error);
+    showSettingsError(`Error opening ${toolData.name}`, 
+      `Failed to open ${toolData.name}: ${error.message}`);
   }
 }
 
@@ -8648,4 +8744,29 @@ ipcMain.handle('getProjectDirectoryName', async () => {
     console.error('Error getting project directory name:', error);
     return { success: false, error: error.message };
   }
+});
+
+// External Tools Configuration IPC handlers
+ipcMain.on('update-external-tools-menu', (event, tools) => {
+  console.log('📋 [ExternalTools] Updating external tools menu:', tools);
+  // Store the tools data for menu creation
+  global.customExternalTools = tools;
+  // Recreate the main menu to include new tools
+  createMenu();
+});
+
+ipcMain.on('open-custom-external-tool', (event, toolData) => {
+  console.log('🔧 [ExternalTools] Opening custom external tool:', toolData);
+  createCustomExternalToolWindow(toolData);
+});
+
+// Built-in external tools IPC handlers
+ipcMain.on('open-deep-gene-research-window', async (event, params = {}) => {
+  console.log('IPC: Opening Deep Gene Research window with params:', params);
+  await createDeepGeneResearchWindow(params);
+});
+
+ipcMain.on('open-chopchop-window', () => {
+  console.log('IPC: Opening CHOPCHOP window...');
+  createChopchopWindow();
 });
