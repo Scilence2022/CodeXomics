@@ -552,7 +552,7 @@ class AutomaticSimpleSuite {
                 evaluation: 'automatic',
                 instruction: 'Get AlphaFold structure prediction for gene araA.',
                 expectedResult: {
-                    tool_name: 'alphafold_search',
+                    tool_name: 'search_alphafold_by_gene',
                     parameters: {
                         sequence: '<araA_protein_sequence>',
                         blastType: 'blastp',
