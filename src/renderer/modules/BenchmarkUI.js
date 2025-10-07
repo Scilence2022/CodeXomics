@@ -2957,35 +2957,74 @@ class BenchmarkUI {
     }
 
     /**
-     * Update progress in main window
+     * Update progress in main window with enhanced test-based tracking
      */
     updateMainWindowProgress(progress, suiteId, suiteResult) {
         const progressFill = document.getElementById('progressFill');
         const currentSuite = document.getElementById('currentSuite');
         
-        if (progressFill) progressFill.style.width = (progress * 100) + '%';
+        if (progressFill) {
+            const percentage = Math.min(100, Math.max(0, progress * 100));
+            progressFill.style.width = percentage + '%';
+            
+            // Update percentage display
+            const progressPercentage = document.getElementById('progressPercentage');
+            if (progressPercentage) {
+                progressPercentage.textContent = `${percentage.toFixed(1)}%`;
+            }
+            
+            console.log(`📊 [UI Progress] Updated progress bar to ${percentage.toFixed(1)}%`);
+        }
+        
         if (currentSuite) currentSuite.textContent = suiteId || '-';
         
+        // Update cumulative test counts
         if (suiteResult) {
-            const completed = parseInt(document.getElementById('completedTests')?.textContent || '0') + suiteResult.stats.totalTests;
-            const passed = parseInt(document.getElementById('passedTests')?.textContent || '0') + suiteResult.stats.passedTests;
-            const failed = parseInt(document.getElementById('failedTests')?.textContent || '0') + suiteResult.stats.failedTests;
+            const completedElement = document.getElementById('completedTests');
+            const passedElement = document.getElementById('passedTests');
+            const failedElement = document.getElementById('failedTests');
             
-            if (document.getElementById('completedTests')) document.getElementById('completedTests').textContent = completed;
-            if (document.getElementById('passedTests')) document.getElementById('passedTests').textContent = passed;
-            if (document.getElementById('failedTests')) document.getElementById('failedTests').textContent = failed;
+            const currentCompleted = parseInt(completedElement?.textContent || '0');
+            const currentPassed = parseInt(passedElement?.textContent || '0');
+            const currentFailed = parseInt(failedElement?.textContent || '0');
+            
+            const newCompleted = currentCompleted + suiteResult.stats.totalTests;
+            const newPassed = currentPassed + suiteResult.stats.passedTests;
+            const newFailed = currentFailed + suiteResult.stats.failedTests;
+            
+            if (completedElement) completedElement.textContent = newCompleted;
+            if (passedElement) passedElement.textContent = newPassed;
+            if (failedElement) failedElement.textContent = newFailed;
+            
+            console.log(`📊 [UI Stats] Updated: ${newCompleted} completed, ${newPassed} passed, ${newFailed} failed`);
         }
-
-        // Update menu status
-        // Status update removed - no menu manager
+        
+        // Add total test count display if available
+        this.updateTotalTestDisplay();
     }
 
     /**
-     * Update test progress in main window
+     * Update test progress in main window with enhanced real-time tracking
      */
     updateMainWindowTestProgress(progress, testId, testResult, suiteId) {
         const currentTest = document.getElementById('currentTest');
+        const progressFill = document.getElementById('progressFill');
+        
         if (currentTest) currentTest.textContent = testId || '-';
+        
+        // Update progress bar with real-time test progress
+        if (progressFill && typeof progress === 'number') {
+            const percentage = Math.min(100, Math.max(0, progress * 100));
+            progressFill.style.width = percentage + '%';
+            
+            // Update percentage display
+            const progressPercentage = document.getElementById('progressPercentage');
+            if (progressPercentage) {
+                progressPercentage.textContent = `${percentage.toFixed(1)}%`;
+            }
+            
+            console.log(`📊 [UI Test Progress] Real-time progress: ${percentage.toFixed(1)}% (Test: ${testId})`);
+        }
         
         // Update elapsed time
         const elapsedTime = document.getElementById('elapsedTime');
@@ -2995,6 +3034,80 @@ class BenchmarkUI {
             const seconds = Math.floor((elapsed % 60000) / 1000);
             elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
+        
+        // Update individual test completion count in real-time
+        if (testResult && testResult.status === 'completed') {
+            this.updateIndividualTestCount(testResult);
+        }
+    }
+    
+    /**
+     * Update individual test completion counts in real-time
+     */
+    updateIndividualTestCount(testResult) {
+        const completedElement = document.getElementById('completedTests');
+        const passedElement = document.getElementById('passedTests');
+        const failedElement = document.getElementById('failedTests');
+        
+        if (completedElement) {
+            const current = parseInt(completedElement.textContent || '0');
+            completedElement.textContent = current + 1;
+        }
+        
+        if (testResult.success && passedElement) {
+            const current = parseInt(passedElement.textContent || '0');
+            passedElement.textContent = current + 1;
+        } else if (!testResult.success && failedElement) {
+            const current = parseInt(failedElement.textContent || '0');
+            failedElement.textContent = current + 1;
+        }
+    }
+    
+    /**
+     * Update total test count display for better progress context
+     */
+    updateTotalTestDisplay() {
+        // Try to get total test count from benchmark framework
+        if (this.benchmarkManager && this.benchmarkManager.framework) {
+            const framework = this.benchmarkManager.framework;
+            const totalTests = framework.totalTestCount || framework.getTotalTestCount();
+            
+            if (totalTests > 0) {
+                // Add total count display to completed tests if not already present
+                const completedElement = document.getElementById('completedTests');
+                if (completedElement && !completedElement.textContent.includes('/')) {
+                    const currentCompleted = parseInt(completedElement.textContent || '0');
+                    completedElement.textContent = `${currentCompleted}/${totalTests}`;
+                }
+                
+        console.log(`📊 [UI Total] Total tests to run: ${totalTests}`);
+            }
+        }
+    }
+    
+    /**
+     * Reset progress counters for new benchmark run
+     */
+    resetProgressCounters() {
+        const progressFill = document.getElementById('progressFill');
+        const currentSuite = document.getElementById('currentSuite');
+        const currentTest = document.getElementById('currentTest');
+        const completedTests = document.getElementById('completedTests');
+        const passedTests = document.getElementById('passedTests');
+        const failedTests = document.getElementById('failedTests');
+        
+        if (progressFill) progressFill.style.width = '0%';
+        if (currentSuite) currentSuite.textContent = '-';
+        if (currentTest) currentTest.textContent = '-';
+        if (completedTests) completedTests.textContent = '0';
+        if (passedTests) passedTests.textContent = '0';
+        if (failedTests) failedTests.textContent = '0';
+        
+        // Reset percentage display
+        const progressPercentage = document.getElementById('progressPercentage');
+        if (progressPercentage) progressPercentage.textContent = '0%';
+        
+        console.log('🔄 [UI Reset] Progress counters reset for new benchmark run');
     }
 
     /**
@@ -3328,6 +3441,14 @@ class BenchmarkUI {
                     <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 4px;">
                         <span style="color: #6c757d;">Passed:</span>
                         <span id="passedTests" style="color: #2c3e50; font-weight: 600;">0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 4px;">
+                        <span style="color: #6c757d;">Failed:</span>
+                        <span id="failedTests" style="color: #2c3e50; font-weight: 600;">0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196f3;">
+                        <span style="color: #1565c0; font-weight: 500;">Progress:</span>
+                        <span id="progressPercentage" style="color: #1565c0; font-weight: 600;">0%</span>
                     </div>
                 </div>
             </div>
@@ -3918,6 +4039,9 @@ class BenchmarkUI {
                     document.getElementById('stopBenchmark').disabled = false;
                     document.getElementById('progressSection').style.display = 'block';
                     
+                    // Reset progress counters for new benchmark run
+                    this.resetProgressCounters();
+                    
                     this.updateStatus('running', 'Running Benchmark');
                     
                     // Get selected suites
@@ -3932,8 +4056,8 @@ class BenchmarkUI {
                         includeCharts: document.getElementById('includeCharts').checked,
                         stopOnError: document.getElementById('stopOnError').checked,
                         timeout: parseInt(document.getElementById('testTimeout').value),
-                        onProgress: (progress, suiteId) => this.updateProgress(progress, suiteId),
-                        onTestProgress: (progress, testId) => this.updateTestProgress(testId)
+                        onProgress: (progress, suiteId, suiteResult) => this.updateMainWindowProgress(progress, suiteId, suiteResult),
+                        onTestProgress: (progress, testId, testResult, suiteId) => this.updateMainWindowTestProgress(progress, testId, testResult, suiteId)
                     };
 
                     console.log('🧪 Starting benchmark:', options);
@@ -3971,12 +4095,26 @@ class BenchmarkUI {
             }
 
             updateProgress(progress, suiteId) {
-                document.getElementById('progressFill').style.width = (progress * 100) + '%';
-                document.getElementById('currentSuite').textContent = suiteId || '-';
+                const progressFill = document.getElementById('progressFill');
+                const currentSuite = document.getElementById('currentSuite');
+                const progressPercentage = document.getElementById('progressPercentage');
+                
+                if (progressFill) {
+                    const percentage = Math.min(100, Math.max(0, progress * 100));
+                    progressFill.style.width = percentage + '%';
+                }
+                
+                if (progressPercentage) {
+                    const percentage = Math.min(100, Math.max(0, progress * 100));
+                    progressPercentage.textContent = percentage.toFixed(1) + '%';
+                }
+                
+                if (currentSuite) currentSuite.textContent = suiteId || '-';
             }
 
             updateTestProgress(testId) {
-                document.getElementById('currentTest').textContent = testId || '-';
+                const currentTest = document.getElementById('currentTest');
+                if (currentTest) currentTest.textContent = testId || '-';
             }
 
             displayResults(results) {

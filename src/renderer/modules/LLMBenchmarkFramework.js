@@ -141,6 +141,23 @@ class LLMBenchmarkFramework {
                 options: options
             };
 
+            // Calculate total test count for accurate progress tracking
+            let totalTestCount = 0;
+            let completedTestCount = 0;
+            
+            for (const [suiteId, testSuite] of this.testSuites.entries()) {
+                if (options.suites && !options.suites.includes(suiteId)) {
+                    continue; // Skip if specific suites requested and this isn't one
+                }
+                totalTestCount += testSuite.getTestCount();
+            }
+            
+            console.log(`📊 [Progress Tracking] Total tests to run: ${totalTestCount}`);
+            
+            // Store for progress calculation
+            this.totalTestCount = totalTestCount;
+            this.completedTestCount = 0;
+
             // Monitor memory usage
             const initialMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
             console.log(`🧠 Initial memory usage: ${Math.round(initialMemory / 1024 / 1024)} MB`);
@@ -176,10 +193,14 @@ class LLMBenchmarkFramework {
                     const suiteResult = await this.runTestSuite(suiteId, options);
                     results.testSuiteResults.push(suiteResult);
                     
-                    // Update progress if callback provided
+                    // Update completed test count
+                    this.completedTestCount += suiteResult.stats.totalTests;
+                    
+                    // Update progress with granular test-based calculation
                     if (options.onProgress) {
-                        const progress = results.testSuiteResults.length / this.testSuites.size;
-                        options.onProgress(progress, suiteId, suiteResult);
+                        const testBasedProgress = this.totalTestCount > 0 ? this.completedTestCount / this.totalTestCount : 0;
+                        console.log(`📊 [Progress Update] Suite '${suiteId}' completed: ${this.completedTestCount}/${this.totalTestCount} tests (${(testBasedProgress * 100).toFixed(1)}%)`);
+                        options.onProgress(testBasedProgress, suiteId, suiteResult);
                     }
                     
                     // Memory monitoring
@@ -359,8 +380,13 @@ class LLMBenchmarkFramework {
             
             // Update test progress if callback provided
             if (options.onTestProgress) {
-                const progress = (i + 1) / filteredTests.length;
-                options.onTestProgress(progress, test.id, testResult, suiteId);
+                const testProgress = (i + 1) / filteredTests.length;
+                const overallTestProgress = this.framework ? 
+                    (this.framework.completedTestCount + i + 1) / this.framework.totalTestCount :
+                    testProgress;
+                
+                console.log(`📊 [Test Progress] Test ${i + 1}/${filteredTests.length} in suite, Overall: ${this.framework?.completedTestCount + i + 1 || i + 1}/${this.framework?.totalTestCount || filteredTests.length}`);
+                options.onTestProgress(overallTestProgress, test.id, testResult, suiteId);
             }
             
             // Memory management: Force garbage collection every 5 tests
