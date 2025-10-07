@@ -71,8 +71,6 @@ class MultiAgentSettingsManager {
                     'openai/gpt-4o-mini': 'GPT-4o Mini (Fast & Efficient)',
                     'openai/gpt-4-turbo': 'GPT-4 Turbo (Latest)',
                     'openai/gpt-4': 'GPT-4 (Legacy)',
-                    'openai/gpt-3.5-turbo': 'GPT-3.5 Turbo (Fast)',
-                    'openai/gpt-3.5-turbo-16k': 'GPT-3.5 Turbo 16K (Long Context)',
                     
                     // Anthropic Models (Latest)
                     'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest - Most Capable)',
@@ -80,6 +78,12 @@ class MultiAgentSettingsManager {
                     'anthropic/claude-3-opus-20240229': 'Claude 3 Opus (Most Capable)',
                     'anthropic/claude-3-sonnet-20240229': 'Claude 3 Sonnet (Balanced)',
                     'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku (Fast)',
+                    
+                    // GLM Models (Z.AI)
+                    'z-ai/glm-4.6': 'GLM-4.6 (Latest Flagship)',
+                    'z-ai/glm-4.5': 'GLM-4.5 (Previous Flagship)',
+                    'z-ai/glm-4.5-air:free': 'GLM-4.5-Air (Free)',
+                    'z-ai/glm-4.5v': 'GLM-4.5V (Vision)',
                     // Claude Sonnet 4 Series (Latest)
                     'anthropic/claude-3-5-sonnet-4': 'Claude Sonnet 4 (Latest - Most Advanced)',
                     'anthropic/claude-3-5-sonnet-4-mini': 'Claude Sonnet 4 Mini (Fast & Efficient)',
@@ -193,13 +197,15 @@ class MultiAgentSettingsManager {
                     'Pro/Qwen/Qwen2-1.5B-Instruct': 'Qwen2-1.5B-Instruct (Pro)',
                     'Vendor-A/Qwen/Qwen2.5-72B-Instruct': 'Qwen2.5-72B-Instruct (Vendor-A)',
                     
-                    // GLM Models
+                    // GLM Models (Latest)
+                    'THUDM/GLM-4.6': 'GLM-4.6 (Latest Flagship)',
+                    'THUDM/GLM-4.5': 'GLM-4.5 (Previous Flagship)', 
+                    'THUDM/GLM-4.5-Air': 'GLM-4.5-Air (Lightweight)',
                     'THUDM/GLM-Z1-32B-0414': 'GLM-Z1-32B-0414 (Latest)',
                     'THUDM/GLM-4-32B-0414': 'GLM-4-32B-0414 (Latest)',
                     'THUDM/GLM-Z1-Rumination-32B-0414': 'GLM-Z1-Rumination-32B-0414 (Rumination)',
                     'THUDM/GLM-4-9B-0414': 'GLM-4-9B-0414 (Fast)',
                     'THUDM/glm-4-9b-chat': 'GLM-4-9B-Chat (Chat Optimized)',
-                    'Pro/THUDM/chatglm3-6b': 'ChatGLM3-6B (Pro)',
                     'Pro/THUDM/glm-4-9b-chat': 'GLM-4-9B-Chat (Pro)',
                     
                     // Other Models
@@ -207,8 +213,9 @@ class MultiAgentSettingsManager {
                     'moonshotai/Kimi-K2-Instruct': 'Kimi-K2-Instruct',
                     'ascend-tribe/pangu-pro-moe': 'pangu-pro-moe',
                     'tencent/Hunyuan-A13B-Instruct': 'Hunyuan-A13B-Instruct',
-                    'zai-org/GLM-4.5': 'GLM-4.5',
-                    'zai-org/GLM-4.5-Air': 'GLM-4.5-Air',
+                    'z-ai/GLM-4.6': 'GLM-4.6 (Latest)',
+                    'z-ai/GLM-4.5': 'GLM-4.5',
+                    'z-ai/GLM-4.5-Air': 'GLM-4.5-Air',
                     'MiniMaxAI/MiniMax-M1-80k': 'MiniMax-M1-80k (Long Context)',
                     'Tongyi-Zhiwen/QwenLong-L1-32B': 'QwenLong-L1-32B (Long Context)',
                     'TeleAI/TeleChat2': 'TeleChat2 (Latest)',

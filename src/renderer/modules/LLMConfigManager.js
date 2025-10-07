@@ -50,7 +50,7 @@ class LLMConfigManager {
             siliconflow: {
                 name: 'SiliconFlow',
                 apiKey: '',
-                model: 'Qwen/Qwen2.5-72B-Instruct',
+                model: 'Qwen/Qwen3-32B',
                 baseUrl: 'https://api.siliconflow.cn/v1',
                 enabled: false,
                 availableModels: [
@@ -69,7 +69,7 @@ class LLMConfigManager {
                     'Qwen/Qwen3-Coder-480B-A35B-Instruct',
                     'Qwen/Qwen2.5-Coder-32B-Instruct',
                     'Qwen/Qwen2.5-Coder-7B-Instruct',
-                    // Qwen General Models
+                    // Qwen General Models (Latest Qwen 3 Series Only)
                     'Qwen/Qwen3-235B-A22B-Thinking-2507',
                     'Qwen/Qwen3-235B-A22B-Instruct-2507',
                     'Qwen/Qwen3-32B',
@@ -77,29 +77,24 @@ class LLMConfigManager {
                     'Qwen/Qwen3-8B',
                     'Qwen/QwQ-32B',
                     'Qwen/QwQ-32B-Preview',
-                    'Qwen/Qwen2.5-72B-Instruct-128K',
-                    'Qwen/Qwen2.5-72B-Instruct',
-                    'Qwen/Qwen2.5-32B-Instruct',
-                    'Qwen/Qwen2.5-14B-Instruct',
-                    'Qwen/Qwen2.5-7B-Instruct',
-                    'Qwen/Qwen2-7B-Instruct',
-                    'Qwen/Qwen2-1.5B-Instruct',
-                    // GLM Models
+                    // GLM Models (Latest Series)
+                    'THUDM/GLM-4.6',
+                    'THUDM/GLM-4.5',
+                    'THUDM/GLM-4.5-Air',
                     'THUDM/GLM-Z1-32B-0414',
                     'THUDM/GLM-4-32B-0414',
                     'THUDM/GLM-Z1-Rumination-32B-0414',
                     'THUDM/GLM-4-9B-0414',
                     'THUDM/glm-4-9b-chat',
-                    'Pro/THUDM/chatglm3-6b',
                     'Pro/THUDM/glm-4-9b-chat',
                     // Other Models
                     'baidu/ERNIE-4.5-300B-A47B',
                     'moonshotai/Kimi-K2-Instruct',
                     'ascend-tribe/pangu-pro-moe',
                     'tencent/Hunyuan-A13B-Instruct',
-                    'zai-org/GLM-4.5',
-                    'zai-org/GLM-4.5-Air',
-                    'zai-org/GLM-4.6',
+                    'z-ai/GLM-4.6',        // Updated format
+                    'z-ai/GLM-4.5',        // Updated format
+                    'z-ai/GLM-4.5-Air',    // Updated format
                     'MiniMaxAI/MiniMax-M1-80k',
                     'Tongyi-Zhiwen/QwenLong-L1-32B',
                     'TeleAI/TeleChat2',
@@ -119,14 +114,25 @@ class LLMConfigManager {
                     'openai/gpt-5',         // Full model: $1.25/$10 per M tokens, advanced reasoning
                     'openai/gpt-5-mini',    // Compact: $0.25/$2 per M tokens, lighter reasoning
                     'openai/gpt-5-nano',    // Smallest: $0.05/$0.40 per M tokens, ultra-low latency
+                    
+                    // GLM 4.5/4.6 Series (Latest from Z.AI)
+                    'z-ai/glm-4.6',         // GLM-4.6 (Latest flagship)
+                    'z-ai/glm-4.5',         // GLM-4.5 (Previous flagship)
+                    'z-ai/glm-4.5-air:free', // GLM-4.5-Air (Free, lightweight)
+                    'z-ai/glm-4.5v',        // GLM-4.5V (Vision capable)
+                    
                     // Google Gemini Series
                     'google/gemini-2.0-flash',    // Latest multimodal, competitive pricing
                     'google/gemini-1.5-pro-latest',   // Large context, most capable
                     'google/gemini-1.5-flash-latest', // Fast, efficient
+                    
+                    // Anthropic Claude Series
+                    'anthropic/claude-3-5-sonnet-20241022',
+                    'anthropic/claude-3-5-haiku-20241022',
+                    
                     // Fallback models
                     'openai/gpt-4o',        
-                    'openai/gpt-4-turbo',   
-                    'anthropic/claude-3-5-sonnet-20241022'
+                    'openai/gpt-4-turbo'
                 ]
             },
             local: {
@@ -163,7 +169,7 @@ class LLMConfigManager {
                 preferredModels: {
                     'openai': 'gpt-4o',
                     'anthropic': 'claude-3-5-sonnet-20241022',
-                    'siliconflow': 'Qwen/Qwen2.5-72B-Instruct',
+                    'siliconflow': 'Qwen/Qwen3-32B',
                     'google': 'gemini-2.0-flash',
                     'deepseek': 'deepseek-chat',
                     'openrouter': 'openai/gpt-4o'
@@ -2171,12 +2177,19 @@ class LLMConfigManager {
         
         // Anthropic fallbacks
         if (model.startsWith('anthropic/')) {
-            if (model.includes('sonnet-4')) return 'anthropic/claude-3-5-sonnet-20241022';
-            if (model.includes('opus')) return 'anthropic/claude-3-5-sonnet-20241022';
+            if (model.includes('claude-3-5-sonnet')) return 'anthropic/claude-3-5-haiku-20241022';
+            if (model.includes('claude-3-5-haiku')) return 'anthropic/claude-3-opus-20240229';
+            if (model.includes('claude-3-opus')) return 'anthropic/claude-3-sonnet-20240229';
         }
         
-        // Generic safe default - prefer GPT-5 if available, fallback to GPT-4o
-        return 'openai/gpt-5';
+        // GLM fallbacks
+        if (model.startsWith('z-ai/')) {
+            if (model.includes('glm-4.6')) return 'z-ai/glm-4.5';
+            if (model.includes('glm-4.5') && !model.includes('air')) return 'z-ai/glm-4.5-air:free';
+            if (model.includes('glm-4.5-air')) return 'openai/gpt-4o-mini';
+        }
+        
+        return null;
     }
 
     async sendLocalMessage(provider, message, context) {
