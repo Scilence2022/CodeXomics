@@ -413,6 +413,7 @@ class TabManager {
             sidebarPanels: {
                 geneDetailsSection: { visible: false, content: null },
                 readDetailsSection: { visible: false, content: null },
+                variantDetailsSection: { visible: false, content: null },
                 searchResultsSection: { visible: false, content: null }
             },
             
@@ -2416,9 +2417,17 @@ class TabManager {
             };
         }
 
+        // Ensure all required panel properties exist
+        const requiredPanels = ['geneDetailsSection', 'readDetailsSection', 'variantDetailsSection', 'searchResultsSection'];
+        requiredPanels.forEach(panelId => {
+            if (!tabState.sidebarPanels[panelId]) {
+                tabState.sidebarPanels[panelId] = { visible: false, content: null };
+            }
+        });
+
         // Save gene details panel state
         const genePanel = document.getElementById('geneDetailsSection');
-        if (genePanel) {
+        if (genePanel && tabState.sidebarPanels.geneDetailsSection) {
             tabState.sidebarPanels.geneDetailsSection.visible = genePanel.style.display !== 'none';
             if (tabState.sidebarPanels.geneDetailsSection.visible) {
                 tabState.sidebarPanels.geneDetailsSection.content = genePanel.innerHTML;
@@ -2427,7 +2436,7 @@ class TabManager {
 
         // Save read details panel state
         const readPanel = document.getElementById('readDetailsSection');
-        if (readPanel) {
+        if (readPanel && tabState.sidebarPanels.readDetailsSection) {
             tabState.sidebarPanels.readDetailsSection.visible = readPanel.style.display !== 'none';
             if (tabState.sidebarPanels.readDetailsSection.visible) {
                 tabState.sidebarPanels.readDetailsSection.content = readPanel.innerHTML;
@@ -2436,7 +2445,7 @@ class TabManager {
 
         // Save variant details panel state
         const variantPanel = document.getElementById('variantDetailsSection');
-        if (variantPanel) {
+        if (variantPanel && tabState.sidebarPanels.variantDetailsSection) {
             tabState.sidebarPanels.variantDetailsSection.visible = variantPanel.style.display !== 'none';
             if (tabState.sidebarPanels.variantDetailsSection.visible) {
                 tabState.sidebarPanels.variantDetailsSection.content = variantPanel.innerHTML;
@@ -2445,7 +2454,7 @@ class TabManager {
 
         // Save search results panel state
         const searchPanel = document.getElementById('searchResultsSection');
-        if (searchPanel) {
+        if (searchPanel && tabState.sidebarPanels.searchResultsSection) {
             tabState.sidebarPanels.searchResultsSection.visible = searchPanel.style.display !== 'none';
             if (tabState.sidebarPanels.searchResultsSection.visible) {
                 tabState.sidebarPanels.searchResultsSection.content = searchPanel.innerHTML;
@@ -2468,6 +2477,14 @@ class TabManager {
                 searchResultsSection: { visible: false, content: null }
             };
         }
+
+        // Ensure all required panel properties exist
+        const requiredPanels = ['geneDetailsSection', 'readDetailsSection', 'variantDetailsSection', 'searchResultsSection'];
+        requiredPanels.forEach(panelId => {
+            if (!tabState.sidebarPanels[panelId]) {
+                tabState.sidebarPanels[panelId] = { visible: false, content: null };
+            }
+        });
 
         // Restore gene details panel
         const genePanel = document.getElementById('geneDetailsSection');
@@ -2559,11 +2576,14 @@ class TabManager {
             };
         }
 
-        if (tabState.sidebarPanels[panelId]) {
-            tabState.sidebarPanels[panelId].visible = visible;
-            if (visible && content) {
-                tabState.sidebarPanels[panelId].content = content;
-            }
+        // Ensure the specific panel exists before trying to update it
+        if (!tabState.sidebarPanels[panelId]) {
+            tabState.sidebarPanels[panelId] = { visible: false, content: null };
+        }
+
+        tabState.sidebarPanels[panelId].visible = visible;
+        if (visible && content) {
+            tabState.sidebarPanels[panelId].content = content;
         }
 
         console.log(`Updated sidebar panel ${panelId} for tab ${this.activeTabId}: visible=${visible}`);
