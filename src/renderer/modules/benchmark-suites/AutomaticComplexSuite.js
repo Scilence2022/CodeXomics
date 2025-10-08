@@ -4,7 +4,7 @@
  */
 class AutomaticComplexSuite {
     constructor() {
-        this.suiteName = 'Automatic Complex Tests';
+        this.suiteName = 'Automatic Complex Tests (3)'; // Updated count after adding tab test
         this.suiteId = 'automatic_complex';
         this.description = 'Complex tests with automatic evaluation - Advanced genomic analysis operations';
         this.framework = null;
@@ -197,6 +197,26 @@ class AutomaticComplexSuite {
                 bonusScore: 2,
                 timeout: 60000,
                 evaluator: this.evaluateWorkflowCall.bind(this)
+            },
+
+            // UI INTERACTION TASKS - Automatic + Complex
+            {
+                id: 'ui_auto_01',
+                name: 'Open Three New Tabs',
+                type: 'function_call',
+                category: 'ui_interaction',
+                complexity: 'complex',
+                evaluation: 'automatic',
+                instruction: 'Open three new tabs for parallel genome analysis.',
+                expectedResult: {
+                    tool_name: 'open_new_tab',
+                    parameters: {},
+                    expectedTabsIncrease: 3 // Expected increase in tab count
+                },
+                maxScore: 5,
+                bonusScore: 0,
+                timeout: 60000,
+                evaluator: this.evaluateMultipleTabOpeningCall.bind(this)
             }
         ];
     }
@@ -836,6 +856,156 @@ class AutomaticComplexSuite {
         await this.cleanupExportFiles();
         
         console.log('✅ [AutomaticComplexSuite] Setup completed');
+    }
+
+    /**
+     * Evaluate multiple tab opening test with detailed scoring
+     * Song's requirement: Complex scoring based on actual vs expected tab count
+     * Expected: 3 tabs = 5 points, 2-4 tabs = 3 points, 1 tab = 2 points, 0 tabs = 0 points
+     */
+    async evaluateMultipleTabOpeningCall(actualResult, expectedResult, testResult) {
+        const evaluation = {
+            success: false,
+            score: 0,
+            maxScore: testResult.maxScore || 5,
+            errors: [],
+            warnings: [],
+            details: {
+                initialTabsCount: 0,
+                finalTabsCount: 0,
+                tabsOpened: 0,
+                expectedTabsIncrease: expectedResult.expectedTabsIncrease || 3
+            }
+        };
+
+        console.log('🗂️ [evaluateMultipleTabOpeningCall] Evaluating multiple tab opening test:', {
+            testId: testResult.testId,
+            expectedTool: expectedResult.tool_name,
+            expectedIncrease: evaluation.details.expectedTabsIncrease,
+            actualResult: actualResult
+        });
+
+        if (!actualResult) {
+            evaluation.errors.push('No result obtained from test execution');
+            return evaluation;
+        }
+
+        // Get tabs count through genomeBrowser.tabManager
+        try {
+            if (window.genomeBrowser && window.genomeBrowser.tabManager) {
+                evaluation.details.finalTabsCount = window.genomeBrowser.tabManager.tabs.size;
+                
+                // Try to estimate initial count (this is a limitation - we don't have before/after tracking)
+                // For complex tests, we assume reasonable initial state or check from tool execution results
+                if (Array.isArray(actualResult) && actualResult.length > 0) {
+                    // Multiple tool calls - number of successful calls
+                    const successfulCalls = actualResult.filter(call => 
+                        call && call.tool_name === expectedResult.tool_name && 
+                        (!call.error && call.success !== false)
+                    ).length;
+                    evaluation.details.tabsOpened = successfulCalls;
+                    console.log('🗂️ [evaluateMultipleTabOpeningCall] Multiple calls detected:', {
+                        totalCalls: actualResult.length,
+                        successfulCalls: successfulCalls
+                    });
+                } else if (actualResult.tool_name === expectedResult.tool_name) {
+                    // Single tool call - assume 1 tab opened if successful
+                    evaluation.details.tabsOpened = (!actualResult.error && actualResult.success !== false) ? 1 : 0;
+                    console.log('🗂️ [evaluateMultipleTabOpeningCall] Single call detected');
+                } else {
+                    evaluation.details.tabsOpened = 0;
+                    console.log('🗂️ [evaluateMultipleTabOpeningCall] No valid tool calls detected');
+                }
+                
+                console.log('🗂️ [evaluateMultipleTabOpeningCall] Tab analysis:', {
+                    finalTabsCount: evaluation.details.finalTabsCount,
+                    estimatedTabsOpened: evaluation.details.tabsOpened,
+                    expectedIncrease: evaluation.details.expectedTabsIncrease
+                });
+            } else {
+                evaluation.warnings.push('TabManager not available for verification');
+                // Fallback: analyze actualResult structure
+                if (Array.isArray(actualResult)) {
+                    evaluation.details.tabsOpened = actualResult.filter(call => 
+                        call && call.tool_name === expectedResult.tool_name
+                    ).length;
+                } else if (actualResult.tool_name === expectedResult.tool_name) {
+                    evaluation.details.tabsOpened = 1;
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ [evaluateMultipleTabOpeningCall] Could not access TabManager:', error.message);
+            evaluation.warnings.push('Could not verify tab count directly');
+            
+            // Fallback analysis based on actualResult structure
+            if (Array.isArray(actualResult)) {
+                evaluation.details.tabsOpened = actualResult.filter(call => 
+                    call && call.tool_name === expectedResult.tool_name
+                ).length;
+            } else if (actualResult.tool_name === expectedResult.tool_name) {
+                evaluation.details.tabsOpened = 1;
+            }
+        }
+
+        // Song's complex scoring system
+        const tabsOpened = evaluation.details.tabsOpened;
+        const expectedIncrease = evaluation.details.expectedTabsIncrease;
+        
+        if (tabsOpened === expectedIncrease) {
+            // Perfect match: full score (5 points)
+            evaluation.score = 5;
+            evaluation.success = true;
+            evaluation.warnings.push(`Perfect! Opened exactly ${expectedIncrease} tabs as expected`);
+            console.log('🎯 [evaluateMultipleTabOpeningCall] Perfect score - exact match!');
+        } else if (tabsOpened >= 2 && tabsOpened <= 4) {
+            // Close to target: 3 points
+            evaluation.score = 3;
+            evaluation.success = true;
+            evaluation.warnings.push(`Good! Opened ${tabsOpened} tabs (expected ${expectedIncrease})`);
+            console.log('👍 [evaluateMultipleTabOpeningCall] Good score - close to target');
+        } else if (tabsOpened === 1) {
+            // Opened at least one: 2 points
+            evaluation.score = 2;
+            evaluation.success = false; // Below passing threshold for complex tests
+            evaluation.warnings.push(`Partial! Opened ${tabsOpened} tab (expected ${expectedIncrease})`);
+            console.log('⚠️ [evaluateMultipleTabOpeningCall] Partial score - opened some tabs');
+        } else {
+            // No tabs opened: 0 points
+            evaluation.score = 0;
+            evaluation.success = false;
+            evaluation.errors.push(`Failed to open any tabs (expected ${expectedIncrease})`);
+            console.log('❌ [evaluateMultipleTabOpeningCall] No score - no tabs opened');
+        }
+
+        // Additional check: Look for success patterns in response
+        if (typeof actualResult === 'string') {
+            const multiTabPatterns = [
+                /opened.*three.*tabs?/i,
+                /created.*3.*tabs?/i,
+                /three.*tabs?.*opened/i,
+                /tabs?.*opened.*successfully/i
+            ];
+            
+            const hasMultiTabPattern = multiTabPatterns.some(pattern => pattern.test(actualResult));
+            if (hasMultiTabPattern && evaluation.score < 5) {
+                evaluation.score = Math.max(evaluation.score, 3); // At least good score
+                evaluation.warnings.push('Multiple tab opening detected from response text');
+                console.log('🔍 [evaluateMultipleTabOpeningCall] Multi-tab pattern detected in response');
+            }
+        }
+
+        console.log('🏁 [evaluateMultipleTabOpeningCall] Final evaluation:', {
+            score: evaluation.score,
+            maxScore: evaluation.maxScore,
+            success: evaluation.success,
+            tabsOpened: evaluation.details.tabsOpened,
+            expectedIncrease: evaluation.details.expectedTabsIncrease,
+            scoringReason: evaluation.score === 5 ? 'Perfect match' : 
+                          evaluation.score === 3 ? 'Close to target' :
+                          evaluation.score === 2 ? 'Partial success' : 'Failed'
+        });
+
+        return evaluation;
     }
 
     async cleanup(context) {

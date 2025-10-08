@@ -563,11 +563,11 @@ class BenchmarkUI {
                             <div class="checkbox-grid">
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-automatic_simple" checked>
-                                    <span>⚙️ Automatic Simple Tests <small>(24 tests)</small></span>
+                                    <span>⚙️ Automatic Simple Tests <small>(25 tests)</small></span>
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-automatic_complex">
-                                    <span>🔧 Automatic Complex Tests <small>(2 tests)</small></span>
+                                    <span>🔧 Automatic Complex Tests <small>(3 tests)</small></span>
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-manual_simple">

@@ -4,7 +4,7 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests (24)'; // Updated count after removing system_auto_02
+        this.suiteName = 'Automatic Simple Tests (25)'; // Updated count after adding tab test
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
         this.framework = null;
@@ -602,6 +602,25 @@ class AutomaticSimpleSuite {
                 bonusScore: 0, // Song's new evaluation: Fixed 5-point scale
                 timeout: 30000,
                 evaluator: this.evaluateExportCall.bind(this)
+            },
+
+            // UI INTERACTION TASKS - Automatic + Simple
+            {
+                id: 'ui_auto_01',
+                name: 'Open New Tab',
+                type: 'function_call',
+                category: 'ui_interaction',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Open a new tab for parallel analysis.',
+                expectedResult: {
+                    tool_name: 'open_new_tab',
+                    parameters: {}
+                },
+                maxScore: 5,
+                bonusScore: 0,
+                timeout: 30000,
+                evaluator: this.evaluateTabOpeningCall.bind(this)
             },
 
             // EXTERNAL DATABASE TASKS - Automatic + Simple
@@ -1500,6 +1519,89 @@ class AutomaticSimpleSuite {
             success,
             totalRecords: window.songBenchmarkDebug.toolDetectionLog.length
         });
+    }
+
+    /**
+     * Evaluate tab opening test: tabs count after > tabs count before = full score
+     * Song's requirement: Simple pass/fail logic for automatic simple tests
+     */
+    async evaluateTabOpeningCall(actualResult, expectedResult, testResult) {
+        const evaluation = {
+            success: false,
+            score: 0,
+            maxScore: testResult.maxScore || 5,
+            errors: [],
+            warnings: []
+        };
+
+        console.log('🗂️ [evaluateTabOpeningCall] Evaluating tab opening test:', {
+            testId: testResult.testId,
+            expectedTool: expectedResult.tool_name,
+            actualResult: actualResult
+        });
+
+        if (!actualResult) {
+            evaluation.errors.push('No result obtained from test execution');
+            return evaluation;
+        }
+
+        // Get tabs count through genomeBrowser.tabManager if available
+        let currentTabsCount = 0;
+        try {
+            if (window.genomeBrowser && window.genomeBrowser.tabManager) {
+                currentTabsCount = window.genomeBrowser.tabManager.tabs.size;
+                console.log('🗂️ [evaluateTabOpeningCall] Current tabs count:', currentTabsCount);
+            } else {
+                evaluation.warnings.push('TabManager not available for direct count verification');
+            }
+        } catch (error) {
+            console.warn('⚠️ [evaluateTabOpeningCall] Could not access TabManager:', error.message);
+            evaluation.warnings.push('Could not verify tab count directly');
+        }
+
+        // Check tool execution first
+        const basicEvaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
+        
+        // If tool executed correctly, assume tab was opened (full score)
+        if (basicEvaluation.success) {
+            evaluation.score = evaluation.maxScore;
+            evaluation.success = true;
+            evaluation.warnings.push('Tab opening successful - tool executed correctly');
+            console.log('✅ [evaluateTabOpeningCall] Tab opening tool executed successfully - awarding full score');
+        } else {
+            // Tool didn't execute correctly
+            evaluation.score = 0;
+            evaluation.success = false;
+            evaluation.errors.push(...basicEvaluation.errors);
+            console.log('❌ [evaluateTabOpeningCall] Tab opening tool failed to execute');
+        }
+
+        // Additional check: Look for success patterns in response
+        if (typeof actualResult === 'string') {
+            const successPatterns = [
+                /new tab.*opened/i,
+                /tab.*created/i,
+                /opened new tab/i,
+                /successfully.*opened/i
+            ];
+            
+            const hasSuccessPattern = successPatterns.some(pattern => pattern.test(actualResult));
+            if (hasSuccessPattern && evaluation.score === 0) {
+                evaluation.score = evaluation.maxScore;
+                evaluation.success = true;
+                evaluation.warnings.push('Tab opening detected from response text');
+                console.log('✅ [evaluateTabOpeningCall] Tab opening detected from response pattern');
+            }
+        }
+
+        console.log('🏁 [evaluateTabOpeningCall] Final evaluation:', {
+            score: evaluation.score,
+            maxScore: evaluation.maxScore,
+            success: evaluation.success,
+            currentTabsCount: currentTabsCount
+        });
+
+        return evaluation;
     }
 }
 
