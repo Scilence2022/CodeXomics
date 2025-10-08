@@ -65,7 +65,7 @@ console.log('- export_data: Export sequence/annotation data');
 console.log('');
 console.log('Protein Structure:');
 console.log('- fetch_protein_structure: Download protein 3D structure from PDB');
-console.log('- search_protein_by_gene: Search protein structures by gene name');
+console.log('- search_pdb_structures: Search protein structures by gene name');
 console.log('- open_protein_viewer: Open 3D protein structure viewer');
 console.log('');
 console.log('ℹ️  Note: Additional tools are available through the ChatManager');

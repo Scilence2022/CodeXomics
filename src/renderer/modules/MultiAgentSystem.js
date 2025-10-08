@@ -740,7 +740,7 @@ class MultiAgentSystem {
     isSpecializedAgent(agentName, functionName) {
         const specializations = {
             'SequenceAgent': ['get_sequence', 'translate_dna', 'reverse_complement', 'find_orfs'],
-            'ProteinAgent': ['fetch_protein_structure', 'search_protein_by_gene', 'open_protein_viewer'],
+            'ProteinAgent': ['fetch_protein_structure', 'search_pdb_structures', 'open_protein_viewer'],
             'NetworkAgent': ['build_protein_interaction_network', 'analyze_network_centrality'],
             'AnalysisAgent': ['analyze_region', 'compare_regions', 'find_similar_sequences'],
             'DataAgent': ['get_gene_details', 'get_operons', 'create_annotation']

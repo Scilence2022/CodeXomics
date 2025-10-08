@@ -351,22 +351,6 @@ class MCPGenomeBrowserServer {
                 }
             },
 
-            // Deprecated: Keep for backward compatibility
-            search_protein_by_gene: {
-                name: 'search_protein_by_gene',
-                description: 'DEPRECATED: Use search_pdb_structures instead. Search for protein structures associated with a gene',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        geneName: { type: 'string', description: 'Gene name to search' },
-                        organism: { type: 'string', description: 'Organism name (optional)' },
-                        maxResults: { type: 'number', description: 'Maximum number of results to return' },
-                        clientId: { type: 'string', description: 'Browser client ID' }
-                    },
-                    required: ['geneName']
-                }
-            },
-
             jump_to_gene: {
                 name: 'jump_to_gene',
                 description: 'Jump directly to a gene location by name or locus tag',
@@ -841,15 +825,9 @@ class MCPGenomeBrowserServer {
         }
         
         if (toolName === 'search_pdb_structures') {
-            return await this.searchProteinByGene(parameters); // Route to existing implementation
+            return await this.searchPDBStructures(parameters);
         }
         
-        // Backward compatibility
-        if (toolName === 'search_protein_by_gene') {
-            console.warn('⚠️ search_protein_by_gene is deprecated. Use search_pdb_structures instead.');
-            return await this.searchProteinByGene(parameters);
-        }
-
         // Handle AlphaFold tools directly on server
         if (toolName === 'search_alphafold_by_gene') {
             return await this.searchAlphaFoldByGene(parameters);
@@ -1018,7 +996,7 @@ class MCPGenomeBrowserServer {
             // If no PDB ID provided, search by gene name
             if (!targetPdbId && geneName) {
                 console.log('No PDB ID provided, searching by gene name:', geneName);
-                const searchResults = await this.searchProteinByGene({ geneName, organism, maxResults: 1 });
+                const searchResults = await this.searchPDBStructures({ geneName, organism, maxResults: 1 });
                 if (searchResults.length === 0) {
                     throw new Error(`No protein structures found for gene: ${geneName}`);
                 }
@@ -1059,7 +1037,7 @@ class MCPGenomeBrowserServer {
     /**
      * Search for protein structures by gene name using RCSB PDB API
      */
-    async searchProteinByGene(parameters) {
+    async searchPDBStructures(parameters) {
         const { geneName, organism, maxResults = 10 } = parameters;
         
         try {
@@ -1138,6 +1116,15 @@ class MCPGenomeBrowserServer {
         } catch (error) {
             throw new Error(`Failed to search protein structures: ${error.message}`);
         }
+    }
+
+    /**
+     * Legacy method - search for protein structures by gene name (deprecated)
+     * @deprecated Use searchPDBStructures instead
+     */
+    async searchProteinByGene(parameters) {
+        console.warn('⚠️ searchProteinByGene is deprecated. Use searchPDBStructures instead.');
+        return await this.searchPDBStructures(parameters);
     }
 
     /**

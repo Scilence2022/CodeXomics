@@ -7070,7 +7070,7 @@ Annotation & Data:
 Protein Structure:
   - open_protein_viewer: Display 3D protein structures
   - fetch_protein_structure: Get PDB structure data
-  - search_protein_by_gene: Find proteins by gene name
+  - search_pdb_structures: Find experimental protein structures from PDB database
 
 TOOL USAGE EXAMPLES:
 Basic Navigation:
@@ -7162,7 +7162,7 @@ Data Management:
                 'find_restriction_sites', 'sequence_statistics'
             ],
             'PROTEIN STRUCTURE': [
-                'search_protein_by_gene', 'open_protein_viewer', 'fetch_protein_structure',
+                'search_pdb_structures', 'open_protein_viewer', 'fetch_protein_structure',
                 'search_alphafold_by_gene', 'fetch_alphafold_structure', 'open_alphafold_viewer'
             ],
             'DATABASE INTEGRATION': [
@@ -7644,7 +7644,7 @@ COMMON TASK PATTERNS:
 • **Sequence Export: export_cds_fasta → export coding sequences, export_protein_fasta → export proteins**
 • **Annotation Export: export_gff_annotations → export features as GFF, export_bed_format → export as BED**
 • AlphaFold AI Predictions: search_alphafold_by_gene → open_alphafold_viewer
-• PDB Experimental Structures: search_protein_by_gene → open_protein_viewer
+• PDB Experimental Structures: search_pdb_structures → open_protein_viewer
 • Sequence Analysis: get_sequence → compute_gc/translate_dna/find_orfs
 • Navigation: jump_to_gene → navigate_to_position
 • New Tab: open_new_tab → for parallel analysis
@@ -7681,7 +7681,7 @@ SEARCH FUNCTIONS GUIDE:
 - Gene names/products: search_gene_by_name, search_features
 - Genomic positions: search_by_position, get_nearby_features  
 - Sequence motifs: search_sequence_motif
-- PDB experimental structures: search_protein_by_gene (for known PDB entries)
+- PDB experimental structures: search_pdb_structures (for known PDB entries)
 - AlphaFold AI predictions: search_alphafold_by_gene (for AI-predicted structures)
 
 ANALYSIS FUNCTIONS:
@@ -7896,13 +7896,13 @@ Common Analysis Tools:
 Protein Structure Tools:
 - Display protein 3D structure: {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
 - Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
-- Search PDB proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+- Search PDB proteins by gene: {"tool_name": "search_pdb_structures", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
 - Search AlphaFold by gene: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "lysC", "organism": "Escherichia coli"}}
 
 PROTEIN STRUCTURE DISAMBIGUATION:
-- For "PDB" searches or experimental structures → use search_protein_by_gene
+- For "PDB" searches or experimental structures → use search_pdb_structures
 - For "AlphaFold" or AI predictions → use search_alphafold_by_gene
-- Example: "search PDB protein structure for lysC" → search_protein_by_gene
+- Example: "search PDB protein structure for lysC" → search_pdb_structures
 
 IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.
 
@@ -8167,13 +8167,13 @@ Common Analysis Tools:
 Protein Structure Tools:
 - Display protein 3D structure: {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
 - Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
-- Search PDB proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+- Search PDB proteins by gene: {"tool_name": "search_pdb_structures", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
 - Search AlphaFold by gene: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "lysC", "organism": "Escherichia coli"}}
 
 PROTEIN STRUCTURE DISAMBIGUATION:
-- For "PDB" searches or experimental structures → use search_protein_by_gene
+- For "PDB" searches or experimental structures → use search_pdb_structures
 - For "AlphaFold" or AI predictions → use search_alphafold_by_gene
-- Example: "search PDB protein structure for lysC" → search_protein_by_gene
+- Example: "search PDB protein structure for lysC" → search_pdb_structures
 
 IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.
 
@@ -9159,12 +9159,13 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.fetchProteinStructure(parameters);
                     break;
                     
-                case 'search_protein_by_gene':
-                    result = await this.searchProteinByGene(parameters);
-                    break;
-                    
                 case 'search_pdb_structures':
                     result = await this.searchPDBStructures(parameters);
+                    break;
+                    
+                case 'search_uniprot_database':
+                    console.log('🔍 [ChatManager] Executing search_uniprot_database via executeToolByName');
+                    result = await this.searchUniProtDatabase(parameters);
                     break;
                     
                 case 'get_pdb_details':
@@ -9792,7 +9793,7 @@ ${this.getPluginSystemInfo()}`;
             'open_protein_viewer',
             'fetch_protein_structure',
             'search_pdb_structures',
-            'search_protein_by_gene',
+            'search_pdb_structures',
             'get_pdb_details',
             
             // Metabolic Pathways
@@ -13174,7 +13175,7 @@ ${this.getPluginSystemInfo()}`;
             // If no PDB ID provided, search by gene name
             if (!targetPdbId && geneName) {
                 console.log('No PDB ID provided, searching by gene name:', geneName);
-                const searchResults = await this.searchProteinByGene({ geneName, organism, maxResults: 1 });
+                const searchResults = await this.searchPDBStructures({ geneName, organism, maxResults: 1 });
                 if (searchResults.length === 0) {
                     throw new Error(`No protein structures found for gene: ${geneName}`);
                 }
@@ -13306,9 +13307,84 @@ ${this.getPluginSystemInfo()}`;
     }
 
     // Keep the old method name for backward compatibility, but deprecate it
-    async searchProteinByGene(parameters) {
-        console.warn('⚠️ searchProteinByGene is deprecated. Use searchPDBStructures instead.');
-        return await this.searchPDBStructures(parameters);
+    /**
+     * Search UniProt database with various search types and filters
+     * @param {Object} parameters - Search parameters
+     * @returns {Promise<Object>} Search results
+     */
+    async searchUniProtDatabase(parameters) {
+        const { 
+            search_query, 
+            search_type = 'all_fields', 
+            organism, 
+            reviewed_only = false, 
+            max_results = 50,
+            evidence_filter = [],
+            length_range = {},
+            sort_by = 'score'
+        } = parameters;
+
+        console.log('🔍 [ChatManager] UniProt database search:', {
+            search_query,
+            search_type,
+            organism,
+            reviewed_only,
+            max_results
+        });
+
+        try {
+            // Try MCP server first if available
+            const allTools = this.mcpServerManager.getAllAvailableTools();
+            const mcpTool = allTools.find(t => t.name === 'search_uniprot_database');
+            
+            if (mcpTool) {
+                console.log('🔍 [ChatManager] Executing via MCP server');
+                const result = await this.mcpServerManager.executeToolOnServer(
+                    mcpTool.serverId, 
+                    'search_uniprot_database', 
+                    {
+                        query: search_query,
+                        searchType: search_type,
+                        organism: organism,
+                        reviewedOnly: reviewed_only,
+                        limit: max_results
+                    }
+                );
+                return result;
+            }
+
+            // Fallback to plugin if available
+            if (this.pluginFunctionCallsIntegrator && this.pluginFunctionCallsIntegrator.isPluginFunction('search_uniprot_database')) {
+                console.log('🔍 [ChatManager] Executing via plugin');
+                const result = await this.pluginFunctionCallsIntegrator.executePluginFunction('search_uniprot_database', parameters);
+                return result;
+            }
+
+            // Manual implementation as fallback
+            console.log('🔍 [ChatManager] No MCP/plugin available, implementing basic search');
+            
+            return {
+                success: false,
+                error: 'UniProt search service not available. Please install and configure the UniProt plugin or MCP server.',
+                results: [],
+                totalFound: 0,
+                query: search_query,
+                searchType: search_type,
+                timestamp: new Date().toISOString()
+            };
+
+        } catch (error) {
+            console.error('❌ [ChatManager] UniProt search error:', error);
+            return {
+                success: false,
+                error: error.message,
+                results: [],
+                totalFound: 0,
+                query: search_query,
+                searchType: search_type,
+                timestamp: new Date().toISOString()
+            };
+        }
     }
 
     /**
@@ -16106,7 +16182,6 @@ ${this.getPluginSystemInfo()}`;
             'open_protein_viewer': 'Protein Agent',
             'fetch_protein_structure': 'Protein Agent',
             'search_pdb_structures': 'Protein Agent',
-            'search_protein_by_gene': 'Protein Agent',
             'get_pdb_details': 'Protein Agent',
             'amino_acid_composition': 'Protein Agent',
             

@@ -113,12 +113,6 @@ class ToolDefinitionCreator {
                 keywords: ['search', 'pdb', 'experimental', 'structures', 'gene'],
                 priority: 1
             },
-            'search_protein_by_gene': {
-                category: 'protein',
-                description: 'DEPRECATED: Use search_pdb_structures instead. Search for protein structures associated with a gene',
-                keywords: ['search', 'protein', 'gene', 'structure', 'deprecated'],
-                priority: 2  // Lower priority for deprecated tool
-            },
             'fetch_alphafold_structure': {
                 category: 'protein',
                 description: 'Fetch AlphaFold protein structure by UniProt ID',

@@ -84,7 +84,7 @@ const toolInfo = `📚 Available Tools (Full List):
 
 🧪 Protein Structure:
 - fetch_protein_structure: Download protein 3D structure from PDB
-- search_protein_by_gene: Search protein structures by gene name
+- search_pdb_structures: Search protein structures by gene name
 - open_protein_viewer: Open 3D protein structure viewer
 - search_alphafold_by_gene: Search AlphaFold structures by gene
 - fetch_alphafold_structure: Fetch AlphaFold structures

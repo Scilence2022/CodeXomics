@@ -402,20 +402,6 @@ class ClaudeMCPGenomeServer {
                             required: ["geneName"]
                         }
                     },
-                    {
-                        name: "search_protein_by_gene",
-                        description: "DEPRECATED: Use search_pdb_structures instead. Search for protein structures associated with a gene",
-                        inputSchema: {
-                            type: "object",
-                            properties: {
-                                geneName: { type: "string", description: "Gene name to search" },
-                                organism: { type: "string", description: "Organism name (optional)" },
-                                maxResults: { type: "number", description: "Maximum number of results to return" },
-                                clientId: { type: "string", description: "Browser client ID" }
-                            },
-                            required: ["geneName"]
-                        }
-                    },
                     // AlphaFold tools
                     {
                         name: "search_alphafold_by_gene",
@@ -769,7 +755,6 @@ class ClaudeMCPGenomeServer {
         const serverSideTools = [
             'fetch_protein_structure',
             'search_pdb_structures',
-            'search_protein_by_gene', // Backward compatibility
             'fetch_alphafold_structure',
             'search_alphafold_by_sequence',
             'search_uniprot_database',
