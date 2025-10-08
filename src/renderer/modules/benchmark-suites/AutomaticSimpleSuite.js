@@ -244,7 +244,7 @@ class AutomaticSimpleSuite {
                 expectedResult: {
                     tool_name: 'load_wig_tracks',
                     parameters: {
-                        filePath: this.buildFilePath('another_sample.wig')
+                        filePaths: this.buildFilePath('another_sample.wig')  // Fixed: Use filePaths (plural) to match tool specification
                     }
                 },
                 maxScore: 5,
@@ -980,24 +980,35 @@ class AutomaticSimpleSuite {
         const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
         
         // Add file loading specific checks
-        if (actualResult && actualResult.parameters && actualResult.parameters.filePath) {
-            const actualFilePath = actualResult.parameters.filePath;
-            const expectedFilePath = expectedResult.parameters.filePath;
+        if (actualResult && actualResult.parameters) {
+            // Handle both filePath (singular) and filePaths (plural) parameters
+            let actualFilePath = actualResult.parameters.filePath || actualResult.parameters.filePaths;
+            let expectedFilePath = expectedResult.parameters.filePath || expectedResult.parameters.filePaths;
             
-            // Check if filename matches (flexible path matching)
-            const expectedFileName = expectedFilePath.split('/').pop();
-            const actualFileName = actualFilePath.split('/').pop();
-            
-            if (actualFileName === expectedFileName || actualFilePath.includes(expectedFileName)) {
-                evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1));
-                console.log(`✅ File loading: correct file '${expectedFileName}'`);
-            } else {
-                evaluation.warnings.push(`Expected file '${expectedFileName}' but got '${actualFileName}'`);
+            // If filePaths is an array, take the first element
+            if (Array.isArray(actualFilePath)) {
+                actualFilePath = actualFilePath[0];
+            }
+            if (Array.isArray(expectedFilePath)) {
+                expectedFilePath = expectedFilePath[0];
             }
             
-            // Log current default directory for debugging
-            const currentDir = this.getDefaultDirectory();
-            console.log(`📁 File loading using directory: ${currentDir}`);
+            if (actualFilePath && expectedFilePath) {
+                // Check if filename matches (flexible path matching)
+                const expectedFileName = expectedFilePath.split('/').pop();
+                const actualFileName = actualFilePath.split('/').pop();
+                
+                if (actualFileName === expectedFileName || actualFilePath.includes(expectedFileName)) {
+                    evaluation.score = Math.min(evaluation.maxScore, evaluation.score + (testResult.bonusScore || 1));
+                    console.log(`✅ File loading: correct file '${expectedFileName}'`);
+                } else {
+                    evaluation.warnings.push(`Expected file '${expectedFileName}' but got '${actualFileName}'`);
+                }
+                
+                // Log current default directory for debugging
+                const currentDir = this.getDefaultDirectory();
+                console.log(`📁 File loading using directory: ${currentDir}`);
+            }
         }
         
         // 🔥 CRITICAL FIX: Recalculate success field after adding bonus points
