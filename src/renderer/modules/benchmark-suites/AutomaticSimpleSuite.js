@@ -69,6 +69,69 @@ class AutomaticSimpleSuite {
     }
 
     /**
+     * Clean up target export files before tests to prevent false positives
+     * 在测试开始前检测并删除目标导出文件，避免判断错误
+     */
+    async cleanupExportFiles() {
+        const exportFiles = [
+            'exported_sequences.fasta',
+            'exported_data.gbk',
+            'exported_annotations.gff3', 
+            'exported_features.bed',
+            'exported_cds.fasta',
+            'exported_proteins.fasta',
+            'exported_region.fasta'
+        ];
+        
+        console.log('🧹 [AutomaticSimpleSuite] Starting export file cleanup...');
+        
+        for (const filename of exportFiles) {
+            try {
+                const filePath = this.buildFilePath(filename);
+                console.log(`🔍 [AutomaticSimpleSuite] Checking if ${filePath} exists...`);
+                
+                // Method 1: Try Node.js fs module if available
+                if (typeof require !== 'undefined') {
+                    const fs = require('fs');
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                        console.log(`✅ [AutomaticSimpleSuite] Deleted existing file: ${filePath}`);
+                    } else {
+                        console.log(`ℹ️  [AutomaticSimpleSuite] File does not exist: ${filePath}`);
+                    }
+                } 
+                // Method 2: Try via ChatManager's file operations if available
+                else if (window.chatManager && window.chatManager.deleteFile) {
+                    try {
+                        const result = await window.chatManager.deleteFile({ filePath: filePath });
+                        if (result && result.success) {
+                            console.log(`✅ [AutomaticSimpleSuite] Deleted via ChatManager: ${filePath}`);
+                        } else {
+                            console.log(`ℹ️  [AutomaticSimpleSuite] File may not exist or delete failed: ${filePath}`);
+                        }
+                    } catch (error) {
+                        if (error.message && error.message.includes('not found')) {
+                            console.log(`ℹ️  [AutomaticSimpleSuite] File does not exist: ${filePath}`);
+                        } else {
+                            console.warn(`⚠️  [AutomaticSimpleSuite] Error checking/deleting ${filePath}:`, error.message);
+                        }
+                    }
+                }
+                // Method 3: Log warning if no deletion method available
+                else {
+                    console.warn(`⚠️  [AutomaticSimpleSuite] No file deletion method available for ${filePath}`);
+                }
+                
+            } catch (error) {
+                console.warn(`⚠️  [AutomaticSimpleSuite] Failed to cleanup ${filename}:`, error.message);
+                // Continue with other files even if one fails
+            }
+        }
+        
+        console.log('✅ [AutomaticSimpleSuite] Export file cleanup completed');
+    }
+
+    /**
      * Initialize automatic simple test cases
      */
     initializeTests() {
@@ -1173,7 +1236,13 @@ class AutomaticSimpleSuite {
     }
 
     async setup(context) {
-        console.log('Setting up Automatic Simple test suite');
+        console.log('🔧 [AutomaticSimpleSuite] Setting up Automatic Simple test suite...');
+        
+        // 清理导出文件防止假阳性
+        // Clean up export files to prevent false positives
+        await this.cleanupExportFiles();
+        
+        console.log('✅ [AutomaticSimpleSuite] Setup completed');
     }
 
     async cleanup(context) {

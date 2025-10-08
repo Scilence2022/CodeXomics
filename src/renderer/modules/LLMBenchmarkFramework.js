@@ -365,6 +365,26 @@ class LLMBenchmarkFramework {
             options.onProgress(initialProgress, suiteId, null);
         }
 
+        // CRITICAL FIX: Call test suite setup method before running any tests
+        if (testSuite.setup && typeof testSuite.setup === 'function') {
+            console.log(`🔧 [LLMBenchmarkFramework] Calling setup for test suite: ${suiteId}`);
+            try {
+                const context = {
+                    chatManager: this.chatManager,
+                    configManager: this.configManager,
+                    suiteId: suiteId,
+                    framework: this
+                };
+                await testSuite.setup(context);
+                console.log(`✅ [LLMBenchmarkFramework] Setup completed for test suite: ${suiteId}`);
+            } catch (setupError) {
+                console.error(`❌ [LLMBenchmarkFramework] Setup failed for test suite ${suiteId}:`, setupError);
+                // Don't throw - allow tests to continue even if setup fails
+            }
+        } else {
+            console.log(`ℹ️  [LLMBenchmarkFramework] No setup method found for test suite: ${suiteId}`);
+        }
+
         // Display test suite start
         this.displayTestSuiteStart(testSuite, filteredTests.length);
         
