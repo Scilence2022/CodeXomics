@@ -107,11 +107,17 @@ class ToolDefinitionCreator {
                 keywords: ['open', 'viewer', '3d', 'protein', 'structure'],
                 priority: 1
             },
+            'search_pdb_structures': {
+                category: 'protein',
+                description: 'Search PDB database for experimental protein structures by gene name',
+                keywords: ['search', 'pdb', 'experimental', 'structures', 'gene'],
+                priority: 1
+            },
             'search_protein_by_gene': {
                 category: 'protein',
-                description: 'Search for protein structures associated with a gene',
-                keywords: ['search', 'protein', 'gene', 'structure'],
-                priority: 1
+                description: 'DEPRECATED: Use search_pdb_structures instead. Search for protein structures associated with a gene',
+                keywords: ['search', 'protein', 'gene', 'structure', 'deprecated'],
+                priority: 2  // Lower priority for deprecated tool
             },
             'fetch_alphafold_structure': {
                 category: 'protein',

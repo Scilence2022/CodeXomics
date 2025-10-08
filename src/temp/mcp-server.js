@@ -336,9 +336,25 @@ class MCPGenomeBrowserServer {
                 }
             },
 
+            search_pdb_structures: {
+                name: 'search_pdb_structures',
+                description: 'Search PDB database for experimental protein structures by gene name',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        geneName: { type: 'string', description: 'Gene name to search for experimental structures' },
+                        organism: { type: 'string', description: 'Organism name (optional)' },
+                        maxResults: { type: 'number', description: 'Maximum number of results to return' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['geneName']
+                }
+            },
+
+            // Deprecated: Keep for backward compatibility
             search_protein_by_gene: {
                 name: 'search_protein_by_gene',
-                description: 'Search for protein structures associated with a gene',
+                description: 'DEPRECATED: Use search_pdb_structures instead. Search for protein structures associated with a gene',
                 parameters: {
                     type: 'object',
                     properties: {
@@ -824,7 +840,13 @@ class MCPGenomeBrowserServer {
             return await this.fetchProteinStructure(parameters);
         }
         
+        if (toolName === 'search_pdb_structures') {
+            return await this.searchProteinByGene(parameters); // Route to existing implementation
+        }
+        
+        // Backward compatibility
         if (toolName === 'search_protein_by_gene') {
+            console.warn('⚠️ search_protein_by_gene is deprecated. Use search_pdb_structures instead.');
             return await this.searchProteinByGene(parameters);
         }
 
@@ -1082,6 +1104,7 @@ class MCPGenomeBrowserServer {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 }
             }, JSON.stringify(searchQuery));
 

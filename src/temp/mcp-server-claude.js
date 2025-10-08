@@ -389,8 +389,22 @@ class ClaudeMCPGenomeServer {
                         }
                     },
                     {
+                        name: "search_pdb_structures",
+                        description: "Search PDB database for experimental protein structures by gene name",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                geneName: { type: "string", description: "Gene name to search for experimental structures" },
+                                organism: { type: "string", description: "Organism name (optional)" },
+                                maxResults: { type: "number", description: "Maximum number of results to return" },
+                                clientId: { type: "string", description: "Browser client ID" }
+                            },
+                            required: ["geneName"]
+                        }
+                    },
+                    {
                         name: "search_protein_by_gene",
-                        description: "Search for protein structures associated with a gene",
+                        description: "DEPRECATED: Use search_pdb_structures instead. Search for protein structures associated with a gene",
                         inputSchema: {
                             type: "object",
                             properties: {
@@ -754,7 +768,8 @@ class ClaudeMCPGenomeServer {
     isServerSideTool(toolName) {
         const serverSideTools = [
             'fetch_protein_structure',
-            'search_protein_by_gene',
+            'search_pdb_structures',
+            'search_protein_by_gene', // Backward compatibility
             'fetch_alphafold_structure',
             'search_alphafold_by_sequence',
             'search_uniprot_database',

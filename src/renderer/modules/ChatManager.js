@@ -7559,9 +7559,9 @@ CRITICAL: The system will automatically route tool requests based on the priorit
 CRITICAL: Choose the correct protein structure function based on user intent:
 
 • For PDB database searches (experimental structures):
-  - Keywords: "PDB", "PDB database", "experimental structure", "crystal structure", "NMR structure"
-  - Use: search_protein_by_gene
-  - Example: "search PDB protein structure for lysC" → search_protein_by_gene
+  - Keywords: "PDB", "PDB database", "experimental structure", "crystal structure", "NMR structure", "cryo-EM"
+  - Use: search_pdb_structures
+  - Example: "search PDB experimental structures for lysC" → search_pdb_structures
 
 • For AlphaFold predictions (AI-predicted structures):
   - Keywords: "AlphaFold", "predicted structure", "AI prediction", "fold prediction"
@@ -7569,9 +7569,9 @@ CRITICAL: Choose the correct protein structure function based on user intent:
   - Example: "find AlphaFold structure for lysC" → search_alphafold_by_gene
 
 • Default behavior (when unspecified):
-  - If user mentions "PDB" explicitly → use search_protein_by_gene
+  - If user mentions "PDB" explicitly → use search_pdb_structures
   - If user mentions "AlphaFold" explicitly → use search_alphafold_by_gene
-  - If context is unclear, prefer search_protein_by_gene for experimental data
+  - If context is unclear, prefer search_pdb_structures for experimental data
 
 ===SEQUENCE EDITING FUNCTIONS - DETAILED USAGE===
 
@@ -13253,19 +13253,19 @@ ${this.getPluginSystemInfo()}`;
     }
 
     /**
-     * Search for protein structures by gene name
+     * Search PDB database for experimental protein structures by gene name
      */
-    async searchProteinByGene(parameters) {
+    async searchPDBStructures(parameters) {
         // Handle both parameter naming conventions
         const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
         const organism = parameters.organism || 'Escherichia coli';
         const maxResults = parameters.maxResults || 10;
         
         try {
-            console.log(`Searching for protein structures by gene: ${geneName}, organism: ${organism}`);
+            console.log(`Searching PDB for experimental structures: ${geneName}, organism: ${organism}`);
             
             if (!geneName) {
-                throw new Error('Gene name is required for PDB search');
+                throw new Error('Gene name is required for PDB structure search');
             }
             
             // Perform PDB search using multiple methods
@@ -13278,7 +13278,7 @@ ${this.getPluginSystemInfo()}`;
             
             return {
                 success: true,
-                tool: 'search_protein_by_gene',
+                tool: 'search_pdb_structures',
                 parameters: parameters,
                 results: searchResults,
                 count: searchResults.length,
@@ -13293,11 +13293,17 @@ ${this.getPluginSystemInfo()}`;
             return {
                 success: false,
                 error: error.message,
-                tool: 'search_protein_by_gene',
+                tool: 'search_pdb_structures',
                 parameters: parameters,
                 timestamp: new Date().toISOString()
             };
         }
+    }
+
+    // Keep the old method name for backward compatibility, but deprecate it
+    async searchProteinByGene(parameters) {
+        console.warn('⚠️ searchProteinByGene is deprecated. Use searchPDBStructures instead.');
+        return await this.searchPDBStructures(parameters);
     }
 
     /**
@@ -14136,7 +14142,7 @@ ${this.getPluginSystemInfo()}`;
         try {
             console.log(`Performing PDB search for gene: ${geneName}, organism: ${organism}`);
             
-            // Use RCSB PDB search API with improved query
+            // Use RCSB PDB search API with improved query (POST request)
             const searchQuery = {
                 "query": {
                     "type": "group",
@@ -14171,12 +14177,20 @@ ${this.getPluginSystemInfo()}`;
                 "return_type": "entry"
             };
             
-            const searchUrl = `https://search.rcsb.org/rcsbsearch/v2/query?json=${encodeURIComponent(JSON.stringify(searchQuery))}`;
-            console.log('PDB search URL:', searchUrl);
+            console.log('PDB search query:', JSON.stringify(searchQuery, null, 2));
             
-            const response = await fetch(searchUrl);
+            // Fixed: Use POST request instead of GET with URL parameter
+            const response = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(searchQuery)
+            });
             
             if (!response.ok) {
+                console.warn(`PDB search failed with ${response.status}: ${response.statusText}`);
                 // Try simpler search if complex query fails
                 return await this.performSimplePDBSearch(geneName, organism, maxResults);
             }
@@ -14222,9 +14236,16 @@ ${this.getPluginSystemInfo()}`;
             "return_type": "entry"
         };
         
-        const searchUrl = `https://search.rcsb.org/rcsbsearch/v2/query?json=${encodeURIComponent(JSON.stringify(simpleQuery))}`;
+        // Fixed: Use POST request for fallback search as well
+        const response = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(simpleQuery)
+        });
         
-        const response = await fetch(searchUrl);
         if (!response.ok) {
             throw new Error(`Simple PDB search failed: ${response.status} ${response.statusText}`);
         }

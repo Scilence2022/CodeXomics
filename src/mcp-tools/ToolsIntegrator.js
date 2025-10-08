@@ -97,7 +97,9 @@ class ToolsIntegrator {
                 switch (toolName) {
                     case 'fetch_protein_structure':
                         return await this.proteinTools.fetchProteinStructure(parameters);
-                    case 'search_protein_by_gene':
+                    case 'search_pdb_structures':
+                        return await this.proteinTools.searchPDBStructures(parameters);
+                    case 'search_protein_by_gene': // Backward compatibility
                         return await this.proteinTools.searchProteinByGene(parameters);
                     case 'fetch_alphafold_structure':
                         return await this.proteinTools.fetchAlphaFoldStructure(parameters);
@@ -282,7 +284,7 @@ class ToolsIntegrator {
                 ])
             ),
             serverSideTools: [
-                'fetch_protein_structure', 'search_protein_by_gene',
+                'fetch_protein_structure', 'search_pdb_structures', 'search_protein_by_gene', // Protein tools
                 'fetch_alphafold_structure', 'search_alphafold_by_sequence', 'search_uniprot_database',
                 'advanced_uniprot_search', 'get_uniprot_entry', 'analyze_interpro_domains',
                 'search_interpro_entry', 'get_interpro_entry_details', 'evo2_generate_sequence',
@@ -290,7 +292,7 @@ class ToolsIntegrator {
                 'evo2_analyze_essentiality'
             ].length,
             clientSideTools: totalTools - [
-                'fetch_protein_structure', 'search_protein_by_gene',
+                'fetch_protein_structure', 'search_pdb_structures', 'search_protein_by_gene',
                 'fetch_alphafold_structure', 'search_alphafold_by_sequence', 'search_uniprot_database',
                 'advanced_uniprot_search', 'get_uniprot_entry', 'analyze_interpro_domains',
                 'search_interpro_entry', 'get_interpro_entry_details', 'evo2_generate_sequence',

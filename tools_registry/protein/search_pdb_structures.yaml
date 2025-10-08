@@ -1,0 +1,150 @@
+name: search_pdb_structures
+version: 1.0.0
+description: "Search PDB database for experimental protein structures by gene name. Returns available X-ray crystallography, NMR, cryo-EM, and other experimental structure data."
+category: protein
+keywords: ["search", "pdb", "experimental", "structures", "gene", "crystallography", "nmr", "cryo-em"]
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: server
+  timeout: 30000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: true
+
+# Tool parameters
+parameters:
+  type: object
+  properties:
+    geneName:
+      type: string
+      description: "Gene name to search for associated experimental protein structures"
+      examples: ["p53", "lacZ", "dnaA", "rpoB", "hemoglobin"]
+    organism:
+      type: string
+      description: "Organism name for more specific search results"
+      default: "Homo sapiens"
+      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus", "Saccharomyces cerevisiae"]
+    max_resolution:
+      type: number
+      description: "Maximum resolution in Angstroms (filters low-quality structures)"
+      minimum: 0.5
+      maximum: 10.0
+      default: 5.0
+    structure_methods:
+      type: array
+      description: "Experimental methods to include in search"
+      items:
+        type: string
+        enum: ["x-ray", "nmr", "cryo-em", "neutron", "fiber diffraction"]
+      default: ["x-ray", "nmr", "cryo-em"]
+    max_results:
+      type: number
+      description: "Maximum number of structures to return"
+      minimum: 1
+      maximum: 50
+      default: 10
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required:
+    - geneName
+
+# Return value specification
+returns:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: "Whether the search was successful"
+    results:
+      type: array
+      description: "Array of PDB structure entries"
+      items:
+        type: object
+        properties:
+          pdb_id:
+            type: string
+            description: "PDB identifier"
+          title:
+            type: string
+            description: "Structure title"
+          resolution:
+            type: number
+            description: "Resolution in Angstroms"
+          method:
+            type: string
+            description: "Experimental method used"
+          organism:
+            type: string
+            description: "Source organism"
+          release_date:
+            type: string
+            description: "Structure release date"
+          classification:
+            type: string
+            description: "Structural classification"
+          pdb_url:
+            type: string
+            description: "URL to PDB entry page"
+          download_url:
+            type: string
+            description: "Direct download URL for PDB file"
+    count:
+      type: number
+      description: "Number of structures found"
+    message:
+      type: string
+      description: "Human-readable result message"
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Search for PDB crystal structures of p53"
+    tool_call: "search_pdb_structures(geneName='p53', organism='Homo sapiens', structure_methods=['x-ray'])"
+    thought: "User wants experimental crystal structures specifically from PDB database"
+    expected_result: "List of X-ray crystal structures for p53 protein"
+
+  - user_query: "Find experimental protein structures for lacZ in E. coli"
+    tool_call: "search_pdb_structures(geneName='lacZ', organism='Escherichia coli', max_results=5)"
+    thought: "User wants experimental structures from PDB for lacZ gene in E. coli"
+    expected_result: "Available experimental structures for lacZ from E. coli"
+
+  - user_query: "Get high-resolution NMR structures for dnaA"
+    tool_call: "search_pdb_structures(geneName='dnaA', structure_methods=['nmr'], max_resolution=2.0)"
+    thought: "User specifically wants high-resolution NMR structures"
+    expected_result: "High-quality NMR structures for dnaA protein"
+
+  - user_query: "Search PDB database for hemoglobin structures"
+    tool_call: "search_pdb_structures(geneName='hemoglobin', max_results=10)"
+    thought: "User wants experimental structures from PDB database for hemoglobin"
+    expected_result: "Experimental hemoglobin structures from PDB"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["open_protein_viewer", "fetch_protein_structure"]
+  alternatives: ["search_alphafold_by_gene"]
+  prerequisites: []
+  follow_up: ["open_protein_viewer", "fetch_protein_structure", "analyze_protein_domains"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["protein", "structure", "pdb", "experimental", "search"]
+  complexity: "moderate"
+  usage_pattern: "common"
+
+# Error handling
+error_handling:
+  gene_not_found: "Returns empty result if no structures found for the gene"
+  network_error: "Returns error if PDB API is unavailable"
+  invalid_organism: "Returns error if organism name is invalid"
+  api_limit_exceeded: "Returns error if API rate limit is exceeded"
+  invalid_parameters: "Returns error for invalid search parameters"

@@ -149,7 +149,8 @@ class FunctionCallsOrganizer {
                 functions: [
                     'open_protein_viewer',
                     'fetch_protein_structure', 
-                    'search_protein_by_gene',
+                    'search_pdb_structures',  // New preferred name
+                    'search_protein_by_gene', // Deprecated but kept for compatibility
                     'search_alphafold_by_gene',
                     'fetch_alphafold_structure',
                     'open_alphafold_viewer',
