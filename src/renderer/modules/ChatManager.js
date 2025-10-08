@@ -7099,7 +7099,7 @@ Advanced Analysis:
 
 Protein Structure:
   {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
-  {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+  {"tool_name": "search_pdb_structures", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
 
 Data Management:
   {"tool_name": "create_annotation", "parameters": {"type": "gene", "name": "test_gene", "chromosome": "chr1", "start": 1000, "end": 2000}}
@@ -7975,7 +7975,7 @@ Metabolic Pathway Examples:
             // BLAST & External
             'blast_search', 'blast_sequence_from_region',
             // Protein Structure
-            'open_protein_viewer', 'fetch_protein_structure',
+            'open_protein_viewer', 'fetch_protein_structure', 'search_pdb_structures',
             // Data Management
             'get_genome_info', 'export_data', 'create_annotation'
         ];
@@ -9163,6 +9163,10 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.searchProteinByGene(parameters);
                     break;
                     
+                case 'search_pdb_structures':
+                    result = await this.searchPDBStructures(parameters);
+                    break;
+                    
                 case 'get_pdb_details':
                     result = await this.getPDBDetails(parameters.pdbId);
                     break;
@@ -9787,6 +9791,7 @@ ${this.getPluginSystemInfo()}`;
             // Protein Structure
             'open_protein_viewer',
             'fetch_protein_structure',
+            'search_pdb_structures',
             'search_protein_by_gene',
             'get_pdb_details',
             
@@ -16100,6 +16105,7 @@ ${this.getPluginSystemInfo()}`;
             // Protein Agent - 蛋白质相关
             'open_protein_viewer': 'Protein Agent',
             'fetch_protein_structure': 'Protein Agent',
+            'search_pdb_structures': 'Protein Agent',
             'search_protein_by_gene': 'Protein Agent',
             'get_pdb_details': 'Protein Agent',
             'amino_acid_composition': 'Protein Agent',
