@@ -415,16 +415,16 @@ class AutomaticSimpleSuite {
             },
             {
                 id: 'search_auto_02',
-                name: 'Search Ribosome Functions',
+                name: 'Search DNA Polymerase',
                 type: 'function_call',
                 category: 'search',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Find genes related to ribosome function.',
+                instruction: 'Search for DNA Polymerase genes.',
                 expectedResult: {
                     tool_name: 'search_features',
                     parameters: {
-                        query: 'ribosome',
+                        query: 'DNA Polymerase',
                         caseSensitive: false
                     }
                 },
