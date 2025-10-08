@@ -13576,7 +13576,7 @@ ${this.getPluginSystemInfo()}`;
                     organism: protein.organism?.scientificName || organism,
                     length: protein.sequence?.length,
                     alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${uniprotId}`,
-                    downloadUrl: `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`,
+                    downloadUrl: `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`,
                     reviewed: protein.entryType === 'UniProtKB reviewed (Swiss-Prot)'
                 });
                 console.log(`✓ Added ${uniprotId} to AlphaFold results`);
@@ -13631,7 +13631,7 @@ ${this.getPluginSystemInfo()}`;
                     organism: knownStructure.organism,
                     length: knownStructure.length,
                     alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${knownStructure.uniprotId}`,
-                    downloadUrl: `https://alphafold.ebi.ac.uk/files/AF-${knownStructure.uniprotId}-F1-model_v4.pdb`,
+                    downloadUrl: `https://alphafold.ebi.ac.uk/files/AF-${knownStructure.uniprotId}-F1-model_v6.pdb`,
                     reviewed: true,
                     isKnownStructure: true
                 });
@@ -13648,7 +13648,7 @@ ${this.getPluginSystemInfo()}`;
     async checkAlphaFoldAvailability(uniprotId) {
         try {
             // Check if AlphaFold structure exists by trying to access the download URL
-            const checkUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`;
+            const checkUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`;
             
             // Use AbortController to handle timeouts cleanly
             const controller = new AbortController();
@@ -13689,7 +13689,7 @@ ${this.getPluginSystemInfo()}`;
         try {
             console.log(`Downloading AlphaFold structure for ${uniprotId} in ${format} format`);
             
-            const downloadUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`;
+            const downloadUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`;
             
             console.log('AlphaFold download URL:', downloadUrl);
             

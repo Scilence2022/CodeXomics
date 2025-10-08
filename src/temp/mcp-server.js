@@ -1373,7 +1373,7 @@ class MCPGenomeBrowserServer {
             const fileExtension = format === 'cif' ? 'cif' : 'pdb';
             const structureData = await this.makeHTTPSRequest({
                 hostname: 'alphafold.ebi.ac.uk',
-                path: `/files/AF-${uniprotId}-F1-model_v4.${fileExtension}`,
+                path: `/files/AF-${uniprotId}-F1-model_v6.${fileExtension}`,
                 method: 'GET'
             });
             
@@ -1384,7 +1384,7 @@ class MCPGenomeBrowserServer {
             try {
                 confidenceData = await this.makeHTTPSRequest({
                     hostname: 'alphafold.ebi.ac.uk',
-                    path: `/files/AF-${uniprotId}-F1-predicted_aligned_error_v4.json`,
+                    path: `/files/AF-${uniprotId}-F1-predicted_aligned_error_v6.json`,
                     method: 'GET'
                 });
                 console.log('AlphaFold confidence data downloaded');
