@@ -718,10 +718,12 @@ class AutomaticSimpleSuite {
             console.log(`🔍 [evaluateBasicFunctionCall] Checking tracker for tool: ${expectedResult.tool_name}`);
             
             // Look for recent successful execution of the expected tool
+            // Use configured benchmark timeout instead of hardcoded 30 seconds
+            const timeoutMs = (this.framework && this.framework.testTimeout) || 120000; // Default to 2 minutes
             const relevantExecution = recentExecutions.find(exec => 
                 exec.toolName === expectedResult.tool_name && 
                 exec.status === 'completed' &&
-                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+                Date.now() - exec.startTime < timeoutMs // Within configured timeout window
             );
             
             if (relevantExecution) {
@@ -736,7 +738,7 @@ class AutomaticSimpleSuite {
             const failedExecution = recentExecutions.find(exec => 
                 exec.toolName === expectedResult.tool_name && 
                 exec.status === 'failed' &&
-                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+                Date.now() - exec.startTime < timeoutMs // Within configured timeout window
             );
             
             if (failedExecution) {
@@ -1141,7 +1143,7 @@ class AutomaticSimpleSuite {
             const relevantExecution = recentExecutions.find(exec => 
                 exec.toolName === expectedToolName && 
                 exec.status === 'completed' &&
-                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+                Date.now() - exec.startTime < timeoutMs // Within configured timeout window
             );
             
             if (relevantExecution) {

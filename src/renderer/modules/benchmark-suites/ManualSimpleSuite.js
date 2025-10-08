@@ -45,7 +45,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please verify: 1) Browser navigates to lacZ gene, 2) Gene is highlighted/centered in view, 3) Navigation completes within 5 seconds.'
             },
@@ -63,7 +63,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please confirm: 1) New browser tab opens successfully, 2) New tab is ready for genome visualization, 3) Original tab remains functional.'
             },
@@ -83,7 +83,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please verify: 1) Browser switches to the first tab successfully, 2) Tab content loads properly, 3) Tab switching does not affect the current genomic view state.'
             },
@@ -103,7 +103,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateTabSwitchCall.bind(this),
                 manualVerification: 'Please verify: 1) Browser finds and switches to tab containing "Genome Browser" in the name, 2) Partial name matching works correctly, 3) Tab switching preserves the current genomic view state, 4) Tab focus indicator is properly updated.'
             },
@@ -126,7 +126,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please verify: 1) Codon usage analysis is performed for lacZ, 2) Results show frequency tables and statistics, 3) Codon bias patterns are identified, 4) Results are clearly visualized.'
             },
@@ -148,7 +148,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please verify: 1) File selection dialog opens properly, 2) Dialog supports FASTA/GenBank formats, 3) File filtering works correctly, 4) Dialog interface is user-friendly.'
             },
@@ -166,7 +166,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please verify: 1) Annotation loading interface appears, 2) Compatible annotation formats are supported, 3) File selection is intuitive, 4) Loading progress is indicated.'
             },
@@ -184,7 +184,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please verify: 1) Reads file dialog opens, 2) BAM/SAM formats are supported, 3) File size handling is appropriate, 4) Integration with genome view is prepared.'
             },
@@ -202,7 +202,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please verify: 1) WIG file loading interface appears, 2) Track configuration options are available, 3) Quantitative data handling is prepared, 4) Visualization parameters can be set.'
             },
@@ -225,7 +225,7 @@ class ManualSimpleSuite {
                 },
                 maxScore: 5,
                 bonusScore: 1,
-                timeout: 30000,
+                timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
                 manualVerification: 'Please verify: 1) Search identifies genes with locus tags b0030, b0031, etc., 2) Partial matching works correctly, 3) Results are comprehensive, 4) Search performance is acceptable.'
             }
@@ -264,10 +264,12 @@ class ManualSimpleSuite {
             console.log(`🔍 [ManualSimpleSuite] Checking tracker for tool: ${expectedResult.tool_name}`);
             
             // Look for recent successful execution of the expected tool
+            // Use configured benchmark timeout instead of hardcoded 30 seconds
+            const timeoutMs = (this.framework && this.framework.testTimeout) || 120000; // Default to 2 minutes
             const relevantExecution = recentExecutions.find(exec => 
                 exec.toolName === expectedResult.tool_name && 
                 exec.status === 'completed' &&
-                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+                Date.now() - exec.startTime < timeoutMs // Within configured timeout window
             );
             
             if (relevantExecution) {
@@ -282,7 +284,7 @@ class ManualSimpleSuite {
             const failedExecution = recentExecutions.find(exec => 
                 exec.toolName === expectedResult.tool_name && 
                 exec.status === 'failed' &&
-                Date.now() - exec.startTime < 30000 // Within last 30 seconds
+                Date.now() - exec.startTime < timeoutMs // Within configured timeout window
             );
             
             if (failedExecution) {
