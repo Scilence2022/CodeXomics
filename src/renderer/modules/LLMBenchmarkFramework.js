@@ -2672,18 +2672,36 @@ class LLMBenchmarkFramework {
                         tools: currentExecutionData.functionCalls.map(c => c.tool_name)
                     });
                     
-                    // Return the most recent function call
-                    const latestCall = currentExecutionData.functionCalls[currentExecutionData.functionCalls.length - 1];
-                    return {
-                        tool_name: latestCall.tool_name,
-                        parameters: latestCall.parameters,
-                        executed: true,
-                        round: latestCall.round,
-                        timestamp: latestCall.timestamp,
-                        confidence: 100, // Actual execution = 100% confidence
-                        actualResult: true,
-                        detectionMethod: 'chatmanager_execution'
-                    };
+                    // CRITICAL FIX: Return ALL function calls if multiple, not just the latest
+                    if (currentExecutionData.functionCalls.length > 1) {
+                        console.log(`🎯 Multiple ChatManager function calls detected (${currentExecutionData.functionCalls.length}), returning all:`, 
+                            currentExecutionData.functionCalls.map(call => call.tool_name));
+                        
+                        // Return array of all function calls for multiple tools evaluation
+                        return currentExecutionData.functionCalls.map(call => ({
+                            tool_name: call.tool_name,
+                            parameters: call.parameters,
+                            executed: true,
+                            round: call.round,
+                            timestamp: call.timestamp,
+                            confidence: 100, // Actual execution = 100% confidence
+                            actualResult: true,
+                            detectionMethod: 'chatmanager_execution'
+                        }));
+                    } else {
+                        // Single function call, return as single object
+                        const latestCall = currentExecutionData.functionCalls[0];
+                        return {
+                            tool_name: latestCall.tool_name,
+                            parameters: latestCall.parameters,
+                            executed: true,
+                            round: latestCall.round,
+                            timestamp: latestCall.timestamp,
+                            confidence: 100, // Actual execution = 100% confidence
+                            actualResult: true,
+                            detectionMethod: 'chatmanager_execution'
+                        };
+                    }
                 } else {
                     console.log('⚠️ Ignoring stale ChatManager execution data:', {
                         age: Math.round(dataAge / 1000) + 's',

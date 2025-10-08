@@ -617,9 +617,7 @@ class AutomaticSimpleSuite {
                 expectedResult: {
                     tool_name: 'search_alphafold_by_gene',
                     parameters: {
-                        sequence: '<araA_protein_sequence>',
-                        blastType: 'blastp',
-                        database: 'nr'
+                        geneName: 'araA'  // Fixed: Use correct parameter name and remove incorrect ones
                     }
                 },
                 maxScore: 5,

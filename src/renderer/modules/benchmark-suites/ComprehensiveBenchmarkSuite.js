@@ -472,11 +472,9 @@ class ComprehensiveBenchmarkSuite {
                 evaluation: 'automatic',
                 instruction: 'Get AlphaFold structure prediction for gene araA.',
                 expectedResult: {
-                    tool_name: 'alphafold_search',
+                    tool_name: 'search_alphafold_by_gene',  // Fixed: Use correct tool name
                     parameters: {
-                        sequence: '<araA_protein_sequence>',
-                        blastType: 'blastp',
-                        database: 'nr'
+                        geneName: 'araA'  // Fixed: Use correct parameter name
                     }
                 },
                 maxScore: 5,
