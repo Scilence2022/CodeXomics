@@ -627,12 +627,12 @@ class AutomaticSimpleSuite {
             // Note: ext_auto_01 (UniProt lacZ search) test removed as requested
             {
                 id: 'ext_auto_02',
-                name: 'Get AlphaFold Structure for lysC',
+                name: 'Search AlphaFold Structure for lysC',
                 type: 'function_call',
                 category: 'external_database',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Get AlphaFold structure prediction for gene lysC.',
+                instruction: 'Search AlphaFold structure prediction for gene lysC.',
                 expectedResult: {
                     tool_name: 'search_alphafold_by_gene',
                     parameters: {
