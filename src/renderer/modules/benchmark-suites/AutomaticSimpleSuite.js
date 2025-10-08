@@ -626,6 +626,26 @@ class AutomaticSimpleSuite {
             // EXTERNAL DATABASE TASKS - Automatic + Simple
             // Note: ext_auto_01 (UniProt lacZ search) test removed as requested
             {
+                id: 'ext_auto_01b',
+                name: 'Search PDB Structure for talB',
+                type: 'function_call',
+                category: 'external_database',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Search PDB experimental structures for gene talB from Escherichia coli.',
+                expectedResult: {
+                    tool_name: 'search_pdb_structures',
+                    parameters: {
+                        geneName: 'talB',
+                        organism: 'Escherichia coli'
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
                 id: 'ext_auto_02',
                 name: 'Search AlphaFold Structure for lysC',
                 type: 'function_call',

@@ -1,6 +1,6 @@
 {
   "name": "codexomics",
-  "version": "0.3.4-beta",
+  "version": "0.522.0",
   "description": "An AI-powered bioinformatics analysis platform built with Electron",
   "main": "src/main.js",
   "homepage": "https://github.com/Scilence2022/CodeXomics",
@@ -130,7 +130,7 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
-      "title": "Install ${productName} ${version}",
+      "title": "${productName} ${version}",
       "icon": "build/icon.icns",
       "iconSize": 90,
       "window": {
