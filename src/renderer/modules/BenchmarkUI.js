@@ -1960,11 +1960,25 @@ class BenchmarkUI {
 
         try {
             this.isRunning = true;
+            this.startTime = Date.now(); // CRITICAL: Set startTime for elapsed timer
             
             // Update UI
             document.getElementById('startBenchmark').disabled = true;
             document.getElementById('stopBenchmark').disabled = false;
             document.getElementById('progressSection').style.display = 'block';
+            
+            // Start elapsed time updater (every second)
+            this.elapsedTimeInterval = setInterval(() => {
+                const elapsedTime = document.getElementById('elapsedTime');
+                if (elapsedTime && this.startTime && this.isRunning) {
+                    const elapsed = Date.now() - this.startTime;
+                    const minutes = Math.floor(elapsed / 60000);
+                    const seconds = Math.floor((elapsed % 60000) / 1000);
+                    elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000); // Update every second
+            
+            console.log('🚀 [UI Start] Benchmark started, elapsed timer started at:', new Date(this.startTime).toLocaleTimeString());
             
             // Update menu status
             // Status update removed - no menu manager
@@ -2020,6 +2034,14 @@ class BenchmarkUI {
             alert('Benchmark failed: ' + errorMessage + detailedGuidance);
         } finally {
             this.isRunning = false;
+            
+            // Clear elapsed time interval
+            if (this.elapsedTimeInterval) {
+                clearInterval(this.elapsedTimeInterval);
+                this.elapsedTimeInterval = null;
+                console.log('⏱️ [UI Stop] Elapsed timer stopped');
+            }
+            
             document.getElementById('startBenchmark').disabled = false;
             document.getElementById('stopBenchmark').disabled = true;
             document.getElementById('exportResults').disabled = false;
@@ -2039,6 +2061,14 @@ class BenchmarkUI {
         if (!this.isRunning) return;
         
         this.isRunning = false;
+        
+        // Clear elapsed time interval
+        if (this.elapsedTimeInterval) {
+            clearInterval(this.elapsedTimeInterval);
+            this.elapsedTimeInterval = null;
+            console.log('⏱️ [UI Stop] Elapsed timer stopped (manual stop)');
+        }
+        
         if (this.framework) {
             this.framework.stopBenchmark();
         }
@@ -2976,9 +3006,13 @@ class BenchmarkUI {
             console.log(`📊 [UI Progress] Updated progress bar to ${percentage.toFixed(1)}%`);
         }
         
-        if (currentSuite) currentSuite.textContent = suiteId || '-';
+        // Always update current suite when provided
+        if (currentSuite && suiteId) {
+            currentSuite.textContent = suiteId || '-';
+            console.log(`🏆 [UI Suite Update] Current suite updated to: ${suiteId}`);
+        }
         
-        // Update cumulative test counts
+        // Update cumulative test counts when suite completes (suiteResult is provided)
         if (suiteResult) {
             const completedElement = document.getElementById('completedTests');
             const passedElement = document.getElementById('passedTests');
@@ -2996,7 +3030,10 @@ class BenchmarkUI {
             if (passedElement) passedElement.textContent = newPassed;
             if (failedElement) failedElement.textContent = newFailed;
             
-            console.log(`📊 [UI Stats] Updated: ${newCompleted} completed, ${newPassed} passed, ${newFailed} failed`);
+            console.log(`✅ [UI Suite Complete] Suite ${suiteId} completed - Updated totals: ${newCompleted} completed, ${newPassed} passed, ${newFailed} failed`);
+        } else {
+            // Suite is starting - no stats to update yet
+            console.log(`🚀 [UI Suite Start] Suite ${suiteId} is starting...`);
         }
         
         // Add total test count display if available
@@ -3010,7 +3047,11 @@ class BenchmarkUI {
         const currentTest = document.getElementById('currentTest');
         const progressFill = document.getElementById('progressFill');
         
-        if (currentTest) currentTest.textContent = testId || '-';
+        // Always update current test name when provided
+        if (currentTest && testId) {
+            currentTest.textContent = testId || '-';
+            console.log(`🎯 [UI Test Update] Current test updated to: ${testId}`);
+        }
         
         // Update progress bar with real-time test progress
         if (progressFill && typeof progress === 'number') {
@@ -3035,9 +3076,13 @@ class BenchmarkUI {
             elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
         
-        // Update individual test completion count in real-time
+        // Update individual test completion count ONLY when test completes (testResult is not null)
         if (testResult && testResult.status === 'completed') {
             this.updateIndividualTestCount(testResult);
+            console.log(`✅ [UI Test Complete] Test ${testId} completed with status: ${testResult.success ? 'PASS' : 'FAIL'}`);
+        } else if (testResult === null) {
+            // Test is starting - this is when we update the current test name
+            console.log(`🚀 [UI Test Start] Test ${testId} is starting...`);
         }
     }
     
@@ -3095,6 +3140,7 @@ class BenchmarkUI {
         const completedTests = document.getElementById('completedTests');
         const passedTests = document.getElementById('passedTests');
         const failedTests = document.getElementById('failedTests');
+        const elapsedTime = document.getElementById('elapsedTime');
         
         if (progressFill) progressFill.style.width = '0%';
         if (currentSuite) currentSuite.textContent = '-';
@@ -3102,12 +3148,16 @@ class BenchmarkUI {
         if (completedTests) completedTests.textContent = '0';
         if (passedTests) passedTests.textContent = '0';
         if (failedTests) failedTests.textContent = '0';
+        if (elapsedTime) elapsedTime.textContent = '00:00'; // Reset elapsed time
         
         // Reset percentage display
         const progressPercentage = document.getElementById('progressPercentage');
         if (progressPercentage) progressPercentage.textContent = '0%';
         
-        console.log('🔄 [UI Reset] Progress counters reset for new benchmark run');
+        // Reset startTime to current time
+        this.startTime = Date.now();
+        
+        console.log('🔄 [UI Reset] Progress counters reset for new benchmark run, startTime set to:', new Date(this.startTime).toLocaleTimeString());
     }
 
     /**

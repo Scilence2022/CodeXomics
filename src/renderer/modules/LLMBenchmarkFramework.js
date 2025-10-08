@@ -356,6 +356,15 @@ class LLMBenchmarkFramework {
         const filteredTests = options.tests ? 
             tests.filter(test => options.tests.includes(test.id)) : tests;
 
+        // CRITICAL FIX: Update current suite name at the beginning
+        if (options.onProgress) {
+            // Call with 0 progress to indicate suite is starting
+            const initialProgress = this.framework ? 
+                this.framework.completedTestCount / this.framework.totalTestCount : 0;
+            console.log(`🚀 [Suite Progress START] Starting suite ${suiteId}`);
+            options.onProgress(initialProgress, suiteId, null);
+        }
+
         // Display test suite start
         this.displayTestSuiteStart(testSuite, filteredTests.length);
         
@@ -372,20 +381,33 @@ class LLMBenchmarkFramework {
 
             console.log(`Running test: ${test.id} (${i + 1}/${filteredTests.length})`);
             
+            // CRITICAL FIX: Update test progress BEFORE starting the test to show current test name
+            if (options.onTestProgress) {
+                const testProgress = i / filteredTests.length; // Use i (starting) instead of i+1 (completed)
+                const overallTestProgress = this.framework ? 
+                    (this.framework.completedTestCount + i) / this.framework.totalTestCount :
+                    testProgress;
+                
+                console.log(`📊 [Test Progress START] Starting test ${i + 1}/${filteredTests.length} in suite, Overall: ${this.framework?.completedTestCount + i || i}/${this.framework?.totalTestCount || filteredTests.length}`);
+                
+                // Call with null testResult to indicate test is starting
+                options.onTestProgress(overallTestProgress, test.id, null, suiteId);
+            }
+            
             // Display test progress
             this.displayTestProgress(test, i + 1, filteredTests.length);
             
             const testResult = await this.runSingleTest(test, suiteId);
             results.testResults.push(testResult);
             
-            // Update test progress if callback provided
+            // Update test progress AFTER completion with result
             if (options.onTestProgress) {
                 const testProgress = (i + 1) / filteredTests.length;
                 const overallTestProgress = this.framework ? 
                     (this.framework.completedTestCount + i + 1) / this.framework.totalTestCount :
                     testProgress;
                 
-                console.log(`📊 [Test Progress] Test ${i + 1}/${filteredTests.length} in suite, Overall: ${this.framework?.completedTestCount + i + 1 || i + 1}/${this.framework?.totalTestCount || filteredTests.length}`);
+                console.log(`📊 [Test Progress COMPLETE] Test ${i + 1}/${filteredTests.length} in suite, Overall: ${this.framework?.completedTestCount + i + 1 || i + 1}/${this.framework?.totalTestCount || filteredTests.length}`);
                 options.onTestProgress(overallTestProgress, test.id, testResult, suiteId);
             }
             
