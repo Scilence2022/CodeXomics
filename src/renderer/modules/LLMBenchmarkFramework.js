@@ -2694,12 +2694,20 @@ class LLMBenchmarkFramework {
             }
         }
 
-        // Fallback to text-based detection
+        // CRITICAL FIX: Return all detected function calls for multiple tools evaluation
         if (parsedResponse && parsedResponse.functionCalls && parsedResponse.functionCalls.length > 0) {
-            // Return the highest confidence function call for single function tests
             const sortedCalls = parsedResponse.functionCalls.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-            console.log('🎯 Returning highest confidence function call:', sortedCalls[0]);
-            return sortedCalls[0];
+            
+            // If multiple function calls detected, return all of them for proper evaluation
+            if (sortedCalls.length > 1) {
+                console.log(`🎯 Multiple function calls detected (${sortedCalls.length}), returning all for evaluation:`, 
+                    sortedCalls.map(call => call.tool_name));
+                return sortedCalls; // Return array of all tools
+            } else {
+                // Single function call, return as single object
+                console.log('🎯 Returning single function call:', sortedCalls[0]);
+                return sortedCalls[0];
+            }
         }
 
         // CRITICAL INSIGHT: If ChatManager executed functions successfully, 
@@ -2716,7 +2724,14 @@ class LLMBenchmarkFramework {
             const jsonMatches = response.match(/\{[^}]*"tool_name"[^}]*\}/g);
             if (jsonMatches) {
                 const parsed = jsonMatches.map(match => JSON.parse(match));
-                return parsed.length === 1 ? parsed[0] : parsed;
+                console.log(`🎯 JSON fallback found ${parsed.length} tool calls:`, parsed.map(p => p.tool_name));
+                
+                // CRITICAL FIX: Return all parsed tools if multiple, single if one
+                if (parsed.length > 1) {
+                    return parsed; // Return array for multiple tools
+                } else {
+                    return parsed[0]; // Return single object for one tool
+                }
             }
             
             // If no function calls detected, return response with empty function calls

@@ -287,12 +287,43 @@ class ManualComplexSuite {
             }
         }
 
-        // Check tool name - award full points for correct tool
-        const actualTool = Array.isArray(actualResult) ? actualResult[0]?.tool_name : actualResult.tool_name;
-        if (actualTool === expectedResult.tool_name) {
+        // ENHANCED: Handle multiple tool calls - check all tools in array
+        let actualTools = [];
+        let actualTool = null;
+        
+        if (Array.isArray(actualResult)) {
+            actualTools = actualResult.map(call => call?.tool_name).filter(Boolean);
+            actualTool = actualTools[0]; // Primary tool for backward compatibility
+            console.log(`🎯 [ManualComplexSuite] Multiple tools detected:`, actualTools);
+            console.log(`🎯 [ManualComplexSuite] Checking if expected tool '${expectedResult.tool_name}' is in:`, actualTools);
+            
+            // Check if expected tool is in the array
+            if (actualTools.includes(expectedResult.tool_name)) {
+                actualTool = expectedResult.tool_name; // Use the expected tool for evaluation
+                console.log(`✅ [ManualComplexSuite] Expected tool '${expectedResult.tool_name}' found in tool array!`);
+            } else {
+                console.log(`❌ [ManualComplexSuite] Expected tool '${expectedResult.tool_name}' NOT found in tool array`);
+            }
+        } else {
+            actualTool = actualResult?.tool_name;
+            actualTools = actualTool ? [actualTool] : [];
+            console.log(`🎯 [ManualComplexSuite] Single tool detected: '${actualTool}'`);
+        }
+        
+        console.log(`🎯 [ManualComplexSuite] Final extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);        
+        
+        // Check if expected tool is found in the detected tools array
+        if (actualTools.includes(expectedResult.tool_name)) {
+            console.log(`✅ [ManualComplexSuite] EXPECTED TOOL FOUND: '${expectedResult.tool_name}' detected in tools array`);
+            evaluation.score = evaluation.maxScore; // FULL POINTS for correct tool detection
+            actualTool = expectedResult.tool_name; // Set for parameter evaluation
+        } else if (actualTool === expectedResult.tool_name) {
+            console.log(`✅ [ManualComplexSuite] Correct tool name detected: ${actualTool}`);
             evaluation.score = evaluation.maxScore; // Full points for correct tool
         } else {
-            evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool}'`);
+            console.log(`❌ [ManualComplexSuite] Tool mismatch: expected '${expectedResult.tool_name}', got '${actualTool}'`);
+            console.log(`❌ [ManualComplexSuite] Available tools were:`, actualTools);
+            evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool || 'none'}'. Available tools: [${actualTools.join(', ')}]`);
             evaluation.score = 0; // No points for wrong tool
             evaluation.success = false;
             return evaluation;

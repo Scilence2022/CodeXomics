@@ -370,8 +370,20 @@ class AutomaticComplexSuite {
         
         // PRIORITY 2: Standard extraction if no parseDebugInfo available
         if (!actualTool) {
+            // ENHANCED: Handle multiple tool calls - check all tools in array
+            let actualTools = [];
+            
             if (Array.isArray(actualResult)) {
-                actualTool = actualResult[0]?.tool_name;
+                actualTools = actualResult.map(call => call?.tool_name).filter(Boolean);
+                actualTool = actualTools[0]; // Primary tool for backward compatibility
+                console.log(`🎯 [AutomaticComplexSuite] Multiple tools detected:`, actualTools);
+                console.log(`🎯 [AutomaticComplexSuite] Checking if expected tool '${expectedResult.tool_name}' is in:`, actualTools);
+                
+                // Check if expected tool is in the array
+                if (actualTools.includes(expectedResult.tool_name)) {
+                    actualTool = expectedResult.tool_name; // Use the expected tool for evaluation
+                    console.log(`✅ [AutomaticComplexSuite] Expected tool '${expectedResult.tool_name}' found in tool array!`);
+                }
             } else if (actualResult && typeof actualResult === 'object') {
                 actualTool = actualResult.tool_name;
             }
