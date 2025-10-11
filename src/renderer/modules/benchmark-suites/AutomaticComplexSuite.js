@@ -4,7 +4,7 @@
  */
 class AutomaticComplexSuite {
     constructor() {
-        this.suiteName = 'Automatic Complex Tests (3)'; // Updated count after adding tab test
+        this.suiteName = 'Automatic Complex Tests (4)'; // Updated count after adding export workflow test
         this.suiteId = 'automatic_complex';
         this.description = 'Complex tests with automatic evaluation - Advanced genomic analysis operations';
         this.framework = null;
@@ -197,6 +197,80 @@ class AutomaticComplexSuite {
                 bonusScore: 2,
                 timeout: 60000,
                 evaluator: this.evaluateWorkflowCall.bind(this)
+            },
+
+            // DATA EXPORT WORKFLOW - Automatic + Complex
+            {
+                id: 'export_auto_complex_01',
+                name: 'Complete Data Export Workflow',
+                type: 'workflow',
+                category: 'file_export',
+                complexity: 'complex',
+                evaluation: 'automatic',
+                instruction: `Please perform the following tasks in order: 1) Export sequences in FASTA format to file: ${this.buildFilePath('exported_sequences.fasta')}; 2) Export data in GenBank format to file: ${this.buildFilePath('exported_data.gbk')}; 3) Export GFF3 annotation format to file: ${this.buildFilePath('exported_annotations.gff3')}; 4) Export features in BED format to file: ${this.buildFilePath('exported_features.bed')}; 5) Export coding sequences as FASTA format to file: ${this.buildFilePath('exported_cds.fasta')}; 6) Export protein sequences in FASTA format to file: ${this.buildFilePath('exported_proteins.fasta')}; 7) Export currently visible genomic region as FASTA to file: ${this.buildFilePath('exported_region.fasta')}.`,
+                expectedResult: {
+                    tool_sequence: [
+                        'export_fasta_sequence',
+                        'export_genbank_format', 
+                        'export_gff_annotations',
+                        'export_bed_format',
+                        'export_cds_fasta',
+                        'export_protein_fasta',
+                        'export_current_view_fasta'
+                    ],
+                    parameters: [
+                        {
+                            format: 'fasta',
+                            includeDescription: true,
+                            filePath: this.buildFilePath('exported_sequences.fasta')
+                        },
+                        {
+                            includeSequence: true,
+                            includeAnnotations: true,
+                            filePath: this.buildFilePath('exported_data.gbk')
+                        },
+                        {
+                            version: 'gff3',
+                            includeSequence: false,
+                            filePath: this.buildFilePath('exported_annotations.gff3')
+                        },
+                        {
+                            trackName: 'exported_features',
+                            includeScore: true,
+                            filePath: this.buildFilePath('exported_features.bed')
+                        },
+                        {
+                            sequenceType: 'cds',
+                            includeHeaders: true,
+                            filePath: this.buildFilePath('exported_cds.fasta')
+                        },
+                        {
+                            sequenceType: 'protein',
+                            includeHeaders: true,
+                            translate: true,
+                            filePath: this.buildFilePath('exported_proteins.fasta')
+                        },
+                        {
+                            format: 'fasta',
+                            currentViewOnly: true,
+                            includeCoordinates: true,
+                            filePath: this.buildFilePath('exported_region.fasta')
+                        }
+                    ],
+                    expectedFiles: [
+                        'exported_sequences.fasta',
+                        'exported_data.gbk',
+                        'exported_annotations.gff3',
+                        'exported_features.bed',
+                        'exported_cds.fasta',
+                        'exported_proteins.fasta',
+                        'exported_region.fasta'
+                    ]
+                },
+                maxScore: 20,
+                bonusScore: 5,
+                timeout: 180000,
+                evaluator: this.evaluateDataExportWorkflow.bind(this)
             },
 
             // UI INTERACTION TASKS - Automatic + Complex
@@ -846,6 +920,288 @@ class AutomaticComplexSuite {
         }
         
         return evaluation;
+    }
+
+    /**
+     * Evaluate data export workflow with Song's file-priority system
+     * Primary: Check if target files exist → Full score
+     * Fallback: Tool calls + execution success
+     */
+    async evaluateDataExportWorkflow(actualResult, expectedResult, testResult) {
+        const evaluation = {
+            success: false,
+            score: 0,
+            maxScore: testResult.maxScore || 20,
+            errors: [],
+            warnings: [],
+            details: {
+                filesExported: [],
+                toolsExecuted: [],
+                successfulExports: 0,
+                totalExpectedFiles: expectedResult.expectedFiles?.length || 7
+            }
+        };
+
+        console.log('🗂️ [DataExportWorkflow] Starting Song\'s file-priority evaluation:', {
+            testId: testResult.id,
+            expectedFiles: expectedResult.expectedFiles,
+            actualResult: actualResult
+        });
+
+        if (!actualResult) {
+            evaluation.errors.push('No result obtained from data export workflow');
+            return evaluation;
+        }
+
+        // PRIORITY 1: Check if target export files exist (Song's NEW file-priority system)
+        const expectedFiles = expectedResult.expectedFiles || [];
+        const pointsPerFile = Math.floor(evaluation.maxScore / evaluation.details.totalExpectedFiles);
+        console.log(`📊 [DataExportWorkflow] Points per file: ${pointsPerFile}`);
+
+        for (const fileName of expectedFiles) {
+            const filePath = this.buildFilePath(fileName);
+            const fileExists = this.checkTargetFileExists(filePath);
+            
+            if (fileExists) {
+                evaluation.details.filesExported.push(fileName);
+                evaluation.details.successfulExports++;
+                evaluation.score += pointsPerFile;
+                console.log(`✅ [DataExportWorkflow] File exists: ${fileName} (+${pointsPerFile} points)`);
+            } else {
+                console.log(`❌ [DataExportWorkflow] File missing: ${fileName}`);
+            }
+        }
+
+        // If files exist, award full score (Song's primary criterion)
+        if (evaluation.details.successfulExports >= Math.ceil(evaluation.details.totalExpectedFiles * 0.5)) {
+            console.log(`🎯 [DataExportWorkflow] PRIMARY SUCCESS: ${evaluation.details.successfulExports}/${evaluation.details.totalExpectedFiles} files exist`);
+            evaluation.success = true;
+            // Cap score at maximum
+            evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
+            return evaluation;
+        }
+
+        console.log(`⚠️ [DataExportWorkflow] Insufficient files exist, using fallback evaluation`);
+
+        // FALLBACK: Tool execution evaluation (only if files don't exist)
+        const isNaturalLanguageResponse = typeof actualResult === 'string' || 
+            (actualResult && typeof actualResult === 'object' && !actualResult.tool_name && !Array.isArray(actualResult));
+        
+        if (isNaturalLanguageResponse) {
+            console.log('📝 [DataExportWorkflow] Parsing natural language response for export success');
+            return this.parseNaturalLanguageExportResponse(actualResult, expectedResult, testResult, evaluation);
+        }
+
+        // Handle structured tool results
+        let results = [];
+        if (Array.isArray(actualResult)) {
+            results = actualResult;
+        } else if (actualResult && actualResult.tool_name) {
+            results = [actualResult];
+        }
+
+        console.log(`📋 [DataExportWorkflow] Processing ${results.length} tool results`);
+
+        // Expected tools mapping
+        const expectedTools = {
+            'export_fasta_sequence': ['exported_sequences.fasta'],
+            'export_genbank_format': ['exported_data.gbk'],
+            'export_gff_annotations': ['exported_annotations.gff3'],
+            'export_bed_format': ['exported_features.bed'],
+            'export_cds_fasta': ['exported_cds.fasta'],
+            'export_protein_fasta': ['exported_proteins.fasta'],
+            'export_current_view_fasta': ['exported_region.fasta']
+        };
+
+        // Fallback scoring: 3 points for correct tool, 1 point for execution success
+        results.forEach((result, index) => {
+            if (!result || !result.tool_name) {
+                console.log(`⚠️ [DataExportWorkflow] Result ${index} missing tool_name`);
+                return;
+            }
+
+            const toolName = result.tool_name;
+            evaluation.details.toolsExecuted.push(toolName);
+
+            if (expectedTools[toolName]) {
+                // Correct tool: +3 points (Song's fallback criterion 1)
+                evaluation.score += 3;
+                console.log(`✅ [DataExportWorkflow] Correct tool: ${toolName} (+3 points)`);
+
+                // Check execution success: +1 point (Song's fallback criterion 2)
+                const hasSuccessSignal = this.checkToolExecutionSuccess(result, toolName);
+                if (hasSuccessSignal) {
+                    evaluation.score += 1;
+                    console.log(`✅ [DataExportWorkflow] Tool execution success: ${toolName} (+1 point)`);
+                } else {
+                    console.log(`❌ [DataExportWorkflow] No execution success signal: ${toolName}`);
+                }
+            } else {
+                evaluation.warnings.push(`Unexpected tool executed: ${toolName}`);
+                console.log(`⚠️ [DataExportWorkflow] Unexpected tool: ${toolName}`);
+            }
+        });
+
+        // Calculate success based on fallback scoring (4+ points to pass)
+        evaluation.success = evaluation.score >= 4;
+        evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
+
+        console.log(`🎯 [DataExportWorkflow] Fallback evaluation complete:`, {
+            score: evaluation.score,
+            maxScore: evaluation.maxScore,
+            success: evaluation.success,
+            filesExported: evaluation.details.successfulExports,
+            toolsExecuted: evaluation.details.toolsExecuted.length
+        });
+
+        return evaluation;
+    }
+
+    /**
+     * Parse natural language response for export workflow success
+     */
+    parseNaturalLanguageExportResponse(actualResult, expectedResult, testResult, evaluation) {
+        let responseText = '';
+        
+        // Extract text from various response formats
+        if (typeof actualResult === 'string') {
+            responseText = actualResult;
+        } else if (actualResult && actualResult.response) {
+            responseText = actualResult.response;
+        } else if (actualResult && actualResult.message) {
+            responseText = actualResult.message;
+        } else {
+            responseText = JSON.stringify(actualResult);
+        }
+        
+        console.log('📄 [DataExportWorkflow] Parsing response text:', responseText.substring(0, 500));
+        
+        // Expected files and their success indicators
+        const expectedFiles = expectedResult.expectedFiles || [];
+        const pointsPerFile = Math.floor(evaluation.maxScore / evaluation.details.totalExpectedFiles);
+        
+        // Check for each expected file export success
+        expectedFiles.forEach(fileName => {
+            const patterns = [
+                new RegExp(`${fileName}.*created`, 'i'),
+                new RegExp(`created.*${fileName}`, 'i'),
+                new RegExp(`exported.*${fileName}`, 'i'),
+                new RegExp(`saved.*${fileName}`, 'i'),
+                new RegExp(`${fileName.replace('.', '\\.')}`, 'i')
+            ];
+            
+            const found = patterns.some(pattern => pattern.test(responseText));
+            
+            if (found) {
+                evaluation.details.filesExported.push(fileName);
+                evaluation.details.successfulExports++;
+                evaluation.score += pointsPerFile;
+                console.log(`✅ [DataExportWorkflow] Export detected: ${fileName} (+${pointsPerFile} points)`);
+            } else {
+                console.log(`❌ [DataExportWorkflow] Export not detected: ${fileName}`);
+            }
+        });
+        
+        // General export success patterns
+        const generalSuccessPatterns = [
+            /export.*completed successfully/i,
+            /all.*files.*exported/i,
+            /export.*workflow.*complete/i,
+            /task.*completed.*export/i
+        ];
+        
+        const hasGeneralSuccess = generalSuccessPatterns.some(pattern => pattern.test(responseText));
+        if (hasGeneralSuccess) {
+            evaluation.score += 2; // Bonus for general success indication
+            console.log(`✅ [DataExportWorkflow] General export success detected (+2 bonus points)`);
+        }
+        
+        // Calculate success based on export detection
+        const successRate = evaluation.details.successfulExports / evaluation.details.totalExpectedFiles;
+        evaluation.success = successRate >= 0.4; // At least 40% of files exported
+        
+        // Cap score at maximum
+        evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
+        
+        console.log(`🎯 [DataExportWorkflow] Natural language parsing results:`, {
+            score: evaluation.score,
+            maxScore: evaluation.maxScore,
+            filesExported: evaluation.details.successfulExports,
+            totalFiles: evaluation.details.totalExpectedFiles,
+            successRate: (successRate * 100).toFixed(1) + '%',
+            success: evaluation.success
+        });
+        
+        return evaluation;
+    }
+
+    /**
+     * Check if target export file exists (Song's file-priority system)
+     */
+    checkTargetFileExists(filePath) {
+        try {
+            if (typeof require !== 'undefined') {
+                const fs = require('fs');
+                const exists = fs.existsSync(filePath);
+                console.log(`🔍 [checkTargetFileExists] fs.existsSync(${filePath}): ${exists}`);
+                return exists;
+            }
+        } catch (error) {
+            console.log(`⚠️ [checkTargetFileExists] fs check failed:`, error.message);
+        }
+        
+        // Fallback: assume file doesn't exist if we can't check
+        console.log(`⚠️ [checkTargetFileExists] Cannot verify file existence for: ${filePath}`);
+        return false;
+    }
+
+    /**
+     * Check if tool execution was successful (Song's fallback criterion)
+     */
+    checkToolExecutionSuccess(actualResult, expectedToolName) {
+        // Method 1: Check Tool Execution Tracker
+        if (window.chatManager && window.chatManager.toolExecutionTracker) {
+            const tracker = window.chatManager.toolExecutionTracker;
+            const recentExecutions = tracker.getSessionExecutions();
+            
+            // Use execution data freshness validation (Song's requirement)
+            const timeoutMs = 120000; // 2 minutes max age
+            const relevantExecution = recentExecutions.find(exec => 
+                exec.toolName === expectedToolName && 
+                exec.status === 'completed' &&
+                Date.now() - exec.startTime < timeoutMs
+            );
+            
+            if (relevantExecution) {
+                console.log(`🔍 [checkToolExecutionSuccess] Tracker shows successful execution:`, relevantExecution);
+                return true;
+            }
+        }
+        
+        // Method 2: Check for success patterns in response text
+        if (typeof actualResult === 'string') {
+            const successPatterns = [
+                /tool execution completed.*succeeded/i,
+                /successfully (executed|exported|created|generated)/i,
+                /export.*completed successfully/i,
+                /file.*created successfully/i,
+                /operation completed successfully/i
+            ];
+            
+            const hasSuccessPattern = successPatterns.some(pattern => pattern.test(actualResult));
+            if (hasSuccessPattern) {
+                console.log(`🔍 [checkToolExecutionSuccess] Success pattern found in response`);
+                return true;
+            }
+        }
+        
+        // Method 3: Check if actualResult indicates successful tool execution
+        if (actualResult && typeof actualResult === 'object' && actualResult.success === true) {
+            console.log(`🔍 [checkToolExecutionSuccess] Result object indicates success`);
+            return true;
+        }
+        
+        return false;
     }
 
     async setup(context) {
