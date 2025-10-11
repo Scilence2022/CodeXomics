@@ -65,7 +65,7 @@ class ManualSuite {
                 bonusScore: 1,
                 timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) Annotation loading interface appears, 2) Compatible annotation formats are supported, 3) Loading progress is indicated.'
+                manualVerification: 'Please verify: 1) Annotation loading interface appears, 2) Annotation file can be loaded and visualized.'
             },
             {
                 id: 'load_manual_03',
@@ -83,7 +83,7 @@ class ManualSuite {
                 bonusScore: 1,
                 timeout: 300000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) Reads file dialog opens, 2) BAM/SAM formats are supported, 3) BAM/SAM file loading is indicated.'
+                manualVerification: 'Please verify: 1) Reads file dialog opens, 2) BAM/SAM file can be loaded and visualized.'
             },
             {
                 id: 'load_manual_04',
