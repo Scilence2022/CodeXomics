@@ -2028,6 +2028,13 @@ function createMenu() {
           }
         },
         {
+          label: 'ProGenFixer',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: async () => {
+            await createProGenFixerWindow();
+          }
+        },
+        {
           label: 'Install BLAST+ Tools',
           accelerator: 'CmdOrCtrl+Alt+B',
           click: () => {
@@ -4558,7 +4565,173 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
   });
 }
 
-// Create Deep Gene Research Window
+// Create ProGenFixer Window
+async function createProGenFixerWindow() {
+  try {
+    console.log('🚀 Starting ProGenFixer window creation...');
+    let progenFixerUrl = 'https://progenfixer.biodesign.ac.cn'; // Default fallback
+    
+    try {
+      // Get the URL from General Settings
+      const mainWindow = getCurrentMainWindow();
+      if (mainWindow && mainWindow.webContents) {
+        console.log('📋 Getting settings from main window...');
+        const settings = await mainWindow.webContents.executeJavaScript(`
+          if (window.genomeBrowser && window.genomeBrowser.generalSettingsManager) {
+            window.genomeBrowser.generalSettingsManager.getSettings();
+          } else {
+            Promise.resolve({});
+          }
+        `);
+        
+        console.log('📋 Settings retrieved:', settings);
+        
+        if (settings && settings.progenFixerUrl) {
+          progenFixerUrl = settings.progenFixerUrl;
+          console.log('✅ Using ProGenFixer URL from settings:', progenFixerUrl);
+        } else {
+          console.log('⚠️ No ProGenFixer URL found in settings, using default:', progenFixerUrl);
+          showSettingsWarning('ProGenFixer URL not configured', 
+            'Using default URL (https://progenfixer.biodesign.ac.cn). You can configure the URL in General Settings → Features → External Tools.');
+        }
+      } else {
+        console.log('⚠️ Main window not available, using default URL:', progenFixerUrl);
+        showSettingsWarning('Main window not available', 
+          'Using default URL (https://progenfixer.biodesign.ac.cn). Please ensure the main window is open.');
+      }
+    } catch (error) {
+      console.warn('❌ Failed to get ProGenFixer URL from settings, using default:', error.message);
+      showSettingsError('Failed to load ProGenFixer settings', 
+        `Using default URL (https://progenfixer.biodesign.ac.cn) due to error: ${error.message}. Please check your settings configuration.`);
+    }
+    
+    console.log('🔧 Creating ProGenFixer window with URL:', progenFixerUrl);
+    
+    const progenFixerWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 1000,
+      minHeight: 700,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        webSecurity: false, // Allow loading external URLs
+        allowRunningInsecureContent: true,
+        // Enable clipboard and keyboard functionality
+        experimentalFeatures: true,
+        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
+      },
+      title: 'ProGenFixer - Genome AI Studio',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false,
+      resizable: true,
+      minimizable: true,
+      maximizable: true,
+      closable: true
+    });
+
+    console.log('✅ ProGenFixer BrowserWindow created successfully');
+
+    // Load the ProGenFixer URL
+    console.log('🌐 Loading ProGenFixer URL...');
+    await progenFixerWindow.loadURL(progenFixerUrl);
+    console.log('✅ ProGenFixer URL loaded successfully');
+    
+    // Show the window when ready
+    progenFixerWindow.once('ready-to-show', () => {
+      console.log('🎉 ProGenFixer window ready to show');
+      progenFixerWindow.show();
+      progenFixerWindow.focus();
+      console.log('✅ ProGenFixer window opened successfully');
+    });
+
+    // Also try to show immediately after load
+    console.log('🚀 Attempting immediate show...');
+    progenFixerWindow.show();
+    progenFixerWindow.focus();
+
+    // Fallback: Show window after a timeout if ready-to-show doesn't fire
+    setTimeout(() => {
+      if (!progenFixerWindow.isDestroyed() && !progenFixerWindow.isVisible()) {
+        console.log('⚠️ ProGenFixer window ready-to-show timeout, forcing show');
+        progenFixerWindow.show();
+        progenFixerWindow.focus();
+      }
+    }, 3000);
+
+    // Handle window closed
+    progenFixerWindow.on('closed', () => {
+      console.log('🔒 ProGenFixer window closed');
+    });
+
+    // Handle navigation errors
+    progenFixerWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('❌ ProGenFixer window failed to load:', errorDescription);
+      console.error('❌ Error code:', errorCode);
+      console.error('❌ Validated URL:', validatedURL);
+      
+      // Show user-friendly error page
+      progenFixerWindow.loadURL(`data:text/html,
+        <html>
+          <head>
+            <title>ProGenFixer - Connection Error</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                     text-align: center; padding: 50px; background: #f5f5f5; color: #333; }
+              h1 { color: #e74c3c; }
+              .error-code { color: #7f8c8d; font-size: 14px; }
+              button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+            </style>
+          </head>
+          <body>
+            <h1>🔧 ProGenFixer Unavailable</h1>
+            <p>Could not connect to ProGenFixer at:</p>
+            <p><strong>${validatedURL}</strong></p>
+            <p class="error-code">Error ${errorCode}: ${errorDescription}</p>
+            <div style="margin-top: 30px;">
+              <button onclick="window.location.reload()" style="background: #3498db; color: white;">
+                🔄 Retry
+              </button>
+              <button onclick="window.close()" style="background: #95a5a6; color: white;">
+                ❌ Close
+              </button>
+            </div>
+            <div style="margin-top: 20px; font-size: 14px; color: #7f8c8d;">
+              <p>Please check if the ProGenFixer service is accessible.</p>
+              <p>You can configure the URL in General Settings → Features → External Tools.</p>
+            </div>
+          </body>
+        </html>
+      `);
+    });
+
+    // Add additional event listeners for debugging
+    progenFixerWindow.webContents.on('did-start-loading', () => {
+      console.log('🔄 ProGenFixer window started loading...');
+    });
+
+    progenFixerWindow.webContents.on('did-finish-load', () => {
+      console.log('✅ ProGenFixer window finished loading');
+    });
+
+    progenFixerWindow.webContents.on('dom-ready', () => {
+      console.log('📄 ProGenFixer window DOM ready');
+    });
+
+    console.log('🎯 ProGenFixer window creation process completed');
+
+  } catch (error) {
+    console.error('❌ Error creating ProGenFixer window:', error);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Show error dialog
+    dialog.showErrorBox(
+      'Error Opening ProGenFixer',
+      `Failed to create ProGenFixer window: ${error.message}\n\nPlease check if the service is accessible at https://progenfixer.biodesign.ac.cn`
+    );
+  }
+}
 async function createDeepGeneResearchWindow(params = {}) {
   try {
     // Get the URL from General Settings
@@ -8783,4 +8956,9 @@ ipcMain.on('open-deep-gene-research-window', async (event, params = {}) => {
 ipcMain.on('open-chopchop-window', () => {
   console.log('IPC: Opening CHOPCHOP window...');
   createChopchopWindow();
+});
+
+ipcMain.on('open-progenfixer-window', () => {
+  console.log('IPC: Opening ProGenFixer window...');
+  createProGenFixerWindow();
 });

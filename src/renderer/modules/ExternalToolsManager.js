@@ -19,6 +19,12 @@ class ExternalToolsManager {
                 url: 'https://chopchop.cbu.uib.no/',
                 icon: 'fas fa-cut',
                 accelerator: 'CmdOrCtrl+Shift+C'
+            },
+            progenfixer: {
+                name: 'ProGenFixer',
+                url: 'https://progenfixer.biodesign.ac.cn',
+                icon: 'fas fa-wrench',
+                accelerator: 'CmdOrCtrl+Shift+P'
             }
         };
         
@@ -161,6 +167,11 @@ class ExternalToolsManager {
             chopchopUrlInput.value = this.builtinTools.chopchop.url;
         }
 
+        const progenFixerUrlInput = document.getElementById('extToolProGenFixerUrl');
+        if (progenFixerUrlInput) {
+            progenFixerUrlInput.value = this.builtinTools.progenfixer.url;
+        }
+
         // Populate custom tools
         this.renderCustomTools();
     }
@@ -245,6 +256,7 @@ class ExternalToolsManager {
         // Collect built-in tools data
         const deepGeneUrlInput = document.getElementById('extToolDeepGeneUrl');
         const chopchopUrlInput = document.getElementById('extToolChopchopUrl');
+        const progenFixerUrlInput = document.getElementById('extToolProGenFixerUrl');
         
         if (deepGeneUrlInput) {
             this.builtinTools.deepGeneResearch.url = deepGeneUrlInput.value.trim();
@@ -252,6 +264,10 @@ class ExternalToolsManager {
         
         if (chopchopUrlInput) {
             this.builtinTools.chopchop.url = chopchopUrlInput.value.trim();
+        }
+
+        if (progenFixerUrlInput) {
+            this.builtinTools.progenfixer.url = progenFixerUrlInput.value.trim();
         }
 
         // Collect custom tools data
@@ -299,6 +315,7 @@ class ExternalToolsManager {
                 // Update GeneralSettingsManager with built-in tools URLs
                 await this.genomeBrowser.configManager.set('generalSettings.deepGeneResearchUrl', this.builtinTools.deepGeneResearch.url);
                 await this.genomeBrowser.configManager.set('generalSettings.chopchopUrl', this.builtinTools.chopchop.url);
+                await this.genomeBrowser.configManager.set('generalSettings.progenFixerUrl', this.builtinTools.progenfixer.url);
                 
                 await this.genomeBrowser.configManager.saveConfig();
                 
@@ -306,6 +323,7 @@ class ExternalToolsManager {
                 if (this.genomeBrowser.generalSettingsManager) {
                     this.genomeBrowser.generalSettingsManager.updateSetting('deepGeneResearchUrl', this.builtinTools.deepGeneResearch.url);
                     this.genomeBrowser.generalSettingsManager.updateSetting('chopchopUrl', this.builtinTools.chopchop.url);
+                    this.genomeBrowser.generalSettingsManager.updateSetting('progenFixerUrl', this.builtinTools.progenfixer.url);
                 }
             }
 
@@ -341,6 +359,9 @@ class ExternalToolsManager {
                 }
                 if (generalSettings.chopchopUrl) {
                     this.builtinTools.chopchop.url = generalSettings.chopchopUrl;
+                }
+                if (generalSettings.progenFixerUrl) {
+                    this.builtinTools.progenfixer.url = generalSettings.progenFixerUrl;
                 }
                 
                 // Load custom tools settings
@@ -378,6 +399,12 @@ class ExternalToolsManager {
                 url: 'https://chopchop.cbu.uib.no/',
                 icon: 'fas fa-cut',
                 accelerator: 'CmdOrCtrl+Shift+C'
+            },
+            progenfixer: {
+                name: 'ProGenFixer',
+                url: 'https://progenfixer.biodesign.ac.cn',
+                icon: 'fas fa-wrench',
+                accelerator: 'CmdOrCtrl+Shift+P'
             }
         };
         
@@ -443,6 +470,8 @@ class ExternalToolsManager {
                     ipcRenderer.send('open-deep-gene-research-window');
                 } else if (toolData.key === 'chopchop') {
                     ipcRenderer.send('open-chopchop-window');
+                } else if (toolData.key === 'progenfixer') {
+                    ipcRenderer.send('open-progenfixer-window');
                 }
             } else if (toolData.type === 'custom') {
                 // Handle custom tools

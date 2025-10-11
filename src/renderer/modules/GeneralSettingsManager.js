@@ -57,7 +57,8 @@ class GeneralSettingsManager {
             
         // External Tools
         deepGeneResearchUrl: 'http://localhost:3000/',
-        chopchopUrl: 'https://chopchop.cbu.uib.no/'
+        chopchopUrl: 'https://chopchop.cbu.uib.no/',
+        progenFixerUrl: 'https://progenfixer.biodesign.ac.cn'
         };
     }
 
@@ -336,6 +337,13 @@ class GeneralSettingsManager {
         if (chopchopUrlInput) {
             chopchopUrlInput.addEventListener('change', (e) => {
                 this.updateSetting('chopchopUrl', e.target.value);
+            });
+        }
+
+        const progenFixerUrlInput = document.getElementById('progenFixerUrl');
+        if (progenFixerUrlInput) {
+            progenFixerUrlInput.addEventListener('change', (e) => {
+                this.updateSetting('progenFixerUrl', e.target.value);
             });
         }
 
@@ -638,6 +646,12 @@ class GeneralSettingsManager {
         // External tools settings
         const deepGeneResearchUrlInput = document.getElementById('deepGeneResearchUrl');
         if (deepGeneResearchUrlInput) deepGeneResearchUrlInput.value = this.settings.deepGeneResearchUrl;
+
+        const chopchopUrlInput = document.getElementById('chopchopUrl');
+        if (chopchopUrlInput) chopchopUrlInput.value = this.settings.chopchopUrl;
+
+        const progenFixerUrlInput = document.getElementById('progenFixerUrl');
+        if (progenFixerUrlInput) progenFixerUrlInput.value = this.settings.progenFixerUrl;
 
         // Update system info
         this.updateSystemInfo();
