@@ -72,8 +72,7 @@ class BenchmarkManager {
         const suites = [
             'AutomaticSimpleSuite',
             'AutomaticComplexSuite',
-            'ManualSimpleSuite',
-            'ManualComplexSuite'
+            'ManualSuite',
         ];
 
         console.log('📦 Loading test suites...');

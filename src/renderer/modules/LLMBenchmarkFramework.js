@@ -35,7 +35,7 @@ class LLMBenchmarkFramework {
      */
     initializeTestSuites() {
         // Check if all required test suite classes are available
-        const requiredClasses = ['AutomaticSimpleSuite', 'AutomaticComplexSuite', 'ManualSimpleSuite', 'ManualComplexSuite'];
+        const requiredClasses = ['AutomaticSimpleSuite', 'AutomaticComplexSuite', 'ManualSuite', 'ManualComplexSuite'];
         const missingClasses = requiredClasses.filter(className => !window[className]);
         
         if (missingClasses.length > 0) {
@@ -53,7 +53,7 @@ class LLMBenchmarkFramework {
         // Specialized Genomic Analysis Test Suites (4 suites organized by evaluation method and complexity)
         this.registerTestSuite('automatic_simple', new AutomaticSimpleSuite());
         this.registerTestSuite('automatic_complex', new AutomaticComplexSuite());
-        this.registerTestSuite('manual_simple', new ManualSimpleSuite());
+        this.registerTestSuite('manual_suite', new ManualSuite());
         this.registerTestSuite('manual_complex', new ManualComplexSuite());
         
         console.log(`✅ Initialized ${this.testSuites.size} test suites with ${this.getTotalTestCount()} total tests`);
