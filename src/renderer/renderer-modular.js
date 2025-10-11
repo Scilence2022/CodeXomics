@@ -7666,36 +7666,59 @@ class GenomeBrowser {
         const sequenceContent = document.getElementById('sequenceContent');
         if (!sequenceContent) return;
         
+        // Remove any existing listeners to prevent duplicates
+        if (this._sequenceSelectionListeners) {
+            sequenceContent.removeEventListener('mousedown', this._sequenceSelectionListeners.mousedown);
+            sequenceContent.removeEventListener('mousemove', this._sequenceSelectionListeners.mousemove);
+            sequenceContent.removeEventListener('mouseup', this._sequenceSelectionListeners.mouseup);
+            document.removeEventListener('mouseup', this._sequenceSelectionListeners.docMouseup);
+        }
+        
         let isSelecting = false;
         let selectionStart = null;
         let selectionEnd = null;
         
-        sequenceContent.addEventListener('mousedown', (e) => {
+        const mousedownHandler = (e) => {
             if (e.target.matches('.sequence-bases span')) {
                 isSelecting = true;
                 selectionStart = this.getSequencePosition(e.target);
-                this.clearSequenceSelection();
+                // Clear all existing selections when starting a new manual selection
+                this.clearAllSelections();
                 e.preventDefault();
             }
-        });
+        };
         
-        sequenceContent.addEventListener('mousemove', (e) => {
+        const mousemoveHandler = (e) => {
             if (isSelecting && e.target.matches('.sequence-bases span')) {
                 selectionEnd = this.getSequencePosition(e.target);
                 this.updateSequenceSelection(selectionStart, selectionEnd);
             }
-        });
+        };
         
-        sequenceContent.addEventListener('mouseup', () => {
+        const mouseupHandler = () => {
             if (isSelecting && selectionStart && selectionEnd) {
                 this.finalizeSequenceSelection(selectionStart, selectionEnd);
             }
             isSelecting = false;
-        });
+        };
         
-        document.addEventListener('mouseup', () => {
+        const docMouseupHandler = () => {
             isSelecting = false;
-        });
+        };
+        
+        // Store listeners for cleanup
+        this._sequenceSelectionListeners = {
+            mousedown: mousedownHandler,
+            mousemove: mousemoveHandler,
+            mouseup: mouseupHandler,
+            docMouseup: docMouseupHandler
+        };
+        
+        // Add event listeners
+        sequenceContent.addEventListener('mousedown', mousedownHandler);
+        sequenceContent.addEventListener('mousemove', mousemoveHandler);
+        sequenceContent.addEventListener('mouseup', mouseupHandler);
+        document.addEventListener('mouseup', docMouseupHandler);
     }
 
     getSequencePosition(baseElement) {
@@ -7862,29 +7885,30 @@ class GenomeBrowser {
             // Show bottom sequence panel
             if (sequenceDisplaySection) {
                 sequenceDisplaySection.style.display = 'flex';
-                // Set proper initial height (not too big on first load)
-                if (!sequenceDisplaySection.style.height || sequenceDisplaySection.style.height === 'auto') {
-                    sequenceDisplaySection.style.height = '250px'; // Default height
-                }
-                // Ensure it's positioned at the bottom
+                
+                // Set proper layout properties to ensure it reaches the bottom
+                sequenceDisplaySection.style.height = '250px'; // Default height
+                sequenceDisplaySection.style.minHeight = '50px';
+                sequenceDisplaySection.style.maxHeight = '60vh';
+                sequenceDisplaySection.style.flex = '0 0 auto'; // Don't grow automatically
                 sequenceDisplaySection.style.position = 'relative';
                 sequenceDisplaySection.style.bottom = '0';
-                sequenceDisplaySection.style.flex = 'none'; // Don't grow automatically
+                sequenceDisplaySection.style.order = '999'; // Ensure it's at the bottom
+                sequenceDisplaySection.style.flexDirection = 'column';
             }
             
             if (splitter) {
                 splitter.style.display = 'flex';
             }
             
-            // Adjust genome viewer to make room for bottom panel
+            // Adjust genome viewer to make room for bottom panel and ensure proper ordering
             if (genomeViewerSection) {
-                // Use flex to fill remaining space, but set a minimum height
-                genomeViewerSection.style.flex = '1';
+                genomeViewerSection.style.flex = '1'; // Fill remaining space
+                genomeViewerSection.style.flexBasis = 'auto';
                 genomeViewerSection.style.minHeight = '200px'; // Ensure minimum space for tracks
-                // Remove any fixed height if set to allow flexible sizing
-                if (genomeViewerSection.style.height === 'auto' || !genomeViewerSection.style.height) {
-                    genomeViewerSection.style.flexBasis = 'auto';
-                }
+                genomeViewerSection.style.order = '1'; // Ensure it's above sequence section
+                genomeViewerSection.style.display = 'flex';
+                genomeViewerSection.style.flexDirection = 'column';
             }
             
             // Display the sequence content
@@ -7907,6 +7931,7 @@ class GenomeBrowser {
                 genomeViewerSection.style.flex = '1';
                 genomeViewerSection.style.flexBasis = '100%';
                 genomeViewerSection.style.minHeight = 'auto';
+                genomeViewerSection.style.order = '1';
             }
         }
     }
@@ -7950,12 +7975,18 @@ class GenomeBrowser {
                               sequenceDisplaySection.classList.contains('collapsed');
             
             if (isCollapsed) {
-                // Expand - show sequence content
+                // Expand - show sequence content and restore proper layout
                 sequenceContent.style.display = 'flex';
                 sequenceDisplaySection.classList.remove('collapsed');
-                // Remove any height restrictions when expanding
-                sequenceDisplaySection.style.minHeight = '';
-                sequenceDisplaySection.style.maxHeight = '';
+                
+                // Restore proper height and flex properties
+                sequenceDisplaySection.style.minHeight = '50px';
+                sequenceDisplaySection.style.maxHeight = '60vh';
+                sequenceDisplaySection.style.height = '250px'; // Default height
+                sequenceDisplaySection.style.flex = '0 0 auto';
+                sequenceDisplaySection.style.position = 'relative';
+                sequenceDisplaySection.style.bottom = '0';
+                sequenceDisplaySection.style.order = '999'; // Ensure it's at the bottom
                 
                 if (splitter) {
                     splitter.style.display = 'flex';
@@ -7964,9 +7995,12 @@ class GenomeBrowser {
                 // Collapse - hide only sequence content, keep header visible
                 sequenceContent.style.display = 'none';
                 sequenceDisplaySection.classList.add('collapsed');
-                // Set collapsed height to just show the header (approximately 50px)
+                
+                // Set collapsed height to just show the header
                 sequenceDisplaySection.style.minHeight = '50px';
                 sequenceDisplaySection.style.maxHeight = '50px';
+                sequenceDisplaySection.style.height = '50px';
+                sequenceDisplaySection.style.flex = '0 0 auto';
                 
                 if (splitter) {
                     splitter.style.display = 'none';
@@ -7979,7 +8013,9 @@ class GenomeBrowser {
             }
             
             // Trigger resize event for layout adjustment
-            window.dispatchEvent(new Event('resize'));
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 150);
         }
     }
 
