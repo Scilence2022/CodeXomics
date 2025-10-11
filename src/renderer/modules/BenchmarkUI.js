@@ -575,7 +575,7 @@ class BenchmarkUI {
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-manual_complex">
-                                    <span>🧠 Manual Complex Tests <small>(10 tests)</small></span>
+                                    <span>🧠 Manual Complex Tests <small>(9 tests)</small></span>
                                 </label>
                             </div>
                         </div>
