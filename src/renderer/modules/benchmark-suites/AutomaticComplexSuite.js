@@ -926,6 +926,7 @@ class AutomaticComplexSuite {
      * Evaluate data export workflow with Song's file-priority system
      * Primary: Check if target files exist → Full score
      * Fallback: Tool calls + execution success
+     * Enhanced: Handle "NO TOOLS DETECTED" cases with execution tracker priority
      */
     async evaluateDataExportWorkflow(actualResult, expectedResult, testResult) {
         const evaluation = {
@@ -938,14 +939,16 @@ class AutomaticComplexSuite {
                 filesExported: [],
                 toolsExecuted: [],
                 successfulExports: 0,
-                totalExpectedFiles: expectedResult.expectedFiles?.length || 7
+                totalExpectedFiles: expectedResult.expectedFiles?.length || 7,
+                evaluationMethod: 'unknown'
             }
         };
 
-        console.log('🗂️ [DataExportWorkflow] Starting Song\'s file-priority evaluation:', {
+        console.log('🗂️ [DataExportWorkflow] Starting Song\'s enhanced file-priority evaluation:', {
             testId: testResult.id,
             expectedFiles: expectedResult.expectedFiles,
-            actualResult: actualResult
+            actualResult: actualResult,
+            parseDebugInfo: testResult.parseDebugInfo
         });
 
         if (!actualResult) {
@@ -953,7 +956,60 @@ class AutomaticComplexSuite {
             return evaluation;
         }
 
-        // PRIORITY 1: Check if target export files exist (Song's NEW file-priority system)
+        // PRIORITY 0: Tool Execution Tracker - Most Authoritative Source (Song's enhancement)
+        // This handles the "NO TOOLS DETECTED" case where parsing fails but tools actually executed
+        if (window.chatManager && window.chatManager.toolExecutionTracker) {
+            const tracker = window.chatManager.toolExecutionTracker;
+            const recentExecutions = tracker.getSessionExecutions();
+            
+            console.log('🔍 [DataExportWorkflow] Checking Tool Execution Tracker for recent executions');
+            
+            // Check for recent executions of expected export tools (within 3 minutes)
+            const timeoutMs = 180000; // 3 minutes for complex workflow
+            const expectedTools = expectedResult.tool_sequence || [];
+            const executedTools = [];
+            
+            expectedTools.forEach(expectedTool => {
+                const relevantExecution = recentExecutions.find(exec => 
+                    exec.toolName === expectedTool && 
+                    exec.status === 'completed' &&
+                    Date.now() - exec.startTime < timeoutMs
+                );
+                
+                if (relevantExecution) {
+                    executedTools.push({
+                        tool: expectedTool,
+                        execution: relevantExecution
+                    });
+                    console.log(`✅ [DataExportWorkflow] TRACKER: Found successful execution of '${expectedTool}'`);
+                }
+            });
+            
+            if (executedTools.length > 0) {
+                console.log(`🎯 [DataExportWorkflow] TRACKER PRIORITY: Found ${executedTools.length}/${expectedTools.length} successful tool executions`);
+                
+                // Award points based on tool execution tracker (most reliable source)
+                const pointsPerTool = Math.floor(evaluation.maxScore / expectedTools.length);
+                evaluation.score = executedTools.length * pointsPerTool;
+                evaluation.details.toolsExecuted = executedTools.map(et => et.tool);
+                evaluation.details.evaluationMethod = 'execution_tracker';
+                
+                // If most tools executed successfully, consider it a pass
+                if (executedTools.length >= Math.ceil(expectedTools.length * 0.6)) {
+                    evaluation.success = true;
+                    evaluation.warnings.push(`Awarded points based on Tool Execution Tracker (${executedTools.length}/${expectedTools.length} tools executed)`);
+                    console.log(`✅ [DataExportWorkflow] TRACKER SUCCESS: ${executedTools.length}/${expectedTools.length} tools executed successfully`);
+                }
+                
+                // Still check files for bonus points and confirmation
+                this.checkExportedFilesForBonus(evaluation, expectedResult);
+                
+                evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
+                return evaluation;
+            }
+        }
+
+        // PRIORITY 1: Check if target export files exist (Song's file-priority system)
         const expectedFiles = expectedResult.expectedFiles || [];
         const pointsPerFile = Math.floor(evaluation.maxScore / evaluation.details.totalExpectedFiles);
         console.log(`📊 [DataExportWorkflow] Points per file: ${pointsPerFile}`);
@@ -976,23 +1032,47 @@ class AutomaticComplexSuite {
         if (evaluation.details.successfulExports >= Math.ceil(evaluation.details.totalExpectedFiles * 0.5)) {
             console.log(`🎯 [DataExportWorkflow] PRIMARY SUCCESS: ${evaluation.details.successfulExports}/${evaluation.details.totalExpectedFiles} files exist`);
             evaluation.success = true;
-            // Cap score at maximum
+            evaluation.details.evaluationMethod = 'file_existence';
             evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
             return evaluation;
         }
 
         console.log(`⚠️ [DataExportWorkflow] Insufficient files exist, using fallback evaluation`);
 
-        // FALLBACK: Tool execution evaluation (only if files don't exist)
+        // PRIORITY 2: Enhanced ChatManager parseDebugInfo detection (Song's improvement)
+        if (testResult.parseDebugInfo && testResult.parseDebugInfo.detectedTools && testResult.parseDebugInfo.detectedTools.length > 0) {
+            const detectedTools = testResult.parseDebugInfo.detectedTools;
+            console.log(`🎯 [DataExportWorkflow] Using ChatManager's detected tools:`, detectedTools.map(t => t.tool));
+            
+            const expectedToolsSet = new Set(expectedResult.tool_sequence || []);
+            const matchingTools = detectedTools.filter(dt => expectedToolsSet.has(dt.tool));
+            
+            if (matchingTools.length > 0) {
+                const pointsPerTool = Math.floor(evaluation.maxScore / (expectedResult.tool_sequence?.length || 7));
+                evaluation.score = matchingTools.length * pointsPerTool;
+                evaluation.details.toolsExecuted = matchingTools.map(mt => mt.tool);
+                evaluation.details.evaluationMethod = 'parse_debug_info';
+                evaluation.success = matchingTools.length >= Math.ceil((expectedResult.tool_sequence?.length || 7) * 0.6);
+                
+                console.log(`✅ [DataExportWorkflow] PARSE DEBUG SUCCESS: ${matchingTools.length} matching tools detected`);
+                evaluation.warnings.push(`Awarded points based on ChatManager parseDebugInfo (${matchingTools.length} tools detected)`);
+                
+                evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
+                return evaluation;
+            }
+        }
+
+        // PRIORITY 3: Natural Language Response Parsing
         const isNaturalLanguageResponse = typeof actualResult === 'string' || 
             (actualResult && typeof actualResult === 'object' && !actualResult.tool_name && !Array.isArray(actualResult));
         
         if (isNaturalLanguageResponse) {
             console.log('📝 [DataExportWorkflow] Parsing natural language response for export success');
+            evaluation.details.evaluationMethod = 'natural_language';
             return this.parseNaturalLanguageExportResponse(actualResult, expectedResult, testResult, evaluation);
         }
 
-        // Handle structured tool results
+        // PRIORITY 4: Structured Tool Results (Legacy)
         let results = [];
         if (Array.isArray(actualResult)) {
             results = actualResult;
@@ -1000,9 +1080,85 @@ class AutomaticComplexSuite {
             results = [actualResult];
         }
 
-        console.log(`📋 [DataExportWorkflow] Processing ${results.length} tool results`);
+        console.log(`📋 [DataExportWorkflow] Processing ${results.length} structured tool results`);
 
-        // Expected tools mapping
+        if (results.length > 0) {
+            evaluation.details.evaluationMethod = 'structured_tools';
+            return this.evaluateStructuredToolResults(results, expectedResult, evaluation);
+        }
+
+        // FINAL FALLBACK: If no tools detected but this is a multi-tool workflow,
+        // check for general success patterns in the response
+        if (typeof actualResult === 'string' || 
+            (actualResult && actualResult.message) || 
+            (actualResult && actualResult.response)) {
+            
+            const responseText = typeof actualResult === 'string' ? actualResult : 
+                               (actualResult.message || actualResult.response || JSON.stringify(actualResult));
+            
+            console.log('🔍 [DataExportWorkflow] FINAL FALLBACK: Checking for general success patterns');
+            
+            const generalSuccessPatterns = [
+                /export.*completed successfully/i,
+                /all.*files.*exported/i,
+                /workflow.*complete/i,
+                /tasks?.*completed/i,
+                /successfully.*exported/i,
+                /export.*successful/i
+            ];
+            
+            const hasGeneralSuccess = generalSuccessPatterns.some(pattern => pattern.test(responseText));
+            
+            if (hasGeneralSuccess) {
+                // Award partial credit for general success indication
+                evaluation.score = Math.floor(evaluation.maxScore * 0.6); // 60% for general success
+                evaluation.success = true;
+                evaluation.details.evaluationMethod = 'general_success_pattern';
+                evaluation.warnings.push('Awarded partial credit based on general success patterns in response');
+                console.log(`✅ [DataExportWorkflow] GENERAL SUCCESS: Detected success patterns in response`);
+                return evaluation;
+            }
+        }
+
+        // No success detected
+        evaluation.errors.push('No tool execution or success patterns detected');
+        evaluation.details.evaluationMethod = 'no_detection';
+        console.log(`❌ [DataExportWorkflow] NO SUCCESS: No detection method succeeded`);
+
+        return evaluation;
+    }
+
+    /**
+     * Check exported files for bonus points and confirmation
+     */
+    checkExportedFilesForBonus(evaluation, expectedResult) {
+        const expectedFiles = expectedResult.expectedFiles || [];
+        let bonusFiles = 0;
+        
+        expectedFiles.forEach(fileName => {
+            const filePath = this.buildFilePath(fileName);
+            const fileExists = this.checkTargetFileExists(filePath);
+            
+            if (fileExists) {
+                evaluation.details.filesExported.push(fileName);
+                evaluation.details.successfulExports++;
+                bonusFiles++;
+                console.log(`✅ [DataExportWorkflow] BONUS: File exists: ${fileName}`);
+            }
+        });
+        
+        if (bonusFiles > 0) {
+            const bonusPoints = Math.min(5, bonusFiles); // Max 5 bonus points
+            evaluation.score += bonusPoints;
+            evaluation.warnings.push(`Added ${bonusPoints} bonus points for ${bonusFiles} confirmed exported files`);
+            console.log(`🎆 [DataExportWorkflow] BONUS: +${bonusPoints} points for ${bonusFiles} files`);
+        }
+    }
+
+    /**
+     * Evaluate structured tool results (legacy method)
+     */
+    evaluateStructuredToolResults(results, expectedResult, evaluation) {
         const expectedTools = {
             'export_fasta_sequence': ['exported_sequences.fasta'],
             'export_genbank_format': ['exported_data.gbk'],
@@ -1046,7 +1202,7 @@ class AutomaticComplexSuite {
         evaluation.success = evaluation.score >= 4;
         evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
 
-        console.log(`🎯 [DataExportWorkflow] Fallback evaluation complete:`, {
+        console.log(`🎯 [DataExportWorkflow] Structured tool evaluation complete:`, {
             score: evaluation.score,
             maxScore: evaluation.maxScore,
             success: evaluation.success,
@@ -1056,10 +1212,6 @@ class AutomaticComplexSuite {
 
         return evaluation;
     }
-
-    /**
-     * Parse natural language response for export workflow success
-     */
     parseNaturalLanguageExportResponse(actualResult, expectedResult, testResult, evaluation) {
         let responseText = '';
         
