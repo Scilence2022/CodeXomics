@@ -3541,6 +3541,7 @@ class LLMBenchmarkFramework {
 
     /**
      * Extract parse debug information from captured logs
+     * ENHANCED: Better detection of "SUCCESS - FLEXIBLE" and multi-tool patterns
      */
     extractParseDebugInfoFromLogs(logs) {
         const parseInfo = {
@@ -3590,6 +3591,92 @@ class LLMBenchmarkFramework {
                         timestamp: log.timestamp
                     });
                 }
+            } else if (msg.includes('SUCCESS - FLEXIBLE') || msg.includes('SUCCESS - DIRECT') || msg.includes('SUCCESS - REGEX') || msg.includes('SUCCESS - SEARCH')) {
+                // CRITICAL FIX: Detect successful tool parsing from different methods
+                parseInfo.toolCallDetection.push(msg);
+                
+                // Try to extract tool information from the previous log entries
+                // Look backwards for the tool data that was just parsed
+                for (let i = logs.indexOf(log) - 1; i >= 0 && i >= logs.indexOf(log) - 10; i--) {
+                    const prevMsg = logs[i]?.message;
+                    if (!prevMsg) continue;
+                    
+                    // Look for flexible extraction parse successful
+                    if (prevMsg.includes('Flexible extraction parse successful:')) {
+                        try {
+                            const toolMatch = prevMsg.match(/Flexible extraction parse successful:\s*({.*})/s);
+                            if (toolMatch) {
+                                const toolData = JSON.parse(toolMatch[1]);
+                                if (toolData.tool_name) {
+                                    parseInfo.detectedTools.push({
+                                        tool: toolData.tool_name,
+                                        method: 'flexible_extraction',
+                                        parameters: toolData.parameters || {},
+                                        timestamp: log.timestamp
+                                    });
+                                    break;
+                                }
+                            }
+                        } catch (e) {
+                            // Continue searching
+                        }
+                    }
+                    
+                    // Look for regex parse successful
+                    else if (prevMsg.includes('Regex parse successful:')) {
+                        try {
+                            const toolMatch = prevMsg.match(/Regex parse successful:\s*({.*})/s);
+                            if (toolMatch) {
+                                const toolData = JSON.parse(toolMatch[1]);
+                                if (toolData.tool_name) {
+                                    parseInfo.detectedTools.push({
+                                        tool: toolData.tool_name,
+                                        method: 'regex_extraction',
+                                        parameters: toolData.parameters || {},
+                                        timestamp: log.timestamp
+                                    });
+                                    break;
+                                }
+                            }
+                        } catch (e) {
+                            // Continue searching
+                        }
+                    }
+                    
+                    // Look for direct parse successful (if not already found)
+                    else if (prevMsg.includes('Direct parse successful:')) {
+                        try {
+                            const toolMatch = prevMsg.match(/Direct parse successful:\s*({.*})/s);
+                            if (toolMatch) {
+                                const toolData = JSON.parse(toolMatch[1]);
+                                if (toolData.tool_name) {
+                                    parseInfo.detectedTools.push({
+                                        tool: toolData.tool_name,
+                                        method: 'direct_parse',
+                                        parameters: toolData.parameters || {},
+                                        timestamp: log.timestamp
+                                    });
+                                    break;
+                                }
+                            }
+                        } catch (e) {
+                            // Continue searching
+                        }
+                    }
+                }
+            } else if (msg.includes('[parseMultipleToolCalls] Valid tool call')) {
+                // ENHANCED: Capture multiple tool calls detection
+                parseInfo.toolCallDetection.push(msg);
+                
+                // Extract tool name from multiple tool calls detection
+                const toolMatch = msg.match(/Valid tool call \d+.*?:\s*([^\s,]+)/i);
+                if (toolMatch) {
+                    parseInfo.detectedTools.push({
+                        tool: toolMatch[1],
+                        method: 'multiple_tools',
+                        timestamp: log.timestamp
+                    });
+                }
             } else if (msg.includes('Multiple tool calls found:')) {
                 parseInfo.toolCallDetection.push(msg);
             }
@@ -3605,6 +3692,10 @@ class LLMBenchmarkFramework {
             }
         });
         parseInfo.detectedTools = uniqueTools;
+        
+        console.log('🔍 [extractParseDebugInfoFromLogs] Final detected tools:', parseInfo.detectedTools);
+        console.log('🔍 [extractParseDebugInfoFromLogs] Parse steps found:', parseInfo.parseSteps.length);
+        console.log('🔍 [extractParseDebugInfoFromLogs] Tool call detections found:', parseInfo.toolCallDetection.length);
         
         return parseInfo;
     }
