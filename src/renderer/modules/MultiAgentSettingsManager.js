@@ -209,6 +209,8 @@ class MultiAgentSettingsManager {
                     
                     // Other Models
                     'baidu/ERNIE-4.5-300B-A47B': 'ERNIE-4.5-300B-A47B',
+                    // Kimi Series
+                    'Pro/moonshotai/Kimi-K2-Instruct-0905': 'Kimi-K2-Instruct-0905 (Pro)',
                     'moonshotai/Kimi-K2-Instruct': 'Kimi-K2-Instruct',
                     'ascend-tribe/pangu-pro-moe': 'pangu-pro-moe',
                     'tencent/Hunyuan-A13B-Instruct': 'Hunyuan-A13B-Instruct',
