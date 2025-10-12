@@ -589,26 +589,28 @@ We welcome contributions from the genomics and bioinformatics community!
 ## 🧪 What's New in v0.522beta - First Beta Release
 
 ### **🧪 First Beta Release**
-- ✅ **Multi-agent AI** bioinformatics platform for testing
-- ✅ **Natural language** genome analysis capabilities
-- ✅ **AI benchmark testing** framework for validation
-- ✅ **Integration** of 8+ external bioinformatics tools
-- ✅ **MCP implementation** (Model Context Protocol)
+- ✅ **Core genome visualization** with multi-track support
+- ✅ **Basic AI integration** with multiple LLM providers
+- ✅ **AI testing framework** for evaluation and validation
+- ✅ **Cross-platform support** (macOS, Windows, Linux)
+- ✅ **File format support** (FASTA, GenBank, GFF, VCF, BAM)
+- 🚧 **Experimental features** under development (multi-agent, external tools)
 - 🔬 **Community feedback** welcome for improvements
 
-### **✨ Key Features**
-- ✅ **Multi-Agent AI System** - Collaborative AI agents for complex genomic analysis
-- ✅ **MCP Integration** - Model Context Protocol for tool interoperability
-- ✅ **ProGenFixer Integration** - Access to protein engineering tools
-- ✅ **Enhanced Benchmark Suite** - AI evaluation with 22+ test cases
-- ✅ **SiliconFlow Models** - Organized by source (Qwen, DeepSeek, Kimi, GLM, Yi)
-- ✅ **Kimi K2 Pro** - Latest model integration
+### **✨ Stable Features**
+- ✅ **Genome Visualization** - SVG-based multi-track genome browser
+- ✅ **AI Chat Interface** - Natural language queries with LLM integration
+- ✅ **File Format Support** - FASTA, GenBank, GFF, VCF, BAM file handling
+- ✅ **Cross-Platform** - Works on macOS, Windows, and Linux
+- ✅ **Project Management** - Save and load analysis projects
+- ✅ **Testing Framework** - AI benchmark and evaluation tools
 
-### **🐛 Bug Fixes**
-- ✅ **LLM Configuration** - Fixed multi-file synchronization issues
-- ✅ **Benchmark UI** - Improved test count display and progress tracking
-- ✅ **Tool Parsing** - Enhanced detection for flexible success cases
-- ✅ **Data Export** - Improved workflow handling
+### **🚧 Under Development**
+- ⚠️ **Multi-Agent AI** - Early implementation, needs stability improvements
+- ⚠️ **External Tools** - KGML Pathway Viewer, STRING Networks (prototype stage)
+- ⚠️ **Plugin System** - Basic framework, incomplete marketplace
+- ⚠️ **MCP Integration** - Experimental Model Context Protocol support
+- ⚠️ **Advanced AI Features** - Tool coordination, agent specialization
 
 ### **⚡ Performance Improvements**
 - ✅ **Version Management** - Centralized version system with synchronization

@@ -9,36 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **🔬 Milestone: First Beta Release of CodeXomics**
 
-We're excited to share the **first beta release** of CodeXomics, an AI-powered bioinformatics analysis platform designed for community testing and feedback. This beta introduces multi-agent AI collaboration capabilities to enhance genomic research workflows.
+We're excited to share the **first beta release** of CodeXomics, focusing on core genome visualization and basic AI integration, with several experimental features under active development for community testing and feedback.
 
-### ✨ Key Features Introduced
+### ✅ Stable Features Ready for Testing
 
-#### **Multi-Agent AI System**
-- Collaborative AI system with multiple agents working together
-- Intelligent coordination between AI coordinator and specialized worker agents
-- Context-aware analysis with automatic tool selection
-- Natural language interface for genomic queries
-- Conversation evolution tracking and decision analysis
+#### **Core Genome Visualization**
+- SVG-based genome browser with multi-track support
+- Interactive navigation and zooming capabilities
+- File format support (FASTA, GenBank, GFF, VCF, BAM)
+- Project save/load functionality
 
-#### **External Tools Integration**
-- **ProGenFixer**: Protein engineering and sequence optimization
-- **Deep Gene Research**: Advanced gene analysis platform
-- **CHOPCHOP**: CRISPR design and analysis
-- **KGML Pathway Viewer**: Interactive KEGG pathway visualization
-- **STRING Networks**: Protein-protein interaction analysis
-- **AlphaFold Integration**: Direct protein structure prediction
+#### **Basic AI Integration**
+- LLM provider support (OpenAI, Anthropic, Google, SiliconFlow)
+- Natural language query interface
+- AI benchmark testing framework
+- Configuration management system
 
-#### **LLM Ecosystem Support**
-- Multi-provider support: OpenAI, Anthropic, Google Gemini, SiliconFlow, DeepSeek, Kimi
-- Flexible model selection for different task types
-- MCP (Model Context Protocol) integration for tool interoperability
-- Support for Chinese LLMs through SiliconFlow
+### 🚧 Experimental Features (Under Development)
 
-#### **AI Benchmark Framework**
-- Comprehensive AI evaluation suite (22+ test cases)
-- Multi-agent testing and coordination evaluation
-- Real-time assessment with detailed reporting
-- Metrics for evaluating AI-powered bioinformatics tools
+#### **Multi-Agent AI System** *(Early Development)*
+- Basic framework implemented, needs extensive testing and refinement
+- Simple AI coordination, limited agent specialization
+- Not yet reliable for complex workflows
+
+#### **External Tools Integration** *(Prototype Stage)*
+- **KGML Pathway Viewer**: Basic implementation, needs UI improvements
+- **STRING Networks**: Initial integration, requires better data handling
+- **ProGenFixer**: Simple browser window integration
+- **Deep Gene Research**: Basic external link integration
+- **CHOPCHOP**: Basic external tool access
+- Status: All tools require significant development for production use
+
+#### **Plugin System** *(Basic Framework)*
+- Simple plugin loading system implemented
+- Basic API structure in place
+- No marketplace or comprehensive security validation yet
+- Requires significant development for production use
+
+#### **MCP Integration** *(Experimental)*
+- Initial Model Context Protocol implementation
+- Limited tool interoperability
+- Highly experimental and subject to major changes
 
 ### 🛠️ Platform Features
 
@@ -109,7 +120,7 @@ We're excited to share the **first beta release** of CodeXomics, an AI-powered b
 ## Development History
 
 ### Note
-CodeXomics development focused on creating an AI-integrated bioinformatics platform. This first beta release (v0.522beta) represents our initial effort to combine multi-agent AI systems with genomic analysis tools, designed for community testing and feedback.
+CodeXomics development focused on creating an AI-integrated bioinformatics platform. This first beta release (v0.522beta) provides stable core genome visualization and basic AI integration, with several experimental features included for community testing and feedback. The experimental features require significant development before production readiness.
 
 **Previous development focused on:**
 - Core architecture design

@@ -8,80 +8,85 @@
 
 **🔬 Introducing CodeXomics Beta**
 
-We're excited to share the **first beta release** of CodeXomics - an AI-powered bioinformatics analysis platform that aims to enhance genomic research through multi-agent AI collaboration. This beta release is designed for testing, feedback, and validation from the bioinformatics community.
+We're excited to share the **first beta release** of CodeXomics - a bioinformatics analysis platform that integrates AI capabilities with traditional genome analysis tools. This beta focuses on core genome visualization and basic AI integration, with several experimental features under development.
 
-**What this beta offers:**
-- 🤖 **Multi-agent AI system** for collaborative genomic analysis
-- 🧬 **Natural language interface** for genome exploration
-- 🔬 **Integration** with multiple external bioinformatics tools
-- 📊 **Benchmark testing framework** for AI evaluation
-- 🤝 **MCP integration** for improved tool interoperability
+**What's ready for testing:**
+- 🧬 **Genome visualization** with multi-track support
+- 🤖 **Basic AI integration** with multiple LLM providers
+- 📊 **Testing framework** for AI evaluation
+- 💻 **Cross-platform support** (macOS, Windows, Linux)
+
+**What's experimental:**
+- 🚧 **Multi-agent coordination** (early development)
+- 🚧 **External tools** (prototype implementations)
+- 🚧 **Plugin system** (basic framework)
+- 🚧 **MCP integration** (experimental)
 
 ---
 
-## ✨ Key Features
+## ✅ Current Stable Features
 
-*This release introduces several features aimed at improving the bioinformatics research experience through AI integration.*
+*These features are tested and ready for community use in this beta release.*
 
-### 🤖 **Multi-Agent AI System**
-- **AI Collaboration**: Multiple AI agents working together for genomic analysis
-- **Intelligent Coordination**: AI coordinator delegates tasks to specialized worker agents
-- **Context-Aware Analysis**: AI understands genomic context and selects appropriate tools
-- **Natural Language Interface**: Ask questions in plain English, receive detailed answers
-- **Conversation Tracking**: Monitor AI reasoning and decision-making processes
-
-### 🔧 **External Tools Integration**
-- **ProGenFixer**: Protein engineering and sequence optimization (Cmd/Ctrl+Shift+P)
-- **Deep Gene Research**: Gene analysis and research platform
-- **CHOPCHOP**: CRISPR design and analysis tool
-- **KGML Pathway Viewer**: Interactive KEGG pathway visualization
-- **STRING Networks**: Protein-protein interaction analysis
-- **AlphaFold Integration**: Protein structure prediction access
-- **Coordinated Integration**: Tools work together through AI coordination
-
-### 🤖 **LLM Provider Support**
-- **Multi-Provider Support**: OpenAI, Anthropic, Google Gemini, SiliconFlow, DeepSeek, Kimi, and local LLMs
-- **Flexible Model Selection**: Choose different models for coordination vs specialized tasks
-- **SiliconFlow Integration**: Chinese LLM support with organized model families:
-  - 🌐 Qwen Series (Alibaba Cloud) - 7B to 110B parameters
-  - 🧠 DeepSeek Series - Reasoning capabilities
-  - 🌙 Kimi Series (Moonshot AI) - Including K2 Pro model
-  - 💡 GLM Series (Zhipu AI) - Conversation capabilities
-  - 🎯 Yi Series (01.AI) - Performance models
-- **MCP Integration**: Model Context Protocol for tool interoperability
-
-### 📊 **AI Benchmark Framework**
-- **AI Evaluation Suite**: Benchmark suite with 22+ test cases across 6 categories
-- **Multi-Agent Testing**: Evaluate AI collaboration and coordination capabilities
-- **Real-Time Assessment**: Live progress tracking and performance metrics
-- **Manual Verification**: Interactive human-in-the-loop validation system
-- **Detailed Reporting**: Export AI interaction logs and performance analysis
-- **Research Metrics**: Establish benchmarks for AI-powered bioinformatics tools
-
-### 🧬 **Genome Visualization**
+### 🧬 **Core Genome Visualization**
 - **SVG Rendering**: Hardware-accelerated, scalable visualizations
-- **Multi-Track System**: Genes, sequences, variants, reads, proteins, and networks
+- **Multi-Track System**: Genes, sequences, variants, and reads visualization
 - **Interactive Navigation**: Smooth zooming, panning, and real-time updates
+- **File Format Support**: FASTA, GenBank, GFF, VCF, BAM file loading
 - **Context Persistence**: Track states saved across sessions
-- **AI-Enhanced Features**: Automated feature detection and highlighting
 
-### 🔌 **Plugin Architecture**
-- **Plugin System**: Plugin marketplace with security validation
-- **AI Integration**: Plugins callable by AI agents
-- **Community Support**: Built-in marketplace for plugin discovery
-- **Easy Integration**: Seamless integration with existing tools
+### 🤖 **Basic AI Integration**
+- **LLM Provider Support**: OpenAI, Anthropic, Google Gemini integration
+- **SiliconFlow Support**: Chinese LLM models (Qwen, DeepSeek, Kimi, GLM, Yi)
+- **Natural Language Queries**: Basic genome analysis through chat interface
+- **Configuration Management**: LLM settings and API key management
+
+### 📊 **Testing Framework**
+- **AI Benchmark Suite**: 22+ test cases for AI evaluation
+- **Manual Testing Interface**: Interactive verification system
+- **Performance Metrics**: Basic AI performance tracking
+- **Test Reporting**: Export test results and logs
+
+### 💻 **Platform Foundation**
+- **Cross-Platform Support**: macOS, Windows, Linux compatibility
+- **Project Management**: Basic project save/load functionality
+- **Documentation**: Comprehensive user and developer guides
+- **Version Management**: Centralized version control system
 
 ---
 
-## 🛠️ **Stable Foundation**
+## 🚧 Features Under Development
 
-*Building a reliable platform for scientific research requires attention to stability and reliability.*
+*These features are implemented but require significant refinement and testing before full release.*
 
-- **Multi-File Configuration Sync**: Resolved LLM configuration persistence across 4+ configuration files
-- **Benchmark System Reliability**: Enhanced test count accuracy and progress tracking
-- **Workflow Robustness**: Improved data export pipeline with comprehensive edge case handling
-- **AI Tool Integration**: Enhanced parsing detection for flexible success scenarios
-- **Cross-Platform Stability**: Tested and validated on macOS, Windows, and Linux
+### 🤖 **Multi-Agent AI System** *(Early Development)*
+- **Status**: Basic framework implemented, needs extensive testing
+- **Current State**: Simple AI coordination, limited agent specialization
+- **Limitations**: Not fully reliable for complex workflows
+- **Future Plans**: Enhanced agent coordination, improved reliability
+
+### 🔧 **External Tools Integration** *(Prototype Stage)*
+- **KGML Pathway Viewer**: Basic implementation, needs UI improvements
+- **STRING Networks**: Initial integration, requires better data handling
+- **ProGenFixer**: Basic browser window integration
+- **Deep Gene Research**: Simple external link integration
+- **CHOPCHOP**: Basic external tool access
+- **Status**: These tools need significant development for production use
+
+### 🔌 **Plugin System** *(Early Framework)*
+- **Status**: Basic plugin architecture exists but incomplete
+- **Current State**: Simple plugin loading, basic API
+- **Limitations**: No marketplace, limited security validation
+- **Future Plans**: Full marketplace, comprehensive plugin API
+
+### 🌐 **MCP Integration** *(Experimental)*
+- **Status**: Initial implementation, highly experimental
+- **Current State**: Basic protocol support
+- **Limitations**: Limited tool interoperability
+- **Future Plans**: Full MCP compliance, enhanced tool coordination
+
+### ⚠️ **Important Note**
+These development features are included for testing purposes only. They may be unstable, incomplete, or require significant changes based on community feedback.
 
 ---
 
@@ -228,19 +233,34 @@ We're excited to share the **first beta release** of CodeXomics - an AI-powered 
 
 ---
 
-## 🚀 **Future Development**
+## 🗺️ **Development Roadmap**
 
-**Next Steps:**
-- Community feedback integration
-- Additional LLM provider support
-- Enhanced plugin marketplace
-- Performance improvements
+*Planned development priorities based on community feedback and testing results.*
 
-**Future Goals:**
-- Multi-genome comparison capabilities
-- Collaborative analysis features
-- Cloud integration options
-- Specialized AI models for biological research
+### **Phase 1: Core Stability** *(Next 1-2 months)*
+- **Multi-Agent System**: Improve reliability and coordination
+- **External Tools**: Stabilize KGML Pathway Viewer and STRING Networks
+- **Plugin System**: Complete basic plugin architecture
+- **Bug Fixes**: Address issues reported by beta testers
+
+### **Phase 2: Feature Completion** *(2-4 months)*
+- **MCP Integration**: Full Model Context Protocol compliance
+- **Tool Coordination**: Enhanced AI-driven tool selection
+- **Plugin Marketplace**: Community plugin discovery and installation
+- **Advanced AI Features**: Improved multi-agent workflows
+
+### **Phase 3: Advanced Capabilities** *(4-6 months)*
+- **Real-time Collaboration**: Multi-user analysis sessions
+- **Cloud Integration**: Distributed computing capabilities
+- **Specialized AI Models**: Domain-specific biological AI
+- **Advanced Visualization**: Enhanced genome browser features
+
+### **Community Priorities**
+Development priorities will be adjusted based on:
+- Beta tester feedback and reported issues
+- Community feature requests and use cases
+- Performance and stability requirements
+- Research collaboration opportunities
 
 ---
 
