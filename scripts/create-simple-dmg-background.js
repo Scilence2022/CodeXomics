@@ -1,9 +1,35 @@
-<!DOCTYPE html>
+#!/usr/bin/env node
+
+/**
+ * Simple DMG Background Creator for CodeXomics
+ * 
+ * Creates a HTML page that can be screenshot to create the DMG background
+ * Automatically updates version information from version.js
+ * 
+ * @author CodeXomics Team
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+// Import version information
+const VERSION_INFO = require('../src/version.js');
+
+const DMG_WIDTH = 660;
+const DMG_HEIGHT = 420;
+
+/**
+ * Generate HTML template for DMG background
+ */
+function generateHTMLTemplate() {
+    console.log('🎨 Generating HTML template for CodeXomics', VERSION_INFO.displayVersion);
+    
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeXomics v0.522beta - DMG Background</title>
+    <title>CodeXomics ${VERSION_INFO.displayVersion} - DMG Background</title>
     <style>
         * {
             margin: 0;
@@ -12,8 +38,8 @@
         }
         
         body {
-            width: 660px;
-            height: 420px;
+            width: ${DMG_WIDTH}px;
+            height: ${DMG_HEIGHT}px;
             background: linear-gradient(135deg, #4A90E2 0%, #7B68EE 30%, #9370DB 70%, #8A2BE2 100%);
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
             display: flex;
@@ -205,7 +231,7 @@
 <body>
     <div class="header">
         <h1 class="app-name">CodeXomics</h1>
-        <p class="version">v0.522beta Beta</p>
+        <p class="version">${VERSION_INFO.displayVersion} Beta</p>
         <p class="subtitle">AI-Powered Bioinformatics Platform</p>
     </div>
     
@@ -242,4 +268,89 @@
         <div class="dna-strand"></div>
     </div>
 </body>
-</html>
+</html>`;
+
+    // Save the HTML template
+    const htmlPath = path.join(__dirname, '../build/dmg-background-template.html');
+    fs.writeFileSync(htmlPath, html);
+    
+    console.log('✅ HTML template generated successfully:', htmlPath);
+    console.log('📐 Dimensions:', DMG_WIDTH, 'x', DMG_HEIGHT);
+    console.log('📝 Version:', VERSION_INFO.displayVersion);
+    
+    // Also generate instructions
+    const instructions = `# DMG Background Generation Instructions
+
+## Generated Files:
+- HTML Template: ${htmlPath}
+
+## To create the PNG background:
+
+### Method 1: Using Browser Screenshot
+1. Open the HTML file in a browser
+2. Set browser window to exactly ${DMG_WIDTH}x${DMG_HEIGHT} pixels
+3. Take a screenshot and save as 'dmg-background.png' in the build/ folder
+
+### Method 2: Using Puppeteer (if available)
+\`\`\`bash
+npm install puppeteer
+node -e "
+const puppeteer = require('puppeteer');
+(async () => {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setViewport({width: ${DMG_WIDTH}, height: ${DMG_HEIGHT}});
+  await page.goto('file://${htmlPath.replace(/\\/g, '/')}');
+  await page.screenshot({path: '${path.join(__dirname, '../build/dmg-background.png')}', fullPage: false});
+  await browser.close();
+})();
+"
+\`\`\`
+
+### Method 3: Using wkhtmltopdf/wkhtmltoimage
+\`\`\`bash
+# Install wkhtmltopdf (includes wkhtmltoimage)
+# macOS: brew install wkhtmltopdf
+# Ubuntu: sudo apt-get install wkhtmltopdf
+
+wkhtmltoimage --width ${DMG_WIDTH} --height ${DMG_HEIGHT} --format png "${htmlPath}" "${path.join(__dirname, '../build/dmg-background.png')}"
+\`\`\`
+
+## Version Information:
+- App Name: ${VERSION_INFO.appName}
+- Version: ${VERSION_INFO.displayVersion}
+- Full Version: ${VERSION_INFO.fullVersion}
+
+The HTML template automatically includes the current version information.
+`;
+
+    const instructionsPath = path.join(__dirname, '../build/DMG_GENERATION_INSTRUCTIONS.md');
+    fs.writeFileSync(instructionsPath, instructions);
+    
+    console.log('📋 Instructions saved to:', instructionsPath);
+    
+    return { htmlPath, instructionsPath };
+}
+
+// Run the generator if called directly
+if (require.main === module) {
+    try {
+        const { htmlPath, instructionsPath } = generateHTMLTemplate();
+        
+        console.log('\n🎨 DMG Background Template Generation Complete!');
+        console.log('📂 Files generated:');
+        console.log('   HTML Template:', htmlPath);
+        console.log('   Instructions:', instructionsPath);
+        console.log('\n💡 Next steps:');
+        console.log('   1. Open the HTML file in a browser');
+        console.log('   2. Screenshot at', DMG_WIDTH, 'x', DMG_HEIGHT, 'pixels');
+        console.log('   3. Save as build/dmg-background.png');
+        console.log('\n🚀 Version automatically included:', VERSION_INFO.displayVersion);
+        
+    } catch (error) {
+        console.error('❌ Error generating DMG background template:', error.message);
+        process.exit(1);
+    }
+}
+
+module.exports = { generateHTMLTemplate };
