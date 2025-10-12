@@ -105,20 +105,22 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 
 ### **Download Pre-built Releases**
 
-Download the latest version (v0.522beta) for your platform from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta):
+Download the latest version (v0.522beta) for your platform:
 
 #### macOS
-- **Intel (x64)**: `CodeXomics-0.522.0-beta-x64.dmg` (139 MB)
-- **Apple Silicon (arm64)**: `CodeXomics-0.522.0-beta-arm64.dmg` (134 MB)
+- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-x64.dmg)**: `CodeXomics-0.522.0-beta-x64.dmg` (139 MB)
+- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-arm64.dmg)**: `CodeXomics-0.522.0-beta-arm64.dmg` (134 MB)
 
 #### Windows  
-- **Installer**: `CodeXomics Setup 0.522.0-beta.exe` (207 MB)
-- **Portable**: `CodeXomics 0.522.0-beta.exe` (207 MB)
+- **[Installer](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics%20Setup%200.522.0-beta.exe)**: `CodeXomics Setup 0.522.0-beta.exe` (209 MB)
+- **[Portable](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics%200.522.0-beta.exe)**: `CodeXomics 0.522.0-beta.exe` (208 MB)
 
 #### Linux
-- **AppImage**: `CodeXomics-0.522.0-beta.AppImage` (144 MB)
-- **Debian**: `codexomics_0.522.0-beta_amd64.deb` (93 MB)
-- **Snap**: `codexomics_0.522.0-beta_amd64.snap` (124 MB)
+- **[AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta.AppImage)**: `CodeXomics-0.522.0-beta.AppImage` (145 MB)
+- **[Debian](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/codexomics_0.522.0-beta_amd64.deb)**: `codexomics_0.522.0-beta_amd64.deb` (94 MB)
+- **[Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/codexomics_0.522.0-beta_amd64.snap)**: `codexomics_0.522.0-beta_amd64.snap` (124 MB)
+
+**📋 All Downloads**: [GitHub Releases Page](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)
 
 ### **Build from Source**
 ```bash
