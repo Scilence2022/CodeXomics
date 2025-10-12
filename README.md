@@ -1,8 +1,35 @@
-# CodeXomics v0.3 beta
+<div align="center">
 
-A modern, cross-platform bioinformatics analysis platform built with Electron, featuring an advanced plugin system, AI-powered natural language interaction, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
+# 🧬 CodeXomics
+
+### AI-Powered Bioinformatics Analysis Platform
+
+[![Version](https://img.shields.io/badge/version-0.522beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
+
+A modern, cross-platform bioinformatics analysis platform built with Electron, featuring multi-agent AI collaboration, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
+
+[Features](#-key-features) •
+[Installation](#-installation) •
+[Quick Start](#-quick-start) •
+[Documentation](#-documentation) •
+[Contributing](#-contributing)
+
+</div>
+
+---
 
 ## ✨ Key Features
+
+### 🤖 **Multi-Agent AI System**
+- **Collaborative Intelligence** - Multiple AI agents working together for complex genomic analysis
+- **MCP Integration** - Model Context Protocol for seamless tool integration
+- **Conversation Evolution v2** - Advanced conversation tracking and analysis system
+- **Multi-Provider Support** - OpenAI, Anthropic, Google Gemini, SiliconFlow, DeepSeek, Kimi, and local LLMs
+- **Intelligent Tool Selection** - Dynamic tool registry with context-aware selection
+- **Benchmark Testing** - Comprehensive AI evaluation with 22+ test cases across 6 categories
 
 ### 🧬 **Advanced Genome Visualization**
 - **Dynamic SVG-based GC Content/Skew** - Crisp, scalable visualization with adaptive window sizing
@@ -21,13 +48,22 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Zero Configuration** - Seamless LLM integration for new plugins
 - **Core Plugins** - Biological Networks, Comparative Genomics, Metabolic Pathways, and more
 
-### 🧪 **Benchmark Testing Interface**
-- **Comprehensive AI Evaluation** - 22 test cases across 6 genomic analysis categories
+### 🔧 **External Tools Integration**
+- **ProGenFixer** - Protein engineering and sequence optimization tool
+- **Deep Gene Research** - Advanced gene analysis and research platform  
+- **CHOPCHOP** - CRISPR design and analysis tool
+- **Customizable Tools** - Add your own external bioinformatics tools
+- **Keyboard Shortcuts** - Quick access to frequently used tools
+- **Session Management** - Persistent tool windows and state
+
+### 🧪 **Benchmark Testing Interface** 
+- **Comprehensive AI Evaluation** - 22+ test cases across 6 genomic analysis categories
 - **Manual Test Interaction** - Interactive dialogs for human verification and scoring
 - **Triple Classification System** - Automatic/manual evaluation, simple/complex tasks, 5 task types
 - **Real-time Progress Tracking** - Live progress bars and statistics during test execution
 - **Detailed Reporting** - Export test results, LLM interactions, and performance metrics
 - **Professional Interface** - Full-screen testing environment with comprehensive configuration options
+- **Multi-Agent Testing** - Evaluate multi-agent collaboration and coordination
 
 ### 🤖 **AI-Powered Assistant**
 - **Natural Language Queries** - Ask questions about genes, functions, and genomic regions
@@ -65,11 +101,21 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 ## 🚀 Installation
 
 ### **Download Pre-built Releases**
-Download the latest version for your platform from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases):
 
-- **macOS**: `CodeXomics-0.3.0-beta.dmg`
-- **Windows**: `CodeXomics-Setup-0.3.0-beta.exe`
-- **Linux**: `CodeXomics-0.3.0-beta.AppImage`
+Download the latest version (v0.522beta) for your platform from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta):
+
+#### macOS
+- **Intel (x64)**: `CodeXomics-0.522.0-beta-x64.dmg` (139 MB)
+- **Apple Silicon (arm64)**: `CodeXomics-0.522.0-beta-arm64.dmg` (134 MB)
+
+#### Windows  
+- **Installer**: `CodeXomics Setup 0.522.0-beta.exe` (207 MB)
+- **Portable**: `CodeXomics 0.522.0-beta.exe` (207 MB)
+
+#### Linux
+- **AppImage**: `CodeXomics-0.522.0-beta.AppImage` (144 MB)
+- **Debian**: `codexomics_0.522.0-beta_amd64.deb` (93 MB)
+- **Snap**: `codexomics_0.522.0-beta_amd64.snap` (124 MB)
 
 ### **Build from Source**
 ```bash
@@ -87,39 +133,51 @@ npm start
 npm run build
 ```
 
-## 📖 Quick Start Guide
+## 📖 Quick Start
 
-### **1. Load Your Genome Data**
-- Click **"Load File"** in the header
-- Select your genome file (FASTA, GenBank, etc.)
-- Choose additional annotation files (GFF, BED, VCF)
+### **1. Install and Launch**
+```bash
+# Download for your platform from releases
+# macOS: Open DMG and drag to Applications
+# Windows: Run installer or portable exe  
+# Linux: Make AppImage executable or install deb/snap
 
-### **2. Create or Open a Project**
-- Use **File → New Project** to create a structured project
-- Or **File → Open Project** (Ctrl+Shift+O) to load existing ".prj.GAI" files
-- Switch between Grid, List, and Details views as needed
+# Or build from source
+git clone https://github.com/Scilence2022/CodeXomics.git
+cd CodeXomics
+npm install
+npm start
+```
 
-### **3. Configure AI Assistant**
-- Click **"Options"** → **"Configure LLMs"**
-- Add your API key for OpenAI, Anthropic, or Google
-- Test the connection and save settings
+### **2. Configure AI Models**
+```
+Options → Configure LLMs
+├── Add API keys (OpenAI, Anthropic, Google, SiliconFlow)
+├── Configure multi-agent settings
+├── Test connections
+└── Save configuration
+```
 
-### **4. Explore Advanced Tools**
-- Access **Tools → Visualization Tools → KGML Pathway Viewer** (Ctrl+Shift+K)
-- Try **Tools → Bioinformatics Tools → STRING Protein Networks**
-- Use the enhanced Gene Details sidebar for database cross-references
+### **3. Load Genomic Data**
+```
+File → Load File
+├── Genome: FASTA, GenBank
+├── Annotations: GFF, GTF, BED
+├── Variants: VCF
+└── Reads: BAM, SAM
+```
 
-### **5. Test AI Performance**
-- Access **Benchmark & Debug Tools** in the top menu
-- Click **"Open Benchmark"** under LLM Benchmark Suite
-- Configure test suites and run comprehensive evaluations
-- Complete manual tests with interactive verification dialogs
-- Export detailed reports and LLM interaction logs
+### **4. Start Analyzing**
+- **Ask AI**: "Find all DNA polymerase genes"
+- **Use Tools**: Tools → ProGenFixer, KGML Viewer, STRING Networks
+- **Run Benchmarks**: Benchmark & Debug → Open Benchmark
+- **Create Projects**: File → New Project
 
-### **6. Install Plugins**
-- Access the Plugin Marketplace through the menu
-- Browse and install community-developed plugins
-- Plugins automatically integrate with the AI assistant
+### **5. Advanced Features**
+- **Multi-Agent Mode**: Enable collaborative AI analysis
+- **External Tools**: Quick access via keyboard shortcuts
+- **Plugin Marketplace**: Install community plugins
+- **Conversation Evolution**: Track AI reasoning and decision-making
 
 ## 🎯 Core Features
 
@@ -525,48 +583,91 @@ We welcome contributions from the genomics and bioinformatics community!
 - Update relevant markdown documentation
 - Test plugin compatibility
 
-## 📝 Recent Updates (v0.3 beta)
+## 📝 What's New in v0.522beta
 
-### **Major Enhancements**
-- ✅ **Dynamic Tool Registry** - Intelligent tool selection based on user intent and context
-- ✅ **Complete Plugin System** - Full plugin architecture with marketplace
-- ✅ **KGML Pathway Viewer** - Advanced pathway visualization tool
-- ✅ **Enhanced Gene Details** - 50+ database cross-references
-- ✅ **STRING Networks** - Protein interaction network analysis
-- ✅ **Project Management** - XML project format with multiple view modes
-- ✅ **Conversation Evolution** - Advanced AI conversation tracking
-- ✅ **AlphaFold Integration** - Protein structure prediction access
-- ✅ **Context-Aware AI** - Tools adapt to current genome state and user queries
+### **🎉 Major Features**
+- ✅ **Multi-Agent AI System** - Collaborative AI agents for complex analysis workflows
+- ✅ **MCP Integration** - Model Context Protocol for seamless tool interoperability
+- ✅ **ProGenFixer Integration** - Direct access to protein engineering tools
+- ✅ **Conversation Evolution v2** - Enhanced AI conversation tracking and analysis
+- ✅ **Enhanced Benchmark Suite** - Comprehensive AI evaluation with 22+ test cases
+- ✅ **SiliconFlow Models** - Reorganized by source (Qwen, DeepSeek, Kimi, GLM, Yi)
+- ✅ **Kimi K2 Pro** - Latest Pro model integration
 
-### **Bug Fixes**
-- ✅ **View Mode Functionality** - Fixed Grid/List/Details view switching
-- ✅ **Simple Mode Consistency** - Unified interface appearance
-- ✅ **Track Settings** - Consistent rendering after settings changes
-- ✅ **Protein Structure Viewer** - Fixed dependency loading issues
-- ✅ **Database Links** - Improved external database connectivity
+### **🐛 Bug Fixes**
+- ✅ **LLM Configuration Persistence** - Fixed multi-file synchronization issues
+- ✅ **Benchmark UI** - Accurate test count display and progress tracking
+- ✅ **Tool Parsing** - Enhanced detection for flexible success cases
+- ✅ **Data Export Workflow** - Improved edge case handling
 
-### **System Improvements**
-- ✅ **Dynamic Tool Selection** - Intelligent tool selection reduces context size and improves performance
-- ✅ **Menu Reorganization** - Streamlined menu structure
-- ✅ **Performance Optimization** - Better memory management and tool caching
-- ✅ **Security Enhancement** - Plugin sandboxing and validation
-- ✅ **Cross-platform Compatibility** - Improved file path handling
-- ✅ **Tool Registry Integration** - Seamless integration with existing ChatBox system
+### **⚡ Performance Improvements**
+- ✅ **Version Management** - Centralized version system with automatic sync
+- ✅ **Code Cleanup** - Removed deprecated legacy code
+- ✅ **Test Suite** - Refactored manual test organization
+- ✅ **Log Parsing** - Enhanced debugging capabilities
+
+📋 **Full Changelog**: [CHANGELOG.md](CHANGELOG.md)  
+📦 **Release Notes**: [docs/release-notes/RELEASE_NOTES_v0.522beta.md](docs/release-notes/RELEASE_NOTES_v0.522beta.md)
+
+## 📚 Documentation
+
+- **[User Guide](docs/user-guides/)** - Comprehensive usage instructions
+- **[Developer Guide](docs/developer-guides/)** - Contribution and development setup
+- **[API Reference](docs/api-docs/)** - Complete API documentation
+- **[Fix Summaries](docs/fix-summaries/)** - Implementation details and bug fixes
+- **[Release Notes](docs/release-notes/)** - Version history and changes
+
+## 🤝 Contributing
+
+We welcome contributions from the genomics and bioinformatics community!
+
+### **How to Contribute**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+See [PROJECT_RULES.md](PROJECT_RULES.md) for development guidelines.
+
+## 🐛 Issues and Support
+
+- **Bug Reports**: [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
+- **Feature Requests**: [GitHub Discussions](https://github.com/Scilence2022/CodeXomics/discussions)
+- **Email**: songlf@tib.cas.cn
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 - **Electron** - Cross-platform desktop app framework
 - **D3.js** - Data visualization library
-- **OpenAI/Anthropic** - AI model providers
+- **OpenAI/Anthropic/Google** - AI model providers
+- **SiliconFlow** - Chinese LLM integration platform
 - **KEGG** - Pathway data and visualization
 - **STRING** - Protein interaction networks
 - **AlphaFold** - Protein structure predictions
+- **ProGenFixer** - Protein engineering tools
 - **Bioinformatics Community** - Inspiration and feedback
 
+## 📊 Project Stats
+
+![GitHub stars](https://img.shields.io/github/stars/Scilence2022/CodeXomics?style=social)
+![GitHub forks](https://img.shields.io/github/forks/Scilence2022/CodeXomics?style=social)
+![GitHub issues](https://img.shields.io/github/issues/Scilence2022/CodeXomics)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/Scilence2022/CodeXomics)
+
 ---
-**CodeXomics** - Intelligent bioinformatics analysis with advanced plugin system for the modern researcher 
+
+<div align="center">
+
+**CodeXomics v0.522beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
+
+Made with ❤️ by the CodeXomics Team
+
+[⬆ Back to Top](#-codexomics)
+
+</div> 
 

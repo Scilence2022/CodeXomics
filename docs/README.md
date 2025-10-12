@@ -1,156 +1,246 @@
-# Genome AI Studio Documentation
+# CodeXomics Documentation
 
-Welcome to the comprehensive documentation for **Genome AI Studio v0.3 beta** - An advanced, AI-powered genome analysis platform with integrated plugin system and comprehensive bioinformatics tools.
+Welcome to the CodeXomics documentation hub! This directory contains comprehensive documentation for users, developers, and contributors.
 
-## 📚 Documentation Overview
-
-This documentation is organized into several categories to help you find the information you need quickly and efficiently.
-
-## 🚀 Quick Start Guides
+## 📚 Documentation Structure
 
 ### For Users
-- **[Getting Started Guide](project-guides/GETTING_STARTED.md)** - Installation, setup, and first steps
-- **[User Manual](project-guides/USER_MANUAL.md)** - Complete guide to using Genome AI Studio
-- **[Bioinformatics Tools Guide](project-guides/BIOINFORMATICS_TOOLS_README.md)** - Overview of integrated analysis tools
+
+**[User Guides](user-guides/)**
+- **[USER_GUIDE.md](user-guides/USER_GUIDE.md)** - Complete user manual covering all features
+- Installation instructions
+- Feature walkthroughs
+- Troubleshooting guide
+- FAQ
 
 ### For Developers
-- **[Build Instructions](project-guides/build-instructions.md)** - How to build from source
-- **[Plugin Development Guide](project-guides/PLUGIN_DEVELOPMENT_GUIDE.md)** - Creating plugins for the platform
-- **[API Documentation](project-guides/API_DOCUMENTATION.md)** - Complete API reference
 
-## 🎯 Feature Documentation
+**[Developer Guides](developer-guides/)**
+- **[DEVELOPER_GUIDE.md](developer-guides/DEVELOPER_GUIDE.md)** - Comprehensive development guide
+- Development setup
+- Architecture overview
+- Plugin development
+- Contributing guidelines
+- Testing procedures
 
-### Core Features
-- **[AI Chat Integration](../README.md#ai-powered-assistant)** - Natural language interaction with genomic data
-- **[Project Management](../README.md#project-management)** - Working with .prj.GAI project files
-- **[Plugin System](../README.md#advanced-plugin-system)** - Extensible architecture overview
+**[API Documentation](api-docs/)**
+- API reference (coming soon)
+- Module documentation
+- Function signatures
+- Usage examples
 
-### Advanced Tools
-- **[KGML Pathway Viewer](../README.md#kgml-pathway-viewer)** - Visualizing KEGG pathway data
-- **[STRING Protein Networks](../README.md#string-protein-networks)** - Protein interaction analysis
-- **[AlphaFold Integration](implementation-summaries/ALPHAFOLD_INTEGRATION_IMPLEMENTATION.md)** - Protein structure prediction
-- **[BLAST Tools](BLAST_GUIDE.md)** - Sequence alignment and database searching
+### Project Information
 
-## 🔧 Technical Documentation
+**[Implementation Summaries](implementation-summaries/)**
+- Detailed implementation notes (172 files)
+- Feature development summaries
+- Technical decision documentation
+- System design documents
 
-### System Architecture
-- **[Plugin System Architecture](implementation-summaries/PLUGIN_SYSTEM_PHASE2_COMPLETE.md)** - Complete plugin framework
-- **[Conversation Evolution System](implementation-summaries/CONVERSATION_EVOLUTION_SYSTEM_COMPLETE.md)** - AI conversation tracking
-- **[Version Management System](implementation-summaries/UNIFIED_VERSION_MANAGEMENT_IMPLEMENTATION.md)** - Unified version control
+**[Project Guides](project-guides/)**
+- Project-specific guides (25 files)
+- Workflow documentation
+- Best practices
+- Setup procedures
 
-### Configuration & Setup
-- **[Plugin Marketplace Setup](project-guides/PLUGIN_MARKETPLACE_SERVER_SETUP.md)** - Setting up the plugin marketplace
-- **[LLM Configuration](../README.md#ai-assistant-setup)** - Configuring AI providers
-- **[Project Configuration](../README.md#project-structure)** - Setting up projects
+**[Fix Summaries](fix-summaries/)**
+- Bug fix documentation
+- Issue resolutions
+- Performance improvements
+- System enhancements
 
-## 📖 User Guides
+**[Release Notes](release-notes/)**
+- Version release notes
+- Changelog details
+- Upgrade guides
+- Breaking changes
 
-### Basic Usage
-- **[File Format Support](../README.md#file-format-support)** - Supported file types and formats
-- **[Genome Visualization](../README.md#genome-visualization)** - Working with genomic data
-- **[Search & Navigation](../README.md#navigation)** - Finding and exploring features
+### Additional Resources
 
-### Advanced Features
-- **[Custom Annotations](../README.md#custom-annotations)** - Creating user-defined features
-- **[Export Functions](../README.md#export-capabilities)** - Data export options
-- **[Plugin Management](project-guides/PLUGIN_MARKETPLACE_USAGE_GUIDE.md)** - Installing and managing plugins
+**[BLAST Guide](BLAST_GUIDE.md)**
+- BLAST tool integration
+- Usage instructions
+- Configuration options
 
-## 🛠️ Development Resources
+**[Smart Execution Guide](SMART_EXECUTION_GUIDE.md)**
+- AI execution system
+- Tool selection logic
+- Optimization strategies
 
-### For Plugin Developers
-- **[Plugin API Reference](project-guides/PLUGIN_API_REFERENCE.md)** - Complete API documentation
-- **[Plugin Examples](project-guides/PLUGIN_EXAMPLES.md)** - Sample plugin implementations
-- **[Testing Framework](implementation-summaries/PLUGIN_TEST_FRAMEWORK_IMPLEMENTATION.md)** - Plugin testing tools
-
-### For Core Developers
-- **[Contributing Guidelines](project-guides/CONTRIBUTING.md)** - How to contribute to the project
-- **[Code Style Guide](project-guides/CODE_STYLE_GUIDE.md)** - Coding standards and conventions
-- **[Smart Execution Guide](SMART_EXECUTION_GUIDE.md)** - Advanced execution patterns
-
-## 🧪 Specialized Tools
-
-### Visualization Tools
-- **[Circos Plotter](project-guides/CIRCOS_PLOTTER_README.md)** - Circular genome visualization
-- **[Network Visualization](implementation-summaries/BIOLOGICAL_NETWORKS_PLUGIN_IMPLEMENTATION.md)** - Biological network analysis
-- **[Pathway Analysis](implementation-summaries/METABOLIC_PATHWAYS_PLUGIN_IMPLEMENTATION.md)** - Metabolic pathway visualization
-
-### Analysis Tools
-- **[Comparative Genomics](implementation-summaries/COMPARATIVE_GENOMICS_PLUGIN_IMPLEMENTATION.md)** - Multi-genome comparison
-- **[Population Genomics](implementation-summaries/POPULATION_GENOMICS_PLUGIN_IMPLEMENTATION.md)** - Population-level analysis
-- **[Structural Genomics](implementation-summaries/STRUCTURAL_GENOMICS_PLUGIN_IMPLEMENTATION.md)** - Protein structure analysis
-
-## 🔍 Reference Documentation
-
-### Implementation Summaries
-The `implementation-summaries/` directory contains detailed technical documentation of all implemented features:
-
-- **Feature Implementations** (`*_IMPLEMENTATION.md`) - Detailed implementation documentation
-- **System Completions** (`*_COMPLETE.md`) - Comprehensive system reports
-- **Bug Fixes** (`*_FIX.md`) - Bug fix documentation and solutions
-- **Enhancements** (`*_ENHANCEMENT.md`) - Feature enhancement details
-
-### Recent Major Updates (v0.3 beta)
-- **[Plugin System Phase 2](implementation-summaries/PLUGIN_SYSTEM_PHASE2_COMPLETE.md)** - Complete plugin architecture
-- **[Unified Version Management](implementation-summaries/UNIFIED_VERSION_MANAGEMENT_IMPLEMENTATION.md)** - Centralized version control
-- **[Enhanced Gene Details](implementation-summaries/ENHANCED_GENE_DETAILS_IMPLEMENTATION.md)** - 50+ database integrations
-- **[Project Manager Enhancements](implementation-summaries/PROJECT_MANAGER_ENHANCED_IMPLEMENTATION.md)** - Improved project management
-
-## 🆘 Help & Support
-
-### Troubleshooting
-- **[Common Issues](project-guides/TROUBLESHOOTING_GUIDE.md)** - Solutions to common problems
-- **[Performance Optimization](project-guides/PERFORMANCE_GUIDE.md)** - Optimizing application performance
-- **[Error Resolution](project-guides/ERROR_RESOLUTION_GUIDE.md)** - Detailed error solutions
-
-### Getting Help
-- **[FAQ](project-guides/FAQ.md)** - Frequently asked questions
-- **[Support Channels](project-guides/SUPPORT.md)** - How to get help
-- **[Bug Reporting](project-guides/BUG_REPORTING.md)** - Reporting issues effectively
-
-## 📝 Documentation Standards
-
-### For Contributors
-All documentation in this project follows specific organizational rules:
-
-1. **Implementation Summaries** (`docs/implementation-summaries/`) - Technical implementation details
-2. **Project Guides** (`docs/project-guides/`) - User-facing guides and tutorials
-3. **Root Documentation** - Main README and project overview files
-
-### File Naming Conventions
-- **Implementation docs**: `FEATURE_NAME_IMPLEMENTATION.md`
-- **Completion reports**: `SYSTEM_NAME_COMPLETE.md`
-- **Bug fixes**: `ISSUE_DESCRIPTION_FIX.md`
-- **User guides**: `TOPIC_GUIDE.md` or `TOOL_README.md`
-
-### Writing Guidelines
-- Use clear, descriptive headings
-- Include code examples where appropriate
-- Maintain consistent formatting
-- Update version information regularly
-- Cross-reference related documentation
-
-## 🔄 Document Maintenance
-
-### Keeping Documentation Current
-- Documentation is updated with each major release
-- Implementation summaries are created for all new features
-- User guides are reviewed and updated quarterly
-- API documentation is automatically updated from code
-
-### Version Information
-- Current version: **v0.3 beta**
-- Documentation last updated: **January 2025**
-- Next major update: **v0.4 beta** (planned)
-
-## 📧 Contact & Feedback
-
-For documentation feedback or suggestions:
-- Create an issue in the project repository
-- Contact the development team
-- Submit documentation improvements via pull request
+**[Documentation Index](DOCUMENTATION_INDEX.md)**
+- Complete documentation index
+- Cross-references
+- Quick navigation
 
 ---
 
-**Genome AI Studio** - Intelligent genomic analysis with advanced plugin system for the modern researcher
+## 🚀 Quick Navigation
 
-*This documentation covers version 0.3.0-beta. For the latest updates, please check the project repository.* 
+### Getting Started
+1. **New Users** → Start with [User Guide](user-guides/USER_GUIDE.md)
+2. **New Developers** → Read [Developer Guide](developer-guides/DEVELOPER_GUIDE.md)
+3. **Contributors** → Check [Contributing Guidelines](developer-guides/DEVELOPER_GUIDE.md#contributing)
+
+### Common Tasks
+
+**Installation**
+- [User Guide - Installation](user-guides/USER_GUIDE.md#installation)
+
+**Configuration**
+- [User Guide - AI Configuration](user-guides/USER_GUIDE.md#ai-assistant)
+- [Developer Guide - Setup](developer-guides/DEVELOPER_GUIDE.md#development-setup)
+
+**Development**
+- [Developer Guide - Architecture](developer-guides/DEVELOPER_GUIDE.md#project-architecture)
+- [Developer Guide - Plugin Development](developer-guides/DEVELOPER_GUIDE.md#plugin-development)
+
+**Troubleshooting**
+- [User Guide - Troubleshooting](user-guides/USER_GUIDE.md#troubleshooting)
+- [Fix Summaries](fix-summaries/)
+
+---
+
+## 📖 Documentation Standards
+
+### Writing Guidelines
+
+**Clarity**
+- Use clear, concise language
+- Define technical terms
+- Provide examples
+- Include screenshots where helpful
+
+**Structure**
+- Logical organization
+- Consistent headings
+- Table of contents for long documents
+- Cross-references between related docs
+
+**Code Examples**
+```javascript
+// Well-commented code
+// Clear variable names
+// Runnable examples
+```
+
+**Maintenance**
+- Keep docs updated with code changes
+- Version-specific documentation
+- Mark deprecated features
+- Update links and references
+
+### File Organization
+
+**Naming Conventions:**
+- `UPPERCASE.md` for main documents
+- `lowercase-with-dashes.md` for supporting docs
+- Descriptive, clear names
+- No spaces in filenames
+
+**Directory Structure:**
+```
+docs/
+├── README.md                      # This file
+├── user-guides/                   # User documentation
+├── developer-guides/              # Developer documentation
+├── api-docs/                      # API reference
+├── implementation-summaries/      # Technical summaries
+├── project-guides/                # Project guides
+├── fix-summaries/                 # Bug fixes
+└── release-notes/                 # Version releases
+```
+
+---
+
+## 🔄 Recent Updates
+
+### v0.522beta Documentation
+- ✅ Reorganized documentation structure
+- ✅ Created comprehensive User Guide
+- ✅ Created comprehensive Developer Guide
+- ✅ Moved implementation summaries to fix-summaries/
+- ✅ Created release-notes directory
+- ✅ Updated main README with current information
+
+### Documentation Improvements
+- ✅ Added navigation aids
+- ✅ Improved organization
+- ✅ Enhanced cross-referencing
+- ✅ Added quick start sections
+- ✅ Standardized formatting
+
+---
+
+## 🤝 Contributing to Documentation
+
+### How to Help
+
+1. **Fix Errors**
+   - Typos, grammar, broken links
+   - Outdated information
+   - Missing details
+
+2. **Add Examples**
+   - Code snippets
+   - Use cases
+   - Tutorials
+
+3. **Improve Clarity**
+   - Better explanations
+   - Diagrams and visuals
+   - Simplified language
+
+4. **Expand Coverage**
+   - Document undocumented features
+   - Add troubleshooting tips
+   - Create tutorials
+
+### Contribution Process
+
+1. Fork repository
+2. Create documentation branch
+3. Make improvements
+4. Submit pull request
+5. Address review feedback
+
+See [Developer Guide - Contributing](developer-guides/DEVELOPER_GUIDE.md#contributing) for details.
+
+---
+
+## 📝 Feedback
+
+We welcome feedback on our documentation!
+
+- **Issues**: Report documentation issues on [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
+- **Suggestions**: Share ideas in [GitHub Discussions](https://github.com/Scilence2022/CodeXomics/discussions)
+- **Email**: Contact us at songlf@tib.cas.cn
+
+---
+
+## 🔗 External Resources
+
+### Related Projects
+- [Electron Documentation](https://www.electronjs.org/docs)
+- [D3.js Documentation](https://d3js.org/)
+- [KEGG Database](https://www.genome.jp/kegg/)
+- [STRING Database](https://string-db.org/)
+
+### AI/LLM Resources
+- [OpenAI API](https://platform.openai.com/docs)
+- [Anthropic Claude](https://docs.anthropic.com/)
+- [Google Gemini](https://ai.google.dev/)
+- [SiliconFlow](https://siliconflow.cn/)
+
+### Bioinformatics Resources
+- [NCBI](https://www.ncbi.nlm.nih.gov/)
+- [UniProt](https://www.uniprot.org/)
+- [AlphaFold Database](https://alphafold.ebi.ac.uk/)
+- [ProGenFixer](https://progenfixer.biodesign.ac.cn/)
+
+---
+
+**CodeXomics Documentation** - v0.522beta
+
+Last Updated: October 2025
+
+Made with ❤️ by the CodeXomics Team
