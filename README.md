@@ -8,8 +8,11 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
+[![First Release](https://img.shields.io/badge/🚀%20First%20Public%20Release-v0.522beta-gold.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)
 
-A modern, cross-platform bioinformatics analysis platform built with Electron, featuring multi-agent AI collaboration, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
+A modern, cross-platform bioinformatics analysis platform built with Electron, featuring **world-first multi-agent AI collaboration**, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
+
+🎉 **[First Public Release - v0.522beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)** 🎉
 
 [Features](#-key-features) •
 [Installation](#-installation) •
@@ -583,9 +586,16 @@ We welcome contributions from the genomics and bioinformatics community!
 - Update relevant markdown documentation
 - Test plugin compatibility
 
-## 📝 What's New in v0.522beta
+## 🎉 What's New in v0.522beta - First Public Release
 
-### **🎉 Major Features**
+### **🚀 Historic First Release**
+- ✅ **World's First** multi-agent AI bioinformatics platform
+- ✅ **Revolutionary** natural language genome analysis capabilities
+- ✅ **Pioneering** AI benchmark testing framework for bioinformatics
+- ✅ **Unprecedented** integration of 8+ external bioinformatics tools
+- ✅ **Cutting-edge** MCP (Model Context Protocol) implementation
+
+### **🌟 Major Features**
 - ✅ **Multi-Agent AI System** - Collaborative AI agents for complex analysis workflows
 - ✅ **MCP Integration** - Model Context Protocol for seamless tool interoperability
 - ✅ **ProGenFixer Integration** - Direct access to protein engineering tools
