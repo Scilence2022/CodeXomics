@@ -5,11 +5,11 @@ All notable changes to CodeXomics will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.522.0-beta] - 2025-10-12 - 🚀 FIRST PUBLIC RELEASE
+## [0.522.0-beta] - 2025-10-12 - 🧪 FIRST BETA RELEASE
 
-**🎉 Milestone: First Public Release of CodeXomics**
+**🔬 Milestone: First Beta Release of CodeXomics**
 
-We're excited to share the **first public release** of CodeXomics, an AI-powered bioinformatics analysis platform that aims to enhance how researchers interact with genomic data through multi-agent AI collaboration.
+We're excited to share the **first beta release** of CodeXomics, an AI-powered bioinformatics analysis platform designed for community testing and feedback. This beta introduces multi-agent AI collaboration capabilities to enhance genomic research workflows.
 
 ### ✨ Key Features Introduced
 
@@ -109,7 +109,7 @@ We're excited to share the **first public release** of CodeXomics, an AI-powered
 ## Development History
 
 ### Note
-CodeXomics development focused on creating an AI-integrated bioinformatics platform. This first public release (v0.522beta) represents our initial effort to combine multi-agent AI systems with genomic analysis tools.
+CodeXomics development focused on creating an AI-integrated bioinformatics platform. This first beta release (v0.522beta) represents our initial effort to combine multi-agent AI systems with genomic analysis tools, designed for community testing and feedback.
 
 **Previous development focused on:**
 - Core architecture design
@@ -122,8 +122,8 @@ CodeXomics development focused on creating an AI-integrated bioinformatics platf
 
 ## Release Links
 
-- [v0.522beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta) - 🚀 **First Public Release**
-- [Release Notes](RELEASE_NOTES_v0.522beta.md) - Complete release documentation
+- [v0.522beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta) - 🧪 **First Beta Release**
+- [Release Notes](RELEASE_NOTES_v0.522beta.md) - Complete beta release documentation
 - [User Guide](../user-guides/USER_GUIDE.md) - Comprehensive user manual
 - [Developer Guide](../developer-guides/DEVELOPER_GUIDE.md) - Development documentation
 

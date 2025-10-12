@@ -1,16 +1,16 @@
-# CodeXomics v0.522beta - First Public Release
+# CodeXomics v0.522beta - First Beta Release
 
-## 🚀 First Public Release - AI-Enhanced Bioinformatics Platform
+## 🧪 First Beta Release - AI-Enhanced Bioinformatics Platform
 
 **Release Date:** October 12, 2025  
 **Version:** 0.522.0-beta  
-**Milestone:** First Public Release
+**Milestone:** First Beta Release
 
-**🎉 Introducing CodeXomics**
+**🔬 Introducing CodeXomics Beta**
 
-We're excited to share the **first public release** of CodeXomics - an AI-powered bioinformatics analysis platform that aims to enhance genomic research through multi-agent AI collaboration. This platform represents our effort to integrate artificial intelligence with traditional bioinformatics tools to provide researchers with more intuitive and powerful analysis capabilities.
+We're excited to share the **first beta release** of CodeXomics - an AI-powered bioinformatics analysis platform that aims to enhance genomic research through multi-agent AI collaboration. This beta release is designed for testing, feedback, and validation from the bioinformatics community.
 
-**What this release offers:**
+**What this beta offers:**
 - 🤖 **Multi-agent AI system** for collaborative genomic analysis
 - 🧬 **Natural language interface** for genome exploration
 - 🔬 **Integration** with multiple external bioinformatics tools
@@ -135,21 +135,27 @@ We're excited to share the **first public release** of CodeXomics - an AI-powere
 
 ## 🧪 **Beta Release Information**
 
-*This first public release represents a stable, feature-complete platform. As an initial release, we welcome user feedback to help us improve.*
+*This first beta release is designed for testing, feedback, and community validation.*
 
-**Why Beta?**
-- **New Technology**: We're introducing multi-agent AI in bioinformatics
-- **Community Feedback**: Your input helps us improve the user experience
-- **Continuous Improvement**: Beta allows us to integrate new AI models and tools
-- **Research Validation**: We want to ensure the platform meets diverse research needs
+**Purpose of Beta:**
+- **Testing & Validation**: We're seeking community feedback on features and usability
+- **Performance Evaluation**: Test AI systems across different research scenarios
+- **Compatibility Testing**: Validate cross-platform functionality and file format support
+- **Feature Refinement**: Gather input to improve user experience and workflows
+- **Community Input**: Help us understand diverse research needs and use cases
 
-**Stability Information:**
-- ✅ Core features tested across use cases
-- ✅ AI systems validated with multiple scenarios
+**Beta Stability:**
+- ✅ Core features tested and functional
+- ✅ AI systems validated with multiple test cases
 - ✅ Cross-platform compatibility verified
 - ✅ Data integrity and security measures in place
+- ⚠️ Some features may need refinement based on feedback
 
-**Support**: [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues) | **Contact**: songlf@tib.cas.cn
+**How to Help:**
+- **Test Features**: Try different analysis workflows
+- **Report Issues**: [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
+- **Share Feedback**: Let us know what works and what needs improvement
+- **Contact**: songlf@tib.cas.cn
 
 ---
 
@@ -165,9 +171,9 @@ We're excited to share the **first public release** of CodeXomics - an AI-powere
 
 ---
 
-## 🏆 **Development Summary**
+## 📋 **Development Summary**
 
-*This first release represents the initial milestone in developing an AI-integrated bioinformatics platform.*
+*This first beta release represents our initial milestone in developing an AI-integrated bioinformatics platform for community testing.*
 
 **🎯 Core Development:**
 - Multi-agent AI system implementation
@@ -240,12 +246,12 @@ We're excited to share the **first public release** of CodeXomics - an AI-powere
 
 <div align="center">
 
-## 🎉 **Thank You for Trying CodeXomics!**
+## 🔬 **Thank You for Beta Testing!**
 
 **CodeXomics v0.522beta** aims to enhance bioinformatics research by combining artificial intelligence with traditional genomic analysis tools.
 
-*We hope this platform proves useful for your research.* 🧬✨🤖
+*We appreciate your help in testing and improving this platform.* 🧬✨🤖
 
-**[Download](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)** | **[Get Started](docs/user-guides/USER_GUIDE.md)** | **[Join Discussion](https://github.com/Scilence2022/CodeXomics/discussions)**
+**[Download Beta](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)** | **[Get Started](docs/user-guides/USER_GUIDE.md)** | **[Report Issues](https://github.com/Scilence2022/CodeXomics/issues)**
 
 </div>

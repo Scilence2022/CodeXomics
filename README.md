@@ -8,11 +8,11 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
-[![First Release](https://img.shields.io/badge/🚀%20First%20Public%20Release-v0.522beta-gold.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)
+[![First Release](https://img.shields.io/badge/🧪%20First%20Beta%20Release-v0.522beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)
 
 A modern, cross-platform bioinformatics analysis platform built with Electron, featuring **multi-agent AI collaboration**, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
 
-🎉 **[First Public Release - v0.522beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)** 🎉
+🧪 **[First Beta Release - v0.522beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)** 🧪
 
 [Features](#-key-features) •
 [Installation](#-installation) •
@@ -586,14 +586,15 @@ We welcome contributions from the genomics and bioinformatics community!
 - Update relevant markdown documentation
 - Test plugin compatibility
 
-## 🎉 What's New in v0.522beta - First Public Release
+## 🧪 What's New in v0.522beta - First Beta Release
 
-### **🚀 First Public Release**
-- ✅ **Multi-agent AI** bioinformatics platform
+### **🧪 First Beta Release**
+- ✅ **Multi-agent AI** bioinformatics platform for testing
 - ✅ **Natural language** genome analysis capabilities
-- ✅ **AI benchmark testing** framework for bioinformatics
+- ✅ **AI benchmark testing** framework for validation
 - ✅ **Integration** of 8+ external bioinformatics tools
 - ✅ **MCP implementation** (Model Context Protocol)
+- 🔬 **Community feedback** welcome for improvements
 
 ### **✨ Key Features**
 - ✅ **Multi-Agent AI System** - Collaborative AI agents for complex genomic analysis
