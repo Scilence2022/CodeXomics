@@ -10,7 +10,7 @@
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
 [![First Release](https://img.shields.io/badge/🚀%20First%20Public%20Release-v0.522beta-gold.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)
 
-A modern, cross-platform bioinformatics analysis platform built with Electron, featuring **world-first multi-agent AI collaboration**, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
+A modern, cross-platform bioinformatics analysis platform built with Electron, featuring **multi-agent AI collaboration**, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
 
 🎉 **[First Public Release - v0.522beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)** 🎉
 
@@ -588,33 +588,32 @@ We welcome contributions from the genomics and bioinformatics community!
 
 ## 🎉 What's New in v0.522beta - First Public Release
 
-### **🚀 Historic First Release**
-- ✅ **World's First** multi-agent AI bioinformatics platform
-- ✅ **Revolutionary** natural language genome analysis capabilities
-- ✅ **Pioneering** AI benchmark testing framework for bioinformatics
-- ✅ **Unprecedented** integration of 8+ external bioinformatics tools
-- ✅ **Cutting-edge** MCP (Model Context Protocol) implementation
+### **🚀 First Public Release**
+- ✅ **Multi-agent AI** bioinformatics platform
+- ✅ **Natural language** genome analysis capabilities
+- ✅ **AI benchmark testing** framework for bioinformatics
+- ✅ **Integration** of 8+ external bioinformatics tools
+- ✅ **MCP implementation** (Model Context Protocol)
 
-### **🌟 Major Features**
-- ✅ **Multi-Agent AI System** - Collaborative AI agents for complex analysis workflows
-- ✅ **MCP Integration** - Model Context Protocol for seamless tool interoperability
-- ✅ **ProGenFixer Integration** - Direct access to protein engineering tools
-- ✅ **Conversation Evolution v2** - Enhanced AI conversation tracking and analysis
-- ✅ **Enhanced Benchmark Suite** - Comprehensive AI evaluation with 22+ test cases
-- ✅ **SiliconFlow Models** - Reorganized by source (Qwen, DeepSeek, Kimi, GLM, Yi)
-- ✅ **Kimi K2 Pro** - Latest Pro model integration
+### **✨ Key Features**
+- ✅ **Multi-Agent AI System** - Collaborative AI agents for complex genomic analysis
+- ✅ **MCP Integration** - Model Context Protocol for tool interoperability
+- ✅ **ProGenFixer Integration** - Access to protein engineering tools
+- ✅ **Enhanced Benchmark Suite** - AI evaluation with 22+ test cases
+- ✅ **SiliconFlow Models** - Organized by source (Qwen, DeepSeek, Kimi, GLM, Yi)
+- ✅ **Kimi K2 Pro** - Latest model integration
 
 ### **🐛 Bug Fixes**
-- ✅ **LLM Configuration Persistence** - Fixed multi-file synchronization issues
-- ✅ **Benchmark UI** - Accurate test count display and progress tracking
+- ✅ **LLM Configuration** - Fixed multi-file synchronization issues
+- ✅ **Benchmark UI** - Improved test count display and progress tracking
 - ✅ **Tool Parsing** - Enhanced detection for flexible success cases
-- ✅ **Data Export Workflow** - Improved edge case handling
+- ✅ **Data Export** - Improved workflow handling
 
 ### **⚡ Performance Improvements**
-- ✅ **Version Management** - Centralized version system with automatic sync
-- ✅ **Code Cleanup** - Removed deprecated legacy code
-- ✅ **Test Suite** - Refactored manual test organization
-- ✅ **Log Parsing** - Enhanced debugging capabilities
+- ✅ **Version Management** - Centralized version system with synchronization
+- ✅ **Code Organization** - Improved structure and maintainability
+- ✅ **Test Suite** - Enhanced manual test organization
+- ✅ **Documentation** - Comprehensive guides and references
 
 📋 **Full Changelog**: [CHANGELOG.md](CHANGELOG.md)  
 📦 **Release Notes**: [docs/release-notes/RELEASE_NOTES_v0.522beta.md](docs/release-notes/RELEASE_NOTES_v0.522beta.md)

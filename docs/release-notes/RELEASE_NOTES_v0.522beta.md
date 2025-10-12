@@ -1,81 +1,81 @@
 # CodeXomics v0.522beta - First Public Release
 
-## 🚀 Historic First Release - Revolutionizing Bioinformatics with AI
+## 🚀 First Public Release - AI-Enhanced Bioinformatics Platform
 
 **Release Date:** October 12, 2025  
 **Version:** 0.522.0-beta  
 **Milestone:** First Public Release
 
-**🎉 Welcome to the Future of Bioinformatics!**
+**🎉 Introducing CodeXomics**
 
-We're thrilled to announce the **first public release** of CodeXomics - a groundbreaking AI-powered bioinformatics analysis platform that represents a paradigm shift in how researchers interact with genomic data. This isn't just another bioinformatics tool; it's the first platform to seamlessly integrate multi-agent AI collaboration with comprehensive genome analysis capabilities.
+We're excited to share the **first public release** of CodeXomics - an AI-powered bioinformatics analysis platform that aims to enhance genomic research through multi-agent AI collaboration. This platform represents our effort to integrate artificial intelligence with traditional bioinformatics tools to provide researchers with more intuitive and powerful analysis capabilities.
 
-**What makes this release historic:**
-- 🌟 **World's first** multi-agent AI bioinformatics platform
-- 🧬 **Revolutionary** natural language genome analysis
-- 🔬 **Unprecedented** integration of 8+ external tools
-- 📊 **Innovative** AI benchmark testing framework
-- 🤖 **Cutting-edge** MCP (Model Context Protocol) integration
+**What this release offers:**
+- 🤖 **Multi-agent AI system** for collaborative genomic analysis
+- 🧬 **Natural language interface** for genome exploration
+- 🔬 **Integration** with multiple external bioinformatics tools
+- 📊 **Benchmark testing framework** for AI evaluation
+- 🤝 **MCP integration** for improved tool interoperability
 
 ---
 
-## 🌟 Revolutionary Features
+## ✨ Key Features
 
-*The following features represent years of development and establish CodeXomics as the most advanced AI-powered bioinformatics platform available today.*
+*This release introduces several features aimed at improving the bioinformatics research experience through AI integration.*
 
-### 🧬 **Multi-Agent AI System** - *World First*
-- **Revolutionary AI Collaboration**: Multiple AI agents working together for complex genomic analysis
+### 🤖 **Multi-Agent AI System**
+- **AI Collaboration**: Multiple AI agents working together for genomic analysis
 - **Intelligent Coordination**: AI coordinator delegates tasks to specialized worker agents
-- **Context-Aware Analysis**: AI understands genomic context and selects appropriate tools automatically
-- **Natural Language Interface**: Ask complex questions in plain English, get comprehensive answers
-- **Conversation Evolution**: Advanced tracking of AI reasoning and decision-making processes
+- **Context-Aware Analysis**: AI understands genomic context and selects appropriate tools
+- **Natural Language Interface**: Ask questions in plain English, receive detailed answers
+- **Conversation Tracking**: Monitor AI reasoning and decision-making processes
 
-### 🔧 **Comprehensive External Tools Integration**
+### 🔧 **External Tools Integration**
 - **ProGenFixer**: Protein engineering and sequence optimization (Cmd/Ctrl+Shift+P)
-- **Deep Gene Research**: Advanced gene analysis and research platform
+- **Deep Gene Research**: Gene analysis and research platform
 - **CHOPCHOP**: CRISPR design and analysis tool
 - **KGML Pathway Viewer**: Interactive KEGG pathway visualization
 - **STRING Networks**: Protein-protein interaction analysis
-- **AlphaFold Integration**: Direct protein structure prediction access
-- **Seamless Integration**: All tools work together through AI coordination
+- **AlphaFold Integration**: Protein structure prediction access
+- **Coordinated Integration**: Tools work together through AI coordination
 
-### 🤖 **Advanced LLM Ecosystem**
+### 🤖 **LLM Provider Support**
 - **Multi-Provider Support**: OpenAI, Anthropic, Google Gemini, SiliconFlow, DeepSeek, Kimi, and local LLMs
-- **Intelligent Model Selection**: Choose different models for coordination vs specialized tasks
-- **SiliconFlow Integration**: Comprehensive Chinese LLM support with organized model families:
+- **Flexible Model Selection**: Choose different models for coordination vs specialized tasks
+- **SiliconFlow Integration**: Chinese LLM support with organized model families:
   - 🌐 Qwen Series (Alibaba Cloud) - 7B to 110B parameters
-  - 🧠 DeepSeek Series - Advanced reasoning capabilities
-  - 🌙 Kimi Series (Moonshot AI) - Including latest K2 Pro model
-  - 💡 GLM Series (Zhipu AI) - Conversation specialists
-  - 🎯 Yi Series (01.AI) - High-performance models
-- **MCP Integration**: Model Context Protocol for seamless tool interoperability
+  - 🧠 DeepSeek Series - Reasoning capabilities
+  - 🌙 Kimi Series (Moonshot AI) - Including K2 Pro model
+  - 💡 GLM Series (Zhipu AI) - Conversation capabilities
+  - 🎯 Yi Series (01.AI) - Performance models
+- **MCP Integration**: Model Context Protocol for tool interoperability
 
-### 📊 **Pioneering AI Benchmark Framework**
-- **Industry-First AI Evaluation**: Comprehensive benchmark suite with 22+ test cases across 6 categories
+### 📊 **AI Benchmark Framework**
+- **AI Evaluation Suite**: Benchmark suite with 22+ test cases across 6 categories
 - **Multi-Agent Testing**: Evaluate AI collaboration and coordination capabilities
 - **Real-Time Assessment**: Live progress tracking and performance metrics
 - **Manual Verification**: Interactive human-in-the-loop validation system
-- **Professional Reporting**: Export detailed AI interaction logs and performance analysis
-- **Research-Grade Metrics**: Establish benchmarks for AI-powered bioinformatics
+- **Detailed Reporting**: Export AI interaction logs and performance analysis
+- **Research Metrics**: Establish benchmarks for AI-powered bioinformatics tools
 
-### 🧬 **Advanced Genome Visualization Engine**
-- **Dynamic SVG Rendering**: Hardware-accelerated, scalable visualizations
+### 🧬 **Genome Visualization**
+- **SVG Rendering**: Hardware-accelerated, scalable visualizations
 - **Multi-Track System**: Genes, sequences, variants, reads, proteins, and networks
 - **Interactive Navigation**: Smooth zooming, panning, and real-time updates
 - **Context Persistence**: Track states saved across sessions
-- **AI-Driven Insights**: Automated feature detection and highlighting
+- **AI-Enhanced Features**: Automated feature detection and highlighting
 
-### 🔌 **Extensible Plugin Architecture**
-- **Complete Plugin System**: Full plugin marketplace with security validation
-- **AI Integration**: Plugins automatically callable by AI agents
-- **Community Ecosystem**: Built-in marketplace for plugin discovery
-- **Zero Configuration**: Seamless integration with existing tools
+### 🔌 **Plugin Architecture**
+- **Plugin System**: Plugin marketplace with security validation
+- **AI Integration**: Plugins callable by AI agents
+- **Community Support**: Built-in marketplace for plugin discovery
+- **Easy Integration**: Seamless integration with existing tools
 
 ---
 
-## 🏗️ **Robust Foundation**
+## 🛠️ **Stable Foundation**
 
-*Building a reliable platform for scientific research requires meticulous attention to detail. This first release includes extensive stability and reliability improvements.*
+*Building a reliable platform for scientific research requires attention to stability and reliability.*
 
 - **Multi-File Configuration Sync**: Resolved LLM configuration persistence across 4+ configuration files
 - **Benchmark System Reliability**: Enhanced test count accuracy and progress tracking
@@ -85,34 +85,34 @@ We're thrilled to announce the **first public release** of CodeXomics - a ground
 
 ---
 
-## 🎯 **Professional Engineering Standards**
+## 💻 **Engineering Practices**
 
-*CodeXomics is built with enterprise-grade engineering practices to ensure reliability and maintainability.*
+*CodeXomics is built with modern engineering practices to ensure reliability and maintainability.*
 
-### **Version Management System**
-- Centralized version control with automatic synchronization
+### **Version Management**
+- Centralized version control with synchronization
 - Clear beta designation: **v0.522beta**
-- Consistent versioning across all components
-- Professional release management workflow
+- Consistent versioning across components
+- Structured release management
 
-### **Code Architecture Excellence**
-- Modular, maintainable codebase with clear separation of concerns
-- Comprehensive test coverage with automated validation
-- Enhanced debugging capabilities with detailed logging
-- Clean architecture patterns throughout
-- Deprecated code removal for optimal performance
+### **Code Organization**
+- Modular, maintainable codebase
+- Test coverage with validation
+- Debugging capabilities with detailed logging
+- Clean architecture patterns
+- Legacy code cleanup for performance
 
-### **Documentation Excellence**
-- **Comprehensive User Guide**: 742 lines of detailed instructions
-- **Complete Developer Guide**: 831 lines covering architecture and contribution
-- **Professional Documentation Structure**: Organized, searchable, and maintainable
+### **Documentation**
+- **User Guide**: 742 lines of detailed instructions
+- **Developer Guide**: 831 lines covering architecture and contribution
+- **Organized Documentation**: Well-structured and searchable
 - **223 Documentation Files**: Properly categorized and cross-referenced
 
 ---
 
-## 📦 **Easy Installation - Get Started in Minutes**
+## 📦 **Installation**
 
-*Download and start using the world's most advanced AI-powered bioinformatics platform immediately.*
+*Download and start using CodeXomics on your preferred platform.*
 
 ### **macOS** 🍎
 - **Intel (x64):** CodeXomics-0.522.0-beta-x64.dmg (139 MB)
@@ -129,27 +129,27 @@ We're thrilled to announce the **first public release** of CodeXomics - a ground
 - **Debian/Ubuntu:** codexomics_0.522.0-beta_amd64.deb (93 MB)
 - **Snap Store:** codexomics_0.522.0-beta_amd64.snap (124 MB)
 
-**Total Download Size:** ~140MB average | **Installation Time:** < 2 minutes
+**Installation Time:** Usually < 2 minutes
 
 ---
 
-## 🧪 **Beta Release Notes**
+## 🧪 **Beta Release Information**
 
-*This first public release represents a stable, feature-complete platform ready for research use. As with any pioneering technology, we encourage user feedback to help us achieve perfection.*
+*This first public release represents a stable, feature-complete platform. As an initial release, we welcome user feedback to help us improve.*
 
 **Why Beta?**
-- **Cutting-Edge Technology**: We're pioneering multi-agent AI in bioinformatics
-- **Community Feedback**: Your input helps us refine the user experience
-- **Rapid Innovation**: Beta allows us to quickly integrate new AI models and tools
+- **New Technology**: We're introducing multi-agent AI in bioinformatics
+- **Community Feedback**: Your input helps us improve the user experience
+- **Continuous Improvement**: Beta allows us to integrate new AI models and tools
 - **Research Validation**: We want to ensure the platform meets diverse research needs
 
-**Stability Assurance:**
-- ✅ Core features extensively tested
-- ✅ AI systems validated across multiple use cases
+**Stability Information:**
+- ✅ Core features tested across use cases
+- ✅ AI systems validated with multiple scenarios
 - ✅ Cross-platform compatibility verified
-- ✅ Data integrity and security ensured
+- ✅ Data integrity and security measures in place
 
-**Report Issues**: [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues) | **Get Help**: songlf@tib.cas.cn
+**Support**: [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues) | **Contact**: songlf@tib.cas.cn
 
 ---
 
@@ -165,52 +165,52 @@ We're thrilled to announce the **first public release** of CodeXomics - a ground
 
 ---
 
-## 🏆 **Development Milestones**
+## 🏆 **Development Summary**
 
-*This first release represents the culmination of extensive development, featuring hundreds of commits across multiple breakthrough innovations.*
+*This first release represents the initial milestone in developing an AI-integrated bioinformatics platform.*
 
-**🎯 Core Framework Development:**
-- Multi-agent AI system architecture
-- Dynamic tool registry implementation
+**🎯 Core Development:**
+- Multi-agent AI system implementation
+- Dynamic tool registry development
 - MCP integration and protocol handling
-- Cross-platform Electron application foundation
+- Cross-platform Electron application
 
-**🧬 Bioinformatics Integration:**
+**🧬 Bioinformatics Features:**
 - Genome visualization engine
 - External tool integration framework
 - File format support (FASTA, GenBank, GFF, VCF, BAM, etc.)
 - Database connectivity and API integration
 
-**🤖 AI System Engineering:**
+**🤖 AI System Implementation:**
 - LLM provider integration (8+ platforms)
-- Intelligent tool selection algorithms
-- Conversation evolution tracking
+- Tool selection algorithms
+- Conversation tracking
 - Benchmark testing framework
 
-**📊 Quality Assurance:**
-- Comprehensive test suite development
-- Cross-platform compatibility testing
-- Documentation standardization
+**📊 Quality & Testing:**
+- Test suite development
+- Cross-platform compatibility
+- Documentation organization
 - Performance optimization
 
-**Recent Final Commits:**
-- Documentation reorganization and professional structure
+**Recent Development:**
+- Documentation organization and structure
 - Version system standardization
 - Release preparation and validation
 
 ---
 
-## 👤 **Creator & Research Team**
+## 👤 **Development Team**
 
-**Lead Developer & Researcher:** Dr. Lifu Song  
+**Lead Developer:** Dr. Lifu Song  
 **Institution:** Chinese Academy of Sciences  
 **Email:** songlf@tib.cas.cn  
-**Vision:** Democratizing advanced bioinformatics through AI
+**Goal:** Enhancing bioinformatics research through AI integration
 
-**Special Thanks:**
+**Acknowledgments:**
 - The bioinformatics community for inspiration and feedback
 - AI research community for foundational technologies
-- Open source contributors and early beta testers
+- Open source contributors and beta testers
 
 ---
 
@@ -222,30 +222,30 @@ We're thrilled to announce the **first public release** of CodeXomics - a ground
 
 ---
 
-## 🚀 **What's Next?**
+## 🚀 **Future Development**
 
-**Immediate Roadmap:**
+**Next Steps:**
 - Community feedback integration
 - Additional LLM provider support
 - Enhanced plugin marketplace
-- Performance optimizations
+- Performance improvements
 
-**Long-term Vision:**
+**Future Goals:**
 - Multi-genome comparison capabilities
-- Real-time collaborative analysis
-- Cloud integration and distributed computing
+- Collaborative analysis features
+- Cloud integration options
 - Specialized AI models for biological research
 
 ---
 
 <div align="center">
 
-## 🎉 **Welcome to the Future of Bioinformatics!**
+## 🎉 **Thank You for Trying CodeXomics!**
 
-**CodeXomics v0.522beta** represents a new era where artificial intelligence and biological research converge to unlock unprecedented insights into the complexity of life itself.
+**CodeXomics v0.522beta** aims to enhance bioinformatics research by combining artificial intelligence with traditional genomic analysis tools.
 
-*Thank you for being part of this historic moment.* 🧬✨🤖
+*We hope this platform proves useful for your research.* 🧬✨🤖
 
-**[Download Now](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)** | **[Get Started](docs/user-guides/USER_GUIDE.md)** | **[Join Community](https://github.com/Scilence2022/CodeXomics/discussions)**
+**[Download](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.522beta)** | **[Get Started](docs/user-guides/USER_GUIDE.md)** | **[Join Discussion](https://github.com/Scilence2022/CodeXomics/discussions)**
 
 </div>
