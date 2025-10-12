@@ -1,6 +1,6 @@
 {
   "name": "codexomics",
-  "version": "0.522.0",
+  "version": "0.522.0-beta",
   "description": "An AI-powered bioinformatics analysis platform built with Electron",
   "main": "src/main.js",
   "homepage": "https://github.com/Scilence2022/CodeXomics",
