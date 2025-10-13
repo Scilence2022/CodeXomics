@@ -31,9 +31,11 @@ async function convertSVGToPNG() {
         await sharp(SVG_PATH, {
             density: 300  // High DPI for crisp rendering
         })
+            .flatten({ background: { r: 46, g: 79, b: 140 } })  // Flatten with deep blue background
             .resize(660, 420, {
-                fit: 'fill',  // Exact dimensions
-                background: { r: 46, g: 79, b: 140, alpha: 1 }  // Deep blue background #2E4F8C
+                fit: 'contain',  // Maintain aspect ratio
+                position: 'center',
+                background: { r: 46, g: 79, b: 140 }  // Deep blue background #2E4F8C
             })
             .png({
                 quality: 100,
