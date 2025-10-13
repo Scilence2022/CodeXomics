@@ -28,12 +28,13 @@ async function convertSVGToPNG() {
         }
         
         // Convert SVG to PNG with high quality
+        // Use 72 DPI for screen display (DMG uses screen resolution, not print resolution)
         await sharp(SVG_PATH, {
-            density: 300  // High DPI for crisp rendering
+            density: 72  // Screen DPI for proper DMG display
         })
             .flatten({ background: { r: 46, g: 79, b: 140 } })  // Flatten with deep blue background
             .resize(660, 420, {
-                fit: 'contain',  // Maintain aspect ratio
+                fit: 'fill',  // Fill exact dimensions
                 position: 'center',
                 background: { r: 46, g: 79, b: 140 }  // Deep blue background #2E4F8C
             })
