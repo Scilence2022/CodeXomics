@@ -1,4 +1,30 @@
-<svg width="660" height="420" xmlns="http://www.w3.org/2000/svg">
+#!/usr/bin/env node
+
+/**
+ * SVG DMG Background Generator for CodeXomics
+ * 
+ * Creates a SVG background for DMG installation interface
+ * Automatically reads version information from version.js
+ * 
+ * @author CodeXomics Team
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+// Import version information
+const VERSION_INFO = require('../src/version.js');
+
+const DMG_WIDTH = 660;
+const DMG_HEIGHT = 420;
+
+/**
+ * Generate SVG background for DMG
+ */
+function generateSVGBackground() {
+    console.log('🎨 Generating SVG background for CodeXomics', VERSION_INFO.displayVersion);
+    
+    const svg = `<svg width="${DMG_WIDTH}" height="${DMG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
@@ -35,15 +61,15 @@
   </defs>
   
   <!-- Main background -->
-  <rect width="660" height="420" fill="url(#mainGradient)"/>
+  <rect width="${DMG_WIDTH}" height="${DMG_HEIGHT}" fill="url(#mainGradient)"/>
   
   <!-- Texture overlay -->
-  <rect width="660" height="420" fill="url(#texturePattern)"/>
+  <rect width="${DMG_WIDTH}" height="${DMG_HEIGHT}" fill="url(#texturePattern)"/>
   
   <!-- Header text -->
   <text x="330" y="90" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="42" font-weight="bold" filter="url(#textShadow)">CodeXomics</text>
   
-  <text x="330" y="115" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="18" font-weight="300" opacity="0.9" filter="url(#lightTextShadow)">v0.522beta Beta</text>
+  <text x="330" y="115" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="18" font-weight="300" opacity="0.9" filter="url(#lightTextShadow)">${VERSION_INFO.displayVersion} Beta</text>
   
   <text x="330" y="135" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="16" font-weight="300" opacity="0.8" filter="url(#lightTextShadow)">AI-Powered Bioinformatics Platform</text>
   
@@ -79,4 +105,33 @@
     <rect x="0" y="20" width="80" height="1" fill="white" rx="1"/>
     <rect x="0" y="40" width="80" height="1" fill="white" rx="1"/>
   </g>
-</svg>
+</svg>`;
+
+    // Save the SVG file
+    const svgPath = path.join(__dirname, '../build/dmg-background.svg');
+    fs.writeFileSync(svgPath, svg);
+    
+    console.log('✅ SVG background generated successfully:', svgPath);
+    console.log('📐 Dimensions:', DMG_WIDTH, 'x', DMG_HEIGHT);
+    console.log('📝 Version:', VERSION_INFO.displayVersion);
+    
+    return svgPath;
+}
+
+// Run the generator if called directly
+if (require.main === module) {
+    try {
+        const svgPath = generateSVGBackground();
+        
+        console.log('\n🎨 DMG Background SVG Generation Complete!');
+        console.log('📄 File generated:', svgPath);
+        console.log('\n🚀 Version automatically included:', VERSION_INFO.displayVersion);
+        console.log('✅ Ready for DMG build process!');
+        
+    } catch (error) {
+        console.error('❌ Error generating DMG background SVG:', error.message);
+        process.exit(1);
+    }
+}
+
+module.exports = { generateSVGBackground };

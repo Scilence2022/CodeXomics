@@ -23,15 +23,6 @@
       <stop offset="50%" style="stop-color:white;stop-opacity:0.1" />
       <stop offset="100%" style="stop-color:white;stop-opacity:0" />
     </linearGradient>
-    
-    <!-- Text shadow filter -->
-    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.3)"/>
-    </filter>
-    
-    <filter id="lightTextShadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
-    </filter>
   </defs>
   
   <!-- Main background -->
@@ -41,11 +32,11 @@
   <rect width="660" height="420" fill="url(#texturePattern)"/>
   
   <!-- Header text -->
-  <text x="330" y="90" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="42" font-weight="bold" filter="url(#textShadow)">CodeXomics</text>
+  <text x="330" y="90" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="42" font-weight="bold" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))">CodeXomics</text>
   
-  <text x="330" y="115" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="18" font-weight="300" opacity="0.9" filter="url(#lightTextShadow)">v0.522beta Beta</text>
+  <text x="330" y="115" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="18" font-weight="300" opacity="0.9" filter="drop-shadow(0 1px 4px rgba(0,0,0,0.3))">v0.522beta Beta</text>
   
-  <text x="330" y="135" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="16" font-weight="300" opacity="0.8" filter="url(#lightTextShadow)">AI-Powered Bioinformatics Platform</text>
+  <text x="330" y="135" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="16" font-weight="300" opacity="0.8" filter="drop-shadow(0 1px 4px rgba(0,0,0,0.3))">AI-Powered Bioinformatics Platform</text>
   
   <!-- App icon placeholder -->
   <rect x="130" y="160" width="100" height="100" fill="none" stroke="white" stroke-width="2" stroke-dasharray="8,4" stroke-opacity="0.3" rx="20"/>
@@ -65,7 +56,7 @@
   </g>
   
   <!-- Bottom instruction -->
-  <text x="330" y="380" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="16" font-weight="400" opacity="0.9" filter="url(#lightTextShadow)">Drag the app icon to Applications folder to install</text>
+  <text x="330" y="380" text-anchor="middle" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="16" font-weight="400" opacity="0.9" filter="drop-shadow(0 1px 4px rgba(0,0,0,0.4))">Drag the app icon to Applications folder to install</text>
   
   <!-- DNA helix decoration (top right) -->
   <g opacity="0.1" transform="translate(540, 40)">
