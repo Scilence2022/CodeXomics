@@ -29,7 +29,7 @@ We're excited to share the **first beta release** of CodeXomics - a bioinformati
 *These features are tested and ready for community use in this beta release.*
 
 ### 🧬 **Core Genome Visualization**
-- **SVG Rendering**: Hardware-accelerated, scalable visualizations
+- **Canvas & SVG Rendering**: Hardware-accelerated, scalable visualizations
 - **Multi-Track System**: Genes, sequences, variants, and reads visualization
 - **Interactive Navigation**: Smooth zooming, panning, and real-time updates
 - **File Format Support**: FASTA, GenBank, GFF, VCF, BAM file loading
@@ -37,7 +37,7 @@ We're excited to share the **first beta release** of CodeXomics - a bioinformati
 
 ### 🤖 **Basic AI Integration**
 - **LLM Provider Support**: OpenAI, Anthropic, Google Gemini integration
-- **SiliconFlow Support**: Chinese LLM models (Qwen, DeepSeek, Kimi, GLM, Yi)
+- **SiliconFlow & OpenRounter Support**: Open-source LLM models (Qwen, DeepSeek, Kimi, GLM, Yi)
 - **Natural Language Queries**: Basic genome analysis through chat interface
 - **Configuration Management**: LLM settings and API key management
 

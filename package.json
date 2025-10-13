@@ -13,7 +13,7 @@
     "start-with-claude-mcp": "concurrently \"npm run claude-mcp-server\" \"npm start\"",
     "version-sync": "node scripts/update-version.js",
     "version-validate": "node scripts/validate-versions.js",
-    "generate-dmg-bg": "node scripts/generate-dmg-svg.js",
+    "generate-dmg-bg": "node scripts/generate-dmg-svg.js && node scripts/convert-svg-to-png.js",
     "prebuild": "npm run version-sync && npm run generate-dmg-bg",
     "build": "electron-builder",
     "build:mac": "npm run generate-dmg-bg && electron-builder --mac",
@@ -153,7 +153,7 @@
           "path": "/Applications"
         }
       ],
-      "background": "build/dmg-background.svg",
+      "background": "build/dmg-background.png",
       "format": "UDZO",
       "writeUpdateInfo": false,
       "artifactName": "${productName}-${version}-${arch}.${ext}"
