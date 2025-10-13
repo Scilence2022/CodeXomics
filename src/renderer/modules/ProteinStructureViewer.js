@@ -7,7 +7,93 @@ class ProteinStructureViewer {
     constructor() {
         this.structureWindows = new Map(); // Track open structure windows
         this.currentStructures = new Map(); // Track loaded structures
+        this.webglSupported = this.checkWebGLSupport(); // Check WebGL support
         this.initializeModule();
+    }
+
+    /**
+     * Check if WebGL is supported in the current environment
+     */
+    checkWebGLSupport() {
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            
+            if (!gl) {
+                console.warn('WebGL not supported in this environment');
+                return false;
+            }
+            
+            // Check WebGL extensions and capabilities
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                console.log('WebGL Vendor:', vendor);
+                console.log('WebGL Renderer:', renderer);
+                
+                // Check for software rendering (usually indicates poor performance)
+                if (renderer && (renderer.includes('Software') || renderer.includes('Microsoft'))) {
+                    console.warn('WebGL is using software rendering, 3D performance may be limited');
+                }
+            }
+            
+            console.log('WebGL support detected and available');
+            return true;
+            
+        } catch (error) {
+            console.error('Error checking WebGL support:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Get WebGL context information for debugging
+     */
+    getWebGLInfo() {
+        if (!this.webglSupported) {
+            return {
+                supported: false,
+                message: 'WebGL is not supported in this environment'
+            };
+        }
+        
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            
+            if (!gl) {
+                return {
+                    supported: false,
+                    message: 'WebGL context could not be created'
+                };
+            }
+            
+            const info = {
+                supported: true,
+                version: gl.getParameter(gl.VERSION),
+                vendor: gl.getParameter(gl.VENDOR),
+                renderer: gl.getParameter(gl.RENDERER),
+                shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
+                maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+                maxViewportDims: gl.getParameter(gl.MAX_VIEWPORT_DIMS)
+            };
+            
+            // Get debug info if available
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                info.unmaskedVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                info.unmaskedRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            }
+            
+            return info;
+            
+        } catch (error) {
+            return {
+                supported: false,
+                message: `Error getting WebGL info: ${error.message}`
+            };
+        }
     }
 
     initializeModule() {
@@ -523,10 +609,17 @@ class ProteinStructureViewer {
      * Open 3D protein structure viewer in new window
      */
     openStructureViewer(pdbData, proteinName, pdbId) {
+        // Check WebGL support before opening viewer
+        if (!this.webglSupported) {
+            this.showWebGLErrorDialog(proteinName, pdbId);
+            return;
+        }
+        
         const windowId = `protein-${pdbId}-${Date.now()}`;
         
         console.log('Opening protein structure viewer for:', pdbId);
         console.log('PDB data length:', pdbData ? pdbData.length : 'No data');
+        console.log('WebGL support status:', this.webglSupported);
         
         // Create new window
         const viewerWindow = window.open('', windowId, 
@@ -568,6 +661,310 @@ class ProteinStructureViewer {
         this.structureWindows.set(windowId, viewerWindow);
         
         console.log('Protein viewer window created with ID:', windowId);
+    }
+
+    /**
+     * Show WebGL error dialog with fallback options
+     */
+    showWebGLErrorDialog(proteinName, pdbId) {
+        const webglInfo = this.getWebGLInfo();
+        
+        const dialog = document.createElement('dialog');
+        dialog.className = 'webgl-error-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-content">
+                <div class="dialog-header">
+                    <h3>⚠️ 3D Viewer Not Available</h3>
+                    <button class="close-btn" onclick="this.closest('dialog').close()">×</button>
+                </div>
+                <div class="dialog-body">
+                    <div class="error-message">
+                        <p><strong>WebGL is required but not available</strong></p>
+                        <p>The 3D protein structure viewer requires WebGL support, which is not available in your current environment.</p>
+                    </div>
+                    
+                    <div class="webgl-info">
+                        <h4>System Information:</h4>
+                        <ul>
+                            <li><strong>WebGL Support:</strong> ${webglInfo.supported ? 'Available' : 'Not Available'}</li>
+                            <li><strong>Browser:</strong> ${navigator.userAgent.split(' ').pop()}</li>
+                            <li><strong>Platform:</strong> ${navigator.platform}</li>
+                            ${webglInfo.message ? `<li><strong>Details:</strong> ${webglInfo.message}</li>` : ''}
+                        </ul>
+                    </div>
+                    
+                    <div class="solutions">
+                        <h4>Possible Solutions:</h4>
+                        <ul>
+                            <li><strong>Windows:</strong> Update your graphics drivers and enable hardware acceleration</li>
+                            <li><strong>Browser:</strong> Try a different browser (Chrome, Firefox, Edge)</li>
+                            <li><strong>Settings:</strong> Enable WebGL in browser settings</li>
+                            <li><strong>Antivirus:</strong> Check if security software is blocking WebGL</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alternatives">
+                        <h4>Alternative Options:</h4>
+                        <button class="btn btn-primary" onclick="proteinStructureViewer.downloadPDBFile('${pdbId}', '${proteinName}')">
+                            📁 Download PDB File
+                        </button>
+                        <button class="btn btn-secondary" onclick="proteinStructureViewer.showPDBInfo('${pdbId}', '${proteinName}')">
+                            ℹ️ Show Structure Info
+                        </button>
+                        <button class="btn btn-secondary" onclick="proteinStructureViewer.openRCSBPage('${pdbId}')">
+                            🌐 View on RCSB PDB
+                        </button>
+                    </div>
+                    
+                    <div class="dialog-footer">
+                        <button class="btn btn-secondary" onclick="this.closest('dialog').close()">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add styles for the dialog
+        if (!document.getElementById('webgl-error-styles')) {
+            const styles = document.createElement('style');
+            styles.id = 'webgl-error-styles';
+            styles.textContent = `
+                .webgl-error-dialog {
+                    max-width: 600px;
+                    border: none;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                    padding: 0;
+                }
+                .webgl-error-dialog .dialog-header {
+                    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+                    color: white;
+                    padding: 15px 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-radius: 8px 8px 0 0;
+                }
+                .webgl-error-dialog .dialog-body {
+                    padding: 20px;
+                }
+                .webgl-error-dialog .error-message {
+                    background: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 4px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                }
+                .webgl-error-dialog .webgl-info, 
+                .webgl-error-dialog .solutions, 
+                .webgl-error-dialog .alternatives {
+                    margin-bottom: 20px;
+                }
+                .webgl-error-dialog h4 {
+                    margin-top: 0;
+                    margin-bottom: 10px;
+                    color: #333;
+                }
+                .webgl-error-dialog ul {
+                    margin: 0;
+                    padding-left: 20px;
+                }
+                .webgl-error-dialog li {
+                    margin-bottom: 5px;
+                }
+                .webgl-error-dialog .alternatives {
+                    text-align: center;
+                }
+                .webgl-error-dialog .btn {
+                    margin: 5px;
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    text-decoration: none;
+                    display: inline-block;
+                }
+                .webgl-error-dialog .btn-primary {
+                    background: #0984e3;
+                    color: white;
+                }
+                .webgl-error-dialog .btn-secondary {
+                    background: #636e72;
+                    color: white;
+                }
+                .webgl-error-dialog .btn:hover {
+                    opacity: 0.9;
+                }
+                .webgl-error-dialog .dialog-footer {
+                    text-align: right;
+                    border-top: 1px solid #eee;
+                    padding-top: 15px;
+                }
+            `;
+            document.head.appendChild(styles);
+        }
+        
+        document.body.appendChild(dialog);
+        dialog.showModal();
+    }
+
+    /**
+     * Download PDB file as fallback option
+     */
+    downloadPDBFile(pdbId, proteinName) {
+        const pdbUrl = `https://files.rcsb.org/download/${pdbId}.pdb`;
+        const link = document.createElement('a');
+        link.href = pdbUrl;
+        link.download = `${pdbId}_${proteinName}.pdb`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Show success message
+        this.showNotification(`Downloading PDB file for ${proteinName} (${pdbId})`, 'info');
+    }
+
+    /**
+     * Show PDB structure information as fallback
+     */
+    async showPDBInfo(pdbId, proteinName) {
+        try {
+            // Try to get structure info from MCP server
+            const structureInfo = await this.requestMCPTool('fetch_protein_structure', {
+                pdbId: pdbId,
+                infoOnly: true
+            });
+            
+            let infoContent = `
+                <h3>Protein Structure Information</h3>
+                <p><strong>Protein:</strong> ${proteinName}</p>
+                <p><strong>PDB ID:</strong> ${pdbId}</p>
+            `;
+            
+            if (structureInfo && structureInfo.success) {
+                if (structureInfo.resolution) {
+                    infoContent += `<p><strong>Resolution:</strong> ${structureInfo.resolution} Å</p>`;
+                }
+                if (structureInfo.method) {
+                    infoContent += `<p><strong>Method:</strong> ${structureInfo.method}</p>`;
+                }
+                if (structureInfo.organism) {
+                    infoContent += `<p><strong>Organism:</strong> ${structureInfo.organism}</p>`;
+                }
+                if (structureInfo.description) {
+                    infoContent += `<p><strong>Description:</strong> ${structureInfo.description}</p>`;
+                }
+            } else {
+                infoContent += `<p><em>Detailed structure information not available</em></p>`;
+            }
+            
+            infoContent += `
+                <p><strong>External Links:</strong></p>
+                <ul>
+                    <li><a href="https://www.rcsb.org/structure/${pdbId}" target="_blank">RCSB PDB Entry</a></li>
+                    <li><a href="https://files.rcsb.org/download/${pdbId}.pdb" target="_blank">Download PDB File</a></li>
+                    <li><a href="https://www.ebi.ac.uk/pdbe/entry/pdb/${pdbId}" target="_blank">PDBe Entry</a></li>
+                </ul>
+            `;
+            
+            this.showInfoDialog('Protein Structure Information', infoContent);
+            
+        } catch (error) {
+            console.error('Error getting PDB info:', error);
+            this.showInfoDialog('Protein Structure Information', `
+                <h3>Protein Structure Information</h3>
+                <p><strong>Protein:</strong> ${proteinName}</p>
+                <p><strong>PDB ID:</strong> ${pdbId}</p>
+                <p><em>Could not retrieve detailed information</em></p>
+                <p><strong>External Links:</strong></p>
+                <ul>
+                    <li><a href="https://www.rcsb.org/structure/${pdbId}" target="_blank">RCSB PDB Entry</a></li>
+                    <li><a href="https://files.rcsb.org/download/${pdbId}.pdb" target="_blank">Download PDB File</a></li>
+                </ul>
+            `);
+        }
+    }
+
+    /**
+     * Open RCSB PDB page for the structure
+     */
+    openRCSBPage(pdbId) {
+        const url = `https://www.rcsb.org/structure/${pdbId}`;
+        window.open(url, '_blank');
+    }
+
+    /**
+     * Show information dialog
+     */
+    showInfoDialog(title, content) {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'info-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-content">
+                <div class="dialog-header">
+                    <h3>${title}</h3>
+                    <button class="close-btn" onclick="this.closest('dialog').close()">×</button>
+                </div>
+                <div class="dialog-body">
+                    ${content}
+                </div>
+                <div class="dialog-footer">
+                    <button class="btn btn-secondary" onclick="this.closest('dialog').close()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        
+        // Auto-close after user closes
+        dialog.addEventListener('close', () => {
+            document.body.removeChild(dialog);
+        });
+    }
+
+    /**
+     * Show notification message
+     */
+    showNotification(message, type = 'info') {
+        // Try to use existing notification system
+        if (window.genomeBrowser && window.genomeBrowser.showNotification) {
+            window.genomeBrowser.showNotification(message, type);
+        } else if (window.app && window.app.showNotification) {
+            window.app.showNotification(message, type);
+        } else {
+            // Fallback to alert
+            alert(message);
+        }
+    }
+
+    /**
+     * Handle NGL viewer errors with detailed feedback
+     */
+    handleNGLError(viewerWindow, errorMessage) {
+        const loadingElement = viewerWindow.document.getElementById('loading');
+        if (loadingElement) {
+            const webglInfo = this.getWebGLInfo();
+            
+            loadingElement.innerHTML = `
+                <div style="text-align: left; max-width: 400px; margin: 0 auto;">
+                    <h3 style="color: #e74c3c; margin-bottom: 15px;">⚠️ 3D Viewer Error</h3>
+                    <p style="margin-bottom: 10px;"><strong>Error:</strong> ${errorMessage}</p>
+                    
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0; font-size: 12px;">
+                        <strong>System Information:</strong><br>
+                        WebGL Support: ${webglInfo.supported ? '✓ Available' : '❌ Not Available'}<br>
+                        Browser: ${navigator.userAgent.split(' ').pop()}<br>
+                        Platform: ${navigator.platform}
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <button onclick="window.close()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px; cursor: pointer;">Close Window</button>
+                        <button onclick="window.open('https://www.rcsb.org/structure/${viewerWindow.pdbId || 'unknown'}', '_blank')" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">View on RCSB</button>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     /**
@@ -716,8 +1113,7 @@ class ProteinStructureViewer {
             // Check if NGL is available
             if (!viewerWindow.NGL) {
                 console.error('NGL library not loaded');
-                viewerWindow.document.getElementById('loading').textContent = 
-                    'Error: NGL library failed to load. Please check your internet connection.';
+                this.handleNGLError(viewerWindow, 'NGL library failed to load. This may be due to network issues or browser security restrictions.');
                 return;
             }
 
@@ -728,16 +1124,23 @@ class ProteinStructureViewer {
             const viewportElement = viewerWindow.document.getElementById('viewport');
             if (!viewportElement) {
                 console.error('Viewport element not found');
-                viewerWindow.document.getElementById('loading').textContent = 
-                    'Error: Viewport element not found';
+                this.handleNGLError(viewerWindow, 'Viewport element not found in viewer window.');
                 return;
             }
 
-            const stage = new NGL.Stage(viewportElement, {
-                backgroundColor: "white"
-            });
+            // Try to create NGL stage with error handling
+            let stage;
+            try {
+                stage = new NGL.Stage(viewportElement, {
+                    backgroundColor: "white"
+                });
+            } catch (stageError) {
+                console.error('Failed to create NGL stage:', stageError);
+                this.handleNGLError(viewerWindow, `Failed to create 3D viewer: ${stageError.message}. This may be due to WebGL limitations on your system.`);
+                return;
+            }
 
-            console.log('NGL stage created');
+            console.log('NGL stage created successfully');
 
             // Add representation controls
             let currentRepresentation = 'cartoon';
@@ -747,14 +1150,13 @@ class ProteinStructureViewer {
             // Validate PDB data
             if (!pdbData || pdbData.length === 0) {
                 console.error('No PDB data provided');
-                viewerWindow.document.getElementById('loading').textContent = 
-                    'Error: No protein structure data received';
+                this.handleNGLError(viewerWindow, 'No protein structure data received. Please try again or check the PDB ID.');
                 return;
             }
 
             console.log('Loading PDB data...');
             
-            // Load structure from PDB string data directly
+            // Load structure from PDB string data directly with enhanced error handling
             // Use NGL's built-in string loading method
             const stringBlob = new Blob([pdbData], { type: 'text/plain' });
             const dataUrl = URL.createObjectURL(stringBlob);
@@ -767,25 +1169,41 @@ class ProteinStructureViewer {
                     // Clean up the object URL
                     URL.revokeObjectURL(dataUrl);
                     
-                    // Add default representation
-                    comp.addRepresentation(currentRepresentation, {
-                        colorScheme: "chainid"
-                    });
-                    
-                    console.log('Representation added');
-                    
-                    // Auto view
-                    comp.autoView();
-                    
-                    console.log('Auto view applied');
-                    
-                    // Hide loading
-                    const loadingElement = viewerWindow.document.getElementById('loading');
-                    if (loadingElement) {
-                        loadingElement.style.display = 'none';
+                    try {
+                        // Add default representation with error handling
+                        comp.addRepresentation(currentRepresentation, {
+                            colorScheme: "chainid"
+                        });
+                        
+                        console.log('Representation added');
+                        
+                        // Auto view
+                        comp.autoView();
+                        
+                        console.log('Auto view applied');
+                        
+                        // Hide loading
+                        const loadingElement = viewerWindow.document.getElementById('loading');
+                        if (loadingElement) {
+                            loadingElement.style.display = 'none';
+                        }
+                        
+                        console.log('NGL viewer initialization completed successfully');
+                        
+                    } catch (reprError) {
+                        console.error('Error adding representation:', reprError);
+                        const loadingElement = viewerWindow.document.getElementById('loading');
+                        if (loadingElement) {
+                            loadingElement.innerHTML = `
+                                <div style="color: #e74c3c; text-align: center;">
+                                    <h3>⚠️ Rendering Error</h3>
+                                    <p>Failed to render protein structure: ${reprError.message}</p>
+                                    <p>This may be due to WebGL limitations on your system.</p>
+                                    <button onclick="window.close()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Close</button>
+                                </div>
+                            `;
+                        }
                     }
-                    
-                    console.log('NGL viewer initialization completed successfully');
                     
                 }).catch(function(error) {
                     console.error('Error loading PDB structure:', error);
@@ -793,13 +1211,37 @@ class ProteinStructureViewer {
                     // Clean up the object URL in case of error
                     URL.revokeObjectURL(dataUrl);
                     
+                    // Provide detailed error message based on error type
+                    let errorMessage = 'Failed to load protein structure.';
+                    if (error.message) {
+                        if (error.message.includes('WebGL')) {
+                            errorMessage = 'WebGL error occurred while loading structure. Your graphics drivers may need updating.';
+                        } else if (error.message.includes('parse') || error.message.includes('format')) {
+                            errorMessage = 'Invalid PDB format or corrupted structure data.';
+                        } else {
+                            errorMessage = `Loading error: ${error.message}`;
+                        }
+                    }
+                    
                     const loadingElement = viewerWindow.document.getElementById('loading');
                     if (loadingElement) {
-                        loadingElement.textContent = 
-                            'Error loading structure: ' + error.message + 
-                            ' (Check console for details)';
+                        loadingElement.innerHTML = `
+                            <div style="text-align: center; color: #e74c3c;">
+                                <h3>⚠️ Loading Error</h3>
+                                <p><strong>Error:</strong> ${errorMessage}</p>
+                                <p><strong>PDB ID:</strong> ${pdbId}</p>
+                                <div style="margin-top: 15px;">
+                                    <button onclick="window.close()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px; cursor: pointer;">Close</button>
+                                    <button onclick="window.open('https://www.rcsb.org/structure/${pdbId}', '_blank')" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">View on RCSB</button>
+                                    <button onclick="window.open('https://files.rcsb.org/download/${pdbId}.pdb', '_blank')" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Download PDB</button>
+                                </div>
+                            </div>
+                        `;
                     }
                 });
+
+            // Store pdbId in window for error handlers
+            viewerWindow.pdbId = pdbId;
 
             // Add control functions to window
             viewerWindow.resetView = () => {

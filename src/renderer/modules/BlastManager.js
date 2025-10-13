@@ -26,8 +26,8 @@ class BlastManager {
             pollInterval: 5000,   // Check every 5 seconds
             supportedFormats: ['fasta', 'fa', 'fas', 'txt'],
             // Local BLAST configuration
-            localBlastPath: '/usr/local/bin', // Default BLAST+ installation path
-            localDbPath: '/Users/song/blast/db', // User-specific local database path
+            localBlastPath: this.getPlatformBlastPath(), // Platform-specific BLAST+ path
+            localDbPath: this.getPlatformDbPath(), // Platform-specific database path
             localDatabases: new Map(), // Will store local database information
             supportedLocalFormats: ['fasta', 'fa', 'fas', 'txt', 'gb', 'gbk', 'genbank']
         };
@@ -41,6 +41,113 @@ class BlastManager {
         this.initializeDatabaseManagement().catch(error => {
             console.error('Failed to initialize database management:', error);
         });
+    }
+
+    /**
+     * Get platform-specific BLAST+ installation path
+     */
+    getPlatformBlastPath() {
+        const os = require('os');
+        const path = require('path');
+        const platform = os.platform();
+        const homeDir = os.homedir();
+        
+        switch (platform) {
+            case 'win32':
+                return 'C:\\Program Files\\NCBI\\blast+\\bin';
+            case 'darwin':
+                return '/usr/local/bin';
+            case 'linux':
+                return '/usr/local/bin';
+            default:
+                return '/usr/local/bin';
+        }
+    }
+
+    /**
+     * Get platform-specific database path
+     * Prioritizes current file directory, falls back to user data directory
+     */
+    getPlatformDbPath() {
+        const os = require('os');
+        const path = require('path');
+        const platform = os.platform();
+        const homeDir = os.homedir();
+        
+        // Try to get current file directory first
+        const currentFileDir = this.getCurrentFileDirectory();
+        if (currentFileDir) {
+            return path.join(currentFileDir, 'blast_db');
+        }
+        
+        // Fallback to platform-specific user data directory
+        switch (platform) {
+            case 'win32':
+                const appData = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+                return path.join(appData, 'GenomeAIStudio', 'blast', 'db');
+            case 'darwin':
+                return path.join(homeDir, 'Library', 'Application Support', 'GenomeAIStudio', 'blast', 'db');
+            case 'linux':
+                return path.join(homeDir, '.local', 'share', 'GenomeAIStudio', 'blast', 'db');
+            default:
+                return path.join(homeDir, '.genome-ai-studio', 'blast', 'db');
+        }
+    }
+
+    /**
+     * Get current file directory for database creation
+     */
+    getCurrentFileDirectory() {
+        // Try multiple approaches to get the current file path
+        let currentFilePath = null;
+        
+        // Approach 1: From FileManager.currentFile.path (primary structure)
+        const currentFile = this.app?.fileManager?.currentFile;
+        if (currentFile && currentFile.path) {
+            currentFilePath = currentFile.path;
+        }
+        
+        // Approach 2: From FileManager.currentFile.info.path (alternative structure)
+        if (!currentFilePath && currentFile && currentFile.info?.path) {
+            currentFilePath = currentFile.info.path;
+        }
+        
+        // Approach 3: Check if there's a global file path stored
+        if (!currentFilePath && this.app?.currentFilePath) {
+            currentFilePath = this.app.currentFilePath;
+        }
+        
+        if (currentFilePath) {
+            const path = require('path');
+            return path.dirname(currentFilePath);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Create directory using cross-platform method
+     */
+    async createDirectoryAsync(dirPath) {
+        const fs = require('fs');
+        const path = require('path');
+        
+        try {
+            // Use Node.js built-in recursive directory creation
+            await fs.promises.mkdir(dirPath, { recursive: true });
+            console.log(`BlastManager: Created directory: ${dirPath}`);
+            return true;
+        } catch (error) {
+            // If fs.promises.mkdir fails, try synchronous version
+            try {
+                fs.mkdirSync(dirPath, { recursive: true });
+                console.log(`BlastManager: Created directory (sync): ${dirPath}`);
+                return true;
+            } catch (syncError) {
+                console.error(`BlastManager: Failed to create directory ${dirPath}:`, error);
+                throw new Error(`Failed to create directory ${dirPath}: ${error.message}`);
+            }
+        }
     }
 
     async initializeLocalBlast() {
@@ -160,12 +267,14 @@ class BlastManager {
         const path = require('path');
         
         try {
-            const localDbPath = this.config.localDbPath;
+            // Get current database path (may change based on current file location)
+            const localDbPath = this.getCurrentDatabasePath();
+            this.config.localDbPath = localDbPath; // Update config with current path
             
             // Check if directory exists
             if (!fs.existsSync(localDbPath)) {
                 console.log('BlastManager: Creating BLAST database directory:', localDbPath);
-                fs.mkdirSync(localDbPath, { recursive: true });
+                await this.createDirectoryAsync(localDbPath);
                 return true;
             }
             
@@ -181,6 +290,18 @@ class BlastManager {
             console.error('BlastManager: Error checking BLAST database directory:', error);
             throw error;
         }
+    }
+
+    /**
+     * Get current database path, prioritizing current file directory
+     */
+    getCurrentDatabasePath() {
+        const currentFileDir = this.getCurrentFileDirectory();
+        if (currentFileDir) {
+            const path = require('path');
+            return path.join(currentFileDir, 'blast_db');
+        }
+        return this.config.localDbPath; // Fallback to configured path
     }
 
     async runCommand(command, workingDirectory = null) {
@@ -210,11 +331,12 @@ class BlastManager {
                 }
                 
                 // Set BLASTDB environment variable for the command
-                const localDbPath = this.config.localDbPath; // Use the configured localDbPath
+                const localDbPath = this.getCurrentDatabasePath(); // Use current database path
                 
                 // Check if BLASTDB directory exists, create it if it doesn't
                 if (!fs.existsSync(localDbPath)) {
                     try {
+                        // Use synchronous directory creation in this context
                         fs.mkdirSync(localDbPath, { recursive: true });
                         console.log('BlastManager: Created BLASTDB directory:', localDbPath);
                     } catch (error) {
@@ -377,8 +499,14 @@ class BlastManager {
                 throw new Error('Invalid input file format');
             }
 
-            // Create database directory if it doesn't exist
-            await this.runCommand(`mkdir -p ${this.config.localDbPath}`);
+            // Get target directory (prefer current file directory or use params.outputDir)
+            const targetDir = params.outputDir || this.getCurrentDatabasePath();
+            
+            // Create database directory if it doesn't exist using cross-platform method
+            await this.createDirectoryAsync(targetDir);
+            
+            // Update config to use the target directory
+            this.config.localDbPath = targetDir;
 
             // Build makeblastdb command
             const command = this.buildMakeBlastDbCommand(params);
@@ -398,9 +526,12 @@ class BlastManager {
     buildMakeBlastDbCommand(params) {
         const { inputFile, dbName, dbType, title, parseSeqids, outputDir } = params;
         
-        // Use custom output directory if provided, otherwise use default localDbPath
-        const targetDir = outputDir || this.config.localDbPath;
-        let command = `makeblastdb -in "${inputFile}" -dbtype ${dbType} -out "${targetDir}/${dbName}"`;
+        // Use custom output directory if provided, otherwise use current database path
+        const targetDir = outputDir || this.getCurrentDatabasePath();
+        const path = require('path');
+        const outputPath = path.join(targetDir, dbName);
+        
+        let command = `makeblastdb -in "${inputFile}" -dbtype ${dbType} -out "${outputPath}"`;
         
         if (title) {
             command += ` -title "${title}"`;
@@ -409,6 +540,9 @@ class BlastManager {
         if (parseSeqids) {
             command += ' -parse_seqids';
         }
+        
+        console.log('BlastManager: Built makeblastdb command:', command);
+        console.log('BlastManager: Target directory:', targetDir);
         
         return command;
     }
