@@ -32,7 +32,15 @@ async function convertSVGToPNG() {
         await tryImageMagick();
         return;
     } catch (error) {
-        console.log('⚠️  ImageMagick not available:', error.message);
+        console.log('⚠️  ImageMagick method 1 failed:', error.message);
+    }
+    
+    // Method 1b: Try ImageMagick with solid background fallback
+    try {
+        await tryImageMagickWithBackground();
+        return;
+    } catch (error) {
+        console.log('⚠️  ImageMagick method 2 failed:', error.message);
     }
     
     // Method 2: Try Inkscape
@@ -64,11 +72,34 @@ async function convertSVGToPNG() {
 }
 
 /**
+ * Try ImageMagick convert command with solid background
+ */
+function tryImageMagickWithBackground() {
+    return new Promise((resolve, reject) => {
+        // Use solid background to ensure gradients render properly
+        const cmd = `convert "${SVG_PATH}" -background "#4A90E2" -flatten -density 300 -resize 660x420! "${PNG_PATH}"`;
+        exec(cmd, (error, stdout, stderr) => {
+            if (error) {
+                reject(new Error('ImageMagick with background command failed'));
+                return;
+            }
+            if (fs.existsSync(PNG_PATH)) {
+                console.log('✅ Successfully converted using ImageMagick with background');
+                resolve();
+            } else {
+                reject(new Error('ImageMagick with background did not create output file'));
+            }
+        });
+    });
+}
+
+/**
  * Try ImageMagick convert command
  */
 function tryImageMagick() {
     return new Promise((resolve, reject) => {
-        const cmd = `convert "${SVG_PATH}" -background transparent -density 150 "${PNG_PATH}"`;
+        // Use improved ImageMagick settings to preserve gradients and background
+        const cmd = `convert "${SVG_PATH}" -background none -density 300 -resize 660x420! "${PNG_PATH}"`;
         exec(cmd, (error, stdout, stderr) => {
             if (error) {
                 reject(new Error('ImageMagick convert command failed'));
