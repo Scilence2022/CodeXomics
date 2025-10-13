@@ -76,15 +76,15 @@ async function convertSVGToPNG() {
  */
 function tryImageMagickWithBackground() {
     return new Promise((resolve, reject) => {
-        // Use solid background to ensure gradients render properly
-        const cmd = `convert "${SVG_PATH}" -background "#4A90E2" -flatten -density 300 -resize 660x420! "${PNG_PATH}"`;
+        // Use deep blue background that matches DMG backgroundColor
+        const cmd = `convert "${SVG_PATH}" -background "#2E4F8C" -flatten -density 300 -resize 660x420! "${PNG_PATH}"`;
         exec(cmd, (error, stdout, stderr) => {
             if (error) {
                 reject(new Error('ImageMagick with background command failed'));
                 return;
             }
             if (fs.existsSync(PNG_PATH)) {
-                console.log('✅ Successfully converted using ImageMagick with background');
+                console.log('✅ Successfully converted using ImageMagick with deep blue background');
                 resolve();
             } else {
                 reject(new Error('ImageMagick with background did not create output file'));
@@ -98,8 +98,8 @@ function tryImageMagickWithBackground() {
  */
 function tryImageMagick() {
     return new Promise((resolve, reject) => {
-        // Use improved ImageMagick settings to preserve gradients and background
-        const cmd = `convert "${SVG_PATH}" -background none -density 300 -resize 660x420! "${PNG_PATH}"`;
+        // Use improved ImageMagick settings - transparent background since DMG has backgroundColor set
+        const cmd = `convert "${SVG_PATH}" -background transparent -density 300 -resize 660x420! "${PNG_PATH}"`;
         exec(cmd, (error, stdout, stderr) => {
             if (error) {
                 reject(new Error('ImageMagick convert command failed'));

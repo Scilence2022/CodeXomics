@@ -134,6 +134,7 @@
       "title": "${productName} ${version}",
       "icon": "build/icon.icns",
       "iconSize": 90,
+      "backgroundColor": "#2E4F8C",
       "window": {
         "width": 660,
         "height": 420,
