@@ -127,8 +127,8 @@ These development features are included for testing purposes only. They may be u
 - **Installation**: Open DMG and drag to Applications folder, or extract ZIP
 
 ### **Windows** 🪟
-- **[Installer (Recommended)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics%20Setup%200.522.0-beta.exe)** - CodeXomics Setup 0.522.0-beta.exe (209 MB)
-- **[Portable Version](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics%200.522.0-beta.exe)** - CodeXomics 0.522.0-beta.exe (208 MB)
+- **[Installer (Recommended)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics.Setup.0.522.0-beta.exe)** - CodeXomics.Setup.0.522.0-beta.exe (209 MB)
+- **[Portable Version](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics.0.522.0-beta.exe)** - CodeXomics.0.522.0-beta.exe (208 MB)
 - **Installation**: Run installer or extract portable version
 
 ### **Linux** 🐧
