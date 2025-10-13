@@ -279,7 +279,7 @@ class ToolsRegistryManager {
             ],
             navigation: ['navigate', 'go to', 'jump', 'position', 'location', 'move', 'go', 'navigate to'],
             zoom: ['zoom', 'zoom in', 'zoom out', 'magnify', 'scale', 'focus', 'enlarge', 'reduce', 'view', 'detail', 'context'],
-            search: ['search', 'find', 'look for', 'query', 'locate'],
+            search: ['search', 'find', 'look for', 'query', 'locate', 'annotation', 'function', 'features'],
             analysis: ['analyze', 'calculate', 'compute', 'measure', 'count', 'analysis'],
             sequence: ['sequence', 'dna', 'rna', 'protein', 'amino acid', 'translate', 'translation', 'reverse complement', 'gc content', 'codon', 'orf', 'frame'],
             structure: ['structure', '3d', 'pdb', 'alphafold', 'protein structure'],
@@ -348,6 +348,28 @@ class ToolsRegistryManager {
                     keywords: matches
                 });
                 console.log('🔍 [Dynamic Tools] Intent detected:', intent, 'matches:', matches, 'confidence:', adjustedConfidence);
+            }
+        }
+
+        // Special handling for annotation and function keywords to register search_features tool
+        if (query.includes('annotation') || query.includes('function')) {
+            if (!detectedIntents.some(intent => intent.intent === 'search')) {
+                detectedIntents.push({
+                    intent: 'search',
+                    confidence: 0.9,
+                    keywords: ['annotation', 'function', 'search_features'],
+                    tool_hint: 'search_features' // Special hint for tool registration
+                });
+                console.log('🔍 [Dynamic Tools] Annotation/Function pattern detected, adding search intent with search_features hint');
+            } else {
+                // Enhance existing search intent for annotation/function
+                const searchIntent = detectedIntents.find(intent => intent.intent === 'search');
+                if (searchIntent) {
+                    searchIntent.confidence = Math.min(searchIntent.confidence + 0.2, 1.0);
+                    searchIntent.keywords = [...new Set([...searchIntent.keywords, 'annotation', 'function', 'search_features'])];
+                    searchIntent.tool_hint = 'search_features';
+                    console.log('🔍 [Dynamic Tools] Enhanced existing search intent with annotation/function keywords');
+                }
             }
         }
 
@@ -501,7 +523,7 @@ class ToolsRegistryManager {
             zoom: [
                 'zoom', 'zoom in', 'zoom out', 'magnify', 'scale', 'focus', 'enlarge', 'reduce', 'view', 'detail', 'context'
             ],
-            search: ['search', 'find', 'query', 'lookup'],
+            search: ['search', 'find', 'query', 'lookup', 'annotation', 'function', 'features'],
             analysis: ['analyze', 'calculate', 'compute', 'measure'],
             sequence: ['sequence', 'dna', 'rna', 'protein'],
             structure: ['structure', '3d', 'pdb', 'alphafold'],
@@ -607,6 +629,20 @@ class ToolsRegistryManager {
                 }
             }
 
+            
+            // Special bonus for search_features tool when annotation or function keywords are detected
+            if (tool.name === 'search_features' && 
+                (intent.query.toLowerCase().includes('annotation') || intent.query.toLowerCase().includes('function'))) {
+                score += 80; // High bonus for search_features with annotation/function keywords
+                console.log('🔍 [Dynamic Tools] search_features annotation/function bonus applied:', tool.name);
+            }
+            
+            // Special bonus for search tools with tool hints from intent analysis
+            if (intent.all && intent.all.some(detectedIntent => 
+                detectedIntent.tool_hint === tool.name && detectedIntent.intent === 'search')) {
+                score += 100; // Very high bonus for tools with specific hints
+                console.log('🔍 [Dynamic Tools] Tool hint bonus applied for search_features:', tool.name);
+            }
             
             // Special bonus for zoom tools when zoom keywords are detected
             if ((tool.name === 'zoom_in' || tool.name === 'zoom_out') && 

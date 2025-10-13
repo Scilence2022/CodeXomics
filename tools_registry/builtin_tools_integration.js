@@ -317,6 +317,19 @@ class BuiltInToolsIntegration {
             });
         }
 
+        // Check for annotation and function search patterns (for search_features tool)
+        if (/\b(annotation|function|features|search)\b/i.test(query)) {
+            // Note: search_features is not a built-in tool but we boost its detection
+            // by marking it as highly relevant when annotation/function keywords are present
+            relevantTools.push({
+                name: 'search_features',
+                confidence: 0.95,
+                reason: 'Annotation/function search keywords detected - register search_features tool',
+                is_external: true, // Mark as external tool for special handling
+                category: 'navigation'
+            });
+        }
+
         // Check for tab management patterns
         if (/\b(switch|change|activate|select|goto)\s+(tab|window)\b/i.test(query) || 
             /\b(tab\s+(switch|change|activate|select))\b/i.test(query)) {

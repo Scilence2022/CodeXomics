@@ -240,31 +240,61 @@ class SystemIntegration {
             
             // Create built-in tool objects for high-confidence matches
             const relevantBuiltInTools = [];
+            const externalToolHints = []; // Track external tool hints from built-in analysis
+            
             for (const relevantTool of builtInRelevance) {
                 if (relevantTool.confidence >= 0.7) { // Include high-confidence built-in tools
-                    const builtInToolInfo = this.builtInTools.getBuiltInToolInfo(relevantTool.name);
-                    if (builtInToolInfo) {
-                        // Create a tool object that matches the registry format
-                        const builtInToolObject = {
+                    if (relevantTool.is_external) {
+                        // This is a hint for an external tool (like search_features)
+                        externalToolHints.push({
                             name: relevantTool.name,
-                            description: `Built-in ${builtInToolInfo.category} tool for ${relevantTool.reason}`,
-                            category: builtInToolInfo.category,
-                            execution_type: 'built-in',
-                            implementation: {
-                                type: 'built-in',
-                                method: builtInToolInfo.method
-                            },
-                            priority: builtInToolInfo.priority,
                             confidence: relevantTool.confidence,
-                            parameters: await this.getBuiltInToolParameters(relevantTool.name),
-                            sample_usages: await this.getBuiltInToolSampleUsages(relevantTool.name)
-                        };
-                        relevantBuiltInTools.push(builtInToolObject);
-                        console.log(`✅ [System Integration] Added built-in tool: ${relevantTool.name} (confidence: ${relevantTool.confidence})`);
+                            reason: relevantTool.reason,
+                            category: relevantTool.category || 'external'
+                        });
+                        console.log('🎯 [System Integration] External tool hint detected:', relevantTool.name);
+                    } else {
+                        const builtInToolInfo = this.builtInTools.getBuiltInToolInfo(relevantTool.name);
+                        if (builtInToolInfo) {
+                            // Create a tool object that matches the registry format
+                            const builtInToolObject = {
+                                name: relevantTool.name,
+                                description: `Built-in ${builtInToolInfo.category} tool for ${relevantTool.reason}`,
+                                category: builtInToolInfo.category,
+                                execution_type: 'built-in',
+                                implementation: {
+                                    type: 'built-in',
+                                    method: builtInToolInfo.method
+                                },
+                                confidence: relevantTool.confidence,
+                                type: 'built-in',
+                                priority: 1,
+                                parameters: { properties: {} } // Minimal parameter structure
+                            };
+                            relevantBuiltInTools.push(builtInToolObject);
+                            console.log('🎯 [System Integration] Added built-in tool:', relevantTool.name, 'confidence:', relevantTool.confidence);
+                        }
                     }
                 }
             }
             
+            // Enhance registry tools with external tool hints
+            if (externalToolHints.length > 0) {
+                console.log('🎯 [System Integration] Processing external tool hints:', externalToolHints.length);
+                for (const hint of externalToolHints) {
+                    // Try to find the hinted tool in registry
+                    const hintedTool = registryPromptData.tools.find(tool => tool.name === hint.name);
+                    if (hintedTool) {
+                        // Boost the priority/confidence of the hinted tool
+                        hintedTool.hint_boost = true;
+                        hintedTool.hint_confidence = hint.confidence;
+                        hintedTool.hint_reason = hint.reason;
+                        console.log('🚀 [System Integration] Boosted external tool via hint:', hint.name);
+                    } else {
+                        console.log('⚠️ [System Integration] Hinted tool not found in registry:', hint.name);
+                    }
+                }
+            }
             // Merge built-in tools with registry tools (built-in tools first for priority)
             const combinedTools = [...relevantBuiltInTools, ...registryPromptData.tools];
             
