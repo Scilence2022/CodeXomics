@@ -6402,7 +6402,7 @@ class ChatManager {
             sequence, 
             uniprot_id,
             geneName,
-            organism = 'Homo sapiens',
+            organism = null,  // No default organism - will be set based on input type
             applications = ['Pfam', 'SMART', 'PROSITE'],
             goterms = true,
             pathways = true,
@@ -6464,9 +6464,11 @@ class ChatManager {
                         throw new Error(`Failed to retrieve UniProt sequence: ${error.message}`);
                     }
                 } else if (geneName) {
-                    console.log('📋 [ChatManager] Searching UniProt for gene:', geneName);
+                    // When searching by gene name, organism is required
+                    const searchOrganism = organism || 'Homo sapiens'; // Default to human if not specified
+                    console.log('📋 [ChatManager] Searching UniProt for gene:', geneName, 'organism:', searchOrganism);
                     try {
-                        const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=gene:${geneName}+AND+organism_name:${encodeURIComponent(organism)}&format=fasta&size=1`;
+                        const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=gene:${geneName}+AND+organism_name:${encodeURIComponent(searchOrganism)}&format=fasta&size=1`;
                         const searchResponse = await fetch(searchUrl);
                         if (searchResponse.ok) {
                             const fastaText = await searchResponse.text();
@@ -6475,13 +6477,16 @@ class ChatManager {
                                 targetSequence = lines.slice(1).join('').replace(/\s/g, '');
                                 const header = lines[0];
                                 const uniprotId = header.split('|')[1];
+                                // Extract organism from FASTA header if possible
+                                const organismMatch = header.match(/OS=([^=]+?)(?:OX=|GN=|PE=|SV=|$)/);
+                                const detectedOrganism = organismMatch ? organismMatch[1].trim() : searchOrganism;
                                 proteinInfo = {
                                     id: uniprotId,
                                     name: geneName,
-                                    organism: organism,
+                                    organism: detectedOrganism,
                                     length: targetSequence.length
                                 };
-                                console.log(`✅ Found sequence for ${geneName}: ${targetSequence.length} AA`);
+                                console.log(`✅ Found sequence for ${geneName}: ${targetSequence.length} AA from ${detectedOrganism}`);
                             } else {
                                 throw new Error(`No sequence found for gene ${geneName}`);
                             }
@@ -6690,7 +6695,7 @@ class ChatManager {
                     protein_info: proteinInfo || {
                         id: 'USER_PROVIDED',
                         name: 'User sequence',
-                        organism: organism,
+                        organism: organism || 'Not specified',  // Use 'Not specified' if no organism provided
                         length: cleanSequence.length
                     },
                     sequence_length: cleanSequence.length,
@@ -6979,7 +6984,7 @@ class ChatManager {
         const { 
             uniprot_id,
             geneName,
-            organism = 'Homo sapiens',
+            organism = null,  // No default organism - will be 'Homo sapiens' only for gene searches
             include_sequence = true,
             include_features = true,
             include_function = true,
@@ -7012,6 +7017,7 @@ class ChatManager {
             // Fallback implementation
             const entryId = uniprot_id || 'P04637';
             const gene = geneName || 'TP53';
+            const displayOrganism = organism || (geneName ? 'Homo sapiens' : 'Not specified');
 
             const result = {
                 success: true,
@@ -7020,7 +7026,7 @@ class ChatManager {
                 entry_info: {
                     uniprot_id: entryId,
                     protein_name: `${gene} protein`,
-                    organism: organism,
+                    organism: displayOrganism,
                     status: 'reviewed'
                 },
                 sequence_length: 393,
