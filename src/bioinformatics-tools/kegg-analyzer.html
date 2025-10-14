@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KEGG Pathway Analysis - CodeXomics</title>
+    <title>KEGG Pathway Enrichment Analysis - Genome AI Studio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <!-- Plotly loading commented out to improve performance -->
-    <!-- <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> -->
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -15,36 +12,42 @@
             --success-color: #27ae60;
             --warning-color: #f39c12;
             --danger-color: #e74c3c;
-            --bg-primary: #f8f9fa;
+            --bg-primary: #f5f7fa;
             --bg-secondary: #ffffff;
             --text-primary: #2c3e50;
             --text-secondary: #7f8c8d;
             --border-color: #dee2e6;
             --radius: 8px;
             --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --shadow-hover: 0 4px 20px rgba(0,0,0,0.15);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: var(--text-primary);
             line-height: 1.6;
+            min-height: 100vh;
         }
 
         .app-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 20px;
-            box-shadow: var(--shadow);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            color: var(--text-primary);
+            padding: 20px 30px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
@@ -55,186 +58,420 @@
         }
 
         .app-title i {
-            font-size: 2rem;
-            background: rgba(255,255,255,0.2);
-            padding: 10px;
-            border-radius: var(--radius);
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .title-text h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin-bottom: 5px;
         }
 
         .title-text p {
-            font-size: 0.9rem;
-            opacity: 0.9;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .header-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .header-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
         }
 
         .main-container {
-            display: flex;
-            height: calc(100vh - 100px);
-            max-width: 1400px;
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            min-height: calc(100vh - 100px);
+            max-width: 1600px;
             margin: 0 auto;
-            gap: 20px;
-            padding: 20px;
+            gap: 24px;
+            padding: 24px;
         }
 
         .sidebar {
-            width: 400px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
             box-shadow: var(--shadow);
-            padding: 20px;
+            padding: 24px;
             overflow-y: auto;
+            height: fit-content;
+            position: sticky;
+            top: 120px;
         }
 
         .content-area {
-            flex: 1;
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
             box-shadow: var(--shadow);
-            padding: 20px;
+            padding: 28px;
             overflow-y: auto;
         }
 
         .form-section {
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 28px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .form-section:last-child {
+            border-bottom: none;
         }
 
         .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 18px;
             color: var(--primary-color);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+        }
+
+        .section-title i {
+            font-size: 1.3rem;
+            padding: 8px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 8px;
         }
 
         .form-control {
             width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
             border-radius: var(--radius);
             font-size: 14px;
-            margin-bottom: 15px;
-            transition: border-color 0.3s ease;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: white;
         }
 
         .form-control:focus {
             outline: none;
             border-color: var(--secondary-color);
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
             border-radius: var(--radius);
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            font-family: inherit;
         }
 
         .btn-primary {
-            background: var(--secondary-color);
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            color: white;
+            width: 100%;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
             color: white;
             width: 100%;
             justify-content: center;
         }
 
-        .btn-primary:hover {
-            background: var(--primary-color);
+        .btn-secondary:hover {
+            background: #7f8c8d;
             transform: translateY(-2px);
         }
 
-        .btn-success {
-            background: var(--success-color);
-            color: white;
+        #statusArea {
+            margin-bottom: 20px;
+        }
+
+        .status-message {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .status-success {
+            background: #d4edda;
+            border-left: 4px solid var(--success-color);
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            border-left: 4px solid var(--danger-color);
+            color: #721c24;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning-color);
+            color: #856404;
+        }
+
+        #loadingIndicator {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            font-size: 3rem;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+
+        .loading-spinner i {
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-message {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         .pathway-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            padding: 15px;
-            margin-bottom: 15px;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
             transition: all 0.3s ease;
         }
 
         .pathway-card:hover {
-            box-shadow: var(--shadow);
+            border-color: var(--secondary-color);
+            box-shadow: var(--shadow-hover);
             transform: translateY(-2px);
         }
 
+        .pathway-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
         .pathway-id {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--secondary-color);
             font-size: 1.1rem;
-            margin-bottom: 8px;
         }
 
         .pathway-name {
             font-size: 1.2rem;
-            font-weight: 500;
-            margin-bottom: 8px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
         }
 
         .pathway-stats {
-            display: flex;
-            gap: 15px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
         .stat-item {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border-radius: var(--radius);
         }
 
-        .loading {
+        .stat-item i {
+            color: var(--secondary-color);
+        }
+
+        .pathway-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        #llmInterpretationPanel {
+            display: none;
+            background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+            border: 2px solid var(--secondary-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .llm-interpretation-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .llm-interpretation-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.3rem;
+            color: var(--primary-color);
+        }
+
+        .llm-interpretation-header i {
+            color: var(--secondary-color);
+            font-size: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: var(--radius);
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(0,0,0,0.1);
+            color: var(--primary-color);
+        }
+
+        .llm-interpretation-content {
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+            line-height: 1.8;
+        }
+
+        .interpretation-text {
+            color: var(--text-primary);
+        }
+
+        .interpretation-text strong {
+            color: var(--primary-color);
+        }
+
+        .interpretation-text code {
+            background: var(--bg-primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+        }
+
+        .llm-interpretation-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .empty-state {
             text-align: center;
-            padding: 40px;
+            padding: 80px 20px;
             color: var(--text-secondary);
         }
 
-        .loading i {
-            font-size: 2rem;
-            animation: spin 1s linear infinite;
-            margin-bottom: 10px;
-            display: block;
+        .empty-state i {
+            font-size: 4rem;
+            opacity: 0.3;
+            margin-bottom: 20px;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            color: var(--text-primary);
         }
 
-        .status-message {
-            padding: 10px;
-            border-radius: var(--radius);
-            margin-bottom: 15px;
-        }
-
-        .status-success {
-            background: rgba(39, 174, 96, 0.1);
-            border: 1px solid rgba(39, 174, 96, 0.3);
-            color: var(--success-color);
-        }
-
-        .status-error {
-            background: rgba(231, 76, 60, 0.1);
-            border: 1px solid rgba(231, 76, 60, 0.3);
-            color: var(--danger-color);
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: relative;
+                top: 0;
+            }
         }
     </style>
 </head>
@@ -244,9 +481,19 @@
             <div class="app-title">
                 <i class="fas fa-sitemap"></i>
                 <div class="title-text">
-                    <h1>KEGG Pathway Analysis</h1>
-                    <p>Kyoto Encyclopedia of Genes and Genomes</p>
+                    <h1>KEGG Pathway Enrichment Analysis</h1>
+                    <p>Kyoto Encyclopedia of Genes and Genomes - Functional Pathway Analysis</p>
                 </div>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" id="llmInterpretBtn" style="display: none;">
+                    <i class="fas fa-brain"></i>
+                    AI Interpret
+                </button>
+                <button class="header-btn" id="sendToChatBtn" style="display: none;">
+                    <i class="fas fa-comments"></i>
+                    Analyze in ChatBox
+                </button>
             </div>
         </div>
     </div>
@@ -255,23 +502,34 @@
         <div class="sidebar">
             <div class="form-section">
                 <div class="section-title">
-                    <i class="fas fa-upload"></i>
+                    <i class="fas fa-database"></i>
                     Input Data
                 </div>
                 
-                <select class="form-control" id="organism">
-                    <option value="hsa">Homo sapiens (Human)</option>
-                    <option value="mmu">Mus musculus (Mouse)</option>
-                    <option value="sce">Saccharomyces cerevisiae</option>
-                    <option value="eco">Escherichia coli</option>
-                    <option value="dme">Drosophila melanogaster</option>
-                </select>
+                <div class="form-group">
+                    <label class="form-label">Organism</label>
+                    <select class="form-control" id="organism">
+                        <option value="hsa">Homo sapiens (Human)</option>
+                        <option value="mmu">Mus musculus (Mouse)</option>
+                        <option value="rno">Rattus norvegicus (Rat)</option>
+                        <option value="dme">Drosophila melanogaster (Fruit fly)</option>
+                        <option value="cel">Caenorhabditis elegans (Worm)</option>
+                        <option value="sce">Saccharomyces cerevisiae (Yeast)</option>
+                        <option value="eco">Escherichia coli K-12</option>
+                        <option value="ath">Arabidopsis thaliana (Plant)</option>
+                    </select>
+                </div>
                 
-                <textarea class="form-control" id="geneInput" placeholder="Enter gene symbols or KEGG IDs (one per line):
+                <div class="form-group">
+                    <label class="form-label">Gene List (one per line)</label>
+                    <textarea class="form-control" id="geneInput" 
+                        placeholder="Enter gene symbols or IDs:
 TP53
 EGFR
 BRCA1
-MYC" rows="8"></textarea>
+MYC
+KRAS"></textarea>
+                </div>
                 
                 <button class="btn btn-primary" id="analyzeBtn">
                     <i class="fas fa-play"></i>
@@ -282,33 +540,35 @@ MYC" rows="8"></textarea>
             <div class="form-section">
                 <div class="section-title">
                     <i class="fas fa-sliders-h"></i>
-                    Analysis Options
+                    Analysis Parameters
                 </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">P-value Threshold</label>
-                    <input type="number" class="form-control" id="pValueThreshold" value="0.05" step="0.01" min="0" max="1">
+                
+                <div class="form-group">
+                    <label class="form-label">P-value Threshold</label>
+                    <input type="number" class="form-control" id="pValueThreshold" 
+                        value="0.05" step="0.01" min="0" max="1">
                 </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Minimum Gene Count</label>
-                    <input type="number" class="form-control" id="minGeneCount" value="2" min="1">
+                
+                <div class="form-group">
+                    <label class="form-label">Minimum Gene Count</label>
+                    <input type="number" class="form-control" id="minGeneCount" 
+                        value="2" min="1">
                 </div>
             </div>
 
             <div class="form-section">
                 <div class="section-title">
-                    <i class="fas fa-bolt"></i>
+                    <i class="fas fa-tools"></i>
                     Quick Actions
                 </div>
-
-                <button class="btn btn-success" id="exampleBtn" style="margin-bottom: 10px;">
+                
+                <button class="btn btn-secondary" id="exampleBtn" style="margin-bottom: 10px;">
                     <i class="fas fa-flask"></i>
                     Load Example
                 </button>
-
-                <button class="btn btn-primary" id="clearBtn">
-                    <i class="fas fa-trash"></i>
+                
+                <button class="btn btn-secondary" id="clearBtn">
+                    <i class="fas fa-trash-alt"></i>
                     Clear Results
                 </button>
             </div>
@@ -317,201 +577,55 @@ MYC" rows="8"></textarea>
         <div class="content-area">
             <div id="statusArea"></div>
             
-            <div id="resultsContainer">
-                <div class="loading" style="display: none;" id="loadingIndicator">
-                    <i class="fas fa-spinner"></i>
-                    <p>Analyzing KEGG pathways...</p>
+            <div id="llmInterpretationPanel"></div>
+            
+            <div id="loadingIndicator">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
                 </div>
-                
-                <div id="keggResults">
-                    <div style="text-align: center; padding: 40px; color: #7f8c8d;">
-                        <i class="fas fa-sitemap" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
-                        <h3>No KEGG Analysis Results</h3>
-                        <p>Enter gene data and click "Analyze Pathways" to see results.</p>
-                    </div>
+                <div class="loading-message">Analyzing KEGG pathways...</div>
+            </div>
+            
+            <div id="resultsContainer">
+                <div class="empty-state">
+                    <i class="fas fa-sitemap"></i>
+                    <h3>No Analysis Results</h3>
+                    <p>Enter gene data and click "Analyze Pathways" to identify enriched KEGG pathways.</p>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="tool-menu-handler.js"></script>
+    <script src="shared-analyzer-base.js"></script>
     <script>
-        class KEGGAnalyzer {
+        class KEGGAnalyzer extends SharedAnalyzerBase {
             constructor() {
+                super('KEGG Pathway Analysis', {
+                    primaryColor: '#2c3e50',
+                    secondaryColor: '#3498db',
+                    icon: 'fa-sitemap'
+                });
+                
                 this.init();
+                
+                // Notify window is ready
+                setTimeout(() => {
+                    this.ipcRenderer.send('window-ready', 'kegg-analyzer');
+                }, 100);
             }
 
             init() {
                 document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzePathways());
                 document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
                 document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
-            }
-
-            loadExample() {
-                // Show organism selection dialog
-                const sampleOptions = `
-                    <div style="text-align: center; padding: 20px;">
-                        <h3>Select Sample Dataset</h3>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
-                            <button class="btn btn-primary" onclick="this.loadHumanSample()" style="padding: 15px;">
-                                <i class="fas fa-user"></i><br>
-                                Human Cancer Genes<br>
-                                <small>(TP53, EGFR, BRCA1...)</small>
-                            </button>
-                            <button class="btn btn-success" onclick="this.loadEcoliSample()" style="padding: 15px;">
-                                <i class="fas fa-bacteria"></i><br>
-                                E. coli K12 Genes<br>
-                                <small>(lacZ, trpA, recA...)</small>
-                            </button>
-                        </div>
-                        <button class="btn btn-secondary" onclick="this.closeSampleDialog()" style="width: 100px;">Cancel</button>
-                    </div>
-                `;
-                
-                const dialog = document.createElement('div');
-                dialog.id = 'sampleDialog';
-                dialog.style.cssText = `
-                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                    background: rgba(0,0,0,0.5); z-index: 1000; display: flex; 
-                    align-items: center; justify-content: center;
-                `;
-                dialog.innerHTML = `<div style="background: white; border-radius: 10px; max-width: 500px; width: 90%;">${sampleOptions}</div>`;
-                document.body.appendChild(dialog);
-                
-                // Add event listeners to buttons
-                dialog.querySelector('button:nth-of-type(1)').onclick = () => this.loadHumanSample();
-                dialog.querySelector('button:nth-of-type(2)').onclick = () => this.loadEcoliSample();
-                dialog.querySelector('button:nth-of-type(3)').onclick = () => this.closeSampleDialog();
-            }
-
-            loadHumanSample() {
-                document.getElementById('geneInput').value = `TP53
-EGFR
-BRCA1
-MYC
-KRAS
-PTEN
-RB1
-CDKN2A`;
-                document.getElementById('organism').value = 'hsa';
-                this.closeSampleDialog();
-                this.showStatus('Human cancer genes sample loaded successfully!', 'success');
-            }
-
-            loadEcoliSample() {
-                document.getElementById('geneInput').value = `lacZ
-lacY
-lacA
-trpA
-trpB
-trpC
-trpD
-trpE
-recA
-recB
-recC
-lexA
-rpoB
-rpoD
-ftsZ
-dnaA
-dnaB
-dnaC
-gyrA
-gyrB
-topA
-ssb
-polA
-ligA
-dam
-seqA
-ftsA
-ftsQ
-ftsW
-ftsI
-murE
-murF
-acrA
-acrB
-tolC
-ompF
-ompC
-malE
-malF
-malG
-malK
-glpF
-glpK
-glpD
-fadA
-fadB
-aceA
-aceB
-gltA
-acnA
-acnB
-icdA
-sucA
-sucB
-sucC
-sucD
-sdhA
-sdhB
-sdhC
-sdhD
-fumA
-fumB
-fumC
-mdh
-pykA
-pykF
-eno
-pgk
-gapA
-fbaA
-tpiA
-pfkA
-pfkB
-glk
-pgi
-fbp
-gnd
-zwf
-rpe
-rpiA
-tkfA
-tkfB
-tktA
-tktB
-talA
-talB`;
-                document.getElementById('organism').value = 'eco';
-                this.closeSampleDialog();
-                this.showStatus('E. coli K12 metabolic genes sample loaded successfully!', 'success');
-            }
-
-            closeSampleDialog() {
-                const dialog = document.getElementById('sampleDialog');
-                if (dialog) {
-                    dialog.remove();
-                }
-            }
-
-            clearResults() {
-                document.getElementById('keggResults').innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #7f8c8d;">
-                        <i class="fas fa-sitemap" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
-                        <h3>No KEGG Analysis Results</h3>
-                        <p>Enter gene data and click "Analyze Pathways" to see results.</p>
-                    </div>
-                `;
-                this.showStatus('Results cleared.', 'success');
+                document.getElementById('sendToChatBtn').addEventListener('click', () => this.sendCurrentToChatBox());
             }
 
             async analyzePathways() {
                 const geneInput = document.getElementById('geneInput').value.trim();
                 if (!geneInput) {
-                    this.showStatus('Please enter gene data to analyze.', 'error');
+                    this.showStatus('Please enter gene data to analyze', 'warning');
                     return;
                 }
 
@@ -520,221 +634,229 @@ talB`;
                 const pValueThreshold = parseFloat(document.getElementById('pValueThreshold').value);
                 const minGeneCount = parseInt(document.getElementById('minGeneCount').value);
 
-                this.showLoading(true);
-                this.showStatus('Querying KEGG database...', 'success');
+                this.showLoading(true, 'Querying KEGG database...');
+                this.showStatus('Starting pathway enrichment analysis...', 'info');
 
                 try {
-                    await this.delay(2500);
-                    const results = await this.simulateKEGGAnalysis(genes, organism, pValueThreshold, minGeneCount);
+                    await this.delay(1000);
+                    
+                    // Simulate KEGG API call (in production, this would call actual KEGG REST API)
+                    const results = await this.performKEGGEnrichment(genes, organism, pValueThreshold, minGeneCount);
+                    
+                    this.currentResults = results;
                     this.displayResults(results);
-                    this.showStatus(`Analysis complete! Found ${results.enrichedPathways.length} enriched pathways.`, 'success');
-                } catch (error) {
-                    this.showStatus(`Analysis failed: ${error.message}`, 'error');
-                } finally {
                     this.showLoading(false);
+                    this.showStatus(`Found ${results.enrichedPathways.length} enriched pathways`, 'success');
+                    
+                    // Show ChatBox integration button
+                    document.getElementById('sendToChatBtn').style.display = 'block';
+                    document.getElementById('llmInterpretBtn').style.display = 'block';
+                    
+                } catch (error) {
+                    this.showLoading(false);
+                    this.showStatus(`Analysis failed: ${error.message}`, 'error');
                 }
             }
 
-            async simulateKEGGAnalysis(genes, organism, pValueThreshold, minGeneCount) {
-                let pathwayDatabase = [];
+            async performKEGGEnrichment(genes, organism, pValueThreshold, minGeneCount) {
+                // Simulate KEGG pathway enrichment
+                const pathwayDatabase = this.getPathwayDatabase(organism);
+                const enrichedPathways = [];
                 
-                if (organism === 'eco') {
-                    // E. coli K12 specific pathways
-                    pathwayDatabase = [
-                        { id: 'eco00010', name: 'Glycolysis / Gluconeogenesis', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 8) + 5 },
-                        { id: 'eco00020', name: 'Citrate cycle (TCA cycle)', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 6) + 4 },
-                        { id: 'eco00030', name: 'Pentose phosphate pathway', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00040', name: 'Pentose and glucuronate interconversions', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00051', name: 'Fructose and mannose metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00052', name: 'Galactose metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00053', name: 'Ascorbate and aldarate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00061', name: 'Fatty acid biosynthesis', category: 'Lipid Metabolism', geneCount: Math.floor(Math.random() * 6) + 3 },
-                        { id: 'eco00071', name: 'Fatty acid degradation', category: 'Lipid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00240', name: 'Pyrimidine metabolism', category: 'Nucleotide Metabolism', geneCount: Math.floor(Math.random() * 7) + 4 },
-                        { id: 'eco00230', name: 'Purine metabolism', category: 'Nucleotide Metabolism', geneCount: Math.floor(Math.random() * 8) + 5 },
-                        { id: 'eco00260', name: 'Glycine, serine and threonine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 6) + 3 },
-                        { id: 'eco00270', name: 'Cysteine and methionine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00280', name: 'Valine, leucine and isoleucine degradation', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00290', name: 'Valine, leucine and isoleucine biosynthesis', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00300', name: 'Lysine biosynthesis', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00310', name: 'Lysine degradation', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00350', name: 'Tyrosine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00360', name: 'Phenylalanine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00380', name: 'Tryptophan metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00400', name: 'Phenylalanine, tyrosine and tryptophan biosynthesis', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 6) + 4 },
-                        { id: 'eco00410', name: 'beta-Alanine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00430', name: 'Taurine and hypotaurine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00440', name: 'Phosphonate and phosphinate metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00450', name: 'Selenocompound metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00460', name: 'Cyanoamino acid metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00471', name: 'D-Glutamine and D-glutamate metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00473', name: 'D-Alanine metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00480', name: 'Glutathione metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00500', name: 'Starch and sucrose metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00520', name: 'Amino sugar and nucleotide sugar metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 6) + 4 },
-                        { id: 'eco00540', name: 'Lipopolysaccharide biosynthesis', category: 'Glycan Biosynthesis and Metabolism', geneCount: Math.floor(Math.random() * 7) + 4 },
-                        { id: 'eco00550', name: 'Peptidoglycan biosynthesis', category: 'Glycan Biosynthesis and Metabolism', geneCount: Math.floor(Math.random() * 6) + 3 },
-                        { id: 'eco00564', name: 'Glycerophospholipid metabolism', category: 'Lipid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00620', name: 'Pyruvate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 6) + 4 },
-                        { id: 'eco00630', name: 'Glyoxylate and dicarboxylate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00640', name: 'Propanoate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 4) + 3 },
-                        { id: 'eco00650', name: 'Butanoate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00660', name: 'C5-Branched dibasic acid metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00670', name: 'One carbon pool by folate', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 3 },
-                        { id: 'eco00680', name: 'Methane metabolism', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00710', name: 'Carbon fixation in photosynthetic organisms', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00720', name: 'Carbon fixation pathways in prokaryotes', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 4) + 3 },
-                        { id: 'eco00730', name: 'Thiamine metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00740', name: 'Riboflavin metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00750', name: 'Vitamin B6 metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00760', name: 'Nicotinate and nicotinamide metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'eco00770', name: 'Pantothenate and CoA biosynthesis', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 3 },
-                        { id: 'eco00780', name: 'Biotin metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00785', name: 'Lipoic acid metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 3) + 2 },
-                        { id: 'eco00790', name: 'Folate biosynthesis', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 3 },
-                        { id: 'eco00860', name: 'Porphyrin and chlorophyll metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00900', name: 'Terpenoid backbone biosynthesis', category: 'Metabolism of Terpenoids and Polyketides', geneCount: Math.floor(Math.random() * 4) + 3 },
-                        { id: 'eco00910', name: 'Nitrogen metabolism', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco00920', name: 'Sulfur metabolism', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 4) + 3 },
-                        { id: 'eco01040', name: 'Biosynthesis of unsaturated fatty acids', category: 'Lipid Metabolism', geneCount: Math.floor(Math.random() * 4) + 3 },
-                        { id: 'eco01100', name: 'Metabolic pathways', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 15) + 10 },
-                        { id: 'eco01110', name: 'Biosynthesis of secondary metabolites', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 12) + 8 },
-                        { id: 'eco01120', name: 'Microbial metabolism in diverse environments', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 10) + 6 },
-                        { id: 'eco01200', name: 'Carbon metabolism', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 12) + 8 },
-                        { id: 'eco01210', name: '2-Oxocarboxylic acid metabolism', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 6) + 4 },
-                        { id: 'eco01212', name: 'Fatty acid metabolism', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 8) + 5 },
-                        { id: 'eco01230', name: 'Biosynthesis of amino acids', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 10) + 7 },
-                        { id: 'eco02010', name: 'ABC transporters', category: 'Environmental Information Processing', geneCount: Math.floor(Math.random() * 12) + 8 },
-                        { id: 'eco02020', name: 'Two-component system', category: 'Environmental Information Processing', geneCount: Math.floor(Math.random() * 8) + 5 },
-                        { id: 'eco02030', name: 'Bacterial chemotaxis', category: 'Environmental Information Processing', geneCount: Math.floor(Math.random() * 6) + 4 },
-                        { id: 'eco02040', name: 'Flagellar assembly', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 7) + 4 },
-                        { id: 'eco03010', name: 'Ribosome', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 15) + 10 },
-                        { id: 'eco03020', name: 'RNA polymerase', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco03030', name: 'DNA replication', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 8) + 5 },
-                        { id: 'eco03060', name: 'Protein export', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 6) + 4 },
-                        { id: 'eco03070', name: 'Bacterial secretion system', category: 'Environmental Information Processing', geneCount: Math.floor(Math.random() * 7) + 4 },
-                        { id: 'eco03410', name: 'Base excision repair', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco03420', name: 'Nucleotide excision repair', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 6) + 4 },
-                        { id: 'eco03430', name: 'Mismatch repair', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 5) + 3 },
-                        { id: 'eco03440', name: 'Homologous recombination', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 7) + 4 }
-                    ];
-                } else {
-                    // Human pathways (default)
-                    pathwayDatabase = [
-                        { id: 'hsa05200', name: 'Pathways in cancer', category: 'Human Diseases', geneCount: Math.floor(Math.random() * 6) + 3 },
-                        { id: 'hsa04110', name: 'Cell cycle', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 5) + 2 },
-                        { id: 'hsa04115', name: 'p53 signaling pathway', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 4) + 2 },
-                        { id: 'hsa04151', name: 'PI3K-Akt signaling pathway', category: 'Signal Transduction', geneCount: Math.floor(Math.random() * 7) + 3 },
-                        { id: 'hsa04210', name: 'Apoptosis', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 5) + 2 }
-                    ];
-                }
-
-                const enrichedPathways = pathwayDatabase.map(pathway => ({
-                    ...pathway,
-                    pValue: Math.random() * pValueThreshold,
-                    fdr: Math.random() * 0.2,
-                    enrichmentScore: Math.random() * 3 + 1,
-                    geneRatio: `${pathway.geneCount}/${genes.length}`,
-                    bgRatio: `${pathway.geneCount + Math.floor(Math.random() * 100)}/20000`
-                })).filter(pathway => pathway.geneCount >= minGeneCount);
-
-                return {
-                    inputGenes: genes,
-                    organism: organism,
-                    enrichedPathways: enrichedPathways.sort((a, b) => a.pValue - b.pValue),
-                    statistics: {
-                        totalInputGenes: genes.length,
-                        mappedGenes: Math.floor(genes.length * 0.90),
-                        enrichedPathways: enrichedPathways.length
+                for (const pathway of pathwayDatabase) {
+                    const pValue = Math.random() * 0.1;
+                    const geneCount = Math.floor(Math.random() * genes.length) + 1;
+                    
+                    if (pValue <= pValueThreshold && geneCount >= minGeneCount) {
+                        enrichedPathways.push({
+                            ...pathway,
+                            pValue: pValue,
+                            fdr: pValue * 1.2,
+                            geneCount: geneCount,
+                            totalGenes: genes.length,
+                            matchedGenes: genes.slice(0, geneCount),
+                            foldEnrichment: (geneCount / genes.length) * 10
+                        });
                     }
+                }
+                
+                enrichedPathways.sort((a, b) => a.pValue - b.pValue);
+                
+                return {
+                    organism: organism,
+                    inputGenes: genes,
+                    enrichedPathways: enrichedPathways,
+                    analysisDate: new Date().toISOString(),
+                    parameters: { pValueThreshold, minGeneCount }
                 };
             }
 
-            displayResults(results) {
-                const container = document.getElementById('keggResults');
+            getPathwayDatabase(organism) {
+                const pathways = [
+                    { id: 'hsa04110', name: 'Cell cycle', category: 'Cellular Processes', description: 'Regulation of cell division and proliferation' },
+                    { id: 'hsa05200', name: 'Pathways in cancer', category: 'Human Diseases', description: 'Multiple cancer-related signaling pathways' },
+                    { id: 'hsa04151', name: 'PI3K-Akt signaling pathway', category: 'Signal Transduction', description: 'Cell growth and survival signaling' },
+                    { id: 'hsa04010', name: 'MAPK signaling pathway', category: 'Signal Transduction', description: 'Mitogen-activated protein kinase cascade' },
+                    { id: 'hsa04115', name: 'p53 signaling pathway', category: 'Cellular Processes', description: 'DNA damage response and apoptosis' },
+                    { id: 'hsa04210', name: 'Apoptosis', category: 'Cellular Processes', description: 'Programmed cell death pathway' },
+                    { id: 'hsa04064', name: 'NF-kappa B signaling pathway', category: 'Signal Transduction', description: 'Inflammatory response regulation' },
+                    { id: 'hsa04668', name: 'TNF signaling pathway', category: 'Signal Transduction', description: 'Tumor necrosis factor pathway' }
+                ];
                 
-                if (!results.enrichedPathways.length) {
+                return pathways.map(p => ({ ...p, id: p.id.replace('hsa', organism) }));
+            }
+
+            displayResults(results) {
+                const container = document.getElementById('resultsContainer');
+                if (!results || !results.enrichedPathways || results.enrichedPathways.length === 0) {
                     container.innerHTML = `
-                        <div style="text-align: center; padding: 40px; color: #7f8c8d;">
-                            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                        <div class="empty-state">
+                            <i class="fas fa-sitemap"></i>
                             <h3>No Enriched Pathways Found</h3>
-                            <p>Try adjusting your thresholds or use different genes.</p>
+                            <p>No pathways met the significance threshold. Try adjusting parameters.</p>
                         </div>
                     `;
                     return;
                 }
-
+                
                 const summaryHtml = `
-                    <div style="margin-bottom: 20px; padding: 15px; background: #e8f4fd; border-radius: 8px;">
-                        <h4>Analysis Summary</h4>
-                        <p><strong>Input Genes:</strong> ${results.statistics.totalInputGenes} | 
-                           <strong>Mapped:</strong> ${results.statistics.mappedGenes} | 
-                           <strong>Enriched Pathways:</strong> ${results.statistics.enrichedPathways}</p>
-                        <p><strong>Organism:</strong> ${results.organism.toUpperCase()}</p>
+                    <div style="background: linear-gradient(135deg, #e3f2fd, #f3e5f5); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                        <h2 style="margin-bottom: 16px; color: var(--primary-color);">
+                            <i class="fas fa-chart-bar"></i>
+                            Analysis Summary
+                        </h2>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                            <div style="background: white; padding: 16px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 2rem; font-weight: bold; color: var(--secondary-color);">
+                                    ${results.enrichedPathways.length}
+                                </div>
+                                <div style="color: var(--text-secondary); font-size: 0.9rem;">Enriched Pathways</div>
+                            </div>
+                            <div style="background: white; padding: 16px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 2rem; font-weight: bold; color: var(--success-color);">
+                                    ${results.inputGenes.length}
+                                </div>
+                                <div style="color: var(--text-secondary); font-size: 0.9rem;">Input Genes</div>
+                            </div>
+                            <div style="background: white; padding: 16px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 2rem; font-weight: bold; color: var(--warning-color);">
+                                    ${results.enrichedPathways[0].pValue.toExponential(2)}
+                                </div>
+                                <div style="color: var(--text-secondary); font-size: 0.9rem;">Top P-value</div>
+                            </div>
+                        </div>
                     </div>
                 `;
-
-                const pathwayCards = results.enrichedPathways.map(pathway => `
+                
+                const pathwayCards = results.enrichedPathways.map((pathway, index) => `
                     <div class="pathway-card">
-                        <div class="pathway-id">${pathway.id}</div>
-                        <div class="pathway-name">${pathway.name}</div>
-                        <div style="margin: 10px 0; color: #666; font-style: italic;">${pathway.category}</div>
+                        <div class="pathway-header">
+                            <div>
+                                <div class="pathway-id">#${index + 1} · ${pathway.id}</div>
+                                <div class="pathway-name">${pathway.name}</div>
+                                <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 12px;">
+                                    ${pathway.category} · ${pathway.description}
+                                </div>
+                            </div>
+                        </div>
                         <div class="pathway-stats">
                             <div class="stat-item">
                                 <i class="fas fa-dna"></i>
-                                <span>${pathway.geneRatio}</span>
+                                <span>${pathway.geneCount} / ${pathway.totalGenes} genes</span>
                             </div>
                             <div class="stat-item">
                                 <i class="fas fa-chart-line"></i>
-                                <span>p = ${pathway.pValue.toExponential(2)}</span>
+                                <span>${pathway.foldEnrichment.toFixed(2)}x enrichment</span>
                             </div>
                             <div class="stat-item">
-                                <i class="fas fa-fire"></i>
-                                <span>ES = ${pathway.enrichmentScore.toFixed(2)}</span>
+                                <i class="fas fa-calculator"></i>
+                                <span>P-value: ${pathway.pValue.toExponential(3)}</span>
                             </div>
                             <div class="stat-item">
-                                <i class="fas fa-percentage"></i>
-                                <span>FDR = ${pathway.fdr.toFixed(3)}</span>
+                                <i class="fas fa-filter"></i>
+                                <span>FDR: ${pathway.fdr.toExponential(3)}</span>
                             </div>
                         </div>
-                        <button class="btn btn-primary" onclick="window.open('https://www.genome.jp/kegg-bin/show_pathway?${pathway.id}', '_blank')" style="margin-top: 15px; width: auto;">
-                            <i class="fas fa-external-link-alt"></i>
-                            View in KEGG
-                        </button>
+                        <div style="margin-top: 12px; padding: 12px; background: var(--bg-primary); border-radius: var(--radius);">
+                            <strong>Matched Genes:</strong> ${pathway.matchedGenes.join(', ')}
+                        </div>
+                        <div class="pathway-actions">
+                            <button class="btn btn-secondary btn-small" onclick="window.analyzer.viewPathway('${pathway.id}')">
+                                <i class="fas fa-external-link-alt"></i>
+                                View in KEGG
+                            </button>
+                            <button class="btn btn-secondary btn-small" onclick="window.analyzer.askAboutPathway('${pathway.id}')">
+                                <i class="fas fa-question-circle"></i>
+                                Ask ChatBox
+                            </button>
+                        </div>
                     </div>
                 `).join('');
-
+                
                 container.innerHTML = summaryHtml + pathwayCards;
             }
 
-            showLoading(show) {
-                document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+            viewPathway(pathwayId) {
+                const url = `https://www.genome.jp/kegg-bin/show_pathway?${pathwayId}`;
+                require('electron').shell.openExternal(url);
             }
 
-            showStatus(message, type) {
-                const statusArea = document.getElementById('statusArea');
-                statusArea.innerHTML = `
-                    <div class="status-message status-${type}">
-                        <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'}"></i>
-                        ${message}
+            askAboutPathway(pathwayId) {
+                const pathway = this.currentResults.enrichedPathways.find(p => p.id === pathwayId);
+                if (!pathway) return;
+                
+                const query = `Explain the biological significance of "${pathway.name}" pathway (${pathway.id}) in the context of these genes: ${pathway.matchedGenes.join(', ')}. What are the key functions and why might this pathway be enriched?`;
+                this.sendToChatBox(query, { pathway, fullResults: this.currentResults });
+            }
+
+            sendCurrentToChatBox() {
+                if (!this.currentResults) {
+                    this.showStatus('No results to send', 'warning');
+                    return;
+                }
+                
+                const topPathways = this.currentResults.enrichedPathways.slice(0, 5).map(p => p.name).join(', ');
+                const query = `I performed KEGG pathway enrichment analysis on ${this.currentResults.inputGenes.length} genes and found ${this.currentResults.enrichedPathways.length} enriched pathways. The top pathways include: ${topPathways}. Please provide a comprehensive biological interpretation of these results.`;
+                
+                this.sendToChatBox(query, this.currentResults);
+            }
+
+            buildDetailedQuery(data) {
+                const topPathways = data.enrichedPathways.slice(0, 3).map(p => 
+                    `${p.name} (${p.geneCount} genes, p=${p.pValue.toExponential(2)})`
+                ).join(', ');
+                
+                return `Provide detailed analysis of KEGG pathway enrichment results: ${topPathways}. What biological processes are highlighted?`;
+            }
+
+            getResultCount(data) {
+                return data.enrichedPathways ? data.enrichedPathways.length : 0;
+            }
+
+            loadExample() {
+                document.getElementById('geneInput').value = 'TP53\nEGFR\nBRCA1\nMYC\nKRAS\nPTEN\nRB1\nAPC\nVHL\nCDKN2A';
+                document.getElementById('organism').value = 'hsa';
+                this.showStatus('Example data loaded', 'success');
+            }
+
+            clearResults() {
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-sitemap"></i>
+                        <h3>No Analysis Results</h3>
+                        <p>Enter gene data and click "Analyze Pathways" to identify enriched KEGG pathways.</p>
                     </div>
                 `;
-                setTimeout(() => statusArea.innerHTML = '', 5000);
-            }
-
-            delay(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
+                this.currentResults = null;
+                document.getElementById('sendToChatBtn').style.display = 'none';
+                document.getElementById('llmInterpretBtn').style.display = 'none';
+                this.showStatus('Results cleared', 'success');
             }
         }
 
-        // 注意：ToolMenuHandler类已从外部文件 tool-menu-handler.js 引入
-        // 不需要在此处重复定义
-
-        document.addEventListener('DOMContentLoaded', () => {
-            window.keggAnalyzer = new KEGGAnalyzer();
-            // 初始化菜单处理器，传入工具名称和实例
-            window.toolMenuHandler = new ToolMenuHandler('KEGG Pathway Analysis', window.keggAnalyzer);
-        });
+        // Initialize
+        window.analyzer = new KEGGAnalyzer();
+        window.toolMenuHandler = new ToolMenuHandler('KEGG Pathway Analysis', window.analyzer);
     </script>
 </body>
-</html> 
+</html>

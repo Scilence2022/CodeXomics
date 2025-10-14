@@ -5207,6 +5207,122 @@ ipcMain.on('open-deep-gene-research-window', async (event, params = {}) => {
   await createDeepGeneResearchWindow(params);
 });
 
+// ========== CHATBOX INTEGRATION IPC HANDLERS ==========
+
+// Store pending data for analyzer windows
+const analyzerPendingData = new Map();
+
+// Handle analyzer window ready notification
+ipcMain.on('window-ready', (event, toolName) => {
+  console.log(`[ChatBox Integration] ${toolName} window ready`);
+  
+  // Check if there's pending data for this tool
+  if (analyzerPendingData.has(toolName)) {
+    const data = analyzerPendingData.get(toolName);
+    event.sender.send('load-analysis-data', data);
+    analyzerPendingData.delete(toolName);
+    console.log(`[ChatBox Integration] Sent pending data to ${toolName}`);
+  }
+});
+
+// Handle request for pending data
+ipcMain.on('request-pending-data', (event, toolName) => {
+  console.log(`[ChatBox Integration] ${toolName} requesting pending data`);
+  
+  if (analyzerPendingData.has(toolName)) {
+    const data = analyzerPendingData.get(toolName);
+    event.sender.send('load-analysis-data', data);
+    analyzerPendingData.delete(toolName);
+  }
+});
+
+// Handle analysis request from analyzer tools to ChatBox
+ipcMain.on('analyze-in-chatbox', (event, request) => {
+  console.log('[ChatBox Integration] Received analysis request:', request);
+  
+  const mainWindow = getCurrentMainWindow();
+  if (mainWindow && mainWindow.webContents) {
+    // Send the query to ChatBox with metadata
+    mainWindow.webContents.send('chatbox-analyze-request', {
+      query: request.query,
+      toolName: request.toolName,
+      data: request.data,
+      timestamp: request.timestamp
+    });
+    
+    console.log(`[ChatBox Integration] Forwarded request to ChatBox from ${request.toolName}`);
+  } else {
+    console.error('[ChatBox Integration] Main window not available');
+  }
+});
+
+// Handle request for LLM interpretation
+ipcMain.on('request-llm-interpretation', (event, request) => {
+  console.log('[ChatBox Integration] LLM interpretation requested:', request);
+  
+  const mainWindow = getCurrentMainWindow();
+  if (mainWindow && mainWindow.webContents) {
+    // Format the interpretation request
+    const interpretQuery = `Please provide a detailed biological interpretation of the following ${request.toolName} results:\n\n` +
+      `Analysis Type: ${request.context.analysisType}\n` +
+      `Number of Results: ${request.context.resultCount}\n\n` +
+      `Please explain the biological significance and functional implications of these findings.`;
+    
+    mainWindow.webContents.send('chatbox-interpret-request', {
+      query: interpretQuery,
+      data: request.data,
+      context: request.context,
+      toolName: request.toolName,
+      responseTarget: event.sender
+    });
+    
+    console.log(`[ChatBox Integration] Sent interpretation request to ChatBox`);
+  }
+});
+
+// Handle LLM interpretation response back to analyzer tool
+ipcMain.on('llm-interpretation-response', (event, response) => {
+  console.log('[ChatBox Integration] LLM interpretation response received');
+  
+  if (response.targetWindow && response.targetWindow.send) {
+    response.targetWindow.send('llm-interpretation-result', {
+      interpretation: response.interpretation,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Handle request to send analysis data from ChatBox to analyzer tool
+ipcMain.on('send-to-analyzer', (event, request) => {
+  console.log('[ChatBox Integration] Sending data to analyzer:', request.toolName);
+  
+  // Store the data for when the window opens
+  analyzerPendingData.set(request.toolName, {
+    results: request.data,
+    source: 'chatbox',
+    originalQuery: request.originalQuery,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Open the appropriate analyzer window
+  switch (request.toolName.toLowerCase()) {
+    case 'kegg pathway analysis':
+    case 'kegg-analyzer':
+      createKEGGWindow();
+      break;
+    case 'gene ontology analysis':
+    case 'go-analyzer':
+      createGOWindow();
+      break;
+    case 'interpro domain analysis':
+    case 'interpro-analyzer':
+      createInterProWindow();
+      break;
+    default:
+      console.warn(`[ChatBox Integration] Unknown analyzer tool: ${request.toolName}`);
+  }
+});
+
 // IPC handler for Deep Gene Research window menu actions
 ipcMain.on('deep-gene-research-menu-action', (event, action) => {
   console.log('Deep Gene Research menu action:', action);

@@ -6436,91 +6436,315 @@ class ChatManager {
                 }
             }
 
-            // Fallback implementation - mock analysis for demonstration
+            // Real InterPro REST API implementation
             let targetSequence = sequence;
             let proteinInfo = null;
 
             // If no sequence provided, try to get it from UniProt ID or gene name
             if (!targetSequence) {
                 if (uniprot_id) {
-                    console.log('📋 [ChatManager] Retrieving sequence from UniProt ID:', uniprot_id);
-                    // This would normally fetch from UniProt API
-                    proteinInfo = {
-                        id: uniprot_id,
-                        name: `Protein ${uniprot_id}`,
-                        organism: organism,
-                        length: 'Unknown'
-                    };
-                    targetSequence = 'SEQUENCE_PLACEHOLDER'; // Would be actual sequence from UniProt
+                    console.log('📋 [ChatManager] Retrieving sequence from UniProt:', uniprot_id);
+                    try {
+                        const uniprotResponse = await fetch(`https://rest.uniprot.org/uniprotkb/${uniprot_id}.fasta`);
+                        if (uniprotResponse.ok) {
+                            const fastaText = await uniprotResponse.text();
+                            const lines = fastaText.split('\n');
+                            targetSequence = lines.slice(1).join('').replace(/\s/g, '');
+                            proteinInfo = {
+                                id: uniprot_id,
+                                name: lines[0].split('|')[2] || uniprot_id,
+                                organism: organism,
+                                length: targetSequence.length
+                            };
+                            console.log(`✅ Retrieved sequence from UniProt: ${targetSequence.length} AA`);
+                        } else {
+                            throw new Error(`UniProt ID ${uniprot_id} not found`);
+                        }
+                    } catch (error) {
+                        throw new Error(`Failed to retrieve UniProt sequence: ${error.message}`);
+                    }
                 } else if (geneName) {
-                    console.log('📋 [ChatManager] Retrieving sequence from gene name:', geneName);
-                    proteinInfo = {
-                        id: 'UNKNOWN',
-                        name: geneName,
+                    console.log('📋 [ChatManager] Searching UniProt for gene:', geneName);
+                    try {
+                        const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=gene:${geneName}+AND+organism_name:${encodeURIComponent(organism)}&format=fasta&size=1`;
+                        const searchResponse = await fetch(searchUrl);
+                        if (searchResponse.ok) {
+                            const fastaText = await searchResponse.text();
+                            if (fastaText.trim()) {
+                                const lines = fastaText.split('\n');
+                                targetSequence = lines.slice(1).join('').replace(/\s/g, '');
+                                const header = lines[0];
+                                const uniprotId = header.split('|')[1];
+                                proteinInfo = {
+                                    id: uniprotId,
+                                    name: geneName,
+                                    organism: organism,
+                                    length: targetSequence.length
+                                };
+                                console.log(`✅ Found sequence for ${geneName}: ${targetSequence.length} AA`);
+                            } else {
+                                throw new Error(`No sequence found for gene ${geneName}`);
+                            }
+                        } else {
+                            throw new Error(`Gene ${geneName} not found in UniProt`);
+                        }
+                    } catch (error) {
+                        throw new Error(`Failed to search UniProt: ${error.message}`);
+                    }
+                }
+            }
+
+            if (!targetSequence || targetSequence.length < 10) {
+                throw new Error('No valid protein sequence provided. Please provide sequence, UniProt ID, or gene name.');
+            }
+
+            // Clean sequence
+            const cleanSequence = targetSequence.replace(/[^ACDEFGHIKLMNPQRSTVWY]/gi, '').toUpperCase();
+            console.log(`🧬 [ChatManager] Analyzing sequence: ${cleanSequence.length} amino acids`);
+
+            // Call real InterPro API via InterProScan 5
+            console.log('🌐 [ChatManager] Calling InterPro REST API (InterProScan 5)...');
+            
+            try {
+                // Submit job to InterProScan
+                // API Documentation: https://www.ebi.ac.uk/Tools/webservices/services/pfa/iprscan5_rest
+                const submitUrl = 'https://www.ebi.ac.uk/Tools/services/rest/iprscan5/run';
+                const formData = new URLSearchParams();
+                // EBI requires a valid email format - using a standard test email
+                formData.append('email', 'CodeXomics@yeah.net');
+                formData.append('title', 'CodeXomics');
+                formData.append('sequence', cleanSequence);
+                
+                // Map application names to correct API parameter values
+                // InterProScan 5 REST API - Verified codes from EBI API (2025-10-14)
+                // Retrieved from: https://www.ebi.ac.uk/Tools/services/rest/iprscan5/parameterdetails/appl
+                const applMapping = {
+                    'Pfam': 'PfamA',                    // Pfam database
+                    'SMART': 'SMART',                  // SMART database
+                    'PROSITE': 'PrositeProfiles',      // PROSITE Profiles (note case: PrositeProfiles)
+                    'ProSiteProfiles': 'PrositeProfiles', // Alternative name
+                    'ProSitePatterns': 'PrositePatterns', // PROSITE Patterns
+                    'PANTHER': 'Panther',              // PANTHER (capital P, lowercase rest)
+                    'Gene3D': 'Gene3d',                // Gene3D (lowercase 'd')
+                    'HAMAP': 'HAMAP',                  // HAMAP database
+                    'Hamap': 'HAMAP',                  // Alternative case
+                    'PRINTS': 'PRINTS',                // PRINTS database
+                    'PIRSF': 'PIRSF',                  // PIRSF database
+                    'PIRSR': 'PIRSR',                  // PIR Site Rules
+                    'SUPERFAMILY': 'SuperFamily',      // SUPERFAMILY (capital S and F)
+                    'NCBIfam': 'NCBIfam',              // NCBIfam (formerly TIGRFAMs)
+                    'TIGRFAMs': 'NCBIfam',             // TIGRFAMs renamed to NCBIfam
+                    'SFLD': 'SFLD',                    // SFLD database
+                    'CDD': 'CDD',                      // CDD database
+                    'Phobius': 'Phobius',              // Phobius
+                    'SignalP': 'SignalP_EUK',          // SignalP (default to eukaryotic)
+                    'SignalP_EUK': 'SignalP_EUK',      // SignalP eukaryotes
+                    'SignalP_GRAM_POSITIVE': 'SignalP_GRAM_POSITIVE', // SignalP gram-positive
+                    'SignalP_GRAM_NEGATIVE': 'SignalP_GRAM_NEGATIVE', // SignalP gram-negative
+                    'Coils': 'Coils',                  // Coils predictor
+                    'MobiDBLite': 'MobiDBLite',        // MobiDB-Lite
+                    'TMHMM': 'TMHMM',                  // TMHMM
+                    'AntiFam': 'AntiFam',              // AntiFam
+                    'FunFam': 'FunFam'                 // Functional families
+                };
+                
+                // Convert application names using the mapping (case-insensitive)
+                const applCodes = applications.map(app => {
+                    const mappedCode = applMapping[app];
+                    if (mappedCode) return mappedCode;
+                    // Try case-insensitive match
+                    const key = Object.keys(applMapping).find(k => k.toLowerCase() === app.toLowerCase());
+                    return key ? applMapping[key] : app;
+                });
+                formData.append('appl', applCodes.join(','));
+                
+                // Add GO terms and pathway annotations if requested
+                if (goterms) formData.append('goterms', 'true');
+                if (pathways) formData.append('pathways', 'true');
+                
+                console.log('📤 [ChatManager] Submitting to InterPro with params:', {
+                    sequence_length: cleanSequence.length,
+                    applications: applCodes,
+                    goterms,
+                    pathways
+                });
+                
+                const submitResponse = await fetch(submitUrl, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'text/plain'
+                    },
+                    body: formData.toString()
+                });
+                
+                if (!submitResponse.ok) {
+                    const errorText = await submitResponse.text();
+                    console.error('❌ [ChatManager] InterPro API error response:', errorText);
+                    throw new Error(`InterPro API submission failed (${submitResponse.status}): ${errorText || submitResponse.statusText}`);
+                }
+                
+                const jobId = await submitResponse.text();
+                console.log(`✅ [ChatManager] InterPro job submitted: ${jobId}`);
+                
+                // Poll for results (with timeout)
+                let attempts = 0;
+                const maxAttempts = 60; // 5 minutes max (5 second intervals)
+                let status = 'RUNNING';
+                
+                while (status === 'RUNNING' && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                    
+                    const statusUrl = `https://www.ebi.ac.uk/Tools/services/rest/iprscan5/status/${jobId}`;
+                    const statusResponse = await fetch(statusUrl);
+                    status = await statusResponse.text();
+                    
+                    console.log(`⏳ [ChatManager] InterPro job status: ${status} (attempt ${attempts + 1}/${maxAttempts})`);
+                    attempts++;
+                    
+                    if (status === 'FINISHED') break;
+                    if (status === 'FAILED' || status === 'ERROR') {
+                        throw new Error('InterPro analysis failed');
+                    }
+                }
+                
+                if (status !== 'FINISHED') {
+                    throw new Error('InterPro analysis timeout - sequence may be too long or service is busy');
+                }
+                
+                // Get results
+                const resultUrl = `https://www.ebi.ac.uk/Tools/services/rest/iprscan5/result/${jobId}/json`;
+                const resultResponse = await fetch(resultUrl);
+                
+                if (!resultResponse.ok) {
+                    throw new Error('Failed to retrieve InterPro results');
+                }
+                
+                const interproData = await resultResponse.json();
+                console.log('✅ [ChatManager] InterPro results retrieved successfully');
+                
+                // Parse InterPro results
+                const domains = [];
+                const goTerms = [];
+                const pathwayData = [];
+                
+                if (interproData.results && interproData.results[0]) {
+                    const matches = interproData.results[0].matches || [];
+                    
+                    matches.forEach(match => {
+                        const signature = match.signature || {};
+                        const locations = match.locations || [];
+                        
+                        locations.forEach(loc => {
+                            domains.push({
+                                accession: signature.accession,
+                                name: signature.name || signature.description || 'Unknown',
+                                type: signature.type || 'Domain',
+                                start: loc.start,
+                                end: loc.end,
+                                evalue: loc.score || 0,
+                                database: signature.signatureLibraryRelease?.library || 'InterPro',
+                                description: signature.description || '',
+                                interpro_entry: match.entry?.accession || null
+                            });
+                        });
+                        
+                        // Extract GO terms
+                        if (match.entry && match.entry.goXRefs) {
+                            match.entry.goXRefs.forEach(go => {
+                                goTerms.push({
+                                    id: go.id,
+                                    category: go.category,
+                                    name: go.name
+                                });
+                            });
+                        }
+                        
+                        // Extract pathway data
+                        if (match.entry && match.entry.pathwayXRefs) {
+                            match.entry.pathwayXRefs.forEach(pathway => {
+                                pathwayData.push({
+                                    id: pathway.id,
+                                    name: pathway.name,
+                                    database: pathway.databaseName
+                                });
+                            });
+                        }
+                    });
+                }
+                
+                // Calculate coverage
+                const coveredPositions = new Set();
+                domains.forEach(d => {
+                    for (let i = d.start; i <= d.end; i++) {
+                        coveredPositions.add(i);
+                    }
+                });
+                const coverage = (coveredPositions.size / cleanSequence.length * 100).toFixed(2);
+                
+                const result = {
+                    success: true,
+                    tool: 'analyze_interpro_domains',
+                    timestamp: new Date().toISOString(),
+                    job_id: jobId,
+                    protein_info: proteinInfo || {
+                        id: 'USER_PROVIDED',
+                        name: 'User sequence',
                         organism: organism,
-                        length: 'Unknown'
-                    };
-                    targetSequence = 'SEQUENCE_PLACEHOLDER'; // Would be actual sequence
-                }
+                        length: cleanSequence.length
+                    },
+                    sequence_length: cleanSequence.length,
+                    analysis_parameters: {
+                        applications: applications,
+                        include_go_terms: goterms,
+                        include_pathways: pathways,
+                        include_superfamilies: include_superfamilies
+                    },
+                    domain_architecture: domains,
+                    go_terms: goTerms,
+                    pathways: pathwayData,
+                    summary: {
+                        total_domains: domains.length,
+                        domain_coverage: parseFloat(coverage),
+                        databases_searched: applications,
+                        go_terms_found: goTerms.length,
+                        pathways_found: pathwayData.length
+                    },
+                    message: `Found ${domains.length} protein domains using real InterPro API`,
+                    api_source: 'InterProScan 5 REST API (EBI)'
+                };
+                
+                console.log('✅ [ChatManager] Real InterPro analysis completed:', result.summary);
+                return result;
+                
+            } catch (apiError) {
+                console.error('❌ [ChatManager] InterPro API call failed:', apiError);
+                console.error('❌ [ChatManager] Error details:', {
+                    message: apiError.message,
+                    stack: apiError.stack
+                });
+                
+                // Return detailed error without simulation fallback
+                // Following: "Robust Error Handling Without Simulation" specification
+                return {
+                    success: false,
+                    tool: 'analyze_interpro_domains',
+                    error: apiError.message,
+                    error_type: 'API_ERROR',
+                    timestamp: new Date().toISOString(),
+                    user_message: 'InterPro analysis failed. This tool requires a working internet connection and the EBI InterPro service must be available. Please check your connection and try again later.',
+                    developer_info: {
+                        api_endpoint: 'https://www.ebi.ac.uk/Tools/services/rest/iprscan5/',
+                        error_details: apiError.message,
+                        troubleshooting: [
+                            'Verify internet connection',
+                            'Check if EBI services are operational: https://www.ebi.ac.uk/about/news/service-news',
+                            'Ensure sequence is valid protein sequence',
+                            'Try with fewer applications/databases if sequence is very long'
+                        ]
+                    }
+                };
             }
-
-            if (!targetSequence) {
-                throw new Error('No protein sequence provided. Please provide sequence, UniProt ID, or gene name.');
-            }
-
-            // Mock domain analysis results
-            const mockDomains = [
-                {
-                    accession: 'PF00069',
-                    name: 'Protein kinase domain',
-                    type: 'Domain',
-                    start: 15,
-                    end: 270,
-                    evalue: 1.2e-45,
-                    database: 'Pfam',
-                    description: 'Serine/threonine/tyrosine protein kinase catalytic domain'
-                },
-                {
-                    accession: 'SM00220',
-                    name: 'S_TKc',
-                    type: 'Domain', 
-                    start: 20,
-                    end: 265,
-                    evalue: 3.4e-32,
-                    database: 'SMART',
-                    description: 'Serine/Threonine protein kinases, catalytic domain'
-                }
-            ];
-
-            const result = {
-                success: true,
-                tool: 'analyze_interpro_domains',
-                timestamp: new Date().toISOString(),
-                protein_info: proteinInfo || {
-                    id: 'USER_PROVIDED',
-                    name: 'User sequence',
-                    organism: organism,
-                    length: targetSequence.length
-                },
-                sequence_length: targetSequence.length,
-                analysis_parameters: {
-                    applications: applications,
-                    include_go_terms: goterms,
-                    include_pathways: pathways,
-                    include_superfamilies: include_superfamilies
-                },
-                domain_architecture: mockDomains,
-                summary: {
-                    total_domains: mockDomains.length,
-                    domain_coverage: 85.2,
-                    databases_searched: applications
-                },
-                message: `Found ${mockDomains.length} protein domains using InterPro analysis`,
-                note: 'This is a demonstration result. Real implementation would connect to InterPro API.'
-            };
-
-            console.log('✅ [ChatManager] InterPro domain analysis completed:', result.summary);
-            return result;
 
         } catch (error) {
             console.error('❌ [ChatManager] InterPro domain analysis failed:', error);
