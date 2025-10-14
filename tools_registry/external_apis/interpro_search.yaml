@@ -1,52 +1,68 @@
 name: interpro_search
-version: 1.0.0
-description: Search InterPro database for protein domains
+version: 1.1.0-deprecated
+description: "⚠️ DEPRECATED: This tool is deprecated. Use 'analyze_interpro_domains' instead. This tool name exists only for backward compatibility and will be removed in future versions."
 category: external_apis
 keywords:
   - interpro
   - search
   - protein
   - domains
-priority: 2
+  - deprecated
+priority: 5
 execution:
   type: server
   timeout: 120000
   retries: 2
-  requires_auth: true
+  requires_auth: false
   requires_data: false
   requires_network: true
+deprecated: true
+replacement_tool: "analyze_interpro_domains"
+deprecation_notice: "This tool has been replaced by 'analyze_interpro_domains' which provides enhanced functionality with multiple input methods (sequence, UniProt ID, or gene name). Please update your code to use 'analyze_interpro_domains' instead."
 parameters:
   type: object
   properties:
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
     sequence:
       type: string
-      description: Query sequence
-    blastType:
+      description: "Protein sequence for InterPro analysis"
+      pattern: "^[ACDEFGHIKLMNPQRSTVWY*X-]+$"
+    search_term:
       type: string
-      description: Type of BLAST search
+      description: "Search term for InterPro database"
+    analysis_type:
+      type: string
+      description: "Type of InterPro analysis"
       enum:
-        - blastn
-        - blastp
-        - blastx
-        - tblastn
-        - tblastx
-    database:
+        - domains
+        - families
+        - sites
+        - complete
+      default: complete
+    applications:
+      type: array
+      description: "InterPro member databases to use"
+      items:
+        type: string
+        enum: ["Pfam", "SMART", "PROSITE", "PANTHER", "Gene3D"]
+      default: ["Pfam", "SMART"]
+    clientId:
       type: string
-      description: Target database
-      default: nr
-  required:
-    - sequence
-    - blastType
-    - database
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: []
+  anyOf:
+    - required: ["sequence"]
+    - required: ["search_term"]
 sample_usages:
-  - user_query: Use interpro_search to analyze genomic data
-    tool_call: interpro_search(parameter1='value1', parameter2='value2')
-    thought: User wants to use interpro_search for search interpro database for protein domains
-    expected_result: Result from interpro_search analysis
+  - user_query: "Analyze protein domains using InterPro"
+    tool_call: "analyze_interpro_domains(sequence='MVSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGK', analysis_type='domains')"
+    thought: "⚠️ DEPRECATED: Use analyze_interpro_domains instead of interpro_search"
+    expected_result: "Domain analysis results from InterPro - Please migrate to analyze_interpro_domains"
+  
+  - user_query: "Search InterPro database for kinase domains"
+    tool_call: "search_interpro_entry(search_term='kinase', entry_type='domain', database_source=['Pfam', 'SMART'])"
+    thought: "⚠️ DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis"
+    expected_result: "InterPro search results - Please use the appropriate replacement tool"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -68,6 +84,10 @@ error_handling:
   api_error: Returns error if external API is unavailable
   network_timeout: Returns error if request times out
 returns:
-  success: boolean - Whether API call was successful
-  results: array - List of API results
-  execution_time: number - API call execution time
+  success: "boolean - Whether API call was successful"
+  results: "array - List of InterPro analysis results"
+  domains: "array - Identified protein domains"
+  families: "array - Protein families found"
+  statistics: "object - Analysis statistics and coverage"
+  execution_time: "number - API call execution time"
+  api_source: "string - External API endpoint used"

@@ -111,6 +111,50 @@ class BuiltInToolsIntegration {
             priority: 1
         });
 
+        // Database tools - UniProt
+        this.builtInToolsMap.set('search_uniprot_database', {
+            method: 'searchUniProtDatabase',
+            category: 'database',
+            type: 'built-in',
+            priority: 1
+        });
+
+        this.builtInToolsMap.set('advanced_uniprot_search', {
+            method: 'advancedUniProtSearch',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('get_uniprot_entry', {
+            method: 'getUniProtEntry',
+            category: 'database',
+            type: 'built-in',
+            priority: 1
+        });
+
+        // Database tools - InterPro
+        this.builtInToolsMap.set('analyze_interpro_domains', {
+            method: 'analyzeInterProDomains',
+            category: 'database',
+            type: 'built-in',
+            priority: 1
+        });
+
+        this.builtInToolsMap.set('search_interpro_entry', {
+            method: 'searchInterProEntry',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('get_interpro_entry_details', {
+            method: 'getInterProEntryDetails',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
         console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
     }
 
@@ -367,6 +411,96 @@ class BuiltInToolsIntegration {
             }
         }
 
+        // Check for database search patterns - UniProt
+        if (/\b(uniprot|protein\s+database|search\s+protein|protein\s+search)\b/i.test(query)) {
+            if (/\b(advanced|multiple|complex)\b/i.test(query)) {
+                relevantTools.push({
+                    name: 'advanced_uniprot_search',
+                    confidence: 0.9,
+                    reason: 'Advanced UniProt search keywords detected'
+                });
+            } else if (/\b(get|retrieve|fetch|entry|id)\b/i.test(query)) {
+                relevantTools.push({
+                    name: 'get_uniprot_entry',
+                    confidence: 0.9,
+                    reason: 'UniProt entry retrieval keywords detected'
+                });
+            } else {
+                relevantTools.push({
+                    name: 'search_uniprot_database',
+                    confidence: 0.85,
+                    reason: 'UniProt database search keywords detected'
+                });
+            }
+        }
+
+        // Check for database search patterns - InterPro
+        if (/\b(interpro|domain|family|families|functional\s+site)\b/i.test(query)) {
+            if (/\b(analyze|analysis|predict|domain\s+analysis)\b/i.test(query) || 
+                /\b(protein\s+domain|domain\s+architecture)\b/i.test(query)) {
+                relevantTools.push({
+                    name: 'analyze_interpro_domains',
+                    confidence: 0.95,
+                    reason: 'InterPro domain analysis keywords detected'
+                });
+            } else if (/\b(get|retrieve|fetch|entry|details)\b/i.test(query)) {
+                relevantTools.push({
+                    name: 'get_interpro_entry_details',
+                    confidence: 0.9,
+                    reason: 'InterPro entry details keywords detected'
+                });
+            } else if (/\b(search|find|lookup)\b/i.test(query)) {
+                relevantTools.push({
+                    name: 'search_interpro_entry',
+                    confidence: 0.85,
+                    reason: 'InterPro search keywords detected'
+                });
+            } else {
+                // Generic domain mention - suggest search
+                relevantTools.push({
+                    name: 'search_interpro_entry',
+                    confidence: 0.75,
+                    reason: 'Domain-related keywords detected, suggesting InterPro search'
+                });
+            }
+        }
+
+        // Check for protein/domain analysis patterns (generic)
+        if (/\b(protein|domain|pfam|smart|prosite)\b/i.test(query) && 
+            /\b(analyze|analysis|identify|predict|find)\b/i.test(query)) {
+            // Add InterPro domain analysis if not already added
+            if (!relevantTools.some(t => t.name === 'analyze_interpro_domains')) {
+                relevantTools.push({
+                    name: 'analyze_interpro_domains',
+                    confidence: 0.8,
+                    reason: 'Generic protein domain analysis keywords detected'
+                });
+            }
+        }
+
+        // Check for specific domain names or "has/have domains" patterns
+        if (/\b(kinase|phosphatase|transferase|helicase|protease)\b/i.test(query) && 
+            /\b(domain|domains)\b/i.test(query)) {
+            if (!relevantTools.some(t => t.name === 'search_interpro_entry')) {
+                relevantTools.push({
+                    name: 'search_interpro_entry',
+                    confidence: 0.85,
+                    reason: 'Specific domain type search detected'
+                });
+            }
+        }
+
+        // Check for "what domains" or "which domains" patterns
+        if (/\b(what|which|show|list)\b/i.test(query) && /\b(domain|domains)\b/i.test(query)) {
+            if (!relevantTools.some(t => t.name === 'analyze_interpro_domains')) {
+                relevantTools.push({
+                    name: 'analyze_interpro_domains',
+                    confidence: 0.85,
+                    reason: 'Domain query pattern detected'
+                });
+            }
+        }
+
         return relevantTools;
     }
 
@@ -400,6 +534,8 @@ class BuiltInToolsIntegration {
         const fileLoadingTools = this.getBuiltInToolsByCategory('file_loading');
         const navigationTools = this.getBuiltInToolsByCategory('navigation');
         const sequenceTools = this.getBuiltInToolsByCategory('sequence');
+        const databaseTools = this.getBuiltInToolsByCategory('database');
+        const systemTools = this.getBuiltInToolsByCategory('system');
         
         return `# Genome AI Studio - Built-in Tools System (Non-Dynamic Mode)
 
@@ -436,12 +572,37 @@ ${navigationTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} too
 
 ${sequenceTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
 
+## 🗄️ Built-in Database Integration Tools
+
+${databaseTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+
+**Database Tools Instructions:**
+- **UniProt Tools**: Search and retrieve protein information from UniProt database
+  - search_uniprot_database: Basic protein/gene searches
+  - advanced_uniprot_search: Complex multi-field searches
+  - get_uniprot_entry: Get detailed entry by UniProt ID
+
+- **InterPro Tools**: Analyze protein domains and functional sites
+  - analyze_interpro_domains: Analyze domains by **sequence**, UniProt ID, or gene name
+  - search_interpro_entry: Search InterPro database for domain families
+  - get_interpro_entry_details: Get detailed InterPro entry information
+
+**Important**: analyze_interpro_domains supports three input methods:
+  1. Direct sequence: Provide protein amino acid sequence
+  2. Gene name: Provide gene name + organism (auto-resolves sequence)
+  3. UniProt ID: Provide UniProt accession ID (auto-resolves sequence)
+
+## ⚙️ Built-in System Tools
+
+${systemTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} tool`).join('\n')}
+
 ## 🎯 Tool Usage Guidelines
 
 1. **File Loading Priority**: Always use built-in file loading tools for importing data
-2. **Direct Execution**: Built-in tools execute directly without external dependencies
-3. **Performance**: Built-in tools are optimized for speed and reliability
-4. **Error Handling**: Built-in tools provide comprehensive error messages
+2. **Database Access**: Use built-in database tools for protein/domain analysis
+3. **Direct Execution**: Built-in tools execute directly without external dependencies
+4. **Performance**: Built-in tools are optimized for speed and reliability
+5. **Error Handling**: Built-in tools provide comprehensive error messages
 
 ## ⚡ Response Format
 
@@ -456,8 +617,9 @@ ${'```'}
 - **Reliability**: No external dependencies
 - **Integration**: Deep integration with genome browser
 - **Optimization**: Specifically optimized for genomic data
+- **Flexibility**: Multiple input methods for database tools
 
-Remember: Built-in tools are your primary toolkit for file operations and core functionality. Use them for the best performance and reliability.`;
+Remember: Built-in tools are your primary toolkit for file operations, database access, and core functionality. Use them for the best performance and reliability.`;
     }
 }
 

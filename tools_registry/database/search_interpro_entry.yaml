@@ -1,31 +1,39 @@
 name: search_interpro_entry
-version: 1.1.0
-description: "Search InterPro database for domain families, functional sites, and protein signatures using keywords, names, or descriptions."
+version: 1.2.0
+description: "Search InterPro database for domain families, functional sites, and protein signatures using keywords, names, or descriptions. Enhanced with advanced filtering and batch processing capabilities."
 category: database
-keywords: ["search", "interpro", "entry", "database", "domains", "families", "signatures"]
+keywords: ["search", "interpro", "entry", "database", "domains", "families", "signatures", "annotation"]
 priority: 2
 execution:
   type: server
-  timeout: 30000
-  retries: 2
+  timeout: 60000
+  retries: 3
   requires_auth: false
   requires_data: false
   requires_network: true
+  cache_duration: 1800
+  rate_limit: 20
 parameters:
   type: object
   properties:
+    search_terms:
+      type: array
+      description: "List of search terms for batch processing"
+      items:
+        type: string
+      examples: [["kinase", "phosphatase"], ["DNA binding", "helix-turn-helix"]]
     search_term:
       type: string
-      description: "Search term for InterPro entries (domain name, keyword, or description)"
-      examples: ["kinase", "immunoglobulin", "DNA binding", "kringle", "zinc finger"]
+      description: "Single search term for InterPro entries (domain name, keyword, or description)"
+      examples: ["kinase", "immunoglobulin", "DNA binding", "kringle", "zinc finger", "helix-turn-helix"]
     search_type:
       type: string
-      enum: ["name", "description", "keyword", "signature", "all"]
+      enum: ["name", "description", "keyword", "signature", "go_term", "literature", "all"]
       description: "Type of search to perform"
       default: "all"
     entry_type:
       type: string
-      enum: ["domain", "family", "repeat", "site", "homologous_superfamily", "all"]
+      enum: ["domain", "family", "repeat", "site", "homologous_superfamily", "conserved_site", "binding_site", "active_site", "all"]
       description: "Filter by InterPro entry type"
       default: "all"
     database_source:
@@ -33,47 +41,79 @@ parameters:
       description: "Filter by member databases"
       items:
         type: string
-        enum: ["Pfam", "SMART", "PROSITE", "PRINTS", "PANTHER", "Gene3D", "SUPERFAMILY"]
+        enum: ["Pfam", "SMART", "PROSITE", "PRINTS", "PANTHER", "Gene3D", "SUPERFAMILY", "PIRSF", "HAMAP", "CDD", "NCBIfam", "SFLD"]
       default: []
     max_results:
       type: number
-      description: "Maximum number of entries to return"
+      description: "Maximum number of entries to return per search term"
       minimum: 1
-      maximum: 500
+      maximum: 1000
       default: 50
+    min_protein_count:
+      type: number
+      description: "Minimum number of proteins containing the entry"
+      minimum: 0
+      default: 0
     sort_by:
       type: string
-      enum: ["relevance", "name", "type", "protein_count"]
+      enum: ["relevance", "name", "type", "protein_count", "creation_date", "update_date"]
       description: "Sort order for results"
       default: "relevance"
     include_statistics:
       type: boolean
       description: "Include statistics (protein count, organism distribution)"
       default: true
+    include_cross_references:
+      type: boolean
+      description: "Include cross-references to other databases"
+      default: false
     organism_filter:
       type: string
       description: "Filter entries by organism (optional)"
-      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus"]
+      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus", "Saccharomyces cerevisiae"]
+    taxonomy_filter:
+      type: array
+      description: "Filter by taxonomy IDs"
+      items:
+        type: number
+      examples: [[9606], [511145, 83333]]
+    confidence_level:
+      type: string
+      enum: ["low", "medium", "high", "all"]
+      description: "Confidence level filter for entries"
+      default: "all"
+    fuzzy_matching:
+      type: boolean
+      description: "Enable fuzzy string matching for search terms"
+      default: false
     clientId:
       type: string
       description: "Browser client ID for multi-window support"
       default: "default"
-  required: ["search_term"]
+  required: []
+  oneOf:
+    - required: ["search_term"]
+    - required: ["search_terms"]
 sample_usages:
   - user_query: "Search for kinase domains in InterPro"
-    tool_call: "search_interpro_entry(search_term='kinase', entry_type='domain', database_source=['Pfam', 'SMART'])"
-    thought: "User wants to find kinase domains from specific member databases"
-    expected_result: "List of kinase-related domain entries from Pfam and SMART databases"
+    tool_call: "search_interpro_entry(search_term='kinase', entry_type='domain', database_source=['Pfam', 'SMART'], min_protein_count=100)"
+    thought: "User wants to find kinase domains from specific member databases with significant protein coverage"
+    expected_result: "List of kinase-related domain entries from Pfam and SMART databases with at least 100 proteins"
   
   - user_query: "Find DNA binding families"
-    tool_call: "search_interpro_entry(search_term='DNA binding', search_type='description', entry_type='family', max_results=20)"
-    thought: "User wants protein families involved in DNA binding"
-    expected_result: "DNA-binding protein families with descriptions and statistics"
+    tool_call: "search_interpro_entry(search_term='DNA binding', search_type='description', entry_type='family', max_results=20, include_cross_references=true)"
+    thought: "User wants protein families involved in DNA binding with cross-reference information"
+    expected_result: "DNA-binding protein families with descriptions, statistics, and database cross-references"
   
   - user_query: "Search for immunoglobulin signatures"
-    tool_call: "search_interpro_entry(search_term='immunoglobulin', search_type='name', include_statistics=true, sort_by='protein_count')"
-    thought: "User wants immunoglobulin-related entries sorted by abundance"
-    expected_result: "Immunoglobulin signatures sorted by number of matching proteins"
+    tool_call: "search_interpro_entry(search_term='immunoglobulin', search_type='name', include_statistics=true, sort_by='protein_count', confidence_level='high')"
+    thought: "User wants high-confidence immunoglobulin-related entries sorted by abundance"
+    expected_result: "Immunoglobulin signatures sorted by number of matching proteins with high confidence"
+  
+  - user_query: "Batch search for multiple enzyme families"
+    tool_call: "search_interpro_entry(search_terms=['kinase', 'phosphatase', 'transferase'], entry_type='family', organism_filter='Homo sapiens', max_results=25)"
+    thought: "User wants to search multiple enzyme families simultaneously in human proteins"
+    expected_result: "Combined results for kinase, phosphatase, and transferase families in human proteins"
 relationships:
   depends_on: []
   conflicts_with: []
@@ -96,10 +136,15 @@ error_handling:
   query_error: Returns error if query is invalid
 returns:
   success: "boolean - Whether search was successful"
-  results_count: "number - Number of InterPro entries found"
-  entries: "array - List of matching InterPro entries with IDs, names, and types"
-  entry_details: "array - For each entry: ID, name, type, description, member databases"
+  search_metadata: "object - Search parameters, timing, and batch processing info"
+  results_count: "number - Total number of InterPro entries found across all searches"
+  batch_results: "array - Results organized by search term (for batch searches)"
+  entries: "array - List of matching InterPro entries with IDs, names, types, and relevance scores"
+  entry_details: "array - For each entry: ID, name, type, description, member databases, confidence metrics"
   statistics: "object - Search statistics and entry distribution (if requested)"
-  search_parameters: "object - Parameters used in the search"
-  database_distribution: "object - Count of entries by member database"
-  type_distribution: "object - Count of entries by InterPro type"
+  cross_references: "object - Cross-references to other databases (if requested)"
+  search_parameters: "object - Parameters used in the search for reproducibility"
+  database_distribution: "object - Count of entries by member database with coverage statistics"
+  type_distribution: "object - Count of entries by InterPro type with functional categories"
+  organism_distribution: "object - Distribution across organisms (if organism filtering applied)"
+  quality_metrics: "object - Search quality, relevance scoring, and confidence indicators"

@@ -72,43 +72,108 @@ class DatabaseTools {
 
             analyze_interpro_domains: {
                 name: 'analyze_interpro_domains',
-                description: 'Analyze protein domains and features using InterPro database',
+                description: 'Analyze protein domains, families, and functional sites using InterPro database. Enhanced with multiple input methods and comprehensive analysis options.',
                 parameters: {
                     type: 'object',
                     properties: {
-                        sequence: { type: 'string', description: 'Protein sequence in single-letter amino acid code' },
+                        sequence: { type: 'string', description: 'Protein amino acid sequence to analyze (single-letter code)' },
+                        uniprot_id: { type: 'string', description: 'UniProt accession ID as alternative input' },
+                        geneName: { type: 'string', description: 'Gene name as alternative input' },
+                        organism: { type: 'string', description: 'Organism name for gene name resolution', default: 'Homo sapiens' },
                         applications: { 
                             type: 'array', 
                             items: { type: 'string' },
-                            description: 'InterPro member databases to search (e.g., Pfam, SMART, PROSITE)',
-                            default: ['Pfam', 'SMART', 'PROSITE', 'PANTHER', 'PRINTS']
+                            description: 'InterPro member databases to search',
+                            default: ['Pfam', 'SMART', 'PROSITE', 'PANTHER', 'Gene3D']
+                        },
+                        analysis_type: {
+                            type: 'string',
+                            enum: ['domains', 'families', 'sites', 'repeats', 'complete'],
+                            description: 'Type of InterPro analysis to perform',
+                            default: 'complete'
+                        },
+                        include_superfamilies: { type: 'boolean', description: 'Include protein superfamily classifications', default: true },
+                        confidence_threshold: { type: 'number', description: 'Minimum confidence score (0.0-1.0)', default: 0.5 },
+                        output_format: {
+                            type: 'string',
+                            enum: ['summary', 'detailed', 'graphical', 'json'],
+                            description: 'Format for analysis output',
+                            default: 'detailed'
                         },
                         goterms: { type: 'boolean', description: 'Include Gene Ontology terms', default: true },
                         pathways: { type: 'boolean', description: 'Include pathway information', default: true },
-                        includeMatchSequence: { type: 'boolean', description: 'Include matched sequence regions', default: true }
+                        include_match_sequence: { type: 'boolean', description: 'Include matched sequence regions', default: true },
+                        email_notification: { type: 'string', description: 'Email for job completion notification' },
+                        priority: {
+                            type: 'string',
+                            enum: ['low', 'normal', 'high'],
+                            description: 'Job priority level',
+                            default: 'normal'
+                        }
                     },
-                    required: ['sequence']
+                    required: []
                 }
             },
 
             search_interpro_entry: {
                 name: 'search_interpro_entry',
-                description: 'Search InterPro database for specific entries by ID or text',
+                description: 'Search InterPro database for domain families, functional sites, and protein signatures. Enhanced with batch processing and advanced filtering.',
                 parameters: {
                     type: 'object',
                     properties: {
-                        query: { type: 'string', description: 'InterPro ID (e.g., IPR000001) or search text' },
-                        searchType: { 
-                            type: 'string', 
-                            description: 'Type of search: entry_id, name, or text',
-                            enum: ['entry_id', 'name', 'text'],
-                            default: 'text'
+                        search_term: { type: 'string', description: 'Single search term for InterPro entries' },
+                        search_terms: { 
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Multiple search terms for batch processing'
                         },
-                        includeProteins: { type: 'boolean', description: 'Include associated proteins', default: false },
-                        includeStructures: { type: 'boolean', description: 'Include structure information', default: false },
-                        limit: { type: 'number', description: 'Maximum number of results', default: 50 }
+                        search_type: { 
+                            type: 'string', 
+                            description: 'Type of search: name, description, keyword, signature, go_term, literature, or all',
+                            enum: ['name', 'description', 'keyword', 'signature', 'go_term', 'literature', 'all'],
+                            default: 'all'
+                        },
+                        entry_type: {
+                            type: 'string',
+                            enum: ['domain', 'family', 'repeat', 'site', 'homologous_superfamily', 'conserved_site', 'binding_site', 'active_site', 'all'],
+                            description: 'Filter by InterPro entry type',
+                            default: 'all'
+                        },
+                        database_source: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Filter by member databases',
+                            default: []
+                        },
+                        max_results: { type: 'number', description: 'Maximum results per search term', default: 50 },
+                        min_protein_count: { type: 'number', description: 'Minimum proteins containing entry', default: 0 },
+                        sort_by: {
+                            type: 'string',
+                            enum: ['relevance', 'name', 'type', 'protein_count', 'creation_date', 'update_date'],
+                            description: 'Sort order for results',
+                            default: 'relevance'
+                        },
+                        include_statistics: { type: 'boolean', description: 'Include search statistics', default: true },
+                        include_cross_references: { type: 'boolean', description: 'Include cross-references', default: false },
+                        organism_filter: { type: 'string', description: 'Filter by organism' },
+                        taxonomy_filter: {
+                            type: 'array',
+                            items: { type: 'number' },
+                            description: 'Filter by taxonomy IDs',
+                            default: []
+                        },
+                        confidence_level: {
+                            type: 'string',
+                            enum: ['low', 'medium', 'high', 'all'],
+                            description: 'Confidence level filter',
+                            default: 'all'
+                        },
+                        fuzzy_matching: { type: 'boolean', description: 'Enable fuzzy string matching', default: false }
                     },
-                    required: ['query']
+                    oneOf: [
+                        { required: ['search_term'] },
+                        { required: ['search_terms'] }
+                    ]
                 }
             },
 

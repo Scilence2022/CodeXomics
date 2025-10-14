@@ -6534,6 +6534,308 @@ class ChatManager {
     }
 
     /**
+     * Search InterPro database for entries
+     */
+    async searchInterProEntry(parameters) {
+        const { 
+            search_term,
+            search_terms,
+            search_type = 'all',
+            entry_type = 'all',
+            database_source = [],
+            max_results = 50,
+            include_statistics = true
+        } = parameters;
+
+        console.log('🔍 [ChatManager] Searching InterPro entries:', {
+            search_term,
+            search_terms,
+            search_type,
+            entry_type
+        });
+
+        try {
+            // Try MCP server first
+            if (this.mcpServerManager) {
+                const mcpTools = this.mcpServerManager.getAllAvailableTools();
+                const mcpTool = mcpTools.find(t => t.name === 'search_interpro_entry');
+                
+                if (mcpTool) {
+                    try {
+                        return await this.mcpServerManager.executeToolOnServer(
+                            mcpTool.serverId, 'search_interpro_entry', parameters
+                        );
+                    } catch (mcpError) {
+                        console.warn('🔄 [ChatManager] MCP execution failed, using fallback:', mcpError.message);
+                    }
+                }
+            }
+
+            // Fallback implementation
+            const terms = search_terms || [search_term];
+            const mockEntries = terms.flatMap(term => [
+                {
+                    accession: 'IPR000719',
+                    name: `${term} domain`,
+                    type: 'Domain',
+                    description: `Protein kinase domain related to ${term}`,
+                    member_databases: ['Pfam', 'SMART'],
+                    protein_count: 15000
+                }
+            ]);
+
+            return {
+                success: true,
+                tool: 'search_interpro_entry',
+                timestamp: new Date().toISOString(),
+                results_count: mockEntries.length,
+                entries: mockEntries,
+                search_parameters: { search_term, search_type, entry_type },
+                message: `Found ${mockEntries.length} InterPro entries`,
+                note: 'This is a demonstration result. Real implementation would connect to InterPro API.'
+            };
+
+        } catch (error) {
+            console.error('❌ [ChatManager] InterPro entry search failed:', error);
+            return {
+                success: false,
+                tool: 'search_interpro_entry',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Get detailed information for an InterPro entry
+     */
+    async getInterProEntryDetails(parameters) {
+        const { 
+            interpro_id,
+            entry_name,
+            include_proteins = true,
+            include_structures = true,
+            output_format = 'detailed'
+        } = parameters;
+
+        console.log('📖 [ChatManager] Getting InterPro entry details:', {
+            interpro_id,
+            entry_name
+        });
+
+        try {
+            // Try MCP server first
+            if (this.mcpServerManager) {
+                const mcpTools = this.mcpServerManager.getAllAvailableTools();
+                const mcpTool = mcpTools.find(t => t.name === 'get_interpro_entry_details');
+                
+                if (mcpTool) {
+                    try {
+                        return await this.mcpServerManager.executeToolOnServer(
+                            mcpTool.serverId, 'get_interpro_entry_details', parameters
+                        );
+                    } catch (mcpError) {
+                        console.warn('🔄 [ChatManager] MCP execution failed, using fallback:', mcpError.message);
+                    }
+                }
+            }
+
+            // Fallback implementation
+            const entryId = interpro_id || 'IPR000719';
+            const entryNameStr = entry_name || 'Protein kinase domain';
+
+            return {
+                success: true,
+                tool: 'get_interpro_entry_details',
+                timestamp: new Date().toISOString(),
+                entry_info: {
+                    accession: entryId,
+                    name: entryNameStr,
+                    type: 'Domain',
+                    description: 'Serine/threonine/tyrosine protein kinase catalytic domain'
+                },
+                member_databases: ['Pfam', 'SMART', 'PROSITE'],
+                protein_matches: include_proteins ? [
+                    { uniprot_id: 'P12345', name: 'Example protein 1', organism: 'Homo sapiens' },
+                    { uniprot_id: 'P67890', name: 'Example protein 2', organism: 'Mus musculus' }
+                ] : [],
+                statistics: {
+                    protein_count: 15000,
+                    organism_count: 500
+                },
+                message: `Retrieved details for ${entryNameStr}`,
+                note: 'This is a demonstration result. Real implementation would connect to InterPro API.'
+            };
+
+        } catch (error) {
+            console.error('❌ [ChatManager] InterPro entry details retrieval failed:', error);
+            return {
+                success: false,
+                tool: 'get_interpro_entry_details',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Advanced UniProt search with multiple filters
+     */
+    async advancedUniProtSearch(parameters) {
+        const { 
+            query_fields,
+            boolean_operator = 'AND',
+            filters = {},
+            max_results = 100,
+            sort_by = 'relevance'
+        } = parameters;
+
+        console.log('🔍 [ChatManager] Advanced UniProt search:', {
+            query_fields,
+            boolean_operator,
+            filters
+        });
+
+        try {
+            // Try MCP server first
+            if (this.mcpServerManager) {
+                const mcpTools = this.mcpServerManager.getAllAvailableTools();
+                const mcpTool = mcpTools.find(t => t.name === 'advanced_uniprot_search');
+                
+                if (mcpTool) {
+                    try {
+                        return await this.mcpServerManager.executeToolOnServer(
+                            mcpTool.serverId, 'advanced_uniprot_search', parameters
+                        );
+                    } catch (mcpError) {
+                        console.warn('🔄 [ChatManager] MCP execution failed, using fallback:', mcpError.message);
+                    }
+                }
+            }
+
+            // Fallback implementation
+            const mockEntries = [
+                {
+                    uniprot_id: 'P04637',
+                    protein_name: query_fields.protein_name || 'Example protein',
+                    organism: query_fields.organism || 'Homo sapiens',
+                    length: 393,
+                    reviewed: true
+                }
+            ];
+
+            return {
+                success: true,
+                tool: 'advanced_uniprot_search',
+                timestamp: new Date().toISOString(),
+                results_count: mockEntries.length,
+                entries: mockEntries,
+                reviewed_count: 1,
+                unreviewed_count: 0,
+                search_summary: { query_fields, boolean_operator, filters },
+                message: `Found ${mockEntries.length} UniProt entries`,
+                note: 'This is a demonstration result. Real implementation would connect to UniProt API.'
+            };
+
+        } catch (error) {
+            console.error('❌ [ChatManager] Advanced UniProt search failed:', error);
+            return {
+                success: false,
+                tool: 'advanced_uniprot_search',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Get detailed UniProt entry information
+     */
+    async getUniProtEntry(parameters) {
+        const { 
+            uniprot_id,
+            geneName,
+            organism = 'Homo sapiens',
+            include_sequence = true,
+            include_features = true,
+            include_function = true,
+            format = 'detailed'
+        } = parameters;
+
+        console.log('📖 [ChatManager] Getting UniProt entry:', {
+            uniprot_id,
+            geneName,
+            organism
+        });
+
+        try {
+            // Try MCP server first
+            if (this.mcpServerManager) {
+                const mcpTools = this.mcpServerManager.getAllAvailableTools();
+                const mcpTool = mcpTools.find(t => t.name === 'get_uniprot_entry');
+                
+                if (mcpTool) {
+                    try {
+                        return await this.mcpServerManager.executeToolOnServer(
+                            mcpTool.serverId, 'get_uniprot_entry', parameters
+                        );
+                    } catch (mcpError) {
+                        console.warn('🔄 [ChatManager] MCP execution failed, using fallback:', mcpError.message);
+                    }
+                }
+            }
+
+            // Fallback implementation
+            const entryId = uniprot_id || 'P04637';
+            const gene = geneName || 'TP53';
+
+            const result = {
+                success: true,
+                tool: 'get_uniprot_entry',
+                timestamp: new Date().toISOString(),
+                entry_info: {
+                    uniprot_id: entryId,
+                    protein_name: `${gene} protein`,
+                    organism: organism,
+                    status: 'reviewed'
+                },
+                sequence_length: 393,
+                message: `Retrieved UniProt entry for ${gene}`,
+                note: 'This is a demonstration result. Real implementation would connect to UniProt API.'
+            };
+
+            if (include_sequence) {
+                result.protein_sequence = 'MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGP...';
+            }
+
+            if (include_features) {
+                result.features = [
+                    { type: 'Domain', description: 'DNA-binding', start: 102, end: 292 },
+                    { type: 'Region', description: 'Transactivation', start: 1, end: 61 }
+                ];
+            }
+
+            if (include_function) {
+                result.function = {
+                    description: 'Tumor suppressor protein',
+                    go_terms: ['GO:0006355', 'GO:0045786']
+                };
+            }
+
+            return result;
+
+        } catch (error) {
+            console.error('❌ [ChatManager] UniProt entry retrieval failed:', error);
+            return {
+                success: false,
+                tool: 'get_uniprot_entry',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
      * Generate a completion response based on tool execution results
      */
     generateCompletionResponseFromToolResults(successfulResults, toolsToExecute) {
@@ -9166,6 +9468,31 @@ ${this.getPluginSystemInfo()}`;
                 case 'search_uniprot_database':
                     console.log('🔍 [ChatManager] Executing search_uniprot_database via executeToolByName');
                     result = await this.searchUniProtDatabase(parameters);
+                    break;
+                    
+                case 'advanced_uniprot_search':
+                    console.log('🔍 [ChatManager] Executing advanced_uniprot_search via executeToolByName');
+                    result = await this.advancedUniProtSearch(parameters);
+                    break;
+                    
+                case 'get_uniprot_entry':
+                    console.log('🔍 [ChatManager] Executing get_uniprot_entry via executeToolByName');
+                    result = await this.getUniProtEntry(parameters);
+                    break;
+                    
+                case 'analyze_interpro_domains':
+                    console.log('🔬 [ChatManager] Executing analyze_interpro_domains via executeToolByName');
+                    result = await this.analyzeInterProDomains(parameters);
+                    break;
+                    
+                case 'search_interpro_entry':
+                    console.log('🔬 [ChatManager] Executing search_interpro_entry via executeToolByName');
+                    result = await this.searchInterProEntry(parameters);
+                    break;
+                    
+                case 'get_interpro_entry_details':
+                    console.log('🔬 [ChatManager] Executing get_interpro_entry_details via executeToolByName');
+                    result = await this.getInterProEntryDetails(parameters);
                     break;
                     
                 case 'get_pdb_details':
