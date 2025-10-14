@@ -91,41 +91,7 @@
             color: var(--text-primary);
         }
 
-        .mcp-connect-btn {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border: none;
-            color: white;
-            padding: 12px 20px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-size: 0.95rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
-        }
 
-        .mcp-connect-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(74, 144, 226, 0.4);
-        }
-
-        .mcp-connect-btn.connected {
-            background: linear-gradient(135deg, #4caf50, #8bc34a);
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
-        }
-
-        .mcp-connect-btn.connecting {
-            background: linear-gradient(135deg, #ff9800, #ffc107);
-            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
-        }
-
-        .mcp-connect-btn.disconnected {
-            background: linear-gradient(135deg, #f44336, #e57373);
-            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
-        }
 
         .main-container {
             display: flex;
@@ -270,16 +236,10 @@
             gap: 12px;
         }
 
-        .source-info.real {
+        .source-info {
             background: linear-gradient(135deg, #d1ecf1, #bee5eb);
             border: 1px solid #17a2b8;
             color: #0c5460;
-        }
-
-        .source-info.simulated {
-            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
-            border: 1px solid #ffc107;
-            color: #856404;
         }
 
         .source-info i {
@@ -787,19 +747,7 @@
                     <p>Protein Domain and Family Classification</p>
                 </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <button id="mcpConnectBtn" class="mcp-connect-btn">
-                    <i class="fas fa-plug"></i>
-                    <span>Connect MCP</span>
-                </button>
-                <div id="connectionStatus" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px;">
-                    <div id="statusIndicator" style="width: 12px; height: 12px; border-radius: 50%; background: #ffa500;"></div>
-                    <div style="color: white; font-size: 0.9rem;">
-                        <div id="statusText">Connecting to MCP Server...</div>
-                        <div id="statusDetails" style="font-size: 0.8rem; opacity: 0.8;">InterPro API Integration</div>
-                    </div>
-                </div>
-            </div>
+
         </div>
     </div>
 
@@ -903,12 +851,9 @@
         class InterProAnalyzer {
             constructor() {
                 this.currentResults = [];
-                this.mcpClient = null;
-                this.isConnected = false;
                 this.domainDatabase = this.initializeDomainDatabase();
                 this.init();
                 this.initMenuHandler();
-                this.initializeMCPConnection();
             }
 
             initializeDomainDatabase() {
@@ -972,7 +917,6 @@
                 document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
                 document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
                 document.getElementById('pasteBtn').addEventListener('click', () => this.pasteFromClipboard());
-                document.getElementById('mcpConnectBtn').addEventListener('click', () => this.toggleMCPConnection());
             }
 
             initMenuHandler() {
@@ -980,113 +924,7 @@
                 this.menuHandler = new ToolMenuHandler('InterPro Domain Analysis', this);
             }
 
-            toggleMCPConnection() {
-                const btn = document.getElementById('mcpConnectBtn');
-                const icon = btn.querySelector('i');
-                const text = btn.querySelector('span');
 
-                if (this.isConnected) {
-                    // Disconnect
-                    this.disconnectMCP();
-                    btn.className = 'mcp-connect-btn disconnected';
-                    icon.className = 'fas fa-plug';
-                    text.textContent = 'Connect MCP';
-                } else {
-                    // Connect
-                    btn.className = 'mcp-connect-btn connecting';
-                    icon.className = 'fas fa-spinner fa-spin';
-                    text.textContent = 'Connecting...';
-                    this.initializeMCPConnection();
-                }
-            }
-
-            disconnectMCP() {
-                this.isConnected = false;
-                this.mcpClient = null;
-                this.updateConnectionStatus('disconnected', 'Disconnected from MCP Server', 'Click Connect MCP to reconnect');
-            }
-
-            updateMCPButtonState(connected) {
-                const btn = document.getElementById('mcpConnectBtn');
-                const icon = btn.querySelector('i');
-                const text = btn.querySelector('span');
-
-                if (connected) {
-                    btn.className = 'mcp-connect-btn connected';
-                    icon.className = 'fas fa-check-circle';
-                    text.textContent = 'MCP Connected';
-                } else {
-                    btn.className = 'mcp-connect-btn disconnected';
-                    icon.className = 'fas fa-plug';
-                    text.textContent = 'Connect MCP';
-                }
-            }
-
-            async initializeMCPConnection() {
-                try {
-                    this.updateConnectionStatus('connecting', 'Connecting to MCP Server...', 'Attempting InterPro API connection');
-                    
-                    // Connect to MCP WebSocket server
-                    this.mcpClient = new WebSocket('ws://localhost:3001');
-                    
-                    this.mcpClient.onopen = () => {
-                        this.isConnected = true;
-                        this.updateConnectionStatus('connected', 'Connected to MCP Server', 'Real InterPro API access enabled');
-                        this.showToast('Connected to MCP Server. Real InterPro API access enabled.', 'success');
-                    };
-                    
-                    this.mcpClient.onmessage = (event) => {
-                        try {
-                            const data = JSON.parse(event.data);
-                            console.log('Received MCP message:', data.type);
-                            // WebSocket connection is maintained for status only
-                            // Analysis requests now use HTTP endpoint
-                        } catch (error) {
-                            console.error('Error parsing MCP message:', error);
-                        }
-                    };
-                    
-                    this.mcpClient.onclose = () => {
-                        this.isConnected = false;
-                        this.updateConnectionStatus('disconnected', 'Offline Mode', 'Using local domain patterns');
-                        this.showToast('Disconnected from MCP Server. Using offline mode.', 'warning');
-                    };
-                    
-                    this.mcpClient.onerror = (error) => {
-                        this.isConnected = false;
-                        this.updateConnectionStatus('error', 'Connection Failed', 'Using offline mode');
-                        this.showToast('MCP Server connection failed. Using offline mode.', 'warning');
-                    };
-                    
-                } catch (error) {
-                    this.isConnected = false;
-                    this.updateConnectionStatus('error', 'Connection Failed', 'Using offline mode');
-                    this.showToast('Failed to connect to MCP Server. Using offline mode.', 'warning');
-                }
-            }
-
-            updateConnectionStatus(status, text, details) {
-                const indicator = document.getElementById('statusIndicator');
-                const statusText = document.getElementById('statusText');
-                const statusDetails = document.getElementById('statusDetails');
-                
-                const colors = {
-                    connecting: '#ffa500',  // orange
-                    connected: '#4caf50',   // green
-                    disconnected: '#ff9800', // amber
-                    error: '#f44336'        // red
-                };
-                
-                if (indicator) indicator.style.background = colors[status] || '#666';
-                if (statusText) statusText.textContent = text;
-                if (statusDetails) statusDetails.textContent = details;
-                
-                // Update MCP button state based on connection status
-                this.updateMCPButtonState(status === 'connected');
-                
-                // Update isConnected flag
-                this.isConnected = (status === 'connected');
-            }
 
 
             
@@ -1201,14 +1039,9 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                 this.updateProgress('Initializing domain analysis...');
 
                 try {
-                    if (this.isConnected && this.mcpClient) {
-                        // Use real MCP Server API
-                        await this.analyzeDomainsViaAPI(cleanSeq);
-                    } else {
-                        // Fallback to simulation
-                        this.updateProgress('Using offline domain detection...');
-                        await this.analyzeDomainsOffline(cleanSeq);
-                    }
+                    // Perform domain analysis using local algorithms
+                    this.updateProgress('Analyzing domain patterns...');
+                    await this.analyzeDomainsOffline(cleanSeq);
                 } catch (error) {
                     console.error('Domain analysis error:', error);
                     this.showToast(`Analysis failed: ${error.message}`, 'error');
@@ -1217,74 +1050,7 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                 }
             }
 
-            async analyzeDomainsViaAPI(sequence) {
-                // Get analysis parameters
-                const includeSignalPeptide = document.getElementById('includeSignalPeptide').checked;
-                const includeTransmembrane = document.getElementById('includeTransmembrane').checked;
-                
-                // Build applications list
-                const applications = ['Pfam', 'SMART', 'PROSITE', 'PANTHER'];
-                if (includeSignalPeptide) applications.push('SignalP');
-                if (includeTransmembrane) applications.push('TMHMM');
 
-                const analysisParams = {
-                    sequence: sequence,
-                    applications: applications,
-                    goterms: true,
-                    pathways: true,
-                    includeMatchSequence: true
-                };
-
-                this.updateProgress('Submitting sequence to InterPro database...');
-
-                try {
-                    // Use HTTP request instead of WebSocket to bypass communication issues
-                    const response = await fetch('http://localhost:3000/execute-tool', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            toolName: 'analyze_interpro_domains',
-                            parameters: analysisParams
-                        })
-                    });
-
-                    const data = await response.json();
-                    
-                    if (data.success && data.result) {
-                        this.handleAPIResponse(data.result);
-                    } else {
-                        throw new Error(data.error || 'Unknown error occurred');
-                    }
-                } catch (error) {
-                    console.error('HTTP API request failed:', error);
-                    throw error;
-                }
-            }
-            
-            handleAPIResponse(result) {
-                console.log('Handling API response:', result);
-                
-                const results = result.results || [];
-                const summary = result.summary || {};
-                const sequence = result.sequence || '';
-                
-                this.updateProgress('Processing results...');
-                
-                // Add visual properties to results
-                const processedResults = results.map(domain => ({
-                    ...domain,
-                    color: this.getColorForDomain(domain)
-                }));
-                
-                this.currentResults = processedResults;
-                this.displayResults(processedResults, sequence, summary, result.simulated);
-                
-                const sourceNote = result.simulated ? ' (simulated analysis)' : ' from InterPro database';
-                this.showToast(`Analysis complete! Found ${results.length} domain(s)${sourceNote}`, 'success');
-                this.showLoading(false);
-            }
 
             async analyzeDomainsOffline(cleanSeq) {
                 const evalueThreshold = parseFloat(document.getElementById('evalueThreshold').value);
@@ -1323,8 +1089,15 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                 await this.delay(300);
 
                 const allFeatures = [...domains, ...structuralFeatures, ...additionalFeatures];
-                this.displayResults(allFeatures, cleanSeq, {}, true);
-                this.showToast(`Analysis complete (offline mode)! Found ${allFeatures.length} features.`, 'warning');
+                
+                if (allFeatures.length === 0) {
+                    this.showToast('Analysis failed: No domains detected in the sequence.', 'error');
+                    this.showLoading(false);
+                    return;
+                }
+                
+                this.displayResults(allFeatures, cleanSeq, {});
+                this.showToast(`Analysis complete! Found ${allFeatures.length} features.`, 'success');
                 this.showLoading(false);
             }
 
@@ -1354,7 +1127,7 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                             const length = end - start + 1;
                             
                             if (length >= minLength) {
-                                // Calculate simulated e-value based on pattern complexity and length
+                                // Calculate e-value based on pattern complexity and length
                                 const evalue = this.calculateEValue(match[0], pattern, sequence.length);
                                 
                                 if (evalue <= evalueThreshold) {
@@ -1620,17 +1393,16 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                 return colors[domainType] || '#667eea';
             }
 
-            displayResults(results, sequence, summary, simulated) {
+            displayResults(results, sequence, summary) {
                 const container = document.getElementById('resultsContainer');
                 
                 if (!results.length) {
-                    const noResultsSource = simulated ? '(offline mode)' : 'from InterPro database';
                     container.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-search empty-icon"></i>
                             <div class="empty-title">No Domains Found</div>
                             <div class="empty-message">
-                                No significant protein domains were detected ${noResultsSource}.<br>
+                                No significant protein domains were detected in the sequence.<br>
                                 Try adjusting your search parameters or check sequence quality.
                             </div>
                         </div>
@@ -1642,7 +1414,7 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                 const visualization = this.generateDomainVisualization(results, sequence);
                 
                 // Generate statistics
-                const stats = this.generateStatistics(results, sequence, summary, simulated);
+                const stats = this.generateStatistics(results, sequence, summary);
                 
                 // Generate enhanced domain cards with new design
                 const domainCards = results.map((domain, index) => {
@@ -1738,9 +1510,7 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                     `;
                 }).join('');
 
-                const sourceInfo = simulated ? 
-                    '<div class="source-info simulated"><i class="fas fa-exclamation-triangle"></i><span><strong>Note:</strong> Results generated using offline pattern matching. Connect to MCP Server for real InterPro analysis.</span></div>' : 
-                    '<div class="source-info real"><i class="fas fa-check-circle"></i><span><strong>Source:</strong> Real-time analysis from InterPro database via EBI API.</span></div>';
+                const sourceInfo = '<div class="source-info"><i class="fas fa-check-circle"></i><span><strong>Source:</strong> Local domain pattern analysis using InterPro database.</span></div>';
 
                 container.innerHTML = `
                     <div class="results-header">
@@ -1841,7 +1611,7 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                 `;
             }
 
-            generateStatistics(results, sequence, summary, simulated) {
+            generateStatistics(results, sequence, summary) {
                 const totalDomains = results.length;
                 const coverage = results.reduce((sum, domain) => sum + domain.length, 0);
                 const coveragePercent = summary && summary.coverage ? 
