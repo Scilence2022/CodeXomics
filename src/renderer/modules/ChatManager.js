@@ -16749,23 +16749,33 @@ ${this.getPluginSystemInfo()}`;
                 };
             }
             
-            // 检查是否是内置本地函数
-            const localTools = [
-                'navigate_to_position', 'search_features', 'get_current_state', 'open_new_tab',
-                'get_sequence', 'toggle_track', 'create_annotation', 'analyze_region',
-                'export_data', 'jump_to_gene', 'get_genome_info', 'search_gene_by_name',
-                'compute_gc', 'translate_dna', 'reverse_complement', 'find_orfs',
-                'search_sequence_motif', 'get_nearby_features', 'get_feature_details',
-                'export_sequence', 'import_sequence_data', 'search_go_terms',
-                'search_kegg_pathways', 'get_protein_info', 'delete_gene', 'delete_sequence'
-            ];
+            // 检查是否是内置本地函数 - 使用 FunctionCallsOrganizer 获取完整列表
+            if (this.functionCallsOrganizer) {
+                const category = this.functionCallsOrganizer.getFunctionCategory(toolName);
+                if (category) {
+                    // Tool found in FunctionCallsOrganizer - it's a local/internal tool
+                    return {
+                        type: 'local',
+                        display: 'Internal Function',
+                        source: 'genome-ai-studio',
+                        category: category.name,
+                        priority: category.priority
+                    };
+                }
+            }
             
-            if (localTools.includes(toolName)) {
-                return {
-                    type: 'local',
-                    display: 'Internal Function',
-                    source: 'genome-ai-studio'
-                };
+            // Fallback: Check builtin_tools_integration for database and other built-in tools
+            if (this.builtInTools && this.builtInTools.builtInToolsMap) {
+                const builtInTool = this.builtInTools.builtInToolsMap.get(toolName);
+                if (builtInTool) {
+                    return {
+                        type: 'local',
+                        display: 'Built-in Tool',
+                        source: 'genome-ai-studio',
+                        category: builtInTool.category,
+                        priority: builtInTool.priority
+                    };
+                }
             }
             
             // 未知工具
