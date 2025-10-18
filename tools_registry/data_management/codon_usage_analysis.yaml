@@ -144,8 +144,20 @@ returns:
     - gene: object - Gene information (if analyzed by gene name/locus tag)
     - totalCodons: number - Total number of codons analyzed
     - uniqueCodons: number - Number of unique codons found
-    - codonUsage: array - Array of codon usage data with frequency percentages
+    - codonUsage: array - Array of codon usage data with frequency percentages and RSCU values
     - aminoAcidComposition: object - Amino acid composition counts
+    - codonPreferences: object - Codon preferences by amino acid showing:
+      - aminoAcid: string - Single letter amino acid code
+      - totalCount: number - Total count for this amino acid
+      - synonymousCodons: number - Number of synonymous codons
+      - codons: array - Detailed codon usage within amino acid including:
+        - codon: string - Three-letter codon sequence
+        - count: number - Number of occurrences
+        - percentage: number - Percentage within amino acid group
+        - rscu: number - Relative Synonymous Codon Usage value
+        - preference: string - Classification (preferred/neutral/rare)
+      - mostPreferred: string - Most frequently used codon for this amino acid
+      - leastPreferred: string - Least frequently used codon for this amino acid
     - mostFrequentCodons: array - Top 10 most frequent codons
     - sequenceLength: number - Length of analyzed sequence
     - analysisType: string - Type of analysis performed (sequence/geneName/locusTag)"

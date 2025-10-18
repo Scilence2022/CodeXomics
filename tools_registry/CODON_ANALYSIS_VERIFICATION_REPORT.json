@@ -1,0 +1,102 @@
+{
+  "passed": 19,
+  "failed": 0,
+  "warnings": 0,
+  "tests": [
+    {
+      "test": "YAML file codon_usage_analysis.yaml",
+      "status": "PASS",
+      "message": "All essential fields present"
+    },
+    {
+      "test": "Enhanced codon_usage_analysis",
+      "status": "PASS",
+      "message": "Contains codonPreferences and RSCU documentation"
+    },
+    {
+      "test": "YAML file genome_codon_usage_analysis.yaml",
+      "status": "PASS",
+      "message": "All essential fields present"
+    },
+    {
+      "test": "Genome-wide analysis",
+      "status": "PASS",
+      "message": "Contains genome-wide specific features"
+    },
+    {
+      "test": "codonUsageAnalysis method",
+      "status": "PASS",
+      "message": "Method exists"
+    },
+    {
+      "test": "Enhanced codon analysis",
+      "status": "PASS",
+      "message": "Contains RSCU and preference calculations"
+    },
+    {
+      "test": "genomeCodonUsageAnalysis method",
+      "status": "PASS",
+      "message": "Method exists"
+    },
+    {
+      "test": "Genome-wide analysis",
+      "status": "PASS",
+      "message": "Contains genome-wide calculations"
+    },
+    {
+      "test": "Tool execution registration",
+      "status": "PASS",
+      "message": "Both tools registered in executeToolByName"
+    },
+    {
+      "test": "Response formatting",
+      "status": "PASS",
+      "message": "Codon usage response formatting exists"
+    },
+    {
+      "test": "Genome response formatting",
+      "status": "PASS",
+      "message": "Genome-wide response formatting exists"
+    },
+    {
+      "test": "Tool registration",
+      "status": "PASS",
+      "message": "Both tools registered in FunctionCallsOrganizer"
+    },
+    {
+      "test": "Category assignment",
+      "status": "PASS",
+      "message": "Tools in dataManipulation category"
+    },
+    {
+      "test": "Built-in tool mapping",
+      "status": "PASS",
+      "message": "Both tools mapped in builtin_tools_integration"
+    },
+    {
+      "test": "Method mapping",
+      "status": "PASS",
+      "message": "Correct ChatManager methods referenced"
+    },
+    {
+      "test": "Category mapping",
+      "status": "PASS",
+      "message": "Correct category assignment"
+    },
+    {
+      "test": "Documentation",
+      "status": "PASS",
+      "message": "Complete implementation documentation exists"
+    },
+    {
+      "test": "Technical details",
+      "status": "PASS",
+      "message": "RSCU and preference documentation present"
+    },
+    {
+      "test": "Testing section",
+      "status": "PASS",
+      "message": "Testing recommendations included"
+    }
+  ]
+}

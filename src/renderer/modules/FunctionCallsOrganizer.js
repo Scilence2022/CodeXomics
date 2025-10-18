@@ -138,7 +138,9 @@ class FunctionCallsOrganizer {
                     'replace_sequence',
                     'copy_sequence',
                     'cut_sequence',
-                    'paste_sequence'
+                    'paste_sequence',
+                    'codon_usage_analysis',
+                    'genome_codon_usage_analysis'
                 ]
             },
             

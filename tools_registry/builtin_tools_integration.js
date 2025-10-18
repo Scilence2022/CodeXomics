@@ -155,6 +155,21 @@ class BuiltInToolsIntegration {
             priority: 2
         });
 
+        // Data management tools - Codon usage analysis
+        this.builtInToolsMap.set('codon_usage_analysis', {
+            method: 'codonUsageAnalysis',
+            category: 'data_management',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('genome_codon_usage_analysis', {
+            method: 'genomeCodonUsageAnalysis',
+            category: 'data_management',
+            type: 'built-in',
+            priority: 2
+        });
+
         console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
     }
 

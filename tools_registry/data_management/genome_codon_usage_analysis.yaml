@@ -1,0 +1,138 @@
+name: genome_codon_usage_analysis
+version: 1.0.0
+description: Perform genome-wide codon usage analysis across all CDS features to identify codon preferences and biases at the organism level. Analyzes codon usage patterns across the entire genome or specific chromosomes.
+category: data_management
+keywords:
+  - genome
+  - codon
+  - usage
+  - analysis
+  - genome-wide
+  - bias
+  - preference
+  - RSCU
+  - statistics
+  - comparative
+priority: 2
+execution:
+  type: client
+  timeout: 60000
+  retries: 3
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: "Specific chromosome/contig to analyze (optional, analyzes all chromosomes if not specified)"
+      examples:
+        - "U00096"
+        - "chromosome"
+        - "chr1"
+    featureType:
+      type: string
+      description: "Type of features to analyze (default CDS)"
+      default: "CDS"
+      enum:
+        - "CDS"
+        - "gene"
+        - "mRNA"
+    minLength:
+      type: integer
+      description: "Minimum feature length in base pairs to include in analysis (default 300)"
+      default: 300
+      minimum: 1
+      maximum: 100000
+    maxGenes:
+      type: integer
+      description: "Maximum number of genes to analyze (optional, useful for large genomes)"
+      minimum: 1
+      examples:
+        - 1000
+        - 5000
+    clientId:
+      type: string
+      description: "Browser client ID for multi-window support"
+      default: default
+  required: []
+sample_usages:
+  - user_query: Analyze genome-wide codon usage
+    tool_call: genome_codon_usage_analysis()
+    thought: User wants to analyze codon usage patterns across the entire genome
+    expected_result: Genome-wide codon usage statistics showing preferences and biases
+  - user_query: genome codon usage analysis for chromosome U00096
+    tool_call: genome_codon_usage_analysis(chromosome="U00096", minLength=300)
+    thought: User wants genome-wide codon usage analysis for specific chromosome
+    expected_result: Codon usage statistics for all CDS features on chromosome U00096
+  - user_query: analyze codon preferences across all genes with minimum length 500bp
+    tool_call: genome_codon_usage_analysis(minLength=500, featureType="CDS")
+    thought: User wants genome-wide analysis with length filter
+    expected_result: Codon usage analysis for genes longer than 500bp
+  - user_query: what are the preferred codons in this genome
+    tool_call: genome_codon_usage_analysis(maxGenes=5000)
+    thought: User wants to identify genome-wide codon preferences
+    expected_result: Comprehensive codon preference analysis showing RSCU values and preferred codons per amino acid
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["codon_usage_analysis"]
+  alternatives: []
+  prerequisites: ["Genome data must be loaded"]
+  follow_up: ["codon_usage_analysis"]
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - data_management
+    - important
+    - genome-wide
+  complexity: high
+  usage_pattern: specialized
+error_handling:
+  no_genome_data:
+    error: "No genome data loaded"
+    solution: "Load genome file and annotation data before performing genome-wide analysis"
+    retry: false
+  no_features_found:
+    error: "No CDS features found matching criteria"
+    solution: "Check minLength parameter or verify annotation data is loaded correctly"
+    retry: true
+  analysis_failed:
+    error: "Genome-wide codon usage analysis failed"
+    solution: "Check genome data integrity and try again"
+    retry: true
+  insufficient_data:
+    error: "Not enough features for meaningful genome-wide analysis"
+    solution: "Lower minLength threshold or load more complete annotation data"
+    retry: true
+returns:
+  success: boolean - Whether operation was successful
+  result: |
+    object - Genome-wide analysis results including:
+      - analysisType: string - Type of analysis (genome-wide)
+      - totalGenes: number - Total number of genes analyzed
+      - totalCodons: number - Total number of codons counted
+      - totalSequenceLength: number - Total sequence length analyzed
+      - chromosomes: array - List of chromosomes included in analysis
+      - featureType: string - Type of features analyzed
+      - minLength: number - Minimum length filter applied
+      - uniqueCodons: number - Number of unique codons found
+      - codonUsage: array - Array of codon usage data with frequency and RSCU
+      - aminoAcidComposition: object - Genome-wide amino acid composition
+      - codonPreferences: object - Codon preferences by amino acid showing
+        - aminoAcid: string - Single letter amino acid code
+        - totalCount: number - Total count for this amino acid
+        - synonymousCodons: number - Number of synonymous codons
+        - codons: array - Detailed codon usage within amino acid
+        - mostPreferred: string - Most frequently used codon
+        - leastPreferred: string - Least frequently used codon
+      - mostFrequentCodons: array - Top 10 most frequent codons genome-wide
+      - leastFrequentCodons: array - Top 10 least frequent codons
+      - gcContent: object - GC content at each codon position
+      - analyzedGenes: array - List of genes included in analysis
+  error: string - Error message if success is false
+  error_type: string - Type of error for proper handling

@@ -2104,6 +2104,11 @@ class ChatManager {
                     result = await this.codonUsageAnalysis(parameters);
                     break;
                     
+                case 'genome_codon_usage_analysis':
+                    console.log('🧬 [ChatManager] Executing genome_codon_usage_analysis via executeToolByName');
+                    result = await this.genomeCodonUsageAnalysis(parameters);
+                    break;
+                    
                 case 'amino_acid_composition':
                     result = await this.aminoAcidComposition(parameters);
                     break;
@@ -7366,7 +7371,7 @@ The gene search has been completed successfully.`;
                     const geneInfo = data.geneName ? ` for gene **${data.geneName}**` : '';
                     const locusInfo = data.locusTag ? ` (locus tag: ${data.locusTag})` : '';
                     
-                    return `## Codon Usage Analysis Results${geneInfo}${locusInfo}
+                    let response = `## Codon Usage Analysis Results${geneInfo}${locusInfo}
 
 **Analysis Summary:**
 - **Total Codons**: ${data.totalCodons}
@@ -7376,7 +7381,7 @@ The gene search has been completed successfully.`;
 
 **Top 10 Most Frequent Codons:**
 ${data.mostFrequentCodons.slice(0, 10).map(codon => 
-    `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences)`
+    `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences)${codon.rscu ? ` - RSCU: ${codon.rscu}` : ''}`
 ).join('\n')}
 
 **Amino Acid Composition:**
@@ -7384,11 +7389,81 @@ ${Object.entries(data.aminoAcidComposition)
     .sort(([,a], [,b]) => b - a)
     .slice(0, 10)
     .map(([aa, count]) => `- **${aa}**: ${count} codons`)
-    .join('\n')}
+    .join('\n')}`;
 
-The codon usage analysis has been completed successfully.`;
+                    // Add codon preferences if available
+                    if (data.codonPreferences && Object.keys(data.codonPreferences).length > 0) {
+                        response += `\n\n**Codon Preferences by Amino Acid:**\n`;
+                        const sortedAAs = Object.entries(data.codonPreferences)
+                            .filter(([aa]) => aa !== '*') // Exclude stop codons
+                            .sort(([,a], [,b]) => b.totalCount - a.totalCount)
+                            .slice(0, 10);
+                        
+                        for (const [aa, pref] of sortedAAs) {
+                            response += `\n**${aa}** (${pref.totalCount} total, ${pref.synonymousCodons} synonymous codons):\n`;
+                            for (const codonInfo of pref.codons) {
+                                const prefIcon = codonInfo.preference === 'preferred' ? '⭐' : 
+                                               (codonInfo.preference === 'rare' ? '⚠️' : '▪️');
+                                response += `  ${prefIcon} ${codonInfo.codon}: ${codonInfo.percentage}% (RSCU: ${codonInfo.rscu}, ${codonInfo.preference})\n`;
+                            }
+                        }
+                    }
+
+                    response += `\nThe codon usage analysis has been completed successfully.`;
+                    return response;
                 } else {
                     return "Codon usage analysis completed, but no results were obtained.";
+                }
+                
+            case 'genome_codon_usage_analysis':
+                if (result.result) {
+                    const data = result.result;
+                    let response = `## Genome-Wide Codon Usage Analysis Results
+
+**Analysis Summary:**
+- **Total Genes Analyzed**: ${data.totalGenes}
+- **Total Codons**: ${data.totalCodons}
+- **Unique Codons**: ${data.uniqueCodons}
+- **Total Sequence Length**: ${data.totalSequenceLength} bp
+- **Chromosomes**: ${data.chromosomes?.join(', ')}
+- **Feature Type**: ${data.featureType}
+- **Minimum Length Filter**: ${data.minLength} bp
+
+**Top 10 Most Frequent Codons (Genome-Wide):**
+${data.mostFrequentCodons.slice(0, 10).map(codon => 
+    `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences) - RSCU: ${codon.rscu}`
+).join('\n')}
+
+**GC Content by Codon Position:**
+- **Position 1**: ${data.gcContent?.position1}%
+- **Position 2**: ${data.gcContent?.position2}%
+- **Position 3**: ${data.gcContent?.position3}%
+- **Overall**: ${data.gcContent?.overall}%`;
+
+                    // Add genome-wide codon preferences
+                    if (data.codonPreferences && Object.keys(data.codonPreferences).length > 0) {
+                        response += `\n\n**Genome-Wide Codon Preferences by Amino Acid:**\n`;
+                        const sortedAAs = Object.entries(data.codonPreferences)
+                            .filter(([aa]) => aa !== '*') // Exclude stop codons
+                            .sort(([,a], [,b]) => b.totalCount - a.totalCount)
+                            .slice(0, 15);
+                        
+                        for (const [aa, pref] of sortedAAs) {
+                            response += `\n**${aa}** (${pref.totalCount} total, ${pref.synonymousCodons} synonymous codons):\n`;
+                            response += `  Most preferred: ${pref.mostPreferred}, Least preferred: ${pref.leastPreferred}\n`;
+                            const topCodons = pref.codons.slice(0, 3);
+                            for (const codonInfo of topCodons) {
+                                const prefIcon = codonInfo.preference === 'highly preferred' ? '⭐⭐' :
+                                               (codonInfo.preference === 'preferred' ? '⭐' : '▪️');
+                                response += `  ${prefIcon} ${codonInfo.codon}: ${codonInfo.percentage}% (RSCU: ${codonInfo.rscu})\n`;
+                            }
+                        }
+                    }
+
+                    response += `\n\nThe genome-wide codon usage analysis has been completed successfully.`;
+                    return response;
+                } else {
+                    return "Genome-wide codon usage analysis completed, but no results were obtained.";
                 }
                 
             default:
@@ -9464,6 +9539,11 @@ ${this.getPluginSystemInfo()}`;
                     
                 case 'codon_usage_analysis':
                     result = await this.codonUsageAnalysis(parameters);
+                    break;
+                    
+                case 'genome_codon_usage_analysis':
+                    console.log('🧬 [ChatManager] Executing genome_codon_usage_analysis via executeToolByName');
+                    result = await this.genomeCodonUsageAnalysis(parameters);
                     break;
                     
                 case 'amino_acid_composition':
@@ -12085,6 +12165,31 @@ ${this.getPluginSystemInfo()}`;
             'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
         };
         
+        // Synonymous codon groups
+        const synonymousCodons = {
+            'F': ['TTT', 'TTC'],
+            'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
+            'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
+            'Y': ['TAT', 'TAC'],
+            'C': ['TGT', 'TGC'],
+            'W': ['TGG'],
+            'P': ['CCT', 'CCC', 'CCA', 'CCG'],
+            'H': ['CAT', 'CAC'],
+            'Q': ['CAA', 'CAG'],
+            'R': ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
+            'I': ['ATT', 'ATC', 'ATA'],
+            'M': ['ATG'],
+            'T': ['ACT', 'ACC', 'ACA', 'ACG'],
+            'N': ['AAT', 'AAC'],
+            'K': ['AAA', 'AAG'],
+            'V': ['GTT', 'GTC', 'GTA', 'GTG'],
+            'A': ['GCT', 'GCC', 'GCA', 'GCG'],
+            'D': ['GAT', 'GAC'],
+            'E': ['GAA', 'GAG'],
+            'G': ['GGT', 'GGC', 'GGA', 'GGG'],
+            '*': ['TAA', 'TAG', 'TGA']
+        };
+        
         // Count codons
         for (let i = 0; i < analysisSequence.length - 2; i += 3) {
             const codon = analysisSequence.substring(i, i + 3);
@@ -12098,12 +12203,50 @@ ${this.getPluginSystemInfo()}`;
         
         const totalCodons = Object.values(codonCounts).reduce((sum, count) => sum + count, 0);
         
+        // Calculate RSCU (Relative Synonymous Codon Usage)
+        const rscu = {};
+        const codonPreferences = {};
+        
+        for (const [aa, codons] of Object.entries(synonymousCodons)) {
+            const aaCount = aminoAcidCounts[aa] || 0;
+            if (aaCount > 0 && codons.length > 1) {
+                const expectedFreq = aaCount / codons.length;
+                
+                codonPreferences[aa] = {
+                    aminoAcid: aa,
+                    totalCount: aaCount,
+                    synonymousCodons: codons.length,
+                    codons: []
+                };
+                
+                for (const codon of codons) {
+                    const observedCount = codonCounts[codon] || 0;
+                    const rscuValue = expectedFreq > 0 ? observedCount / expectedFreq : 0;
+                    rscu[codon] = rscuValue;
+                    
+                    codonPreferences[aa].codons.push({
+                        codon: codon,
+                        count: observedCount,
+                        percentage: aaCount > 0 ? parseFloat((observedCount / aaCount * 100).toFixed(2)) : 0,
+                        rscu: parseFloat(rscuValue.toFixed(3)),
+                        preference: rscuValue > 1.0 ? 'preferred' : (rscuValue < 0.5 ? 'rare' : 'neutral')
+                    });
+                }
+                
+                // Sort codons by usage within each amino acid
+                codonPreferences[aa].codons.sort((a, b) => b.percentage - a.percentage);
+                codonPreferences[aa].mostPreferred = codonPreferences[aa].codons[0].codon;
+                codonPreferences[aa].leastPreferred = codonPreferences[aa].codons[codonPreferences[aa].codons.length - 1].codon;
+            }
+        }
+        
         // Calculate relative usage
         const codonUsage = Object.entries(codonCounts).map(([codon, count]) => ({
             codon: codon,
             aminoAcid: geneticCode[codon],
             count: count,
-            frequency: parseFloat((count / totalCodons * 100).toFixed(2))
+            frequency: parseFloat((count / totalCodons * 100).toFixed(2)),
+            rscu: rscu[codon] ? parseFloat(rscu[codon].toFixed(3)) : null
         })).sort((a, b) => b.frequency - a.frequency);
         
         return {
@@ -12114,9 +12257,236 @@ ${this.getPluginSystemInfo()}`;
             uniqueCodons: Object.keys(codonCounts).length,
             codonUsage: codonUsage,
             aminoAcidComposition: aminoAcidCounts,
+            codonPreferences: codonPreferences,
             mostFrequentCodons: codonUsage.slice(0, 10),
             sequenceLength: analysisSequence.length,
             analysisType: sequence ? 'sequence' : (geneName ? 'geneName' : 'locusTag')
+        };
+    }
+
+    /**
+     * Genome-wide codon usage analysis
+     * Analyzes codon usage patterns across all CDS features in the genome
+     */
+    async genomeCodonUsageAnalysis(params) {
+        const { chromosome, featureType = 'CDS', minLength = 300, maxGenes } = params;
+        
+        console.log('🧬 [ChatManager] Starting genome-wide codon usage analysis:', params);
+        
+        if (!this.app || !this.app.currentAnnotations) {
+            throw new Error('No genome data loaded');
+        }
+        
+        // Get all chromosomes to analyze
+        const chromosomes = chromosome ? [chromosome] : Object.keys(this.app.currentAnnotations);
+        
+        if (chromosomes.length === 0) {
+            throw new Error('No chromosomes found in loaded genome');
+        }
+        
+        // Genetic code and synonymous codon groups
+        const geneticCode = {
+            'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
+            'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
+            'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
+            'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W',
+            'CTT': 'L', 'CTC': 'L', 'CTA': 'L', 'CTG': 'L',
+            'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
+            'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q',
+            'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R',
+            'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
+            'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
+            'AAT': 'N', 'AAC': 'N', 'AAA': 'K', 'AAG': 'K',
+            'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
+            'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V',
+            'GCT': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',
+            'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
+            'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
+        };
+        
+        const synonymousCodons = {
+            'F': ['TTT', 'TTC'],
+            'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
+            'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
+            'Y': ['TAT', 'TAC'],
+            'C': ['TGT', 'TGC'],
+            'W': ['TGG'],
+            'P': ['CCT', 'CCC', 'CCA', 'CCG'],
+            'H': ['CAT', 'CAC'],
+            'Q': ['CAA', 'CAG'],
+            'R': ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
+            'I': ['ATT', 'ATC', 'ATA'],
+            'M': ['ATG'],
+            'T': ['ACT', 'ACC', 'ACA', 'ACG'],
+            'N': ['AAT', 'AAC'],
+            'K': ['AAA', 'AAG'],
+            'V': ['GTT', 'GTC', 'GTA', 'GTG'],
+            'A': ['GCT', 'GCC', 'GCA', 'GCG'],
+            'D': ['GAT', 'GAC'],
+            'E': ['GAA', 'GAG'],
+            'G': ['GGT', 'GGC', 'GGA', 'GGG'],
+            '*': ['TAA', 'TAG', 'TGA']
+        };
+        
+        // Genome-wide codon counts
+        const genomeCodonCounts = {};
+        const genomeAminoAcidCounts = {};
+        let totalGenes = 0;
+        let totalCodons = 0;
+        let totalSequenceLength = 0;
+        const geneResults = [];
+        
+        // Iterate through all chromosomes
+        for (const chr of chromosomes) {
+            const features = this.app.currentAnnotations[chr] || [];
+            
+            // Filter for CDS features
+            const cdsFeatures = features.filter(f => f.type === featureType);
+            
+            for (const feature of cdsFeatures) {
+                // Apply length filter
+                const featureLength = feature.end - feature.start + 1;
+                if (featureLength < minLength) {
+                    continue;
+                }
+                
+                // Apply max genes limit if specified
+                if (maxGenes && totalGenes >= maxGenes) {
+                    break;
+                }
+                
+                try {
+                    // Get sequence for this feature
+                    let featureSeq = await this.app.getSequenceForRegion(chr, feature.start, feature.end);
+                    
+                    // Handle negative strand
+                    if (feature.strand === '-') {
+                        featureSeq = this.reverseComplement(featureSeq);
+                    }
+                    
+                    // Count codons in this feature
+                    for (let i = 0; i < featureSeq.length - 2; i += 3) {
+                        const codon = featureSeq.substring(i, i + 3);
+                        const aminoAcid = geneticCode[codon];
+                        
+                        if (aminoAcid) {
+                            genomeCodonCounts[codon] = (genomeCodonCounts[codon] || 0) + 1;
+                            genomeAminoAcidCounts[aminoAcid] = (genomeAminoAcidCounts[aminoAcid] || 0) + 1;
+                            totalCodons++;
+                        }
+                    }
+                    
+                    totalSequenceLength += featureSeq.length;
+                    totalGenes++;
+                    
+                    geneResults.push({
+                        chromosome: chr,
+                        name: feature.name || feature.id,
+                        locusTag: feature.locusTag,
+                        start: feature.start,
+                        end: feature.end,
+                        length: featureLength,
+                        strand: feature.strand
+                    });
+                    
+                } catch (error) {
+                    console.warn(`Failed to analyze gene ${feature.name || feature.id}:`, error);
+                    continue;
+                }
+            }
+            
+            // Break if maxGenes reached
+            if (maxGenes && totalGenes >= maxGenes) {
+                break;
+            }
+        }
+        
+        if (totalGenes === 0) {
+            throw new Error(`No ${featureType} features found matching criteria (minLength: ${minLength})`);
+        }
+        
+        // Calculate genome-wide RSCU and preferences
+        const genomeRSCU = {};
+        const genomeCodonPreferences = {};
+        
+        for (const [aa, codons] of Object.entries(synonymousCodons)) {
+            const aaCount = genomeAminoAcidCounts[aa] || 0;
+            if (aaCount > 0 && codons.length > 1) {
+                const expectedFreq = aaCount / codons.length;
+                
+                genomeCodonPreferences[aa] = {
+                    aminoAcid: aa,
+                    totalCount: aaCount,
+                    synonymousCodons: codons.length,
+                    codons: []
+                };
+                
+                for (const codon of codons) {
+                    const observedCount = genomeCodonCounts[codon] || 0;
+                    const rscuValue = expectedFreq > 0 ? observedCount / expectedFreq : 0;
+                    genomeRSCU[codon] = rscuValue;
+                    
+                    genomeCodonPreferences[aa].codons.push({
+                        codon: codon,
+                        count: observedCount,
+                        percentage: aaCount > 0 ? parseFloat((observedCount / aaCount * 100).toFixed(2)) : 0,
+                        rscu: parseFloat(rscuValue.toFixed(3)),
+                        preference: rscuValue > 1.2 ? 'highly preferred' : (rscuValue > 0.8 ? 'preferred' : (rscuValue < 0.5 ? 'rare' : 'neutral'))
+                    });
+                }
+                
+                // Sort codons by usage within each amino acid
+                genomeCodonPreferences[aa].codons.sort((a, b) => b.percentage - a.percentage);
+                genomeCodonPreferences[aa].mostPreferred = genomeCodonPreferences[aa].codons[0].codon;
+                genomeCodonPreferences[aa].leastPreferred = genomeCodonPreferences[aa].codons[genomeCodonPreferences[aa].codons.length - 1].codon;
+            }
+        }
+        
+        // Calculate overall codon usage
+        const genomeCodonUsage = Object.entries(genomeCodonCounts).map(([codon, count]) => ({
+            codon: codon,
+            aminoAcid: geneticCode[codon],
+            count: count,
+            frequency: parseFloat((count / totalCodons * 100).toFixed(2)),
+            rscu: genomeRSCU[codon] ? parseFloat(genomeRSCU[codon].toFixed(3)) : null
+        })).sort((a, b) => b.frequency - a.frequency);
+        
+        // Calculate GC content at different codon positions
+        const gcByPosition = { pos1: 0, pos2: 0, pos3: 0 };
+        for (const [codon, count] of Object.entries(genomeCodonCounts)) {
+            if (codon.length === 3) {
+                if (codon[0] === 'G' || codon[0] === 'C') gcByPosition.pos1 += count;
+                if (codon[1] === 'G' || codon[1] === 'C') gcByPosition.pos2 += count;
+                if (codon[2] === 'G' || codon[2] === 'C') gcByPosition.pos3 += count;
+            }
+        }
+        
+        const gcContent = {
+            position1: parseFloat((gcByPosition.pos1 / totalCodons * 100).toFixed(2)),
+            position2: parseFloat((gcByPosition.pos2 / totalCodons * 100).toFixed(2)),
+            position3: parseFloat((gcByPosition.pos3 / totalCodons * 100).toFixed(2)),
+            overall: parseFloat(((gcByPosition.pos1 + gcByPosition.pos2 + gcByPosition.pos3) / (totalCodons * 3) * 100).toFixed(2))
+        };
+        
+        console.log(`✅ [ChatManager] Genome-wide codon usage analysis complete: ${totalGenes} genes, ${totalCodons} codons`);
+        
+        return {
+            success: true,
+            analysisType: 'genome-wide',
+            totalGenes: totalGenes,
+            totalCodons: totalCodons,
+            totalSequenceLength: totalSequenceLength,
+            chromosomes: chromosomes,
+            featureType: featureType,
+            minLength: minLength,
+            uniqueCodons: Object.keys(genomeCodonCounts).length,
+            codonUsage: genomeCodonUsage,
+            aminoAcidComposition: genomeAminoAcidCounts,
+            codonPreferences: genomeCodonPreferences,
+            mostFrequentCodons: genomeCodonUsage.slice(0, 10),
+            leastFrequentCodons: genomeCodonUsage.slice(-10).reverse(),
+            // gcContent: gcContent,
+            // analyzedGenes: geneResults
         };
     }
 
