@@ -67,7 +67,9 @@ async yourToolName(params) {
 ```
 
 #### 2B. executeToolByName() Switch Case ⭐⭐ CRITICAL - MOST COMMONLY FORGOTTEN!
-**Location:** ~line 9300-10100
+**Location:** ~line 9200-10100
+
+**Important:** This is the **ONLY switch statement** you need to update!
 
 ```javascript
 case 'your_tool_name':
@@ -80,7 +82,8 @@ case 'your_tool_name':
 1. Search for `async executeToolByName(toolName, parameters)`
 2. Find the main `switch (toolName)` statement
 3. Add your case alphabetically or by category
-4. **DO NOT** add it only to response formatting sections!
+
+**Note:** After recent refactoring (2025-10-18), the legacy `executeToolRequest` method now delegates to `executeToolByName`, so you **no longer need to update multiple switch statements**. Just add your tool to executeToolByName and it will work everywhere!
 
 #### 2C. Response Formatting (Optional but Recommended)
 **Location:** `formatToolResultForDisplay()` method ~line 7300-7500
