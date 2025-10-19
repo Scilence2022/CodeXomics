@@ -4735,7 +4735,7 @@ async function createProGenFixerWindow() {
 async function createDeepGeneResearchWindow(params = {}) {
   try {
     // Get the URL from General Settings
-    let deepGeneResearchUrl = 'http://localhost:3000/'; // Default fallback
+    let deepGeneResearchUrl = 'http://43.196.74.134:3000'; // Default fallback
     
     try {
       // Get the main window to access GeneralSettingsManager directly
@@ -4756,18 +4756,18 @@ async function createDeepGeneResearchWindow(params = {}) {
           console.log('No Deep Gene Research URL found in settings, using default:', deepGeneResearchUrl);
           // Show notification to user about using default URL
           showSettingsWarning('Deep Gene Research URL not configured', 
-            'Using default URL (http://localhost:3000/). You can configure the URL in General Settings → Features → External Tools.');
+            'Using default URL (http://43.196.74.134:3000). You can configure the URL in General Settings → Features → External Tools.');
         }
       } else {
         console.log('Main window not available, using default URL:', deepGeneResearchUrl);
         showSettingsWarning('Main window not available', 
-          'Using default URL (http://localhost:3000/). Please ensure the main window is open.');
+          'Using default URL (http://43.196.74.134:3000). Please ensure the main window is open.');
       }
     } catch (error) {
       console.warn('Failed to get Deep Gene Research URL from settings, using default:', error.message);
       // Show error notification to user
       showSettingsError('Failed to load Deep Gene Research settings', 
-        `Using default URL (http://localhost:3000/) due to error: ${error.message}. Please check your settings configuration.`);
+        `Using default URL (http://43.196.74.134:3000) due to error: ${error.message}. Please check your settings configuration.`);
     }
     
     // Add parameters to URL if provided
@@ -4799,7 +4799,7 @@ async function createDeepGeneResearchWindow(params = {}) {
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
       },
-      title: 'Deep Gene Research - Genome AI Studio',
+      title: 'Deep Gene Research - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
       resizable: true,
