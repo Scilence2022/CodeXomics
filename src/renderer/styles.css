@@ -1120,6 +1120,7 @@
   justify-content: center;
   transition: all 0.2s ease;
   user-select: none;
+  z-index: 5; /* Below ruler (z-index: 15) but above base content */
 }
 
 .splitter:hover {
