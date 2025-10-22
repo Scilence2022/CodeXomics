@@ -3,184 +3,546 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversation Evolution System - CodeXomics</title>
+    <title>Plugin Documentation System - CodeXomics</title>
     <link rel="stylesheet" href="renderer/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
             margin: 0;
             padding: 0;
             font-family: 'Inter', sans-serif;
-            background: #1e1e1e;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             color: #e0e0e0;
             overflow: hidden;
         }
         
-        #evolutionApp {
+        #app {
             width: 100vw;
             height: 100vh;
             display: flex;
             flex-direction: column;
         }
         
-        .evolution-header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            padding: 20px 24px;
-            border-bottom: 1px solid #333;
+        /* Header */
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 24px 32px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
-        .evolution-header h1 {
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .app-title h1 {
             margin: 0;
-            font-size: 24px;
-            font-weight: 600;
+            font-size: 28px;
+            font-weight: 700;
             color: #fff;
             display: flex;
             align-items: center;
             gap: 12px;
         }
         
+        .app-title .icon-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .app-title .icon-badge i {
+            font-size: 32px;
+        }
+        
+        .header-stats {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-item .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            display: block;
+        }
+        
+        .stat-item .stat-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            display: block;
+            margin-top: 4px;
+        }
+        
         .status-indicator {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 14px;
-            color: #aaa;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
         }
         
         .status-dot {
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: #4a9eff;
+            background: #4ade80;
             animation: pulse 2s infinite;
+            box-shadow: 0 0 10px #4ade80;
         }
         
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.9); }
         }
         
-        .evolution-content {
+        .status-text {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #252525;
+            border-right: 1px solid #3a3a3a;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        .nav-section {
+            padding: 24px 16px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        
+        .nav-section h3 {
+            margin: 0 0 16px 0;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #888;
+            letter-spacing: 1px;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #ccc;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            position: relative;
+        }
+        
+        .nav-item i {
+            width: 20px;
+            font-size: 16px;
+        }
+        
+        .nav-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .nav-item .badge {
+            margin-left: auto;
+            background: #667eea;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .nav-item.active .badge {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Content Area */
+        .content-area {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            background: #1e1e1e;
         }
         
-        .evolution-tabs {
-            display: flex;
-            background: #2a2a2a;
-            border-bottom: 1px solid #333;
-            padding: 0 24px;
+        .content-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid #3a3a3a;
+            background: #252525;
         }
         
-        .tab-btn {
-            background: none;
-            border: none;
-            color: #888;
-            padding: 16px 20px;
-            cursor: pointer;
+        .content-header h2 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .content-header p {
+            margin: 0;
+            color: #999;
             font-size: 14px;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            line-height: 1.6;
         }
         
-        .tab-btn:hover {
-            color: #bbb;
-            background: rgba(255, 255, 255, 0.05);
-        }
-        
-        .tab-btn.active {
-            color: #4a9eff;
-            border-bottom-color: #4a9eff;
-            background: rgba(74, 158, 255, 0.1);
-        }
-        
-        .evolution-toolbar {
+        .content-toolbar {
+            padding: 16px 32px;
+            border-bottom: 1px solid #3a3a3a;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 24px;
             background: #252525;
-            border-bottom: 1px solid #333;
         }
         
-        .toolbar-left {
+        .toolbar-left, .toolbar-right {
             display: flex;
             gap: 12px;
         }
         
         .btn {
-            padding: 8px 16px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 500;
             display: flex;
             align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
+            gap: 8px;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
         }
         
         .btn-primary {
-            background: #4a9eff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
         
         .btn-primary:hover:not(:disabled) {
-            background: #357abd;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
         }
         
         .btn-primary:disabled {
             background: #555;
             cursor: not-allowed;
+            box-shadow: none;
         }
         
         .btn-secondary {
-            background: #666;
-            color: white;
+            background: #3a3a3a;
+            color: #ccc;
+            border: 1px solid #555;
         }
         
         .btn-secondary:hover {
-            background: #777;
+            background: #4a4a4a;
+            color: #fff;
+            border-color: #667eea;
         }
         
-        .evolution-stats {
-            font-size: 13px;
-            color: #aaa;
+        .btn-success {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
         }
         
-        .tab-content {
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(74, 222, 128, 0.4);
+        }
+        
+        /* Content Body */
+        .content-body {
             flex: 1;
             overflow-y: auto;
-            padding: 24px;
+            padding: 32px;
         }
         
+        /* Cards */
+        .card {
+            background: #252525;
+            border: 1px solid #3a3a3a;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            border-color: #667eea;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .card-title h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .card-title .icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        
+        .card-meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .meta-badge {
+            padding: 4px 12px;
+            background: #3a3a3a;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .meta-badge.priority-high { background: #dc2626; color: #fff; }
+        .meta-badge.priority-medium { background: #f59e0b; color: #fff; }
+        .meta-badge.priority-low { background: #3b82f6; color: #fff; }
+        
+        .card-body {
+            color: #ccc;
+            line-height: 1.6;
+        }
+        
+        .card-footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #3a3a3a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 80px 40px;
+            color: #666;
+        }
+        
+        .empty-state .icon {
+            font-size: 72px;
+            margin-bottom: 24px;
+            color: #444;
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            margin: 0 0 12px 0;
+            font-size: 24px;
+            color: #888;
+        }
+        
+        .empty-state p {
+            margin: 0 0 24px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Documentation Prompt Display */
+        .doc-prompt-container {
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+        
+        .doc-prompt-header {
+            background: #2a2a2a;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        
+        .doc-prompt-header h4 {
+            margin: 0;
+            font-size: 14px;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .doc-prompt-body {
+            padding: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .doc-prompt-body pre {
+            margin: 0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #e0e0e0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 24px;
+        }
+        
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+            border: 1px solid #3a3a3a;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: #667eea;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+        }
+        
+        .stat-card .stat-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-card .stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .stat-label {
+            font-size: 14px;
+            color: #888;
+            font-weight: 500;
+        }
+        
+        /* Loading Spinner */
         .loading-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100%;
-            color: #888;
+            padding: 80px 20px;
         }
         
         .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 3px solid #333;
-            border-top: 3px solid #4a9eff;
+            width: 60px;
+            height: 60px;
+            border: 4px solid #3a3a3a;
+            border-top: 4px solid #667eea;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 16px;
+            margin-bottom: 24px;
         }
         
         @keyframes spin {
@@ -188,200 +550,201 @@
             100% { transform: rotate(360deg); }
         }
         
-        .error-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #ff6b6b;
-        }
-        
-        .error-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-        
-        /* Additional styles for empty states and other components */
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 60px 20px;
-            color: #666;
-            min-height: 300px;
-        }
-        
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 16px;
-            color: #444;
-        }
-        
-        .empty-state p {
-            margin: 8px 0;
+        .loading-text {
+            color: #888;
             font-size: 16px;
         }
         
-        .empty-state small {
-            font-size: 13px;
-            color: #888;
-        }
-        
-        .conversation-list,
-        .missing-features-list,
-        .plugins-list,
-        .reports-section {
-            width: 100%;
-        }
-        
-        .conversation-list h3,
-        .missing-features-list h3,
-        .plugins-list h3,
-        .reports-section h3,
-        .evolution-process h3 {
-            margin: 0 0 16px 0;
-            color: #4a9eff;
-            font-size: 18px;
+        /* Copy Button */
+        .copy-btn {
+            padding: 6px 12px;
+            background: #667eea;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            transition: all 0.2s ease;
         }
         
-        .conversation-list p,
-        .missing-features-list p,
-        .plugins-list p,
-        .reports-section p,
-        .evolution-process p {
-            margin: 0 0 24px 0;
-            color: #ccc;
-            line-height: 1.5;
+        .copy-btn:hover {
+            background: #764ba2;
         }
         
-        .evolution-controls {
-            display: flex;
-            gap: 12px;
-            margin: 20px 0;
+        .copy-btn.copied {
+            background: #4ade80;
         }
         
-        .status-info {
-            background: #2a2a2a;
-            border-radius: 8px;
-            padding: 20px;
-            border-left: 4px solid #4a9eff;
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
         }
         
-        .status-info p {
-            margin: 8px 0;
-            color: #ddd;
-        }
-        
-        .status-info strong {
-            color: #4a9eff;
-        }
-        
-        .progress-container {
-            background: #2a2a2a;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        
-        .progress-container h4 {
-            margin: 0 0 16px 0;
-            color: #4a9eff;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #333;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 12px 0;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4a9eff, #0984e3);
-            transition: width 0.3s ease;
-            width: 0%;
-        }
-        
-        .evolution-log {
+        ::-webkit-scrollbar-track {
             background: #1a1a1a;
-            border: 1px solid #333;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4a4a;
+        }
+        
+        /* Complexity Badge */
+        .complexity-badge {
+            padding: 4px 12px;
             border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .complexity-simple { background: #4ade80; color: #fff; }
+        .complexity-moderate { background: #f59e0b; color: #fff; }
+        .complexity-complex { background: #dc2626; color: #fff; }
+        
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #3a3a3a;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-bottom: 24px;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 6px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 2px solid #1e1e1e;
+        }
+        
+        .timeline-content {
+            background: #252525;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
             padding: 16px;
-            font-family: monospace;
-            font-size: 13px;
-            max-height: 300px;
-            overflow-y: auto;
-            white-space: pre-wrap;
+        }
+        
+        .timeline-content h4 {
+            margin: 0 0 8px 0;
+            color: #fff;
+            font-size: 16px;
+        }
+        
+        .timeline-content p {
+            margin: 0;
             color: #ccc;
+            font-size: 14px;
+        }
+        
+        .timeline-content .time {
+            color: #888;
+            font-size: 12px;
+            margin-top: 8px;
         }
     </style>
 </head>
 <body>
-    <div id="evolutionApp">
-        <div class="evolution-header">
-            <h1>
-                <i class="fas fa-dna"></i>
-                Conversation Evolution System
-            </h1>
-            <div class="status-indicator">
-                <div class="status-dot"></div>
-                <span>System Active</span>
+    <div id="app">
+        <div class="app-header">
+            <div class="header-content">
+                <div class="app-title">
+                    <div class="icon-badge">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <div>
+                        <h1>Plugin Documentation System</h1>
+                    </div>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="docCount">0</span>
+                        <span class="stat-label">Documentation</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="conversationCount">0</span>
+                        <span class="stat-label">Conversations</span>
+                    </div>
+                    <div class="status-indicator">
+                        <div class="status-dot"></div>
+                        <span class="status-text">Active</span>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <div class="evolution-content">
-            <div class="evolution-tabs">
-                <button class="tab-btn active" id="conversationsTab" onclick="switchTab('conversations')">
-                    <i class="fas fa-comments"></i> Conversation History
-                </button>
-                <button class="tab-btn" id="missingTab" onclick="switchTab('missing')">
-                    <i class="fas fa-exclamation-triangle"></i> Missing Features
-                </button>
-                <button class="tab-btn" id="pluginsTab" onclick="switchTab('plugins')">
-                    <i class="fas fa-puzzle-piece"></i> Generated Plugins
-                </button>
-                <button class="tab-btn" id="evolutionTab" onclick="switchTab('evolution')">
-                    <i class="fas fa-dna"></i> Evolution Process
-                </button>
-                <button class="tab-btn" id="reportsTab" onclick="switchTab('reports')">
-                    <i class="fas fa-chart-line"></i> Evolution Reports
-                </button>
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="nav-section">
+                    <h3>Main</h3>
+                    <div class="nav-item active" onclick="switchView('dashboard')">
+                        <i class="fas fa-th-large"></i>
+                        <span>Dashboard</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('documentation')">
+                        <i class="fas fa-book"></i>
+                        <span>Documentation</span>
+                        <span class="badge" id="docBadge">0</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('missing-features')">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Missing Features</span>
+                        <span class="badge" id="missingBadge">0</span>
+                    </div>
+                </div>
+                
+                <div class="nav-section">
+                    <h3>Analysis</h3>
+                    <div class="nav-item" onclick="switchView('conversations')">
+                        <i class="fas fa-comments"></i>
+                        <span>Conversations</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('analytics')">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Analytics</span>
+                    </div>
+                </div>
+                
+                <div class="nav-section">
+                    <h3>Settings</h3>
+                    <div class="nav-item" onclick="switchView('history')">
+                        <i class="fas fa-history"></i>
+                        <span>History Manager</span>
+                    </div>
+                    <div class="nav-item" onclick="exportData()">
+                        <i class="fas fa-download"></i>
+                        <span>Export Data</span>
+                    </div>
+                </div>
             </div>
             
-            <div class="evolution-toolbar">
-                <div class="toolbar-left">
-                    <button class="btn btn-primary" id="startEvolutionBtn" onclick="startEvolution()">
-                        <i class="fas fa-play"></i> Start Evolution
-                    </button>
-                    <button class="btn btn-secondary" onclick="refreshData()">
-                        <i class="fas fa-refresh"></i> Refresh Data
-                    </button>
-                </div>
-                <div class="toolbar-right">
-                    <button class="btn btn-secondary" onclick="showHistoryManager()">
-                        <i class="fas fa-history"></i> History Manager
-                    </button>
-                    <button class="btn btn-secondary" onclick="exportHistory()">
-                        <i class="fas fa-download"></i> Export History
-                    </button>
-                    <span class="evolution-stats" id="evolutionStats">
-                        Loading statistics...
-                    </span>
-                </div>
-            </div>
-            
-            <div class="tab-content" id="tabContent">
-                <div class="loading-container">
-                    <div class="loading-spinner"></div>
-                    <p>Initializing Conversation Evolution System...</p>
+            <div class="content-area">
+                <div id="viewContainer">
+                    <!-- Dynamic content will be loaded here -->
                 </div>
             </div>
         </div>
@@ -394,1390 +757,568 @@
     <script src="renderer/modules/ConversationAnalysisEngine.js"></script>
     <script src="renderer/modules/AutoPluginGenerator.js"></script>
     <script src="renderer/modules/ConversationEvolutionManager.js"></script>
-    <script src="renderer/modules/EvolutionInterfaceManager.js"></script>
     
     <script>
         const { ipcRenderer } = require('electron');
         
-        // Global variables
-        let currentTab = 'conversations';
+        // Global state
+        let currentView = 'dashboard';
         let evolutionManager = null;
-        let interfaceManager = null;
-        let isEvolutionRunning = false;
+        let isAnalyzing = false;
         
-        // Initialize the evolution system
-        async function initializeEvolutionSystem() {
+        // Initialize the system
+        async function initializeSystem() {
             try {
-                console.log('🧬 Initializing Conversation Evolution System...');
+                console.log('🚀 Initializing Plugin Documentation System...');
                 
-                // Create config manager using the full ConfigManager class
+                // Create config manager
                 const configManager = new ConfigManager();
-                
-                // Wait for config manager to initialize
                 await configManager.waitForInitialization();
                 
                 // Create evolution manager
                 evolutionManager = new ConversationEvolutionManager(null, configManager, null);
                 
-                // Create interface manager with the evolution manager
-                interfaceManager = new EvolutionInterfaceManager(evolutionManager, configManager);
-                
                 // Make globally available
                 window.evolutionManager = evolutionManager;
-                window.interfaceManager = interfaceManager;
-                window.evolutionInterfaceManager = interfaceManager;
                 
-                // Initialize the interface
-                if (interfaceManager.initializeStandaloneInterface) {
-                    interfaceManager.initializeStandaloneInterface();
-                } else {
-                    renderCurrentTab();
-                    updateStats();
-                }
+                // Load initial view
+                switchView('dashboard');
+                updateHeaderStats();
                 
-                console.log('✅ Evolution system initialized successfully');
+                console.log('✅ System initialized successfully');
                 
             } catch (error) {
-                console.error('❌ Failed to initialize evolution system:', error);
-                showError('Failed to initialize evolution system: ' + error.message);
+                console.error('❌ Failed to initialize system:', error);
+                showError('Failed to initialize system: ' + error.message);
             }
         }
         
-        // Switch tabs
-        function switchTab(tabName) {
-            currentTab = tabName;
+        // Switch between views
+        function switchView(viewName) {
+            currentView = viewName;
             
-            // Update tab buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
             });
-            document.getElementById(tabName + 'Tab').classList.add('active');
+            event?.target?.closest('.nav-item')?.classList.add('active');
             
-            // Render tab content
-            renderCurrentTab();
+            // Render view
+            renderView(viewName);
         }
         
-        // Render current tab content
-        function renderCurrentTab() {
-            const content = document.getElementById('tabContent');
+        // Render different views
+        function renderView(viewName) {
+            const container = document.getElementById('viewContainer');
             
-            switch (currentTab) {
+            switch (viewName) {
+                case 'dashboard':
+                    renderDashboard(container);
+                    break;
+                case 'documentation':
+                    renderDocumentation(container);
+                    break;
+                case 'missing-features':
+                    renderMissingFeatures(container);
+                    break;
                 case 'conversations':
-                    renderConversationsTab();
+                    renderConversations(container);
                     break;
-                case 'missing':
-                    renderMissingFeaturesTab();
+                case 'analytics':
+                    renderAnalytics(container);
                     break;
-                case 'plugins':
-                    renderPluginsTab();
-                    break;
-                case 'evolution':
-                    renderEvolutionTab();
-                    break;
-                case 'reports':
-                    renderReportsTab();
+                case 'history':
+                    renderHistory(container);
                     break;
                 default:
-                    content.innerHTML = '<div class="error-container"><i class="fas fa-exclamation-triangle error-icon"></i><p>Unknown tab: ' + currentTab + '</p></div>';
+                    container.innerHTML = '<div class="empty-state"><div class="icon"><i class="fas fa-question-circle"></i></div><h3>Unknown View</h3></div>';
             }
         }
         
-        // Render individual tab contents
-        function renderConversationsTab() {
-            const content = document.getElementById('tabContent');
+        // Dashboard View
+        function renderDashboard(container) {
+            const docs = evolutionManager?.evolutionData?.pluginDocumentation || [];
+            const conversations = evolutionManager?.evolutionData?.conversations || [];
+            const missingFeatures = evolutionManager?.evolutionData?.missingFunctions || [];
             
-            try {
-                // 获取对话统计信息
-                const conversations = evolutionManager?.getConversationHistory() || [];
-                const conversationCount = conversations.length;
+            container.innerHTML = `
+                <div class="content-header">
+                    <h2>Dashboard</h2>
+                    <p>Overview of the Plugin Documentation System and analysis insights</p>
+                </div>
                 
-                // 计算基本统计
-                const totalMessages = conversations.reduce((sum, conv) => {
-                    const messageCount = conv.stats?.messageCount || conv.messageCount || 0;
-                    return sum + messageCount;
-                }, 0);
+                <div class="content-toolbar">
+                    <div class="toolbar-left">
+                        <button class="btn btn-primary" onclick="startAnalysis()" ${isAnalyzing ? 'disabled' : ''}>
+                            <i class="fas fa-magic"></i>
+                            ${isAnalyzing ? 'Analyzing...' : 'Analyze Conversations'}
+                        </button>
+                        <button class="btn btn-secondary" onclick="refreshData()">
+                            <i class="fas fa-sync"></i>
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="btn btn-secondary" onclick="switchView('history')">
+                            <i class="fas fa-history"></i>
+                            History
+                        </button>
+                    </div>
+                </div>
                 
-                const totalErrors = conversations.reduce((sum, conv) => {
-                    return sum + (conv.stats?.errorCount || 0);
-                }, 0);
-                
-                const recentConversations = conversations.slice(0, 3);
-                
-                content.innerHTML = `
-                    <div class="conversation-list">
-                        <h3><i class="fas fa-comments"></i> Conversation History</h3>
-                        <p>Track and analyze all conversations with the AI system to identify patterns and missing capabilities.</p>
-                        
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-number">${conversationCount}</div>
-                                <div class="stat-label">Total Conversations</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-number">${totalMessages}</div>
-                                <div class="stat-label">Total Messages</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-number">${totalErrors}</div>
-                                <div class="stat-label">Total Errors</div>
+                <div class="content-body">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-book"></i></div>
+                            <div class="stat-number">${docs.length}</div>
+                            <div class="stat-label">Plugin Documentation</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-comments"></i></div>
+                            <div class="stat-number">${conversations.length}</div>
+                            <div class="stat-label">Analyzed Conversations</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-lightbulb"></i></div>
+                            <div class="stat-number">${missingFeatures.length}</div>
+                            <div class="stat-label">Missing Features</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="stat-number">${docs.filter(d => d.metadata?.generated).length}</div>
+                            <div class="stat-label">Generated Guides</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="icon"><i class="fas fa-info-circle"></i></div>
+                                <h3>About Plugin Documentation System</h3>
                             </div>
                         </div>
-                        
-                        <div class="action-buttons">
-                            <button class="btn btn-primary" onclick="showHistoryManager()">
-                                <i class="fas fa-history"></i> History Manager
-                            </button>
-                            <button class="btn btn-secondary" onclick="searchStoredConversations()">
-                                <i class="fas fa-search"></i> Search Conversations
-                            </button>
-                            <button class="btn btn-secondary" onclick="exportHistory('json')">
-                                <i class="fas fa-download"></i> Export History
-                            </button>
+                        <div class="card-body">
+                            <p>The Plugin Documentation System analyzes your conversations with the AI to identify missing features and capabilities. Instead of automatically generating plugin code, it creates comprehensive documentation prompts that guide you through building plugins yourself.</p>
+                            <br>
+                            <p><strong>How it works:</strong></p>
+                            <ul style="margin: 12px 0; padding-left: 20px; color: #ccc;">
+                                <li>Monitors AI conversations for feature requests and limitations</li>
+                                <li>Analyzes patterns to identify missing functionality</li>
+                                <li>Generates detailed documentation prompts with implementation guides</li>
+                                <li>Provides code examples, best practices, and testing strategies</li>
+                            </ul>
+                            <br>
+                            <p>Start by clicking <strong>"Analyze Conversations"</strong> to begin the analysis process.</p>
                         </div>
-                        
-                        ${conversationCount > 0 ? `
-                            <div class="recent-conversations">
-                                <h4>Recent Conversations</h4>
-                                ${recentConversations.map((conv, index) => {
-                                    const messageCount = conv.stats?.messageCount || conv.messageCount || 0;
-                                    const errorCount = conv.stats?.errorCount || 0;
-                                    const category = conv.metadata?.category || 'standard';
-                                    
-                                    return `
-                                        <div class="conversation-item-mini" onclick="viewConversationDetails('${conv.id}')">
-                                            <div class="conv-mini-header">
-                                                <span class="conv-mini-title">Conversation ${index + 1}</span>
-                                                <span class="conv-mini-time">${new Date(conv.startTime).toLocaleDateString()}</span>
-                                            </div>
-                                            <div class="conv-mini-stats">
-                                                <span class="badge-mini">${messageCount} messages</span>
-                                                <span class="badge-mini">${errorCount} errors</span>
-                                                <span class="badge-mini badge-${category}">${category}</span>
-                                            </div>
+                    </div>
+                    
+                    ${docs.length > 0 ? `
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <div class="icon"><i class="fas fa-book"></i></div>
+                                    <h3>Recent Documentation</h3>
+                                </div>
+                                <button class="btn btn-secondary" onclick="switchView('documentation')">
+                                    View All
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                ${docs.slice(0, 3).map(doc => `
+                                    <div style="padding: 16px; background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 8px; margin-bottom: 12px;">
+                                        <h4 style="margin: 0 0 8px 0; color: #fff;">${doc.specification?.name || 'Unnamed Documentation'}</h4>
+                                        <p style="margin: 0; color: #999; font-size: 14px;">${(doc.specification?.description || '').substring(0, 150)}...</p>
+                                        <div style="margin-top: 12px; display: flex; gap: 8px;">
+                                            <span class="meta-badge priority-${doc.metadata?.priority || 'low'}">${doc.metadata?.priority || 'low'} priority</span>
+                                            <span class="complexity-badge complexity-${doc.metadata?.complexity || 'simple'}">${doc.metadata?.complexity || 'simple'}</span>
                                         </div>
-                                    `;
-                                }).join('')}
+                                    </div>
+                                `).join('')}
                             </div>
-                        ` : `
-                            <div class="empty-state">
-                                <i class="fas fa-comments"></i>
-                                <p>No conversations recorded yet</p>
-                                <small>Conversations will appear here as you interact with the AI system</small>
-                            </div>
-                        `}
-                    </div>
-                `;
-                
-                // 添加样式
-                if (!document.getElementById('conversationTabStyles')) {
-                    const styles = document.createElement('style');
-                    styles.id = 'conversationTabStyles';
-                    styles.textContent = `
-                        .stats-grid {
-                            display: grid;
-                            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                            gap: 16px;
-                            margin: 20px 0;
-                        }
-                        .stat-card {
-                            background: #333;
-                            border: 1px solid #555;
-                            border-radius: 8px;
-                            padding: 20px;
-                            text-align: center;
-                        }
-                        .stat-number {
-                            font-size: 32px;
-                            font-weight: bold;
-                            color: #4a9eff;
-                            margin-bottom: 8px;
-                        }
-                        .stat-label {
-                            color: #ccc;
-                            font-size: 14px;
-                        }
-                        .action-buttons {
-                            display: flex;
-                            gap: 12px;
-                            margin: 20px 0;
-                            flex-wrap: wrap;
-                        }
-                        .recent-conversations {
-                            margin-top: 30px;
-                        }
-                        .recent-conversations h4 {
-                            color: #fff;
-                            margin-bottom: 16px;
-                            border-bottom: 2px solid #4a9eff;
-                            padding-bottom: 8px;
-                        }
-                        .conversation-item-mini {
-                            background: #333;
-                            border: 1px solid #555;
-                            border-radius: 6px;
-                            padding: 12px;
-                            margin-bottom: 8px;
-                            cursor: pointer;
-                            transition: all 0.2s ease;
-                        }
-                        .conversation-item-mini:hover {
-                            background: #3a3a3a;
-                            border-color: #4a9eff;
-                        }
-                        .conv-mini-header {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            margin-bottom: 8px;
-                        }
-                        .conv-mini-title {
-                            color: #fff;
-                            font-weight: 500;
-                        }
-                        .conv-mini-time {
-                            color: #888;
-                            font-size: 12px;
-                        }
-                        .conv-mini-stats {
-                            display: flex;
-                            gap: 6px;
-                        }
-                        .badge-mini {
-                            display: inline-block;
-                            padding: 2px 6px;
-                            background: #555;
-                            color: #ccc;
-                            border-radius: 3px;
-                            font-size: 11px;
-                        }
-                        .badge-mini.badge-problematic { background: #ff6b6b; color: #fff; }
-                        .badge-mini.badge-plugin-generation { background: #4ecdc4; color: #fff; }
-                        .badge-mini.badge-extended { background: #45b7d1; color: #fff; }
-                        .badge-mini.badge-tool-intensive { background: #f9ca24; color: #333; }
-                    `;
-                    document.head.appendChild(styles);
-                }
-                
-            } catch (error) {
-                console.error('Error rendering conversations tab:', error);
-                content.innerHTML = `
-                    <div class="conversation-list">
-                        <h3><i class="fas fa-comments"></i> Conversation History</h3>
-                        <p>Track and analyze all conversations with the AI system to identify patterns and missing capabilities.</p>
-                        <div class="error-state">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <p>Error loading conversation data</p>
-                            <small>${error.message}</small>
                         </div>
-                    </div>
-                `;
-            }
-        }
-        
-        function renderMissingFeaturesTab() {
-            const content = document.getElementById('tabContent');
-            content.innerHTML = `
-                <div class="missing-features-list">
-                    <h3><i class="fas fa-exclamation-triangle"></i> Missing Features</h3>
-                    <p>Features and capabilities that have been requested but are not currently available in the system.</p>
-                    <div class="empty-state">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>No missing features identified yet</p>
-                        <small>Missing features will be automatically detected from conversation analysis</small>
-                    </div>
+                    ` : ''}
                 </div>
             `;
         }
         
-        function renderPluginsTab() {
-            const content = document.getElementById('tabContent');
-            content.innerHTML = `
-                <div class="plugins-list">
-                    <h3><i class="fas fa-puzzle-piece"></i> Generated Plugins</h3>
-                    <p>Plugins that have been automatically generated to address missing features and capabilities.</p>
-                    <div class="empty-state">
-                        <i class="fas fa-puzzle-piece"></i>
-                        <p>No plugins generated yet</p>
-                        <small>Plugins will be generated automatically when missing features are identified</small>
+        // Documentation View
+        function renderDocumentation(container) {
+            const docs = evolutionManager?.evolutionData?.pluginDocumentation || [];
+            
+            container.innerHTML = `
+                <div class="content-header">
+                    <h2>Plugin Documentation</h2>
+                    <p>Comprehensive guides and prompts for creating plugins to address missing features</p>
+                </div>
+                
+                <div class="content-toolbar">
+                    <div class="toolbar-left">
+                        <button class="btn btn-success" onclick="generateNewDoc()">
+                            <i class="fas fa-plus"></i>
+                            Generate New Documentation
+                        </button>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="btn btn-secondary" onclick="refreshData()">
+                            <i class="fas fa-sync"></i>
+                            Refresh
+                        </button>
                     </div>
                 </div>
-            `;
-        }
-        
-        function renderEvolutionTab() {
-            const content = document.getElementById('tabContent');
-            content.innerHTML = `
-                <div class="evolution-process">
-                    <h3><i class="fas fa-dna"></i> Evolution Control Panel</h3>
-                    <p>Monitor and control the automatic evolution process that analyzes conversations and generates solutions.</p>
-                    
-                    <div class="evolution-controls">
-                        <button class="btn btn-primary" onclick="startEvolution()" ${isEvolutionRunning ? 'disabled' : ''}>
-                            <i class="fas fa-play"></i> Start Auto Evolution
-                        </button>
-                        <button class="btn btn-secondary" onclick="generateReport()">
-                            <i class="fas fa-chart-line"></i> Generate Evolution Report
-                        </button>
-                    </div>
-                    
-                    ${isEvolutionRunning ? `
-                        <div class="progress-container">
-                            <h4>Evolution Progress</h4>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="evolutionProgress" style="width: 0%"></div>
-                            </div>
-                            <div class="evolution-log" id="evolutionLog">
-                                Initializing evolution process...
-                            </div>
+                
+                <div class="content-body">
+                    ${docs.length > 0 ? `
+                        <div class="grid">
+                            ${docs.map(doc => renderDocCard(doc)).join('')}
                         </div>
                     ` : `
-                        <div class="status-info">
-                            <p><strong>Status:</strong> Evolution system is ready</p>
-                            <p><strong>Next Action:</strong> Start evolution process to analyze conversations and generate solutions</p>
+                        <div class="empty-state">
+                            <div class="icon"><i class="fas fa-book-open"></i></div>
+                            <h3>No Documentation Generated Yet</h3>
+                            <p>Start by analyzing conversations to identify missing features, then generate documentation prompts.</p>
+                            <button class="btn btn-primary" onclick="startAnalysis()">
+                                <i class="fas fa-magic"></i>
+                                Start Analysis
+                            </button>
                         </div>
                     `}
                 </div>
             `;
         }
         
-        function renderReportsTab() {
-            const content = document.getElementById('tabContent');
-            content.innerHTML = `
-                <div class="reports-section">
-                    <h3><i class="fas fa-chart-line"></i> Evolution Reports</h3>
-                    <p>Detailed analysis and statistics about the evolution process and system improvements.</p>
-                    <div class="empty-state">
-                        <i class="fas fa-chart-line"></i>
-                        <p>No reports generated yet</p>
-                        <small>Reports will be available after running the evolution process</small>
+        // Render Documentation Card
+        function renderDocCard(doc) {
+            const spec = doc.specification || {};
+            const meta = doc.metadata || {};
+            
+            return `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="icon"><i class="fas fa-puzzle-piece"></i></div>
+                            <h3>${spec.name || 'Unnamed Plugin'}</h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p>${spec.description || 'No description available'}</p>
+                        <div class="card-meta">
+                            <span class="meta-badge priority-${meta.priority || 'low'}">
+                                <i class="fas fa-flag"></i>
+                                ${meta.priority || 'low'} priority
+                            </span>
+                            <span class="complexity-badge complexity-${meta.complexity || 'simple'}">
+                                ${meta.complexity || 'simple'}
+                            </span>
+                            <span class="meta-badge">
+                                <i class="fas fa-clock"></i>
+                                ${meta.estimatedTime || 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary" onclick="viewDocumentation('${doc.id}')">
+                            <i class="fas fa-eye"></i>
+                            View Details
+                        </button>
+                        <button class="btn btn-primary" onclick="copyDocumentation('${doc.id}')">
+                            <i class="fas fa-copy"></i>
+                            Copy Prompt
+                        </button>
                     </div>
                 </div>
             `;
         }
         
-        // Evolution system functions
-        async function startEvolution() {
-            if (isEvolutionRunning) return;
+        // Missing Features View
+        function renderMissingFeatures(container) {
+            const features = evolutionManager?.evolutionData?.missingFunctions || [];
             
-            isEvolutionRunning = true;
-            document.getElementById('startEvolutionBtn').disabled = true;
+            container.innerHTML = `
+                <div class="content-header">
+                    <h2>Missing Features</h2>
+                    <p>Identified capabilities and features that are currently unavailable in the system</p>
+                </div>
+                
+                <div class="content-toolbar">
+                    <div class="toolbar-left">
+                        <button class="btn btn-primary" onclick="startAnalysis()">
+                            <i class="fas fa-search"></i>
+                            Analyze Conversations
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="content-body">
+                    ${features.length > 0 ? `
+                        ${features.map((feature, index) => `
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <div class="icon"><i class="fas fa-lightbulb"></i></div>
+                                        <h3>Feature ${index + 1}</h3>
+                                    </div>
+                                    <div class="card-meta">
+                                        <span class="meta-badge priority-${feature.priority || 'low'}">
+                                            ${feature.priority || 'low'} priority
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Description:</strong> ${feature.missingFunctionDescription || 'No description'}</p>
+                                    <p><strong>Category:</strong> ${feature.category || 'Unknown'}</p>
+                                    <p><strong>Domain:</strong> ${feature.domain || 'General'}</p>
+                                </div>
+                                <div class="card-footer">
+                                    <button class="btn btn-success" onclick="generateDocForFeature('${feature.id}')">
+                                        <i class="fas fa-book"></i>
+                                        Generate Documentation
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    ` : `
+                        <div class="empty-state">
+                            <div class="icon"><i class="fas fa-check-circle"></i></div>
+                            <h3>No Missing Features Identified</h3>
+                            <p>All requested features appear to be available, or no analysis has been performed yet.</p>
+                            <button class="btn btn-primary" onclick="startAnalysis()">
+                                <i class="fas fa-search"></i>
+                                Analyze Conversations
+                            </button>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+        
+        // Conversations View
+        function renderConversations(container) {
+            const conversations = evolutionManager?.evolutionData?.conversations || [];
             
+            container.innerHTML = `
+                <div class="content-header">
+                    <h2>Conversation History</h2>
+                    <p>Analyzed conversations used to identify patterns and missing features</p>
+                </div>
+                
+                <div class="content-toolbar">
+                    <div class="toolbar-left">
+                        <button class="btn btn-secondary" onclick="refreshData()">
+                            <i class="fas fa-sync"></i>
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="btn btn-secondary" onclick="switchView('history')">
+                            <i class="fas fa-cog"></i>
+                            Manage History
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="content-body">
+                    ${conversations.length > 0 ? `
+                        ${conversations.map((conv, index) => `
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <div class="icon"><i class="fas fa-comment"></i></div>
+                                        <h3>Conversation ${index + 1}</h3>
+                                    </div>
+                                    <div class="card-meta">
+                                        <span class="meta-badge">
+                                            <i class="fas fa-calendar"></i>
+                                            ${new Date(conv.startTime).toLocaleDateString()}
+                                        </span>
+                                        <span class="meta-badge">
+                                            <i class="fas fa-message"></i>
+                                            ${conv.stats?.messageCount || 0} messages
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Status:</strong> ${conv.completed ? 'Completed' : 'In Progress'}</p>
+                                    <p><strong>Errors:</strong> ${conv.stats?.errorCount || 0}</p>
+                                    <p><strong>Category:</strong> ${conv.metadata?.category || 'standard'}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    ` : `
+                        <div class="empty-state">
+                            <div class="icon"><i class="fas fa-comments"></i></div>
+                            <h3>No Conversations Recorded</h3>
+                            <p>Conversations will appear here as you interact with the AI system.</p>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+        
+        // Analytics View
+        function renderAnalytics(container) {
+            container.innerHTML = `
+                <div class="content-header">
+                    <h2>Analytics</h2>
+                    <p>Insights and statistics about conversation patterns and documentation generation</p>
+                </div>
+                
+                <div class="content-body">
+                    <div class="empty-state">
+                        <div class="icon"><i class="fas fa-chart-bar"></i></div>
+                        <h3>Analytics Coming Soon</h3>
+                        <p>Detailed analytics and visualizations will be available in a future update.</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // History Manager View
+        function renderHistory(container) {
+            container.innerHTML = `
+                <div class="content-header">
+                    <h2>History Manager</h2>
+                    <p>Manage conversation history and system data</p>
+                </div>
+                
+                <div class="content-toolbar">
+                    <div class="toolbar-left">
+                        <button class="btn btn-secondary" onclick="exportData()">
+                            <i class="fas fa-download"></i>
+                            Export Data
+                        </button>
+                        <button class="btn btn-secondary" onclick="importData()">
+                            <i class="fas fa-upload"></i>
+                            Import Data
+                        </button>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="btn btn-secondary" style="background: #dc2626; color: white;" onclick="clearAllData()">
+                            <i class="fas fa-trash"></i>
+                            Clear All Data
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="content-body">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="icon"><i class="fas fa-database"></i></div>
+                                <h3>Storage Information</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p>Manage your conversation history and system data. You can export data for backup or import previously saved data.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Helper Functions
+        function updateHeaderStats() {
+            const docs = evolutionManager?.evolutionData?.pluginDocumentation || [];
+            const conversations = evolutionManager?.evolutionData?.conversations || [];
+            
+            document.getElementById('docCount').textContent = docs.length;
+            document.getElementById('conversationCount').textContent = conversations.length;
+            document.getElementById('docBadge').textContent = docs.length;
+            document.getElementById('missingBadge').textContent = (evolutionManager?.evolutionData?.missingFunctions || []).length;
+        }
+        
+        async function startAnalysis() {
+            if (isAnalyzing) return;
+            
+            isAnalyzing = true;
             try {
-                if (interfaceManager && interfaceManager.startEvolution) {
-                    await interfaceManager.startEvolution();
-                } else {
-                    throw new Error('Evolution interface not properly initialized');
-                }
+                console.log('🔍 Starting conversation analysis...');
+                // TODO: Implement actual analysis logic
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Simulated delay
+                
+                refreshData();
+                console.log('✅ Analysis complete');
             } catch (error) {
-                console.error('Evolution process failed:', error);
-                showError('Evolution process failed: ' + error.message);
+                console.error('❌ Analysis failed:', error);
+                showError('Analysis failed: ' + error.message);
             } finally {
-                isEvolutionRunning = false;
-                document.getElementById('startEvolutionBtn').disabled = false;
-                // Only render if a tab is active
-                if (document.querySelector('.tab-btn.active')) {
-                    renderCurrentTab();
-                }
+                isAnalyzing = false;
             }
         }
         
         function refreshData() {
-            console.log('🔄 Refreshing evolution data...');
-            if (interfaceManager && interfaceManager.refreshData) {
-                interfaceManager.refreshData();
-            }
-            // Only re-render if we are on a main tab
-            if (document.querySelector('.tab-btn.active')) {
-                 renderCurrentTab();
-            }
-            updateStats();
+            console.log('🔄 Refreshing data...');
+            updateHeaderStats();
+            renderView(currentView);
         }
         
-        function generateReport() {
-            console.log('📊 Generating evolution report...');
-            switchTab('reports');
+        function generateNewDoc() {
+            console.log('📝 Generating new documentation...');
+            alert('Generate new documentation - Feature coming soon!');
         }
         
-        function updateStats() {
-            const statsElement = document.getElementById('evolutionStats');
-            if (statsElement) {
-                if (evolutionManager && evolutionManager.getEvolutionStats) {
-                    try {
-                        const stats = evolutionManager.getEvolutionStats();
-                        statsElement.textContent = `Conversations: ${stats.completedConversations}/${stats.totalConversations} | Missing Features: ${stats.missingFunctions} | Generated Plugins: ${stats.successfulPlugins}/${stats.generatedPlugins}`;
-                    } catch (error) {
-                        statsElement.textContent = 'Statistics unavailable';
-                    }
-                } else {
-                    statsElement.textContent = 'System initializing...';
+        function generateDocForFeature(featureId) {
+            console.log('📝 Generating documentation for feature:', featureId);
+            alert('Generate documentation for feature - Feature coming soon!');
+        }
+        
+        function viewDocumentation(docId) {
+            console.log('👁️ Viewing documentation:', docId);
+            const doc = evolutionManager?.evolutionData?.pluginDocumentation?.find(d => d.id === docId);
+            if (doc) {
+                // TODO: Show detailed documentation view
+                alert('View documentation details - Feature coming soon!');
+            }
+        }
+        
+        function copyDocumentation(docId) {
+            console.log('📋 Copying documentation:', docId);
+            const doc = evolutionManager?.evolutionData?.pluginDocumentation?.find(d => d.id === docId);
+            if (doc) {
+                const prompt = JSON.stringify(doc, null, 2);
+                navigator.clipboard.writeText(prompt).then(() => {
+                    alert('Documentation prompt copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                });
+            }
+        }
+        
+        function exportData() {
+            console.log('📤 Exporting data...');
+            if (evolutionManager?.storageManager?.exportConversationHistory) {
+                evolutionManager.storageManager.exportConversationHistory('json');
+            } else {
+                alert('Export functionality not available');
+            }
+        }
+        
+        function importData() {
+            console.log('📥 Importing data...');
+            alert('Import data - Feature coming soon!');
+        }
+        
+        function clearAllData() {
+            if (confirm('⚠️ This will permanently delete ALL data. This action cannot be undone. Continue?')) {
+                console.log('🗑️ Clearing all data...');
+                if (evolutionManager?.storageManager) {
+                    evolutionManager.storageManager.historyData.conversations = [];
+                    evolutionManager.storageManager.historyData.analysisRecords = [];
+                    evolutionManager.storageManager.historyData.pluginGenerationHistory = [];
+                    evolutionManager.storageManager.saveHistoryData();
+                    refreshData();
+                    alert('All data has been cleared.');
                 }
             }
         }
         
         function showError(message) {
-            const content = document.getElementById('tabContent');
-            content.innerHTML = `
-                <div class="error-container">
-                    <i class="fas fa-exclamation-triangle error-icon"></i>
-                    <h3>Error</h3>
-                    <p>${message}</p>
-                    <button class="btn btn-primary" onclick="location.reload()">
-                        <i class="fas fa-refresh"></i> Retry
-                    </button>
-                </div>
-            `;
+            alert('Error: ' + message);
         }
         
-        // IPC handlers for menu actions
-        ipcRenderer.on('switch-tab', (event, tabName) => {
-            switchTab(tabName);
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSystem();
         });
-        
-        ipcRenderer.on('start-evolution', () => {
-            startEvolution();
-        });
-        
-        ipcRenderer.on('refresh-evolution-data', () => {
-            refreshData();
-        });
-        
-        ipcRenderer.on('generate-evolution-report', () => {
-            generateReport();
-        });
-        
-        ipcRenderer.on('export-evolution-data', () => {
-            console.log('📤 Exporting evolution data...');
-            // TODO: Implement export functionality
-        });
-        
-        ipcRenderer.on('import-evolution-data', () => {
-            console.log('📥 Importing evolution data...');
-            // TODO: Implement import functionality
-        });
-        
-        ipcRenderer.on('clear-evolution-data', () => {
-            if (confirm('Are you sure you want to clear all evolution data? This action cannot be undone.')) {
-                console.log('🗑️ Clearing evolution data...');
-                // TODO: Implement clear functionality
-            }
-        });
-        
-        // History management functions
-        function showHistoryManager() {
-            console.log('📋 Opening History Manager...');
-            
-            // Create draggable window
-            createDraggableHistoryManager();
-        }
-        
-        function createDraggableHistoryManager() {
-            // Remove existing window if present
-            const existingWindow = document.getElementById('historyManagerWindow');
-            if (existingWindow) {
-                existingWindow.remove();
-            }
-            
-            // Create draggable window
-            const windowDiv = document.createElement('div');
-            windowDiv.id = 'historyManagerWindow';
-            windowDiv.className = 'draggable-window';
-            
-            const conversations = evolutionManager?.getConversationHistory({
-                sortBy: 'startTime',
-                sortOrder: 'desc'
-            }) || [];
-            
-            const storageStats = evolutionManager?.getStorageStats() || {};
-            
-            windowDiv.innerHTML = `
-                <div class="window-header" id="historyWindowHeader">
-                    <div class="window-title">
-                        <i class="fas fa-history"></i>
-                        History Manager
-                    </div>
-                    <div class="window-controls">
-                        <button class="btn-icon" onclick="minimizeHistoryWindow()" title="Minimize">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <button class="btn-icon" onclick="closeHistoryWindow()" title="Close">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="window-content">
-                    <div class="history-toolbar">
-                        <div class="toolbar-section">
-                            <button class="btn btn-primary" onclick="selectAllConversations()">
-                                <i class="fas fa-check-square"></i> Select All
-                            </button>
-                            <button class="btn btn-secondary" onclick="deselectAllConversations()">
-                                <i class="fas fa-square"></i> Deselect All
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteSelectedConversations()" id="deleteSelectedBtn" disabled>
-                                <i class="fas fa-trash"></i> Delete Selected
-                            </button>
-                        </div>
-                        <div class="toolbar-section">
-                            <button class="btn btn-success" onclick="markAsSuccessExample()" id="markSuccessBtn" disabled>
-                                <i class="fas fa-star"></i> Mark as Success Example
-                            </button>
-                            <button class="btn btn-info" onclick="viewSuccessExamples()">
-                                <i class="fas fa-eye"></i> View Examples
-                            </button>
-                        </div>
-                        <div class="toolbar-section">
-                            <input type="text" id="historySearchInput" placeholder="Search conversations..." class="search-input">
-                            <button class="btn btn-secondary" onclick="searchHistoryConversations()">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="history-stats">
-                        <span class="stat-item">Total: ${conversations.length}</span>
-                        <span class="stat-item">Messages: ${storageStats.totalMessages || 0}</span>
-                        <span class="stat-item">Examples: <span id="exampleCount">0</span></span>
-                        <span class="stat-item">Selected: <span id="selectedCount">0</span></span>
-                    </div>
-                    
-                    <div class="conversation-list-container" id="conversationListContainer">
-                        ${renderConversationList(conversations)}
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(windowDiv);
-            
-            // Make window draggable
-            makeDraggable(windowDiv, 'historyWindowHeader');
-            
-            // Load success examples count
-            updateSuccessExamplesCount();
-            
-            // Add window styles
-            addHistoryManagerStyles();
-        }
-        
-        function renderConversationList(conversations) {
-            if (conversations.length === 0) {
-                return `
-                    <div class="empty-conversation-list">
-                        <i class="fas fa-comments"></i>
-                        <p>No conversations found</p>
-                        <small>Conversations will appear here as you interact with the system</small>
-                    </div>
-                `;
-            }
-            
-            return conversations.map((conv, index) => {
-                const messages = conv.events ? conv.events.filter(event => 
-                    event.type === 'message' && event.content
-                ) : [];
-                
-                const messageCount = conv.stats?.messageCount || conv.messageCount || messages.length || 0;
-                const errorCount = conv.stats?.errorCount || 0;
-                const category = conv.metadata?.category || 'standard';
-                const isSuccessExample = conv.metadata?.isSuccessExample || false;
-                
-                const duration = conv.duration || (conv.endTime && conv.startTime ? 
-                    Math.round((new Date(conv.endTime) - new Date(conv.startTime)) / 1000) + 's' : 'N/A');
-                
-                const previewMessages = messages.slice(0, 2).map(msg => 
-                    `<div class="message-preview"><strong>${msg.sender}:</strong> ${(msg.content || '').substring(0, 80)}${(msg.content || '').length > 80 ? '...' : ''}</div>`
-                ).join('');
-                
-                return `
-                    <div class="conversation-item ${isSuccessExample ? 'success-example' : ''}" data-conv-id="${conv.id}">
-                        <div class="conv-checkbox">
-                            <input type="checkbox" class="conv-select" data-conv-id="${conv.id}" onchange="updateSelectionCount()">
-                        </div>
-                        <div class="conv-content" onclick="expandConversation('${conv.id}')">
-                            <div class="conv-header">
-                                <div class="conv-info">
-                                    <h4>Conversation ${index + 1} ${isSuccessExample ? '⭐' : ''}</h4>
-                                    <span class="conv-date">${new Date(conv.startTime).toLocaleString()}</span>
-                                </div>
-                                <div class="conv-badges">
-                                    <span class="badge">${messageCount} msgs</span>
-                                    <span class="badge ${errorCount > 0 ? 'badge-error' : ''}">${errorCount} errors</span>
-                                    <span class="badge">${duration}</span>
-                                    <span class="badge badge-${category}">${category}</span>
-                                </div>
-                            </div>
-                            <div class="conv-preview">
-                                ${previewMessages || '<div class="message-preview"><em>No messages found</em></div>'}
-                            </div>
-                        </div>
-                        <div class="conv-actions">
-                            <button class="btn-icon" onclick="editConversation('${conv.id}')" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-icon" onclick="duplicateConversation('${conv.id}')" title="Duplicate">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button class="btn-icon ${isSuccessExample ? 'active' : ''}" onclick="toggleSuccessExample('${conv.id}')" title="Toggle Success Example">
-                                <i class="fas fa-star"></i>
-                            </button>
-                            <button class="btn-icon btn-danger" onclick="deleteConversation('${conv.id}')" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        function makeDraggable(element, handleId) {
-            const handle = document.getElementById(handleId);
-            let isDragging = false;
-            let startX, startY, initialX, initialY;
-            
-            handle.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                initialX = element.offsetLeft;
-                initialY = element.offsetTop;
-                
-                handle.style.cursor = 'grabbing';
-                e.preventDefault();
-            });
-            
-            document.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                
-                const deltaX = e.clientX - startX;
-                const deltaY = e.clientY - startY;
-                
-                element.style.left = (initialX + deltaX) + 'px';
-                element.style.top = (initialY + deltaY) + 'px';
-            });
-            
-            document.addEventListener('mouseup', () => {
-                if (isDragging) {
-                    isDragging = false;
-                    handle.style.cursor = 'grab';
-                }
-            });
-        }
-        
-        function closeHistoryWindow() {
-            const window = document.getElementById('historyManagerWindow');
-            if (window) {
-                window.remove();
-            }
-        }
-        
-        function minimizeHistoryWindow() {
-            const window = document.getElementById('historyManagerWindow');
-            if (window) {
-                window.style.display = window.style.display === 'none' ? 'block' : 'none';
-            }
-        }
-        
-        function selectAllConversations() {
-            const checkboxes = document.querySelectorAll('.conv-select');
-            checkboxes.forEach(cb => cb.checked = true);
-            updateSelectionCount();
-        }
-        
-        function deselectAllConversations() {
-            const checkboxes = document.querySelectorAll('.conv-select');
-            checkboxes.forEach(cb => cb.checked = false);
-            updateSelectionCount();
-        }
-        
-        function updateSelectionCount() {
-            const selected = document.querySelectorAll('.conv-select:checked');
-            const count = selected.length;
-            
-            document.getElementById('selectedCount').textContent = count;
-            document.getElementById('deleteSelectedBtn').disabled = count === 0;
-            document.getElementById('markSuccessBtn').disabled = count === 0;
-        }
-        
-        function deleteSelectedConversations() {
-            const selected = document.querySelectorAll('.conv-select:checked');
-            if (selected.length === 0) return;
-            
-            const confirmed = confirm(`Are you sure you want to delete ${selected.length} selected conversation(s)?`);
-            if (!confirmed) return;
-            
-            const idsToDelete = Array.from(selected).map(cb => cb.dataset.convId);
-            
-            // Remove from storage
-            if (evolutionManager && evolutionManager.storageManager) {
-                idsToDelete.forEach(id => {
-                    evolutionManager.storageManager.historyData.conversations = 
-                        evolutionManager.storageManager.historyData.conversations.filter(conv => conv.id !== id);
-                });
-                evolutionManager.storageManager.saveHistoryData();
-            }
-            
-            // Refresh display
-            refreshHistoryManager();
-            console.log(`Deleted ${idsToDelete.length} conversations`);
-        }
-        
-        function markAsSuccessExample() {
-            const selected = document.querySelectorAll('.conv-select:checked');
-            if (selected.length === 0) return;
-            
-            const idsToMark = Array.from(selected).map(cb => cb.dataset.convId);
-            
-            // Mark as success examples
-            if (evolutionManager && evolutionManager.storageManager) {
-                idsToMark.forEach(id => {
-                    const conv = evolutionManager.storageManager.historyData.conversations.find(c => c.id === id);
-                    if (conv) {
-                        if (!conv.metadata) conv.metadata = {};
-                        conv.metadata.isSuccessExample = true;
-                        conv.metadata.markedAsExampleAt = new Date().toISOString();
-                    }
-                });
-                evolutionManager.storageManager.saveHistoryData();
-            }
-            
-            // Update ChatBox prompts
-            updateChatBoxWithSuccessExamples();
-            
-            // Refresh display
-            refreshHistoryManager();
-            updateSuccessExamplesCount();
-            
-            console.log(`Marked ${idsToMark.length} conversations as success examples`);
-        }
-        
-        function toggleSuccessExample(convId) {
-            if (evolutionManager && evolutionManager.storageManager) {
-                const conv = evolutionManager.storageManager.historyData.conversations.find(c => c.id === convId);
-                if (conv) {
-                    if (!conv.metadata) conv.metadata = {};
-                    conv.metadata.isSuccessExample = !conv.metadata.isSuccessExample;
-                    
-                    if (conv.metadata.isSuccessExample) {
-                        conv.metadata.markedAsExampleAt = new Date().toISOString();
-                    } else {
-                        delete conv.metadata.markedAsExampleAt;
-                    }
-                    
-                    evolutionManager.storageManager.saveHistoryData();
-                    updateChatBoxWithSuccessExamples();
-                    refreshHistoryManager();
-                    updateSuccessExamplesCount();
-                }
-            }
-        }
-        
-        function deleteConversation(convId) {
-            const confirmed = confirm('Are you sure you want to delete this conversation?');
-            if (!confirmed) return;
-            
-            if (evolutionManager && evolutionManager.storageManager) {
-                evolutionManager.storageManager.historyData.conversations = 
-                    evolutionManager.storageManager.historyData.conversations.filter(conv => conv.id !== convId);
-                evolutionManager.storageManager.saveHistoryData();
-            }
-            
-            refreshHistoryManager();
-        }
-        
-        function editConversation(convId) {
-            // TODO: Implement conversation editing
-            alert(`Edit conversation ${convId} - Feature coming soon!`);
-        }
-        
-        function duplicateConversation(convId) {
-            if (evolutionManager && evolutionManager.storageManager) {
-                const conv = evolutionManager.storageManager.historyData.conversations.find(c => c.id === convId);
-                if (conv) {
-                    const duplicate = {
-                        ...conv,
-                        id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-                        startTime: new Date().toISOString(),
-                        metadata: {
-                            ...conv.metadata,
-                            duplicatedFrom: convId,
-                            duplicatedAt: new Date().toISOString(),
-                            isSuccessExample: false
-                        }
-                    };
-                    
-                    evolutionManager.storageManager.historyData.conversations.unshift(duplicate);
-                    evolutionManager.storageManager.saveHistoryData();
-                    refreshHistoryManager();
-                }
-            }
-        }
-        
-        function expandConversation(convId) {
-            // TODO: Implement detailed conversation view
-            console.log('Expanding conversation:', convId);
-        }
-        
-        function searchHistoryConversations() {
-            const query = document.getElementById('historySearchInput').value.trim();
-            if (!query) {
-                refreshHistoryManager();
-                return;
-            }
-            
-            const results = evolutionManager?.searchConversations(query, {
-                fields: ['messages', 'context', 'analysis'],
-                caseSensitive: false
-            }) || [];
-            
-            const container = document.getElementById('conversationListContainer');
-            container.innerHTML = renderConversationList(results);
-        }
-        
-        function refreshHistoryManager() {
-            const conversations = evolutionManager?.getConversationHistory({
-                sortBy: 'startTime',
-                sortOrder: 'desc'
-            }) || [];
-            
-            const container = document.getElementById('conversationListContainer');
-            if (container) {
-                container.innerHTML = renderConversationList(conversations);
-            }
-        }
-        
-        function updateSuccessExamplesCount() {
-            if (evolutionManager && evolutionManager.storageManager) {
-                const examples = evolutionManager.storageManager.historyData.conversations.filter(
-                    conv => conv.metadata?.isSuccessExample
-                );
-                const countElement = document.getElementById('exampleCount');
-                if (countElement) {
-                    countElement.textContent = examples.length;
-                }
-            }
-        }
-        
-        function viewSuccessExamples() {
-            if (evolutionManager && evolutionManager.storageManager) {
-                const examples = evolutionManager.storageManager.historyData.conversations.filter(
-                    conv => conv.metadata?.isSuccessExample
-                );
-                
-                const container = document.getElementById('conversationListContainer');
-                container.innerHTML = renderConversationList(examples);
-            }
-        }
-        
-        function updateChatBoxWithSuccessExamples() {
-            if (!evolutionManager || !evolutionManager.storageManager) return;
-            
-            const examples = evolutionManager.storageManager.historyData.conversations.filter(
-                conv => conv.metadata?.isSuccessExample
-            );
-            
-            if (examples.length === 0) return;
-            
-            // Format examples for ChatBox
-            const examplePrompts = examples.map((conv, index) => {
-                const messages = conv.events ? conv.events.filter(event => 
-                    event.type === 'message' && event.content
-                ) : [];
-                
-                if (messages.length === 0) return '';
-                
-                const formattedMessages = messages.slice(0, 4).map(msg => 
-                    `${msg.sender}: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}`
-                ).join('\n');
-                
-                return `Example ${index + 1}:\n${formattedMessages}\n`;
-            }).filter(example => example).join('\n---\n');
-            
-            // Save to config for ChatBox to use
-            if (window.configManager) {
-                const currentPrompt = window.configManager.get('chatbox.systemPrompt', '');
-                const exampleSection = `\n\n## Success Examples:\n${examplePrompts}`;
-                
-                // Check if examples already exist in prompt
-                const hasExamples = currentPrompt.includes('## Success Examples:');
-                
-                let newPrompt;
-                if (hasExamples) {
-                    // Replace existing examples
-                    newPrompt = currentPrompt.replace(/\n\n## Success Examples:[\s\S]*$/, exampleSection);
-                } else {
-                    // Add new examples
-                    newPrompt = currentPrompt + exampleSection;
-                }
-                
-                window.configManager.set('chatbox.systemPrompt', newPrompt);
-                console.log(`Updated ChatBox with ${examples.length} success examples`);
-            }
-        }
-        
-        function addHistoryManagerStyles() {
-            if (document.getElementById('historyManagerStyles')) return;
-            
-            const styles = document.createElement('style');
-            styles.id = 'historyManagerStyles';
-            styles.textContent = `
-                .draggable-window {
-                    position: fixed;
-                    top: 10%;
-                    left: 15%;
-                    width: 70%;
-                    height: 75%;
-                    background: #2a2a2a;
-                    border: 1px solid #555;
-                    border-radius: 8px;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-                    z-index: 10000;
-                    display: flex;
-                    flex-direction: column;
-                }
-                
-                .window-header {
-                    background: linear-gradient(135deg, #34495e, #2c3e50);
-                    color: white;
-                    padding: 12px 16px;
-                    border-radius: 8px 8px 0 0;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    cursor: grab;
-                    user-select: none;
-                }
-                
-                .window-header:active {
-                    cursor: grabbing;
-                }
-                
-                .window-title {
-                    font-weight: 600;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                
-                .window-controls {
-                    display: flex;
-                    gap: 8px;
-                }
-                
-                .btn-icon {
-                    background: none;
-                    border: none;
-                    color: #ccc;
-                    padding: 4px 8px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                
-                .btn-icon:hover {
-                    background: rgba(255,255,255,0.1);
-                    color: white;
-                }
-                
-                .btn-icon.active {
-                    color: #f39c12;
-                }
-                
-                .btn-icon.btn-danger:hover {
-                    background: #e74c3c;
-                    color: white;
-                }
-                
-                .window-content {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    overflow: hidden;
-                }
-                
-                .history-toolbar {
-                    padding: 16px;
-                    border-bottom: 1px solid #444;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    flex-wrap: wrap;
-                    gap: 12px;
-                }
-                
-                .toolbar-section {
-                    display: flex;
-                    gap: 8px;
-                    align-items: center;
-                }
-                
-                .search-input {
-                    padding: 8px 12px;
-                    background: #333;
-                    border: 1px solid #555;
-                    border-radius: 4px;
-                    color: #fff;
-                    width: 200px;
-                }
-                
-                .history-stats {
-                    padding: 8px 16px;
-                    background: #333;
-                    border-bottom: 1px solid #444;
-                    display: flex;
-                    gap: 20px;
-                    font-size: 13px;
-                    color: #ccc;
-                }
-                
-                .stat-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                }
-                
-                .conversation-list-container {
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 16px;
-                }
-                
-                .conversation-item {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 12px;
-                    padding: 16px;
-                    background: #333;
-                    border: 1px solid #444;
-                    border-radius: 6px;
-                    margin-bottom: 12px;
-                    transition: all 0.2s;
-                }
-                
-                .conversation-item:hover {
-                    background: #3a3a3a;
-                    border-color: #555;
-                }
-                
-                .conversation-item.success-example {
-                    border-left: 4px solid #f39c12;
-                    background: #3a3a2a;
-                }
-                
-                .conv-checkbox {
-                    padding-top: 4px;
-                }
-                
-                .conv-content {
-                    flex: 1;
-                    cursor: pointer;
-                }
-                
-                .conv-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
-                    margin-bottom: 8px;
-                }
-                
-                .conv-info h4 {
-                    margin: 0 0 4px 0;
-                    color: #fff;
-                    font-size: 16px;
-                }
-                
-                .conv-date {
-                    color: #888;
-                    font-size: 12px;
-                }
-                
-                .conv-badges {
-                    display: flex;
-                    gap: 6px;
-                    flex-wrap: wrap;
-                }
-                
-                .badge {
-                    padding: 2px 6px;
-                    background: #555;
-                    color: #ccc;
-                    border-radius: 3px;
-                    font-size: 11px;
-                }
-                
-                .badge-error {
-                    background: #e74c3c;
-                    color: white;
-                }
-                
-                .badge-problematic { background: #e74c3c; }
-                .badge-plugin-generation { background: #3498db; }
-                .badge-extended { background: #9b59b6; }
-                .badge-tool-intensive { background: #f39c12; }
-                
-                .conv-preview {
-                    color: #ccc;
-                    font-size: 13px;
-                    line-height: 1.4;
-                }
-                
-                .message-preview {
-                    margin-bottom: 4px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-                
-                .conv-actions {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 4px;
-                }
-                
-                .empty-conversation-list {
-                    text-align: center;
-                    padding: 60px 20px;
-                    color: #666;
-                }
-                
-                .empty-conversation-list i {
-                    font-size: 48px;
-                    margin-bottom: 16px;
-                    color: #444;
-                }
-            `;
-            document.head.appendChild(styles);
-        }
-        
-        // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', async () => {
-            await initializeEvolutionSystem();
-            // 在初始化后强制刷新一次数据
-            console.log('🔄 Performing initial data refresh on DOMContentLoaded...');
-            refreshData();
-        });
-        
-        // Handle window focus for data refresh
-        window.addEventListener('focus', () => {
-            console.log('🔄 Window focused, refreshing data...');
-            refreshData();
-        });
-        
-        // Legacy functions for compatibility
-        async function exportHistory(format = 'json') {
-            console.log(`📤 Exporting history as ${format.toUpperCase()}...`);
-            
-            try {
-                if (evolutionManager && evolutionManager.storageManager && evolutionManager.storageManager.exportConversationHistory) {
-                    await evolutionManager.storageManager.exportConversationHistory(format);
-                    console.log('✅ History exported successfully');
-                } else {
-                    throw new Error('Export functionality not available');
-                }
-            } catch (error) {
-                console.error('Export failed:', error);
-                alert('Export failed: ' + error.message);
-            }
-        }
-        
-        async function cleanupHistory() {
-            const confirmed = confirm('This will remove old conversation data (older than 30 days) while keeping recent conversations. Continue?');
-            if (!confirmed) return;
-            
-            console.log('🧹 Cleaning up old history data...');
-            
-            try {
-                if (evolutionManager && evolutionManager.storageManager && evolutionManager.storageManager.cleanupHistory) {
-                    const result = await evolutionManager.storageManager.cleanupHistory({
-                        olderThanDays: 30,
-                        keepMinimum: 10,
-                        removeErrors: false,
-                        removeEmpty: true
-                    });
-                    
-                    alert(`Cleanup completed: Removed ${result.removedConversations} conversations. ${result.remainingConversations} conversations remain.`);
-                    refreshHistoryManager(); // Refresh view
-                } else {
-                    throw new Error('Cleanup functionality not available');
-                }
-            } catch (error) {
-                console.error('Cleanup failed:', error);
-                alert('Cleanup failed: ' + error.message);
-            }
-        }
-        
-        async function clearAllHistory() {
-            const confirmed = confirm('⚠️ This will permanently delete ALL conversation history. This action cannot be undone. Are you absolutely sure?');
-            if (!confirmed) return;
-            
-            const doubleConfirmed = confirm('🚨 FINAL WARNING: This will erase all stored conversations, analysis records, and plugin generation history. Continue?');
-            if (!doubleConfirmed) return;
-            
-            console.log('🗑️ Clearing all history data...');
-            
-            if (evolutionManager && evolutionManager.storageManager) {
-                evolutionManager.storageManager.historyData.conversations = [];
-                evolutionManager.storageManager.historyData.analysisRecords = [];
-                evolutionManager.storageManager.historyData.pluginGenerationHistory = [];
-                evolutionManager.storageManager.historyData.evolutionTimeline = [];
-                evolutionManager.storageManager.updateStorageStats();
-                await evolutionManager.storageManager.saveHistoryData();
-                
-                refreshHistoryManager();
-                updateChatBoxWithSuccessExamples(); // Clear examples from ChatBox
-                
-                console.log('✅ All history data cleared');
-                alert('All history data has been cleared successfully.');
-            }
-        }
-        
-        function viewConversationDetails(conversationId) {
-            console.log('👁️ Viewing conversation details:', conversationId);
-            
-            if (evolutionManager && evolutionManager.storageManager) {
-                const conv = evolutionManager.storageManager.historyData.conversations.find(c => c.id === conversationId);
-                if (conv) {
-                    // Create detailed view modal
-                    const modal = document.createElement('div');
-                    modal.className = 'conversation-detail-modal';
-                    modal.onclick = (e) => {
-                        if (e.target === modal) modal.remove();
-                    };
-                    
-                    const messages = conv.events ? conv.events.filter(event => 
-                        event.type === 'message' && event.content
-                    ) : [];
-                    
-                    modal.innerHTML = `
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h3>Conversation Details</h3>
-                                <button onclick="this.closest('.conversation-detail-modal').remove()" class="btn-close">×</button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="conv-meta">
-                                    <p><strong>ID:</strong> ${conv.id}</p>
-                                    <p><strong>Started:</strong> ${new Date(conv.startTime).toLocaleString()}</p>
-                                    <p><strong>Duration:</strong> ${conv.duration || 'N/A'}</p>
-                                    <p><strong>Messages:</strong> ${messages.length}</p>
-                                    <p><strong>Category:</strong> ${conv.metadata?.category || 'standard'}</p>
-                                    <p><strong>Success Example:</strong> ${conv.metadata?.isSuccessExample ? 'Yes ⭐' : 'No'}</p>
-                                </div>
-                                <div class="conv-messages">
-                                    <h4>Messages:</h4>
-                                    ${messages.map(msg => `
-                                        <div class="message-detail">
-                                            <div class="msg-header">
-                                                <strong>${msg.sender}</strong>
-                                                <span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString()}</span>
-                                            </div>
-                                            <div class="msg-content">${msg.content}</div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    document.body.appendChild(modal);
-                    
-                    // Add modal styles
-                    if (!document.getElementById('modalStyles')) {
-                        const styles = document.createElement('style');
-                        styles.id = 'modalStyles';
-                        styles.textContent = `
-                            .conversation-detail-modal {
-                                position: fixed;
-                                top: 0;
-                                left: 0;
-                                width: 100%;
-                                height: 100%;
-                                background: rgba(0,0,0,0.8);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                z-index: 20000;
-                            }
-                            .modal-content {
-                                background: #2a2a2a;
-                                border-radius: 8px;
-                                width: 80%;
-                                max-width: 800px;
-                                max-height: 80%;
-                                overflow: hidden;
-                                display: flex;
-                                flex-direction: column;
-                            }
-                            .modal-header {
-                                padding: 16px;
-                                border-bottom: 1px solid #444;
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                background: #333;
-                            }
-                            .modal-header h3 {
-                                margin: 0;
-                                color: #fff;
-                            }
-                            .btn-close {
-                                background: none;
-                                border: none;
-                                color: #ccc;
-                                font-size: 24px;
-                                cursor: pointer;
-                                padding: 4px;
-                            }
-                            .btn-close:hover {
-                                color: #fff;
-                            }
-                            .modal-body {
-                                padding: 16px;
-                                overflow-y: auto;
-                                flex: 1;
-                            }
-                            .conv-meta {
-                                background: #333;
-                                padding: 16px;
-                                border-radius: 6px;
-                                margin-bottom: 16px;
-                            }
-                            .conv-meta p {
-                                margin: 8px 0;
-                                color: #ccc;
-                            }
-                            .conv-messages h4 {
-                                color: #4a9eff;
-                                margin-bottom: 16px;
-                            }
-                            .message-detail {
-                                background: #333;
-                                border: 1px solid #444;
-                                border-radius: 6px;
-                                padding: 12px;
-                                margin-bottom: 12px;
-                            }
-                            .msg-header {
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                margin-bottom: 8px;
-                            }
-                            .msg-header strong {
-                                color: #4a9eff;
-                            }
-                            .msg-time {
-                                color: #888;
-                                font-size: 12px;
-                            }
-                            .msg-content {
-                                color: #ccc;
-                                line-height: 1.4;
-                                white-space: pre-wrap;
-                            }
-                        `;
-                        document.head.appendChild(styles);
-                    }
-                }
-            }
-        }
     </script>
 </body>
-</html> 
+</html>

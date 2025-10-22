@@ -1,8 +1,9 @@
 /**
- * AutoPluginGenerator - 自动插件生成器
- * 根据对话分析结果自动生成符合系统要求的插件代码
+ * PluginDocumentationGenerator - Plugin Documentation Generator
+ * Generates comprehensive documentation prompts and guides for users to create plugins
+ * based on conversation analysis results
  */
-class AutoPluginGenerator {
+class PluginDocumentationGenerator {
     constructor(evolutionManager) {
         this.evolutionManager = evolutionManager;
         this.llmConfigManager = evolutionManager.llmConfigManager;
@@ -11,7 +12,7 @@ class AutoPluginGenerator {
         this.pluginTemplates = this.initializePluginTemplates();
         this.codeTemplates = this.initializeCodeTemplates();
         
-        console.log('AutoPluginGenerator initialized');
+        console.log('PluginDocumentationGenerator initialized');
     }
 
     /**
@@ -161,7 +162,7 @@ if (typeof module !== 'undefined' && module.exports) {
     }
 
     /**
-     * 生成插件规格说明
+     * Generate plugin specification
      */
     async generatePluginSpecification(analysis) {
         try {
@@ -196,7 +197,7 @@ if (typeof module !== 'undefined' && module.exports) {
     }
 
     /**
-     * 生成插件ID
+     * Generate plugin ID
      */
     generatePluginId(analysis) {
         const domain = analysis.domain || 'general';
@@ -207,7 +208,7 @@ if (typeof module !== 'undefined' && module.exports) {
     }
 
     /**
-     * 生成插件名称
+     * Generate plugin name
      */
     generatePluginName(analysis) {
         const domain = analysis.domain || 'General';
@@ -217,7 +218,7 @@ if (typeof module !== 'undefined' && module.exports) {
     }
 
     /**
-     * 生成函数规格
+     * Generate function specifications
      */
     async generateFunctionSpecs(analysis) {
         const functions = [];
@@ -759,9 +760,11 @@ class ${this.generateClassName(spec.name)}Test {
     }
 }
 
-// 导出类
+// Export class
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = AutoPluginGenerator;
+    module.exports = PluginDocumentationGenerator;
 } else if (typeof window !== 'undefined') {
-    window.AutoPluginGenerator = AutoPluginGenerator;
+    window.PluginDocumentationGenerator = PluginDocumentationGenerator;
+    // Keep backward compatibility alias during transition
+    window.AutoPluginGenerator = PluginDocumentationGenerator;
 }

@@ -1,6 +1,7 @@
 /**
- * ConversationEvolutionManager - 对话进化管理器
- * 分析ChatBox LLM对话过程，识别无法实现的功能需求，并自动生成相应的插件
+ * ConversationEvolutionManager - Conversation Evolution Manager
+ * Analyzes ChatBox LLM conversations, identifies unmet functionality needs,
+ * and generates comprehensive plugin development documentation
  */
 class ConversationEvolutionManager {
     constructor(app, configManager, chatManager) {
@@ -8,17 +9,17 @@ class ConversationEvolutionManager {
         this.configManager = configManager;
         this.chatManager = chatManager;
         
-        // 进化数据存储
+        // Evolution data storage
         this.evolutionData = {
             conversations: [],
             missingFunctions: [],
-            generatedPlugins: [],
+            pluginDocumentation: [],  // Changed from generatedPlugins
             evolutionHistory: []
         };
         
-        // 分析引擎
+        // Analysis engine
         this.analysisEngine = null;
-        this.pluginGenerator = null;
+        this.pluginDocumentationGenerator = null;
         
         // LLM配置
         this.llmConfigManager = null;
@@ -57,9 +58,9 @@ class ConversationEvolutionManager {
             this.analysisEngine = new ConversationAnalysisEngine(this);
             console.log('🔍 Conversation analysis engine initialized');
             
-            // 初始化插件生成器
-            this.pluginGenerator = new AutoPluginGenerator(this);
-            console.log('🔧 Auto plugin generator initialized');
+            // Initialize plugin documentation generator
+            this.pluginDocumentationGenerator = new PluginDocumentationGenerator(this);
+            console.log('🔧 Plugin documentation generator initialized');
             
             // 3. 不再需要单独的加载步骤，因为 storageManager 已经加载了
             // await this.loadEvolutionData();
@@ -356,126 +357,94 @@ class ConversationEvolutionManager {
     }
 
     /**
-     * 启动插件生成
+     * Generate plugin development documentation
      */
-    async initiatePluginGeneration(analysis) {
+    async generatePluginDocumentation(analysis) {
         try {
-            const pluginSpec = await this.pluginGenerator.generatePluginSpecification(analysis);
+            const documentation = await this.pluginDocumentationGenerator.generatePluginDocumentation(analysis);
             
-            if (pluginSpec) {
-                await this.generateAndTestPlugin(pluginSpec);
+            if (documentation) {
+                await this.storePluginDocumentation(documentation);
+                // Notify user about new documentation
+                this.notifyUserAboutDocumentation(documentation);
             }
         } catch (error) {
-            console.error('Failed to generate plugin:', error);
+            console.error('Failed to generate plugin documentation:', error);
         }
     }
 
     /**
-     * 生成并测试插件
+     * Store plugin documentation
      */
-    async generateAndTestPlugin(spec) {
+    async storePluginDocumentation(documentation) {
         try {
             const startTime = Date.now();
             
-            // 生成插件代码
-            const pluginCode = await this.pluginGenerator.generatePluginCode(spec);
+            // Store documentation in evolution data
+            this.evolutionData.pluginDocumentation.push(documentation);
             
-            // 创建插件记录
-            const plugin = {
-                id: Date.now() + Math.random().toString(36).substr(2, 9),
-                name: spec.name,
-                description: spec.description,
-                generatedAt: new Date().toISOString(),
-                specification: spec,
-                code: pluginCode,
-                status: 'generated',
-                testResults: null
+            // Create documentation record for storage
+            const docRecord = {
+                id: documentation.id,
+                name: documentation.specification.name,
+                description: documentation.specification.description,
+                generatedAt: documentation.timestamp,
+                specification: documentation.specification,
+                prompt: documentation.prompt,
+                implementationGuide: documentation.implementationGuide,
+                status: 'available'
             };
             
-            // 测试插件
-            const testResults = await this.testGeneratedPlugin(plugin);
-            plugin.testResults = testResults;
-            plugin.status = testResults.success ? 'tested' : 'failed';
+            // No testing needed for documentation
+            // Documentation is ready for user to copy and use
             
-            // 记录生成的插件
-            this.evolutionData.generatedPlugins.push(plugin);
+            // Record generated documentation
+            // Already added above
             
-            // 保存插件生成记录到存储系统
+            // Save documentation record to storage system
             if (this.storageManager) {
                 const generationTime = Date.now() - startTime;
-                this.storageManager.savePluginGenerationRecord({
-                    pluginId: plugin.id,
-                    conversationId: spec.conversationId,
-                    analysisId: spec.analysisId,
-                    name: plugin.name,
-                    type: spec.type || 'auto-generated',
-                    specification: spec,
-                    method: 'auto-generation',
-                    sourceAnalysis: spec.sourceAnalysis || {},
+                this.storageManager.savePluginDocumentationRecord({
+                    documentationId: documentation.id,
+                    conversationId: documentation.specification.conversationId,
+                    analysisId: documentation.specification.analysisId,
+                    name: documentation.specification.name,
+                    type: 'documentation',
+                    specification: documentation.specification,
+                    method: 'documentation-generation',
                     generationTime: generationTime,
-                    testResults: testResults,
-                    status: plugin.status,
-                    codeStats: {
-                        linesOfCode: pluginCode ? pluginCode.split('\n').length : 0,
-                        complexity: this.calculateCodeComplexity(pluginCode),
-                        dependencies: this.extractDependencies(pluginCode)
-                    },
-                    tags: spec.tags || [],
-                    category: spec.category || 'unknown'
+                    status: 'available',
+                    metadata: documentation.metadata,
+                    tags: documentation.specification.tags || [],
+                    category: documentation.specification.category || 'unknown'
                 }).catch(error => {
-                    console.error('Failed to save plugin generation record:', error);
+                    console.error('Failed to save documentation record:', error);
                 });
             }
             
-            return plugin;
+            return documentation;
         } catch (error) {
-            console.error('Failed to generate and test plugin:', error);
+            console.error('Failed to store plugin documentation:', error);
             return null;
         }
     }
 
     /**
-     * 测试生成的插件
+     * Notify user about new documentation
      */
-    async testGeneratedPlugin(plugin) {
-        try {
-            const testResults = {
-                success: false,
-                tests: [],
-                errors: []
-            };
-            
-            // 基本代码解析测试
-            try {
-                new Function(plugin.code);
-                testResults.tests.push({ name: 'Code Parsing', success: true });
-            } catch (error) {
-                testResults.tests.push({ 
-                    name: 'Code Parsing', 
-                    success: false, 
-                    error: error.message 
-                });
-                testResults.errors.push(`Code parsing failed: ${error.message}`);
-            }
-            
-            // 插件结构验证
-            const structureTest = this.validatePluginStructure(plugin.code);
-            testResults.tests.push(structureTest);
-            
-            if (!structureTest.success) {
-                testResults.errors.push(structureTest.error);
-            }
-            
-            // 设置总体成功状态
-            testResults.success = testResults.tests.every(test => test.success);
-            
-            return testResults;
-        } catch (error) {
-            return {
-                success: false,
-                tests: [],
-                errors: [`Test execution failed: ${error.message}`]
-            };
+    notifyUserAboutDocumentation(documentation) {
+        console.log(`📖 New plugin documentation available: ${documentation.specification.name}`);
+        console.log(`📋 Copy documentation prompt to create your plugin`);
+        console.log(`⏱️ Estimated development time: ${documentation.metadata.estimatedTime}`);
+        
+        // Emit event for UI to handle
+        if (this.app && this.app.emit) {
+            this.app.emit('plugin-documentation-ready', {
+                id: documentation.id,
+                name: documentation.specification.name,
+                priority: documentation.metadata.priority,
+                complexity: documentation.metadata.complexity
+            });
         }
     }
 
@@ -571,22 +540,22 @@ class ConversationEvolutionManager {
     }
 
     /**
-     * 考虑生成插件
+     * Consider plugin documentation generation
      */
-    async considerPluginGeneration(missingFunction) {
-        // 检查是否已经为此功能生成过插件
-        const existingPlugin = this.evolutionData.generatedPlugins.find(plugin => 
-            plugin.specification.addresses === missingFunction.id
+    async considerPluginDocumentation(missingFunction) {
+        // Check if documentation already exists for this function
+        const existingDoc = this.evolutionData.pluginDocumentation.find(doc => 
+            doc.specification.addresses === missingFunction.id
         );
         
-        if (!existingPlugin && missingFunction.priority >= 7) {
-            await this.initiatePluginGeneration({ 
+        if (!existingDoc && missingFunction.priority >= 7) {
+            await this.generatePluginDocumentation({ 
                 isMissingFunction: true,
                 missingFunctionDescription: missingFunction.description,
                 userIntent: missingFunction.userIntent,
                 suggestedImplementation: missingFunction.suggestedImplementation,
                 priority: missingFunction.priority,
-                shouldGeneratePlugin: true
+                shouldGenerateDocumentation: true
             });
         }
     }
@@ -609,8 +578,8 @@ class ConversationEvolutionManager {
                 totalConversations: conversations.length,
                 completedConversations: conversations.length, // 简化
                 missingFunctions: analysisRecords.length,
-                generatedPlugins: plugins.length,
-                successfulPlugins: plugins.filter(p => p.status === 'success').length,
+                generatedDocumentation: plugins.length,
+                successfulDocumentation: plugins.filter(p => p.status === 'available').length,
             };
             
             console.log('📊 getEvolutionStats successfully calculated:', stats);
@@ -707,19 +676,19 @@ class ConversationEvolutionManager {
     }
 
     /**
-     * 为缺失功能生成插件
+     * Generate documentation for missing function
      */
-    async generatePluginForMissingFunction(missingFunction) {
+    async generateDocumentationForMissingFunction(missingFunction) {
         const analysis = {
             isMissingFunction: true,
             missingFunctionDescription: missingFunction.description,
             userIntent: missingFunction.userIntent,
             suggestedImplementation: missingFunction.suggestedImplementation,
             priority: missingFunction.priority,
-            shouldGeneratePlugin: true
+            shouldGenerateDocumentation: true
         };
         
-        return await this.initiatePluginGeneration(analysis);
+        return await this.generatePluginDocumentation(analysis);
     }
 
     /**
@@ -745,11 +714,12 @@ class ConversationEvolutionManager {
                 successRate: c.stats.successCount / Math.max(c.stats.messageCount, 1)
             })),
             topMissingFunctions,
-            generatedPlugins: this.evolutionData.generatedPlugins.map(p => ({
-                name: p.name,
-                status: p.status,
-                generatedAt: p.generatedAt,
-                testSuccess: p.testResults?.success || false
+            pluginDocumentation: this.evolutionData.pluginDocumentation.map(doc => ({
+                name: doc.name,
+                status: doc.status,
+                generatedAt: doc.generatedAt,
+                priority: doc.metadata?.priority || 0,
+                complexity: doc.metadata?.complexity || 0
             })),
             evolutionHistory: this.evolutionData.evolutionHistory
         };
