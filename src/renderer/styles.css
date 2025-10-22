@@ -1108,6 +1108,15 @@
   flex: 1;
 }
 
+/* Viewer Container - ensures proper vertical stacking of genome viewer, splitter, and sequence sections */
+.viewer-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
 .splitter {
   height: 8px;
   background: linear-gradient(to bottom, #e9ecef, #dee2e6, #e9ecef);
@@ -1121,6 +1130,8 @@
   transition: all 0.2s ease;
   user-select: none;
   z-index: 5; /* Below ruler (z-index: 15) but above base content */
+  flex-shrink: 0; /* Prevent splitter from shrinking */
+  order: 2; /* Position after genome-viewer-section (order: 1) and before sequence-display-section (order: 3) */
 }
 
 .splitter:hover {
@@ -1183,13 +1194,13 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  flex: 1 0 auto;
+  flex: 0 0 auto; /* Don't grow, don't shrink from set height */
   height: 250px;
   min-height: 50px;
   max-height: 80vh;
   position: relative;
   z-index: 10;
-  order: 999;
+  order: 3; /* Position after genome-viewer-section (order: 1) and splitter (order: 2) */
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -2930,6 +2941,7 @@ sup {
   overflow-y: auto;
   position: relative;
   min-height: 200px;
+  order: 1; /* Position before splitter (order: 2) and sequence-display-section (order: 3) */
 }
 
 @keyframes selectedPulse {
