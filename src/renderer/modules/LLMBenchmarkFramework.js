@@ -564,7 +564,7 @@ class LLMBenchmarkFramework {
             `&nbsp;&nbsp;&nbsp;${this.generateSuiteRecommendation(successRate, avgScore, testSuite.getName())}<br><br>` +
             
             `───────────────────────────────────────────────────────────<br>` +
-            `**Test Engineer:** Dr. Sarah Chen | **Lab:** GenomeAI Testing | **Date:** ${new Date().toLocaleDateString()}<br>` +
+            `**Test Engineer:** | **Lab:** GenomeAI Testing | **Date:** ${new Date().toLocaleDateString()}<br>` +
             `**Report Status:** ${successRate >= 70 ? 'APPROVED FOR REVIEW ✅' : 'REQUIRES IMMEDIATE ATTENTION ⚠️'}`
         );
     }
@@ -3971,7 +3971,7 @@ class LLMBenchmarkFramework {
      */
     displayEvaluationStart(test, testResult) {
         this.chatManager.updateThinkingMessage(
-            `<br><br>👩‍🔬 **Dr. Sarah Chen - EVALUATION PHASE**<br>` +
+            `<br><br>👩‍🔬 ** EVALUATION PHASE**<br>` +
             `═══════════════════════════════════════════════════════════<br><br>` +
             
             `⚖️ **SCORING EVALUATION INITIATED**<br><br>` +
@@ -4017,7 +4017,7 @@ class LLMBenchmarkFramework {
 
         // Professional test report format
         this.chatManager.updateThinkingMessage(
-            `<br><br>👩‍🔬 **Dr. Sarah Chen - EVALUATION REPORT**<br>` +
+            `<br><br>👩‍🔬 **EVALUATION REPORT**<br>` +
             `═══════════════════════════════════════════════════════════<br><br>` +
             
             `${gradeEmoji} **FINAL TEST RESULT: ${evaluation.success ? 'PASS' : 'FAIL'}** ${successIcon}<br><br>` +
@@ -4041,7 +4041,7 @@ class LLMBenchmarkFramework {
             `&nbsp;&nbsp;&nbsp;${this.generateProfessionalAssessment(evaluation, scorePercentage, test.type)}<br><br>` +
             
             `───────────────────────────────────────────────────────────<br>` +
-            `**Test Engineer:** Dr. Sarah Chen | **Date:** ${new Date().toLocaleDateString()} | **Status:** ${evaluation.success ? 'APPROVED ✅' : 'REQUIRES REVIEW ⚠️'}`
+            `**Test Engineer:**  | **Date:** ${new Date().toLocaleDateString()} | **Status:** ${evaluation.success ? 'APPROVED ✅' : 'REQUIRES REVIEW ⚠️'}`
         );
     }
 
