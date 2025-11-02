@@ -4809,7 +4809,7 @@ async function createDeepGeneResearchWindow(params = {}) {
     });
 
     // Load the Deep Gene Research URL
-    deepGeneResearchWindow.loadURL(deepGeneResearchUrl);
+    deepGeneResearchWindow.loadURL(deepGeneResearchUrl); 
 
     // Show window when ready
     deepGeneResearchWindow.once('ready-to-show', () => {
