@@ -217,6 +217,7 @@ class MultiAgentSettingsManager {
                     'zai-org/GLM-4.5': 'GLM-4.5',
                     'zai-org/GLM-4.5-Air': 'GLM-4.5-Air',
                     'MiniMaxAI/MiniMax-M1-80k': 'MiniMax-M1-80k (Long Context)',
+                    'MiniMaxAI/MiniMax-M2': 'MiniMax-M2 (Latest)',
                     'Tongyi-Zhiwen/QwenLong-L1-32B': 'QwenLong-L1-32B (Long Context)',
                     'TeleAI/TeleChat2': 'TeleChat2 (Latest)',
                     'internlm/internlm2_5-7b-chat': 'InternLM2.5-7B-Chat (Fast)',
@@ -1037,4 +1038,4 @@ class MultiAgentSettingsManager {
 }
 
 // Export for global use
-window.MultiAgentSettingsManager = MultiAgentSettingsManager; 
+window.MultiAgentSettingsManager = MultiAgentSettingsManager;

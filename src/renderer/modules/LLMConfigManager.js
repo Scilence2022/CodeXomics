@@ -134,6 +134,7 @@ class LLMConfigManager {
                     'ascend-tribe/pangu-pro-moe',             // PanGu Pro MoE
                     'tencent/Hunyuan-A13B-Instruct',          // Hunyuan 13B
                     'MiniMaxAI/MiniMax-M1-80k',               // MiniMax M1
+                    'MiniMaxAI/MiniMax-M2',                   // MiniMax M2 (Latest)
                     'TeleAI/TeleChat2',                       // TeleChat2
                     
                     // InternLM Series (by size)
