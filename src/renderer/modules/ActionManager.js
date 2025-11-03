@@ -1697,6 +1697,11 @@ class ActionManager {
             // Step 6: Cleanup - IMPORTANT: Original genome data remains UNCHANGED
             // All modifications were applied to the proxy/copy, which was exported to GBK file.
             // The original genomeBrowser data is never modified during action execution.
+            
+            // 🔒 CRITICAL FIX: Clear sequence modifications to prevent contaminating original data
+            console.log(`🧹 [ActionManager] Clearing ${this.sequenceModifications.size} chromosome modifications from memory`);
+            this.sequenceModifications.clear();
+            
             this.restoreGenomeDataFromBackup(originalGenomeData);
             this.isExecuting = false;
             this.hideExecutionProgress();
@@ -1706,6 +1711,7 @@ class ActionManager {
             
             console.log(`🔒 [ActionManager] Execution cleanup completed`);
             console.log(`✅ [ActionManager] Original genome data preserved - modifications only in generated GBK file`);
+            console.log(`✅ [ActionManager] Sequence modifications cleared - no contamination of original sequence`);
         }
     }
     
@@ -3697,13 +3703,18 @@ class ActionManager {
     
     /**
      * Adjust feature positions based on sequence modifications
+     * 
+     * @param {string} chromosome - Chromosome name
+     * @param {Array} originalFeatures - REQUIRED: Features to adjust (from execution copy, NOT original!)
      */
     adjustFeaturePositions(chromosome, originalFeatures = null) {
-        // Use provided originalFeatures or fall back to backed up original annotations
-        const sourceFeatures = originalFeatures || 
-                              (this.originalAnnotations && this.originalAnnotations[chromosome]) || 
-                              (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) || 
-                              [];
+        // 🔒 CRITICAL: originalFeatures must be provided - NO FALLBACK to original data!
+        if (!originalFeatures || originalFeatures.length === 0) {
+            console.warn(`⚠️ [ActionManager] No features provided for adjustment on ${chromosome}`);
+            return [];
+        }
+        
+        const sourceFeatures = originalFeatures;
         
         if (!this.sequenceModifications.has(chromosome)) {
             return sourceFeatures; // No modifications for this chromosome
