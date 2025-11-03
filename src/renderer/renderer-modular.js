@@ -500,7 +500,7 @@ class GenomeBrowser {
             }
         }, 1000);
         
-        console.log('🎉 Genome AI Studio initialized successfully!');
+        console.log('🎉 CodeXomics initialized successfully!');
         
         // Initialize MCP server status check
         this.initializeMCPServerStatus();
@@ -3160,7 +3160,7 @@ class GenomeBrowser {
             // Show navigation controls
             document.getElementById('genomeNavigation').style.display = 'block';
             
-            // Create Genome AI Studio container
+            // Create CodeXomics container
             const browserContainer = document.createElement('div');
             browserContainer.className = 'genome-browser-container';
             
@@ -8786,16 +8786,15 @@ class GenomeBrowser {
 
 }
 
-// Initialize the Genome AI Studio when the page loads
+// Initialize the CodeXomics when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     // Wait for all scripts to be loaded before initializing
     const waitForScriptsToLoad = () => {
         return new Promise((resolve) => {
             const checkScriptsLoaded = () => {
-                // Check if all required classes are available
-                if (typeof GenomeBrowser !== 'undefined' && 
-                    typeof LiteratureAPIService !== 'undefined' && 
-                    typeof EnhancedCitationDisplay !== 'undefined') {
+                // Only check if GenomeBrowser is available (defined in same file)
+                // Other modules will be loaded asynchronously
+                if (typeof GenomeBrowser !== 'undefined') {
                     resolve();
                 } else {
                     setTimeout(checkScriptsLoaded, 50);
@@ -8807,11 +8806,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize after all scripts are loaded
     waitForScriptsToLoad().then(() => {
-        console.log('✅ All required scripts loaded, initializing Genome AI Studio...');
+        console.log('✅ All required scripts loaded, initializing CodeXomics...');
         window.genomeBrowser = new GenomeBrowser();
         window.app = window.genomeBrowser; // Ensure app is available for benchmark system
         
-        // Initialize enhanced citation display
+        // Initialize enhanced citation display after a delay to ensure modules are loaded
         const initializeEnhancedCitationDisplay = () => {
             console.log('Initializing Enhanced Citation Display...');
             console.log('EnhancedCitationDisplay available:', typeof window.EnhancedCitationDisplay);
@@ -8834,9 +8833,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // Initialize Enhanced Citation Display
+        // Try to initialize Enhanced Citation Display immediately
+        // If it fails, try again after a short delay to ensure scripts are loaded
         if (!initializeEnhancedCitationDisplay()) {
-            console.warn('⚠️ Enhanced Citation Display initialization failed, but continuing...');
+            console.log('⏳ Retrying Enhanced Citation Display initialization after delay...');
+            setTimeout(() => {
+                if (!initializeEnhancedCitationDisplay()) {
+                    console.warn('⚠️ Enhanced Citation Display initialization failed after retry, but continuing...');
+                }
+            }, 500);
         }
     }).catch(error => {
         console.error('❌ Failed to wait for scripts to load:', error);

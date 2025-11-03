@@ -361,9 +361,12 @@ class LiteratureAPIService {
     }
 }
 
-// Export for use in other modules
+// Export for use in other modules - ensure immediate availability
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = LiteratureAPIService;
-} else if (typeof window !== 'undefined') {
+}
+// Always expose to window immediately
+if (typeof window !== 'undefined') {
     window.LiteratureAPIService = LiteratureAPIService;
+    console.log('LiteratureAPIService class registered on window object');
 }

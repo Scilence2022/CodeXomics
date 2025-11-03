@@ -5,7 +5,7 @@ class EnhancedCitationDisplay {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
         this.literatureAPI = new LiteratureAPIService();
-        this.displayMode = 'pmid'; // 'pmid', 'summary', 'detailed'
+        this.displayMode = 'summary'; // 'pmid', 'summary', 'detailed' - default to summary for Nature-style citations
         this.isLoading = false;
         this.literatureData = new Map();
     }
@@ -150,6 +150,34 @@ class EnhancedCitationDisplay {
             .citation-content {
                 flex: 1;
                 min-width: 0;
+            }
+
+            .citation-text {
+                font-size: 11px;
+                color: #212529;
+                line-height: 1.6;
+            }
+
+            .citation-text .citation-authors {
+                font-weight: 500;
+                color: #212529;
+            }
+
+            .citation-text .citation-title {
+                color: #212529;
+            }
+
+            .citation-text i {
+                color: #6c757d;
+            }
+
+            .citation-text a.citation-link {
+                color: #007bff;
+                text-decoration: none;
+            }
+
+            .citation-text a.citation-link:hover {
+                text-decoration: underline;
             }
 
             .citation-pmid {
@@ -417,7 +445,8 @@ class EnhancedCitationDisplay {
     }
 
     /**
-     * Generate summary content
+     * Generate summary content in Nature journal citation format
+     * Format: Authors. Title. Journal Year;Volume(Issue):Pages. PMID: xxxxx
      * @param {Object} citation - Citation object
      * @param {Object} literatureInfo - Literature information
      * @returns {string} HTML content
@@ -425,28 +454,53 @@ class EnhancedCitationDisplay {
     generateSummaryContent(citation, literatureInfo) {
         if (!literatureInfo || literatureInfo.error) {
             return `
-                <div class="citation-pmid">PMID: ${citation.id}</div>
-                <div class="citation-title">Unable to load literature information</div>
-                <div class="citation-links">
-                    <a href="${citation.url}" target="_blank" class="citation-link">View on PubMed</a>
+                <div class="citation-text">
+                    <span class="citation-authors">Unable to load citation.</span>
+                    PMID: <a href="${citation.url}" target="_blank" class="citation-link">${citation.id}</a>
                 </div>
             `;
         }
 
-        const authors = literatureInfo.authors.length > 0 
-            ? (literatureInfo.authors.length > 3 
-                ? `${literatureInfo.authors[0].lastName} et al.` 
-                : literatureInfo.authors.map(a => a.lastName).join(', '))
-            : 'Unknown authors';
+        // Format authors in Nature style: LastName, F. M. (initials with dots)
+        let authorString = '';
+        if (literatureInfo.authors.length > 0) {
+            if (literatureInfo.authors.length === 1) {
+                const author = literatureInfo.authors[0];
+                authorString = `${author.lastName}, ${author.initials}.`;
+            } else if (literatureInfo.authors.length <= 6) {
+                // Show all authors if 6 or fewer
+                authorString = literatureInfo.authors.map(a => `${a.lastName}, ${a.initials}.`).join(', ');
+            } else {
+                // Show first author et al. if more than 6
+                const firstAuthor = literatureInfo.authors[0];
+                authorString = `${firstAuthor.lastName}, ${firstAuthor.initials}. et al.`;
+            }
+        } else {
+            authorString = 'Unknown authors.';
+        }
 
+        // Format journal citation: Journal Year;Volume(Issue):Pages
+        let journalCitation = literatureInfo.journal.title;
+        if (literatureInfo.journal.year) {
+            journalCitation += ` <b>${literatureInfo.journal.year}</b>`;
+        }
+        if (literatureInfo.journal.volume) {
+            journalCitation += `;${literatureInfo.journal.volume}`;
+        }
+        if (literatureInfo.journal.issue) {
+            journalCitation += `(${literatureInfo.journal.issue})`;
+        }
+        if (literatureInfo.journal.pages) {
+            journalCitation += `:${literatureInfo.journal.pages}`;
+        }
+
+        // Nature-style citation format
         return `
-            <div class="citation-pmid">PMID: ${citation.id}</div>
-            <div class="citation-title">${literatureInfo.title}</div>
-            <div class="citation-authors">${authors}</div>
-            <div class="citation-journal">${literatureInfo.journal.citation}</div>
-            <div class="citation-links">
-                <a href="${citation.url}" target="_blank" class="citation-link">PubMed</a>
-                ${literatureInfo.doi ? `<a href="https://doi.org/${literatureInfo.doi}" target="_blank" class="citation-link">DOI</a>` : ''}
+            <div class="citation-text">
+                <span class="citation-authors">${authorString}</span> 
+                <span class="citation-title">${literatureInfo.title}</span> 
+                <i>${journalCitation}</i>. 
+                PMID: <a href="${citation.url}" target="_blank" class="citation-link">${citation.id}</a>${literatureInfo.doi ? `, DOI: <a href="https://doi.org/${literatureInfo.doi}" target="_blank" class="citation-link">${literatureInfo.doi}</a>` : ''}.
             </div>
         `;
     }
@@ -595,9 +649,12 @@ class EnhancedCitationDisplay {
     }
 }
 
-// Export for use in other modules
+// Export for use in other modules - ensure immediate availability
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = EnhancedCitationDisplay;
-} else if (typeof window !== 'undefined') {
+}
+// Always expose to window immediately
+if (typeof window !== 'undefined') {
     window.EnhancedCitationDisplay = EnhancedCitationDisplay;
+    console.log('EnhancedCitationDisplay class registered on window object');
 }
