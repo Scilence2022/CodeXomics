@@ -7529,8 +7529,9 @@ class GenomeBrowser {
         if (!modal) return;
         
         // Set modal title and feature type
-        titleElement.textContent = `Add ${featureType.charAt(0).toUpperCase() + featureType.slice(1)}`;
-        typeSelect.value = featureType;
+        const displayFeatureType = featureType || 'gene';
+        titleElement.textContent = `Add ${displayFeatureType.charAt(0).toUpperCase() + displayFeatureType.slice(1)}`;
+        typeSelect.value = displayFeatureType;
         
         // Populate chromosome dropdown
         this.populateChromosomeSelectForFeature(chromosomeSelect);
@@ -9014,4 +9015,4 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log('MicrobeGenomicsFunctions already available');
     }
-}); 
+});

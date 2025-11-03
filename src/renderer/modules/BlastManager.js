@@ -346,9 +346,10 @@ class BlastManager {
                     }
                 }
                 
-                // Properly escape the BLASTDB path for shell execution
-                const escapedDbPath = localDbPath.replace(/"/g, '\\"');
-                finalCommand = `BLASTDB="${escapedDbPath}" ${finalCommand}`;
+                // For paths with spaces, we need to ensure proper escaping
+                // On macOS/Linux, we can use single quotes to preserve spaces
+                const escapedDbPath = localDbPath.includes(' ') ? `'${localDbPath}'` : localDbPath;
+                finalCommand = `BLASTDB=${escapedDbPath} ${finalCommand}`;
                 console.log('BlastManager: Running BLAST command with BLASTDB set:', finalCommand);
             }
 
@@ -411,8 +412,9 @@ class BlastManager {
     async loadLocalDatabases() {
         try {
             const path = require('path');
-            // Get list of local databases
-            const result = await this.runCommand(`blastdbcmd -list ${this.config.localDbPath}`);
+            // Get list of local databases - properly quote the path to handle spaces
+            const dbPath = this.config.localDbPath;
+            const result = await this.runCommand(`blastdbcmd -list "${dbPath}"`);
             const lines = result.split('\n');
             
             for (const line of lines) {

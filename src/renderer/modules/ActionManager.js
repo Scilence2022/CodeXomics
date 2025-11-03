@@ -1961,31 +1961,15 @@ class ActionManager {
                 return;
             }
             
-            const modifications = this.sequenceModifications.get(affectedChromosome) || [];
+            console.log(`🔧 [ActionManager] Adjusting ${features.length} features for chromosome ${affectedChromosome}`);
             
-            // Apply position adjustments to all features
-            for (const feature of features) {
-                const adjustedPositions = this.adjustFeaturePositionsForModifications(
-                    feature, 
-                    modifications, 
-                    affectedChromosome
-                );
-                
-                if (adjustedPositions) {
-                    feature.start = adjustedPositions.start;
-                    feature.end = adjustedPositions.end;
-                }
-            }
-            
-            // Remove features that are no longer valid
-            const validFeatures = features.filter(feature => 
-                feature.start > 0 && feature.end > feature.start
-            );
+            // Use existing adjustFeaturePositions method which handles all modifications
+            const adjustedFeatures = this.adjustFeaturePositions(affectedChromosome, features);
             
             // Set updated features back to execution copy
-            this.setFeaturesInGenomeData(executionGenomeData, affectedChromosome, validFeatures);
+            this.setFeaturesInGenomeData(executionGenomeData, affectedChromosome, adjustedFeatures);
             
-            console.log(`✅ [ActionManager] Updated ${validFeatures.length} features for chromosome ${affectedChromosome} (in execution copy)`);
+            console.log(`✅ [ActionManager] Updated ${adjustedFeatures.length} features for chromosome ${affectedChromosome} (in execution copy)`);
             
         } catch (error) {
             console.error('❌ [ActionManager] Error updating features:', error);
@@ -5009,10 +4993,11 @@ class ActionManager {
 
             // Check sequences
             if (backupData.sequences) {
-                for (const [chromosome, originalSeq] of Object.entries(backupData.sequences)) {
+                for (const [chromosome, originalLength] of Object.entries(backupData.sequences)) {
                     const currentSeq = this.genomeBrowser.currentSequence?.[chromosome];
-                    if (currentSeq && currentSeq.length !== originalSeq.length) {
-                        issues.push(`Chromosome ${chromosome}: sequence length changed (${originalSeq.length} → ${currentSeq.length})`);
+                    // backupData.sequences stores LENGTHS (numbers), not sequences
+                    if (currentSeq && currentSeq.length !== originalLength) {
+                        issues.push(`Chromosome ${chromosome}: sequence length changed (${originalLength} → ${currentSeq.length})`);
                         dataModified = true;
                     }
                 }
