@@ -7452,8 +7452,8 @@ class GenomeBrowser {
             this.toggleActionsDropdown();
         });
         
-        // Dropdown feature buttons
-        document.querySelectorAll('.dropdown-feature-btn').forEach(btn => {
+        // Dropdown feature buttons (ONLY in Add Features dropdown, NOT Actions dropdown)
+        document.querySelectorAll('#addFeaturesDropdown .dropdown-feature-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const featureType = btn.getAttribute('data-type');
                 this.showAddFeatureModal(featureType);
