@@ -7128,24 +7128,86 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
 - **Position 3**: ${data.gcContent?.position3}%
 - **Overall**: ${data.gcContent?.overall}%`;
 
-                    // Add genome-wide codon preferences
+                    // Add comprehensive genome-wide synonymous codon preferences
                     if (data.codonPreferences && Object.keys(data.codonPreferences).length > 0) {
-                        response += `\n\n**Genome-Wide Codon Preferences by Amino Acid:**\n`;
+                        response += `
+
+## Synonymous Codon Preference Analysis
+
+`;
+                        response += `This analysis shows how the genome uses different codons for each amino acid. Higher RSCU values (>1.0) indicate preferred codons, while lower values (<1.0) indicate less preferred codons.\n`;
+                        
                         const sortedAAs = Object.entries(data.codonPreferences)
                             .filter(([aa]) => aa !== '*') // Exclude stop codons
-                            .sort(([,a], [,b]) => b.totalCount - a.totalCount)
-                            .slice(0, 15);
+                            .sort(([,a], [,b]) => b.totalCount - a.totalCount);
                         
-                        for (const [aa, pref] of sortedAAs) {
-                            response += `\n**${aa}** (${pref.totalCount} total, ${pref.synonymousCodons} synonymous codons):\n`;
-                            response += `  Most preferred: ${pref.mostPreferred}, Least preferred: ${pref.leastPreferred}\n`;
-                            const topCodons = pref.codons.slice(0, 3);
-                            for (const codonInfo of topCodons) {
-                                const prefIcon = codonInfo.preference === 'highly preferred' ? '⭐⭐' :
-                                               (codonInfo.preference === 'preferred' ? '⭐' : '▪️');
-                                response += `  ${prefIcon} ${codonInfo.codon}: ${codonInfo.percentage}% (RSCU: ${codonInfo.rscu})\n`;
+                        // Group by number of synonymous codons
+                        const multiCodonAAs = sortedAAs.filter(([,pref]) => pref.synonymousCodons > 1);
+                        const singleCodonAAs = sortedAAs.filter(([,pref]) => pref.synonymousCodons === 1);
+                        
+                        response += `\n### Multi-Codon Amino Acids (${multiCodonAAs.length} amino acids with codon bias)\n`;
+                        
+                        for (const [aa, pref] of multiCodonAAs) {
+                            // Get amino acid full name
+                            const aaNames = {
+                                'A': 'Alanine', 'R': 'Arginine', 'N': 'Asparagine', 'D': 'Aspartic acid',
+                                'C': 'Cysteine', 'Q': 'Glutamine', 'E': 'Glutamic acid', 'G': 'Glycine',
+                                'H': 'Histidine', 'I': 'Isoleucine', 'L': 'Leucine', 'K': 'Lysine',
+                                'F': 'Phenylalanine', 'P': 'Proline', 'S': 'Serine', 'T': 'Threonine',
+                                'Y': 'Tyrosine', 'V': 'Valine', 'W': 'Tryptophan', 'M': 'Methionine'
+                            };
+                            
+                            const aaFullName = aaNames[aa] || aa;
+                            const biasLevel = pref.statistics.biasStrength >= 75 ? 'Very Strong' :
+                                            pref.statistics.biasStrength >= 50 ? 'Strong' :
+                                            pref.statistics.biasStrength >= 25 ? 'Moderate' : 'Weak';
+                            
+                            response += `\n**${aa} - ${aaFullName}** (${pref.totalCount.toLocaleString()} occurrences, ${pref.synonymousCodons} synonymous codons)\n`;
+                            response += `  📊 Bias Strength: ${biasLevel} (${pref.statistics.biasStrength}%) | Effective # of Codons: ${pref.statistics.effectiveNumberOfCodons}/${pref.synonymousCodons}\n`;
+                            response += `  📈 Usage Distribution: Mean=${pref.statistics.mean}%, StdDev=${pref.statistics.stdDev}%, CV=${pref.statistics.coefficientOfVariation}%\n`;
+                            response += `  \n`;
+                            
+                            // Show all codons with visual indicators
+                            for (const codonInfo of pref.codons) {
+                                // Visual preference indicator
+                                let prefIcon;
+                                if (codonInfo.preference === 'highly preferred') prefIcon = '🌟🌟';
+                                else if (codonInfo.preference === 'preferred') prefIcon = '🌟';
+                                else if (codonInfo.preference === 'rare') prefIcon = '▫️';
+                                else if (codonInfo.preference === 'highly rare') prefIcon = '❌';
+                                else prefIcon = '▪️';
+                                
+                                // Create visual bar for percentage
+                                const barLength = Math.round(codonInfo.percentage / 100 * 20);
+                                const bar = '█'.repeat(barLength) + '░'.repeat(20 - barLength);
+                                
+                                response += `    ${prefIcon} **${codonInfo.codon}**: ${codonInfo.percentage}% |${bar}| RSCU: ${codonInfo.rscu} (${codonInfo.count.toLocaleString()} uses)\n`;
                             }
                         }
+                        
+                        // Add single-codon amino acids summary
+                        if (singleCodonAAs.length > 0) {
+                            response += `\n### Single-Codon Amino Acids (${singleCodonAAs.length} amino acids with no codon bias)\n`;
+                            for (const [aa, pref] of singleCodonAAs) {
+                                const aaNames = {
+                                    'W': 'Tryptophan', 'M': 'Methionine'
+                                };
+                                const aaFullName = aaNames[aa] || aa;
+                                const codon = pref.codons[0];
+                                response += `- **${aa} - ${aaFullName}**: ${codon.codon} (${pref.totalCount.toLocaleString()} occurrences, no alternatives)\n`;
+                            }
+                        }
+                        
+                        // Add interpretation guide
+                        response += `\n### Understanding the Results\n\n`;
+                        response += `**RSCU (Relative Synonymous Codon Usage):**\n`;
+                        response += `- RSCU > 1.5: Highly preferred codon (used much more than expected)\n`;
+                        response += `- RSCU 1.0-1.5: Preferred codon (used more than average)\n`;
+                        response += `- RSCU 0.6-1.0: Neutral/slightly disfavored\n`;
+                        response += `- RSCU 0.3-0.6: Rare codon (used less than average)\n`;
+                        response += `- RSCU < 0.3: Highly rare codon (strongly avoided)\n\n`;
+                        response += `**Bias Strength:** Indicates how strongly the genome prefers certain synonymous codons over others.\n`;
+                        response += `**Effective # of Codons (ENC):** If all synonymous codons were used equally, ENC would equal the number of synonymous codons. Lower ENC indicates stronger bias.\n`;
                     }
 
                     response += `\n\nThe genome-wide codon usage analysis has been completed successfully.`;
@@ -12099,34 +12161,80 @@ ${this.getPluginSystemInfo()}`;
         
         for (const [aa, codons] of Object.entries(synonymousCodons)) {
             const aaCount = genomeAminoAcidCounts[aa] || 0;
-            if (aaCount > 0 && codons.length > 1) {
-                const expectedFreq = aaCount / codons.length;
+            if (aaCount > 0) {
+                const expectedFreq = codons.length > 1 ? aaCount / codons.length : aaCount;
                 
                 genomeCodonPreferences[aa] = {
                     aminoAcid: aa,
                     totalCount: aaCount,
                     synonymousCodons: codons.length,
-                    codons: []
+                    codons: [],
+                    statistics: {}
                 };
                 
+                // Calculate RSCU for each codon
                 for (const codon of codons) {
                     const observedCount = genomeCodonCounts[codon] || 0;
                     const rscuValue = expectedFreq > 0 ? observedCount / expectedFreq : 0;
                     genomeRSCU[codon] = rscuValue;
+                    
+                    // Classify preference level
+                    let preference = 'neutral';
+                    if (codons.length > 1) {
+                        if (rscuValue > 1.5) preference = 'highly preferred';
+                        else if (rscuValue > 1.0) preference = 'preferred';
+                        else if (rscuValue < 0.3) preference = 'highly rare';
+                        else if (rscuValue < 0.6) preference = 'rare';
+                    }
                     
                     genomeCodonPreferences[aa].codons.push({
                         codon: codon,
                         count: observedCount,
                         percentage: aaCount > 0 ? parseFloat((observedCount / aaCount * 100).toFixed(2)) : 0,
                         rscu: parseFloat(rscuValue.toFixed(3)),
-                        preference: rscuValue > 1.2 ? 'highly preferred' : (rscuValue > 0.8 ? 'preferred' : (rscuValue < 0.5 ? 'rare' : 'neutral'))
+                        preference: preference
                     });
                 }
                 
-                // Sort codons by usage within each amino acid
+                // Sort codons by usage within each amino acid (descending)
                 genomeCodonPreferences[aa].codons.sort((a, b) => b.percentage - a.percentage);
-                genomeCodonPreferences[aa].mostPreferred = genomeCodonPreferences[aa].codons[0].codon;
-                genomeCodonPreferences[aa].leastPreferred = genomeCodonPreferences[aa].codons[genomeCodonPreferences[aa].codons.length - 1].codon;
+                
+                // Set most and least preferred
+                if (genomeCodonPreferences[aa].codons.length > 0) {
+                    genomeCodonPreferences[aa].mostPreferred = genomeCodonPreferences[aa].codons[0].codon;
+                    genomeCodonPreferences[aa].leastPreferred = genomeCodonPreferences[aa].codons[genomeCodonPreferences[aa].codons.length - 1].codon;
+                    
+                    // Calculate usage statistics for multi-codon amino acids
+                    if (codons.length > 1) {
+                        const usagePercentages = genomeCodonPreferences[aa].codons.map(c => c.percentage);
+                        const mean = usagePercentages.reduce((sum, p) => sum + p, 0) / usagePercentages.length;
+                        const variance = usagePercentages.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / usagePercentages.length;
+                        const stdDev = Math.sqrt(variance);
+                        
+                        // Calculate Effective Number of Codons (ENC) for this amino acid
+                        // ENC = 1 / sum(p_i^2) where p_i is the proportion of each codon
+                        const encValue = 1 / genomeCodonPreferences[aa].codons.reduce((sum, c) => {
+                            const proportion = c.percentage / 100;
+                            return sum + (proportion * proportion);
+                        }, 0);
+                        
+                        genomeCodonPreferences[aa].statistics = {
+                            mean: parseFloat(mean.toFixed(2)),
+                            stdDev: parseFloat(stdDev.toFixed(2)),
+                            coefficientOfVariation: mean > 0 ? parseFloat((stdDev / mean * 100).toFixed(2)) : 0,
+                            effectiveNumberOfCodons: parseFloat(encValue.toFixed(2)),
+                            biasStrength: parseFloat(((codons.length - encValue) / (codons.length - 1) * 100).toFixed(2)) // 0-100% bias strength
+                        };
+                    } else {
+                        genomeCodonPreferences[aa].statistics = {
+                            mean: 100,
+                            stdDev: 0,
+                            coefficientOfVariation: 0,
+                            effectiveNumberOfCodons: 1,
+                            biasStrength: 0 // No bias for single-codon amino acids
+                        };
+                    }
+                }
             }
         }
         
@@ -12173,8 +12281,8 @@ ${this.getPluginSystemInfo()}`;
             codonPreferences: genomeCodonPreferences,
             mostFrequentCodons: genomeCodonUsage.slice(0, 10),
             leastFrequentCodons: genomeCodonUsage.slice(-10).reverse(),
-            // gcContent: gcContent,
-            // analyzedGenes: geneResults
+            gcContent: gcContent,
+            analyzedGenes: geneResults
         };
     }
 

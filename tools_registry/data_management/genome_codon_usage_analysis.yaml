@@ -1,6 +1,6 @@
 name: genome_codon_usage_analysis
 version: 1.0.0
-description: Perform genome-wide codon usage analysis across all CDS features to identify codon preferences and biases at the organism level. Analyzes codon usage patterns across the entire genome or specific chromosomes.
+description: Perform comprehensive genome-wide codon usage analysis across all CDS features to identify codon preferences and biases at the organism level. Analyzes synonymous codon preferences, calculates RSCU values, and provides detailed statistical analysis of codon bias strength including Effective Number of Codons (ENC) for each amino acid.
 category: data_management
 keywords:
   - genome
@@ -72,8 +72,8 @@ sample_usages:
     expected_result: Codon usage analysis for genes longer than 500bp
   - user_query: what are the preferred codons in this genome
     tool_call: genome_codon_usage_analysis(maxGenes=5000)
-    thought: User wants to identify genome-wide codon preferences
-    expected_result: Comprehensive codon preference analysis showing RSCU values and preferred codons per amino acid
+    thought: User wants to identify genome-wide codon preferences with comprehensive synonymous codon analysis
+    expected_result: Comprehensive codon preference analysis showing RSCU values, bias strength, effective number of codons, and complete synonymous codon distribution for each amino acid
 relationships:
   depends_on: []
   conflicts_with: []
@@ -123,15 +123,32 @@ returns:
       - uniqueCodons: number - Number of unique codons found
       - codonUsage: array - Array of codon usage data with frequency and RSCU
       - aminoAcidComposition: object - Genome-wide amino acid composition
-      - codonPreferences: object - Codon preferences by amino acid showing
+      - codonPreferences: object - Comprehensive codon preferences by amino acid showing:
         - aminoAcid: string - Single letter amino acid code
         - totalCount: number - Total count for this amino acid
         - synonymousCodons: number - Number of synonymous codons
-        - codons: array - Detailed codon usage within amino acid
+        - codons: array - Complete detailed codon usage within amino acid including:
+          - codon: string - Three-letter codon sequence
+          - count: number - Number of occurrences
+          - percentage: number - Percentage within amino acid group
+          - rscu: number - Relative Synonymous Codon Usage value
+          - preference: string - Classification (highly preferred/preferred/neutral/rare/highly rare)
         - mostPreferred: string - Most frequently used codon
         - leastPreferred: string - Least frequently used codon
+        - statistics: object - Statistical measures of codon bias:
+          - mean: number - Mean usage percentage
+          - stdDev: number - Standard deviation of usage
+          - coefficientOfVariation: number - CV as percentage
+          - effectiveNumberOfCodons: number - ENC value (1 to N, lower = stronger bias)
+          - biasStrength: number - Overall bias strength percentage (0-100%)
       - mostFrequentCodons: array - Top 10 most frequent codons genome-wide
       - leastFrequentCodons: array - Top 10 least frequent codons
+      - gcContent: object - GC content at each codon position:
+        - position1: number - GC% at first codon position
+        - position2: number - GC% at second codon position
+        - position3: number - GC% at third codon position (wobble)
+        - overall: number - Overall GC content
+      - analyzedGenes: array - List of genes included in analysis with metadata
       - gcContent: object - GC content at each codon position
       - analyzedGenes: array - List of genes included in analysis
   error: string - Error message if success is false
