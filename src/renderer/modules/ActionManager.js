@@ -2475,63 +2475,19 @@ class ActionManager {
     /**
      * Execute a single action
      */
+    /**
+     * DEPRECATED: Direct action execution without execution copy
+     * 
+     * @deprecated Use executeAllActions() which properly uses execution copy
+     * @private
+     */
     async executeAction(action) {
-        action.status = this.STATUS.EXECUTING;
-        action.executionStart = new Date();
+        console.error('❌❌❌ [ActionManager] CRITICAL: executeAction() called directly!');
+        console.error('This method modifies original data and should NOT be used!');
+        console.error('Use executeAllActions() or executeActionOnCopy() instead.');
+        console.error('Stack trace:', new Error().stack);
         
-        // Notify actions track about status change to executing
-        this.notifyActionsTrackUpdate();
-        
-        try {
-            let result;
-            
-            switch (action.type) {
-                case this.ACTION_TYPES.COPY_SEQUENCE:
-                    result = await this.executeCopySequence(action);
-                    break;
-                    
-                case this.ACTION_TYPES.CUT_SEQUENCE:
-                    result = await this.executeCutSequence(action);
-                    break;
-                    
-                case this.ACTION_TYPES.PASTE_SEQUENCE:
-                    result = await this.executePasteSequence(action);
-                    break;
-                    
-                case this.ACTION_TYPES.DELETE_SEQUENCE:
-                    result = await this.executeDeleteSequence(action);
-                    break;
-                    
-                case this.ACTION_TYPES.INSERT_SEQUENCE:
-                    result = await this.executeInsertSequence(action);
-                    break;
-                    
-                case this.ACTION_TYPES.REPLACE_SEQUENCE:
-                    result = await this.executeReplaceSequence(action);
-                    break;
-                    
-                case this.ACTION_TYPES.SEQUENCE_EDIT:
-                    result = await this.executeSequenceEdit(action);
-                    break;
-                    
-                default:
-                    throw new Error(`Unknown action type: ${action.type}`);
-            }
-            
-            action.status = this.STATUS.COMPLETED;
-            action.result = result;
-            action.executionEnd = new Date();
-            action.actualTime = action.executionEnd - action.executionStart;
-            
-        } catch (error) {
-            action.status = this.STATUS.FAILED;
-            action.error = error.message;
-            action.executionEnd = new Date();
-            console.error(`Error executing action ${action.id}:`, error);
-        }
-        
-        // Notify actions track about status change to completed/failed
-        this.notifyActionsTrackUpdate();
+        throw new Error('executeAction() is deprecated - use executeAllActions() to preserve data integrity');
     }
     
     /**
@@ -4378,7 +4334,16 @@ class ActionManager {
     /**
      * Execute single action
      */
+    /**
+     * Execute single action (DEPRECATED - use executeAllActions instead)
+     * 
+     * @deprecated Single action execution bypasses proper data protection
+     * @param {number} actionId - Action ID
+     */
     async executeSingleAction(actionId) {
+        console.warn('[DEPRECATED] executeSingleAction() is deprecated');
+        console.warn('Use executeAllActions() to ensure proper data protection');
+        
         const action = this.actions.find(a => a.id === actionId);
         if (!action) return;
         
@@ -4387,22 +4352,13 @@ class ActionManager {
             return;
         }
         
-        try {
-            await this.executeAction(action);
-            
-            // Find the index of the executed action and adjust subsequent pending actions
-            const actionIndex = this.actions.findIndex(a => a.id === actionId);
-            if (actionIndex !== -1) {
-                this.adjustPendingActionPositions(action, actionIndex + 1);
-            }
-            
-            this.updateActionListUI();
-            this.updateStats();
-            this.genomeBrowser.showNotification('Action executed successfully', 'success');
-        } catch (error) {
-            console.error('Error executing single action:', error);
-            this.genomeBrowser.showNotification('Error executing action', 'error');
-        }
+        // Redirect to executeAllActions for proper data protection
+        this.genomeBrowser.showNotification(
+            'Single action execution disabled. Use "Execute All" for data safety.',
+            'warning'
+        );
+        
+        console.log('🚫 [ActionManager] Single action execution blocked - use executeAllActions() instead');
     }
     
     /**
