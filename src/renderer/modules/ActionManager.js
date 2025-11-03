@@ -168,41 +168,33 @@ class ActionManager {
     }
     
     /**
-     * Backup original annotations before first modification
+     * DEPRECATED: Backup original annotations
+     * 
+     * @deprecated Since v2.0 - Original data is never modified, backups not needed
      */
     ensureOriginalAnnotationsBackup() {
-        if (!this.originalAnnotations && this.genomeBrowser.currentAnnotations) {
-            this.originalAnnotations = JSON.parse(JSON.stringify(this.genomeBrowser.currentAnnotations));
-            console.log('📋 [ActionManager] Backed up original annotations for rollback');
-        }
+        // NO-OP: Original data is never modified in v2.0
+        // All modifications happen on execution copy/proxy only
     }
     
     /**
-     * Restore features from original backup - for rollback functionality
+     * DEPRECATED: Restore features from original backup
+     * 
+     * @deprecated Since v2.0 - Original data is never modified, restore not needed
      */
     restoreOriginalFeatures() {
-        if (this.originalAnnotations) {
-            this.genomeBrowser.currentAnnotations = JSON.parse(JSON.stringify(this.originalAnnotations));
-            console.log('🔄 [ActionManager] Restored original features from backup');
-            
-            // Clear sequence modifications as we're back to original state
-            this.sequenceModifications.clear();
-            
-            // Update display
-            if (this.genomeBrowser.trackRenderer) {
-                this.genomeBrowser.trackRenderer.updateFeatureTrack();
-            }
-        } else {
-            console.warn('⚠️ [ActionManager] No original features backup available for restoration');
-        }
+        console.warn('[DEPRECATED] restoreOriginalFeatures() is deprecated. Original data is never modified in v2.0');
+        // NO-OP: Original data is never modified, nothing to restore
     }
     
     /**
-     * Clear original annotations backup (call when saving changes permanently)
+     * DEPRECATED: Clear original annotations backup
+     * 
+     * @deprecated Since v2.0 - Original data is never modified, backups not needed
      */
     clearOriginalAnnotationsBackup() {
+        // NO-OP: Original data is never modified in v2.0
         this.originalAnnotations = null;
-        console.log('🗑️ [ActionManager] Cleared original annotations backup');
     }
     
     initializeEventListeners() {
@@ -1946,17 +1938,29 @@ class ActionManager {
     /**
      * Update all features after action execution
      */
+    /**
+     * Update all features after action execution
+     * 
+     * @param {Object} executedAction - Executed action
+     * @param {Object} executionGenomeData - Genome data copy or proxy
+     */
     async updateAllFeaturesAfterAction(executedAction, executionGenomeData) {
         console.log(`🔄 [ActionManager] Updating features after ${executedAction.type} action`);
         
         try {
             // Update feature positions based on sequence modifications
             const affectedChromosome = executedAction.metadata?.chromosome;
-            if (!affectedChromosome || !executionGenomeData.annotations?.[affectedChromosome]) {
+            if (!affectedChromosome) {
                 return;
             }
             
-            const features = executionGenomeData.annotations[affectedChromosome];
+            // 🔒 Use helper methods to support both proxy and direct access
+            const features = this.getFeaturesFromGenomeData(executionGenomeData, affectedChromosome);
+            
+            if (!features || features.length === 0) {
+                return;
+            }
+            
             const modifications = this.sequenceModifications.get(affectedChromosome) || [];
             
             // Apply position adjustments to all features
@@ -1974,11 +1978,14 @@ class ActionManager {
             }
             
             // Remove features that are no longer valid
-            executionGenomeData.annotations[affectedChromosome] = features.filter(feature => 
+            const validFeatures = features.filter(feature => 
                 feature.start > 0 && feature.end > feature.start
             );
             
-            console.log(`✅ [ActionManager] Updated ${features.length} features for chromosome ${affectedChromosome}`);
+            // Set updated features back to execution copy
+            this.setFeaturesInGenomeData(executionGenomeData, affectedChromosome, validFeatures);
+            
+            console.log(`✅ [ActionManager] Updated ${validFeatures.length} features for chromosome ${affectedChromosome} (in execution copy)`);
             
         } catch (error) {
             console.error('❌ [ActionManager] Error updating features:', error);
@@ -3198,6 +3205,13 @@ class ActionManager {
     
     /**
      * Copy features from clipboard to target location with position adjustment
+     * 
+     * @param {Object} clipboardData - Clipboard data
+     * @param {string} targetChromosome - Target chromosome
+     * @param {number} targetStart - Target start position
+     * @param {number} targetEnd - Target end position
+     * @param {boolean} isInsert - Is insert operation
+     * @param {Object} executionGenomeData - Genome data copy or proxy (NEVER modify original!)
      */
     async copyFeaturesFromClipboard(clipboardData, targetChromosome, targetStart, targetEnd, isInsert, executionGenomeData = null) {
         try {
@@ -3213,14 +3227,12 @@ class ActionManager {
                 sourceFeatures: sourceFeatures.length,
                 sourceRegion: sourceRegion,
                 targetLocation: `${targetChromosome}:${targetStart}-${targetEnd}`,
-                isInsert: isInsert
+                isInsert: isInsert,
+                usingExecutionCopy: !!executionGenomeData
             });
             
             // Calculate position offset for features
             const sourceStart = sourceRegion.start;
-            const sourceEnd = sourceRegion.end;
-            
-            // For both insert and replace, features are positioned relative to the target start
             const positionOffset = targetStart - sourceStart;
             
             // Create new features with adjusted positions
@@ -3259,35 +3271,23 @@ class ActionManager {
                 return newFeature;
             });
             
-            // 🔧 CRITICAL FIX: Insert new features into execution genome data copy, NOT original data
-            const annotationsTarget = executionGenomeData?.annotations || this.genomeBrowser.currentAnnotations;
+            // 🔒 CRITICAL: Add features to execution copy ONLY, never to original data
+            const currentFeatures = this.getFeaturesFromGenomeData(executionGenomeData, targetChromosome);
+            const updatedFeatures = [...currentFeatures, ...newFeatures];
             
-            if (!annotationsTarget) {
-                console.warn('⚠️ [ActionManager] No annotations target available for feature copying');
-                return 0;
-            }
+            // Sort features by position
+            updatedFeatures.sort((a, b) => a.start - b.start);
             
-            if (!annotationsTarget[targetChromosome]) {
-                annotationsTarget[targetChromosome] = [];
-            }
-            
-            // Add new features to the target chromosome in the COPY
-            annotationsTarget[targetChromosome].push(...newFeatures);
-            
-            // Sort features by position for better organization
-            annotationsTarget[targetChromosome].sort((a, b) => a.start - b.start);
+            // Set back to execution copy
+            this.setFeaturesInGenomeData(executionGenomeData, targetChromosome, updatedFeatures);
             
             console.log('✅ [ActionManager] Successfully copied features to execution copy:', {
                 targetChromosome: targetChromosome,
                 featuresAdded: newFeatures.length,
-                totalFeaturesNow: annotationsTarget[targetChromosome].length,
-                usingExecutionCopy: !!executionGenomeData
+                totalFeaturesNow: updatedFeatures.length,
+                usingExecutionCopy: !!executionGenomeData,
+                originalDataUntouched: true
             });
-            
-            // Notify genome browser to update displays
-            if (this.genomeBrowser.trackRenderer) {
-                this.genomeBrowser.trackRenderer.updateFeatureTrack();
-            }
             
             return newFeatures.length;
             
@@ -3299,6 +3299,9 @@ class ActionManager {
     
     /**
      * Execute delete sequence action
+     * 
+     * @param {Object} action - Action to execute
+     * @param {Object} executionGenomeData - Genome data copy or proxy (NEVER modify original!)
      */
     async executeDeleteSequence(action, executionGenomeData = null) {
         const { chromosome, start, end } = action.metadata;
@@ -3307,11 +3310,9 @@ class ActionManager {
             actionId: action.id,
             target: action.target,
             region: `${chromosome}:${start}-${end}`,
-            sequenceLength: end - start + 1
+            sequenceLength: end - start + 1,
+            usingExecutionCopy: !!executionGenomeData
         });
-        
-        // Ensure original annotations are backed up before any modification
-        this.ensureOriginalAnnotationsBackup();
         
         // Record the sequence modification
         this.recordSequenceModification(chromosome, {
@@ -3323,38 +3324,40 @@ class ActionManager {
             actionId: action.id
         });
         
-        // Handle features in deleted region - preserve original data for rollback
+        // 🔒 CRITICAL: Only modify execution copy, NEVER original data
         let deletedFeaturesCount = 0;
-        if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
-            const annotations = this.genomeBrowser.currentAnnotations[chromosome];
-            const initialCount = annotations.length;
+        
+        // Get features from execution copy (proxy or direct)
+        const currentFeatures = this.getFeaturesFromGenomeData(executionGenomeData, chromosome);
+        
+        if (currentFeatures && currentFeatures.length > 0) {
+            const initialCount = currentFeatures.length;
             
-            // Store deleted features for potential rollback (preserve original data)
-            const deletedFeatures = annotations.filter(feature => 
+            // Store deleted features for potential rollback
+            const deletedFeatures = currentFeatures.filter(feature => 
                 feature.start >= start && feature.end <= end
             );
             
-            // Store deleted features in action metadata for rollback capability
+            // Store deleted features in action metadata
             action.metadata.deletedFeatures = deletedFeatures;
             
-            // Remove features that are within the deleted region from current display
-            this.genomeBrowser.currentAnnotations[chromosome] = annotations.filter(feature => 
+            // Filter out features in deleted region (only in execution copy)
+            const remainingFeatures = currentFeatures.filter(feature => 
                 !(feature.start >= start && feature.end <= end)
             );
             
-            deletedFeaturesCount = initialCount - this.genomeBrowser.currentAnnotations[chromosome].length;
+            // Set filtered features back to execution copy
+            this.setFeaturesInGenomeData(executionGenomeData, chromosome, remainingFeatures);
             
-            console.log('🗑️ [ActionManager] Removed features from deleted region:', {
+            deletedFeaturesCount = initialCount - remainingFeatures.length;
+            
+            console.log('🗑️ [ActionManager] Removed features from deleted region (in execution copy):', {
                 chromosome: chromosome,
                 region: `${start}-${end}`,
                 deletedFeatures: deletedFeaturesCount,
-                remainingFeatures: this.genomeBrowser.currentAnnotations[chromosome].length
+                remainingFeatures: remainingFeatures.length,
+                originalDataUntouched: true
             });
-            
-            // Notify genome browser to update displays
-            if (this.genomeBrowser.trackRenderer) {
-                this.genomeBrowser.trackRenderer.updateFeatureTrack();
-            }
         }
         
         return {
@@ -4975,10 +4978,14 @@ class ActionManager {
                 console.log(`📚 [ActionManager] Backed up reads for ${Object.keys(backup.reads).length} chromosomes`);
             }
 
-            // Backup sequences if available
-            if (this.genomeBrowser.currentSequences) {
-                backup.sequences = JSON.parse(JSON.stringify(this.genomeBrowser.currentSequences));
-                console.log(`🔤 [ActionManager] Backed up sequences for ${Object.keys(backup.sequences).length} chromosomes`);
+            // 🔒 CRITICAL: Backup sequence lengths (note: singular currentSequence, not currentSequences)
+            if (this.genomeBrowser.currentSequence) {
+                // Store sequence LENGTHS only for verification (not full sequences - too large)
+                backup.sequences = {};
+                for (const [chr, seq] of Object.entries(this.genomeBrowser.currentSequence)) {
+                    backup.sequences[chr] = seq.length;  // Store length for verification
+                }
+                console.log(`🔤 [ActionManager] Backed up sequence lengths for ${Object.keys(backup.sequences).length} chromosomes`);
             }
 
             // Add metadata
@@ -5029,32 +5036,56 @@ class ActionManager {
     /**
      * 🔧 CRITICAL FIX: Restore original genome data from backup (defensive programming)
      */
+    /**
+     * Verify genome data integrity (should never need restoration)
+     * 
+     * @param {Object} backupData - Original genome data snapshot
+     */
     restoreGenomeDataFromBackup(backupData) {
         console.log('🔒 [ActionManager] Verifying genome data integrity...');
 
         try {
-            // Verify that original data hasn't been accidentally modified
-            let needsRestore = false;
+            // ✅ VERIFICATION ONLY - Original data should NEVER be modified
+            let dataModified = false;
             const issues = [];
 
-            // Check annotations
-            if (backupData.annotations) {
-                for (const [chromosome, features] of Object.entries(backupData.annotations)) {
-                    const currentFeatures = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
-                    if (currentFeatures.length !== features.length) {
-                        issues.push(`Chromosome ${chromosome}: features count mismatch (${currentFeatures.length} vs ${features.length})`);
-                        needsRestore = true;
+            // Check sequences
+            if (backupData.sequences) {
+                for (const [chromosome, originalSeq] of Object.entries(backupData.sequences)) {
+                    const currentSeq = this.genomeBrowser.currentSequence?.[chromosome];
+                    if (currentSeq && currentSeq.length !== originalSeq.length) {
+                        issues.push(`Chromosome ${chromosome}: sequence length changed (${originalSeq.length} → ${currentSeq.length})`);
+                        dataModified = true;
                     }
                 }
             }
 
-            if (needsRestore) {
-                console.warn('⚠️ [ActionManager] Original genome data was modified during execution! Restoring from backup...');
-                console.warn('Issues found:', issues);
+            // Check annotations
+            if (backupData.annotations) {
+                for (const [chromosome, originalFeatures] of Object.entries(backupData.annotations)) {
+                    const currentFeatures = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+                    if (currentFeatures.length !== originalFeatures.length) {
+                        issues.push(`Chromosome ${chromosome}: features count changed (${originalFeatures.length} → ${currentFeatures.length})`);
+                        dataModified = true;
+                    }
+                }
+            }
 
-                // Restore from backup
+            if (dataModified) {
+                // ❌❌❌ CRITICAL ERROR: Original data was modified!
+                console.error('❌❌❌ [ActionManager] CRITICAL BUG: Original genome data was modified during execution!');
+                console.error('Issues detected:', issues);
+                console.error('This should NEVER happen! All modifications should be on execution copy only.');
+                console.error('Stack trace:', new Error().stack);
+                
+                // Restore from backup as emergency measure
+                console.warn('⚠️ [ActionManager] Emergency restoration from backup...');
+                
                 if (backupData.annotations) {
                     this.genomeBrowser.currentAnnotations = JSON.parse(JSON.stringify(backupData.annotations));
+                }
+                if (backupData.sequences) {
+                    this.genomeBrowser.currentSequence = JSON.parse(JSON.stringify(backupData.sequences));
                 }
                 if (backupData.variants) {
                     this.genomeBrowser.currentVariants = JSON.parse(JSON.stringify(backupData.variants));
@@ -5062,18 +5093,20 @@ class ActionManager {
                 if (backupData.reads) {
                     this.genomeBrowser.currentReads = JSON.parse(JSON.stringify(backupData.reads));
                 }
-                if (backupData.sequences) {
-                    this.genomeBrowser.currentSequences = JSON.parse(JSON.stringify(backupData.sequences));
-                }
-
-                console.log('✅ [ActionManager] Original genome data restored from backup');
+                
+                console.log('✅ [ActionManager] Emergency restoration completed');
+                
+                // Show error to user
+                this.genomeBrowser.showNotification(
+                    'Critical bug detected: Original genome was modified. Data has been restored from backup. Please report this issue.',
+                    'error'
+                );
             } else {
-                console.log('✅ [ActionManager] Original genome data integrity verified - no restore needed');
+                console.log('✅✅✅ [ActionManager] Original genome data integrity verified - no modifications detected');
             }
 
         } catch (error) {
-            console.error('❌ [ActionManager] Failed to verify/restore genome data:', error);
-            // Don't throw here as this is defensive programming
+            console.error('❌ [ActionManager] Failed to verify genome data integrity:', error);
         }
     }
 
