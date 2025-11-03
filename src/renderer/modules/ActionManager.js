@@ -5084,9 +5084,12 @@ class ActionManager {
                 if (backupData.annotations) {
                     this.genomeBrowser.currentAnnotations = JSON.parse(JSON.stringify(backupData.annotations));
                 }
-                if (backupData.sequences) {
-                    this.genomeBrowser.currentSequence = JSON.parse(JSON.stringify(backupData.sequences));
-                }
+                
+                // 🔒 NOTE: Do NOT restore sequences!
+                // backupData.sequences only contains LENGTHS (numbers) for verification,
+                // not actual sequence strings. Sequences should NEVER be modified during execution.
+                // If sequences were corrupted, this is a separate critical bug that needs investigation.
+                
                 if (backupData.variants) {
                     this.genomeBrowser.currentVariants = JSON.parse(JSON.stringify(backupData.variants));
                 }
@@ -5094,7 +5097,8 @@ class ActionManager {
                     this.genomeBrowser.currentReads = JSON.parse(JSON.stringify(backupData.reads));
                 }
                 
-                console.log('✅ [ActionManager] Emergency restoration completed');
+                console.log('✅ [ActionManager] Emergency restoration completed (annotations, variants, reads)');
+                console.log('⚠️ [ActionManager] Sequences NOT restored - they are stored as lengths only in backup');
                 
                 // Show error to user
                 this.genomeBrowser.showNotification(

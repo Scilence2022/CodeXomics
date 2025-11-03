@@ -8854,7 +8854,14 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             return;
         }
         
-        const confirmMessage = `Remove "${metadata.name}" and its track?\n\nThis will:\n- Remove the file from memory\n- Close the associated track\n- Clear all related data\n\nThis action cannot be undone.`;
+        const confirmMessage = `Remove "${metadata.name}" and its track?
+
+This will:
+- Remove the file from memory
+- Close the associated track
+- Clear all related data
+
+This action cannot be undone.`;
         
         if (!confirm(confirmMessage)) {
             return;
@@ -10455,6 +10462,15 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         }
         
         const sequence = this.genomeBrowser.currentSequence[currentChr];
+        
+        // 🔒 CRITICAL: Validate sequence is a string before using
+        if (typeof sequence !== 'string') {
+            console.error('❌ [updateAllSVGTracks] Invalid sequence type:', typeof sequence);
+            console.error('Expected string, got:', sequence);
+            console.error('This indicates currentSequence was corrupted - possibly stored as length instead of actual sequence');
+            return;
+        }
+        
         const annotations = this.genomeBrowser.currentAnnotations[currentChr] || [];
         const operons = this.genomeBrowser.detectOperons(annotations);
         
@@ -10536,6 +10552,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     
     /**
      * Update GC track SVG with proper dimensions
+     * 
+     * @param {string} chromosome - Chromosome identifier
+     * @param {string|number} sequence - Sequence string or length
      */
     updateGCTrackSVG(chromosome, sequence) {
         const gcTrack = document.querySelector('.gc-track');
@@ -10543,6 +10562,18 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         
         const trackContent = gcTrack.querySelector('.track-content');
         if (!trackContent) return;
+        
+        // 🔒 CRITICAL: Validate sequence is a string, not a number
+        if (typeof sequence !== 'string') {
+            console.warn('⚠️ [updateGCTrackSVG] Sequence is not a string (type:', typeof sequence, '), skipping GC track update');
+            console.warn('This might happen if sequence was stored as length instead of actual sequence data');
+            return;
+        }
+        
+        if (!sequence || sequence.length === 0) {
+            console.warn('⚠️ [updateGCTrackSVG] Empty sequence, skipping GC track update');
+            return;
+        }
         
         // Clear existing content first
         trackContent.innerHTML = '';
