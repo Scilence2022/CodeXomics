@@ -4952,9 +4952,11 @@ class ChatManager {
                         
                         if (successfulResults.length > 0) {
                             // Add successful tool results to conversation with SYSTEM role to prevent re-execution
-                            const successMessages = successfulResults.map(result => 
-                                `${result.tool} executed successfully: ${JSON.stringify(result.result)}`
-                            );
+                            // IMPORTANT: Sanitize results before sending to LLM to prevent context overflow
+                            const successMessages = successfulResults.map(result => {
+                                const sanitizedResult = this.sanitizeResultForLLM(result.result, result.tool);
+                                return `${result.tool} executed successfully: ${JSON.stringify(sanitizedResult)}`;
+                            });
                             conversationHistory.push({
                                 role: 'system',
                                 content: `Tool execution completed: ${successMessages.join('; ')}`
@@ -5126,6 +5128,117 @@ class ChatManager {
             console.log('=== ChatManager.sendToLLM DEBUG END (LLM ERROR) ===');
             return errorMessage;
         }
+    }
+
+    /**
+     * Sanitize tool result for LLM context
+     * Removes or truncates large data arrays to prevent context overflow
+     * @param {Object} result - The tool execution result
+     * @param {string} toolName - Name of the tool that generated the result
+     * @returns {Object} Sanitized result suitable for LLM context
+     */
+    sanitizeResultForLLM(result, toolName) {
+        if (!result || typeof result !== 'object') {
+            return result;
+        }
+
+        // Create a shallow copy to avoid modifying the original
+        const sanitized = { ...result };
+
+        // Tool-specific sanitization rules
+        switch (toolName) {
+            case 'genome_codon_usage_analysis':
+                // Keep summary statistics but remove large gene list
+                if (sanitized.analyzedGenes && Array.isArray(sanitized.analyzedGenes)) {
+                    const geneCount = sanitized.analyzedGenes.length;
+                    const sampleSize = 5;
+                    sanitized.analyzedGenes = {
+                        totalCount: geneCount,
+                        note: `Full list omitted (${geneCount} genes analyzed)`,
+                        sample: sanitized.analyzedGenes.slice(0, sampleSize).map(g => ({
+                            name: g.name,
+                            length: g.length,
+                            chromosome: g.chromosome
+                        }))
+                    };
+                }
+                // Truncate codonPreferences to top amino acids only
+                if (sanitized.codonPreferences && typeof sanitized.codonPreferences === 'object') {
+                    const aaEntries = Object.entries(sanitized.codonPreferences)
+                        .filter(([aa]) => aa !== '*')
+                        .sort(([,a], [,b]) => (b.totalCount || 0) - (a.totalCount || 0))
+                        .slice(0, 10); // Keep only top 10 amino acids
+                    sanitized.codonPreferences = {
+                        note: `Showing top 10 amino acids by usage`,
+                        data: Object.fromEntries(aaEntries)
+                    };
+                }
+                break;
+
+            case 'codon_usage_analysis':
+                // Keep only top codons for summary
+                if (sanitized.codonUsage && Array.isArray(sanitized.codonUsage)) {
+                    sanitized.codonUsage = sanitized.codonUsage.slice(0, 15); // Top 15 codons
+                }
+                break;
+
+            case 'search_features':
+            case 'search_gene_by_name':
+            case 'get_gene_details':
+                // Limit gene/feature results to reasonable number
+                if (sanitized.genes && Array.isArray(sanitized.genes)) {
+                    const totalGenes = sanitized.genes.length;
+                    if (totalGenes > 10) {
+                        sanitized.genes = sanitized.genes.slice(0, 10);
+                        sanitized.note = `Showing first 10 of ${totalGenes} results`;
+                    }
+                }
+                if (sanitized.features && Array.isArray(sanitized.features)) {
+                    const totalFeatures = sanitized.features.length;
+                    if (totalFeatures > 10) {
+                        sanitized.features = sanitized.features.slice(0, 10);
+                        sanitized.note = `Showing first 10 of ${totalFeatures} results`;
+                    }
+                }
+                break;
+
+            case 'find_orfs':
+            case 'find_restriction_sites':
+                // Limit array results
+                if (sanitized.orfs && Array.isArray(sanitized.orfs)) {
+                    const totalOrfs = sanitized.orfs.length;
+                    if (totalOrfs > 20) {
+                        sanitized.orfs = sanitized.orfs.slice(0, 20);
+                        sanitized.note = `Showing first 20 of ${totalOrfs} ORFs`;
+                    }
+                }
+                if (sanitized.sites && Array.isArray(sanitized.sites)) {
+                    const totalSites = sanitized.sites.length;
+                    if (totalSites > 20) {
+                        sanitized.sites = sanitized.sites.slice(0, 20);
+                        sanitized.note = `Showing first 20 of ${totalSites} sites`;
+                    }
+                }
+                break;
+        }
+
+        // General sanitization for any result
+        // Truncate very long sequence strings
+        if (sanitized.sequence && typeof sanitized.sequence === 'string' && sanitized.sequence.length > 1000) {
+            sanitized.sequence = sanitized.sequence.substring(0, 500) + '...[truncated]...' + sanitized.sequence.substring(sanitized.sequence.length - 500);
+            sanitized.sequenceLength = sanitized.sequence.length;
+        }
+
+        // Limit any large arrays not caught by specific rules
+        Object.keys(sanitized).forEach(key => {
+            if (Array.isArray(sanitized[key]) && sanitized[key].length > 50) {
+                const originalLength = sanitized[key].length;
+                sanitized[key] = sanitized[key].slice(0, 50);
+                sanitized[`${key}_truncated`] = `Array truncated from ${originalLength} to 50 items`;
+            }
+        });
+
+        return sanitized;
     }
 
     formatToolResult(toolName, parameters, result) {
