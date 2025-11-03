@@ -3057,12 +3057,12 @@ class ActionManager {
     
     /**
      * Execute cut sequence action
+     * 
+     * @param {Object} action - Action to execute
+     * @param {Object} executionGenomeData - Genome data copy or proxy (NEVER modify original!)
      */
     async executeCutSequence(action, executionGenomeData = null) {
         const { chromosome, start, end, strand } = action.metadata;
-        
-        // Ensure original annotations are backed up before any modification
-        this.ensureOriginalAnnotationsBackup();
         
         const sequence = await this.getSequenceForRegion(chromosome, start, end, strand);
         
@@ -3092,30 +3092,32 @@ class ActionManager {
             operation: 'cut' // Mark this as part of cut operation
         });
         
-        // Remove features from source location (cut operation)
+        // 🔒 CRITICAL: Remove features from cut region (only in execution copy)
         let removedFeaturesCount = 0;
-        if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
-            const annotations = this.genomeBrowser.currentAnnotations[chromosome];
-            const initialCount = annotations.length;
+        
+        // Get features from execution copy (proxy or direct)
+        const currentFeatures = this.getFeaturesFromGenomeData(executionGenomeData, chromosome);
+        
+        if (currentFeatures && currentFeatures.length > 0) {
+            const initialCount = currentFeatures.length;
             
-            // Remove features that are within the cut region
-            this.genomeBrowser.currentAnnotations[chromosome] = annotations.filter(feature => 
+            // Filter out features in cut region (only in execution copy)
+            const remainingFeatures = currentFeatures.filter(feature => 
                 !(feature.start >= start && feature.end <= end)
             );
             
-            removedFeaturesCount = initialCount - this.genomeBrowser.currentAnnotations[chromosome].length;
+            // Set filtered features back to execution copy
+            this.setFeaturesInGenomeData(executionGenomeData, chromosome, remainingFeatures);
             
-            console.log('✂️ [ActionManager] Removed features from cut region:', {
+            removedFeaturesCount = initialCount - remainingFeatures.length;
+            
+            console.log('✂️ [ActionManager] Removed features from cut region (in execution copy):', {
                 chromosome: chromosome,
                 region: `${start}-${end}`,
                 removedFeatures: removedFeaturesCount,
-                remainingFeatures: this.genomeBrowser.currentAnnotations[chromosome].length
+                remainingFeatures: remainingFeatures.length,
+                originalDataUntouched: true
             });
-            
-            // Notify genome browser to update displays
-            if (this.genomeBrowser.trackRenderer) {
-                this.genomeBrowser.trackRenderer.updateFeatureTrack();
-            }
         }
         
         return {
@@ -5075,6 +5077,8 @@ class ActionManager {
                 // ❌❌❌ CRITICAL ERROR: Original data was modified!
                 console.error('❌❌❌ [ActionManager] CRITICAL BUG: Original genome data was modified during execution!');
                 console.error('Issues detected:', issues);
+                console.error('Issues detail:');
+                issues.forEach((issue, idx) => console.error(`  ${idx + 1}. ${issue}`));
                 console.error('This should NEVER happen! All modifications should be on execution copy only.');
                 console.error('Stack trace:', new Error().stack);
                 
@@ -5082,6 +5086,7 @@ class ActionManager {
                 console.warn('⚠️ [ActionManager] Emergency restoration from backup...');
                 
                 if (backupData.annotations) {
+                    console.log('🔄 Restoring annotations...');
                     this.genomeBrowser.currentAnnotations = JSON.parse(JSON.stringify(backupData.annotations));
                 }
                 
@@ -5091,9 +5096,11 @@ class ActionManager {
                 // If sequences were corrupted, this is a separate critical bug that needs investigation.
                 
                 if (backupData.variants) {
+                    console.log('🔄 Restoring variants...');
                     this.genomeBrowser.currentVariants = JSON.parse(JSON.stringify(backupData.variants));
                 }
                 if (backupData.reads) {
+                    console.log('🔄 Restoring reads...');
                     this.genomeBrowser.currentReads = JSON.parse(JSON.stringify(backupData.reads));
                 }
                 
