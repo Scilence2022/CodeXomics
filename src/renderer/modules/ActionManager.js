@@ -42,7 +42,8 @@ class ActionManager {
      */
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
-        this.actions = [];
+        this.actions = [];              // Current active actions (pending/executing)
+        this.actionHistory = [];        // Completed actions history (read-only)
         this.nextActionId = 1;
         this.isExecuting = false;
         this.clipboard = null; // Stores copied/cut sequence data
@@ -60,6 +61,13 @@ class ActionManager {
             totalActions: 0,
             avgExecutionTime: 0,
             lastExecutionTime: 0
+        };
+        
+        // History configuration
+        this.historyConfig = {
+            showHistory: false,           // Whether to display history in UI
+            maxHistorySize: 100,          // Maximum history entries
+            autoArchive: true             // Auto-archive old executions
         };
         
         // Action types - Unified constants
@@ -1634,6 +1642,24 @@ class ActionManager {
             
             this.genomeBrowser.showNotification(`All ${pendingActionsCopy.length} actions executed successfully`, 'success');
             
+            // 📦 CRITICAL FIX: Archive completed actions to history (don't modify original queue)
+            const completedActions = executionActionsCopy.filter(a => 
+                a.status === this.STATUS.COMPLETED || a.status === this.STATUS.FAILED
+            );
+            
+            if (completedActions.length > 0) {
+                // Add execution ID to metadata
+                completedActions.forEach(action => {
+                    if (!action.metadata) action.metadata = {};
+                    action.metadata.executionId = executionId;
+                });
+                
+                // Archive to history
+                this.archiveActions(completedActions);
+                
+                console.log(`✅ [ActionManager] ${completedActions.length} actions archived to history`);
+            }
+            
             // Update performance statistics
             const executionTime = performance.now() - executionStartTime;
             this.stats.lastExecutionTime = executionTime;
@@ -1676,7 +1702,9 @@ class ActionManager {
             };
             
         } finally {
-            // Step 6: Cleanup and restore original state
+            // Step 6: Cleanup - IMPORTANT: Original genome data remains UNCHANGED
+            // All modifications were applied to the proxy/copy, which was exported to GBK file.
+            // The original genomeBrowser data is never modified during action execution.
             this.restoreGenomeDataFromBackup(originalGenomeData);
             this.isExecuting = false;
             this.hideExecutionProgress();
@@ -1685,6 +1713,7 @@ class ActionManager {
             this.notifyActionsTrackUpdate();
             
             console.log(`🔒 [ActionManager] Execution cleanup completed`);
+            console.log(`✅ [ActionManager] Original genome data preserved - modifications only in generated GBK file`);
         }
     }
     
@@ -4022,23 +4051,61 @@ class ActionManager {
     }
     
     /**
-     * Update action list UI
+     * Update action list UI with history support
      */
     updateActionListUI() {
         const content = document.getElementById('actionListContent');
         
+        if (!content) return;
+        
+        let html = '';
+        
+        // Render active actions
         if (this.actions.length === 0) {
-            content.innerHTML = `
+            html += `
                 <div class="empty-actions-message">
                     <i class="fas fa-inbox"></i>
                     <p>No actions queued</p>
                     <small>Use the Action menu to add sequence operations</small>
                 </div>
             `;
-            return;
+        } else {
+            html += '<div class="action-section">';
+            html += '<h4 class="section-title"><i class="fas fa-tasks"></i> Active Actions</h4>';
+            html += this.actions.map((action, index) => this.renderActionItem(action, index)).join('');
+            html += '</div>';
         }
         
-        content.innerHTML = this.actions.map((action, index) => this.renderActionItem(action, index)).join('');
+        // Render history (if enabled)
+        if (this.historyConfig.showHistory && this.actionHistory.length > 0) {
+            html += '<div class="action-section history-section">';
+            html += `
+                <h4 class="section-title">
+                    <i class="fas fa-history"></i> 
+                    Action History (${this.actionHistory.length})
+                    <button class="btn btn-sm btn-secondary" onclick="actionManager.clearHistory()" title="Clear History">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </h4>
+            `;
+            html += this.actionHistory.map(entry => this.renderHistoryEntry(entry)).join('');
+            html += '</div>';
+        }
+        
+        // Add history toggle button
+        if (this.actionHistory.length > 0) {
+            const toggleText = this.historyConfig.showHistory ? 'Hide History' : 'Show History';
+            const toggleIcon = this.historyConfig.showHistory ? 'eye-slash' : 'eye';
+            html += `
+                <div class="action-controls-footer">
+                    <button class="btn btn-secondary" onclick="actionManager.toggleHistoryDisplay()">
+                        <i class="fas fa-${toggleIcon}"></i> ${toggleText} (${this.actionHistory.length})
+                    </button>
+                </div>
+            `;
+        }
+        
+        content.innerHTML = html;
         
         // Add event listeners for action controls
         this.actions.forEach(action => {
@@ -4050,6 +4117,61 @@ class ActionManager {
             editBtn?.addEventListener('click', () => this.editAction(action.id));
             executeBtn?.addEventListener('click', () => this.executeSingleAction(action.id));
         });
+        
+        // Add event listeners for history controls
+        this.actionHistory.forEach(entry => {
+            const reopenBtn = document.getElementById(`reopen-${entry.id}`);
+            reopenBtn?.addEventListener('click', () => this.reopenFromHistory(entry.id));
+        });
+    }
+    
+    /**
+     * Render history entry
+     * 
+     * @param {Object} entry - History entry
+     * @returns {string} HTML string
+     * @private
+     */
+    renderHistoryEntry(entry) {
+        const timestamp = new Date(entry.timestamp).toLocaleString();
+        const completedCount = entry.stats.completed;
+        const failedCount = entry.stats.failed;
+        const totalCount = entry.stats.total;
+        
+        return `
+            <div class="history-entry" data-history-id="${entry.id}">
+                <div class="history-header">
+                    <div class="history-timestamp">
+                        <i class="fas fa-clock"></i> ${timestamp}
+                    </div>
+                    <div class="history-stats">
+                        <span class="badge badge-success">${completedCount} completed</span>
+                        ${failedCount > 0 ? `<span class="badge badge-danger">${failedCount} failed</span>` : ''}
+                        <span class="badge badge-secondary">${totalCount} total</span>
+                    </div>
+                </div>
+                <div class="history-actions-preview">
+                    ${entry.actions.slice(0, 3).map(a => `
+                        <div class="history-action-item">
+                            <span class="action-type-badge">${a.type.replace('_', ' ')}</span>
+                            <span class="action-target">${a.target}</span>
+                        </div>
+                    `).join('')}
+                    ${entry.actions.length > 3 ? `<div class="more-actions">... and ${entry.actions.length - 3} more</div>` : ''}
+                </div>
+                <div class="history-controls">
+                    ${entry.canReopen ? `
+                        <button id="reopen-${entry.id}" class="btn btn-sm btn-primary" title="Restore to active queue">
+                            <i class="fas fa-redo"></i> Reopen
+                        </button>
+                    ` : ''}
+                    <span class="history-note">
+                        <i class="fas fa-info-circle"></i> 
+                        Cannot re-execute from history
+                    </span>
+                </div>
+            </div>
+        `;
     }
     
     /**
@@ -4088,16 +4210,30 @@ class ActionManager {
     }
     
     /**
-     * Update statistics
+     * Update statistics display
      */
     updateStats() {
-        document.getElementById('actionCount').textContent = this.actions.length;
+        const actionCountElem = document.getElementById('actionCount');
+        const estimatedTimeElem = document.getElementById('estimatedTime');
         
-        const estimatedTime = this.actions
-            .filter(action => action.status === this.STATUS.PENDING)
-            .reduce((total, action) => total + action.estimatedTime, 0);
+        if (actionCountElem) {
+            const activeCount = this.actions.length;
+            const historyCount = this.actionHistory.length;
+            actionCountElem.textContent = activeCount;
+            
+            // Add history count if available
+            if (historyCount > 0) {
+                actionCountElem.title = `Active: ${activeCount}, History: ${historyCount}`;
+            }
+        }
         
-        document.getElementById('estimatedTime').textContent = `${(estimatedTime / 1000).toFixed(1)}s`;
+        if (estimatedTimeElem) {
+            const estimatedTime = this.actions
+                .filter(action => action.status === this.STATUS.PENDING)
+                .reduce((total, action) => total + action.estimatedTime, 0);
+            
+            estimatedTimeElem.textContent = `${(estimatedTime / 1000).toFixed(1)}s`;
+        }
     }
     
     /**
@@ -6082,12 +6218,162 @@ class ActionManager {
             ...this.stats,
             performanceMode: this.performanceMode,
             queueSize: this.actions.length,
+            historySize: this.actionHistory.length,
             pendingActions: this.actions.filter(a => a.status === this.STATUS.PENDING).length,
             completedActions: this.actions.filter(a => a.status === this.STATUS.COMPLETED).length,
             failedActions: this.actions.filter(a => a.status === this.STATUS.FAILED).length,
             hasClipboard: !!this.clipboard,
             clipboardSize: this.clipboard?.sequence?.length || 0
         };
+    }
+    
+    /**
+     * Move completed/failed actions to history
+     * 
+     * @param {Array<Object>} actionsToArchive - Actions to move to history
+     * @returns {number} Number of actions archived
+     */
+    archiveActions(actionsToArchive) {
+        if (!actionsToArchive || actionsToArchive.length === 0) {
+            return 0;
+        }
+        
+        // Create history entry with metadata
+        const historyEntry = {
+            id: `history_${Date.now()}`,
+            timestamp: new Date(),
+            executionId: actionsToArchive[0]?.metadata?.executionId || `exec_${Date.now()}`,
+            actions: JSON.parse(JSON.stringify(actionsToArchive)), // Deep copy
+            stats: {
+                total: actionsToArchive.length,
+                completed: actionsToArchive.filter(a => a.status === this.STATUS.COMPLETED).length,
+                failed: actionsToArchive.filter(a => a.status === this.STATUS.FAILED).length
+            },
+            canReopen: true,
+            canExecute: false  // Cannot re-execute from history
+        };
+        
+        // Add to history
+        this.actionHistory.unshift(historyEntry);
+        
+        // Enforce max history size
+        if (this.actionHistory.length > this.historyConfig.maxHistorySize) {
+            this.actionHistory = this.actionHistory.slice(0, this.historyConfig.maxHistorySize);
+        }
+        
+        // Remove from active queue
+        const archivedIds = new Set(actionsToArchive.map(a => a.id));
+        this.actions = this.actions.filter(a => !archivedIds.has(a.id));
+        
+        console.log(`📦 [ActionManager] Archived ${actionsToArchive.length} actions to history`);
+        console.log(`📊 [ActionManager] History size: ${this.actionHistory.length} entries`);
+        
+        return actionsToArchive.length;
+    }
+    
+    /**
+     * Restore actions from history to active queue
+     * 
+     * @param {string} historyId - History entry ID
+     * @returns {boolean} Success status
+     */
+    reopenFromHistory(historyId) {
+        const historyEntry = this.actionHistory.find(h => h.id === historyId);
+        
+        if (!historyEntry) {
+            console.error(`❌ [ActionManager] History entry ${historyId} not found`);
+            return false;
+        }
+        
+        if (!historyEntry.canReopen) {
+            console.warn(`⚠️ [ActionManager] History entry ${historyId} cannot be reopened`);
+            return false;
+        }
+        
+        // Restore actions as PENDING (reset status)
+        const restoredActions = historyEntry.actions.map(action => ({
+            ...action,
+            id: this.nextActionId++,  // New ID
+            status: this.STATUS.PENDING,  // Reset to pending
+            timestamp: new Date(),  // New timestamp
+            executionStart: null,
+            executionEnd: null,
+            actualTime: null,
+            result: null,
+            error: null,
+            metadata: {
+                ...action.metadata,
+                restoredFrom: historyId,
+                originalExecutionId: historyEntry.executionId
+            }
+        }));
+        
+        // Add to active queue
+        this.actions.push(...restoredActions);
+        
+        console.log(`🔄 [ActionManager] Restored ${restoredActions.length} actions from history ${historyId}`);
+        
+        // Update UI
+        this.updateActionListUI();
+        this.updateStats();
+        
+        this.genomeBrowser.showNotification(
+            `Restored ${restoredActions.length} actions from history`,
+            'success'
+        );
+        
+        return true;
+    }
+    
+    /**
+     * Toggle history visibility in UI
+     * 
+     * @param {boolean} [show] - Force show/hide, or toggle if undefined
+     */
+    toggleHistoryDisplay(show) {
+        if (show === undefined) {
+            this.historyConfig.showHistory = !this.historyConfig.showHistory;
+        } else {
+            this.historyConfig.showHistory = show;
+        }
+        
+        console.log(`👁️ [ActionManager] History display: ${this.historyConfig.showHistory ? 'ON' : 'OFF'}`);
+        
+        // Update UI
+        this.updateActionListUI();
+        
+        return this.historyConfig.showHistory;
+    }
+    
+    /**
+     * Clear action history
+     * 
+     * @param {boolean} confirm - Skip confirmation if true
+     */
+    clearHistory(confirm = false) {
+        if (!confirm && !window.confirm('Clear all action history? This cannot be undone.')) {
+            return false;
+        }
+        
+        const count = this.actionHistory.length;
+        this.actionHistory = [];
+        
+        console.log(`🗑️ [ActionManager] Cleared ${count} history entries`);
+        
+        this.updateActionListUI();
+        this.genomeBrowser.showNotification(`Cleared ${count} history entries`, 'success');
+        
+        return true;
+    }
+    
+    /**
+     * Get history entry details
+     * 
+     * @param {string} historyId - History entry ID
+     * @returns {Object|null} History entry or null
+     */
+    getHistoryEntry(historyId) {
+        return this.actionHistory.find(h => h.id === historyId) || null;
     }
     
     /**
