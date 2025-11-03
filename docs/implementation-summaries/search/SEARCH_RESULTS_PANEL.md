@@ -2,7 +2,7 @@
 
 ## Overview
 
-Genome AI Studio features an advanced search results panel that automatically appears when searches are performed, providing organized navigation through all search matches. The panel has been enhanced with improved AI integration and supports both manual and AI-powered searches.
+CodeXomics features an advanced search results panel that automatically appears when searches are performed, providing organized navigation through all search matches. The panel has been enhanced with improved AI integration and supports both manual and AI-powered searches.
 
 ## 🆕 Recent Enhancements
 

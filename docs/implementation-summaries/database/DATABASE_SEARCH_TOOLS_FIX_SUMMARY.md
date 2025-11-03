@@ -16,11 +16,11 @@ Comprehensive inspection and fixing of Search UniProt Database and Search NCBI D
 Updated all references to match new naming convention:
 
 #### Search UniProt Database:
-- ✅ HTML page title: `Search UniProt Database - Genome AI Studio`
+- ✅ HTML page title: `Search UniProt Database - CodeXomics`
 - ✅ Header title: `Search UniProt Database`
 - ✅ Menu handler initialization: `ToolMenuHandler('Search UniProt Database', this)`
 - ✅ Help dialog title: `Search UniProt Database Help`
-- ✅ Window title in main.js: `Search UniProt Database - Genome AI Studio`
+- ✅ Window title in main.js: `Search UniProt Database - CodeXomics`
 - ✅ Tool window menu reference: `createToolWindowMenu(uniprotWindow, 'Search UniProt Database')`
 
 #### Search NCBI Database:
@@ -29,7 +29,7 @@ Updated all references to match new naming convention:
 - ✅ Menu handler initialization: `ToolMenuHandler('Search NCBI Database', this)`
 - ✅ Help dialog title: `Search NCBI Database Help`
 - ✅ Empty state messages: Updated all instances to `Search NCBI Database`
-- ✅ Window title in main.js: `Search NCBI Database - Genome AI Studio`
+- ✅ Window title in main.js: `Search NCBI Database - CodeXomics`
 - ✅ Tool window menu reference: `createToolWindowMenu(ncbiWindow, 'Search NCBI Database')`
 
 ### 3. Functionality Analysis & Verification

@@ -696,7 +696,7 @@ class NetworkGraphPlugin {
             name: 'Network Graph Plugin',
             version: '1.0.0',
             description: 'Universal network graph visualization plugin',
-            author: 'Genome AI Studio Team',
+            author: 'CodeXomics Team',
             functions: [
                 'renderNetworkGraph'
             ],

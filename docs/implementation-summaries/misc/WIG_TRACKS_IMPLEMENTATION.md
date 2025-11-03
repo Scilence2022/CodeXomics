@@ -1,8 +1,8 @@
-# WIG Tracks Implementation in Genome AI Studio
+# WIG Tracks Implementation in CodeXomics
 
 ## Overview
 
-This document describes the implementation of WIG (Wiggle) format support in Genome AI Studio. WIG files are used to display continuous data such as ChIP-seq, RNA-seq, methylation data, and other quantitative genomic datasets.
+This document describes the implementation of WIG (Wiggle) format support in CodeXomics. WIG files are used to display continuous data such as ChIP-seq, RNA-seq, methylation data, and other quantitative genomic datasets.
 
 ## Features Implemented
 
@@ -390,6 +390,6 @@ Two test files are provided:
 
 ## Conclusion
 
-The WIG tracks implementation provides comprehensive support for quantitative genomic data visualization in Genome AI Studio. The modular design allows for easy extension and integration with existing features while maintaining performance and usability standards.
+The WIG tracks implementation provides comprehensive support for quantitative genomic data visualization in CodeXomics. The modular design allows for easy extension and integration with existing features while maintaining performance and usability standards.
 
 For questions or issues, refer to the main project documentation or submit issues through the project repository. 

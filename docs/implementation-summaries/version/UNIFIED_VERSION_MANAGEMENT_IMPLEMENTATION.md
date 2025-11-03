@@ -54,7 +54,7 @@ const VERSION_FULL = VERSION_PRERELEASE ? `${VERSION_STRING}-${VERSION_PRERELEAS
 const VERSION_DISPLAY = `v${VERSION_MAJOR}.${VERSION_MINOR} ${VERSION_PRERELEASE}`;
 
 // 应用信息
-const APP_NAME = 'Genome AI Studio';
+const APP_NAME = 'CodeXomics';
 const APP_TITLE = `${APP_NAME} ${VERSION_DISPLAY}`;
 ```
 
@@ -314,4 +314,4 @@ if (typeof exports !== 'undefined') {
 - **可维护性**：集中管理，易于维护
 - **可扩展性**：支持未来功能扩展
 
-该系统为Genome AI Studio v0.3 beta版本的发布提供了可靠的版本管理基础，确保了应用程序各个组件版本信息的一致性和准确性。 
+该系统为CodeXomics v0.3 beta版本的发布提供了可靠的版本管理基础，确保了应用程序各个组件版本信息的一致性和准确性。 

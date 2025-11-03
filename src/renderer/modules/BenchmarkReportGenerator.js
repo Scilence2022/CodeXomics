@@ -53,7 +53,7 @@ class BenchmarkReportGenerator {
         return {
             reportTitle: 'LLM Instruction Following Benchmark Report',
             generatedAt: new Date().toISOString(),
-            generatedBy: 'Genome AI Studio Benchmark Framework',
+            generatedBy: 'CodeXomics Benchmark Framework',
             version: '1.0.0',
             benchmarkSession: {
                 startTime: new Date(benchmarkResults.startTime).toISOString(),

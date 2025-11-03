@@ -5,12 +5,12 @@
  * 
  * This script starts the unified MCP server that provides:
  * 1. MCP protocol interface for Claude Desktop (STDIO)
- * 2. WebSocket interface for Genome AI Studio
+ * 2. WebSocket interface for CodeXomics
  * 3. HTTP REST API for external tools
  * 
  * Usage:
  * - For Claude Desktop: node start-unified-claude-mcp-server.js
- * - For Genome AI Studio: Use the Start button in the UI
+ * - For CodeXomics: Use the Start button in the UI
  */
 
 const path = require('path');

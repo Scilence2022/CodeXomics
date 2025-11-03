@@ -1,8 +1,8 @@
-# Enhanced Plugin Development Guide - Genome AI Studio
+# Enhanced Plugin Development Guide - CodeXomics
 
 ## 📋 Overview
 
-This comprehensive guide provides everything needed to develop, test, and deploy plugins for **Genome AI Studio v0.3 beta**, from basic concepts to advanced development techniques.
+This comprehensive guide provides everything needed to develop, test, and deploy plugins for **CodeXomics v0.3 beta**, from basic concepts to advanced development techniques.
 
 **Document Version**: v2.0  
 **Target Audience**: Plugin Developers, System Integrators  
@@ -44,7 +44,7 @@ npm run dev
 - **npm**: v8.0 or higher
 - **Git**: Version control
 - **VS Code**: Recommended IDE with extensions
-- **Genome AI Studio**: Development version
+- **CodeXomics**: Development version
 
 ---
 

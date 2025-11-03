@@ -27,7 +27,7 @@ The issue was caused by multiple sources of console output interfering with the 
 
 **Before**:
 ```javascript
-process.stderr.write('🧬 Starting Genome AI Studio Claude MCP Server...\n');
+process.stderr.write('🧬 Starting CodeXomics Claude MCP Server...\n');
 process.stderr.write('📋 Using official Claude MCP TypeScript SDK\n');
 // ... extensive informational output
 ```
@@ -149,7 +149,7 @@ curl -s http://localhost:3000/health
 ### Server Architecture
 
 ```
-Claude Desktop → JSON-RPC (stdout) → Claude MCP Server → Genome AI Studio
+Claude Desktop → JSON-RPC (stdout) → Claude MCP Server → CodeXomics
                 ← JSON-RPC (stdout) ←
                 ← Errors (stderr) ←
 ```

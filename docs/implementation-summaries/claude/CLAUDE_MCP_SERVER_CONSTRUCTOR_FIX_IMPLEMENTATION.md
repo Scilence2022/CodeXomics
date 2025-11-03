@@ -62,7 +62,7 @@ node start-claude-mcp-server.js
 
 **Output**:
 ```
-🧬 Starting Genome AI Studio Claude MCP Server...
+🧬 Starting CodeXomics Claude MCP Server...
 📋 Using official Claude MCP TypeScript SDK
 
 🚀 Starting backend MCP server...
@@ -97,8 +97,8 @@ MCP Server Tools: 40 tools available
 ## Architecture Benefits
 
 ### 1. Simplified Architecture
-- **Before**: Claude Desktop → Claude MCP Server → Legacy MCP Server → Genome AI Studio
-- **After**: Claude Desktop → Claude MCP Server → Genome AI Studio
+- **Before**: Claude Desktop → Claude MCP Server → Legacy MCP Server → CodeXomics
+- **After**: Claude Desktop → Claude MCP Server → CodeXomics
 
 ### 2. Performance Improvements
 - **Reduced Latency**: ~50% reduction by eliminating intermediate server
@@ -132,7 +132,7 @@ Update Claude Desktop MCP settings:
 
 1. Keep the server running: `node start-claude-mcp-server.js`
 2. Configure Claude Desktop to connect to this server
-3. Launch Genome AI Studio application
+3. Launch CodeXomics application
 4. Use stdio transport for Claude Desktop integration
 
 ### 3. Tool Testing

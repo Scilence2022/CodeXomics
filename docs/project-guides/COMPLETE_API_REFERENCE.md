@@ -1,8 +1,8 @@
-# Complete API Reference - Genome AI Studio
+# Complete API Reference - CodeXomics
 
 ## 📋 Overview
 
-This document provides the complete API reference for **Genome AI Studio v0.3 beta**, covering all 150+ functions across the core system, plugin architecture, and bioinformatics tools.
+This document provides the complete API reference for **CodeXomics v0.3 beta**, covering all 150+ functions across the core system, plugin architecture, and bioinformatics tools.
 
 **API Version**: v0.3.0-beta  
 **Total Functions**: 150+  

@@ -38,7 +38,7 @@ class MCPServerManager {
         const defaultServers = new Map([
             ['genome-studio', {
                 id: 'genome-studio',
-                name: 'Genome AI Studio',
+                name: 'CodeXomics',
                 description: 'Built-in genome analysis tools',
                 url: 'ws://localhost:3003',
                 enabled: true,
@@ -1425,7 +1425,7 @@ class MCPServerManager {
             if (serverConfig.url.includes('localhost:3000')) {
                 reject(new Error('WebSocket connection failed: No MCP server running on localhost:3000. Please start the MCP server first.'));
             } else if (serverConfig.url.includes('localhost:3003')) {
-                reject(new Error('WebSocket connection failed: No MCP server running on localhost:3003. Please start the Genome AI Studio MCP server first.'));
+                reject(new Error('WebSocket connection failed: No MCP server running on localhost:3003. Please start the CodeXomics MCP server first.'));
             } else {
                 reject(new Error(`WebSocket connection failed: ${error.message || 'Connection refused'}`));
             }

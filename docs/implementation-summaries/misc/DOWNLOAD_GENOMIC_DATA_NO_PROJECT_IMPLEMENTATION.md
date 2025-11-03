@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-Successfully removed the project requirement prompt "Please open or create a project first" from the Download Genomic Data functionality in Genome AI Studio main menu. All submenu items now work independently without requiring an active project.
+Successfully removed the project requirement prompt "Please open or create a project first" from the Download Genomic Data functionality in CodeXomics main menu. All submenu items now work independently without requiring an active project.
 
 ## 🎯 Problem Solved
 

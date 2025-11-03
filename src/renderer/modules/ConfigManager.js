@@ -1,5 +1,5 @@
 /**
- * ConfigManager - Comprehensive configuration management for the Genome AI Studio
+ * ConfigManager - Comprehensive configuration management for the CodeXomics
  * Handles LLM settings, UI preferences, chat history, and app configurations
  */
 class ConfigManager {

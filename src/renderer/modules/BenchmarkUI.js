@@ -3262,7 +3262,7 @@ class BenchmarkUI {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM Instruction Following Benchmark - Genome AI Studio</title>
+    <title>LLM Instruction Following Benchmark - CodeXomics</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         

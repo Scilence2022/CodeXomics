@@ -3,7 +3,7 @@
 ## 🎯 Task Completion Status: ✅ COMPLETED
 
 ### 📋 Original Request
-复制主窗口Genome AI Studio的Download菜单及其所有子菜单项和功能到Project Manager，确保功能正常有效。
+复制主窗口CodeXomics的Download菜单及其所有子菜单项和功能到Project Manager，确保功能正常有效。
 
 ### 🚀 Implementation Summary
 

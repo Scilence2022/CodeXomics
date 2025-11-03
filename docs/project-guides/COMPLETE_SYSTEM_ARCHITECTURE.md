@@ -1,14 +1,14 @@
-# Genome AI Studio - Complete System Architecture
+# CodeXomics - Complete System Architecture
 
 ## Overview
 
-Genome AI Studio is a sophisticated, cross-platform genome analysis platform built with Electron, featuring a modular architecture that integrates AI-powered analysis, advanced visualization, and a comprehensive plugin system. This document provides a complete technical overview of the system architecture.
+CodeXomics is a sophisticated, cross-platform genome analysis platform built with Electron, featuring a modular architecture that integrates AI-powered analysis, advanced visualization, and a comprehensive plugin system. This document provides a complete technical overview of the system architecture.
 
 ## System Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Genome AI Studio v0.3 beta                   │
+│                    CodeXomics v0.3 beta                   │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
 │  │   Main Process  │  │  Renderer Process│  │   Preload Script│  │
@@ -517,7 +517,7 @@ Modular Design   →   Microservices   →   Distributed System
 
 ## Conclusion
 
-Genome AI Studio's architecture is designed for:
+CodeXomics's architecture is designed for:
 - **Modularity**: Easy maintenance and extension
 - **Security**: Robust protection against malicious code
 - **Performance**: Optimized for large genomic datasets

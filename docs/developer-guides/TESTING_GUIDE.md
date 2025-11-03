@@ -3,7 +3,7 @@
 ## Quick Start Testing
 
 ### Prerequisites
-1. Ensure Genome AI Studio is installed
+1. Ensure CodeXomics is installed
 2. Have the application running
 3. Main window should be visible
 
@@ -459,7 +459,7 @@ If you find issues, report with:
 
 ```
 **Tool**: KEGG/GO/InterPro Analyzer
-**Version**: Genome AI Studio version
+**Version**: CodeXomics version
 **OS**: macOS/Windows/Linux + version
 **Steps to Reproduce**:
 1. 

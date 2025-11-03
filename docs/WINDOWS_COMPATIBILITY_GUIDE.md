@@ -2,7 +2,7 @@
 
 ## 概述
 
-本指南解决了 Genome AI Studio 在 Windows 操作系统下的两个主要问题：
+本指南解决了 CodeXomics 在 Windows 操作系统下的两个主要问题：
 
 1. **Blast 数据库创建路径问题**
 2. **Protein 3D Structure Viewer WebGL 兼容性问题**
@@ -118,7 +118,7 @@ Windows 下 WebGL 可能受到以下因素影响：
    - 启用"硬件加速 GPU 计划"
 
 2. **应用特定设置**
-   - 添加 Genome AI Studio 应用
+   - 添加 CodeXomics 应用
    - 选择"高性能"GPU
 
 ## 💡 最佳实践
@@ -223,4 +223,4 @@ Windows 下 WebGL 可能受到以下因素影响：
    - 重现步骤
    - 系统配置信息
 
-通过这些改进，Genome AI Studio 现在在 Windows 平台上提供了更好的兼容性和用户体验。
+通过这些改进，CodeXomics 现在在 Windows 平台上提供了更好的兼容性和用户体验。

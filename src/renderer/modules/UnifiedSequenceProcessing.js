@@ -2,7 +2,7 @@
  * Unified Sequence Processing Implementation
  * 
  * This module provides standardized implementations for common sequence processing
- * functions that unifies redundant implementations across the Genome AI Studio codebase.
+ * functions that unifies redundant implementations across the CodeXomics codebase.
  * 
  * Key improvements:
  * - Standardized reverse complement with comprehensive ambiguous base support

@@ -1,6 +1,6 @@
 /**
  * System Integration for Dynamic Tools Registry
- * Integrates the tools registry with existing Genome AI Studio components
+ * Integrates the tools registry with existing CodeXomics components
  */
 
 const ToolsRegistryManager = require('./registry_manager');
@@ -400,9 +400,9 @@ class SystemIntegration {
             return `- **${tool.name}**: ${tool.description}\n  Parameters: ${params}`;
         }).join('\n');
 
-        return `# Genome AI Studio - Enhanced Dynamic Tools System
+        return `# CodeXomics - Enhanced Dynamic Tools System
 
-You are an advanced AI assistant for Genome AI Studio, equipped with ${tools.length} dynamically selected tools based on the user's query.
+You are an advanced AI assistant for CodeXomics, equipped with ${tools.length} dynamically selected tools based on the user's query.
 
 ## 🧬 Current Context
 ${genomeStateInfo}
@@ -488,9 +488,9 @@ Remember: You have access to the most relevant tools for the user's specific que
     generateComprehensiveNonDynamicPrompt(context, toolsByCategory, builtInToolsInfo) {
         const totalTools = Object.values(toolsByCategory).reduce((sum, tools) => sum + tools.length, 0);
         
-        let prompt = `# Genome AI Studio - Comprehensive Tools System (Non-Dynamic Mode)
+        let prompt = `# CodeXomics - Comprehensive Tools System (Non-Dynamic Mode)
 
-You are an advanced AI assistant for Genome AI Studio with access to ${totalTools} tools across ${Object.keys(toolsByCategory).length} categories.
+You are an advanced AI assistant for CodeXomics with access to ${totalTools} tools across ${Object.keys(toolsByCategory).length} categories.
 
 ## 🧬 Current Context
 - **Network Status**: ${context.hasNetwork ? 'Connected' : 'Offline'}
@@ -617,9 +617,9 @@ All tools are statically available in this system prompt for maximum reliability
      */
     getFallbackSystemPrompt() {
         return {
-            systemPrompt: `# Genome AI Studio - Fallback Mode
+            systemPrompt: `# CodeXomics - Fallback Mode
 
-You are an AI assistant for Genome AI Studio. The dynamic tools system is temporarily unavailable.
+You are an AI assistant for CodeXomics. The dynamic tools system is temporarily unavailable.
 
 ## 🔧 Basic Tools Available
 - navigate_to_position: Navigate to genomic positions

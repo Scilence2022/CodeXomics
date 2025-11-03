@@ -169,7 +169,7 @@ curl -s http://localhost:3000/health
 
 #### Issue: Tool execution fails
 **Solution**:
-1. Ensure Genome AI Studio is running
+1. Ensure CodeXomics is running
 2. Check WebSocket connection (port 3001)
 3. Verify tool parameters are correct
 
@@ -213,4 +213,4 @@ The Claude MCP Server is now **fully operational** and ready for Claude Desktop 
 - ✅ **Production Ready**: Stable, reliable server operation
 - ✅ **Claude Desktop Compatible**: Ready for immediate integration
 
-The server provides comprehensive genomics tool integration with direct communication between Claude Desktop and Genome AI Studio, eliminating the need for intermediate servers and providing better performance and maintainability. 
+The server provides comprehensive genomics tool integration with direct communication between Claude Desktop and CodeXomics, eliminating the need for intermediate servers and providing better performance and maintainability. 

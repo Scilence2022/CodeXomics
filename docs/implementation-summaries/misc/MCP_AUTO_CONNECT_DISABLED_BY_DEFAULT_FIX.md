@@ -2,13 +2,13 @@
 
 ## Problem Description
 
-The Genome AI Studio was experiencing unwanted automatic MCP server connections on startup, causing repeated connection failures and console error spam:
+The CodeXomics was experiencing unwanted automatic MCP server connections on startup, causing repeated connection failures and console error spam:
 
 ```
 MCPServerManager.js:696 WebSocket connection to 'ws://localhost:3003/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED
 MCPServerManager.js:728 WebSocket server error (genome-studio)
-MCPServerManager.js:733 WebSocket server disconnected: Genome AI Studio
-ChatManager.js:654 MCP Server disconnected: Genome AI Studio
+MCPServerManager.js:733 WebSocket server disconnected: CodeXomics
+ChatManager.js:654 MCP Server disconnected: CodeXomics
 ```
 
 The system was continuously attempting to connect to `ws://localhost:3003/` even when no MCP server was running, creating a poor user experience with constant error messages.
@@ -21,7 +21,7 @@ The MCPServerManager was configured with `autoConnect: true` by default for the 
 ```javascript
 ['genome-studio', {
     id: 'genome-studio',
-    name: 'Genome AI Studio',
+    name: 'CodeXomics',
     url: 'ws://localhost:3003',
     enabled: true,
     autoConnect: true, // This caused unwanted connections

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Minimal MCP Server for Genome AI Studio
+ * Minimal MCP Server for CodeXomics
  * 
  * A clean, minimal implementation using the official @modelcontextprotocol/sdk
  * Focuses on core MCP protocol compliance and genomics tools integration
@@ -80,7 +80,7 @@ class MinimalMCPServer {
                 serverInfo: {
                     name: 'genome-ai-studio-minimal',
                     version: '1.0.0',
-                    description: `Minimal Genome AI Studio MCP Server (${tools.length} tools)`
+                    description: `Minimal CodeXomics MCP Server (${tools.length} tools)`
                 }
             };
         });
@@ -166,7 +166,7 @@ class MinimalMCPServer {
             res.json({
                 name: 'genome-ai-studio-minimal',
                 version: '1.0.0',
-                description: 'Minimal Genome AI Studio MCP Server',
+                description: 'Minimal CodeXomics MCP Server',
                 transport: {
                     sse: `http://localhost:${this.port}/sse`
                 },
@@ -256,7 +256,7 @@ class MinimalMCPServer {
                             serverInfo: {
                                 name: 'genome-ai-studio-minimal',
                                 version: '1.0.0',
-                                description: `Minimal Genome AI Studio MCP Server (${tools.length} tools)`
+                                description: `Minimal CodeXomics MCP Server (${tools.length} tools)`
                             }
                         };
                         break;

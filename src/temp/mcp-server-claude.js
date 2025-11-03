@@ -1,5 +1,5 @@
 /**
- * Claude MCP Server for Genome AI Studio Integration
+ * Claude MCP Server for CodeXomics Integration
  * Uses official Claude MCP TypeScript SDK for proper protocol compliance
  */
 
@@ -19,14 +19,14 @@ class ClaudeMCPGenomeServer {
         this.server = new Server({
             name: "genome-ai-studio-server",
             version: "1.0.0",
-            description: "Claude MCP Server for Genome AI Studio - Comprehensive genomics analysis tools"
+            description: "Claude MCP Server for CodeXomics - Comprehensive genomics analysis tools"
         }, {
             capabilities: {
                 tools: {}
             }
         });
         
-        this.clients = new Map(); // Store connected Genome AI Studio clients
+        this.clients = new Map(); // Store connected CodeXomics clients
         this.browserState = new Map(); // Store current state of each browser instance
         this.wsServer = null;
         this.wsPort = 3001;
@@ -149,7 +149,7 @@ class ClaudeMCPGenomeServer {
                     },
                     {
                         name: "get_current_state",
-                        description: "Get current state of the Genome AI Studio",
+                        description: "Get current state of the CodeXomics",
                         inputSchema: {
                             type: "object",
                             properties: {
@@ -786,7 +786,7 @@ class ClaudeMCPGenomeServer {
     async executeClientSideTool(toolName, parameters, clientId) {
         const client = this.clients.get(clientId);
         if (!client) {
-            throw new Error('No Genome AI Studio clients connected');
+            throw new Error('No CodeXomics clients connected');
         }
 
         return new Promise((resolve, reject) => {

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Genome AI Studio** is a cross-platform Electron-based genome analysis studio with AI-powered natural language interaction. It provides advanced genome visualization, bioinformatics tools, and a modular plugin architecture for genomic research.
+**CodeXomics** is a cross-platform Electron-based genome analysis studio with AI-powered natural language interaction. It provides advanced genome visualization, bioinformatics tools, and a modular plugin architecture for genomic research.
 
 ## Development Commands
 

@@ -63,7 +63,7 @@ out={:timestamp=>"2025-08-10T17:00:25.005812+0800", :message=>"Process failed: r
 After implementing the fixes:
 
 ✅ **Linux build now succeeds** for all remaining targets:
-- AppImage: `Genome AI Studio-0.3.3-beta.AppImage` (147.6 MB)
+- AppImage: `CodeXomics-0.3.3-beta.AppImage` (147.6 MB)
 - Snap: `genome-ai-studio_0.3.3-beta_amd64.snap` (126.5 MB)  
 - Debian: `genome-ai-studio_0.3.3-beta_amd64.deb` (95.0 MB)
 

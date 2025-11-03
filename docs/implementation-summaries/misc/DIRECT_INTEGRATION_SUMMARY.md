@@ -25,7 +25,7 @@ Successfully implemented a direct integration solution for the Claude MCP Server
 
 ### Before: Complex Chain Architecture
 ```
-Claude Desktop → Claude MCP Server → Legacy MCP Server → Genome AI Studio
+Claude Desktop → Claude MCP Server → Legacy MCP Server → CodeXomics
 ```
 - **4 layers** with complex dependencies
 - **High latency** from multiple network hops
@@ -34,7 +34,7 @@ Claude Desktop → Claude MCP Server → Legacy MCP Server → Genome AI Studio
 
 ### After: Direct Integration Architecture  
 ```
-Claude Desktop → Claude MCP Server → Genome AI Studio
+Claude Desktop → Claude MCP Server → CodeXomics
 ```
 - **2 layers** with clean interfaces
 - **Reduced latency** from direct integration

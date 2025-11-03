@@ -1,8 +1,8 @@
-# Genome AI Studio - Complete API Reference
+# CodeXomics - Complete API Reference
 
 ## Overview
 
-This document provides a comprehensive reference for all APIs available in Genome AI Studio v0.3 beta, including core modules, plugin system, and AI integration interfaces.
+This document provides a comprehensive reference for all APIs available in CodeXomics v0.3 beta, including core modules, plugin system, and AI integration interfaces.
 
 ## 🔧 Core Module APIs
 
@@ -996,7 +996,7 @@ const aiFunction = {
 
 ## 📚 Conclusion
 
-This API reference provides comprehensive coverage of all available interfaces in Genome AI Studio. Key areas include:
+This API reference provides comprehensive coverage of all available interfaces in CodeXomics. Key areas include:
 
 - **Core Modules**: File management, visualization, project management
 - **Plugin System**: Complete plugin development and management

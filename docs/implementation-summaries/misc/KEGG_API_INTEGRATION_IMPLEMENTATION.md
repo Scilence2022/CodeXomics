@@ -202,7 +202,7 @@ The KEGG API integration successfully transforms the KGML Pathway Viewer from a 
 - **View comprehensive metadata** for each pathway
 - **Navigate seamlessly** between search, loading, and visualization
 
-This implementation provides a professional-grade pathway analysis tool that integrates seamlessly with the existing Genome AI Studio ecosystem while maintaining the high-quality user experience and robust functionality that users expect.
+This implementation provides a professional-grade pathway analysis tool that integrates seamlessly with the existing CodeXomics ecosystem while maintaining the high-quality user experience and robust functionality that users expect.
 
 ## Files Modified
 - `src/bioinformatics-tools/kgml-viewer.html` - Complete enhancement with KEGG API integration

@@ -1,8 +1,8 @@
-# Documentation Index - Genome AI Studio
+# Documentation Index - CodeXomics
 
 ## 📋 Overview
 
-This document serves as the central navigation hub for the **Genome AI Studio v0.3 beta** documentation system, providing organized access to all available documentation resources.
+This document serves as the central navigation hub for the **CodeXomics v0.3 beta** documentation system, providing organized access to all available documentation resources.
 
 **Document Version**: v1.0  
 **Total Documents**: 25+  

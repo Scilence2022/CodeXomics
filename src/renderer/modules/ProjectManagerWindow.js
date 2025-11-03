@@ -196,8 +196,8 @@ class ProjectManagerWindow {
             console.warn('Failed to set default project location:', error);
             // 设置一个通用的默认位置
             const defaultLocation = navigator.platform.includes('Win') ? 
-                'C:\\Users\\User\\Documents\\Genome AI Studio Projects' :
-                '/Users/user/Documents/Genome AI Studio Projects';
+                'C:\\Users\\User\\Documents\\CodeXomics Projects' :
+                '/Users/user/Documents/CodeXomics Projects';
             document.getElementById('projectLocation').value = defaultLocation;
         }
     }
@@ -1343,8 +1343,8 @@ class ProjectManagerWindow {
                 `${process.env.HOME || '/Users/' + (process.env.USER || 'user')}/Documents`;
             
             const projectsDir = navigator.platform.includes('Win') ?
-                `${documentsPath}\\Genome AI Studio Projects` :
-                `${documentsPath}/Genome AI Studio Projects`;
+                `${documentsPath}\\CodeXomics Projects` :
+                `${documentsPath}/CodeXomics Projects`;
                 
             const projectDataPath = navigator.platform.includes('Win') ?
                 `${projectsDir}\\${this.currentProject.name}` :
@@ -3544,7 +3544,7 @@ Visit Help → User Guide for comprehensive documentation
 🐛 Report Issues:
 Use Help → Report Issue to submit bug reports
 
-© 2024 Genome AI Studio. All rights reserved.
+© 2024 CodeXomics. All rights reserved.
 
 Built with ❤️ for the bioinformatics community.
         `.trim();

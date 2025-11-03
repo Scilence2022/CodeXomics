@@ -7835,7 +7835,7 @@ ${coreTools}
     getOptimizedSystemMessage() {
         const toolPriority = this.getToolPriorityString();
         
-        return `You are an AI assistant for Genome AI Studio, a comprehensive bioinformatics application. You have access to powerful genomic analysis, protein structure, and sequence analysis tools.
+        return `You are an AI assistant for CodeXomics, a comprehensive bioinformatics application. You have access to powerful genomic analysis, protein structure, and sequence analysis tools.
 
 IMPORTANT: Task Completion Instructions
 When you complete a user's task or fully answer their question, end with a clear completion indicator like "Task completed", "Analysis finished", or "In summary" to signal completion efficiently.
@@ -8092,7 +8092,7 @@ ${examples.map(example =>
         const pluginSystemInfo = this.getPluginSystemInfo();
 
         return `
-Current Genome AI Studio State:
+Current CodeXomics State:
 - Current chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None'}
 - Current position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
 - Visible tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
@@ -8358,12 +8358,12 @@ ${examples.map(example =>
             }
         }
 
-        return `You are an AI assistant for a Genome AI Studio application. You have access to the following tools and current state:
+        return `You are an AI assistant for a CodeXomics application. You have access to the following tools and current state:
 
 IMPORTANT: Task Completion Instructions
 When you believe you have completed the user's task or fully answered their question, you can end the conversation early by providing a summary response WITHOUT any tool calls. Use clear completion indicators like "Task completed", "Analysis finished", "In summary", or "The results show" to signal completion. This allows for efficient task execution without using unnecessary function call rounds.
 
-Current Genome AI Studio State:
+Current CodeXomics State:
 - Current chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None'}
 - Current position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
 - Visible tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}

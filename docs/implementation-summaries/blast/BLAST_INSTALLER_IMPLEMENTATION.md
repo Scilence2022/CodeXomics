@@ -101,7 +101,7 @@ function createBlastInstallerWindow() {
       enableRemoteModule: true,
       webSecurity: false
     },
-    title: 'BLAST+ Tools Installer - Genome AI Studio',
+    title: 'BLAST+ Tools Installer - CodeXomics',
     icon: path.join(__dirname, '../assets/icon.png'),
     show: false
   });

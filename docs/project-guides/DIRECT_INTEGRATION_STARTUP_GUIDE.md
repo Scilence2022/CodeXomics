@@ -1,20 +1,20 @@
-# Direct MCP Server 与 Genome AI Studio 集成启动指南
+# Direct MCP Server 与 CodeXomics 集成启动指南
 
 ## 🎯 **目标**
 
-让 Direct MCP Server 能够与 Genome AI Studio 直接交互，通过 Claude Desktop 提供 40+ 基因组学工具。
+让 Direct MCP Server 能够与 CodeXomics 直接交互，通过 Claude Desktop 提供 40+ 基因组学工具。
 
 ## 📋 **系统架构**
 
 ```
-Claude Desktop → Direct MCP Server → Genome AI Studio
+Claude Desktop → Direct MCP Server → CodeXomics
                 (stdio transport)     (HTTP 3000, WS 3001)
                 (HTTP 3002, WS 3003)
 ```
 
 ## 🚀 **启动步骤**
 
-### 步骤 1: 启动 Genome AI Studio
+### 步骤 1: 启动 CodeXomics
 
 ```bash
 # 在 GenomeExplorer 目录下
@@ -32,7 +32,7 @@ node start-direct-integration.js
 
 **预期输出**:
 ```
-🚀 Starting Direct MCP Server for Genome AI Studio...
+🚀 Starting Direct MCP Server for CodeXomics...
 📡 HTTP Server: http://localhost:3002
 🔌 WebSocket: ws://localhost:3003
 🎯 Claude MCP: stdio transport
@@ -45,7 +45,7 @@ node start-direct-integration.js
 # 检查 Direct MCP Server 健康状态
 curl -s http://localhost:3002/health
 
-# 检查 Genome AI Studio 健康状态
+# 检查 CodeXomics 健康状态
 curl -s http://localhost:3000/health
 ```
 
@@ -106,7 +106,7 @@ curl -s http://localhost:3000/health
 
 | 服务 | HTTP 端口 | WebSocket 端口 | 用途 |
 |------|-----------|----------------|------|
-| **Genome AI Studio** | 3000 | 3001 | 主应用后端 |
+| **CodeXomics** | 3000 | 3001 | 主应用后端 |
 | **Direct MCP Server** | 3002 | 3003 | Claude Desktop 集成 |
 
 ## 🔍 **故障排除**
@@ -124,12 +124,12 @@ lsof -i :3000 -i :3001 -i :3002 -i :3003
 pkill -f "start-claude-mcp-server"
 ```
 
-### 问题 2: Genome AI Studio 未启动
+### 问题 2: CodeXomics 未启动
 
-**症状**: Direct MCP Server 无法连接到 Genome AI Studio
+**症状**: Direct MCP Server 无法连接到 CodeXomics
 
 **解决方案**:
-1. 确保 Genome AI Studio 已启动
+1. 确保 CodeXomics 已启动
 2. 检查 `http://localhost:3000/health` 是否响应
 3. 重启 Direct MCP Server
 
@@ -147,7 +147,7 @@ pkill -f "start-claude-mcp-server"
 **症状**: 工具调用返回错误
 
 **解决方案**:
-1. 确保 Genome AI Studio 窗口已打开
+1. 确保 CodeXomics 窗口已打开
 2. 检查 WebSocket 连接状态
 3. 验证工具参数格式
 
@@ -186,7 +186,7 @@ netstat -an | grep 300
 # Direct MCP Server
 curl -s http://localhost:3002/health
 
-# Genome AI Studio
+# CodeXomics
 curl -s http://localhost:3000/health
 ```
 
@@ -200,13 +200,13 @@ lsof -i :3003
 ## 🎯 **最佳实践**
 
 ### 1. **启动顺序**
-1. 先启动 Genome AI Studio
+1. 先启动 CodeXomics
 2. 等待应用完全加载
 3. 启动 Direct MCP Server
 4. 配置 Claude Desktop
 
 ### 2. **端口管理**
-- Genome AI Studio: 3000/3001
+- CodeXomics: 3000/3001
 - Direct MCP Server: 3002/3003
 - 避免端口冲突
 
@@ -224,7 +224,7 @@ lsof -i :3003
 
 启动完成后，请验证：
 
-- [ ] Genome AI Studio 应用窗口已打开
+- [ ] CodeXomics 应用窗口已打开
 - [ ] Direct MCP Server 正在运行 (端口 3002/3003)
 - [ ] Claude Desktop 配置已添加
 - [ ] 工具列表在 Claude Desktop 中可见
@@ -235,7 +235,7 @@ lsof -i :3003
 
 当您看到以下情况时，集成已成功：
 
-1. **Genome AI Studio**: 应用窗口正常显示
+1. **CodeXomics**: 应用窗口正常显示
 2. **Direct MCP Server**: 启动信息显示成功
 3. **Claude Desktop**: 能够列出和使用基因组学工具
 4. **工具执行**: 能够成功调用工具并获得结果
@@ -251,4 +251,4 @@ lsof -i :3003
 
 ---
 
-**现在您可以享受 Direct MCP Server 与 Genome AI Studio 的完整集成！** 
+**现在您可以享受 Direct MCP Server 与 CodeXomics 的完整集成！** 

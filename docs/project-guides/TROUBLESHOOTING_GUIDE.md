@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you resolve common issues encountered while using **Genome AI Studio v0.3 beta**.
+This guide helps you resolve common issues encountered while using **CodeXomics v0.3 beta**.
 
 ## 🚨 Common Installation Issues
 
@@ -311,7 +311,7 @@ This guide helps you resolve common issues encountered while using **Genome AI S
 
 ### Before Reporting Issues
 
-1. **Update to latest version** of Genome AI Studio
+1. **Update to latest version** of CodeXomics
 2. **Check existing issues** on GitHub
 3. **Gather system information**:
    - Operating system and version
@@ -392,4 +392,4 @@ curl -I https://genome-ai-studio-marketplace.com/api/health
 
 **Still having issues?** Contact our support team with detailed information about your problem, including system specifications and error messages.
 
-*This guide covers Genome AI Studio v0.3.0-beta. Check for updates to both the application and this documentation.* 
+*This guide covers CodeXomics v0.3.0-beta. Check for updates to both the application and this documentation.* 

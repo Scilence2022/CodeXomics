@@ -1843,7 +1843,7 @@ class ActionManager {
             const filename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
             this.downloadTextFile(genbankContent, filename);
             
-            // Auto-open the generated GBK file in a new Genome AI Studio window
+            // Auto-open the generated GBK file in a new CodeXomics window
             await this.autoOpenGeneratedGBK(genbankContent, filename);
             
             this.genomeBrowser.showNotification(`Comprehensive GBK file generated and opened: ${filename}`, 'success');
@@ -1889,7 +1889,7 @@ class ActionManager {
         // Add comprehensive action history as COMMENT section
         if (executedActions.length > 0) {
             content += `COMMENT     ========================================================================\n`;
-            content += `COMMENT     Genome AI Studio Action Manager - Execution Report\n`;
+            content += `COMMENT     CodeXomics Action Manager - Execution Report\n`;
             content += `COMMENT     ========================================================================\n`;
             content += `COMMENT     Execution ID: ${executionId}\n`;
             content += `COMMENT     Total Actions Executed: ${executedActions.length}\n`;
@@ -1944,7 +1944,7 @@ class ActionManager {
         // DEFINITION line
         const definition = sourceFeatures.note || 
                           originalAnnotations.find(f => f.type === 'source')?.qualifiers?.note ||
-                          `${chromosome} - Modified by Genome AI Studio Action Manager`;
+                          `${chromosome} - Modified by CodeXomics Action Manager`;
         content += `DEFINITION  ${definition}\n`;
         
         // ACCESSION line
@@ -2111,7 +2111,7 @@ class ActionManager {
         // Add comprehensive modification history
         if (executedActions.length > 0) {
             content += `COMMENT     ========================================================================\n`;
-            content += `COMMENT     MODIFICATION HISTORY - Genome AI Studio Action Manager\n`;
+            content += `COMMENT     MODIFICATION HISTORY - CodeXomics Action Manager\n`;
             content += `COMMENT     ========================================================================\n`;
             content += `COMMENT     Execution ID: ${executionId}\n`;
             content += `COMMENT     Total modifications: ${executedActions.length}\n`;
@@ -2202,7 +2202,7 @@ class ActionManager {
     }
     
     /**
-     * Auto-open generated GBK file in a new Genome AI Studio window
+     * Auto-open generated GBK file in a new CodeXomics window
      */
     async autoOpenGeneratedGBK(genbankContent, filename) {
         try {
@@ -4205,7 +4205,7 @@ class ActionManager {
                 // Add modification history as comments
                 if (relevantActions.length > 0) {
                     genbankContent += `COMMENT     MODIFICATION HISTORY:\n`;
-                    genbankContent += `COMMENT     This sequence has been modified using Genome AI Studio Action Manager.\n`;
+                    genbankContent += `COMMENT     This sequence has been modified using CodeXomics Action Manager.\n`;
                     genbankContent += `COMMENT     Total modifications: ${relevantActions.length}\n`;
                     genbankContent += `COMMENT     Export timestamp: ${new Date().toISOString()}\n`;
                     genbankContent += `COMMENT     \n`;
@@ -4419,7 +4419,7 @@ class ActionManager {
                 // Add modification history as comments
                 if (relevantActions.length > 0) {
                     genbankContent += `COMMENT     MODIFICATION HISTORY:\n`;
-                    genbankContent += `COMMENT     This sequence has been modified using Genome AI Studio Action Manager.\n`;
+                    genbankContent += `COMMENT     This sequence has been modified using CodeXomics Action Manager.\n`;
                     genbankContent += `COMMENT     Total modifications: ${relevantActions.length}\n`;
                     genbankContent += `COMMENT     Export timestamp: ${new Date().toISOString()}\n`;
                     genbankContent += `COMMENT     \n`;

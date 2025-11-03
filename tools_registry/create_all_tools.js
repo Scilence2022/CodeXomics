@@ -33,7 +33,7 @@ class ToolDefinitionCreator {
             },
             'get_current_state': {
                 category: 'navigation',
-                description: 'Get current state of the Genome AI Studio browser',
+                description: 'Get current state of the CodeXomics browser',
                 keywords: ['current', 'state', 'browser', 'status'],
                 priority: 1
             },

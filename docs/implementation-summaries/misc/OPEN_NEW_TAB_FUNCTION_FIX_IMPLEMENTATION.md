@@ -2,7 +2,7 @@
 
 ## Issue Summary
 
-The `open_new_tab` function call was not executing properly in the Genome AI Studio system. The AI was repeatedly calling `{"tool_name": "open_new_tab", "parameters": {}}` but the function was not being executed, resulting in no new tabs being created.
+The `open_new_tab` function call was not executing properly in the CodeXomics system. The AI was repeatedly calling `{"tool_name": "open_new_tab", "parameters": {}}` but the function was not being executed, resulting in no new tabs being created.
 
 ## Root Cause Analysis
 
@@ -203,7 +203,7 @@ async searchGeneByName(geneName) {
 
 ## Conclusion
 
-The `open_new_tab` function fix provides a robust, comprehensive solution for AI-driven tab creation in Genome AI Studio. The implementation ensures:
+The `open_new_tab` function fix provides a robust, comprehensive solution for AI-driven tab creation in CodeXomics. The implementation ensures:
 
 - **Reliability**: Comprehensive error handling and validation
 - **Flexibility**: Multiple ways to create tabs (gene, position, default)
@@ -221,7 +221,7 @@ The fix resolves the original issue where AI function calls were not executing, 
 
 ## Testing Instructions
 
-1. Open `test/fix-validation-tests/test-open-new-tab-fix.html` in Genome AI Studio
+1. Open `test/fix-validation-tests/test-open-new-tab-fix.html` in CodeXomics
 2. Run each test section sequentially
 3. Verify all tests pass
 4. Test AI function calls: `{"tool_name": "openNewTab", "parameters": {}}`

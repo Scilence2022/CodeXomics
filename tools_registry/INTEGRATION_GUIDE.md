@@ -1,8 +1,8 @@
-# Genome AI Studio Dynamic Tools Registry - Integration Guide
+# CodeXomics Dynamic Tools Registry - Integration Guide
 
 ## 🎯 Overview
 
-This guide explains how to integrate the dynamic tools registry system with the existing Genome AI Studio codebase. The system eliminates the need for maintaining massive system prompts by implementing intelligent, on-demand tool retrieval and injection.
+This guide explains how to integrate the dynamic tools registry system with the existing CodeXomics codebase. The system eliminates the need for maintaining massive system prompts by implementing intelligent, on-demand tool retrieval and injection.
 
 ## 🏗️ Architecture Summary
 
@@ -119,7 +119,7 @@ class ChatManager {
     }
 
     getFallbackSystemMessage() {
-        return `# Genome AI Studio - Fallback Mode
+        return `# CodeXomics - Fallback Mode
         // ... fallback system message ...
         `;
     }
@@ -376,7 +376,7 @@ if (DEBUG) {
 
 ## 🎉 Conclusion
 
-The dynamic tools registry system transforms Genome AI Studio from a monolithic, hard-to-maintain system into a modular, intelligent, and scalable platform. By implementing this system, you gain:
+The dynamic tools registry system transforms CodeXomics from a monolithic, hard-to-maintain system into a modular, intelligent, and scalable platform. By implementing this system, you gain:
 
 - **90% reduction** in system prompt size
 - **5x faster** tool loading
@@ -384,7 +384,7 @@ The dynamic tools registry system transforms Genome AI Studio from a monolithic,
 - **Intelligent tool selection** based on user intent
 - **Easy maintenance** and updates
 
-This architecture follows industry best practices and positions Genome AI Studio for future growth and innovation.
+This architecture follows industry best practices and positions CodeXomics for future growth and innovation.
 
 ---
 

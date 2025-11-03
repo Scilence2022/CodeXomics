@@ -5861,7 +5861,7 @@ class TrackRenderer {
     }
 
     showGeneDetails(gene, operonInfo) {
-        // Call the main Genome AI Studio's gene selection methods
+        // Call the main CodeXomics's gene selection methods
         this.genomeBrowser.selectGene(gene, operonInfo);
         this.genomeBrowser.showGeneDetailsPanel();
         this.genomeBrowser.populateGeneDetails(gene, operonInfo);

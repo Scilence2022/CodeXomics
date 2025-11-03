@@ -1,8 +1,8 @@
-# User Manual - Genome AI Studio
+# User Manual - CodeXomics
 
 ## 📋 Overview
 
-This comprehensive user manual provides detailed guidance for using **Genome AI Studio v0.3 beta**, covering all aspects from basic operations to advanced analysis workflows.
+This comprehensive user manual provides detailed guidance for using **CodeXomics v0.3 beta**, covering all aspects from basic operations to advanced analysis workflows.
 
 **Document Version**: v2.0  
 **Target Audience**: Researchers, Bioinformaticians, Students  

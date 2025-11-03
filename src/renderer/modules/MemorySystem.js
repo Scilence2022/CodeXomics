@@ -1,5 +1,5 @@
 /**
- * Memory System for Genome AI Studio
+ * Memory System for CodeXomics
  * Multi-layer memory architecture for intelligent caching and context management
  */
 class MemorySystem {

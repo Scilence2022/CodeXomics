@@ -987,7 +987,7 @@ class BiologicalNetworksPlugin {
             name: 'Biological Networks Plugin',
             version: '2.0.0',
             description: 'Advanced biological network analysis and visualization',
-            author: 'Genome AI Studio Team',
+            author: 'CodeXomics Team',
             functions: [
                 'buildProteinInteractionNetwork',
                 'buildGeneRegulatoryNetwork', 

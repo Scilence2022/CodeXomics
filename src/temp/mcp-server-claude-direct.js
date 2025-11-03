@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Claude MCP Server for Genome AI Studio - Direct Integration
+ * Claude MCP Server for CodeXomics - Direct Integration
  * Provides comprehensive genomics tools for Claude Desktop MCP integration
  * 
  * This server directly integrates all tools without relying on the legacy MCP server,
@@ -107,7 +107,7 @@ class ClaudeDirectMCPServer {
             await this.backendServer.start();
             
             // Output port information to stderr to avoid JSON-RPC interference
-            process.stderr.write(`🧬 Genome AI Studio Direct MCP Server started\n`);
+            process.stderr.write(`🧬 CodeXomics Direct MCP Server started\n`);
             process.stderr.write(`📡 HTTP Server: http://localhost:${this.httpPort}\n`);
             process.stderr.write(`🔌 WebSocket: ws://localhost:${this.wsPort}\n`);
             process.stderr.write(`\n`);

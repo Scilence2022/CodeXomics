@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Start Claude MCP Server for Genome AI Studio - Direct Integration
+ * Start Claude MCP Server for CodeXomics - Direct Integration
  * 
  * This script starts the Claude MCP (Model Context Protocol) server
  * using the direct integration approach with organized tool modules.

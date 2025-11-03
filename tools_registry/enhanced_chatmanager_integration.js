@@ -369,9 +369,9 @@ class EnhancedChatManagerWithDynamicTools {
      * Get enhanced fallback system message
      */
     getFallbackSystemMessage() {
-        return `# Genome AI Studio - Enhanced Fallback Mode
+        return `# CodeXomics - Enhanced Fallback Mode
 
-You are an AI assistant for Genome AI Studio. The enhanced dynamic tools system is temporarily unavailable.
+You are an AI assistant for CodeXomics. The enhanced dynamic tools system is temporarily unavailable.
 
 ## 🔧 Core Built-in Tools Available
 - load_genome_file: Load genome files (FASTA/GenBank)

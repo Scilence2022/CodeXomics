@@ -2,7 +2,7 @@
 
 ## 🚀 System Overview
 
-This document describes the complete integration of built-in file loading tools with the dynamic tools registry system in Genome AI Studio. The implementation provides intelligent tool selection, enhanced system prompt generation, and seamless integration between native ChatManager methods and the dynamic tool ecosystem.
+This document describes the complete integration of built-in file loading tools with the dynamic tools registry system in CodeXomics. The implementation provides intelligent tool selection, enhanced system prompt generation, and seamless integration between native ChatManager methods and the dynamic tool ecosystem.
 
 ## 🏗️ Architecture Components
 
@@ -265,4 +265,4 @@ registryManager.cacheTimeout = 600000; // 10 minutes
 4. **Additional Tool Categories**: Expand beyond file loading tools
 5. **Advanced Analytics**: Implement ML-based tool selection optimization
 
-This complete integration provides Genome AI Studio with a state-of-the-art dynamic tools system that combines the reliability of built-in tools with the flexibility of dynamic selection, resulting in superior performance and user experience.
+This complete integration provides CodeXomics with a state-of-the-art dynamic tools system that combines the reliability of built-in tools with the flexibility of dynamic selection, resulting in superior performance and user experience.

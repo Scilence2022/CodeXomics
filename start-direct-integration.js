@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Start Direct Integration MCP Server for Genome AI Studio
+ * Start Direct Integration MCP Server for CodeXomics
  * 
  * This script starts the Direct MCP Server with proper port configuration
- * to avoid conflicts with the existing Genome AI Studio backend.
+ * to avoid conflicts with the existing CodeXomics backend.
  * 
  * Port Configuration:
- * - Genome AI Studio: HTTP 3000, WebSocket 3001
+ * - CodeXomics: HTTP 3000, WebSocket 3001
  * - Direct MCP Server: HTTP 3002, WebSocket 3003
  */
 
@@ -36,7 +36,7 @@ process.on('SIGTERM', async () => {
 });
 
 // Output startup information
-process.stderr.write('🚀 Starting Direct MCP Server for Genome AI Studio...\n');
+process.stderr.write('🚀 Starting Direct MCP Server for CodeXomics...\n');
 process.stderr.write('📡 HTTP Server: http://localhost:3002\n');
 process.stderr.write('🔌 WebSocket: ws://localhost:3003\n');
 process.stderr.write('🎯 Claude MCP: stdio transport\n');

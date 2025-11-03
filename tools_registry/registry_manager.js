@@ -1,5 +1,5 @@
 /**
- * Genome AI Studio Tools Registry Manager
+ * CodeXomics Tools Registry Manager
  * Implements dynamic tool retrieval and injection system
  */
 

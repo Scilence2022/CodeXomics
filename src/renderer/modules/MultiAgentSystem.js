@@ -1,5 +1,5 @@
 /**
- * Multi-Agent System for Genome AI Studio
+ * Multi-Agent System for CodeXomics
  * Intelligent coordination of function calling across all subsystems
  */
 class MultiAgentSystem {

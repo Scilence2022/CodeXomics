@@ -89,7 +89,7 @@ average_execution_time: 1000
 
 # Tool metadata
 metadata:
-  author: "Genome AI Studio"
+  author: "CodeXomics"
   created: "2024-01-15"
   last_updated: "2024-01-15"
   tags: ["file-loading", "operon", "bacterial", "specialized", "built-in"]

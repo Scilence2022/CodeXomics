@@ -1,8 +1,8 @@
-# Documentation Templates - Genome AI Studio
+# Documentation Templates - CodeXomics
 
 ## 📋 Overview
 
-This document provides standardized templates for all documentation in the Genome AI Studio project. These templates ensure consistency, maintainability, and professional appearance across all documentation files.
+This document provides standardized templates for all documentation in the CodeXomics project. These templates ensure consistency, maintainability, and professional appearance across all documentation files.
 
 ## 🎯 Template Categories
 

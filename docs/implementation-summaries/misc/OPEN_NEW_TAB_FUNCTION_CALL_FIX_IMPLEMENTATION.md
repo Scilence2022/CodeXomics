@@ -2,7 +2,7 @@
 
 ## Issue Summary
 
-The `open_new_tab` function call was not executing properly in the Genome AI Studio system. The AI was repeatedly calling `{"tool_name": "open_new_tab", "parameters": {}}` but the function was not being executed, resulting in no new tabs being created.
+The `open_new_tab` function call was not executing properly in the CodeXomics system. The AI was repeatedly calling `{"tool_name": "open_new_tab", "parameters": {}}` but the function was not being executed, resulting in no new tabs being created.
 
 ## Root Cause Analysis
 
@@ -150,7 +150,7 @@ TabManager.createNewTab() or newTabButton.click()
 ### How to Use the Tests
 
 #### Option 1: Quick Fix Test (Recommended)
-1. **Open the quick fix test file** in Genome AI Studio:
+1. **Open the quick fix test file** in CodeXomics:
    ```
    Tools → Open Test File → Open New Tab Quick Fix Test
    ```
@@ -161,7 +161,7 @@ TabManager.createNewTab() or newTabButton.click()
 3. **Check the results** - should show "Function call succeeded" and "Tab created successfully"
 
 #### Option 2: Debug Test Page
-1. **Open the debug test file** in Genome AI Studio:
+1. **Open the debug test file** in CodeXomics:
    ```
    Tools → Open Test File → Open New Tab Debug Test
    ```
@@ -173,13 +173,13 @@ TabManager.createNewTab() or newTabButton.click()
 4. **Check the real-time tab information** to monitor tab creation
 
 #### Option 2: Console Debug Script
-1. **Open Developer Tools** in Genome AI Studio (F12 or Cmd+Option+I)
+1. **Open Developer Tools** in CodeXomics (F12 or Cmd+Option+I)
 2. **Copy and paste** the contents of `debug-open-new-tab.js` into the console
 3. **Press Enter** to run the debug script
 4. **Review the console output** for detailed diagnostics
 
 #### Option 3: Simple Test
-1. **Open the simple test file** in Genome AI Studio:
+1. **Open the simple test file** in CodeXomics:
    ```
    File → Open File → test/integration-tests/test-open-new-tab-simple.html
    ```
@@ -187,7 +187,7 @@ TabManager.createNewTab() or newTabButton.click()
 2. **Click "Test Open New Tab"** to run a quick verification
 
 #### Option 4: Comprehensive Test
-1. **Open the comprehensive test file** in Genome AI Studio:
+1. **Open the comprehensive test file** in CodeXomics:
    ```
    File → Open File → test/fix-validation-tests/test-open-new-tab-function-call-fix.html
    ```
@@ -303,7 +303,7 @@ The following debug logging has been added to help diagnose issues:
 
 ## Conclusion
 
-The `open_new_tab` function call fix provides a robust, comprehensive solution for AI-driven tab creation in Genome AI Studio. The implementation ensures:
+The `open_new_tab` function call fix provides a robust, comprehensive solution for AI-driven tab creation in CodeXomics. The implementation ensures:
 
 - **Reliability**: Comprehensive error handling and validation
 - **Flexibility**: Multiple ways to create tabs (gene, position, default)

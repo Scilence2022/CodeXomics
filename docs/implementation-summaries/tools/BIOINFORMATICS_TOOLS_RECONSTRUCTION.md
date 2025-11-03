@@ -332,7 +332,7 @@ ipcRenderer.on('chatbox-interpret-request', (event, request) => {
 1. Batch analysis support
 2. Result comparison between analyses
 3. Export to multiple formats (PDF, Excel, etc.)
-4. Integration with other Genome AI Studio tools
+4. Integration with other CodeXomics tools
 
 ### Long-term
 1. Machine learning-based predictions
@@ -351,4 +351,4 @@ This reconstruction represents a complete reimagining of three critical bioinfor
 - **Modern UI/UX** with professional design
 - **Extensible architecture** for future tools
 
-The new implementation sets a high standard for tool development in Genome AI Studio, with deep ChatBox integration enabling AI-powered biological interpretation that transforms raw analysis results into actionable biological insights.
+The new implementation sets a high standard for tool development in CodeXomics, with deep ChatBox integration enabling AI-powered biological interpretation that transforms raw analysis results into actionable biological insights.

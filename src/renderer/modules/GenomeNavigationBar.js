@@ -582,14 +582,14 @@ class GenomeNavigationBar {
             
             this.draw();
         } else if (this.isResizing || this.isDragging) {
-            // Apply the temporary range to the Genome AI Studio
+            // Apply the temporary range to the CodeXomics
             if (this.tempRange) {
                 this.genomeBrowser.currentPosition = {
                     start: Math.round(this.tempRange.start),
                     end: Math.round(this.tempRange.end)
                 };
                 
-                // Update the Genome AI Studio display
+                // Update the CodeXomics display
                 const sequence = this.genomeBrowser.currentSequence[this.currentChromosome];
                 this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
                 this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);

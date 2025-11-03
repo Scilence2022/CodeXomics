@@ -2,7 +2,7 @@
 
 ## Overview
 
-Genome AI Studio includes a comprehensive system for creating custom genomic annotations directly within the studio interface. This feature allows researchers to add their own annotations, notes, and feature types while maintaining visual distinction from loaded genome data.
+CodeXomics includes a comprehensive system for creating custom genomic annotations directly within the studio interface. This feature allows researchers to add their own annotations, notes, and feature types while maintaining visual distinction from loaded genome data.
 
 ## ✨ Key Features
 

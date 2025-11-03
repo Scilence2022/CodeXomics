@@ -1,8 +1,8 @@
-# LLM Chat Integration for Genome AI Studio
+# LLM Chat Integration for CodeXomics
 
 ## Overview
 
-Genome AI Studio includes a comprehensive LLM (Large Language Model) chat interface that enables natural language interaction with genomic data. The AI assistant has been recently enhanced with **corrected function calling** that properly distinguishes between text-based searches and position-based searches, providing more accurate and reliable responses.
+CodeXomics includes a comprehensive LLM (Large Language Model) chat interface that enables natural language interaction with genomic data. The AI assistant has been recently enhanced with **corrected function calling** that properly distinguishes between text-based searches and position-based searches, providing more accurate and reliable responses.
 
 ## 🆕 Recent Improvements
 

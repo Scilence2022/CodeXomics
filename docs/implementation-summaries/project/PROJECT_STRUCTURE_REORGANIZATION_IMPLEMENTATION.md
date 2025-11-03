@@ -2,7 +2,7 @@
 
 ## 概述
 
-本次实现完成了Genome AI Studio项目结构的重大重组，解决了文件路径访问错误问题，并实现了更合理的项目目录组织结构。
+本次实现完成了CodeXomics项目结构的重大重组，解决了文件路径访问错误问题，并实现了更合理的项目目录组织结构。
 
 ## 问题分析
 
@@ -13,11 +13,11 @@
 
 **实际正确路径应该是**：
 ```
-/Users/song/Documents/Genome AI Studio Projects/5555/genomes/ECOLI.gbk
+/Users/song/Documents/CodeXomics Projects/5555/genomes/ECOLI.gbk
 ```
 
 ### 根本原因
-1. **项目目录名称错误**：系统使用"GenomeExplorer Projects"，实际应为"Genome AI Studio Projects"
+1. **项目目录名称错误**：系统使用"GenomeExplorer Projects"，实际应为"CodeXomics Projects"
 2. **目录结构不合理**：项目文件与数据目录分离，不利于项目管理
 3. **文件名不标准**：使用`ProjectName.prj.GAI`，应统一为`Project.GAI`
 
@@ -27,7 +27,7 @@
 
 **旧结构（修复前）**：
 ```
-/Users/song/Documents/Genome AI Studio Projects/
+/Users/song/Documents/CodeXomics Projects/
 ├── ProjectName.prj.GAI    # 项目文件在根目录
 └── ProjectName/           # 数据目录
     ├── genomes/
@@ -39,7 +39,7 @@
 
 **新结构（修复后）**：
 ```
-/Users/song/Documents/Genome AI Studio Projects/
+/Users/song/Documents/CodeXomics Projects/
 └── ProjectName/           # 统一的项目目录
     ├── Project.GAI        # 固定的项目文件名
     ├── genomes/
@@ -93,7 +93,7 @@ return {
 const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
 
 // 修复后：使用正确的项目目录名
-const projectsDir = path.join(documentsPath, 'Genome AI Studio Projects');
+const projectsDir = path.join(documentsPath, 'CodeXomics Projects');
 ```
 
 #### 2.4 项目加载路径设置 (`ProjectManagerWindow.js`)
@@ -121,7 +121,7 @@ if (fileName === 'Project.GAI') {
 
 ```javascript
 filters: [
-    { name: 'Genome AI Studio Project Files', extensions: ['GAI', 'prj.GAI'] },
+    { name: 'CodeXomics Project Files', extensions: ['GAI', 'prj.GAI'] },
     { name: 'XML Files', extensions: ['xml'] },
     { name: 'Project Files', extensions: ['genomeproj', 'json'] },
     { name: 'All Files', extensions: ['*'] }
@@ -144,7 +144,7 @@ filters: [
 // 在 main.js 中添加的 IPC 处理器
 ipcMain.handle('getProjectDirectoryName', async () => {
     const possibleNames = [
-        'Genome AI Studio Projects',
+        'CodeXomics Projects',
         'GenomeExplorer Projects',
         'GenomeAI Studio Projects',
         'Genome Explorer Projects'
@@ -157,7 +157,7 @@ ipcMain.handle('getProjectDirectoryName', async () => {
         }
     }
     
-    return { success: true, directoryName: 'Genome AI Studio Projects' };
+    return { success: true, directoryName: 'CodeXomics Projects' };
 });
 ```
 
@@ -188,8 +188,8 @@ return path.resolve(projectDataPath, normalizedRelativePath);
 5. **实际路径解析测试**
 
 ### 测试结果预期
-- ✅ 项目目录正确检测为 "Genome AI Studio Projects"
-- ✅ 文件路径正确构建为 `/Users/song/Documents/Genome AI Studio Projects/5555/genomes/ECOLI.gbk`
+- ✅ 项目目录正确检测为 "CodeXomics Projects"
+- ✅ 文件路径正确构建为 `/Users/song/Documents/CodeXomics Projects/5555/genomes/ECOLI.gbk`
 - ✅ 新项目结构验证通过
 - ✅ 旧项目格式兼容性保持
 - ✅ 路径解析错误完全修复
@@ -241,4 +241,4 @@ return path.resolve(projectDataPath, normalizedRelativePath);
 - 提供统一的用户体验
 - 维护数据完整性和兼容性
 
-这是一个全面的、向后兼容的重大改进，为Genome AI Studio的项目管理奠定了坚实基础。 
+这是一个全面的、向后兼容的重大改进，为CodeXomics的项目管理奠定了坚实基础。 

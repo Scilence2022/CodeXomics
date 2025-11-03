@@ -1,8 +1,8 @@
-# Core Workflow Examples - Genome AI Studio
+# Core Workflow Examples - CodeXomics
 
 ## 📋 Overview
 
-This document provides comprehensive, step-by-step workflow examples for **Genome AI Studio v0.3 beta**, covering essential genomic analysis tasks from basic operations to advanced research workflows.
+This document provides comprehensive, step-by-step workflow examples for **CodeXomics v0.3 beta**, covering essential genomic analysis tasks from basic operations to advanced research workflows.
 
 **Document Version**: v1.0  
 **Target Audience**: Researchers, Bioinformaticians, Students  
@@ -28,7 +28,7 @@ This document provides comprehensive, step-by-step workflow examples for **Genom
 **Estimated Time**: 10-15 minutes  
 **Prerequisites**: Genome file (FASTA, GenBank, GFF, etc.)
 
-#### **Step 1: Launch Genome AI Studio**
+#### **Step 1: Launch CodeXomics**
 ```bash
 # Navigate to project directory
 cd /path/to/GenomeExplorer

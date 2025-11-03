@@ -1,8 +1,8 @@
-# Genome AI Studio - Comprehensive Feature Reference
+# CodeXomics - Comprehensive Feature Reference
 
 ## Overview
 
-This document provides a complete reference of all features available in Genome AI Studio v0.3 beta, organized by category and functionality. Each feature includes detailed descriptions, usage instructions, and technical specifications.
+This document provides a complete reference of all features available in CodeXomics v0.3 beta, organized by category and functionality. Each feature includes detailed descriptions, usage instructions, and technical specifications.
 
 ## 🧬 Core Genome Visualization Features
 
@@ -780,7 +780,7 @@ npm run test:plugin-framework
 
 ## 📝 Conclusion
 
-Genome AI Studio v0.3 beta provides a comprehensive, feature-rich platform for genomic analysis with:
+CodeXomics v0.3 beta provides a comprehensive, feature-rich platform for genomic analysis with:
 
 - **Advanced Visualization** - SVG-based rendering with multi-track support
 - **AI Integration** - Natural language interaction with multiple AI providers

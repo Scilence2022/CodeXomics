@@ -1,6 +1,6 @@
 # Protein 3D Structure Viewer Integration
 
-This document describes the implementation of protein 3D structure visualization functionality in Genome AI Studio using the PDB database and NGL Viewer.
+This document describes the implementation of protein 3D structure visualization functionality in CodeXomics using the PDB database and NGL Viewer.
 
 ## Overview
 

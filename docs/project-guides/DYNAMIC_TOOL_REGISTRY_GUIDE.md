@@ -218,4 +218,4 @@ Enable debug logging to see:
 
 ---
 
-*This guide is part of the Genome AI Studio documentation. For questions or contributions, please refer to the main project repository.*
+*This guide is part of the CodeXomics documentation. For questions or contributions, please refer to the main project repository.*

@@ -256,7 +256,7 @@ The Gene Annotation Refine tool successfully achieves:
 
 ✅ **Robust Error Handling**: Graceful handling of errors with informative user feedback
 
-✅ **Seamless Integration**: Full integration with existing Genome AI Studio workflow
+✅ **Seamless Integration**: Full integration with existing CodeXomics workflow
 
 ✅ **Extensible Architecture**: Modular design allowing for future enhancements
 

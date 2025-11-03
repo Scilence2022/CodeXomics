@@ -9,7 +9,7 @@ BLAST options error: Please provide a database name using -out
 
 **Root Cause**: The `makeblastdb` command in BLAST+ tools cannot properly handle absolute paths containing spaces, even when properly quoted or escaped.
 
-**Affected Path**: `/Users/song/Documents/Genome AI Studio Projects/newProject/genomes/protein_sequences.fasta`
+**Affected Path**: `/Users/song/Documents/CodeXomics Projects/newProject/genomes/protein_sequences.fasta`
 
 ## Technical Analysis
 
@@ -144,14 +144,14 @@ exec(finalCommand, (error, stdout, stderr) => {
 ### Before Fix
 ```bash
 # Failed command (absolute paths with spaces)
-export BLASTDB="/Users/song/blast/db" && makeblastdb -in "/Users/song/Documents/Genome AI Studio Projects/newProject/genomes/protein_sequences.fasta" -dbtype prot -out "/Users/song/Documents/Genome AI Studio Projects/newProject/genomes/custom_protein_sequences_20250703111_1751542430272" -title "protein_sequences_20250703111"
+export BLASTDB="/Users/song/blast/db" && makeblastdb -in "/Users/song/Documents/CodeXomics Projects/newProject/genomes/protein_sequences.fasta" -dbtype prot -out "/Users/song/Documents/CodeXomics Projects/newProject/genomes/custom_protein_sequences_20250703111_1751542430272" -title "protein_sequences_20250703111"
 # Error: BLAST options error: Please provide a database name using -out
 ```
 
 ### After Fix
 ```bash
 # Working command (relative paths with working directory)
-cd "/Users/song/Documents/Genome AI Studio Projects/newProject/genomes/"
+cd "/Users/song/Documents/CodeXomics Projects/newProject/genomes/"
 export BLASTDB="/Users/song/blast/db" && makeblastdb -in "protein_sequences.fasta" -dbtype prot -out "custom_protein_sequences_20250703111_1751542430272" -title "protein_sequences_20250703111"
 # Success: Database created successfully
 ```

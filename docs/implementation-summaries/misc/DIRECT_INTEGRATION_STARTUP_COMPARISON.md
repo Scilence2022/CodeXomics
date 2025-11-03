@@ -24,7 +24,7 @@ Two startup files are now available for the Claude MCP Server:
 ```javascript
 const ClaudeMCPGenomeServer = require('./src/mcp-server-claude.js');
 
-process.stderr.write('🧬 Starting Genome AI Studio Claude MCP Server...\n');
+process.stderr.write('🧬 Starting CodeXomics Claude MCP Server...\n');
 process.stderr.write('📋 Using official Claude MCP TypeScript SDK\n');
 
 const server = new ClaudeMCPGenomeServer();

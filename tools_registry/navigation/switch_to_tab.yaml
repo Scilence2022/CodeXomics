@@ -1,7 +1,7 @@
 name: "switch_to_tab"
 description: "Switch to a specific tab in the browser interface by tab ID, name, or index position"
 version: "1.0.0"
-author: "Genome AI Studio"
+author: "CodeXomics"
 category: "navigation"
 intent: "tab_navigation"
 priority: 1

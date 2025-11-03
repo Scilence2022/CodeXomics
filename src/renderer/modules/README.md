@@ -1,6 +1,6 @@
-# Genome AI Studio Modular Architecture
+# CodeXomics Modular Architecture
 
-This document describes the enhanced modular architecture of Genome AI Studio, including recent improvements and integrations.
+This document describes the enhanced modular architecture of CodeXomics, including recent improvements and integrations.
 
 ## Overview
 
@@ -285,4 +285,4 @@ Use the modular architecture (`renderer-modular.js`) for all new development:
 - Implement result caching where appropriate
 - Provide progressive result loading for large datasets
 
-This enhanced modular architecture provides a solid foundation for continued development of Genome AI Studio, with particular emphasis on AI reliability, visual quality, and overall user experience. 
+This enhanced modular architecture provides a solid foundation for continued development of CodeXomics, with particular emphasis on AI reliability, visual quality, and overall user experience. 

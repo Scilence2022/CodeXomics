@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the comprehensive integration of the Multi-Agent System into the ChatBox interface of Genome AI Studio, providing users with intelligent agent-based tool execution capabilities and enhanced performance optimization.
+This document outlines the comprehensive integration of the Multi-Agent System into the ChatBox interface of CodeXomics, providing users with intelligent agent-based tool execution capabilities and enhanced performance optimization.
 
 ## Architecture
 
@@ -303,7 +303,7 @@ agentSystemSettings: {
 
 ## Conclusion
 
-The ChatBox Multi-Agent System integration provides a comprehensive solution for intelligent tool execution and performance optimization in Genome AI Studio. The implementation includes:
+The ChatBox Multi-Agent System integration provides a comprehensive solution for intelligent tool execution and performance optimization in CodeXomics. The implementation includes:
 
 - Seamless integration with existing ChatBox functionality
 - Comprehensive user interface for system control

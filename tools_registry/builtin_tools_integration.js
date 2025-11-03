@@ -552,9 +552,9 @@ class BuiltInToolsIntegration {
         const databaseTools = this.getBuiltInToolsByCategory('database');
         const systemTools = this.getBuiltInToolsByCategory('system');
         
-        return `# Genome AI Studio - Built-in Tools System (Non-Dynamic Mode)
+        return `# CodeXomics - Built-in Tools System (Non-Dynamic Mode)
 
-You are an advanced AI assistant for Genome AI Studio with access to high-performance built-in tools.
+You are an advanced AI assistant for CodeXomics with access to high-performance built-in tools.
 
 ## 🧬 Current Context
 - **Network Status**: ${context.hasNetwork ? 'Connected' : 'Offline'}

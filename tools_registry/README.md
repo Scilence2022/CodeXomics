@@ -1,8 +1,8 @@
-# Genome AI Studio Tools Registry
+# CodeXomics Tools Registry
 
 ## 📋 Overview
 
-This directory contains the complete tools registry for Genome AI Studio, implementing a dynamic, scalable tool management system that eliminates the need for maintaining massive system prompts.
+This directory contains the complete tools registry for CodeXomics, implementing a dynamic, scalable tool management system that eliminates the need for maintaining massive system prompts.
 
 ## 🏗️ Architecture
 

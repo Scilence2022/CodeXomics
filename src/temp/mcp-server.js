@@ -1,5 +1,5 @@
 /**
- * MCP Server for Genome AI Studio Integration
+ * MCP Server for CodeXomics Integration
  * Provides tools for LLM to interact with the genome studio
  */
 
@@ -17,7 +17,7 @@ class MCPGenomeBrowserServer {
         this.port = port;
         this.wsPort = wsPort;
         this.app = express();
-        this.clients = new Map(); // Store connected Genome AI Studio clients
+        this.clients = new Map(); // Store connected CodeXomics clients
         this.browserState = new Map(); // Store current state of each browser instance
         this.wss = null; // Will be created in start()
         this.server = null; // Will be created in start()
@@ -217,7 +217,7 @@ class MCPGenomeBrowserServer {
 
             get_current_state: {
                 name: 'get_current_state',
-                description: 'Get current state of the Genome AI Studio',
+                description: 'Get current state of the CodeXomics',
                 parameters: {
                     type: 'object',
                     properties: {
@@ -928,7 +928,7 @@ class MCPGenomeBrowserServer {
             // If no specific client, use the first available one
             const firstClient = this.clients.values().next().value;
             if (!firstClient) {
-                throw new Error('No Genome AI Studio clients connected');
+                throw new Error('No CodeXomics clients connected');
             }
             clientId = Array.from(this.clients.keys())[0];
         }
@@ -942,7 +942,7 @@ class MCPGenomeBrowserServer {
 
         // Check if client exists and is connected
         if (!client || client.readyState !== 1) { // 1 = WebSocket.OPEN
-            throw new Error(`Client ${clientId || 'unknown'} is not connected. Please ensure Genome AI Studio is running and connected.`);
+            throw new Error(`Client ${clientId || 'unknown'} is not connected. Please ensure CodeXomics is running and connected.`);
         }
 
         return new Promise((resolve, reject) => {
@@ -1766,7 +1766,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'Genome AI Studio/0.2'
+                    'User-Agent': 'CodeXomics/0.2'
                 }
             });
 
@@ -1959,7 +1959,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'Genome AI Studio/0.2'
+                    'User-Agent': 'CodeXomics/0.2'
                 }
             });
 
@@ -2043,7 +2043,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'Genome AI Studio/0.2'
+                    'User-Agent': 'CodeXomics/0.2'
                 }
             });
 
@@ -2393,7 +2393,7 @@ class MCPGenomeBrowserServer {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'Content-Length': Buffer.byteLength(postData),
                     'Accept': 'text/plain',
-                    'User-Agent': 'Genome AI Studio/0.2'
+                    'User-Agent': 'CodeXomics/0.2'
                 }
             }, postData);
 
@@ -2426,7 +2426,7 @@ class MCPGenomeBrowserServer {
                     method: 'GET',
                     headers: {
                         'Accept': 'text/plain',
-                        'User-Agent': 'Genome AI Studio/0.2'
+                        'User-Agent': 'CodeXomics/0.2'
                     }
                 });
 
@@ -2442,7 +2442,7 @@ class MCPGenomeBrowserServer {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
-                            'User-Agent': 'Genome AI Studio/0.2'
+                            'User-Agent': 'CodeXomics/0.2'
                         }
                     });
 
@@ -2832,7 +2832,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'Genome AI Studio/0.2'
+                    'User-Agent': 'CodeXomics/0.2'
                 }
             });
 
@@ -2848,7 +2848,7 @@ class MCPGenomeBrowserServer {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
-                            'User-Agent': 'Genome AI Studio/0.2'
+                            'User-Agent': 'CodeXomics/0.2'
                         }
                     });
                     
@@ -3015,7 +3015,7 @@ class MCPGenomeBrowserServer {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'Content-Length': Buffer.byteLength(postData),
                     'Accept': 'text/plain',
-                    'User-Agent': 'Genome AI Studio/0.2'
+                    'User-Agent': 'CodeXomics/0.2'
                 }
             }, postData);
 
@@ -3125,7 +3125,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'Genome AI Studio/0.2'
+                    'User-Agent': 'CodeXomics/0.2'
                 }
             });
             
@@ -3671,7 +3671,7 @@ class MCPGenomeBrowserServer {
                     'Authorization': `Bearer ${config.apiKey}`,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'User-Agent': 'Genome AI Studio/1.0'
+                    'User-Agent': 'CodeXomics/1.0'
                 }
             }, JSON.stringify(requestBody));
 

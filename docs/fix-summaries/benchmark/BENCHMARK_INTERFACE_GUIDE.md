@@ -2,7 +2,7 @@
 
 ## How to Open the Testing Interface
 
-The Genome AI Studio includes a comprehensive benchmark testing interface for evaluating LLM instruction following capabilities. Here's how to access it:
+The CodeXomics includes a comprehensive benchmark testing interface for evaluating LLM instruction following capabilities. Here's how to access it:
 
 ### Primary Method: Through Benchmark & Debug Tools
 1. **Open the application** - Run `npm start` in the GenomeAIStudio directory

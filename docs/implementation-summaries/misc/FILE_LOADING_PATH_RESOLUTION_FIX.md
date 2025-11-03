@@ -9,7 +9,7 @@ After implementing the project directory structure reorganization, file access w
 {success: false, error: "ENOENT: no such file or directory, stat 'genomes/ECOLI.gbk'"}
 ```
 
-The error showed that the FileManager was receiving relative paths like `genomes/ECOLI.gbk` instead of absolute paths like `/Users/song/Documents/Genome AI Studio Projects/5555/genomes/ECOLI.gbk`.
+The error showed that the FileManager was receiving relative paths like `genomes/ECOLI.gbk` instead of absolute paths like `/Users/song/Documents/CodeXomics Projects/5555/genomes/ECOLI.gbk`.
 
 ## Root Cause Analysis
 
@@ -83,7 +83,7 @@ getFileAbsolutePath(file) {
         const os = require('os');
         
         const documentsPath = path.join(os.homedir(), 'Documents');
-        const projectsDir = path.join(documentsPath, 'Genome AI Studio Projects');
+        const projectsDir = path.join(documentsPath, 'CodeXomics Projects');
         const projectDataPath = path.join(projectsDir, this.currentProject.name);
         
         const normalizedRelativePath = file.path.replace(/\\/g, '/');

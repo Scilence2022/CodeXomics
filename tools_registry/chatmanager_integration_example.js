@@ -150,9 +150,9 @@ class ChatManagerWithDynamicTools {
      * Get fallback system message when dynamic tools fail
      */
     getFallbackSystemMessage() {
-        return `# Genome AI Studio - Fallback Mode
+        return `# CodeXomics - Fallback Mode
 
-You are an AI assistant for Genome AI Studio. The dynamic tools system is temporarily unavailable.
+You are an AI assistant for CodeXomics. The dynamic tools system is temporarily unavailable.
 
 ## 🔧 Basic Tools Available
 - navigate_to_position: Navigate to genomic positions

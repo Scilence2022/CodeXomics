@@ -2,7 +2,7 @@
 
 ## 概述
 
-Genome AI Studio 与 Claude MCP Server 构成一个有机整体：
+CodeXomics 与 Claude MCP Server 构成一个有机整体：
 - **内部**：使用高效的 RPC 机制进行通信
 - **对外**：提供标准 MCP 接口，供外部 Chat 工具（如 Claude Desktop）连接
 
@@ -10,7 +10,7 @@ Genome AI Studio 与 Claude MCP Server 构成一个有机整体：
 
 ## 🚀 启动步骤
 
-### 1. 启动 Genome AI Studio
+### 1. 启动 CodeXomics
 
 ```bash
 # 在项目根目录
@@ -19,7 +19,7 @@ npm start
 
 ### 2. 启动内置 MCP Server
 
-在 Genome AI Studio 界面中：
+在 CodeXomics 界面中：
 - 点击界面上方的 **"Start"** 按钮
 - 等待看到 "Unified Claude MCP Server started successfully" 通知
 
@@ -46,13 +46,13 @@ npm start
 
 3. **配置连接信息**
    ```
-   Name: Genome AI Studio
+   Name: CodeXomics
    URL: http://localhost:3002/sse
    ```
 
 4. **保存并连接**
    - 保存配置
-   - Claude Desktop 会自动连接到 Genome AI Studio
+   - Claude Desktop 会自动连接到 CodeXomics
 
 ## ✅ 验证连接
 
@@ -100,14 +100,14 @@ npm start
 ## 🚨 故障排除
 
 ### 连接失败
-1. **确保 Genome AI Studio 正在运行**
+1. **确保 CodeXomics 正在运行**
    ```bash
    # 检查进程
    ps aux | grep electron
    ```
 
 2. **确保 MCP Server 已启动**
-   - 检查 Genome AI Studio 界面上的 Start 按钮状态
+   - 检查 CodeXomics 界面上的 Start 按钮状态
    - 应该显示 "Stop" 而不是 "Start"
 
 3. **检查端口占用**
@@ -120,12 +120,12 @@ npm start
    - 确保本地端口 3002 没有被防火墙阻止
 
 ### 工具调用失败
-1. **检查 Genome AI Studio 连接状态**
+1. **检查 CodeXomics 连接状态**
    - 在 Claude Desktop 中输入：`ping`
    - 检查返回的状态信息
 
 2. **重启服务**
-   - 在 Genome AI Studio 中点击 "Stop" 然后 "Start"
+   - 在 CodeXomics 中点击 "Stop" 然后 "Start"
    - 重新连接 Claude Desktop
 
 ## 🔄 重新连接
@@ -133,7 +133,7 @@ npm start
 如果需要重新连接：
 
 1. **停止 MCP Server**
-   - 在 Genome AI Studio 中点击 "Stop" 按钮
+   - 在 CodeXomics 中点击 "Stop" 按钮
 
 2. **重新启动**
    - 点击 "Start" 按钮
@@ -144,7 +144,7 @@ npm start
 
 ## 📝 使用示例
 
-连接成功后，您可以在 Claude Desktop 中使用自然语言与 Genome AI Studio 交互：
+连接成功后，您可以在 Claude Desktop 中使用自然语言与 CodeXomics 交互：
 
 ```
 用户: "在基因组中搜索 lysC 基因"
@@ -166,4 +166,4 @@ Claude: [使用 toggleTrack 工具显示基因轨道]
 
 ---
 
-通过这种方式，Claude Desktop 可以直接与 Genome AI Studio 通信，实现强大的 AI 驱动基因组分析功能！
+通过这种方式，Claude Desktop 可以直接与 CodeXomics 通信，实现强大的 AI 驱动基因组分析功能！

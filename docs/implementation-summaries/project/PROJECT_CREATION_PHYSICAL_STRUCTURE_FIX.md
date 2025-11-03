@@ -63,7 +63,7 @@ this.projects.set(projectId, project);
 
 #### New Unified Structure
 ```
-/Users/song/Documents/Genome AI Studio Projects/
+/Users/song/Documents/CodeXomics Projects/
 └── [ProjectName]/                    # Project directory
     ├── Project.GAI                   # Project file (standardized name)
     ├── genomes/                      # Genomes subdirectory
@@ -186,7 +186,7 @@ async setDefaultProjectLocation() {
         const os = require('os');
         const path = require('path');
         const documentsPath = path.join(os.homedir(), 'Documents');
-        const defaultLocation = path.join(documentsPath, 'Genome AI Studio Projects');
+        const defaultLocation = path.join(documentsPath, 'CodeXomics Projects');
         document.getElementById('projectLocation').value = defaultLocation;
     }
 }

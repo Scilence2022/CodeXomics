@@ -78,7 +78,7 @@ class NavigationTools {
 
             get_current_state: {
                 name: 'get_current_state',
-                description: 'Get current state of the Genome AI Studio',
+                description: 'Get current state of the CodeXomics',
                 parameters: {
                     type: 'object',
                     properties: {

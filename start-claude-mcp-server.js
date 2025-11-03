@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Start Claude MCP Server for Genome AI Studio
+ * Start Claude MCP Server for CodeXomics
  * 
  * This script starts the Claude MCP (Model Context Protocol) server
  * using the official Claude MCP TypeScript SDK for proper protocol compliance.
@@ -10,7 +10,7 @@
 const StandardClaudeMCPServer = require('./src/mcp-server-claude-unified.js');
 
 // Use stderr for all output to avoid interfering with JSON-RPC on stdout
-process.stderr.write('🧬 Starting Genome AI Studio Claude MCP Server...\n');
+process.stderr.write('🧬 Starting CodeXomics Claude MCP Server...\n');
 process.stderr.write('📋 Using official Claude MCP TypeScript SDK\n');
 process.stderr.write('\n');
 
@@ -39,7 +39,7 @@ process.stderr.write('💡 Claude MCP Server Usage Instructions:\n');
 process.stderr.write('1. Keep this server running\n');
 process.stderr.write('2. Configure Claude Desktop to connect to this server\n');
 process.stderr.write('3. Use stdio transport for Claude Desktop integration\n');
-process.stderr.write('4. Launch the Genome AI Studio application\n');
+process.stderr.write('4. Launch the CodeXomics application\n');
 process.stderr.write('5. The server will handle communication between Claude and the browser\n');
 process.stderr.write('\n');
 process.stderr.write('🔧 Claude Desktop Configuration:\n');

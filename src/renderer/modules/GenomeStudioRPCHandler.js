@@ -2,7 +2,7 @@
  * Genome Studio RPC Handler
  * 
  * This module handles RPC calls from the MCP server and provides direct access
- * to Genome AI Studio functionality without WebSocket overhead.
+ * to CodeXomics functionality without WebSocket overhead.
  */
 
 // Access ipcRenderer without redeclaring
@@ -323,7 +323,7 @@ class GenomeStudioRPCHandler {
         return {
             success: true,
             timestamp: Date.now(),
-            message: 'Genome AI Studio RPC is ready',
+            message: 'CodeXomics RPC is ready',
             modules: Object.keys(this.modules)
         };
     }

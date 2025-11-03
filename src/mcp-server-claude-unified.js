@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Standard Claude MCP Server for Genome AI Studio
+ * Standard Claude MCP Server for CodeXomics
  * 
  * This is a standard MCP server implementation that:
  * 1. Follows the official MCP protocol specification
  * 2. Uses proper SSE transport for Claude Desktop
  * 3. Handles initialization handshake correctly
- * 4. Communicates with Genome AI Studio via Electron IPC
+ * 4. Communicates with CodeXomics via Electron IPC
  * 
  * Based on the official MCP TypeScript SDK
  */
@@ -101,7 +101,7 @@ class StandardClaudeMCPServer {
                 serverInfo: {
                     name: 'codexomics',
                     version: '1.0.0',
-                    description: `Genome AI Studio MCP Server with ${tools.length} genomics tools`
+                    description: `CodeXomics MCP Server with ${tools.length} genomics tools`
                 }
             };
             
@@ -240,7 +240,7 @@ class StandardClaudeMCPServer {
             res.json({
                 name: 'codexomics',
                 version: '1.0.0',
-                description: 'Genome AI Studio MCP Server',
+                description: 'CodeXomics MCP Server',
                 protocolVersion: this.protocolVersion,
                 capabilities: {
                     tools: true,
@@ -556,7 +556,7 @@ class StandardClaudeMCPServer {
                             serverInfo: {
                                 name: 'codexomics',
                                 version: '1.0.0',
-                                description: `Genome AI Studio MCP Server with ${tools.length} genomics tools`
+                                description: `CodeXomics MCP Server with ${tools.length} genomics tools`
                             }
                         },
                         id
@@ -734,7 +734,7 @@ class StandardClaudeMCPServer {
     
     async executeToolOnClient(toolName, parameters, clientId) {
         if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-            throw new Error('Main window not available. Please ensure Genome AI Studio is running.');
+            throw new Error('Main window not available. Please ensure CodeXomics is running.');
         }
         
         const requestId = `mcp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

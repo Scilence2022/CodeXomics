@@ -1,7 +1,7 @@
 # ProGenFixer Integration Summary
 
 ## Overview
-Successfully added ProGenFixer as a built-in external tool to Genome AI Studio, similar to Deep Gene Research and CHOPCHOP CRISPR Toolbox.
+Successfully added ProGenFixer as a built-in external tool to CodeXomics, similar to Deep Gene Research and CHOPCHOP CRISPR Toolbox.
 
 ## Changes Made
 

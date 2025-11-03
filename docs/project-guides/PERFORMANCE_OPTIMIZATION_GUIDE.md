@@ -1,8 +1,8 @@
-# Performance Optimization Guide - Genome AI Studio
+# Performance Optimization Guide - CodeXomics
 
 ## 📋 Overview
 
-This comprehensive guide provides performance optimization strategies, best practices, and monitoring techniques for **Genome AI Studio v0.3 beta**, ensuring optimal performance across all system components.
+This comprehensive guide provides performance optimization strategies, best practices, and monitoring techniques for **CodeXomics v0.3 beta**, ensuring optimal performance across all system components.
 
 **Document Version**: v1.0  
 **Target Audience**: Developers, System Administrators, Power Users  

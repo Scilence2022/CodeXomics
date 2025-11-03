@@ -1,5 +1,5 @@
 /**
- * Internal MCP Server for Genome AI Studio
+ * Internal MCP Server for CodeXomics
  * 
  * This runs inside the renderer process and has direct access to all Genome Studio modules.
  * It communicates with the main process MCP server via IPC.

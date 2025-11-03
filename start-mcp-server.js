@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * Start MCP Server for Genome AI Studio
+ * Start MCP Server for CodeXomics
  * 
  * This script starts the MCP (Model Context Protocol) server
- * that enables LLM integration with the Genome AI Studio.
+ * that enables LLM integration with the CodeXomics.
  */
 
 const MCPGenomeBrowserServer = require('./src/temp/mcp-server.js');
 
-console.log('🧬 Starting Genome AI Studio MCP Server...');
+console.log('🧬 Starting CodeXomics MCP Server...');
 console.log('');
 
 const server = new MCPGenomeBrowserServer();
@@ -30,7 +30,7 @@ process.on('SIGTERM', () => {
 
 console.log('💡 Usage Instructions:');
 console.log('1. Keep this server running');
-console.log('2. Launch the Genome AI Studio');
+console.log('2. Launch the CodeXomics');
 console.log('3. Click the AI Assistant button in the toolbar');
 console.log('4. Configure your LLM integration (see documentation)');
 console.log('');

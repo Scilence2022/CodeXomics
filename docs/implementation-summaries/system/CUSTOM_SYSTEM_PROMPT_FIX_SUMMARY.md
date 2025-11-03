@@ -14,12 +14,12 @@
 **默认系统消息（无自定义提示词）**：
 ```
 Connected MCP Servers: 1
-- Genome AI Studio (genomics): 23 tools
+- CodeXomics (genomics): 23 tools
 
 MCP Tools by Category:
 GENOMICS:
-  - navigate_to_position (Genome AI Studio): Navigate to a specific genomic position
-  - search_features (Genome AI Studio): Search for genes or features by name or sequence
+  - navigate_to_position (CodeXomics): Navigate to a specific genomic position
+  - search_features (CodeXomics): Search for genes or features by name or sequence
   ...23个详细的MCP工具...
 
 Available Tools Summary:
@@ -136,7 +136,7 @@ const variables = {
 
 1. **完整的基因组浏览器状态**：
    ```
-   Current Genome AI Studio State:
+   Current CodeXomics State:
    - Current chromosome: COLI-K12
    - Current position: {"start":0,"end":10000}
    - Visible tracks: None
@@ -149,12 +149,12 @@ const variables = {
 2. **详细的MCP服务器信息**：
    ```
    Connected MCP Servers: 1
-   - Genome AI Studio (genomics): 23 tools
+   - CodeXomics (genomics): 23 tools
 
    MCP Tools by Category:
    GENOMICS:
-     - navigate_to_position (Genome AI Studio): Navigate to a specific genomic position
-     - search_features (Genome AI Studio): Search for genes or features by name or sequence
+     - navigate_to_position (CodeXomics): Navigate to a specific genomic position
+     - search_features (CodeXomics): Search for genes or features by name or sequence
      ...23个完整的MCP工具描述...
    ```
 

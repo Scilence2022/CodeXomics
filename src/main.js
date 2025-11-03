@@ -25,7 +25,7 @@ function createCircosPlotterMenu(circosWindow) {
   const template = [
     // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
     ...(process.platform === 'darwin' ? [{
-      label: 'Genome AI Studio',
+      label: 'CodeXomics',
       submenu: [
         {
           label: 'About Circos Genome Plotter',
@@ -3355,7 +3355,7 @@ ipcMain.on('open-plugin-function-calling-test', (event) => {
         contextIsolation: true,
         enableRemoteModule: false
       },
-      title: 'Plugin Function Calling Test - Genome AI Studio',
+      title: 'Plugin Function Calling Test - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       show: false
     });
@@ -3774,7 +3774,7 @@ function createKEGGWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'KEGG Pathway Analysis - Genome AI Studio',
+      title: 'KEGG Pathway Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -3812,7 +3812,7 @@ function createGOWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Gene Ontology (GO) Analyzer - Genome AI Studio',
+      title: 'Gene Ontology (GO) Analyzer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -3850,7 +3850,7 @@ function createUniProtWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Search UniProt Database - Genome AI Studio',
+      title: 'Search UniProt Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -3888,7 +3888,7 @@ function createInterProWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'InterPro Domain Analysis - Genome AI Studio',
+      title: 'InterPro Domain Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -3926,7 +3926,7 @@ function createNCBIWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Search NCBI Database - Genome AI Studio',
+      title: 'Search NCBI Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -3967,7 +3967,7 @@ function createSTRINGWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'STRING Protein Networks - Genome AI Studio',
+      title: 'STRING Protein Networks - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -4005,7 +4005,7 @@ function createDAVIDWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'DAVID Functional Analysis - Genome AI Studio',
+      title: 'DAVID Functional Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -4043,7 +4043,7 @@ function createReactomeWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Reactome Pathway Browser - Genome AI Studio',
+      title: 'Reactome Pathway Browser - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -4081,7 +4081,7 @@ function createPDBWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'PDB Structure Viewer - Genome AI Studio',
+      title: 'PDB Structure Viewer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -4119,7 +4119,7 @@ function createKGMLViewerWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'KGML Pathway Viewer - Genome AI Studio',
+      title: 'KGML Pathway Viewer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -4157,7 +4157,7 @@ function createEvo2Window() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'NVIDIA Evo2 DNA Designer - Genome AI Studio',
+      title: 'NVIDIA Evo2 DNA Designer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -4195,7 +4195,7 @@ function createGeneAnnotationRefineWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Gene Annotation Refine - Genome AI Studio',
+      title: 'Gene Annotation Refine - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -4233,7 +4233,7 @@ function createBlastInstallerWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'BLAST+ Tools Installer - Genome AI Studio',
+      title: 'BLAST+ Tools Installer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
       resizable: true,
@@ -4273,7 +4273,7 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
   const template = [
     // macOS app menu
     ...(process.platform === 'darwin' ? [{
-      label: 'Genome AI Studio',
+      label: 'CodeXomics',
       submenu: [
         {
           label: 'About Deep Gene Research',
@@ -4622,7 +4622,7 @@ async function createProGenFixerWindow() {
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
       },
-      title: 'ProGenFixer - Genome AI Studio',
+      title: 'ProGenFixer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
       resizable: true,
@@ -4965,7 +4965,7 @@ async function createChopchopWindow() {
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
       },
-      title: 'CHOPCHOP CRISPR Toolbox - Genome AI Studio',
+      title: 'CHOPCHOP CRISPR Toolbox - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
       resizable: true,
@@ -5093,7 +5093,7 @@ async function createCustomExternalToolWindow(toolData) {
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
       },
-      title: `${toolData.name} - Genome AI Studio`,
+      title: `${toolData.name} - CodeXomics`,
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
       resizable: true,
@@ -6815,7 +6815,7 @@ ipcMain.handle('lockProjectFile', async (event, filePath) => {
     if (projectFileLocks.has(filePath)) {
       return { 
         success: false, 
-        error: 'File is already locked by another instance of Genome AI Studio' 
+        error: 'File is already locked by another instance of CodeXomics' 
       };
     }
     
@@ -7382,7 +7382,7 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
     const result = await dialog.showSaveDialog(null, {
       defaultPath: defaultFileName,
       filters: [
-        { name: 'Genome AI Studio Project Files', extensions: ['GAI'] },
+        { name: 'CodeXomics Project Files', extensions: ['GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj'] },
         { name: 'All Files', extensions: ['*'] }
@@ -9025,7 +9025,7 @@ ipcMain.handle('getProjectDirectoryName', async () => {
     // Check which project directory exists
     const possibleNames = [
       'CodeXomics Projects',
-      'Genome AI Studio Projects',
+      'CodeXomics Projects',
       'GenomeExplorer Projects',
       'Genome Explorer Projects'
     ];

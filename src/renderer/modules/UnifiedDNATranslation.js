@@ -2,7 +2,7 @@
  * Unified DNA Translation Implementation
  * 
  * This module provides a standardized DNA translation function that unifies
- * all 8 inconsistent implementations across the Genome AI Studio codebase.
+ * all 8 inconsistent implementations across the CodeXomics codebase.
  * 
  * Key improvements:
  * - Standardized genetic code table

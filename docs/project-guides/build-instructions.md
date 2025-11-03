@@ -1,8 +1,8 @@
-# Build Instructions for Genome AI Studio
+# Build Instructions for CodeXomics
 
 ## Overview
 
-This document provides comprehensive instructions for building Genome AI Studio with all recent enhancements including AI integration, enhanced visualization, and improved architecture.
+This document provides comprehensive instructions for building CodeXomics with all recent enhancements including AI integration, enhanced visualization, and improved architecture.
 
 ## 🆕 Recent Updates
 
@@ -148,7 +148,7 @@ Edit `package.json` to customize build settings:
 {
   "build": {
     "appId": "com.genomeai.studio",
-    "productName": "Genome AI Studio",
+    "productName": "CodeXomics",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -480,4 +480,4 @@ git push origin v1.0.0
 - [ ] Update download links
 - [ ] Announce release
 
-This comprehensive build guide ensures successful compilation and distribution of Genome AI Studio with all its advanced features and improvements. 
+This comprehensive build guide ensures successful compilation and distribution of CodeXomics with all its advanced features and improvements. 

@@ -7,12 +7,12 @@ This directory contains the organized architecture for the Claude MCP Server too
 The new architecture eliminates the complex chain of legacy dependencies and provides direct integration with Claude Desktop:
 
 ```
-Claude Desktop → Claude MCP Server → Genome AI Studio
+Claude Desktop → Claude MCP Server → CodeXomics
 ```
 
 ### Previous Architecture (Complex)
 ```
-Claude Desktop → Claude MCP Server → Legacy MCP Server → Genome AI Studio
+Claude Desktop → Claude MCP Server → Legacy MCP Server → CodeXomics
 ```
 
 ## Directory Structure
@@ -221,7 +221,7 @@ Execute directly on the server with API calls:
 - Some sequence analysis tools
 
 ### Client-Side Tools (24 tools)
-Execute in the Genome AI Studio browser:
+Execute in the CodeXomics browser:
 - All navigation tools
 - Most sequence analysis tools
 - All data management tools

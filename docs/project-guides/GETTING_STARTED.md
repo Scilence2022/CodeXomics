@@ -1,6 +1,6 @@
-# Getting Started with Genome AI Studio
+# Getting Started with CodeXomics
 
-Welcome to **Genome AI Studio v0.3 beta**! This guide will help you get up and running with the platform quickly and efficiently.
+Welcome to **CodeXomics v0.3 beta**! This guide will help you get up and running with the platform quickly and efficiently.
 
 ## 📋 Prerequisites
 
@@ -51,7 +51,7 @@ npm start
 ## 🎯 First Launch
 
 ### 1. Initial Setup
-When you first launch Genome AI Studio, you'll see the welcome screen with options to:
+When you first launch CodeXomics, you'll see the welcome screen with options to:
 - Load a genome file
 - Open annotation files
 - Import variant data
@@ -227,7 +227,7 @@ The application includes sample data for testing:
 - **Community**: Join discussions and share experiences
 
 ### FAQ
-- **Q**: Can I use Genome AI Studio without an internet connection?
+- **Q**: Can I use CodeXomics without an internet connection?
   **A**: Yes, core features work offline. AI chat and some database features require internet.
 
 - **Q**: What file formats are supported?
@@ -257,4 +257,4 @@ We'd love to hear about your experience! Please:
 
 **Happy analyzing!** 🧬
 
-*This guide covers Genome AI Studio v0.3.0-beta. For the latest updates, check the project repository.* 
+*This guide covers CodeXomics v0.3.0-beta. For the latest updates, check the project repository.* 

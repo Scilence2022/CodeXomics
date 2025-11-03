@@ -2,9 +2,9 @@
 
 ## 📋 General Questions
 
-### What is Genome AI Studio?
+### What is CodeXomics?
 
-Genome AI Studio is an advanced, AI-powered genome analysis platform that provides comprehensive tools for genomic visualization, analysis, and interpretation. It features an integrated plugin system, natural language AI assistant, and support for multiple genomic data formats.
+CodeXomics is an advanced, AI-powered genome analysis platform that provides comprehensive tools for genomic visualization, analysis, and interpretation. It features an integrated plugin system, natural language AI assistant, and support for multiple genomic data formats.
 
 ### What's new in v0.3 beta?
 
@@ -19,12 +19,12 @@ Version 0.3 beta introduces several major enhancements:
 
 ### What operating systems are supported?
 
-Genome AI Studio supports:
+CodeXomics supports:
 - **macOS** 10.14 and later
 - **Windows** 10 and later
 - **Linux** (Ubuntu 18.04+ and other modern distributions)
 
-### Is Genome AI Studio free?
+### Is CodeXomics free?
 
 The core application is free and open-source. Some advanced features may require:
 - API keys for AI services (OpenAI, Anthropic, Google)
@@ -33,7 +33,7 @@ The core application is free and open-source. Some advanced features may require
 
 ## 🚀 Installation & Setup
 
-### How do I install Genome AI Studio?
+### How do I install CodeXomics?
 
 1. **Download** the latest release for your platform from GitHub
 2. **Install** following platform-specific instructions:
@@ -400,4 +400,4 @@ Absolutely:
 - Browse the **[Documentation](../README.md)** for comprehensive information
 - Contact **support** for personalized assistance
 
-*This FAQ covers Genome AI Studio v0.3.0-beta. For the latest information, check the project repository.* 
+*This FAQ covers CodeXomics v0.3.0-beta. For the latest information, check the project repository.* 

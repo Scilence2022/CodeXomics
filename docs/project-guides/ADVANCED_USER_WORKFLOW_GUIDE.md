@@ -1,8 +1,8 @@
-# Advanced User Workflow Guide - Genome AI Studio
+# Advanced User Workflow Guide - CodeXomics
 
 ## Overview
 
-This guide provides advanced workflows and best practices for power users of Genome AI Studio v0.3 beta. It covers complex analysis scenarios, plugin development, and optimization techniques.
+This guide provides advanced workflows and best practices for power users of CodeXomics v0.3 beta. It covers complex analysis scenarios, plugin development, and optimization techniques.
 
 ## 🚀 Advanced Analysis Workflows
 
@@ -622,4 +622,4 @@ This advanced workflow guide provides the foundation for power users to:
 - **Integrate AI** - Leverage AI for complex analysis
 - **Manage Projects** - Organize complex research projects
 
-By following these workflows and best practices, users can maximize the potential of Genome AI Studio for advanced genomic research and analysis.
+By following these workflows and best practices, users can maximize the potential of CodeXomics for advanced genomic research and analysis.

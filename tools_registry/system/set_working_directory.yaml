@@ -1,7 +1,7 @@
 name: "set_working_directory"
 description: "Set the current working directory for the application. Defaults to user home directory when not set."
 version: "1.0.0"
-author: "Genome AI Studio"
+author: "CodeXomics"
 category: "system"
 intent: "system_management"
 priority: 1

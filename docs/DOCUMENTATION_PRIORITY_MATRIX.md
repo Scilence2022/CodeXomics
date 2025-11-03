@@ -1,4 +1,4 @@
-# Documentation Priority Matrix - Genome AI Studio
+# Documentation Priority Matrix - CodeXomics
 
 ## 🎯 Priority Levels
 - **🔴 CRITICAL**: Must be completed immediately (Week 1)
