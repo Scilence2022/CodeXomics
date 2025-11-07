@@ -10,7 +10,7 @@ class ExternalToolsManager {
         this.builtinTools = {
             deepGeneResearch: {
                 name: 'Deep Gene Research',
-                url: 'http://localhost:3000/',
+                url: 'http://43.196.74.134:3000/',
                 icon: 'fas fa-dna',
                 accelerator: 'CmdOrCtrl+Shift+W'
             },

@@ -56,7 +56,7 @@ class GeneralSettingsManager {
             maxBackups: 10,
             
         // External Tools
-        deepGeneResearchUrl: 'http://localhost:3000/',
+        deepGeneResearchUrl: 'http://43.196.74.134:3000/',
         chopchopUrl: 'https://chopchop.cbu.uib.no/',
         progenFixerUrl: 'https://progenfixer.biodesign.ac.cn'
         };
