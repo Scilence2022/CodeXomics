@@ -4,7 +4,7 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests (27)'; // Updated count after adding operon test
+        this.suiteName = 'Automatic Simple Tests (28)'; // Updated count after adding genome codon usage test
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
         this.framework = null;
@@ -409,6 +409,26 @@ class AutomaticSimpleSuite {
                 maxScore: 5,
                 bonusScore: 1,
                 timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'anal_auto_04',
+                name: 'Genome-wide Codon Usage Analysis',
+                type: 'function_call',
+                category: 'analysis',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Perform genome-wide codon usage analysis to identify codon preferences and biases.',
+                expectedResult: {
+                    tool_name: 'genome_codon_usage_analysis',
+                    parameters: {
+                        featureType: 'CDS',
+                        minLength: 300
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 60000,
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
 
