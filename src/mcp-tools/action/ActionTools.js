@@ -179,13 +179,27 @@ class ActionTools {
                 parameters: {
                     type: 'object',
                     properties: {
-                        status: { 
-                            type: 'string', 
-                            enum: ['pending', 'completed', 'failed', 'all'], 
-                            description: 'Filter actions by status', 
-                            default: 'all' 
+                        clientId: {
+                            type: 'string',
+                            description: 'Browser client ID for multi-window support',
+                            default: 'default'
+                        },
+                        chromosome: {
+                            type: 'string',
+                            description: 'Chromosome identifier'
+                        },
+                        start: {
+                            type: 'number',
+                            description: 'Start position (1-based coordinate)',
+                            minimum: 1
+                        },
+                        end: {
+                            type: 'number',
+                            description: 'End position (1-based coordinate)',
+                            minimum: 1
                         }
-                    }
+                    },
+                    required: ['chromosome', 'start', 'end']
                 }
             },
 

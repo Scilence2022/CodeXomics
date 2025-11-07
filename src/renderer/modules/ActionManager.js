@@ -1521,8 +1521,11 @@ class ActionManager {
     
     /**
      * Execute all pending actions with comprehensive conflict detection and resolution
+     * @param {Object} options - Options for execution
+     * @param {string} options.saveFile - Optional file path to save the result directly without showing save dialog
+     * @returns {Promise<Object>} Execution result
      */
-    async executeAllActions() {
+    async executeAllActions(options = {}) {
         if (this.isExecuting) {
             this.genomeBrowser.showNotification('Actions are already executing', 'warning');
             return {
@@ -1630,7 +1633,7 @@ class ActionManager {
             });
             
             // Step 5: Generate comprehensive GBK file with full history
-            await this.generateComprehensiveGBK(executionActionsCopy, executionGenomeDataProxy, executionId);
+            await this.generateComprehensiveGBK(executionActionsCopy, executionGenomeDataProxy, executionId, options.saveFile);
             
             this.genomeBrowser.showNotification(`All ${pendingActionsCopy.length} actions executed successfully`, 'success');
             
@@ -1984,8 +1987,12 @@ class ActionManager {
     
     /**
      * Generate comprehensive GBK file with full action history
+     * @param {Array} executionActionsCopy - Copy of executed actions
+     * @param {Object} executionGenomeData - Genome data with modifications
+     * @param {string} executionId - Unique execution identifier
+     * @param {string} saveFile - Optional file path to save directly without showing save dialog
      */
-    async generateComprehensiveGBK(executionActionsCopy, executionGenomeData, executionId) {
+    async generateComprehensiveGBK(executionActionsCopy, executionGenomeData, executionId, saveFile) {
         try {
             console.log(`📄 [ActionManager] Generating comprehensive GBK file with action history`);
             
@@ -2027,8 +2034,16 @@ class ActionManager {
             }
             
             // Save the comprehensive GBK file
-            const filename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
-            this.downloadTextFile(genbankContent, filename);
+            const filename = saveFile || `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
+            
+            if (saveFile) {
+                // Save directly to the specified file path
+                await this.saveTextFileToFile(genbankContent, saveFile);
+                console.log(`📁 [ActionManager] GBK file saved directly to: ${saveFile}`);
+            } else {
+                // Use the default download method which shows the save dialog
+                this.downloadTextFile(genbankContent, filename);
+            }
             
             // Auto-open the generated GBK file in a new CodeXomics window
             await this.autoOpenGeneratedGBK(genbankContent, filename);
@@ -2386,6 +2401,42 @@ class ActionManager {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+    
+    /**
+     * Save text content directly to a file path without showing save dialog
+     * @param {string} content - File content
+     * @param {string} filePath - Full file path where to save the content
+     * @returns {Promise<boolean>} Success status
+     */
+    async saveTextFileToFile(content, filePath) {
+        try {
+            // Use the file system API if available (Electron environment)
+            if (window.electronAPI && window.electronAPI.saveFile) {
+                const success = await window.electronAPI.saveFile(filePath, content);
+                if (success) {
+                    console.log(`📁 [ActionManager] File saved successfully to: ${filePath}`);
+                    return true;
+                } else {
+                    console.error(`❌ [ActionManager] Failed to save file to: ${filePath}`);
+                    return false;
+                }
+            }
+            
+            // Fallback: create a temporary download and then move it
+            console.warn(`⚠️ [ActionManager] Direct file save not available, using fallback method`);
+            const tempFilename = filePath.split('/').pop() || 'temp_file.gbk';
+            this.downloadTextFile(content, tempFilename);
+            
+            // Note: In a browser environment, we can't directly save to a specific path
+            // This would require server-side support or Electron's file system API
+            console.warn(`⚠️ [ActionManager] File saved with name "${tempFilename}". Manual renaming to "${filePath}" may be required.`);
+            return true;
+            
+        } catch (error) {
+            console.error(`❌ [ActionManager] Error saving file to "${filePath}":`, error);
+            return false;
+        }
     }
     
     /**

@@ -138,6 +138,11 @@ class FunctionCallsOrganizer {
                     'copy_sequence',
                     'cut_sequence',
                     'paste_sequence',
+                    'get_action_list',
+                    'execute_actions',
+                    'clear_actions',
+                    'get_clipboard_content',
+                    'undo_last_action',
                     'codon_usage_analysis',
                     'genome_codon_usage_analysis'
                 ]
@@ -237,6 +242,60 @@ class FunctionCallsOrganizer {
                     'export_gff_annotations',
                     'export_bed_format',
                     'export_current_view_fasta'
+                ]
+            },
+            
+            // 类别14: 插件管理类 - 中等优先级，系统管理型
+            pluginManagement: {
+                priority: 3,
+                description: "Plugin management and execution operations",
+                functions: [
+                    'get_plugin_info',
+                    'install_plugin',
+                    'uninstall_plugin',
+                    'enable_plugin',
+                    'disable_plugin',
+                    'execute_plugin',
+                    'call_plugin_function',
+                    'get_plugin_functions',
+                    'create_plugin',
+                    'validate_plugin',
+                    'search_plugins'
+                ]
+            },
+            
+            // 类别15: 协调管理类 - 中等优先级，任务协调型
+            coordination: {
+                priority: 3,
+                description: "Task coordination and workflow management",
+                functions: [
+                    'decompose_task',
+                    'integrate_results',
+                    'create_workflow',
+                    'execute_workflow',
+                    'assign_task_to_agent',
+                    'get_agent_status',
+                    'balance_load',
+                    'handle_error',
+                    'retry_failed_task',
+                    'fallback_strategy',
+                    'optimize_execution',
+                    'cache_strategy',
+                    'parallel_execution',
+                    'get_workflow_status'
+                ]
+            },
+            
+            // 类别16: 外部API类 - 低优先级，网络依赖型
+            externalApis: {
+                priority: 5,
+                description: "External API calls and third-party integrations",
+                functions: [
+                    'blast_sequence',
+                    'uniprot_search',
+                    'alphafold_search',
+                    'alphafold_get_structure',
+                    'evo2_design'
                 ]
             }
         };

@@ -7973,7 +7973,12 @@ ${coreTools}
                 case 'replace_sequence':
                     return await window.actionManager.replaceSequence(parameters);
                 case 'execute_actions':
-                    return await window.actionManager.executeAllActions(parameters);
+                    // Extract saveFile parameter if provided
+                    const options = {};
+                    if (parameters && parameters.saveFile) {
+                        options.saveFile = parameters.saveFile;
+                    }
+                    return await window.actionManager.executeAllActions(options);
                 case 'get_action_list':
                     return await window.actionManager.getActionList(parameters);
                 case 'clear_actions':
