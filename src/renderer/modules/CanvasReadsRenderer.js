@@ -272,7 +272,10 @@ class CanvasReadsRenderer {
         
         // Render read rows
         this.readRows.forEach((rowReads, rowIndex) => {
-            console.log(`🎨 [CanvasReadsRenderer] Rendering row ${rowIndex} with ${rowReads.length} reads`);
+            // Removed excessive logging - only log in debug mode
+            if (window.DEBUG_MODE) {
+                console.log(`🎨 [CanvasReadsRenderer] Rendering row ${rowIndex} with ${rowReads.length} reads`);
+            }
             this.renderReadRow(rowReads, rowIndex);
         });
         
@@ -387,8 +390,8 @@ class CanvasReadsRenderer {
                 // Try to render sequence directly
                 sequenceRendered = this.renderReadSequence(read, x, y, width, readStart, readEnd);
                 
-                // Debug logging for sequence rendering failures
-                if (!sequenceRendered) {
+                // Debug logging for sequence rendering failures - only in debug mode
+                if (!sequenceRendered && window.DEBUG_MODE) {
                     console.log('🔍 [CanvasReadsRenderer] Sequence rendering failed for read:', read.id, 'width:', width);
                 }
             }
@@ -460,14 +463,17 @@ class CanvasReadsRenderer {
         
         // Debug log coordinate mismatches but proceed with sequence-based calculations
         if (genomicReadLength !== sequenceLength) {
-            console.log(`🔧 [Canvas] Read coordinate/sequence length mismatch - using sequence length as source of truth:`, {
-                readId: read.id,
-                genomicStart: read.start,
-                genomicEnd: read.end,
-                theoreticalGenomicLength: genomicReadLength,
-                actualSequenceLength: sequenceLength,
-                fixApplied: 'using sequenceLength for all calculations'
-            });
+            // Removed excessive logging - only log in debug mode
+            if (window.DEBUG_MODE) {
+                console.log(`🔧 [Canvas] Read coordinate/sequence length mismatch - using sequence length as source of truth:`, {
+                    readId: read.id,
+                    genomicStart: read.start,
+                    genomicEnd: read.end,
+                    theoreticalGenomicLength: genomicReadLength,
+                    actualSequenceLength: sequenceLength,
+                    fixApplied: 'using sequenceLength for all calculations'
+                });
+            }
         }
         
         // CRITICAL FIX: Ensure reads sequence aligns with reference sequence boundaries (match SVG logic)
@@ -478,14 +484,17 @@ class CanvasReadsRenderer {
         
         if (shouldExtractFullRead) {
             const visibleSequence = read.sequence;
-            console.log(`🔧 [Canvas] Full read matches viewport bounds exactly:`, { 
-                readId: read.id, 
-                readStart: read.start,
-                readEnd: read.end,
-                visibleStart,
-                visibleEnd,
-                sequenceLength: visibleSequence.length 
-            });
+            // Removed excessive logging - only log in debug mode
+            if (window.DEBUG_MODE) {
+                console.log(`🔧 [Canvas] Full read matches viewport bounds exactly:`, { 
+                    readId: read.id, 
+                    readStart: read.start,
+                    readEnd: read.end,
+                    visibleStart,
+                    visibleEnd,
+                    sequenceLength: visibleSequence.length 
+                });
+            }
             
             if (!visibleSequence || visibleSequence.length === 0) return false;
             
@@ -494,14 +503,17 @@ class CanvasReadsRenderer {
         }
         
         // For partial reads, extract the portion that corresponds to visibleStart-visibleEnd
-        console.log(`🔧 [Canvas] Extracting partial read sequence:`, { 
-            readId: read.id, 
-            readStart: read.start,
-            readEnd: read.end,
-            visibleStart,
-            visibleEnd,
-            extractingRange: `${visibleStart}-${visibleEnd}`
-        });
+        // Removed excessive logging - only log in debug mode
+        if (window.DEBUG_MODE) {
+            console.log(`🔧 [Canvas] Extracting partial read sequence:`, { 
+                readId: read.id, 
+                readStart: read.start,
+                readEnd: read.end,
+                visibleStart,
+                visibleEnd,
+                extractingRange: `${visibleStart}-${visibleEnd}`
+            });
+        }
         
         // CRITICAL FIX: Calculate offset using actual sequence length, not theoretical genomic length
         // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
@@ -527,19 +539,22 @@ class CanvasReadsRenderer {
         // Get the visible portion of the sequence
         const visibleSequence = read.sequence.substring(startIndex, endIndex + 1);
         
-        console.log(`🔧 [Canvas] Partial sequence display (FIXED coordinate system):`, {
-            readId: read.id,
-            originalGenomicStart: read.start,
-            originalGenomicEnd: read.end,
-            correctedGenomicStart: genomicStart,
-            correctedGenomicEnd: genomicEnd,
-            visibleStart, visibleEnd,
-            startOffset, endOffset,
-            startIndex, endIndex,
-            visibleLength: visibleSequence.length,
-            actualSequenceLength: actualReadLength,
-            coordinateSystemFix: 'using sequence length as source of truth'
-        });
+        // Removed excessive logging - only log in debug mode
+        if (window.DEBUG_MODE) {
+            console.log(`🔧 [Canvas] Partial sequence display (FIXED coordinate system):`, {
+                readId: read.id,
+                originalGenomicStart: read.start,
+                originalGenomicEnd: read.end,
+                correctedGenomicStart: genomicStart,
+                correctedGenomicEnd: genomicEnd,
+                visibleStart, visibleEnd,
+                startOffset, endOffset,
+                startIndex, endIndex,
+                visibleLength: visibleSequence.length,
+                actualSequenceLength: actualReadLength,
+                coordinateSystemFix: 'using sequence length as source of truth'
+            });
+        }
         
         if (!visibleSequence || visibleSequence.length === 0) return false;
         

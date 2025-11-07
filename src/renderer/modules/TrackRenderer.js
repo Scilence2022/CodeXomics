@@ -4999,7 +4999,10 @@ class TrackRenderer {
         
         // Check for force mode first
         if (settings.forceSequences) {
-            console.log(`🔍 [TrackRenderer] Force sequence display - always show`);
+            // Removed excessive logging - only log in debug mode
+            if (window.DEBUG_MODE) {
+                console.log(`🔍 [TrackRenderer] Force sequence display - always show`);
+            }
             return true;
         }
         
@@ -5011,15 +5014,18 @@ class TrackRenderer {
         // Show sequences if average read width > 50px (same as Canvas logic)
         const shouldShow = averageReadWidthPixels > 50;
         
-        console.log(`🔍 [TrackRenderer] Canvas-style sequence display check:`, {
-            range: range,
-            containerWidth: containerWidth,
-            basesPerPixel: basesPerPixel.toFixed(3),
-            averageReadLength: averageReadLength,
-            averageReadWidthPixels: averageReadWidthPixels.toFixed(1),
-            threshold: 50,
-            shouldShow: shouldShow
-        });
+        // Removed excessive logging - only log in debug mode
+        if (window.DEBUG_MODE) {
+            console.log(`🔍 [TrackRenderer] Canvas-style sequence display check:`, {
+                range: range,
+                containerWidth: containerWidth,
+                basesPerPixel: basesPerPixel.toFixed(3),
+                averageReadLength: averageReadLength,
+                averageReadWidthPixels: averageReadWidthPixels.toFixed(1),
+                threshold: 50,
+                shouldShow: shouldShow
+            });
+        }
         
         return shouldShow;
     }
@@ -5058,14 +5064,17 @@ class TrackRenderer {
         const baseThreshold = containerWidth / (range * minPixelsPerBase);
         const adaptiveThreshold = baseThreshold * windowSizeFactor * rangeFactor;
         
-        console.log(`📊 [TrackRenderer] Adaptive threshold calculation:`, {
-            minPixelsPerBase: minPixelsPerBase,
-            minLineSpacing: minLineSpacing,
-            windowSizeFactor: windowSizeFactor,
-            rangeFactor: rangeFactor,
-            baseThreshold: baseThreshold.toFixed(3),
-            adaptiveThreshold: adaptiveThreshold.toFixed(3)
-        });
+        // Removed excessive logging - only log in debug mode
+        if (window.DEBUG_MODE) {
+            console.log(`📊 [TrackRenderer] Adaptive threshold calculation:`, {
+                minPixelsPerBase: minPixelsPerBase,
+                minLineSpacing: minLineSpacing,
+                windowSizeFactor: windowSizeFactor,
+                rangeFactor: rangeFactor,
+                baseThreshold: baseThreshold.toFixed(3),
+                adaptiveThreshold: adaptiveThreshold.toFixed(3)
+            });
+        }
         
         return adaptiveThreshold;
     }
@@ -5094,16 +5103,19 @@ class TrackRenderer {
         const readDensityFactor = Math.min(1.0, 100 / range); // Reduce font size for dense regions
         optimalFontSize = Math.floor(optimalFontSize * (0.7 + readDensityFactor * 0.3));
         
-        console.log(`📏 [TrackRenderer] Font size calculation:`, {
-            range: range,
-            containerWidth: containerWidth,
-            pixelsPerBase: pixelsPerBase.toFixed(2),
-            readHeight: readHeight,
-            readDensityFactor: readDensityFactor.toFixed(2),
-            rawFontSize: Math.floor(pixelsPerBase * 0.8),
-            optimalFontSize: optimalFontSize,
-            constraints: { minFontSize, maxFontSize }
-        });
+        // Removed excessive logging - only log in debug mode
+        if (window.DEBUG_MODE) {
+            console.log(`📏 [TrackRenderer] Font size calculation:`, {
+                range: range,
+                containerWidth: containerWidth,
+                pixelsPerBase: pixelsPerBase.toFixed(2),
+                readHeight: readHeight,
+                readDensityFactor: readDensityFactor.toFixed(2),
+                rawFontSize: Math.floor(pixelsPerBase * 0.8),
+                optimalFontSize: optimalFontSize,
+                constraints: { minFontSize, maxFontSize }
+            });
+        }
         
         return Math.max(minFontSize, optimalFontSize);
     }
@@ -5118,17 +5130,20 @@ class TrackRenderer {
         
         const canRender = pixelsPerBase >= minViablePixelsPerBase && readHeight >= minReadHeight;
         
-        console.log(`🔍 [TrackRenderer] canRenderSequencesInForceMode details:`, {
-            range: range,
-            containerWidth: containerWidth,
-            pixelsPerBase: pixelsPerBase.toFixed(3),
-            minViablePixelsPerBase: minViablePixelsPerBase,
-            readHeight: readHeight,
-            minReadHeight: minReadHeight,
-            pixelsPerBaseOK: pixelsPerBase >= minViablePixelsPerBase,
-            readHeightOK: readHeight >= minReadHeight,
-            canRender: canRender
-        });
+        // Removed excessive logging - only log in debug mode
+        if (window.DEBUG_MODE) {
+            console.log(`🔍 [TrackRenderer] canRenderSequencesInForceMode details:`, {
+                range: range,
+                containerWidth: containerWidth,
+                pixelsPerBase: pixelsPerBase.toFixed(3),
+                minViablePixelsPerBase: minViablePixelsPerBase,
+                readHeight: readHeight,
+                minReadHeight: minReadHeight,
+                pixelsPerBaseOK: pixelsPerBase >= minViablePixelsPerBase,
+                readHeightOK: readHeight >= minReadHeight,
+                canRender: canRender
+            });
+        }
         
         return canRender;
     }

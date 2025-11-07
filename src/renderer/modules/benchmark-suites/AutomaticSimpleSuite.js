@@ -4,7 +4,7 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests (25)'; // Updated count after adding tab test
+        this.suiteName = 'Automatic Simple Tests (27)'; // Updated count after adding operon test
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
         this.framework = null;
@@ -245,6 +245,25 @@ class AutomaticSimpleSuite {
                     tool_name: 'load_wig_tracks',
                     parameters: {
                         filePaths: this.buildFilePath('another_sample.wig')  // Fixed: Use filePaths (plural) to match tool specification
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateFileLoadingCall.bind(this)
+            },
+            {
+                id: 'load_auto_06',
+                name: 'Load Operon File',
+                type: 'function_call',
+                category: 'data_loading',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: `Load operon file ${this.buildFilePath('OperonSet.tsv')}`,
+                expectedResult: {
+                    tool_name: 'load_operon_file',
+                    parameters: {
+                        filePath: this.buildFilePath('OperonSet.tsv')
                     }
                 },
                 maxScore: 5,
