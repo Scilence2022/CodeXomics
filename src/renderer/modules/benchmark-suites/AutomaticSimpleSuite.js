@@ -767,7 +767,7 @@ class AutomaticSimpleSuite {
             },
 
             // SEQUENCE EDITING AND ACTION MANAGEMENT TASKS - Automatic + Simple
-            // These tests follow a logical workflow: copy → check queue → edit operations → paste → execute → undo → clear
+            // Logical workflow: copy → paste → delete → insert → replace → cut → execute → get_list → undo → clear
             {
                 id: 'edit_auto_01',
                 name: 'Copy Sequence Region',
@@ -791,18 +791,18 @@ class AutomaticSimpleSuite {
             },
             {
                 id: 'edit_auto_02',
-                name: 'Get Action List',
+                name: 'Paste Sequence from Clipboard',
                 type: 'function_call',
                 category: 'sequence_editing',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Get the current list of pending sequence editing actions.',
+                instruction: 'Paste the sequence from clipboard at position 600000.',
                 expectedResult: {
-                    tool_name: 'get_action_list',
+                    tool_name: 'paste_sequence',
                     parameters: {
                         chromosome: '<current_chromosome>',
-                        start: 100000,
-                        end: 100500
+                        start: 600000,
+                        end: 600000
                     }
                 },
                 maxScore: 5,
@@ -838,13 +838,14 @@ class AutomaticSimpleSuite {
                 category: 'sequence_editing',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Insert a DNA sequence at position 300000.',
+                instruction: 'Insert the DNA sequence "ATGCGATCGATCGATCG" at position 300000.',
                 expectedResult: {
                     tool_name: 'insert_sequence',
                     parameters: {
                         chromosome: '<current_chromosome>',
                         start: 300000,
-                        end: 300000
+                        end: 300000,
+                        sequence: 'ATGCGATCGATCGATCG'
                     }
                 },
                 maxScore: 5,
@@ -859,13 +860,14 @@ class AutomaticSimpleSuite {
                 category: 'sequence_editing',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Replace the sequence in region 400000 to 400200 with a new sequence.',
+                instruction: 'Replace the sequence in region 400000 to 400200 with the new sequence "GCTAGCTAGCTAGCTA".',
                 expectedResult: {
                     tool_name: 'replace_sequence',
                     parameters: {
                         chromosome: '<current_chromosome>',
                         start: 400000,
-                        end: 400200
+                        end: 400200,
+                        newSequence: 'GCTAGCTAGCTAGCTA'
                     }
                 },
                 maxScore: 5,
@@ -896,17 +898,17 @@ class AutomaticSimpleSuite {
             },
             {
                 id: 'edit_auto_07',
-                name: 'Paste Sequence from Clipboard',
+                name: 'Execute Pending Actions',
                 type: 'function_call',
                 category: 'sequence_editing',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Paste the sequence from clipboard at position 600000.',
+                instruction: 'Execute all pending sequence editing actions in the queue.',
                 expectedResult: {
-                    tool_name: 'paste_sequence',
+                    tool_name: 'execute_actions',
                     parameters: {
                         chromosome: '<current_chromosome>',
-                        start: 600000,
+                        start: 100000,
                         end: 600000
                     }
                 },
@@ -917,14 +919,14 @@ class AutomaticSimpleSuite {
             },
             {
                 id: 'edit_auto_08',
-                name: 'Execute Pending Actions',
+                name: 'Get Action List',
                 type: 'function_call',
                 category: 'sequence_editing',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Execute all pending sequence editing actions in the queue.',
+                instruction: 'Get the current list of sequence editing actions and their status.',
                 expectedResult: {
-                    tool_name: 'execute_actions',
+                    tool_name: 'get_action_list',
                     parameters: {
                         chromosome: '<current_chromosome>',
                         start: 100000,
