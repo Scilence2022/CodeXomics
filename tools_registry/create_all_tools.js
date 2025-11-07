@@ -441,8 +441,8 @@ class ToolDefinitionCreator {
             },
             'load_operon_file': {
                 category: 'file_operations',
-                description: 'Load operon files in JSON, CSV, or TXT format directly by file path',
-                keywords: ['load', 'operon', 'json', 'csv', 'txt'],
+                description: 'Load operon files in JSON, CSV, TSV, or TXT format directly by file path. Supports RegulonDB TSV format.',
+                keywords: ['load', 'operon', 'json', 'csv', 'tsv', 'txt', 'regulondb'],
                 priority: 1
             },
             'export_fasta_sequence': {

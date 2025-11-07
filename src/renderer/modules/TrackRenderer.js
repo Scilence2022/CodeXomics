@@ -521,7 +521,7 @@ class TrackRenderer {
         
         // Get and validate data
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
-        const operons = this.genomeBrowser.detectOperons(annotations);
+        const operons = this.genomeBrowser.detectOperons(annotations, chromosome);
         console.log(`Detected ${operons.length} operons in chromosome ${chromosome}`);
         
         // Filter genes using the new helper method
@@ -10472,7 +10472,7 @@ This action cannot be undone.`;
         }
         
         const annotations = this.genomeBrowser.currentAnnotations[currentChr] || [];
-        const operons = this.genomeBrowser.detectOperons(annotations);
+        const operons = this.genomeBrowser.detectOperons(annotations, currentChr);
         
         console.log('🔄 Updating all SVG tracks for chromosome:', currentChr);
         

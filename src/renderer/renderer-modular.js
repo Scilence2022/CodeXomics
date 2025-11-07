@@ -228,6 +228,8 @@ class GenomeBrowser {
         this.sequenceLength = 0;
         this.operons = [];
         this.loadedOperons = []; // User-loaded operon data
+        this.mappedOperons = null; // Cache for mapped operons to avoid re-mapping on every view update
+        this.operonMappingChromosome = null; // Track which chromosome operons are mapped to
         this.selectedGene = null;
         this.userDefinedFeatures = {};
         this.nextFeatureId = 1;
@@ -4044,14 +4046,30 @@ class GenomeBrowser {
     }
 
     // Operon detection and color assignment methods
-    detectOperons(annotations) {
-        // If user-loaded operons exist, use them instead of auto-detection
+    detectOperons(annotations, chromosome) {
+        // If user-loaded operons exist, use cached mapped version if available
         if (this.loadedOperons && this.loadedOperons.length > 0) {
-            console.log(`Using ${this.loadedOperons.length} loaded operons instead of auto-detection`);
-            return this.loadedOperons.map(operon => ({
+            // Check if we have cached mapped operons for this chromosome
+            if (this.mappedOperons && this.operonMappingChromosome === chromosome) {
+                console.log(`🚀 Using cached ${this.mappedOperons.length} mapped operons (no re-mapping needed)`);
+                return this.mappedOperons;
+            }
+            
+            // Need to map operons for the first time or for a new chromosome
+            console.log(`📋 Mapping ${this.loadedOperons.length} loaded operons to annotations for chromosome ${chromosome}...`);
+            const startTime = performance.now();
+            
+            this.mappedOperons = this.loadedOperons.map(operon => ({
                 ...operon,
                 genes: this.mapOperonGenesToAnnotations(operon, annotations)
             }));
+            
+            this.operonMappingChromosome = chromosome;
+            
+            const endTime = performance.now();
+            console.log(`✅ Operon mapping completed in ${(endTime - startTime).toFixed(2)}ms, cached for future use`);
+            
+            return this.mappedOperons;
         }
 
         // Fall back to simple operon detection based on gene proximity and strand
@@ -4111,27 +4129,38 @@ class GenomeBrowser {
         for (const geneName of operon.genes) {
             // Try to find matching annotation by gene name or locus tag
             const matchingFeature = annotations.find(feature => {
-                const featureGeneName = feature.qualifiers?.gene || feature.qualifiers?.locus_tag || '';
-                return featureGeneName === geneName || 
-                       featureGeneName.includes(geneName) || 
-                       geneName.includes(featureGeneName);
+                const featureGeneName = feature.qualifiers?.gene || '';
+                const featureLocus = feature.qualifiers?.locus_tag || '';
+                
+                // Try exact match first
+                if (featureGeneName === geneName || featureLocus === geneName) {
+                    return true;
+                }
+                
+                // Try case-insensitive match
+                if (featureGeneName.toLowerCase() === geneName.toLowerCase() || 
+                    featureLocus.toLowerCase() === geneName.toLowerCase()) {
+                    return true;
+                }
+                
+                // Try partial match
+                if (featureGeneName && geneName && 
+                    (featureGeneName.includes(geneName) || geneName.includes(featureGeneName))) {
+                    return true;
+                }
+                
+                if (featureLocus && geneName && 
+                    (featureLocus.includes(geneName) || geneName.includes(featureLocus))) {
+                    return true;
+                }
+                
+                return false;
             });
             
             if (matchingFeature) {
                 mappedGenes.push(matchingFeature);
-            } else {
-                // Create a placeholder feature if no match found
-                mappedGenes.push({
-                    type: 'CDS',
-                    start: operon.start,
-                    end: operon.end,
-                    strand: operon.strand,
-                    qualifiers: {
-                        gene: geneName,
-                        locus_tag: geneName
-                    }
-                });
             }
+            // Skip unmapped genes silently - allows operons to work even if some genes can't be mapped
         }
         
         return mappedGenes;
@@ -4192,15 +4221,43 @@ class GenomeBrowser {
             };
         }
         
-        // Original operon detection logic for loaded features
         // Find which operon this gene belongs to
+        // Check by: 1) exact feature match, 2) position overlap, 3) name match
         for (const operon of operons) {
+            // Method 1: Check if this exact gene object is in the operon's genes array
+            if (operon.genes.some(g => g === gene)) {
+                return {
+                    operonName: operon.name,
+                    color: this.assignOperonColor(operon.name),
+                    isInOperon: true
+                };
+            }
+            
+            // Method 2: Check by position match (start and end)
             if (operon.genes.some(g => g.start === gene.start && g.end === gene.end)) {
                 return {
                     operonName: operon.name,
                     color: this.assignOperonColor(operon.name),
                     isInOperon: true
                 };
+            }
+            
+            // Method 3: Check if gene is within operon boundaries and has matching strand
+            if (gene.start >= operon.start && gene.end <= operon.end && gene.strand === operon.strand) {
+                // Also check if gene name matches any gene in the operon
+                const geneName = this.getQualifierValue(gene.qualifiers, 'gene') || 
+                                this.getQualifierValue(gene.qualifiers, 'locus_tag') || '';
+                if (geneName && operon.genes.some(g => {
+                    const operonGeneName = this.getQualifierValue(g.qualifiers, 'gene') || 
+                                          this.getQualifierValue(g.qualifiers, 'locus_tag') || '';
+                    return operonGeneName === geneName;
+                })) {
+                    return {
+                        operonName: operon.name,
+                        color: this.assignOperonColor(operon.name),
+                        isInOperon: true
+                    };
+                }
             }
         }
         

@@ -1,10 +1,10 @@
 name: "load_operon_file"
-version: "2.0.0"
-description: "Load operon definition files (JSON/CSV/TXT) directly with file path specification or via file dialog"
+version: "2.1.0"
+description: "Load operon definition files (JSON/CSV/TSV/TXT) directly with file path specification or via file dialog. Supports RegulonDB TSV format."
 category: "file_loading"
 subcategory: "operon_loading"
 priority: 2
-keywords: ["operon", "operons", "json", "csv", "txt", "load", "file", "bacterial"]
+keywords: ["operon", "operons", "json", "csv", "tsv", "txt", "load", "file", "bacterial", "regulondb"]
 execution_type: "built-in"
 complexity: "simple"
 
@@ -20,9 +20,9 @@ parameters:
   properties:
     filePath:
       type: "string"
-      description: "Direct file path to operon file (JSON/CSV/TXT format)"
+      description: "Direct file path to operon file (JSON/CSV/TSV/TXT format). TSV format supports RegulonDB operon files."
       required: false
-      examples: ["/path/to/operons.json", "operons.csv", "/Users/user/data/operons.txt"]
+      examples: ["/path/to/operons.json", "operons.csv", "/Users/user/data/operons.tsv", "regulondb_operons.txt"]
     showFileDialog:
       type: "boolean"
       description: "Whether to show file dialog regardless of filePath parameter"
@@ -33,7 +33,7 @@ parameters:
       description: "File format hint for better parsing"
       required: false
       default: "auto"
-      enum: ["auto", "json", "csv", "txt"]
+      enum: ["auto", "json", "csv", "tsv", "txt"]
   required: []
 
 # Return value specification
@@ -72,6 +72,10 @@ sample_usages:
   - user_query: "Load operons from operons.csv as CSV format"
     tool_call: '{"tool_name": "load_operon_file", "parameters": {"filePath": "operons.csv", "format": "csv"}}'
     expected_result: "Loads CSV operon file with format hint"
+  
+  - user_query: "Load RegulonDB operon data from regulondb_operons.tsv"
+    tool_call: '{"tool_name": "load_operon_file", "parameters": {"filePath": "regulondb_operons.tsv", "format": "tsv"}}'
+    expected_result: "Loads RegulonDB TSV format operon file with gene annotations and confidence levels"
 
 # Tool relationships
 relationships:
@@ -91,8 +95,8 @@ average_execution_time: 1000
 metadata:
   author: "CodeXomics"
   created: "2024-01-15"
-  last_updated: "2024-01-15"
-  tags: ["file-loading", "operon", "bacterial", "specialized", "built-in"]
+  last_updated: "2025-01-15"
+  tags: ["file-loading", "operon", "bacterial", "specialized", "built-in", "regulondb"]
   
 # Performance considerations
 performance:
@@ -107,8 +111,8 @@ error_handling:
     - error: "File not found"
       solution: "Check file path exists and is accessible"
     - error: "Invalid file format" 
-      solution: "Ensure file is in JSON, CSV, or TXT format with proper structure"
+      solution: "Ensure file is in JSON, CSV, TSV, or TXT format with proper structure"
     - error: "FileManager not available"
       solution: "Ensure genome browser is properly initialized"
     - error: "Parsing error"
-      solution: "Check file format matches expected operon data structure"
+      solution: "Check file format matches expected operon data structure. For RegulonDB TSV files, ensure proper tab-delimited format with required columns."

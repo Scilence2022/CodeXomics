@@ -768,7 +768,7 @@ class SequenceUtils {
         
         const subsequence = fullSequence.substring(viewStart, viewEnd);
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
-        const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations) : [];
+        const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations, chromosome) : [];
 
         // Check if we should invalidate cache
         if (this.shouldInvalidateCache(chromosome, viewStart, viewEnd, annotations)) {

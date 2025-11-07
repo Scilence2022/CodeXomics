@@ -45,11 +45,11 @@ class FileManager {
                 input.multiple = true; // Allow multiple WIG file selection
                 break;
             case 'operon':
-                input.accept = '.json,.csv,.txt,.operon';
+                input.accept = '.json,.csv,.tsv,.txt,.operon';
                 break;
             case 'any':
             default:
-                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig,.json,.csv,.txt,.operon';
+                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig,.json,.csv,.tsv,.txt,.operon';
                 break;
         }
         
@@ -104,6 +104,9 @@ class FileManager {
                 case '.csv':
                     operonData = this.parseOperonCSV(fileContent.data);
                     break;
+                case '.tsv':
+                    operonData = this.parseOperonTSV(fileContent.data);
+                    break;
                 case '.txt':
                 case '.operon':
                     operonData = this.parseOperonTXT(fileContent.data);
@@ -114,6 +117,12 @@ class FileManager {
 
             // Store operon data in genome browser
             this.genomeBrowser.loadedOperons = operonData;
+            
+            // Clear operon mapping cache to force re-mapping with new operons
+            this.genomeBrowser.mappedOperons = null;
+            this.genomeBrowser.operonMappingChromosome = null;
+            console.log('🗑️ Cleared operon mapping cache');
+            
             this.genomeBrowser.currentFile = {
                 path: filePath,
                 info: fileInfo.info,
@@ -126,10 +135,22 @@ class FileManager {
             this.genomeBrowser.showNotification(`Successfully loaded ${operonData.length} operons`, 'success');
 
             // Refresh genome view to show operons
-            if (this.genomeBrowser.currentChromosome) {
-                this.genomeBrowser.displayGenomeView();
+            const currentChr = this.genomeBrowser.currentChromosome;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                // If genome is loaded, refresh the view to show operons
+                const sequence = this.genomeBrowser.currentSequence[currentChr];
+                
+                // Validate sequence is a string (defensive programming)
+                if (typeof sequence !== 'string') {
+                    console.warn('⚠️ Sequence is not a string type:', typeof sequence);
+                    this.genomeBrowser.showNotification('Warning: Loaded operons, but sequence data type is invalid', 'warning');
+                    this.updateOperonPanel();
+                } else {
+                    this.genomeBrowser.displayGenomeView(currentChr, sequence);
+                }
             } else {
-                // If no chromosome is selected, just update the operon panel
+                // If no genome is loaded, just update the operon panel
+                console.log('📋 No genome loaded - operons will be shown when genome is loaded');
                 this.updateOperonPanel();
             }
 
@@ -194,6 +215,115 @@ class FileManager {
             operons.push(this.normalizeOperonData(operon));
         }
 
+        return operons;
+    }
+
+    parseOperonTSV(content) {
+        console.log('📝 Parsing TSV operon file (RegulonDB format)...');
+        console.log('Content preview:', content.substring(0, 200));
+        
+        if (!content || typeof content !== 'string') {
+            console.error('❌ Invalid content for TSV parsing');
+            return [];
+        }
+        
+        const lines = content.split('\n');
+        const operons = [];
+        let headerLine = null;
+        
+        console.log(`📊 Total lines: ${lines.length}`);
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            
+            // Skip empty lines
+            if (!line || !line.trim()) {
+                continue;
+            }
+            
+            const trimmedLine = line.trim();
+            
+            // Skip comment lines (starting with #)
+            if (trimmedLine.startsWith('#')) {
+                continue;
+            }
+            
+            // Detect header line (contains column numbers like "1)" or field names)
+            if (trimmedLine.includes('operonId') || trimmedLine.includes('1)operonId')) {
+                headerLine = trimmedLine;
+                console.log(`📋 Found header line at line ${i + 1}`);
+                continue;
+            }
+            
+            // Parse data line
+            const columns = trimmedLine.split('\t');
+            
+            if (columns.length < 7) {
+                console.warn(`⚠️ Skipping line ${i + 1}: insufficient columns (${columns.length})`);
+                continue;
+            }
+            
+            // RegulonDB TSV format:
+            // Column 0: operonId (e.g., RDBECOLIOPC00001)
+            // Column 1: operonName (e.g., ispDF)
+            // Column 2: firstGeneLeftPos (start position)
+            // Column 3: lastGeneRightPos (end position)
+            // Column 4: strand (forward/reverse)
+            // Column 5: numberOfGenes
+            // Column 6: operonGenes (semicolon-separated gene names)
+            // Column 7: operonEvidence (optional)
+            // Column 8: confidenceLevel (optional: W/S/C)
+            
+            const operonId = columns[0].trim();
+            const operonName = columns[1].trim();
+            const start = parseInt(columns[2]);
+            const end = parseInt(columns[3]);
+            const strandStr = columns[4].trim().toLowerCase();
+            const numberOfGenes = parseInt(columns[5]) || 0;
+            const genesStr = columns[6].trim();
+            const evidence = columns[7] ? columns[7].trim() : '';
+            const confidenceLevelStr = columns[8] ? columns[8].trim() : 'W';
+            
+            // Parse strand (forward = 1, reverse = -1)
+            let strand = 1;
+            if (strandStr === 'reverse' || strandStr === '-') {
+                strand = -1;
+            }
+            
+            // Parse genes (semicolon-separated)
+            const genes = genesStr ? genesStr.split(';').map(g => g.trim()).filter(g => g) : [];
+            
+            // Map confidence level to numeric score
+            let confidence = 0.5; // default for W (Weak)
+            if (confidenceLevelStr === 'C') {
+                confidence = 1.0; // Confirmed
+            } else if (confidenceLevelStr === 'S') {
+                confidence = 0.8; // Strong
+            }
+            
+            const operon = {
+                id: operonId,
+                name: operonName,
+                start: start,
+                end: end,
+                strand: strand,
+                genes: genes,
+                geneCount: numberOfGenes,
+                evidence: evidence,
+                confidence: confidence,
+                confidenceLevel: confidenceLevelStr,
+                source: 'RegulonDB',
+                chromosome: this.genomeBrowser.currentChromosome || 'unknown'
+            };
+            
+            operons.push(this.normalizeOperonData(operon));
+            
+            if (operons.length <= 5) {
+                console.log(`✅ Parsed operon: ${operonName} (${genes.length} genes, ${strandStr}, confidence: ${confidenceLevelStr})`);
+            }
+        }
+
+        console.log(`📊 Parsed ${operons.length} operons from RegulonDB TSV file`);
         return operons;
     }
 
@@ -279,14 +409,18 @@ class FileManager {
     normalizeOperonData(operon) {
         // Ensure all required fields are present and properly formatted
         return {
+            id: operon.id || operon.operonId || `operon_${Date.now()}`,
             name: operon.name || `operon_${Date.now()}`,
             start: parseInt(operon.start) || 0,
             end: parseInt(operon.end) || 0,
-            strand: operon.strand === '-' || operon.strand === -1 ? -1 : 1,
+            strand: operon.strand === '-' || operon.strand === -1 || operon.strand === 'reverse' ? -1 : 1,
             genes: Array.isArray(operon.genes) ? operon.genes : (operon.genes ? operon.genes.split(',').map(g => g.trim()) : []),
+            geneCount: operon.geneCount || operon.numberOfGenes || (Array.isArray(operon.genes) ? operon.genes.length : 0),
             chromosome: operon.chromosome || this.genomeBrowser.currentChromosome || 'unknown',
             description: operon.description || operon.desc || '',
+            evidence: operon.evidence || operon.operonEvidence || '',
             confidence: operon.confidence || operon.score || 1.0,
+            confidenceLevel: operon.confidenceLevel || '',
             source: operon.source || 'user_loaded'
         };
     }
@@ -311,7 +445,9 @@ class FileManager {
             // Clear loaded operons when loading a new genome file
             if (this.genomeBrowser.loadedOperons) {
                 this.genomeBrowser.loadedOperons = [];
-                console.log('🧬 Cleared loaded operons for new genome file');
+                this.genomeBrowser.mappedOperons = null;
+                this.genomeBrowser.operonMappingChromosome = null;
+                console.log('🧬 Cleared loaded operons and mapping cache for new genome file');
             }
 
             // Get file info

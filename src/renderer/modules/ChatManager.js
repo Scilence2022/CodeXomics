@@ -11347,7 +11347,7 @@ ${this.getPluginSystemInfo()}`;
         }
         
         const annotations = this.app.currentAnnotations[chr];
-        const operons = this.app.detectOperons(annotations);
+        const operons = this.app.detectOperons(annotations, chr);
         
         const operonSummary = operons.map(operon => ({
             name: operon.name,
