@@ -389,7 +389,9 @@ class ManualSuite {
         console.log(`🧭 [ManualSuite] Evaluating complex navigation workflow:`, {
             testId: testResult.testId,
             expectedSequence: expectedResult.tool_sequence,
-            actualResult: actualResult
+            actualResult: actualResult,
+            actualResultType: typeof actualResult,
+            isArray: Array.isArray(actualResult)
         });
 
         if (!actualResult) {
@@ -397,55 +399,121 @@ class ManualSuite {
             return evaluation;
         }
 
-        // Handle multiple tool calls in sequence
+        // CRITICAL FIX: Handle different result formats
         let toolResults = [];
+        
+        // Check if actualResult is already an array of tool calls
         if (Array.isArray(actualResult)) {
             toolResults = actualResult;
-        } else if (actualResult.tool_name) {
+        } 
+        // Check if it's a single tool call object
+        else if (actualResult.tool_name) {
             toolResults = [actualResult];
+        }
+        // Check if executionData has functionCalls array
+        else if (testResult.llmInteractionData?.response?.actualExecutionData?.functionCalls) {
+            const functionCalls = testResult.llmInteractionData.response.actualExecutionData.functionCalls;
+            toolResults = functionCalls.map(call => ({
+                tool_name: call.tool_name,
+                parameters: call.parameters,
+                round: call.round
+            }));
+            console.log(`🔧 [ManualSuite] Extracted ${toolResults.length} tools from executionData`);
+        }
+        // Fallback: check detailedLogs for round information
+        else if (testResult.detailedLogs?.toolCallHistory?.toolCallRounds) {
+            const rounds = testResult.detailedLogs.toolCallHistory.toolCallRounds;
+            const allTools = [];
+            rounds.forEach(round => {
+                if (round.tools && round.tools.length > 0) {
+                    round.tools.forEach(tool => {
+                        allTools.push({
+                            tool_name: tool,
+                            round: round.current
+                        });
+                    });
+                }
+            });
+            toolResults = allTools;
+            console.log(`🔧 [ManualSuite] Extracted ${toolResults.length} tools from detailedLogs`);
         }
 
         console.log(`🧭 [ManualSuite] Processing ${toolResults.length} tool calls in workflow`);
+        console.log(`🧭 [ManualSuite] Tool results:`, toolResults);
 
         // Extract actual tool sequence
         evaluation.details.actualSequence = toolResults.map(result => result?.tool_name).filter(Boolean);
         evaluation.details.toolsExecuted = evaluation.details.actualSequence;
 
+        console.log(`🧭 [ManualSuite] Actual sequence:`, evaluation.details.actualSequence);
+        console.log(`🧭 [ManualSuite] Expected sequence:`, evaluation.details.expectedSequence);
+
         // Check sequence matching
         const expectedSequence = evaluation.details.expectedSequence;
         const actualSequence = evaluation.details.actualSequence;
         
-        // Flexible sequence matching - allow for partial matches
+        // ENHANCED: More flexible sequence matching
         let sequenceScore = 0;
-        const maxSequenceScore = 8; // 8 points for sequence matching
+        const maxSequenceScore = 10; // 10 points for sequence matching (increased from 8)
         
         if (actualSequence.length > 0) {
-            // Award points for each correctly executed tool in sequence
-            const minLength = Math.min(expectedSequence.length, actualSequence.length);
+            // Count tools that match expected sequence (in order)
             let correctTools = 0;
+            let exactMatches = 0;
             
-            for (let i = 0; i < minLength; i++) {
+            // Check exact sequence match
+            for (let i = 0; i < Math.min(expectedSequence.length, actualSequence.length); i++) {
                 if (actualSequence[i] === expectedSequence[i]) {
-                    correctTools++;
+                    exactMatches++;
                 }
             }
             
-            sequenceScore = Math.round((correctTools / expectedSequence.length) * maxSequenceScore);
-            evaluation.details.sequenceMatch = correctTools >= Math.ceil(expectedSequence.length * 0.7); // 70% match required
+            // Also give credit for having the right tools, even if order is slightly different
+            expectedSequence.forEach(expectedTool => {
+                if (actualSequence.includes(expectedTool)) {
+                    correctTools++;
+                }
+            });
+            
+            // Calculate score based on both exact matches and presence
+            const exactMatchRatio = exactMatches / expectedSequence.length;
+            const presenceRatio = correctTools / expectedSequence.length;
+            
+            // Weight exact matches more heavily (70%) than just presence (30%)
+            sequenceScore = Math.round((exactMatchRatio * 0.7 + presenceRatio * 0.3) * maxSequenceScore);
+            
+            evaluation.details.sequenceMatch = exactMatches >= Math.ceil(expectedSequence.length * 0.7); // 70% exact match required
+            
+            console.log(`🎯 [ManualSuite] Sequence scoring:`, {
+                exactMatches,
+                correctTools,
+                expectedLength: expectedSequence.length,
+                exactMatchRatio: (exactMatchRatio * 100).toFixed(1) + '%',
+                presenceRatio: (presenceRatio * 100).toFixed(1) + '%',
+                sequenceScore
+            });
         }
 
         // Award additional points for workflow completion
         let workflowScore = 0;
-        const maxWorkflowScore = 7; // 7 points for overall workflow success
+        const maxWorkflowScore = 5; // 5 points for overall workflow success (reduced to make room for sequence score)
         
         // Check for key workflow components
-        const hasTabCreation = actualSequence.includes('open_new_tab');
-        const hasTabSwitching = actualSequence.includes('switch_to_tab');
+        const tabCreationCount = actualSequence.filter(tool => tool === 'open_new_tab').length;
         const hasNavigation = actualSequence.includes('navigate_to_position') || actualSequence.includes('jump_to_gene');
+        const expectedTabCount = expectedSequence.filter(tool => tool === 'open_new_tab').length;
         
-        if (hasTabCreation) workflowScore += 3;
-        if (hasTabSwitching) workflowScore += 2;
-        if (hasNavigation) workflowScore += 2;
+        // Award points for tab creation (3 points max)
+        if (tabCreationCount > 0) {
+            workflowScore += Math.min(3, (tabCreationCount / Math.max(1, expectedTabCount)) * 3);
+        }
+        
+        // Award points for navigation (2 points)
+        if (hasNavigation) {
+            workflowScore += 2;
+        }
+        
+        workflowScore = Math.round(workflowScore);
 
         evaluation.score = sequenceScore + workflowScore;
         evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
@@ -454,6 +522,7 @@ class ManualSuite {
         evaluation.warnings.push(`Sequence matching: ${sequenceScore}/${maxSequenceScore} points`);
         evaluation.warnings.push(`Workflow completion: ${workflowScore}/${maxWorkflowScore} points`);
         evaluation.warnings.push(`Tools executed: ${actualSequence.join(' → ')}`);
+        evaluation.warnings.push(`Expected tools: ${expectedSequence.join(' → ')}`);
 
         console.log(`🧭 [ManualSuite] Complex navigation workflow evaluation complete:`, {
             score: evaluation.score,
