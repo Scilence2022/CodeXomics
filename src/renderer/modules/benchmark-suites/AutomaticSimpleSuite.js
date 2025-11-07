@@ -4,7 +4,7 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests (28)'; // Updated count after adding genome codon usage test
+        this.suiteName = 'Automatic Simple Tests (31)'; // Updated count after adding sequence tools tests
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
         this.framework = null;
@@ -432,6 +432,48 @@ class AutomaticSimpleSuite {
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
 
+            // SEQUENCE TASKS - Automatic + Simple
+            {
+                id: 'seq_auto_01',
+                name: 'Get Genomic Sequence',
+                type: 'function_call',
+                category: 'sequence',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Get the DNA sequence from position 100000 to 101000 on the current chromosome.',
+                expectedResult: {
+                    tool_name: 'get_sequence',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 100000,
+                        end: 101000
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'seq_auto_02',
+                name: 'Get Coding Sequence for Gene',
+                type: 'function_call',
+                category: 'sequence',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Get the coding sequence for gene lacZ.',
+                expectedResult: {
+                    tool_name: 'get_coding_sequence',
+                    parameters: {
+                        gene_name: 'lacZ'
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+
             // SEARCH TASKS - Automatic + Simple
             {
                 id: 'search_auto_01',
@@ -484,6 +526,26 @@ class AutomaticSimpleSuite {
                     tool_name: 'search_gene_by_name',
                     parameters: {
                         name: 'b0344'
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'search_auto_04',
+                name: 'Search Sequence Motif TATAAA',
+                type: 'function_call',
+                category: 'search',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Search for TATA box motif (TATAAA) in the current genomic region on both strands.',
+                expectedResult: {
+                    tool_name: 'search_sequence_motif',
+                    parameters: {
+                        motif: 'TATAAA',
+                        strand: 'both'
                     }
                 },
                 maxScore: 5,
