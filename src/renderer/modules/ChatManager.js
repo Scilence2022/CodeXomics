@@ -10155,7 +10155,7 @@ ${this.getPluginSystemInfo()}`;
                 'replace_sequence': () => genomeBrowser.actionManager.handleReplaceSequence(),
                 'get_action_list': () => genomeBrowser.actionManager.showActionList(),
                 'execute_actions': () => genomeBrowser.actionManager.executeAllActions(),
-                'clearActions': () => genomeBrowser.actionManager.clearAllActions(),
+                'clearActions': () => genomeBrowser.actionManager.clearAllActions({ forced: false }),
                 'getClipboardContent': () => genomeBrowser.actionManager.getClipboardContent(),
                 'undoLastAction': () => genomeBrowser.actionManager.undoLastAction()
             };
