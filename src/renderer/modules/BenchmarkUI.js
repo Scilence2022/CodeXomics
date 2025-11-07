@@ -1347,8 +1347,19 @@ class BenchmarkUI {
         
         // Parse verification items and assign scores
         const verificationItems = this.parseVerificationItems(testData.manualVerification);
-        const itemScore = verificationItems.length > 0 ? Math.floor((testData.maxScore - 1) / verificationItems.length) : 0;
-        const bonusScore = 1; // Extra point for completion
+        
+        // CRITICAL FIX: Ensure full score is achievable when all items are checked
+        // Distribute maxScore across items, with any remainder going to bonus
+        const itemScore = verificationItems.length > 0 ? Math.floor(testData.maxScore / verificationItems.length) : 0;
+        const bonusScore = testData.maxScore - (itemScore * verificationItems.length); // Remainder as bonus
+        
+        console.log(`🎯 [Manual Test Dialog] Scoring setup for ${testData.testId}:`, {
+            maxScore: testData.maxScore,
+            verificationItems: verificationItems.length,
+            itemScore,
+            bonusScore,
+            maxPossible: (itemScore * verificationItems.length) + bonusScore
+        });
         
         dialog.innerHTML = `
             <style>
