@@ -4274,14 +4274,25 @@ class ActionManager {
     
     /**
      * Clear all actions
+     * @param {Object} options - Options for clearing actions
+     * @param {boolean} options.forced - Whether to force clear without confirmation
+     * @returns {Object} - Result of the operation
      */
-    clearAllActions() {
+    clearAllActions(options = {}) {
+        const { forced = false } = options;
+        
         if (this.actions.length === 0) {
             this.genomeBrowser.showNotification('No actions to clear', 'info');
-            return;
+            return { success: true, message: 'No actions to clear' };
         }
         
-        if (confirm('Are you sure you want to clear all actions?')) {
+        let shouldClear = forced;
+        
+        if (!forced) {
+            shouldClear = confirm('Are you sure you want to clear all actions?');
+        }
+        
+        if (shouldClear) {
             this.actions = [];
             this.updateActionListUI();
             this.updateStats();
@@ -4290,7 +4301,10 @@ class ActionManager {
             this.notifyActionsTrackUpdate();
             
             this.genomeBrowser.showNotification('All actions cleared', 'success');
+            return { success: true, message: 'All actions cleared' };
         }
+        
+        return { success: false, message: 'Action clearing cancelled by user' };
     }
     
     /**

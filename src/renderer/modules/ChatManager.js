@@ -7982,7 +7982,11 @@ ${coreTools}
                 case 'get_action_list':
                     return await window.actionManager.getActionList(parameters);
                 case 'clear_actions':
-                    return await window.actionManager.clearAllActions(parameters);
+                    const clearOptions = {};
+                    if (parameters && parameters.forced !== undefined) {
+                        clearOptions.forced = parameters.forced;
+                    }
+                    return await window.actionManager.clearAllActions(clearOptions);
                 case 'get_clipboard_content':
                     return await window.actionManager.getClipboardContent(parameters);
                 case 'undo_last_action':
