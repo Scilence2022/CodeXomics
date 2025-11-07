@@ -5272,7 +5272,8 @@ class ActionManager {
                 parameters: {
                     type: 'object',
                     properties: {
-                        status: { type: 'string', enum: ['pending', 'completed', 'failed', 'all'], description: 'Clear actions by status', default: 'all' }
+                        status: { type: 'string', enum: ['pending', 'completed', 'failed', 'all'], description: 'Clear actions by status', default: 'all' },
+                        forced: { type: 'boolean', description: 'Whether to force clear, skip confirmation prompt', default: false }
                     }
                 }
             },
@@ -5712,7 +5713,18 @@ class ActionManager {
     }
 
     functionClearActions(params) {
-        const { status = 'all' } = params;
+        const { status = 'all', forced = false } = params;
+        
+        // If not forced, show confirmation dialog
+        if (!forced) {
+            const shouldClear = confirm(`确定要清除所有${status === 'all' ? '' : status}操作吗？此操作无法撤销。`);
+            if (!shouldClear) {
+                return {
+                    success: false,
+                    message: '操作已取消'
+                };
+            }
+        }
         
         let clearedCount = 0;
         
