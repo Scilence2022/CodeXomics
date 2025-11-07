@@ -1371,6 +1371,38 @@ class LLMBenchmarkFramework {
                     functionCallRounds: this.extractFunctionCallRoundsFromLogs(capturedLogs)
                 };
                 
+                // SONG'S CRITICAL FIX: If toolCallHistory has no tools but executionData has function calls,
+                // construct toolCallHistory from executionData directly
+                if (executionData && executionData.functionCalls && executionData.functionCalls.length > 0) {
+                    const hasToolsInRounds = interactionData.detailedLogs.toolCallHistory.toolCallRounds.some(r => r.tools && r.tools.length > 0);
+                    
+                    if (!hasToolsInRounds) {
+                        console.log('⚠️ [Benchmark] No tools detected in rounds from logs, reconstructing from executionData');
+                        console.log('🔧 [Benchmark] ExecutionData function calls:', executionData.functionCalls);
+                        
+                        // Group function calls by round
+                        const roundsMap = new Map();
+                        executionData.functionCalls.forEach(call => {
+                            const roundNum = call.round || 1;
+                            if (!roundsMap.has(roundNum)) {
+                                roundsMap.set(roundNum, {
+                                    current: roundNum,
+                                    total: executionData.rounds || 3,
+                                    timestamp: call.timestamp || new Date().toISOString(),
+                                    tools: []
+                                });
+                            }
+                            roundsMap.get(roundNum).tools.push(call.tool_name);
+                        });
+                        
+                        // Replace toolCallRounds with reconstructed data
+                        interactionData.detailedLogs.toolCallHistory.toolCallRounds = Array.from(roundsMap.values());
+                        
+                        console.log('✅ [Benchmark] Reconstructed rounds from executionData:', 
+                            interactionData.detailedLogs.toolCallHistory.toolCallRounds);
+                    }
+                }
+                
             } finally {
                 // Restore original console.log
                 console.log = originalConsoleLog;
@@ -3474,8 +3506,11 @@ class LLMBenchmarkFramework {
 
     /**
      * Extract tool call history from captured logs
+     * CRITICAL FIX: Use actual execution data and tool detection logs
      */
     extractToolCallHistoryFromLogs(logs) {
+        console.log(`🔍🔍🔍 [extractToolCallHistoryFromLogs] Starting extraction from ${logs.length} logs`);
+        
         const toolCallInfo = {
             executedTools: [],
             skippedTools: [],
@@ -3484,52 +3519,99 @@ class LLMBenchmarkFramework {
         };
         
         let currentRound = null;
+        let currentRoundNumber = 0;
+        
+        // DEBUGGING: Log all messages to see what we're working with
+        console.log('🔍 [extractToolCallHistoryFromLogs] Scanning through all log messages:');
+        logs.forEach((log, index) => {
+            const msg = log.message;
+            // Log key messages for debugging
+            if (msg.includes('ROUND') || msg.includes('tool') || msg.includes('Tool') || msg.includes('execute')) {
+                console.log(`  [${index}] ${msg.substring(0, 100)}...`);
+            }
+        });
         
         logs.forEach((log, index) => {
             const msg = log.message;
             
+            // Track round markers
             if (msg.includes('=== FUNCTION CALL ROUND')) {
                 const roundMatch = msg.match(/ROUND (\d+)\/(\d+)/);
                 if (roundMatch) {
+                    currentRoundNumber = parseInt(roundMatch[1]);
                     currentRound = {
-                        current: parseInt(roundMatch[1]),
+                        current: currentRoundNumber,
                         total: parseInt(roundMatch[2]),
                         timestamp: log.timestamp,
                         tools: [] // SONG'S REQUEST: Track tools called in this round
                     };
                     toolCallInfo.toolCallRounds.push(currentRound);
+                    console.log(`🎯 [extractToolCallHistoryFromLogs] Created round ${currentRoundNumber}`);
                 }
-            } else if (currentRound && (msg.includes('Direct parse successful:') || msg.includes('Flexible extraction parse successful:') || msg.includes('Regex parse successful:'))) {
-                // SONG'S REQUEST: Extract tool name from successful parse in current round
+            }
+            // CRITICAL: Extract tool names from tool execution detection
+            else if (msg.includes('=== ') && msg.includes('TOOL CALL(S) DETECTED ===')) {
+                // Extract count
+                const countMatch = msg.match(/=== (\d+) TOOL CALL/);
+                if (countMatch) {
+                    console.log(`🎯 [extractToolCallHistoryFromLogs] Found ${countMatch[1]} tool calls marker at index ${index}`);
+                }
+            }
+            // Extract tool names from the "Tools to execute" log
+            else if (msg.includes('Tools to execute:')) {
+                console.log(`🎯 [extractToolCallHistoryFromLogs] Found "Tools to execute" at index ${index}: ${msg}`);
                 try {
-                    const toolMatch = msg.match(/successful:\s*\{[^}]*"tool_name"[^}]*"([^"]+)"/);
-                    if (toolMatch && !currentRound.tools.includes(toolMatch[1])) {
-                        currentRound.tools.push(toolMatch[1]);
-                        console.log(`🔧 [extractToolCallHistoryFromLogs] Added tool '${toolMatch[1]}' to round ${currentRound.current}`);
+                    // Extract array from log message: "Tools to execute: ['tool1', 'tool2']"
+                    const toolsMatch = msg.match(/Tools to execute:\s*\[(.*)\]/);
+                    if (toolsMatch) {
+                        console.log(`🎯 [extractToolCallHistoryFromLogs] Matched tools string: ${toolsMatch[1]}`);
+                        // Parse the tools array (handling both single-quoted and double-quoted strings)
+                        const toolsStr = toolsMatch[1].replace(/'/g, '"');
+                        const tools = JSON.parse(`[${toolsStr}]`);
+                        
+                        console.log(`🎯 [extractToolCallHistoryFromLogs] Parsed tools:`, tools);
+                        
+                        if (currentRound && tools.length > 0) {
+                            tools.forEach(tool => {
+                                if (!currentRound.tools.includes(tool)) {
+                                    currentRound.tools.push(tool);
+                                    console.log(`✅ [extractToolCallHistoryFromLogs] Added tool '${tool}' to round ${currentRound.current}`);
+                                }
+                            });
+                        } else if (!currentRound) {
+                            console.warn(`⚠️ [extractToolCallHistoryFromLogs] No current round to add tools to!`);
+                        }
+                    } else {
+                        console.warn(`⚠️ [extractToolCallHistoryFromLogs] Could not match tools array pattern in: ${msg}`);
                     }
                 } catch (e) {
-                    // Ignore parsing errors
+                    console.error('[extractToolCallHistoryFromLogs] Failed to parse tools from:', msg, e);
                 }
-            } else if (currentRound && msg.includes('Executing tool:')) {
-                // SONG'S REQUEST: Extract tool name from execution logs
-                const toolMatch = msg.match(/Executing tool:\s*([^\s,]+)/);
-                if (toolMatch && !currentRound.tools.includes(toolMatch[1])) {
-                    currentRound.tools.push(toolMatch[1]);
-                    console.log(`🔧 [extractToolCallHistoryFromLogs] Added executed tool '${toolMatch[1]}' to round ${currentRound.current}`);
+            }
+            // Also check for individual tool execution logs
+            else if (msg.includes('tool(s) executed successfully')) {
+                const countMatch = msg.match(/(\d+) tool\(s\) executed successfully/);
+                if (countMatch) {
+                    console.log(`✅ [extractToolCallHistoryFromLogs] ${countMatch[1]} tools executed successfully in round ${currentRoundNumber}`);
                 }
-            } else if (msg.includes('Skipping already executed tool:')) {
-                const toolName = msg.split('Skipping already executed tool:')[1]?.trim();
-                toolCallInfo.skippedTools.push(toolName);
-            } else if (msg.includes('Already executed tools:')) {
-                // This would be followed by an array log
-            } else if (msg.includes('Parsed tool call result:')) {
-                toolCallInfo.parseResults.push(msg);
-            } else if (msg.includes('Valid tool call found')) {
+            }
+            // Track skipped tools
+            else if (msg.includes('Skipping already executed tool:') || msg.includes('Blocking execution of:')) {
+                const toolMatch = msg.match(/(?:Skipping already executed tool:|Blocking execution of:)\s*([^\s,]+)/);
+                if (toolMatch) {
+                    toolCallInfo.skippedTools.push(toolMatch[1]);
+                    console.log(`🚫 [extractToolCallHistoryFromLogs] Skipped tool: ${toolMatch[1]}`);
+                }
+            }
+            // Track parse results for debugging
+            else if (msg.includes('Parsed tool call result:') || msg.includes('Valid tool call found')) {
                 toolCallInfo.parseResults.push(msg);
             }
         });
         
-        console.log('🔍 [extractToolCallHistoryFromLogs] Extracted rounds with tools:', toolCallInfo.toolCallRounds);
+        console.log('🔍 [extractToolCallHistoryFromLogs] Final extracted rounds:', toolCallInfo.toolCallRounds);
+        console.log('🔍 [extractToolCallHistoryFromLogs] Tools per round:', 
+            toolCallInfo.toolCallRounds.map(r => `Round ${r.current}: [${r.tools.join(', ')}]`));
         
         return toolCallInfo;
     }
