@@ -15,27 +15,27 @@ execution:
   requires_data: true
   requires_network: false
 parameters:
-    type: object
-    properties:
-      clientId:
-        type: string
-        description: Browser client ID for multi-window support
-        default: default
-      chromosome:
-        type: string
-        description: Chromosome identifier
-      start:
-        type: number
-        description: Start position (1-based coordinate)
-        minimum: 1
-      end:
-        type: number
-        description: End position (1-based coordinate)
-        minimum: 1
-      forced:
-        type: boolean
-        description: Whether to force clear, skip confirmation prompt
-        default: false
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+    chromosome:
+      type: string
+      description: Chromosome identifier
+    start:
+      type: number
+      description: Start position (1-based coordinate)
+      minimum: 1
+    end:
+      type: number
+      description: End position (1-based coordinate)
+      minimum: 1
+    forced:
+      type: boolean
+      description: Whether to force clear, skip confirmation prompt
+      default: false
   required:
     - chromosome
     - start
