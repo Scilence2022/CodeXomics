@@ -90,7 +90,6 @@ User Input → ChatManager → SmartExecutor → FunctionCallsOrganizer
 - `compute_gc` - GC computation
 - `calc_region_gc` - Regional GC analysis
 - `reverse_complement` - Reverse complement generation
-- `find_orfs` - Open reading frame detection
 - `sequence_statistics` - Comprehensive sequence analysis
 - `codon_usage_analysis` - Codon usage patterns
 - `analyze_codon_usage` - Advanced codon analysis
@@ -165,7 +164,6 @@ User Input → ChatManager → SmartExecutor → FunctionCallsOrganizer
 - `compute_gc` - GC content calculation
 - `translate_dna` - DNA translation
 - `reverse_complement` - Reverse complement
-- `find_orfs` - ORF detection
 - `search_sequence_motif` - Motif search
 - `predict_promoter` - Promoter prediction
 
@@ -679,4 +677,4 @@ The investment in function calling optimization will pay dividends in improved u
 **Report Generated**: December 2024  
 **Author**: Senior Software Architect  
 **Version**: 1.0  
-**Classification**: Internal Development Use 
+**Classification**: Internal Development Use

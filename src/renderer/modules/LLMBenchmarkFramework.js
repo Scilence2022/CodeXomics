@@ -2368,7 +2368,7 @@ class LLMBenchmarkFramework {
             'load_genome_file', 'switch_chromosome', 'toggle_track_visibility',
             // CRITICAL: Add the missing tools that are failing
             'get_current_state', 'compute_gc', 'reverse_complement',
-            'translate_dna', 'find_orfs', 'codon_usage_analysis'
+            'translate_dna', 'codon_usage_analysis'
         ];
 
         console.log('🔍 [Tool Detection] Known functions list:', knownFunctions.length, 'functions');

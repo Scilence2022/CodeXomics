@@ -30,7 +30,7 @@ const localTools = [
     'navigate_to_position', 'search_features', 'get_current_state', 'open_new_tab',
     'get_sequence', 'toggle_track', 'create_annotation', 'analyze_region',
     'export_data', 'jump_to_gene', 'get_genome_info', 'search_gene_by_name',
-    'compute_gc', 'translate_dna', 'reverse_complement', 'find_orfs',
+    'compute_gc', 'translate_dna', 'reverse_complement',
     'search_sequence_motif', 'get_nearby_features', 'get_feature_details',
     'export_sequence', 'import_sequence_data', 'search_go_terms',
     'search_kegg_pathways', 'get_protein_info', 'delete_gene', 'delete_sequence'

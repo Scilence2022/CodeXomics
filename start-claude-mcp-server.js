@@ -73,13 +73,11 @@ const toolInfo = `📚 Available Tools (Full List):
 - compute_gc: Calculate GC content
 - translate_dna: Translate DNA to protein
 - reverse_complement: Get reverse complement
-- find_orfs: Find Open Reading Frames
 - get_coding_sequence: Get coding sequence for genes
 - codon_usage_analysis: Analyze codon usage patterns
 
 🔬 Advanced Analysis:
 - analyze_region: Analyze genomic regions
-- predict_promoter: Predict promoter regions
 - blast_search: BLAST sequence similarity search
 
 🧪 Protein Structure:
@@ -121,4 +119,4 @@ const toolInfo = `📚 Available Tools (Full List):
 
 `;
 
-process.stderr.write(toolInfo); 
+process.stderr.write(toolInfo);

@@ -76,7 +76,6 @@ getResourceAvailability()
 - `compare_regions` - Multi-region comparison
 - `find_similar_sequences` - Sequence similarity search
 - `predict_promoter` - Promoter prediction
-- `find_orfs` - Open reading frame detection
 
 **Optimizations**:
 - **Parallel Processing**: Independent analysis functions
@@ -452,4 +451,4 @@ The implementation successfully addresses all critical issues identified in the 
 **Implementation Date**: December 2024  
 **Version**: 1.0  
 **Status**: Complete  
-**Next Phase**: Advanced ML Integration and Cloud Deployment 
+**Next Phase**: Advanced ML Integration and Cloud Deployment

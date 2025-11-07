@@ -71,7 +71,6 @@ class FunctionCallsOrganizer {
                 functions: [
                     'translate_sequence',
                     'calculate_gc_content',
-                    'find_orfs',
                     'reverse_complement',
                     'translate_dna',
                     'calculate_entropy',
@@ -611,4 +610,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = FunctionCallsOrganizer;
 } else if (typeof window !== 'undefined') {
     window.FunctionCallsOrganizer = FunctionCallsOrganizer;
-} 
+}

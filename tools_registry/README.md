@@ -33,7 +33,6 @@ tools_registry/
 │   ├── compute_gc.yaml
 │   ├── translate_dna.yaml
 │   ├── reverse_complement.yaml
-│   ├── find_orfs.yaml
 │   ├── search_sequence_motif.yaml
 │   ├── predict_promoter.yaml
 │   └── get_coding_sequence.yaml

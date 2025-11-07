@@ -58,7 +58,6 @@ Once configured, you can use natural language to interact with GenomeExplorer:
 **Sequence Analysis:**
 - "Calculate GC content of sequence ATGCGCTATCG"
 - "Translate DNA sequence ATGAAATAG to protein"
-- "Find ORFs in sequence ATGAAATAG"
 
 **Protein Structure:**
 - "Search for p53 protein structure"
@@ -93,7 +92,6 @@ Once configured, you can use natural language to interact with GenomeExplorer:
 - `compute_gc` - Calculate GC content
 - `translate_dna` - DNA to protein translation
 - `reverse_complement` - Get reverse complement
-- `find_orfs` - Find Open Reading Frames
 - `get_coding_sequence` - Get gene coding sequences
 - `codon_usage_analysis` - Analyze codon usage
 
@@ -234,8 +232,7 @@ Execute multiple tools in sequence:
 // Example batch analysis
 const results = await Promise.all([
     executeTool('get_sequence', { chromosome: 'chr1', start: 1000, end: 2000 }),
-    executeTool('compute_gc', { sequence: 'ATGCGC...' }),
-    executeTool('find_orfs', { dna: 'ATGCGC...' })
+    executeTool('compute_gc', { sequence: 'ATGCGC...' })
 ]);
 ```
 
@@ -301,12 +298,6 @@ const sequence = await executeTool('get_sequence', {
 // 3. Analyze GC content
 const gcContent = await executeTool('compute_gc', {
     sequence: sequence.result
-});
-
-// 4. Find ORFs
-const orfs = await executeTool('find_orfs', {
-    dna: sequence.result,
-    minLength: 30
 });
 ```
 
@@ -375,4 +366,4 @@ Regular updates include:
 - New tool additions
 - Performance improvements
 - Bug fixes
-- Protocol enhancements 
+- Protocol enhancements

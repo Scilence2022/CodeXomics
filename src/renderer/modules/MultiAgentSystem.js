@@ -739,7 +739,7 @@ class MultiAgentSystem {
      */
     isSpecializedAgent(agentName, functionName) {
         const specializations = {
-            'SequenceAgent': ['get_sequence', 'translate_dna', 'reverse_complement', 'find_orfs'],
+            'SequenceAgent': ['get_sequence', 'translate_dna', 'reverse_complement'],
             'ProteinAgent': ['fetch_protein_structure', 'search_pdb_structures', 'open_protein_viewer'],
             'NetworkAgent': ['build_protein_interaction_network', 'analyze_network_centrality'],
             'AnalysisAgent': ['analyze_region', 'compare_regions', 'find_similar_sequences'],
@@ -821,4 +821,4 @@ class MultiAgentSystem {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MultiAgentSystem;
-} 
+}

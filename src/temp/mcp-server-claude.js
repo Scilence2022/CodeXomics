@@ -306,19 +306,6 @@ class ClaudeMCPGenomeServer {
                         }
                     },
                     {
-                        name: "find_orfs",
-                        description: "Find Open Reading Frames (ORFs) in DNA sequence",
-                        inputSchema: {
-                            type: "object",
-                            properties: {
-                                dna: { type: "string", description: "DNA sequence" },
-                                minLength: { type: "number", description: "Minimum ORF length in codons", default: 30 },
-                                clientId: { type: "string", description: "Browser client ID" }
-                            },
-                            required: ["dna"]
-                        }
-                    },
-                    {
                         name: "search_sequence_motif",
                         description: "Search for sequence motifs in the genome",
                         inputSchema: {
@@ -902,4 +889,4 @@ if (require.main === module) {
         await server.stop();
         process.exit(0);
     });
-} 
+}

@@ -43,7 +43,6 @@ class AnalysisAgent extends AgentBase {
         this.toolMapping.set('translate_sequence', this.translateSequence.bind(this));
         this.toolMapping.set('translate_dna', this.translateDNA.bind(this));
         this.toolMapping.set('reverse_complement', this.reverseComplement.bind(this));
-        this.toolMapping.set('find_orfs', this.findORFs.bind(this));
         
         // GC含量分析
         this.toolMapping.set('calculate_gc_content', this.calculateGCContent.bind(this));
@@ -183,40 +182,6 @@ class AnalysisAgent extends AgentBase {
                 reverseComplement: reverseComp,
                 original: dna,
                 length: reverseComp.length
-            };
-            
-        } catch (error) {
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
-    
-    /**
-     * 查找开放阅读框
-     */
-    async findORFs(parameters, strategy) {
-        try {
-            const { dna, minLength = 30 } = parameters;
-            
-            if (!dna) {
-                throw new Error('DNA sequence is required');
-            }
-            
-            const orfs = this.sequenceUtils.findORFs(dna, minLength);
-            
-            return {
-                success: true,
-                orfs: orfs.map(orf => ({
-                    start: orf.start,
-                    end: orf.end,
-                    length: orf.end - orf.start,
-                    frame: orf.frame,
-                    sequence: orf.sequence,
-                    protein: orf.protein
-                })),
-                count: orfs.length
             };
             
         } catch (error) {
@@ -807,4 +772,4 @@ class AnalysisAgent extends AgentBase {
 }
 
 // 导出智能体
-window.AnalysisAgent = AnalysisAgent; 
+window.AnalysisAgent = AnalysisAgent;

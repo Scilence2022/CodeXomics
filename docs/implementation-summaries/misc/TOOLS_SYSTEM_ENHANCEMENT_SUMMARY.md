@@ -36,8 +36,8 @@ showGeneralSettingsModal() {
   ```
   Navigation & State: navigate_to_position, get_current_state, jump_to_gene
   Search & Discovery: search_features, search_gene_by_name, search_sequence_motif  
-  Sequence Analysis: get_sequence, compute_gc, translate_dna, reverse_complement, find_orfs
-  Advanced Analysis: analyze_region, predict_promoter, blast_search
+  Sequence Analysis: get_sequence, compute_gc, translate_dna, reverse_complement
+  Advanced Analysis: analyze_region, blast_search
   Metabolic Pathways: show_metabolic_pathway, find_pathway_genes
   Data Management: get_genome_info, toggle_track, create_annotation, export_data
   Protein Structure: fetch_protein_structure, search_protein_by_gene, open_protein_viewer
@@ -233,4 +233,4 @@ git commit -m "Enhanced function calling tools system with comprehensive metabol
 3. **"显示所有可用工具"** → 完整的70+工具列表
 4. **各种复杂的基因组分析任务** → 智能工具选择和执行
 
-系统已从一个基础的基因组浏览器发展为功能完备的基因组分析平台，支持从简单导航到复杂代谢途径分析的全方位科研需求。 
+系统已从一个基础的基因组浏览器发展为功能完备的基因组分析平台，支持从简单导航到复杂代谢途径分析的全方位科研需求。

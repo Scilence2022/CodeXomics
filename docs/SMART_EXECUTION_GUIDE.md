@@ -45,7 +45,6 @@
 包含的功能：
 - `translate_sequence` - 翻译序列
 - `calculate_gc_content` - 计算GC含量
-- `find_orfs` - 查找开放阅读框
 - `sequence_statistics` - 序列统计
 - `codon_usage_analysis` - 密码子使用分析
 - `calculate_melting_temp` - 计算熔解温度
@@ -267,4 +266,4 @@ FunctionCallsOrganizer (分类和优化)
 3. 查看性能统计数据
 4. 参考故障排除部分
 
-智能执行系统让GenomeExplorer的交互更加快速、智能和用户友好！ 
+智能执行系统让GenomeExplorer的交互更加快速、智能和用户友好！

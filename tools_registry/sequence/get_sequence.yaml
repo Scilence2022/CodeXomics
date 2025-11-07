@@ -84,7 +84,7 @@ sample_usages:
 relationships:
   depends_on: ["navigate_to_position"]
   conflicts_with: []
-  enhances: ["compute_gc", "translate_dna", "find_orfs", "search_sequence_motif"]
+  enhances: ["compute_gc", "translate_dna", "search_sequence_motif"]
   alternatives: ["get_coding_sequence"]
   prerequisites: []
   follow_up: ["compute_gc", "translate_dna", "reverse_complement", "analyze_region"]

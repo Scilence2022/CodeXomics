@@ -69,12 +69,6 @@ class ToolDefinitionCreator {
                 keywords: ['reverse', 'complement', 'dna', 'sequence'],
                 priority: 1
             },
-            'find_orfs': {
-                category: 'sequence',
-                description: 'Find Open Reading Frames (ORFs) in DNA sequence',
-                keywords: ['find', 'orfs', 'reading', 'frames', 'genes'],
-                priority: 1
-            },
             'search_sequence_motif': {
                 category: 'sequence',
                 description: 'Search for sequence motifs in the genome',

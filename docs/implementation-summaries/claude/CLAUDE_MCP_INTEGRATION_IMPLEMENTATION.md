@@ -75,12 +75,11 @@ class ClaudeMCPGenomeServer {
 - `search_gene_by_name`: Search for specific gene by name
 - `search_sequence_motif`: Search for sequence motifs
 
-#### 🧬 Sequence Analysis (7 tools)
+#### 🧬 Sequence Analysis (5 tools)
 - `get_sequence`: Extract DNA sequences
 - `compute_gc`: Calculate GC content
 - `translate_dna`: Translate DNA to protein
 - `reverse_complement`: Get reverse complement
-- `find_orfs`: Find Open Reading Frames
 - `get_coding_sequence`: Get coding sequence for genes
 - `codon_usage_analysis`: Analyze codon usage patterns
 
@@ -108,10 +107,9 @@ class ClaudeMCPGenomeServer {
 - `evo2_optimize_sequence`: Optimize DNA sequences
 - `evo2_analyze_essentiality`: Analyze gene essentiality
 
-#### 🔬 Advanced Analysis (3 tools)
+#### 🔬 Advanced Analysis (2 tools)
 - `blast_search`: BLAST sequence similarity search
 - `analyze_region`: Analyze genomic regions
-- `predict_promoter`: Predict promoter regions
 
 #### 📊 Data Management (5 tools)
 - `toggle_track`: Show/hide visualization tracks
@@ -498,4 +496,4 @@ Server logs include:
 
 The Claude MCP integration provides a robust, standards-compliant interface for genomics analysis while maintaining backward compatibility and extensibility. The implementation supports all existing functionality through a modern, well-documented protocol that integrates seamlessly with Claude Desktop and other MCP-compliant clients.
 
-The system is designed for scalability, maintainability, and ease of use, providing a solid foundation for future enhancements and integrations in the genomics analysis domain. 
+The system is designed for scalability, maintainability, and ease of use, providing a solid foundation for future enhancements and integrations in the genomics analysis domain.

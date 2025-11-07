@@ -29,15 +29,6 @@ parameters:
       enum: ["standard", "vertebrate_mitochondrial", "bacterial", "archaeal"]
       description: "Genetic code table to use for translation"
       default: "standard"
-    find_orfs:
-      type: boolean
-      description: "Find and translate all open reading frames (ORFs)"
-      default: false
-    min_orf_length:
-      type: number
-      description: "Minimum ORF length in amino acids (when find_orfs=true)"
-      minimum: 10
-      default: 50
     include_stop_codons:
       type: boolean
       description: "Include stop codons (*) in translation"
@@ -52,11 +43,6 @@ sample_usages:
     tool_call: "translate_dna(dna='ATGCGCTATCGAAAG', reading_frame=1)"
     thought: "User wants to translate a DNA sequence starting from reading frame 1"
     expected_result: "Amino acid sequence: MRYRK (with start and stop codons if present)"
-  
-  - user_query: "Find all possible ORFs in this sequence"
-    tool_call: "translate_dna(dna='TTGAAATAG', find_orfs=true, min_orf_length=10)"
-    thought: "User wants to find and translate all open reading frames above minimum length"
-    expected_result: "List of ORFs with their positions, frames, and amino acid sequences"
   
   - user_query: "Translate using mitochondrial genetic code"
     tool_call: "translate_dna(dna='ATGAAAAAATAG', genetic_code='vertebrate_mitochondrial', include_stop_codons=false)"
@@ -89,6 +75,5 @@ returns:
   amino_acid_sequence: "string - Translated amino acid sequence"
   reading_frame: "number - Reading frame used for translation"
   genetic_code_used: "string - Genetic code table used"
-  orfs_found: "array - List of ORFs if find_orfs was enabled"
   sequence_length: "number - Length of DNA sequence"
   protein_length: "number - Length of resulting protein sequence"

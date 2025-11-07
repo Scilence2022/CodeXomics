@@ -5202,16 +5202,8 @@ class ChatManager {
                 }
                 break;
 
-            case 'find_orfs':
             case 'find_restriction_sites':
                 // Limit array results
-                if (sanitized.orfs && Array.isArray(sanitized.orfs)) {
-                    const totalOrfs = sanitized.orfs.length;
-                    if (totalOrfs > 20) {
-                        sanitized.orfs = sanitized.orfs.slice(0, 20);
-                        sanitized.note = `Showing first 20 of ${totalOrfs} ORFs`;
-                    }
-                }
                 if (sanitized.sites && Array.isArray(sanitized.sites)) {
                     const totalSites = sanitized.sites.length;
                     if (totalSites > 20) {
@@ -5295,9 +5287,7 @@ class ChatManager {
             case 'calculate_gc_content':
                 return `📊 GC content analysis for ${result.chromosome}:${result.region}: Overall ${result.overallGCContent}% GC (${result.length}bp analyzed in ${result.totalWindows} windows)`;
                 
-            case 'find_orfs':
-                return `🔍 Found ${result.orfsFound} ORFs ≥${result.minLength}bp in ${result.chromosome}:${result.region}`;
-                
+
             case 'get_operons':
                 return `🧬 Found ${result.operonsFound} operons in ${result.chromosome}: ${result.operons.slice(0, 3).map(op => `${op.name} (${op.geneCount} genes)`).join(', ')}${result.operonsFound > 3 ? '...' : ''}`;
                 
@@ -5995,7 +5985,7 @@ class ChatManager {
             // Analysis operations - single execution per analysis request
             analysis: {
                 tools: ['codon_usage_analysis', 'compute_gc', 'analyze_region', 'translate_dna', 
-                       'reverse_complement', 'find_orfs', 'get_coding_sequence', 'analyze_interpro_domains'],
+                       'reverse_complement', 'get_coding_sequence', 'analyze_interpro_domains'],
                 policy: 'parameter_based',
                 condition: (tool, history, results) => {
                     const existingExecution = this.findExistingExecution(toolKey, history);
@@ -7521,7 +7511,6 @@ Sequence Analysis:
   - translate_dna: Translate DNA to protein
   - compute_gc: Calculate GC content
   - reverse_complement: Get reverse complement
-  - find_orfs: Find open reading frames
   - sequence_statistics: Analyze sequence composition
 
 Advanced Analysis:
@@ -7628,7 +7617,7 @@ Data Management:
                 'translate_dna', 'reverse_complement', 'compute_gc'
             ],
             'GENOMIC FEATURES': [
-                'find_orfs', 'predict_promoter', 'predict_rbs', 'search_sequence_motif',
+                'predict_promoter', 'predict_rbs', 'search_sequence_motif',
                 'find_restriction_sites', 'sequence_statistics'
             ],
             'PROTEIN STRUCTURE': [
@@ -7819,7 +7808,6 @@ ${coreTools}
             'get_sequence': () => this.getSequence(parameters),
             'translate_sequence': () => this.translateSequence(parameters),
             'calculate_gc_content': () => this.calculateGCContent(parameters),
-            'find_orfs': () => this.findOpenReadingFrames(parameters),
             
             // Track and display tools
             'toggle_track': () => this.toggleTrack(parameters),
@@ -8115,7 +8103,7 @@ COMMON TASK PATTERNS:
 • **Annotation Export: export_gff_annotations → export features as GFF, export_bed_format → export as BED**
 • AlphaFold AI Predictions: search_alphafold_by_gene → open_alphafold_viewer
 • PDB Experimental Structures: search_pdb_structures → open_protein_viewer
-• Sequence Analysis: get_sequence → compute_gc/translate_dna/find_orfs
+• Sequence Analysis: get_sequence → compute_gc/translate_dna
 • Navigation: jump_to_gene → navigate_to_position
 • New Tab: open_new_tab → for parallel analysis
 • BLAST Search: blast_search → analyze results
@@ -8157,7 +8145,7 @@ SEARCH FUNCTIONS GUIDE:
 ANALYSIS FUNCTIONS:
 - Sequence: get_coding_sequence, translate_dna, reverse_complement
 - Composition: compute_gc, sequence_statistics, codon_usage_analysis
-- Features: find_orfs, predict_promoter, predict_rbs, find_restriction_sites
+- Features: predict_promoter, predict_rbs, find_restriction_sites
 - Comparison: blast_search, compare_regions, find_similar_sequences
 - Editing: copy_sequence, cut_sequence, paste_sequence, deleteSequence, insertSequence, replace_sequence
 
@@ -8331,7 +8319,6 @@ MicrobeGenomicsFunctions Examples:
 - Navigate to gene: {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
 - Calculate GC content: {"tool_name": "compute_gc", "parameters": {"sequence": "ATGCGCTATCG"}}
 - Get upstream region: {"tool_name": "get_upstream_region", "parameters": {"geneObj": {"chromosome": "chr1", "feature": {"start": 1000, "end": 2000}}, "length": 200}}
-- Find ORFs: {"tool_name": "find_orfs", "parameters": {"dna": "ATGAAATAG", "minLength": 30}}
 - Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "ATGCTATAAT"}}
 - Search motif: {"tool_name": "search_sequence_motif", "parameters": {"pattern": "GAATTC", "chromosome": "chr1"}}
 - Reverse complement: {"tool_name": "reverse_complement", "parameters": {"dna": "ATGC"}}
@@ -8360,7 +8347,6 @@ CRITICAL DISTINCTION - Search Functions:
 Common Analysis Tools:
 - Find restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
 - Calculate GC content: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition"]}}
-- Find ORFs: {"tool_name": "find_orfs", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "minLength": 300}}
 - Search motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}
 
 Protein Structure Tools:
@@ -8604,7 +8590,6 @@ MicrobeGenomicsFunctions Examples:
 - Navigate to gene: {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
 - Calculate GC content: {"tool_name": "compute_gc", "parameters": {"sequence": "ATGCGCTATCG"}}
 - Get upstream region: {"tool_name": "get_upstream_region", "parameters": {"geneObj": {"chromosome": "chr1", "feature": {"start": 1000, "end": 2000}}, "length": 200}}
-- Find ORFs: {"tool_name": "find_orfs", "parameters": {"dna": "ATGAAATAG", "minLength": 30}}
 - Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "ATGCTATAAT"}}
 - Search motif: {"tool_name": "search_sequence_motif", "parameters": {"pattern": "GAATTC", "chromosome": "chr1"}}
 - Reverse complement: {"tool_name": "reverse_complement", "parameters": {"dna": "ATGC"}}
@@ -8631,7 +8616,6 @@ CRITICAL DISTINCTION - Search Functions:
 Common Analysis Tools:
 - Find restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
 - Calculate GC content: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition"]}}
-- Find ORFs: {"tool_name": "find_orfs", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "minLength": 300}}
 - Search motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}
 
 Protein Structure Tools:
@@ -9340,9 +9324,7 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.calculateGCContent(parameters);
                     break;
                     
-                case 'find_orfs':
-                    result = await this.findOpenReadingFrames(parameters);
-                    break;
+
                     
                 case 'get_operons':
                     result = await this.getOperons(parameters);
@@ -10238,7 +10220,6 @@ ${this.getPluginSystemInfo()}`;
             'compute_gc',
             'calc_region_gc',
             'reverse_complement',
-            'find_orfs',
             'sequence_statistics',
             'codon_usage_analysis',
             'analyze_codon_usage',
@@ -17007,7 +16988,6 @@ ${this.getPluginSystemInfo()}`;
             'compute_gc': 'Sequence Agent',
             'calc_region_gc': 'Sequence Agent',
             'reverse_complement': 'Sequence Agent',
-            'find_orfs': 'Sequence Agent',
             'find_restriction_sites': 'Sequence Agent',
             'virtual_digest': 'Sequence Agent',
             'get_upstream_region': 'Sequence Agent',
@@ -17908,4 +17888,4 @@ ${this.getPluginSystemInfo()}`;
             testEventAdded: true
         };
     }
-} 
+}

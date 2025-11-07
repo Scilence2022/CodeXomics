@@ -29,7 +29,6 @@ User Chat Input → ChatManager → LLM → Tool Calls → MicrobeGenomicsFuncti
 - `compute_gc`: Calculate GC content of DNA sequence
 - `reverse_complement`: Get reverse complement of DNA
 - `translate_dna`: Translate DNA to protein sequence
-- `find_orfs`: Find Open Reading Frames
 - `calculate_entropy`: Calculate sequence complexity
 
 ### 📊 Calculation Functions
@@ -39,7 +38,6 @@ User Chat Input → ChatManager → LLM → Tool Calls → MicrobeGenomicsFuncti
 - `analyze_codon_usage`: Codon usage statistics
 
 ### 🔮 Prediction Functions
-- `predict_promoter`: Find promoter motifs (-10 box)
 - `predict_rbs`: Predict ribosome binding sites
 - `predict_terminator`: Find transcription terminators
 
@@ -96,8 +94,7 @@ LLM performs:
 1. {"tool_name": "search_gene_by_name", "parameters": {"name": "dnaA"}}
 2. {"tool_name": "get_upstream_region", "parameters": {"geneObj": "result1", "length": 200}}
 3. {"tool_name": "compute_gc", "parameters": {"sequence": "upstream_sequence"}}
-4. {"tool_name": "predict_promoter", "parameters": {"seq": "upstream_sequence"}}
-5. {"tool_name": "navigate_to", "parameters": {"chromosome": "chr", "start": "start", "end": "end"}}
+4. {"tool_name": "navigate_to", "parameters": {"chromosome": "chr", "start": "start", "end": "end"}}
 ```
 
 **Motif Discovery Near Genes:**
@@ -236,4 +233,4 @@ window.chatManager.MicrobeFns
 
 ---
 
-This integration provides a powerful foundation for AI-assisted genomic analysis, making complex bioinformatics workflows accessible through natural language conversation. 
+This integration provides a powerful foundation for AI-assisted genomic analysis, making complex bioinformatics workflows accessible through natural language conversation.

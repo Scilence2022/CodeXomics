@@ -67,10 +67,10 @@ sample_usages:
 relationships:
   depends_on: ["jump_to_gene", "search_gene_by_name"]
   conflicts_with: []
-  enhances: ["find_orfs", "translate_dna"]
+  enhances: ["translate_dna"]
   alternatives: ["get_sequence"]
   prerequisites: []
-  follow_up: ["translate_dna", "compute_gc", "find_orfs"]
+  follow_up: ["translate_dna", "compute_gc"]
 metadata:
   usage_count: 0
   success_rate: 0

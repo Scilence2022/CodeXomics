@@ -46,12 +46,11 @@ The Claude MCP Server is now fully functional and ready for Claude Desktop integ
 - `search_gene_by_name` - Search for specific gene by name
 - `toggle_track` - Show/hide visualization tracks
 
-### 🧬 Sequence Analysis (8 tools)
+### 🧬 Sequence Analysis (7 tools)
 - `get_sequence` - Extract DNA sequences
 - `compute_gc` - Calculate GC content
 - `translate_dna` - Translate DNA to protein
 - `reverse_complement` - Get reverse complement
-- `find_orfs` - Find Open Reading Frames
 - `get_coding_sequence` - Get coding sequence for genes
 - `search_sequence_motif` - Search for sequence motifs
 - `predict_promoter` - Predict promoter regions
@@ -213,4 +212,4 @@ The Claude MCP Server is now **fully operational** and ready for Claude Desktop 
 - ✅ **Production Ready**: Stable, reliable server operation
 - ✅ **Claude Desktop Compatible**: Ready for immediate integration
 
-The server provides comprehensive genomics tool integration with direct communication between Claude Desktop and CodeXomics, eliminating the need for intermediate servers and providing better performance and maintainability. 
+The server provides comprehensive genomics tool integration with direct communication between Claude Desktop and CodeXomics, eliminating the need for intermediate servers and providing better performance and maintainability.

@@ -77,7 +77,7 @@ relationships:
   enhances: ["analyze_region", "sequence_statistics"]
   alternatives: ["sequence_statistics"]
   prerequisites: []
-  follow_up: ["translate_dna", "find_orfs", "predict_promoter"]
+  follow_up: ["translate_dna", "predict_promoter"]
 
 # Performance and usage statistics
 metadata:

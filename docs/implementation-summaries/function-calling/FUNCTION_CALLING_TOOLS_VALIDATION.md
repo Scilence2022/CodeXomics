@@ -47,9 +47,9 @@ const localTools = [
     'search_motif', 'search_pattern', 'search_sequence_motif',
     'search_intergenic_regions', 'get_nearby_features', 'find_intergenic_regions',
     
-    // Sequence Analysis (13 tools)
+    // Sequence Analysis (12 tools)
     'get_sequence', 'translate_sequence', 'translate_dna', 'calculate_gc_content',
-    'compute_gc', 'calc_region_gc', 'reverse_complement', 'find_orfs',
+    'compute_gc', 'calc_region_gc', 'reverse_complement',
     'sequence_statistics', 'codon_usage_analysis', 'analyze_codon_usage',
     'calculate_entropy', 'calculate_melting_temp', 'calculate_molecular_weight',
     
@@ -123,7 +123,7 @@ validateAllTools() {
 ### 1. 智能工具分类
 - **Navigation**: 导航和位置控制 (13个工具)
 - **Search**: 搜索和发现 (10个工具) 
-- **Sequence**: 序列分析 (13个工具)
+- **Sequence**: 序列分析 (12个工具)
 - **Analysis**: 高级分析 (10个工具)
 - **Annotation**: 注释和特征 (9个工具)
 - **Track**: 轨道管理 (4个工具)
@@ -182,4 +182,4 @@ Available Tools Summary:
 2. 实现工具权限和安全控制
 3. 增加工具文档自动生成
 4. 支持自定义工具集配置
-5. 添加工具性能基准测试 
+5. 添加工具性能基准测试

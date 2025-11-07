@@ -44,7 +44,7 @@ Tools for genome browser navigation and state management:
 - `search_gene_by_name` - Search specific gene
 - `toggle_track` - Show/hide tracks
 
-### 2. Sequence Analysis (8 tools)
+### 2. Sequence Analysis (7 tools)
 **Location:** `sequence/SequenceTools.js`
 
 Tools for DNA/RNA sequence analysis and manipulation:
@@ -52,7 +52,6 @@ Tools for DNA/RNA sequence analysis and manipulation:
 - `compute_gc` - Calculate GC content
 - `translate_dna` - Translate DNA to protein
 - `reverse_complement` - Get reverse complement
-- `find_orfs` - Find Open Reading Frames
 - `search_sequence_motif` - Search sequence motifs
 - `predict_promoter` - Predict promoter regions
 - `get_coding_sequence` - Get coding sequence for gene
@@ -281,4 +280,4 @@ For questions or issues with the MCP tools architecture:
 1. Check the module-specific documentation
 2. Review the ToolsIntegrator implementation
 3. Examine the tool execution logs
-4. Consult the main project documentation 
+4. Consult the main project documentation

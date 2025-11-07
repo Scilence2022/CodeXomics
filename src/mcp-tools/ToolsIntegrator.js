@@ -85,8 +85,6 @@ class ToolsIntegrator {
                     return { protein: this.sequenceTools.translateDNA(parameters.dna, parameters.frame) };
                 } else if (toolName === 'reverse_complement') {
                     return { reverseComplement: this.sequenceTools.reverseComplement(parameters.dna) };
-                } else if (toolName === 'find_orfs') {
-                    return { orfs: this.sequenceTools.findORFs(parameters.dna, parameters.minLength) };
                 } else {
                     return await this.sequenceTools.executeClientTool(toolName, parameters, clientId);
                 }
@@ -438,4 +436,4 @@ class ToolsIntegrator {
     }
 }
 
-module.exports = ToolsIntegrator; 
+module.exports = ToolsIntegrator;

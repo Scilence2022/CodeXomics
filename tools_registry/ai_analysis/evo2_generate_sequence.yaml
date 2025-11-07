@@ -97,7 +97,7 @@ relationships:
   enhances: ["evo2_predict_function", "evo2_design_crispr"]
   alternatives: []
   prerequisites: []
-  follow_up: ["compute_gc", "translate_dna", "find_orfs", "evo2_predict_function"]
+  follow_up: ["compute_gc", "translate_dna", "evo2_predict_function"]
 
 # Performance and usage statistics
 metadata:

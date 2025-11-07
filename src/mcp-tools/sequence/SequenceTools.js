@@ -65,20 +65,6 @@ class SequenceTools {
                 }
             },
 
-            find_orfs: {
-                name: 'find_orfs',
-                description: 'Find Open Reading Frames (ORFs) in DNA sequence',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        dna: { type: 'string', description: 'DNA sequence' },
-                        minLength: { type: 'number', description: 'Minimum ORF length in codons', default: 30 },
-                        clientId: { type: 'string', description: 'Browser client ID' }
-                    },
-                    required: ['dna']
-                }
-            },
-
             search_sequence_motif: {
                 name: 'search_sequence_motif',
                 description: 'Search for sequence motifs in the genome',
@@ -90,20 +76,6 @@ class SequenceTools {
                         clientId: { type: 'string', description: 'Browser client ID' }
                     },
                     required: ['pattern']
-                }
-            },
-
-            predict_promoter: {
-                name: 'predict_promoter',
-                description: 'Predict promoter regions in DNA sequence',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        seq: { type: 'string', description: 'DNA sequence to analyze' },
-                        motif: { type: 'string', description: 'Promoter motif pattern (optional)' },
-                        clientId: { type: 'string', description: 'Browser client ID' }
-                    },
-                    required: ['seq']
                 }
             },
 
@@ -180,55 +152,6 @@ class SequenceTools {
         
         return dna.split('').reverse().map(base => complement[base] || base).join('');
     }
-
-    findORFs(dna, minLength = 30) {
-        const startCodon = 'ATG';
-        const stopCodons = ['TAA', 'TAG', 'TGA'];
-        const orfs = [];
-        
-        // Check all 6 reading frames (3 forward, 3 reverse)
-        for (let frame = 0; frame < 3; frame++) {
-            // Forward strand
-            const forwardORFs = this.findORFsInStrand(dna, frame, minLength, '+');
-            orfs.push(...forwardORFs);
-            
-            // Reverse strand
-            const reverseDNA = this.reverseComplement(dna);
-            const reverseORFs = this.findORFsInStrand(reverseDNA, frame, minLength, '-');
-            orfs.push(...reverseORFs);
-        }
-        
-        return orfs.sort((a, b) => b.length - a.length);
-    }
-
-    findORFsInStrand(dna, frame, minLength, strand) {
-        const sequence = dna.toUpperCase().slice(frame);
-        const orfs = [];
-        let start = -1;
-        
-        for (let i = 0; i < sequence.length - 2; i += 3) {
-            const codon = sequence.slice(i, i + 3);
-            
-            if (codon === 'ATG' && start === -1) {
-                start = i;
-            } else if (['TAA', 'TAG', 'TGA'].includes(codon) && start !== -1) {
-                const length = (i - start + 3) / 3;
-                if (length >= minLength) {
-                    orfs.push({
-                        start: start + frame + 1,
-                        end: i + frame + 3,
-                        length: length,
-                        strand: strand,
-                        frame: frame + 1,
-                        sequence: sequence.slice(start, i + 3)
-                    });
-                }
-                start = -1;
-            }
-        }
-        
-        return orfs;
-    }
 }
 
-module.exports = SequenceTools; 
+module.exports = SequenceTools;

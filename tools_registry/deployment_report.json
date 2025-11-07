@@ -2,8 +2,8 @@
   "timestamp": "2025-09-24T13:12:10.886Z",
   "version": "1.0.0",
   "stats": {
-    "totalTools": 88,
-    "validTools": 88,
+    "totalTools": 87,
+    "validTools": 87,
     "invalidTools": 0,
     "categories": 11,
     "totalSize": 172673
@@ -68,11 +68,6 @@
       "name": "compute_gc",
       "category": "sequence",
       "file": "compute_gc.yaml"
-    },
-    {
-      "name": "find_orfs",
-      "category": "sequence",
-      "file": "find_orfs.yaml"
     },
     {
       "name": "get_coding_sequence",

@@ -26,7 +26,7 @@ node start-claude-mcp-server.js
 The server will:
 - 🔍 Automatically find an available port (starting from 3001)
 - 📡 Start both stdio (for Claude Desktop) and WebSocket (for browser) transports
-- 🛠️ Register all 40+ genomics tools
+- 🛠️ Register all 39+ genomics tools
 - 📋 Display connection information
 
 ## 🔧 Manual Configuration (if needed)
@@ -100,11 +100,11 @@ Once connected, Claude Desktop will have access to 40+ genomics tools:
 ### 🔍 Search & Discovery (3 tools)
 - search_features, search_gene_by_name, search_sequence_motif
 
-### 🧬 Sequence Analysis (7 tools)
-- get_sequence, compute_gc, translate_dna, reverse_complement, find_orfs, get_coding_sequence, codon_usage_analysis
+### 🧬 Sequence Analysis (6 tools)
+- get_sequence, compute_gc, translate_dna, reverse_complement, get_coding_sequence, codon_usage_analysis
 
-### 🔬 Advanced Analysis (3 tools)
-- analyze_region, predict_promoter, blast_search
+### 🔬 Advanced Analysis (2 tools)
+- analyze_region, blast_search
 
 ### 🧪 Protein Structure (7 tools)
 - fetch_protein_structure, search_protein_by_gene, open_protein_viewer, search_alphafold_by_gene, fetch_alphafold_structure, search_alphafold_by_sequence, open_alphafold_viewer
@@ -145,4 +145,4 @@ To update the MCP server:
 1. Pull latest changes from git
 2. Run `npm install` to update dependencies
 3. Restart the MCP server
-4. Configuration should remain unchanged 
+4. Configuration should remain unchanged

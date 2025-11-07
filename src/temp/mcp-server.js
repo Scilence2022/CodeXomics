@@ -428,20 +428,6 @@ class MCPGenomeBrowserServer {
                 }
             },
 
-            find_orfs: {
-                name: 'find_orfs',
-                description: 'Find Open Reading Frames (ORFs) in DNA sequence',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        dna: { type: 'string', description: 'DNA sequence' },
-                        minLength: { type: 'number', description: 'Minimum ORF length in codons', default: 30 },
-                        clientId: { type: 'string', description: 'Browser client ID' }
-                    },
-                    required: ['dna']
-                }
-            },
-
             search_sequence_motif: {
                 name: 'search_sequence_motif',
                 description: 'Search for sequence motifs in the genome',
@@ -4108,4 +4094,4 @@ module.exports = MCPGenomeBrowserServer;
 if (require.main === module) {
     const server = new MCPGenomeBrowserServer();
     server.start();
-} 
+}
