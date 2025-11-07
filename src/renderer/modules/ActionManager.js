@@ -250,7 +250,7 @@ class ActionManager {
         
         // Action List modal listeners
         document.getElementById('executeAllActionsBtn')?.addEventListener('click', () => this.executeAllActions());
-        document.getElementById('clearAllActionsBtn')?.addEventListener('click', () => this.clearAllActions());
+        document.getElementById('clearAllActionsBtn')?.addEventListener('click', () => this.clearAllActions({ forced: false }));
         document.getElementById('exportActionsBtn')?.addEventListener('click', () => this.exportActions());
         document.getElementById('importActionsBtn')?.addEventListener('click', () => this.importActions());
         
