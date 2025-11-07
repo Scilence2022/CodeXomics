@@ -2922,9 +2922,21 @@ class ChatManager {
         // Support both camelCase and snake_case parameter names
         const trackName = params.trackName || params.track_name;
         let visible = params.visible;
+        const action = params.action;
         
         if (!trackName) {
             throw new Error('trackName or track_name parameter is required');
+        }
+        
+        // Convert action to visible if visible is not specified
+        if (visible === undefined && action) {
+            if (action === 'show') {
+                visible = true;
+            } else if (action === 'hide') {
+                visible = false;
+            } else {
+                throw new Error('Invalid action parameter. Must be "show" or "hide"');
+            }
         }
         
         // Map track names to checkbox IDs
@@ -2936,7 +2948,8 @@ class ChatManager {
             'proteins': 'trackProteins',
             'wigTracks': 'trackWIG',
             'sequence': 'trackSequence',
-            'actions': 'trackActions'
+            'actions': 'trackActions',
+            'action': 'trackActions'
         };
         
         const checkboxId = trackMapping[trackName];
@@ -2952,6 +2965,20 @@ class ChatManager {
         // If visible not specified, toggle current state
         if (visible === undefined) {
             visible = !trackCheckbox.checked;
+        }
+        
+        // Check current state before making changes
+        const currentState = trackCheckbox.checked;
+        
+        // If the track is already in the desired state, no need to change it
+        if (currentState === visible) {
+            return {
+                success: true,
+                track: trackName,
+                visible: visible,
+                message: `Track ${trackName} is already ${visible ? 'shown' : 'hidden'}`,
+                noChangeNeeded: true
+            };
         }
         
         trackCheckbox.checked = visible;
@@ -5263,6 +5290,9 @@ class ChatManager {
                 
             case 'toggle_track':
             case 'toggle_annotation_track':
+                if (result.noChangeNeeded) {
+                    return `👁️ Track "${parameters.trackName || parameters.track_name}" is already ${result.visible ? 'visible' : 'hidden'}`;
+                }
                 return `👁️ Track "${parameters.trackName || parameters.track_name}" is now ${result.visible ? 'visible' : 'hidden'}`;
                 
             case 'create_annotation':
@@ -5809,15 +5839,29 @@ class ChatManager {
             'load annotation', 'load variant', 'load reads', 'load wig', 'load operon',
             // UI action patterns
             'open new tab', 'create new tab', 'new tab',
-            // Track control patterns
+            // Track control patterns - expanded to include more variations
             'toggle track', 'hide track', 'show track', 'toggle off', 'toggle on',
             'turn off', 'turn on', 'hide gc', 'show gc', 'toggle gc',
+            'show genes', 'hide genes', 'toggle genes', 'show variants', 'hide variants', 'toggle variants',
+            'show reads', 'hide reads', 'toggle reads', 'show proteins', 'hide proteins', 'toggle proteins',
+            'show wig', 'hide wig', 'toggle wig', 'show sequence', 'hide sequence', 'toggle sequence',
+            'show actions', 'hide actions', 'toggle actions',
             // State information patterns
             'get genome info', 'genome information', 'show genome info', 'genome details',
             'get current state', 'current state', 'browser state', 'show state'
         ];
         
-        const isSingleExecutionTask = singleExecutionPatterns.some(pattern => message.includes(pattern));
+        const isSingleExecutionTask = singleExecutionPatterns.some(pattern => 
+            message.toLowerCase().includes(pattern)
+        ) || (
+            // Also check for very short messages that are likely simple commands
+            message.toLowerCase().split(' ').length <= 5 && 
+            (message.toLowerCase().includes('toggle') || 
+             message.toLowerCase().includes('show') || 
+             message.toLowerCase().includes('hide') ||
+             message.toLowerCase().includes('turn on') ||
+             message.toLowerCase().includes('turn off'))
+        );
         
         // Check if we executed tools that typically complete tasks
         const taskCompletingTools = [
@@ -5857,6 +5901,10 @@ class ChatManager {
             ];
             
             if (fileAndUITools.includes(result.tool)) {
+                // For toggle_track operations, both success and noChangeNeeded are valid results
+                if (result.tool === 'toggle_track' || result.tool === 'toggle_annotation_track') {
+                    return result.result.success === true || result.result.noChangeNeeded === true;
+                }
                 return result.result.success === true;
             }
             
@@ -6011,22 +6059,127 @@ class ChatManager {
                 }
             },
             
-            // Track toggle operations - prevent rapid repetition of same track toggle
+            // Track toggle operations - prevent unnecessary repetition of track toggle
             track_operations: {
                 tools: ['toggle_track', 'toggle_annotation_track'],
                 policy: 'parameter_based_rate_limited',
                 condition: (tool, history, results) => {
-                    // Check for recent execution of same track toggle
-                    const recentExecution = this.findRecentExecution(toolName, history, 3000); // 3 seconds
-                    if (recentExecution && recentExecution.parameters) {
-                        // Allow if toggling a different track
-                        const currentTrack = tool.parameters?.trackName;
-                        const recentTrack = recentExecution.parameters?.trackName;
-                        if (currentTrack === recentTrack) {
-                            console.log(`🚫 [Policy] Track toggle rate limited for same track: ${currentTrack}`);
+                    // Get current track name from either trackName or track_name parameter
+                    const currentTrack = tool.parameters?.trackName || tool.parameters?.track_name;
+                    const currentAction = tool.parameters?.action;
+                    const currentVisible = tool.parameters?.visible;
+                    
+                    // Convert action to visible state for comparison
+                    let currentVisibleState = currentVisible;
+                    if (currentVisibleState === undefined && currentAction) {
+                        currentVisibleState = (currentAction === 'show');
+                    }
+                    
+                    // Normalize track names for comparison (treat "action" and "actions" as the same)
+                    const normalizeTrackName = (trackName) => {
+                        if (trackName === 'action') return 'actions';
+                        return trackName;
+                    };
+                    
+                    const normalizedCurrentTrack = normalizeTrackName(currentTrack);
+                    
+                    // Check if the track is already in the desired state
+                    const trackMapping = {
+                        'genes': 'trackGenes',
+                        'gc': 'trackGC',
+                        'variants': 'trackVariants', 
+                        'reads': 'trackReads',
+                        'proteins': 'trackProteins',
+                        'wigTracks': 'trackWIG',
+                        'sequence': 'trackSequence',
+                        'actions': 'trackActions',
+                        'action': 'trackActions'  // 添加对'action'的支持
+                    };
+                    
+                    const checkboxId = trackMapping[currentTrack];
+                    if (checkboxId) {
+                        const trackCheckbox = document.getElementById(checkboxId);
+                        if (trackCheckbox && trackCheckbox.checked === currentVisibleState) {
+                            console.log(`🚫 [Policy] Track ${currentTrack} is already ${currentVisibleState ? 'visible' : 'hidden'}, no need to toggle`);
                             return false;
                         }
                     }
+                    
+                    // Check for recent execution of same track toggle with more precise parameter matching
+                    const now = Date.now();
+                    const timeWindowMs = 3000; // 3 seconds
+                    
+                    // Look through conversation history for recent executions
+                    for (let i = conversationHistory.length - 1; i >= 0; i--) {
+                        const msg = conversationHistory[i];
+                        
+                        // Check assistant messages for tool calls
+                        if (msg.role === 'assistant' && msg.content) {
+                            try {
+                                // Try to parse as single tool call
+                                const parsed = JSON.parse(msg.content);
+                                if ((parsed.tool_name === 'toggle_track' || parsed.tool_name === 'toggle_annotation_track') && 
+                                    parsed.parameters) {
+                                    const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
+                                    
+                                    if (now - estimatedTimestamp < timeWindowMs) {
+                                        // Get recent track name from either trackName or track_name parameter
+                                        const recentTrack = parsed.parameters?.trackName || parsed.parameters?.track_name;
+                                        const recentAction = parsed.parameters?.action;
+                                        const recentVisible = parsed.parameters?.visible;
+                                        
+                                        // Convert recent action to visible state for comparison
+                                        let recentVisibleState = recentVisible;
+                                        if (recentVisibleState === undefined && recentAction) {
+                                            recentVisibleState = (recentAction === 'show');
+                                        }
+                                        
+                                        // If same track and same action, block it
+                                        const normalizedRecentTrack = normalizeTrackName(recentTrack);
+                                        if (normalizedCurrentTrack === normalizedRecentTrack && currentVisibleState === recentVisibleState) {
+                                            console.log(`🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`);
+                                            return false;
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                // Try to parse as multiple tool calls
+                                try {
+                                    const multipleToolCalls = this.parseMultipleToolCalls(msg.content);
+                                    const matchingTool = multipleToolCalls.find(t => 
+                                        t.tool_name === 'toggle_track' || t.tool_name === 'toggle_annotation_track'
+                                    );
+                                    
+                                    if (matchingTool && matchingTool.parameters) {
+                                        const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
+                                        
+                                        if (now - estimatedTimestamp < timeWindowMs) {
+                                            // Get recent track name from either trackName or track_name parameter
+                                            const recentTrack = matchingTool.parameters?.trackName || matchingTool.parameters?.track_name;
+                                            const recentAction = matchingTool.parameters?.action;
+                                            const recentVisible = matchingTool.parameters?.visible;
+                                            
+                                            // Convert recent action to visible state for comparison
+                                            let recentVisibleState = recentVisible;
+                                            if (recentVisibleState === undefined && recentAction) {
+                                                recentVisibleState = (recentAction === 'show');
+                                            }
+                                            
+                                            // If same track and same action, block it
+                                            const normalizedRecentTrack = normalizeTrackName(recentTrack);
+                                            if (normalizedCurrentTrack === normalizedRecentTrack && currentVisibleState === recentVisibleState) {
+                                                console.log(`🚫 [Policy] Track toggle rate limited for same track with same action: ${currentTrack} (${currentAction || currentVisible})`);
+                                                return false;
+                                            }
+                                        }
+                                    }
+                                } catch (e2) {
+                                    // Not a tool call, continue
+                                }
+                            }
+                        }
+                    }
+                    
                     return true;
                 }
             },

@@ -130,11 +130,18 @@ class NavigationTools {
                 parameters: {
                     type: 'object',
                     properties: {
-                        trackName: { type: 'string', description: 'Track name (genes, gc, variants, reads, proteins)' },
+                        trackName: { type: 'string', description: 'Track name (genes, gc, variants, reads, proteins, sequence, actions)' },
+                        track_name: { type: 'string', description: 'Track name (alternative to trackName) (genes, gc, variants, reads, proteins, sequence, actions)' },
                         visible: { type: 'boolean', description: 'Whether to show or hide the track' },
+                        action: { type: 'string', description: 'Action to perform (show or hide)', enum: ['show', 'hide'] },
                         clientId: { type: 'string', description: 'Browser client ID' }
                     },
-                    required: ['trackName', 'visible']
+                    anyOf: [
+                        { required: ['trackName', 'visible'] },
+                        { required: ['track_name', 'visible'] },
+                        { required: ['trackName', 'action'] },
+                        { required: ['track_name', 'action'] }
+                    ]
                 }
             }
         };
