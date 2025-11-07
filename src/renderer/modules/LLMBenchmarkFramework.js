@@ -856,7 +856,10 @@ class LLMBenchmarkFramework {
                 llmInteractionData: interactionData,
                 
                 // CRITICAL FIX: Include parseDebugInfo for tool evaluation
-                parseDebugInfo: actualResult?.parseDebugInfo || null
+                parseDebugInfo: actualResult?.parseDebugInfo || null,
+                
+                // SONG'S CRITICAL REQUIREMENT: Include detailedLogs for round-by-round analysis
+                detailedLogs: interactionData?.detailedLogs || null
             };
 
         } finally {
@@ -3480,17 +3483,39 @@ class LLMBenchmarkFramework {
             parseResults: []
         };
         
-        logs.forEach(log => {
+        let currentRound = null;
+        
+        logs.forEach((log, index) => {
             const msg = log.message;
             
             if (msg.includes('=== FUNCTION CALL ROUND')) {
                 const roundMatch = msg.match(/ROUND (\d+)\/(\d+)/);
                 if (roundMatch) {
-                    toolCallInfo.toolCallRounds.push({
+                    currentRound = {
                         current: parseInt(roundMatch[1]),
                         total: parseInt(roundMatch[2]),
-                        timestamp: log.timestamp
-                    });
+                        timestamp: log.timestamp,
+                        tools: [] // SONG'S REQUEST: Track tools called in this round
+                    };
+                    toolCallInfo.toolCallRounds.push(currentRound);
+                }
+            } else if (currentRound && (msg.includes('Direct parse successful:') || msg.includes('Flexible extraction parse successful:') || msg.includes('Regex parse successful:'))) {
+                // SONG'S REQUEST: Extract tool name from successful parse in current round
+                try {
+                    const toolMatch = msg.match(/successful:\s*\{[^}]*"tool_name"[^}]*"([^"]+)"/);
+                    if (toolMatch && !currentRound.tools.includes(toolMatch[1])) {
+                        currentRound.tools.push(toolMatch[1]);
+                        console.log(`🔧 [extractToolCallHistoryFromLogs] Added tool '${toolMatch[1]}' to round ${currentRound.current}`);
+                    }
+                } catch (e) {
+                    // Ignore parsing errors
+                }
+            } else if (currentRound && msg.includes('Executing tool:')) {
+                // SONG'S REQUEST: Extract tool name from execution logs
+                const toolMatch = msg.match(/Executing tool:\s*([^\s,]+)/);
+                if (toolMatch && !currentRound.tools.includes(toolMatch[1])) {
+                    currentRound.tools.push(toolMatch[1]);
+                    console.log(`🔧 [extractToolCallHistoryFromLogs] Added executed tool '${toolMatch[1]}' to round ${currentRound.current}`);
                 }
             } else if (msg.includes('Skipping already executed tool:')) {
                 const toolName = msg.split('Skipping already executed tool:')[1]?.trim();
@@ -3503,6 +3528,8 @@ class LLMBenchmarkFramework {
                 toolCallInfo.parseResults.push(msg);
             }
         });
+        
+        console.log('🔍 [extractToolCallHistoryFromLogs] Extracted rounds with tools:', toolCallInfo.toolCallRounds);
         
         return toolCallInfo;
     }

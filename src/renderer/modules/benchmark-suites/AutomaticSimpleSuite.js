@@ -747,6 +747,37 @@ class AutomaticSimpleSuite {
             multipleTools: actualTools.length > 1
         });
 
+        // SONG'S CRITICAL REQUIREMENT: Check all rounds for tool detection
+        // Analyze tools from ALL rounds, not just the final result
+        let toolFoundInAnyRound = false;
+        let foundInRound = null;
+        
+        if (testResult.detailedLogs?.toolCallHistory?.toolCallRounds) {
+            const rounds = testResult.detailedLogs.toolCallHistory.toolCallRounds;
+            console.log(`🔍 [evaluateBasicFunctionCall] Checking ${rounds.length} rounds for tool '${expectedResult.tool_name}'`);
+            
+            for (let i = 0; i < rounds.length; i++) {
+                const round = rounds[i];
+                if (round.tools && round.tools.includes(expectedResult.tool_name)) {
+                    toolFoundInAnyRound = true;
+                    foundInRound = round.current;
+                    console.log(`✅ [evaluateBasicFunctionCall] TOOL FOUND IN ROUND ${round.current}: '${expectedResult.tool_name}'`);
+                    break;
+                }
+            }
+            
+            if (toolFoundInAnyRound) {
+                console.log(`✅ [evaluateBasicFunctionCall] SUCCESS: Tool '${expectedResult.tool_name}' detected in round ${foundInRound}`);
+                evaluation.score = evaluation.maxScore; // FULL POINTS
+                evaluation.success = true;
+                evaluation.warnings.push(`Tool found in round ${foundInRound}/${rounds.length}`);
+                return evaluation;
+            } else {
+                console.log(`⚠️ [evaluateBasicFunctionCall] Tool '${expectedResult.tool_name}' NOT found in any of ${rounds.length} rounds`);
+                console.log(`🔍 [evaluateBasicFunctionCall] Tools per round:`, rounds.map((r, i) => `Round ${r.current}: [${r.tools?.join(', ') || 'none'}]`));
+            }
+        }
+
         // PRIORITY 0: Check Tool Execution Tracker for direct execution status
         if (window.chatManager && window.chatManager.toolExecutionTracker) {
             const tracker = window.chatManager.toolExecutionTracker;

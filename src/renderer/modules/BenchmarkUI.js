@@ -2816,8 +2816,26 @@ class BenchmarkUI {
                     <summary style="cursor: pointer; font-weight: bold; color: #28a745;">🔧 Function Call Rounds (Click to expand)</summary>
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
                         ${detailedLogs.toolCallHistory.toolCallRounds.map(round => `
-                            <div style="background: #fff; padding: 8px; margin: 5px 0; border-radius: 4px; border-left: 3px solid #28a745;">
-                                <strong>Round ${round.current}/${round.total}</strong> - ${round.timestamp}
+                            <div style="background: #fff; padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 3px solid #28a745;">
+                                <div style="font-weight: bold; margin-bottom: 6px;">
+                                    <strong>Round ${round.current}/${round.total}</strong> - ${round.timestamp}
+                                </div>
+                                ${round.tools && round.tools.length > 0 ? `
+                                <div style="margin-left: 15px; padding: 6px; background: #e7f5e7; border-radius: 3px;">
+                                    <strong style="color: #28a745;">🎯 Tools Called:</strong>
+                                    <div style="margin-top: 4px;">
+                                        ${round.tools.map(tool => `
+                                            <span style="display: inline-block; background: #28a745; color: white; padding: 2px 8px; margin: 2px; border-radius: 3px; font-size: 11px;">
+                                                ${tool}
+                                            </span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                ` : `
+                                <div style="margin-left: 15px; padding: 6px; background: #fff3cd; border-radius: 3px;">
+                                    <span style="color: #856404; font-size: 11px;">⚠️ No tools detected in this round</span>
+                                </div>
+                                `}
                             </div>
                         `).join('')}
                         

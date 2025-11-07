@@ -144,7 +144,6 @@ class ChatManager {
                     
                     // Check if Dynamic Tools Registry setting changed
                     const dynamicToolsRegistryEnabled = this.configManager.get('chatboxSettings.enableDynamicToolsRegistry', true);
-                    console.log('🔧 [ChatManager] Dynamic Tools Registry setting changed:', dynamicToolsRegistryEnabled);
                 });
                 
                 // Set global reference for settings modal
@@ -152,16 +151,14 @@ class ChatManager {
                 
                 // Listen for Multi-Agent Settings changes
                 window.addEventListener('multiAgentSettingsChanged', (event) => {
-                    console.log('Multi-Agent settings changed, updating toggle button');
                     this.updateMultiAgentToggleButton();
                 });
                 
-                console.log('ChatBoxSettingsManager initialized successfully');
             } else {
                 console.warn('ChatBoxSettingsManager not available');
             }
         } catch (error) {
-            console.error('Failed to initialize ChatBoxSettingsManager:', error);
+            // Silently handle initialization error
         }
     }
 
@@ -203,7 +200,7 @@ class ChatManager {
             this.agentSystemSettings.llmUseSystemPrompt = this.chatBoxSettingsManager.getSetting('agentLLMUseSystemPrompt', true);
             this.agentSystemSettings.llmEnableFunctionCalling = this.chatBoxSettingsManager.getSetting('agentLLMEnableFunctionCalling', true);
             
-            console.log('🔧 Settings updated from ChatBoxSettingsManager');
+            // Settings updated from ChatBoxSettingsManager
         }
     }
 
@@ -214,9 +211,9 @@ class ChatManager {
         // Check if MicrobeGenomicsFunctions is available globally
         if (typeof window !== 'undefined' && window.MicrobeFns) {
             this.MicrobeFns = window.MicrobeFns;
-            console.log('MicrobeGenomicsFunctions integrated successfully');
+            // MicrobeGenomicsFunctions integrated successfully
         } else {
-            console.warn('MicrobeGenomicsFunctions not available globally');
+            // MicrobeGenomicsFunctions not available globally
         }
     }
 
@@ -228,31 +225,31 @@ class ChatManager {
             // Check if PluginManagerV2 is already available globally
             if (typeof PluginManagerV2 !== 'undefined') {
                 this.pluginManager = new PluginManagerV2(this.app, this.configManager);
-                console.log('🔧 PluginManagerV2 integrated successfully from global');
+                // PluginManagerV2 integrated successfully from global
                 
                 // Listen to enhanced plugin events
                 this.pluginManager.on('system-initialized', (data) => {
-                    console.log('🚀 Plugin system initialized:', data);
+                    // Plugin system initialized
                 });
                 
                 this.pluginManager.on('function-executed', (data) => {
-                    console.log('✅ Plugin function executed:', data);
+                    // Plugin function executed
                 });
                 
                 this.pluginManager.on('function-error', (data) => {
-                    console.error('❌ Plugin function error:', data);
+                    // Plugin function error
                 });
                 
                 this.pluginManager.on('plugin-registered', (data) => {
-                    console.log('📦 Plugin registered:', data);
+                    // Plugin registered
                 });
                 
             } else {
-                console.warn('PluginManagerV2 not available, loading dynamically...');
+                // PluginManagerV2 not available, loading dynamically...
                 this.loadPluginManager();
             }
         } catch (error) {
-            console.error('Failed to initialize PluginManagerV2:', error);
+            // Failed to initialize PluginManagerV2
         }
     }
 
@@ -278,12 +275,12 @@ class ChatManager {
             // Initialize after loading
             if (typeof PluginManagerV2 !== 'undefined') {
                 this.pluginManager = new PluginManagerV2(this.app, this.configManager);
-                console.log('🚀 PluginManagerV2 loaded and initialized successfully');
+                // PluginManagerV2 loaded and initialized successfully
             } else {
                 throw new Error('PluginManagerV2 failed to load');
             }
         } catch (error) {
-            console.error('Failed to load PluginManagerV2:', error);
+            // Failed to load PluginManagerV2
             throw new Error('PluginManagerV2 is required for ChatManager functionality');
         }
     }
@@ -296,7 +293,7 @@ class ChatManager {
             // Check if script is already loaded
             const existingScript = document.querySelector(`script[src="${src}"]`);
             if (existingScript) {
-                console.log(`Script ${src} already loaded, skipping...`);
+                // Script already loaded, skipping...
                 resolve();
                 return;
             }
@@ -321,9 +318,9 @@ class ChatManager {
             const initIntegrator = () => {
                 if (typeof PluginFunctionCallsIntegrator !== 'undefined' && this.pluginManager) {
                     this.pluginFunctionCallsIntegrator = new PluginFunctionCallsIntegrator(this, this.pluginManager);
-                    console.log('PluginFunctionCallsIntegrator initialized successfully');
+                    // PluginFunctionCallsIntegrator initialized successfully
                 } else {
-                    console.warn('PluginFunctionCallsIntegrator or PluginManager not available, retrying...');
+                    // PluginFunctionCallsIntegrator or PluginManager not available, retrying...
                     setTimeout(initIntegrator, 500);
                 }
             };
@@ -332,7 +329,7 @@ class ChatManager {
             setTimeout(initIntegrator, 100);
             
         } catch (error) {
-            console.error('Failed to initialize PluginFunctionCallsIntegrator:', error);
+            // Failed to initialize PluginFunctionCallsIntegrator
         }
     }
     
@@ -344,14 +341,14 @@ class ChatManager {
             // Load settings first
             this.loadAgentSystemSettings();
             
-            console.log('🔧 Agent System Settings:', this.agentSystemSettings);
+            // Agent System Settings loaded
             
-            console.log('🤖 Initializing Legacy Multi-Agent System...');
+            // Initializing Legacy Multi-Agent System...
             // Initialize Legacy Multi-Agent System
             await this.initializeLegacyMultiAgentSystem();
             
         } catch (error) {
-            console.error('Failed to initialize Multi-Agent System:', error);
+            // Failed to initialize Multi-Agent System
         }
     }
     
@@ -361,7 +358,7 @@ class ChatManager {
      */
     async initializeLegacyMultiAgentSystem() {
         try {
-            console.log('🤖 Initializing Legacy Multi-Agent System...');
+            // Initializing Legacy Multi-Agent System...
             
             // Load required modules
             await this.loadScript('modules/MultiAgentSystem.js');
@@ -390,7 +387,7 @@ class ChatManager {
                     await this.memorySystem.initialize();
                 }
                 
-                console.log('🤖 Legacy Multi-Agent System initialized successfully');
+                // Legacy Multi-Agent System initialized successfully
                 this.agentSystemEnabled = this.agentSystemSettings.enabled;
                 
                 // Emit initialization event
@@ -400,11 +397,11 @@ class ChatManager {
                 });
                 
             } else {
-                console.warn('MultiAgentSystem not available');
+                // MultiAgentSystem not available
             }
             
         } catch (error) {
-            console.error('Failed to initialize Legacy Multi-Agent System:', error);
+            // Failed to initialize Legacy Multi-Agent System
         }
     }
     
@@ -420,7 +417,7 @@ class ChatManager {
             };
             
         } catch (error) {
-            console.warn('Failed to load agent system settings:', error);
+            // Failed to load agent system settings
         }
     }
     
@@ -431,7 +428,7 @@ class ChatManager {
         try {
             this.configManager.set('agentSystemSettings', this.agentSystemSettings);
         } catch (error) {
-            console.warn('Failed to save agent system settings:', error);
+            // Failed to save agent system settings
         }
     }
     
@@ -474,7 +471,7 @@ class ChatManager {
             settings: this.agentSystemSettings
         });
         
-        console.log(`🤖 Multi-Agent system toggled: ${newState ? 'ON' : 'OFF'}`);
+        // Multi-Agent system toggled
         
         return this.agentSystemEnabled;
     }
@@ -489,7 +486,7 @@ class ChatManager {
         };
         this.saveAgentSystemSettings();
         
-        console.log('🤖 Agent system settings updated:', this.agentSystemSettings);
+        // Agent system settings updated
         
         // Emit settings update event
         this.emit('agent-system-settings-updated', {
@@ -526,12 +523,12 @@ class ChatManager {
             // Initialize the smart executor
             if (typeof SmartExecutor !== 'undefined') {
                 this.smartExecutor = new SmartExecutor(this);
-                console.log('SmartExecutor initialized successfully');
+                // SmartExecutor initialized successfully
             } else {
-                console.warn('SmartExecutor not available, falling back to standard execution');
+                // SmartExecutor not available, falling back to standard execution
             }
         } catch (error) {
-            console.error('Failed to initialize SmartExecutor:', error);
+            // Failed to initialize SmartExecutor
             this.isSmartExecutionEnabled = false;
         }
     }
@@ -541,7 +538,7 @@ class ChatManager {
      */
     async initializeEvolutionIntegration() {
         try {
-            console.log('🧬 Initializing Evolution integration...');
+            // Initializing Evolution integration...
             
             // Check if ConversationEvolutionManager is available globally
             let evolutionManagerFound = false;
@@ -550,16 +547,16 @@ class ChatManager {
                 if (window.evolutionManager) {
                     this.evolutionManager = window.evolutionManager;
                     evolutionManagerFound = true;
-                    console.log('🧬 Evolution Manager connected to ChatBox via window.evolutionManager');
+                    // Evolution Manager connected to ChatBox via window.evolutionManager
                 } else if (window.conversationEvolutionManager) {
                     this.evolutionManager = window.conversationEvolutionManager;
                     evolutionManagerFound = true;
-                    console.log('🧬 Evolution Manager connected to ChatBox via window.conversationEvolutionManager');
+                    // Evolution Manager connected to ChatBox via window.conversationEvolutionManager
                 }
             }
             
             if (!evolutionManagerFound) {
-                console.log('🧬 Evolution Manager not available yet, setting up polling...');
+                // Evolution Manager not available yet, setting up polling...
                 
                 // Set up aggressive polling for Evolution Manager
                 let pollCount = 0;
@@ -570,11 +567,11 @@ class ChatManager {
                     
                     if (window.evolutionManager || window.conversationEvolutionManager) {
                         this.evolutionManager = window.evolutionManager || window.conversationEvolutionManager;
-                        console.log(`🧬 Evolution Manager connected to ChatBox (poll ${pollCount})`);
+                        // Evolution Manager connected to ChatBox (poll ${pollCount})
                         
                         // Immediately sync current conversation if it exists
                         if (this.currentConversationData && this.currentConversationData.events.length > 0) {
-                            console.log('🧬 Syncing existing conversation data to Evolution Manager');
+                            // Syncing existing conversation data to Evolution Manager
                             this.syncCurrentConversationToEvolution();
                         }
                         
@@ -584,7 +581,7 @@ class ChatManager {
                     if (pollCount < maxPolls) {
                         setTimeout(pollForEvolutionManager, 200);
                     } else {
-                        console.warn('🧬 Evolution Manager not found after polling timeout');
+                        // Evolution Manager not found after polling timeout
                     }
                 };
                 
@@ -596,12 +593,12 @@ class ChatManager {
             
             // If Evolution Manager is already connected, sync immediately
             if (evolutionManagerFound && this.currentConversationData) {
-                console.log('🧬 Performing initial sync to Evolution Manager');
+                // Performing initial sync to Evolution Manager
                 this.syncCurrentConversationToEvolution();
             }
             
         } catch (error) {
-            console.error('❌ Failed to initialize Evolution integration:', error);
+            // Failed to initialize Evolution integration
         }
     }
 
@@ -610,7 +607,7 @@ class ChatManager {
      */
     async initializeDynamicTools() {
         try {
-            console.log('🔧 Initializing Dynamic Tools Registry System...');
+            // Initializing Dynamic Tools Registry System...
             
             // Debug: Check if we can access file system to verify tools_registry directory
             if (window.require) {
@@ -626,21 +623,21 @@ class ChatManager {
                         path.join(process.resourcesPath, 'tools_registry')
                     ];
                     
-                    console.log('🔍 Checking tools_registry directory locations:');
+                    // Checking tools_registry directory locations:
                     for (const dir of possibleDirs) {
                         try {
                             const exists = fs.existsSync(dir);
-                            console.log(`  ${exists ? '✅' : '❌'} ${dir}`);
+                            // Directory check result
                             if (exists) {
                                 const files = fs.readdirSync(dir);
-                                console.log(`    Files: ${files.slice(0, 5).join(', ')}${files.length > 5 ? '...' : ''}`);
+                                // Files found
                             }
                         } catch (e) {
-                            console.log(`  ❌ ${dir} (error: ${e.message})`);
+                            // Directory check error
                         }
                     }
                 } catch (e) {
-                    console.log('🔍 Could not access filesystem for directory check:', e.message);
+                    // Could not access filesystem for directory check
                 }
             }
             
@@ -656,13 +653,13 @@ class ChatManager {
             let loadedPath = null;
             for (const tryPath of possiblePaths) {
                 try {
-                    console.log(`🔧 Trying to load SystemIntegration from: ${tryPath}`);
+                    // Trying to load SystemIntegration from path
                     SystemIntegration = require(tryPath);
                     loadedPath = tryPath;
-                    console.log(`✅ Successfully loaded SystemIntegration from: ${tryPath}`);
+                    // Successfully loaded SystemIntegration from path
                     break;
                 } catch (pathError) {
-                    console.log(`❌ Failed to load from ${tryPath}: ${pathError.message}`);
+                    // Failed to load from path
                 }
             }
             
@@ -670,29 +667,29 @@ class ChatManager {
                 throw new Error('Could not load SystemIntegration from any path');
             }
             
-            console.log('🔧 SystemIntegration loaded:', typeof SystemIntegration);
+            // SystemIntegration loaded
             
             if (SystemIntegration) {
-                console.log('🔧 Creating SystemIntegration instance...');
+                // Creating SystemIntegration instance...
                 this.dynamicTools = new SystemIntegration();
-                console.log('🔧 Calling initialize()...');
+                // Calling initialize()...
                 const initialized = await this.dynamicTools.initialize();
-                console.log('🔧 Initialize result:', initialized);
+                // Initialize result
                 
                 if (initialized) {
-                    console.log('✅ Dynamic Tools Registry System initialized');
-                    console.log(`🔧 Loaded from path: ${loadedPath}`);
+                    // Dynamic Tools Registry System initialized
+                    // Loaded from path
                 } else {
-                    console.warn('⚠️ Dynamic Tools Registry System failed to initialize, using fallback');
+                    // Dynamic Tools Registry System failed to initialize, using fallback
                     this.dynamicToolsEnabled = false;
                 }
             } else {
-                console.warn('SystemIntegration not available');
+                // SystemIntegration not available
                 this.dynamicToolsEnabled = false;
             }
         } catch (error) {
-            console.error('❌ Failed to initialize Dynamic Tools Registry System:', error);
-            console.error('❌ Error details:', error.message, error.stack);
+            // Failed to initialize Dynamic Tools Registry System
+            // Error details
             this.dynamicToolsEnabled = false;
         }
     }
@@ -702,25 +699,25 @@ class ChatManager {
      */
     async initializeToolExecutionTracker() {
         try {
-            console.log('🔍 Initializing Tool Execution Tracker...');
+            // Initializing Tool Execution Tracker...
             
             // Check if ToolExecutionTracker is available globally
             if (typeof ToolExecutionTracker !== 'undefined') {
                 this.toolExecutionTracker = new ToolExecutionTracker();
-                console.log('✅ Tool Execution Tracker initialized successfully');
+                // Tool Execution Tracker initialized successfully
             } else {
                 // Try to load the module
                 await this.loadScript('modules/ToolExecutionTracker.js');
                 
                 if (typeof ToolExecutionTracker !== 'undefined') {
                     this.toolExecutionTracker = new ToolExecutionTracker();
-                    console.log('✅ Tool Execution Tracker loaded and initialized successfully');
+                    // Tool Execution Tracker loaded and initialized successfully
                 } else {
-                    console.warn('⚠️ ToolExecutionTracker not available');
+                    // ToolExecutionTracker not available
                 }
             }
         } catch (error) {
-            console.error('❌ Failed to initialize Tool Execution Tracker:', error);
+            // Failed to initialize Tool Execution Tracker
         }
     }
 
@@ -772,29 +769,26 @@ class ChatManager {
      * @returns {Object} Load result
      */
     async loadGenomeFile(parameters = {}) {
-        console.log('🧬 [ChatManager] ==> loadGenomeFile ENTRY POINT <==');
-        console.log('🧬 [ChatManager] Parameters received:', JSON.stringify(parameters, null, 2));
+        // [ChatManager] ==> loadGenomeFile ENTRY POINT <==
+        // [ChatManager] Parameters received
         
         try {
             const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
             
-            console.log('🧬 [ChatManager] Parsed parameters:', { filePath, showFileDialog, fileType });
-            console.log('🧬 [ChatManager] App structure check:', {
-                hasApp: !!this.app,
-                hasFileManager: !!this.app?.fileManager
-            });
+            // [ChatManager] Parsed parameters
+            // [ChatManager] App structure check
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
-                console.log('🧬 [ChatManager] Direct file loading mode');
+                // [ChatManager] Direct file loading mode
                 
                 if (!this.app?.fileManager) {
                     const error = 'FileManager not available - app structure missing';
-                    console.error('❌ [ChatManager]', error);
+                    // [ChatManager] Error
                     throw new Error(error);
                 }
                 
-                console.log('🧬 [ChatManager] FileManager available, checking file existence...');
+                // [ChatManager] FileManager available, checking file existence...
                 
                 // Validate file exists (basic check)
                 if (typeof require !== 'undefined') {
@@ -803,21 +797,21 @@ class ChatManager {
                         if (!fs.existsSync(filePath)) {
                             throw new Error(`File not found: ${filePath}`);
                         }
-                        console.log('✅ [ChatManager] File exists:', filePath);
+                        // [ChatManager] File exists
                     } catch (fsError) {
-                        console.error('❌ [ChatManager] File system error:', fsError);
+                        // [ChatManager] File system error
                         throw fsError;
                     }
                 } else {
-                    console.log('⚠️ [ChatManager] require() not available - skipping file existence check');
+                    // [ChatManager] require() not available - skipping file existence check
                 }
                 
-                console.log('🧬 [ChatManager] Calling fileManager.loadFile...');
+                // [ChatManager] Calling fileManager.loadFile...
                 
                 // Load file directly
                 await this.app.fileManager.loadFile(filePath);
                 
-                console.log('✅ [ChatManager] fileManager.loadFile completed successfully');
+                // [ChatManager] fileManager.loadFile completed successfully
                 
                 const result = {
                     success: true,
@@ -828,11 +822,11 @@ class ChatManager {
                     timestamp: new Date().toISOString()
                 };
                 
-                console.log('🧬 [ChatManager] loadGenomeFile result:', result);
+                // [ChatManager] loadGenomeFile result
                 return result;
                 
             } else {
-                console.log('🧬 [ChatManager] File dialog mode');
+                // [ChatManager] File dialog mode
                 
                 // Note: Remove benchmark mode special handling for consistent behavior
                 // Tool should behave the same way in benchmark mode as in normal mode
@@ -846,13 +840,7 @@ class ChatManager {
                 this.app.fileManager.openSpecificFileType('genome');
                 
                 // Enhanced logging for benchmark tool detection recording
-                console.log('📋 [ChatManager] TOOL EXECUTED: load_genome_file - File dialog opened', {
-                    tool_name: 'load_genome_file',
-                    parameters: parameters,
-                    action: 'dialog_opened',
-                    benchmark_mode: this.isBenchmarkMode(),
-                    timestamp: new Date().toISOString()
-                });
+                // [ChatManager] TOOL EXECUTED: load_genome_file - File dialog opened
                 
                 return {
                     success: true,
@@ -864,8 +852,8 @@ class ChatManager {
                 };
             }
         } catch (error) {
-            console.error('❌ [ChatManager] CRITICAL ERROR in loadGenomeFile:', error);
-            console.error('❌ [ChatManager] Error stack:', error.stack);
+            // [ChatManager] CRITICAL ERROR in loadGenomeFile
+            // [ChatManager] Error stack
             
             const errorResult = {
                 success: false,
@@ -876,7 +864,7 @@ class ChatManager {
                 stack: error.stack
             };
             
-            console.log('🧬 [ChatManager] Error result:', errorResult);
+            // [ChatManager] Error result
             return errorResult;
         }
     }
@@ -893,7 +881,7 @@ class ChatManager {
         try {
             const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
             
-            console.log('📋 [ChatManager] Loading annotation file:', { filePath, showFileDialog, fileType });
+            // [ChatManager] Loading annotation file
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
@@ -937,7 +925,7 @@ class ChatManager {
                 };
             }
         } catch (error) {
-            console.error('❌ [ChatManager] Error loading annotation file:', error);
+            // [ChatManager] Error loading annotation file
             return {
                 success: false,
                 error: error.message,
@@ -957,7 +945,7 @@ class ChatManager {
         try {
             const { filePath, showFileDialog = false } = parameters;
             
-            console.log('🧪 [ChatManager] Loading variant file:', { filePath, showFileDialog });
+            // [ChatManager] Loading variant file
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
@@ -1000,7 +988,7 @@ class ChatManager {
                 };
             }
         } catch (error) {
-            console.error('❌ [ChatManager] Error loading variant file:', error);
+            // [ChatManager] Error loading variant file
             return {
                 success: false,
                 error: error.message,
@@ -1020,7 +1008,7 @@ class ChatManager {
         try {
             const { filePath, showFileDialog = false } = parameters;
             
-            console.log('📖 [ChatManager] Loading reads file:', { filePath, showFileDialog });
+            // [ChatManager] Loading reads file
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
@@ -1063,7 +1051,7 @@ class ChatManager {
                 };
             }
         } catch (error) {
-            console.error('❌ [ChatManager] Error loading reads file:', error);
+            // [ChatManager] Error loading reads file
             return {
                 success: false,
                 error: error.message,
@@ -1084,7 +1072,7 @@ class ChatManager {
         try {
             const { filePaths, showFileDialog = false, multiple = true } = parameters;
             
-            console.log('📊 [ChatManager] Loading WIG tracks:', { filePaths, showFileDialog, multiple });
+            // [ChatManager] Loading WIG tracks
             
             // If direct file path(s) provided and showFileDialog is false, load directly
             if (filePaths && !showFileDialog) {
@@ -1137,7 +1125,7 @@ class ChatManager {
                 };
             }
         } catch (error) {
-            console.error('❌ [ChatManager] Error loading WIG tracks:', error);
+            // [ChatManager] Error loading WIG tracks
             return {
                 success: false,
                 error: error.message,
@@ -1158,7 +1146,7 @@ class ChatManager {
         try {
             const { filePath, showFileDialog = false, format = 'auto' } = parameters;
             
-            console.log('🔬 [ChatManager] Loading operon file:', { filePath, showFileDialog, format });
+            // [ChatManager] Loading operon file
             
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
@@ -1202,7 +1190,7 @@ class ChatManager {
                 };
             }
         } catch (error) {
-            console.error('❌ [ChatManager] Error loading operon file:', error);
+            // [ChatManager] Error loading operon file
             return {
                 success: false,
                 error: error.message,
@@ -1225,7 +1213,7 @@ class ChatManager {
         const directory_path = parameters.directory_path || parameters.working_directory;
         const { use_home_directory = false, create_if_missing = false, validate_permissions = true } = parameters;
         
-        console.log('📁 [ChatManager] Setting working directory:', { directory_path, working_directory: parameters.working_directory, use_home_directory, create_if_missing, validate_permissions });
+        // [ChatManager] Setting working directory
         
         try {
             let targetPath;
@@ -1235,12 +1223,12 @@ class ChatManager {
             if (use_home_directory) {
                 const os = require('os');
                 targetPath = os.homedir();
-                console.log('🏠 [ChatManager] Using home directory:', targetPath);
+                // [ChatManager] Using home directory
             } else if (directory_path) {
                 const path = require('path');
                 // Handle both absolute and relative paths
                 targetPath = path.isAbsolute(directory_path) ? directory_path : path.resolve(process.cwd(), directory_path);
-                console.log('📂 [ChatManager] Target directory:', targetPath);
+                // [ChatManager] Target directory
             } else {
                 throw new Error('Either directory_path or use_home_directory must be provided');
             }
@@ -1252,7 +1240,7 @@ class ChatManager {
             // Check if directory exists
             if (!fs.existsSync(targetPath)) {
                 if (create_if_missing) {
-                    console.log('📁 [ChatManager] Creating directory:', targetPath);
+                    // [ChatManager] Creating directory
                     fs.mkdirSync(targetPath, { recursive: true });
                 } else {
                     throw new Error(`Directory '${targetPath}' does not exist`);
@@ -1272,14 +1260,14 @@ class ChatManager {
                     fs.accessSync(targetPath, fs.constants.R_OK);
                     permissions.readable = true;
                 } catch (e) {
-                    console.warn('⚠️ [ChatManager] Directory not readable:', targetPath);
+                    // [ChatManager] Directory not readable
                 }
                 
                 try {
                     fs.accessSync(targetPath, fs.constants.W_OK);
                     permissions.writable = true;
                 } catch (e) {
-                    console.warn('⚠️ [ChatManager] Directory not writable:', targetPath);
+                    // [ChatManager] Directory not writable
                 }
                 
                 if (!permissions.readable) {
@@ -1311,18 +1299,12 @@ class ChatManager {
             };
             
             // Enhanced logging for benchmark tool detection recording
-            console.log('📋 [ChatManager] TOOL EXECUTED: set_working_directory - Directory changed', {
-                tool_name: 'set_working_directory',
-                parameters: parameters,
-                result: result,
-                benchmark_mode: this.isBenchmarkMode(),
-                timestamp: new Date().toISOString()
-            });
+            // [ChatManager] TOOL EXECUTED: set_working_directory - Directory changed
             
             return result;
             
         } catch (error) {
-            console.error('❌ [ChatManager] Error setting working directory:', error);
+            // [ChatManager] Error setting working directory
             
             const errorResult = {
                 success: false,
@@ -1333,13 +1315,7 @@ class ChatManager {
             };
             
             // Log error for benchmark tool detection recording
-            console.log('📋 [ChatManager] TOOL ERROR: set_working_directory - Failed', {
-                tool_name: 'set_working_directory',
-                parameters: parameters,
-                error: errorResult,
-                benchmark_mode: this.isBenchmarkMode(),
-                timestamp: new Date().toISOString()
-            });
+            // [ChatManager] TOOL ERROR: set_working_directory - Failed
             
             return errorResult;
         }
@@ -1367,17 +1343,17 @@ class ChatManager {
             if (savedDirectory && require('fs').existsSync(savedDirectory)) {
                 this.currentWorkingDirectory = savedDirectory;
                 process.chdir(savedDirectory);
-                console.log('📁 [ChatManager] Restored working directory:', savedDirectory);
+                // [ChatManager] Restored working directory
             } else {
                 // Default to user home directory
                 const os = require('os');
                 const homeDir = os.homedir();
                 this.currentWorkingDirectory = homeDir;
                 process.chdir(homeDir);
-                console.log('🏠 [ChatManager] Initialized working directory to home:', homeDir);
+                // [ChatManager] Initialized working directory to home
             }
         } catch (error) {
-            console.error('❌ [ChatManager] Error initializing working directory:', error);
+            // [ChatManager] Error initializing working directory
             // Fallback to current process directory
             this.currentWorkingDirectory = process.cwd();
         }
@@ -1499,7 +1475,7 @@ class ChatManager {
     connectToEvolutionManager(evolutionManager) {
         if (evolutionManager && this.evolutionEnabled) {
             this.evolutionManager = evolutionManager;
-            console.log('🧬 Evolution Manager connected to ChatBox successfully');
+            // [ChatManager] Evolution Manager connected to ChatBox successfully
             
             // If there's a current conversation in progress, sync it
             if (this.currentConversationData && this.currentConversationData.events.length > 0) {
@@ -1549,13 +1525,13 @@ class ChatManager {
 
     setupMCPServerEventHandlers() {
         this.mcpServerManager.on('serverConnected', (data) => {
-            console.log(`MCP Server connected: ${data.server.name}`);
+            // [ChatManager] MCP Server connected
             this.updateConnectionStatus(true);
             this.updateMCPStatus('connected');
         });
 
         this.mcpServerManager.on('serverDisconnected', (data) => {
-            console.log(`MCP Server disconnected: ${data.server.name}`);
+            // [ChatManager] MCP Server disconnected
             // Only update status to disconnected if no servers are connected
             if (this.mcpServerManager.getConnectedServersCount() === 0) {
                 this.updateConnectionStatus(false);
@@ -1568,11 +1544,11 @@ class ChatManager {
 
         this.mcpServerManager.on('serverError', (data) => {
             const serverName = data.server?.name || data.serverId || 'Unknown Server';
-            console.error(`MCP Server error (${serverName}):`, data.error);
+            // [ChatManager] MCP Server error
         });
 
         this.mcpServerManager.on('toolsUpdated', (data) => {
-            console.log(`Tools updated for server ${data.serverId}:`, data.tools.map(t => t.name));
+            // [ChatManager] Tools updated for server
             // Refresh the MCP tools list in the UI
             if (window.genomeBrowser && window.genomeBrowser.populateMCPToolsList) {
                 setTimeout(() => {
@@ -1618,7 +1594,7 @@ class ChatManager {
             this.mcpSocket = new WebSocket(mcpSettings.serverUrl);
             
             this.mcpSocket.onopen = () => {
-                console.log('Connected to legacy MCP server');
+                // [ChatManager] Connected to legacy MCP server
                 this.isConnected = true;
                 this.updateConnectionStatus(true);
                 this.updateMCPStatus('connected');
@@ -1633,12 +1609,12 @@ class ChatManager {
                     const data = JSON.parse(event.data);
                     this.handleMCPMessage(data);
                 } catch (error) {
-                    console.error('Error parsing MCP message:', error);
+                    // [ChatManager] Error parsing MCP message
                 }
             };
 
             this.mcpSocket.onclose = () => {
-                console.log('Disconnected from legacy MCP server');
+                // [ChatManager] Disconnected from legacy MCP server
                 this.isConnected = false;
                 this.updateConnectionStatus(false);
                 this.updateMCPStatus('disconnected');
@@ -1656,13 +1632,13 @@ class ChatManager {
             };
 
             this.mcpSocket.onerror = (error) => {
-                console.error('Legacy MCP connection error:', error);
+                // [ChatManager] Legacy MCP connection error
                 this.updateConnectionStatus(false);
                 this.updateMCPStatus('disconnected');
             };
 
         } catch (error) {
-            console.error('Failed to setup legacy MCP connection:', error);
+            // [ChatManager] Failed to setup legacy MCP connection
             this.updateConnectionStatus(false);
             this.updateMCPStatus('disconnected');
         }
@@ -1670,7 +1646,7 @@ class ChatManager {
 
     disconnectMCP() {
         if (this.mcpSocket) {
-            console.log('Manually disconnecting from legacy MCP server');
+            // [ChatManager] Manually disconnecting from legacy MCP server
             this.mcpSocket.close();
             this.mcpSocket = null;
         }
@@ -4702,13 +4678,10 @@ class ChatManager {
                 
                 // CRITICAL FIX: Check for tool calls FIRST, before task completion
                 // This prevents early completion from skipping tool execution
-                console.log('Attempting to parse tool call(s)...');
                 const toolCall = this.parseToolCall(response);
                 
                 // Also check for multiple tool calls in response
                 const multipleToolCalls = this.parseMultipleToolCalls(response);
-                console.log('Parsed tool call result:', toolCall);
-                console.log('Multiple tool calls found:', multipleToolCalls.length);
                 
                 // Determine which tools to execute
                 let toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
@@ -6308,7 +6281,6 @@ class ChatManager {
                             const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
                             
                             if (now - estimatedTimestamp < timeWindowMs) {
-                                console.log(`🔍 Found recent tool call of ${toolName} in multiple calls within ${timeWindowMs}ms window`);
                                 return {
                                     toolName,
                                     timestamp: estimatedTimestamp,
@@ -8974,75 +8946,46 @@ ${this.getPluginSystemInfo()}`;
     }
 
     parseToolCall(response) {
-        console.log('=== parseToolCall DEBUG START ===');
-        console.log('Input response:', response);
-        console.log('Response type:', typeof response);
-        console.log('Response length:', response ? response.length : 'null');
-        console.log('Response is null:', response === null);
-        console.log('Response is undefined:', response === undefined);
-        console.log('Response is empty string:', response === '');
-        console.log('Response.trim() length:', response && typeof response === 'string' ? response.trim().length : 'N/A');
-        
-        // Log the actual characters for debugging
-        if (response && typeof response === 'string') {
-            console.log('Response characters (first 100):', JSON.stringify(response.substring(0, 100)));
-            console.log('Response hex dump (first 50 chars):', 
-                response.substring(0, 50).split('').map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join(' ')
-            );
-        }
-        
         // Early return for null/undefined responses but NOT empty strings
         if (response === null || response === undefined) {
-            console.log('Response is null or undefined - returning null');
-            console.log('=== parseToolCall DEBUG END (NULL/UNDEFINED RESPONSE) ===');
             return null;
         }
         
         // Handle empty strings differently - they might be valid in some contexts
         if (response === '') {
-            console.log('Response is empty string - continuing with parsing logic');
+            // Empty string - continue with parsing logic
         }
         
         try {
             // Clean the response by removing any leading/trailing whitespace
             let cleanResponse = response.trim();
-            console.log('After trim:', cleanResponse);
             
             // If response contains thinking tags, extract content after them
             if (cleanResponse.includes('</think>')) {
                 const thinkEndIndex = cleanResponse.lastIndexOf('</think>');
                 cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
-                console.log('After removing thinking tags:', cleanResponse);
             }
             
             // Remove any potential code block markers
             cleanResponse = cleanResponse.replace(/```json\s*|\s*```/gi, '').trim();
             cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '').trim();
-            console.log('After removing code block markers:', cleanResponse);
             
             // If the response starts with non-JSON text (like "✅"), check if there's a JSON after it
             if (!cleanResponse.startsWith('{')) {
-                console.log('Response does not start with {, checking for JSON within text...');
                 const jsonMatch = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
                 if (jsonMatch) {
                     cleanResponse = jsonMatch[0];
-                    console.log('Found JSON within text:', cleanResponse);
-        } else {
-                    console.log('No JSON found within text, checking if this is a confirmation message');
+                } else {
                     // Check if this is a confirmation message that should have been a tool call
                     if (cleanResponse.includes('Navigated to') || cleanResponse.includes('✅')) {
-                        console.log('This appears to be a confirmation message instead of a tool call');
-                        console.log('=== parseToolCall DEBUG END (CONFIRMATION MESSAGE) ===');
                         return null;
                     }
                 }
             }
             
             // Try to parse the entire response as JSON first (most direct approach)
-            console.log('Attempting direct JSON parse...');
             try {
                 const parsed = JSON.parse(cleanResponse);
-                console.log('Direct parse successful:', parsed);
                 
                 // ENHANCED: Fix malformed parameters if needed
                 if (parsed.tool_name && parsed.parameters !== undefined) {
@@ -9052,33 +8995,24 @@ ${this.getPluginSystemInfo()}`;
                         if (paramKeys.length === 1 && !paramKeys.includes('directory_path') && !paramKeys.includes('use_home_directory')) {
                             const pathValue = paramKeys[0];
                             if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
-                                console.log('🔧 [parseToolCall] Fixing malformed parameters (direct parse)');
                                 parsed.parameters = {
                                     directory_path: pathValue
                                 };
-                                console.log('🔧 [parseToolCall] Fixed parameters:', parsed.parameters);
                             }
                         }
                     }
                     
-                    console.log('Valid tool call found via direct parse');
-                    console.log('=== parseToolCall DEBUG END (SUCCESS - DIRECT) ===');
                     return parsed;
                 }
-                console.log('Direct parse result does not have tool_name/parameters');
             } catch (e) {
-                console.log('Direct parse failed:', e.message);
                 // Continue to other parsing methods if direct parse fails
             }
             
             // Try to extract JSON from potential markdown or mixed content
-            console.log('Attempting regex extraction...');
             const jsonMatches = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
-            console.log('Regex matches:', jsonMatches);
             if (jsonMatches) {
                 try {
                     const parsed = JSON.parse(jsonMatches[0]);
-                    console.log('Regex parse successful:', parsed);
                     
                     // ENHANCED: Fix malformed parameters if needed
                     if (parsed.tool_name && parsed.parameters !== undefined) {
@@ -9088,27 +9022,21 @@ ${this.getPluginSystemInfo()}`;
                             if (paramKeys.length === 1 && !paramKeys.includes('directory_path') && !paramKeys.includes('use_home_directory')) {
                                 const pathValue = paramKeys[0];
                                 if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
-                                    console.log('🔧 [parseToolCall] Fixing malformed parameters (regex parse)');
                                     parsed.parameters = {
                                         directory_path: pathValue
                                     };
-                                    console.log('🔧 [parseToolCall] Fixed parameters:', parsed.parameters);
                                 }
                             }
                         }
                         
-                        console.log('Valid tool call found via regex');
-                        console.log('=== parseToolCall DEBUG END (SUCCESS - REGEX) ===');
                         return parsed;
                     }
                 } catch (e) {
-                    console.log('Regex parse failed:', e.message);
                     // Continue to next method
                 }
             }
             
             // Try a more flexible JSON extraction that can handle nested braces
-            console.log('Attempting flexible JSON extraction...');
             const startIndex = cleanResponse.indexOf('{');
             if (startIndex !== -1) {
                 let braceCount = 0;
@@ -9125,10 +9053,8 @@ ${this.getPluginSystemInfo()}`;
                 
                 if (braceCount === 0) {
                     const jsonCandidate = cleanResponse.substring(startIndex, endIndex + 1);
-                    console.log('JSON candidate from flexible extraction:', jsonCandidate);
                     try {
                         const parsed = JSON.parse(jsonCandidate);
-                        console.log('Flexible extraction parse successful:', parsed);
                         
                         // ENHANCED: Fix malformed parameters if needed
                         if (parsed.tool_name && parsed.parameters !== undefined) {
@@ -9140,52 +9066,39 @@ ${this.getPluginSystemInfo()}`;
                                     // The parameter seems to be a path value without proper key
                                     const pathValue = paramKeys[0];
                                     if (pathValue.startsWith('/') || pathValue.startsWith('~') || pathValue.includes('\\')) {
-                                        console.log('🔧 [parseToolCall] Fixing malformed parameters for set_working_directory');
                                         parsed.parameters = {
                                             directory_path: pathValue
                                         };
-                                        console.log('🔧 [parseToolCall] Fixed parameters:', parsed.parameters);
                                     }
                                 }
                             }
                             
-                            console.log('Valid tool call found via flexible extraction');
-                            console.log('=== parseToolCall DEBUG END (SUCCESS - FLEXIBLE) ===');
                             return parsed;
                         }
                     } catch (e) {
-                        console.log('Flexible extraction parse failed:', e.message);
+                        // Continue to next method
                     }
                 }
             }
             
             // Try to find any valid JSON object that has tool_name and parameters
-            console.log('Attempting to find any JSON with tool_name...');
             const allJsonMatches = cleanResponse.match(/\{[^}]*\}/g);
-            console.log('All JSON matches found:', allJsonMatches);
             if (allJsonMatches) {
                 for (let i = 0; i < allJsonMatches.length; i++) {
                     const match = allJsonMatches[i];
-                    console.log(`Trying to parse match ${i}:`, match);
                     try {
                         const parsed = JSON.parse(match);
-                        console.log(`Parse ${i} successful:`, parsed);
                         if (parsed.tool_name && parsed.parameters !== undefined) {
-                            console.log(`Valid tool call found in match ${i}`);
-                            console.log('=== parseToolCall DEBUG END (SUCCESS - SEARCH) ===');
                             return parsed;
                         }
-                        console.log(`Match ${i} does not have tool_name/parameters`);
                     } catch (e) {
-                        console.log(`Parse ${i} failed:`, e.message);
                         // Continue to next match
                     }
                 }
             }
             
             // If no valid tool call found, return null
-            console.log('No valid tool call found in response');
-            console.log('=== parseToolCall DEBUG END (NO TOOL CALL) ===');
+            return null;
             return null;
             
             } catch (error) {
@@ -9225,9 +9138,6 @@ ${this.getPluginSystemInfo()}`;
             cleanResponse = cleanResponse.replace(/}\s*json\s*/g, '}\n');
             cleanResponse = cleanResponse.replace(/\s*json\s*{/g, '\n{');
             
-            console.log('[parseMultipleToolCalls] Original response:', response);
-            console.log('[parseMultipleToolCalls] Cleaned response:', cleanResponse);
-            
             // Try to parse as array first (if properly formatted)
             if (cleanResponse.startsWith('[')) {
                 try {
@@ -9236,11 +9146,9 @@ ${this.getPluginSystemInfo()}`;
                         const validTools = parsedArray.filter(item => 
                             item && typeof item === 'object' && item.tool_name && item.parameters !== undefined
                         );
-                        console.log('[parseMultipleToolCalls] Parsed as array:', validTools.length, 'tools');
                         return validTools;
                     }
                 } catch (e) {
-                    console.log('[parseMultipleToolCalls] Array parse failed:', e.message);
                     // Continue to other parsing methods
                 }
             }
@@ -9277,8 +9185,6 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
             
-            console.log('[parseMultipleToolCalls] Found', jsonMatches.length, 'JSON candidates');
-            
             // Parse each JSON object and validate
             for (let i = 0; i < jsonMatches.length; i++) {
                 const match = jsonMatches[i];
@@ -9286,27 +9192,20 @@ ${this.getPluginSystemInfo()}`;
                     const parsed = JSON.parse(match);
                     if (parsed.tool_name && parsed.parameters !== undefined) {
                         toolCalls.push(parsed);
-                        console.log('[parseMultipleToolCalls] Valid tool call', i + 1, ':', parsed.tool_name);
-                    } else {
-                        console.log('[parseMultipleToolCalls] Invalid tool structure', i + 1, ':', parsed);
                     }
                 } catch (e) {
-                    console.log('[parseMultipleToolCalls] JSON parse failed', i + 1, ':', e.message);
                     // Skip invalid JSON
                 }
             }
             
         } catch (error) {
-            console.warn('[parseMultipleToolCalls] Error parsing multiple tool calls:', error);
+            // Continue with empty toolCalls array
         }
         
-        console.log('[parseMultipleToolCalls] Final result:', toolCalls.length, 'valid tool calls');
         return toolCalls;
     }
 
     async executeToolByName(toolName, parameters) {
-        console.log(`Executing tool: ${toolName} with parameters:`, parameters);
-        
         const startTime = Date.now();
         let success = false;
         let executionId = null;
@@ -9338,12 +9237,9 @@ ${this.getPluginSystemInfo()}`;
             // 如果启用了多智能体系统，尝试通过智能体执行
             if (this.agentSystemEnabled && this.multiAgentSystem) {
                 try {
-                    console.log(`🤖 Attempting agent-based execution for: ${toolName}`);
                     const agentResult = await this.multiAgentSystem.executeTool(toolName, parameters);
                     
                     if (agentResult.success) {
-                        console.log(`🤖 Agent execution successful for ${toolName}`);
-                        
                         // 记录成功执行到内存
                         if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
                             const executionTime = Date.now() - startTime;
@@ -9352,10 +9248,9 @@ ${this.getPluginSystemInfo()}`;
                         
                         return agentResult.result;
                     } else {
-                        console.warn(`🤖 Agent execution failed for ${toolName}, falling back to standard execution`);
+                        // Fall through to standard execution
                     }
                 } catch (agentError) {
-                    console.warn(`🤖 Agent execution error for ${toolName}:`, agentError.message);
                     // Fall through to standard execution
                 }
             }
@@ -9365,14 +9260,12 @@ ${this.getPluginSystemInfo()}`;
             const mcpTool = allTools.find(t => t.name === toolName);
             
             if (mcpTool) {
-                console.log(`Executing tool ${toolName} on MCP server: ${mcpTool.serverName}`);
                 try {
                     const result = await this.mcpServerManager.executeToolOnServer(
                         mcpTool.serverId, 
                         toolName, 
                         parameters
                     );
-                    console.log(`MCP tool ${toolName} execution result:`, result);
                     
                     // 记录MCP工具调用到内存系统
                     if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
@@ -9382,7 +9275,6 @@ ${this.getPluginSystemInfo()}`;
                     
                     return result;
                 } catch (error) {
-                    console.warn(`MCP tool execution failed, falling back to local: ${error.message}`);
                     // Fall through to local execution
                 }
             }
@@ -9390,7 +9282,6 @@ ${this.getPluginSystemInfo()}`;
             // Check if this is a plugin function first
             if (this.pluginFunctionCallsIntegrator && this.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
                 try {
-                    console.log(`Executing plugin function: ${toolName}`);
                     const result = await this.pluginFunctionCallsIntegrator.executePluginFunction(toolName, parameters);
                     
                     // 记录插件工具调用到内存系统
@@ -9401,7 +9292,6 @@ ${this.getPluginSystemInfo()}`;
                     
                     return result;
                 } catch (error) {
-                    console.error(`Plugin function execution failed for ${toolName}:`, error);
                     throw error;
                 }
             }
@@ -9549,7 +9439,6 @@ ${this.getPluginSystemInfo()}`;
                     break;
                     
                 case 'genome_codon_usage_analysis':
-                    console.log('🧬 [ChatManager] Executing genome_codon_usage_analysis via executeToolByName');
                     result = await this.genomeCodonUsageAnalysis(parameters);
                     break;
                     
@@ -9603,41 +9492,31 @@ ${this.getPluginSystemInfo()}`;
                     
                 // File Loading tools (Built-in) - CRITICAL FIX FOR TOOL EXECUTION
                 case 'load_genome_file':
-                    console.log('🧬 [ChatManager] FIXED: Executing load_genome_file via executeToolByName');
                     result = await this.loadGenomeFile(parameters);
                     break;
                     
                 case 'load_annotation_file':
-                    console.log('📋 [ChatManager] FIXED: Executing load_annotation_file via executeToolByName');
                     result = await this.loadAnnotationFile(parameters);
                     break;
                     
                 case 'load_variant_file':
-                    console.log('🧪 [ChatManager] FIXED: Executing load_variant_file via executeToolByName');
                     result = await this.loadVariantFile(parameters);
                     break;
                     
                 case 'load_reads_file':
-                    console.log('🧪 [ChatManager] FIXED: Executing load_reads_file via executeToolByName');
                     result = await this.loadReadsFile(parameters);
                     break;
                     
                 // System Management Tools (Built-in) - CRITICAL FIX FOR set_working_directory
                 case 'set_working_directory':
-                    console.log('📁 [ChatManager] FIXED: Executing set_working_directory via executeToolByName');
                     result = await this.setWorkingDirectory(parameters);
-                    break;
-                    console.log('📖 [ChatManager] FIXED: Executing load_reads_file via executeToolByName');
-                    result = await this.loadReadsFile(parameters);
                     break;
                     
                 case 'load_wig_tracks':
-                    console.log('📈 [ChatManager] FIXED: Executing load_wig_tracks via executeToolByName');
                     result = await this.loadWigTracks(parameters);
                     break;
                     
                 case 'load_operon_file':
-                    console.log('🔬 [ChatManager] FIXED: Executing load_operon_file via executeToolByName');
                     result = await this.loadOperonFile(parameters);
                     break;
                     
@@ -9783,32 +9662,26 @@ ${this.getPluginSystemInfo()}`;
                     break;
                     
                 case 'search_uniprot_database':
-                    console.log('🔍 [ChatManager] Executing search_uniprot_database via executeToolByName');
                     result = await this.searchUniProtDatabase(parameters);
                     break;
                     
                 case 'advanced_uniprot_search':
-                    console.log('🔍 [ChatManager] Executing advanced_uniprot_search via executeToolByName');
                     result = await this.advancedUniProtSearch(parameters);
                     break;
                     
                 case 'get_uniprot_entry':
-                    console.log('🔍 [ChatManager] Executing get_uniprot_entry via executeToolByName');
                     result = await this.getUniProtEntry(parameters);
                     break;
                     
                 case 'analyze_interpro_domains':
-                    console.log('🔬 [ChatManager] Executing analyze_interpro_domains via executeToolByName');
                     result = await this.analyzeInterProDomains(parameters);
                     break;
                     
                 case 'search_interpro_entry':
-                    console.log('🔬 [ChatManager] Executing search_interpro_entry via executeToolByName');
                     result = await this.searchInterProEntry(parameters);
                     break;
                     
                 case 'get_interpro_entry_details':
-                    console.log('🔬 [ChatManager] Executing get_interpro_entry_details via executeToolByName');
                     result = await this.getInterProEntryDetails(parameters);
                     break;
                     
@@ -9999,17 +9872,11 @@ ${this.getPluginSystemInfo()}`;
                     break;
                     
                 case 'open_new_tab':
-                    console.log('🔧 [ChatManager] Executing open_new_tab with parameters:', parameters);
-                    console.log('🔧 [ChatManager] Calling this.openNewTab(parameters) directly...');
                     result = await this.openNewTab(parameters);
-                    console.log('🔧 [ChatManager] openNewTab result:', result);
                     break;
                     
                 case 'switch_to_tab':
-                    console.log('🔧 [ChatManager] Executing switch_to_tab with parameters:', parameters);
-                    console.log('🔧 [ChatManager] Calling this.switchToTab(parameters) directly...');
                     result = await this.switchToTab(parameters);
-                    console.log('🔧 [ChatManager] switchToTab result:', result);
                     break;
                     
                 // Legacy camelCase support for backward compatibility
@@ -10143,8 +10010,6 @@ ${this.getPluginSystemInfo()}`;
      * Execute delete sequence function directly
      */
     async executeDeleteSequence(parameters) {
-        console.log(`🔧 [ChatManager] Executing delete_sequence with parameters:`, parameters);
-        
         try {
             const { chromosome, start, end, strand = '+' } = parameters;
             
@@ -10160,7 +10025,6 @@ ${this.getPluginSystemInfo()}`;
             // Use MicrobeGenomicsFunctions if available
             if (window.MicrobeFns && window.MicrobeFns.delete_sequence) {
                 const result = window.MicrobeFns.delete_sequence(chromosome, start, end);
-                console.log(`✅ [ChatManager] delete_sequence executed via MicrobeFns:`, result);
                 return result;
             }
             
@@ -10190,11 +10054,9 @@ ${this.getPluginSystemInfo()}`;
                 message: `Delete action queued for ${chromosome}:${start}-${end} (${length} bp)`
             };
             
-            console.log(`✅ [ChatManager] delete_sequence executed via ActionManager:`, result);
             return result;
             
         } catch (error) {
-            console.error(`❌ [ChatManager] delete_sequence failed:`, error);
             throw error;
         }
     }
@@ -10203,8 +10065,6 @@ ${this.getPluginSystemInfo()}`;
      * Execute delete gene function by name
      */
     async executeDeleteGene(parameters) {
-        console.log(`🔧 [ChatManager] Executing delete_gene with parameters:`, parameters);
-        
         try {
             const { geneName, chromosome } = parameters;
             
@@ -10212,8 +10072,6 @@ ${this.getPluginSystemInfo()}`;
             if (!geneName) {
                 throw new Error('Missing required parameter: geneName (can be gene name or locus tag)');
             }
-            
-            console.log(`🔍 [ChatManager] Searching for gene/locus tag: ${geneName}`);
             
             // First, find the gene using existing search functionality
             const searchResult = await this.searchGeneByName({ name: geneName, chromosome });
@@ -10233,15 +10091,6 @@ ${this.getPluginSystemInfo()}`;
             const geneStart = targetGene.start;
             const geneEnd = targetGene.end;
             const geneStrand = targetGene.strand || '+';
-            
-            console.log(`🧬 [ChatManager] Found gene ${geneName}:`, {
-                chromosome: geneChromosome,
-                start: geneStart,
-                end: geneEnd,
-                strand: geneStrand,
-                type: targetGene.type,
-                product: targetGene.qualifiers?.product || 'Unknown'
-            });
             
             // Use the delete_sequence functionality with gene coordinates
             const deleteResult = await this.executeDeleteSequence({
@@ -10267,11 +10116,9 @@ ${this.getPluginSystemInfo()}`;
                 message: `Gene/locus tag "${geneName}" deletion queued: ${geneChromosome}:${geneStart}-${geneEnd} (${geneEnd - geneStart + 1} bp)`
             };
             
-            console.log(`✅ [ChatManager] delete_gene executed successfully:`, result);
             return result;
             
         } catch (error) {
-            console.error(`❌ [ChatManager] delete_gene failed:`, error);
             throw error;
         }
     }
@@ -10280,20 +10127,14 @@ ${this.getPluginSystemInfo()}`;
      * Execute action function through UI response functions
      */
     async executeActionFunction(functionName, parameters) {
-        console.log(`🔧 [ChatManager] Executing action function: ${functionName}`, parameters);
-        console.log(`🔧 [ChatManager] Parameters type:`, typeof parameters);
-        console.log(`🔧 [ChatManager] Parameters keys:`, Object.keys(parameters || {}));
-
         try {
             // Use window.genomeBrowser for access
             const genomeBrowser = window.genomeBrowser;
-            console.log(`🔧 [ChatManager] window.genomeBrowser available:`, !!genomeBrowser);
             
             if (!genomeBrowser) {
                 throw new Error('Genome browser not available via window.genomeBrowser');
             }
             
-            console.log(`🔧 [ChatManager] genomeBrowser.actionManager available:`, !!genomeBrowser.actionManager);
             if (!genomeBrowser.actionManager) {
                 throw new Error('ActionManager not available in genome browser');
             }
@@ -10313,21 +10154,13 @@ ${this.getPluginSystemInfo()}`;
                 'undoLastAction': () => genomeBrowser.actionManager.undoLastAction()
             };
 
-            console.log(`🔧 [ChatManager] Available action functions:`, Object.keys(actionFunctionMap));
-            console.log(`🔧 [ChatManager] Requested function: ${functionName}`);
-            console.log(`🔧 [ChatManager] Function exists in map:`, !!actionFunctionMap[functionName]);
-
             // Check if function is supported
             if (!actionFunctionMap[functionName]) {
                 throw new Error(`Action function '${functionName}' not supported via UI response functions`);
             }
 
             // Execute the UI response function
-            console.log(`🔧 [ChatManager] About to execute: actionFunctionMap["${functionName}"]()`);
             const result = actionFunctionMap[functionName]();
-            console.log(`🔧 [ChatManager] Function execution completed, result:`, result);
-            
-            console.log(`✅ [ChatManager] Action function ${functionName} executed successfully via UI response:`, result);
             
             // Return a standardized result format
             return {
@@ -10338,7 +10171,6 @@ ${this.getPluginSystemInfo()}`;
             };
 
         } catch (error) {
-            console.error(`❌ [ChatManager] Action function ${functionName} failed:`, error);
             throw error;
         }
     }
@@ -10465,7 +10297,7 @@ ${this.getPluginSystemInfo()}`;
                 const pluginFunctions = Array.from(this.pluginFunctionCallsIntegrator.pluginFunctionMap.keys());
                 pluginTools.push(...pluginFunctions);
             } catch (error) {
-                console.warn('Failed to get plugin functions:', error);
+                // Silently handle error
             }
         }
         
@@ -10476,7 +10308,7 @@ ${this.getPluginSystemInfo()}`;
                 const allMcpTools = this.mcpServerManager.getAllAvailableTools();
                 mcpTools.push(...allMcpTools.map(tool => tool.name));
             } catch (error) {
-                console.warn('Failed to get MCP tools:', error);
+                // Silently handle error
             }
         }
         
