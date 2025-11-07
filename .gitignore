@@ -276,3 +276,4 @@ download_ecoli_operon_data.py
 ecoli_operons_20250907_191817.csv
 ecoli_operons_20250907_191817.json
 ecoli_operons_20250907_191817.txt
+test_data/*

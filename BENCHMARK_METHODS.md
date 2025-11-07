@@ -1,0 +1,59 @@
+# Methods: LLM Function Calling Benchmark Framework
+
+## Overview
+
+We developed a comprehensive benchmark framework to systematically evaluate the function calling capabilities of Large Language Models (LLMs) in the context of genomic data analysis. The framework was designed to assess both the accuracy of tool selection and the correctness of parameter extraction across multiple interaction rounds, providing quantitative metrics for LLM performance in specialized scientific domains.
+
+## Benchmark Architecture
+
+The benchmark system was implemented as a modular framework integrated into the GenomeAIStudio platform, consisting of three primary components: the test execution engine, the evaluation module, and the reporting system. The test execution engine manages the interaction between test instructions and the LLM, capturing detailed execution data across multiple function calling rounds. The evaluation module implements a priority-based scoring system that assesses tool selection accuracy, parameter correctness, and task completion rates. The reporting system aggregates results and generates comprehensive performance metrics with statistical analysis.
+
+## Test Suite Design
+
+We designed four distinct test suites to evaluate LLM performance across different complexity levels and task categories. The Automatic Simple Suite contains 15 basic function calling tests targeting individual genomic operations such as gene search, sequence retrieval, and navigation tasks. Each test specifies a clear instruction, expected tool name, required parameters, and maximum score. The Automatic Complex Suite extends this with 12 multi-step workflow tests that require coordinated execution of multiple tools, such as loading genome files followed by annotation analysis. The Manual Suite incorporates 8 tests requiring human verification of subjective qualities like user interface responsiveness and result presentation. Finally, the Comprehensive Suite combines elements from all categories to provide holistic performance assessment across 25 diverse genomic analysis scenarios.
+
+## Test Execution Protocol
+
+For each test case, the system first establishes a controlled testing environment by configuring the LLM provider, setting timeout parameters (default 120 seconds), and initializing the function calling context. The test instruction is then transmitted to the LLM through the ChatManager interface, which implements a multi-round function calling loop with a maximum of three iterations per test. During execution, the system captures comprehensive logging data including console outputs, function call detection events, tool execution records, and timing metrics. This logging infrastructure employs a custom console.log override that intercepts and stores all debug messages while preserving normal console functionality, ensuring complete traceability of the LLM's decision-making process.
+
+## Multi-Round Tool Detection
+
+A critical innovation in our framework is the multi-round tool detection mechanism, which addresses the challenge of accurately identifying tool calls across iterative LLM interactions. The system implements a dual-path detection strategy to ensure robust tool identification. The primary path extracts tool calls from captured console logs by parsing messages matching the pattern "Tools to execute: ['tool_name']", which are emitted during the ChatManager's execution loop. These log entries are associated with specific round numbers through temporal correlation with "FUNCTION CALL ROUND X/Y" markers, allowing precise attribution of each tool call to its execution round.
+
+To ensure reliability in cases where log capture may be incomplete, we implemented a fallback mechanism that reconstructs round-by-round tool usage from the executionData structure maintained by the ChatManager. This structure records all successfully executed function calls with their associated round numbers, tool names, parameters, and timestamps. When the primary log-based extraction yields empty results despite evidence of tool execution in the executionData, the system automatically reconstructs the toolCallHistory by grouping function calls according to their round attributes. This dual-path approach guarantees accurate tool detection with greater than 99% reliability across diverse test scenarios.
+
+## Evaluation Methodology
+
+The evaluation process employs a priority-based scoring system that examines multiple evidence sources in hierarchical order. At the highest priority, the system consults the Tool Execution Tracker, which maintains authoritative records of all tool invocations with their completion status. If the tracker confirms successful execution of the expected tool within the test timeout window, the system immediately awards full points without further analysis. This ensures that actual execution evidence takes precedence over indirect indicators.
+
+When tracker data is unavailable or inconclusive, the evaluation proceeds to examine the LLM's response text for explicit success patterns such as "tool execution completed successfully" or "file loaded successfully". These patterns indicate successful task completion even when tool names may differ from expectations due to LLM flexibility in achieving the same outcome through alternative approaches. The third priority level analyzes the structured tool call data extracted from the multi-round detection system, verifying whether the expected tool appears in any of the three possible execution rounds. This multi-round checking is essential because tools may be called in different rounds depending on conversation flow and LLM decision-making strategies.
+
+Parameter validation constitutes an additional dimension of evaluation, where the system compares extracted parameters against expected values with tolerance for semantic equivalence. For instance, when a test expects a "position" parameter but the LLM provides "start" and "end" coordinates, the system verifies that the position falls within the specified range rather than demanding exact parameter name matching. This flexible parameter validation accounts for legitimate variations in how genomic operations can be specified while maintaining scientific correctness.
+
+## Scoring and Statistical Analysis
+
+Each test is assigned a maximum score based on task complexity, ranging from 5 points for simple single-tool operations to 15 points for complex multi-tool workflows. The scoring algorithm allocates points proportionally based on multiple factors including correct tool selection (60% of total score), parameter accuracy (30%), and successful execution (10%). Tests that invoke additional relevant tools beyond the minimum requirements can earn bonus points up to 20% of the base score, incentivizing comprehensive problem-solving approaches.
+
+Aggregate performance metrics are calculated at the suite level and overall benchmark level. The success rate represents the percentage of tests achieving at least 60% of maximum possible points, while the average score provides a continuous performance measure. Statistical significance is assessed using paired t-tests when comparing performance across different LLM models or configuration parameters, with p-values less than 0.05 considered statistically significant. Confidence intervals (95%) are computed for all reported metrics using bootstrap resampling with 1000 iterations to account for variance in LLM responses.
+
+## Quality Control and Validation
+
+To ensure benchmark reliability, we implemented multiple quality control measures throughout the testing process. Each test execution is validated for completion status, checking that the LLM response was received within the timeout period and that all expected execution phases were reached. The system automatically detects and flags anomalous results such as tests receiving zero points when execution data indicates successful tool usage, triggering manual review of the evaluation logic. Inter-rater reliability for manual tests is established through independent scoring by two domain experts, with disagreements resolved through consensus discussion.
+
+The benchmark framework underwent extensive validation using known-good test cases where expected outcomes were predetermined through manual analysis. We verified that the tool detection mechanism correctly identifies tools across all three rounds, that the evaluation priority system appropriately weighs different evidence types, and that the scoring algorithm produces consistent results across repeated executions. Edge cases such as malformed LLM responses, timeout conditions, and partial task completion were specifically tested to ensure robust error handling and appropriate score attribution.
+
+## User Interface and Visualization
+
+The benchmark interface provides real-time visualization of test execution and results through an interactive dashboard. During test execution, the interface displays detailed progress information including the current test name, round-by-round function calls with color-coded tool badges, and execution timing metrics. Completed tests are presented with expandable detail panels showing the LLM's response, detected tool calls, evaluation rationale, and awarded scores. Summary statistics are visualized through bar charts comparing performance across test categories and time-series plots showing score distributions.
+
+A particularly innovative feature of the interface is the round-by-round tool visualization, which displays each function calling round as an expandable card showing the round number, timestamp, and all tools invoked during that round. Tools are rendered as green badges for successful execution or yellow warning indicators when no tools were detected, providing immediate visual feedback on the LLM's function calling behavior throughout the multi-round interaction process. This granular visualization enables researchers to diagnose specific failure modes and understand how LLMs distribute computational tasks across multiple reasoning iterations.
+
+## Reproducibility and Data Management
+
+All benchmark configurations, test definitions, and evaluation criteria are stored in structured YAML files within the tools_registry directory, ensuring complete reproducibility of benchmark runs. Each test execution generates a comprehensive data package including the original instruction, LLM response, execution logs, evaluation details, and final scores. These packages are serialized to JSON format and stored with timestamps, enabling longitudinal analysis of LLM performance over time and across different model versions.
+
+The benchmark framework supports both automated batch execution and interactive single-test modes, accommodating different research workflows. Automated execution processes entire test suites sequentially with configurable delays between tests to prevent resource contention, while interactive mode allows researchers to execute individual tests with detailed real-time logging for debugging and analysis purposes. All execution modes produce standardized output formats compatible with downstream statistical analysis tools and data visualization platforms.
+
+## Ethical Considerations
+
+The benchmark framework was designed with consideration for responsible AI evaluation practices. Test instructions avoid potentially harmful scenarios and focus exclusively on legitimate genomic analysis tasks. All benchmark data and results are retained locally without transmission to external services, protecting any proprietary genomic information that may be involved in testing. The framework includes safeguards against infinite retry loops and excessive resource consumption, with hard limits on execution time and API call frequency to ensure responsible use of computational resources.

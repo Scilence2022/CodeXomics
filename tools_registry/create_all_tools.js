@@ -158,32 +158,6 @@ class ToolDefinitionCreator {
                 priority: 2
             },
 
-            // AI Analysis Tools
-            'evo2_predict_function': {
-                category: 'ai_analysis',
-                description: 'Predict gene function from DNA sequence using Evo2',
-                keywords: ['predict', 'function', 'dna', 'sequence', 'evo2'],
-                priority: 1
-            },
-            'evo2_design_crispr': {
-                category: 'ai_analysis',
-                description: 'Design CRISPR-Cas molecular complexes using Evo2',
-                keywords: ['design', 'crispr', 'cas', 'molecular', 'evo2'],
-                priority: 1
-            },
-            'evo2_optimize_sequence': {
-                category: 'ai_analysis',
-                description: 'Optimize DNA sequences for specific properties using Evo2',
-                keywords: ['optimize', 'sequence', 'dna', 'properties', 'evo2'],
-                priority: 2
-            },
-            'evo2_analyze_essentiality': {
-                category: 'ai_analysis',
-                description: 'Analyze gene essentiality at nucleotide resolution using Evo2',
-                keywords: ['analyze', 'essentiality', 'gene', 'nucleotide', 'evo2'],
-                priority: 2
-            },
-
             // Data Management Tools
             'create_annotation': {
                 category: 'data_management',

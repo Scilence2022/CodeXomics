@@ -7,7 +7,6 @@ const NavigationTools = require('./navigation/NavigationTools');
 const SequenceTools = require('./sequence/SequenceTools');
 const ProteinTools = require('./protein/ProteinTools');
 const DatabaseTools = require('./database/DatabaseTools');
-const Evo2Tools = require('./evo2/Evo2Tools');
 const DataTools = require('./data/DataTools');
 const PathwayTools = require('./pathway/PathwayTools');
 const ActionTools = require('./action/ActionTools');
@@ -21,7 +20,6 @@ class ToolsIntegrator {
         this.sequenceTools = new SequenceTools(server);
         this.proteinTools = new ProteinTools(server);
         this.databaseTools = new DatabaseTools(server);
-        this.evo2Tools = new Evo2Tools(server);
         this.dataTools = new DataTools(server);
         this.pathwayTools = new PathwayTools(server);
         this.actionTools = new ActionTools(server);
@@ -36,7 +34,6 @@ class ToolsIntegrator {
             ...this.sequenceTools.getTools(),
             ...this.proteinTools.getTools(),
             ...this.databaseTools.getTools(),
-            ...this.evo2Tools.getTools(),
             ...this.dataTools.getTools(),
             ...this.pathwayTools.getTools(),
             ...this.actionTools.getTools()
@@ -128,23 +125,7 @@ class ToolsIntegrator {
                 }
             }
             
-            // EVO2 tools
-            if (this.evo2Tools.getTools()[toolName]) {
-                switch (toolName) {
-                    case 'evo2_generate_sequence':
-                        return await this.evo2Tools.evo2GenerateSequence(parameters);
-                    case 'evo2_predict_function':
-                        return await this.evo2Tools.evo2PredictFunction(parameters);
-                    case 'evo2_design_crispr':
-                        return await this.evo2Tools.evo2DesignCrispr(parameters);
-                    case 'evo2_optimize_sequence':
-                        return await this.evo2Tools.evo2OptimizeSequence(parameters);
-                    case 'evo2_analyze_essentiality':
-                        return await this.evo2Tools.evo2AnalyzeEssentiality(parameters);
-                    default:
-                        return await this.evo2Tools.executeClientTool(toolName, parameters, clientId);
-                }
-            }
+
             
             // Data tools
             if (this.dataTools.getTools()[toolName]) {
