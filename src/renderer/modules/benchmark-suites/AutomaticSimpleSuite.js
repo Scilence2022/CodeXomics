@@ -4,7 +4,7 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests (31)'; // Updated count after adding sequence tools tests
+        this.suiteName = 'Automatic Simple Tests (41)'; // Updated count after adding sequence editing and action management tests
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
         this.framework = null;
@@ -758,6 +758,219 @@ class AutomaticSimpleSuite {
                     tool_name: 'search_alphafold_by_gene',
                     parameters: {
                         geneName: 'lysC'  // Fixed: Use correct parameter name and remove incorrect ones
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+
+            // SEQUENCE EDITING AND ACTION MANAGEMENT TASKS - Automatic + Simple
+            // These tests follow a logical workflow: copy → check queue → edit operations → paste → execute → undo → clear
+            {
+                id: 'edit_auto_01',
+                name: 'Copy Sequence Region',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Copy the sequence region from position 100000 to 100500 on the current chromosome.',
+                expectedResult: {
+                    tool_name: 'copy_sequence',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 100000,
+                        end: 100500
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'edit_auto_02',
+                name: 'Get Action List',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Get the current list of pending sequence editing actions.',
+                expectedResult: {
+                    tool_name: 'get_action_list',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 100000,
+                        end: 100500
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'edit_auto_03',
+                name: 'Delete Sequence Region',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Delete the sequence region from position 200000 to 200100.',
+                expectedResult: {
+                    tool_name: 'delete_sequence',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 200000,
+                        end: 200100
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'edit_auto_04',
+                name: 'Insert Sequence at Position',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Insert a DNA sequence at position 300000.',
+                expectedResult: {
+                    tool_name: 'insert_sequence',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 300000,
+                        end: 300000
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'edit_auto_05',
+                name: 'Replace Sequence Region',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Replace the sequence in region 400000 to 400200 with a new sequence.',
+                expectedResult: {
+                    tool_name: 'replace_sequence',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 400000,
+                        end: 400200
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'edit_auto_06',
+                name: 'Cut Sequence Region',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Cut the sequence region from position 500000 to 500300 (copy to clipboard and mark for deletion).',
+                expectedResult: {
+                    tool_name: 'cut_sequence',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 500000,
+                        end: 500300
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'edit_auto_07',
+                name: 'Paste Sequence from Clipboard',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Paste the sequence from clipboard at position 600000.',
+                expectedResult: {
+                    tool_name: 'paste_sequence',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 600000,
+                        end: 600000
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'edit_auto_08',
+                name: 'Execute Pending Actions',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Execute all pending sequence editing actions in the queue.',
+                expectedResult: {
+                    tool_name: 'execute_actions',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 100000,
+                        end: 600000
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'edit_auto_09',
+                name: 'Undo Last Action',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Undo the last completed sequence editing action.',
+                expectedResult: {
+                    tool_name: 'undo_last_action',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 100000,
+                        end: 600000
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
+                id: 'edit_auto_10',
+                name: 'Clear Action Queue',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Clear all actions from the sequence editing queue.',
+                expectedResult: {
+                    tool_name: 'clear_actions',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 100000,
+                        end: 600000
                     }
                 },
                 maxScore: 5,
