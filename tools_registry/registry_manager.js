@@ -147,7 +147,13 @@ class ToolsRegistryManager {
                 try {
                     const toolData = await fs.readFile(yamlFile, 'utf8');
                     const definition = yaml.load(toolData);
-                    tools.push(definition);
+                    
+                    // FIX: Skip undefined/null definitions from invalid YAML files
+                    if (definition && typeof definition === 'object') {
+                        tools.push(definition);
+                    } else {
+                        console.warn(`Skipping invalid tool definition in ${yamlFile}: definition is ${typeof definition}`);
+                    }
                 } catch (error) {
                     console.warn(`Failed to load tool ${toolName}:`, error);
                 }
@@ -400,7 +406,15 @@ class ToolsRegistryManager {
      */
     async getCandidateTools(intent, context) {
         const allTools = await this.getAllTools();
-        console.log('🔍 [Dynamic Tools] Total tools available:', allTools.length);
+        
+        // FIX: Filter out any undefined/null tools before processing
+        const validTools = allTools.filter(tool => tool && typeof tool === 'object' && tool.name);
+        
+        if (validTools.length < allTools.length) {
+            console.warn(`🔍 [Dynamic Tools] Filtered out ${allTools.length - validTools.length} invalid tool(s)`);
+        }
+        
+        console.log('🔍 [Dynamic Tools] Valid tools available:', validTools.length);
         
         // Extract query keywords for direct matching
         const queryKeywords = intent.query.toLowerCase().split(/\s+/).filter(word => 
@@ -426,7 +440,7 @@ class ToolsRegistryManager {
         const combinedIntentKeywords = Array.from(allIntentKeywords);
         console.log('🔍 [Dynamic Tools] Combined intent keywords:', combinedIntentKeywords);
         
-        const intentFiltered = allTools.filter(tool => {
+        const intentFiltered = validTools.filter(tool => {
             const toolKeywords = tool.keywords || [];
             
             // Check intent keyword matches (using combined keywords from all intents)
