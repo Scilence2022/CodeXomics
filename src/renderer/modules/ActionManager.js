@@ -5330,39 +5330,51 @@ class ActionManager {
         try {
             switch (functionName) {
                 case 'copySequence':
+                case 'copy_sequence':
                     return await this.functionCopySequence(parameters);
 
                 case 'cutSequence':
+                case 'cut_sequence':
                     return await this.functionCutSequence(parameters);
 
                 case 'pasteSequence':
+                case 'paste_sequence':
                     return await this.functionPasteSequence(parameters);
 
                 case 'deleteSequence':
+                case 'delete_sequence':
                     return await this.functionDeleteSequence(parameters);
 
                 case 'insertSequence':
+                case 'insert_sequence':
                     return await this.functionInsertSequence(parameters);
 
                 case 'replaceSequence':
+                case 'replace_sequence':
                     return await this.functionReplaceSequence(parameters);
 
                 case 'getActionList':
+                case 'get_action_list':
                     return this.functionGetActionList(parameters);
 
                 case 'executeActions':
+                case 'execute_actions':
                     return await this.functionExecuteActions(parameters);
 
                 case 'clearActions':
+                case 'clear_actions':
                     return this.functionClearActions(parameters);
 
                 case 'getClipboardContent':
+                case 'get_clipboard_content':
                     return this.functionGetClipboardContent(parameters);
 
                 case 'openNewTab':
+                case 'open_new_tab':
                     return await this.functionOpenNewTab(parameters);
                     
                 case 'switchToTab':
+                case 'switch_to_tab':
                     return await this.functionSwitchToTab(parameters);
 
                 default:

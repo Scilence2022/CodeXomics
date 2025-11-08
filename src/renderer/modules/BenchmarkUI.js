@@ -563,7 +563,7 @@ class BenchmarkUI {
                             <div class="checkbox-grid">
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-automatic_simple" checked>
-                                    <span>⚙️ Automatic Simple Tests <small>(27 tests)</small></span>
+                                    <span>⚙️ Automatic Simple Tests <small>(41 tests)</small></span>
                                 </label>
                                 <label class="checkbox-item">
                                     <input type="checkbox" id="suite-automatic_complex">
@@ -4249,7 +4249,7 @@ Comprehensive testing framework for LLM instruction following capabilities.
 • Professional reporting
 
 Active Test Suites:
-- Automatic Simple Tests (24 tests)
+- Automatic Simple Tests (41 tests)
 - Automatic Complex Tests (2 tests) 
 - Manual Simple Tests (8 tests)
 - Manual Complex Tests (3 tests)

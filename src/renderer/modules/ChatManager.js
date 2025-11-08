@@ -10128,35 +10128,11 @@ ${this.getPluginSystemInfo()}`;
                 throw new Error('ActionManager not available in genome browser');
             }
 
-            // Map function names to UI response functions
-            const actionFunctionMap = {
-                'copy_sequence': () => genomeBrowser.actionManager.handleCopySequence(),
-                'cut_sequence': () => genomeBrowser.actionManager.handleCutSequence(),
-                'paste_sequence': () => genomeBrowser.actionManager.handlePasteSequence(),
-                'deleteSequence': () => genomeBrowser.actionManager.handleDeleteSequence(),
-                'insertSequence': () => genomeBrowser.actionManager.handleInsertSequence(),
-                'replace_sequence': () => genomeBrowser.actionManager.handleReplaceSequence(),
-                'get_action_list': () => genomeBrowser.actionManager.showActionList(),
-                'execute_actions': () => genomeBrowser.actionManager.executeAllActions(),
-                'clearActions': () => genomeBrowser.actionManager.clearAllActions(),
-                'getClipboardContent': () => genomeBrowser.actionManager.getClipboardContent()
-            };
-
-            // Check if function is supported
-            if (!actionFunctionMap[functionName]) {
-                throw new Error(`Action function '${functionName}' not supported via UI response functions`);
-            }
-
-            // Execute the UI response function
-            const result = actionFunctionMap[functionName]();
+            // Use ActionManager's executeActionFunction method which delegates to function* methods
+            // This ensures parameters are used instead of showing UI dialogs
+            const result = await genomeBrowser.actionManager.executeActionFunction(functionName, parameters);
             
-            // Return a standardized result format
-            return {
-                success: true,
-                function: functionName,
-                message: `Action '${functionName}' executed via UI response function`,
-                timestamp: new Date().toISOString()
-            };
+            return result;
 
         } catch (error) {
             throw error;
