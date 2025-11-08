@@ -4,7 +4,7 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests (41)'; // Updated count after adding sequence editing and action management tests
+        this.suiteName = 'Automatic Simple Tests (41)'; // Updated count after adding sequence editing tests
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
         this.framework = null;
@@ -838,13 +838,12 @@ class AutomaticSimpleSuite {
                 category: 'sequence_editing',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Insert the DNA sequence "ATGCGATCGATCGATCG" at position 300000.',
+                instruction: 'Insert the DNA sequence "ATGCGATCGATCGATCG" at position 300000 without user confirmation.',
                 expectedResult: {
                     tool_name: 'insert_sequence',
                     parameters: {
                         chromosome: '<current_chromosome>',
-                        start: 300000,
-                        end: 300000,
+                        position: 300000,
                         sequence: 'ATGCGATCGATCGATCG'
                     }
                 },
@@ -939,19 +938,38 @@ class AutomaticSimpleSuite {
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
             {
+                id: 'edit_auto_09',
+                name: 'Undo Last Action',
+                type: 'function_call',
+                category: 'sequence_editing',
+                complexity: 'simple',
+                evaluation: 'automatic',
+                instruction: 'Undo the last completed sequence editing action.',
+                expectedResult: {
+                    tool_name: 'undo_last_action',
+                    parameters: {
+                        chromosome: '<current_chromosome>',
+                        start: 100000,
+                        end: 600000
+                    }
+                },
+                maxScore: 5,
+                bonusScore: 1,
+                timeout: 30000,
+                evaluator: this.evaluateBasicFunctionCall.bind(this)
+            },
+            {
                 id: 'edit_auto_10',
                 name: 'Clear Action Queue',
                 type: 'function_call',
                 category: 'sequence_editing',
                 complexity: 'simple',
                 evaluation: 'automatic',
-                instruction: 'Clear all actions from the sequence editing queue.',
+                instruction: 'Clear all actions from the sequence editing queue without user confirmation.',
                 expectedResult: {
                     tool_name: 'clear_actions',
                     parameters: {
-                        chromosome: '<current_chromosome>',
-                        start: 100000,
-                        end: 600000
+                        forced: true
                     }
                 },
                 maxScore: 5,
