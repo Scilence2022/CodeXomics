@@ -10,7 +10,7 @@ class LLMBenchmarkFramework {
         this.currentTest = null;
         this.isRunning = false;
         this.testTimeout = 120000; // 2 minutes default timeout
-        this.testDelay = 5000; // 5 seconds default delay between tests to avoid rate limits
+        this.testDelay = 60000; // 1 minute default delay every 10 tests to avoid rate limits
         this.totalDelayTime = 0; // Track total delay time to subtract from final duration
         this.statisticsEngine = new BenchmarkStatistics();
         this.reportGenerator = new BenchmarkReportGenerator();
@@ -136,7 +136,7 @@ class LLMBenchmarkFramework {
         // Set test delay from options if provided
         if (options.testDelay !== undefined) {
             this.testDelay = options.testDelay;
-            console.log(`⏱️ Test delay set to ${this.testDelay}ms (${this.testDelay/1000}s) to avoid rate limits`);
+            console.log(`⏱️ Batch delay set to ${this.testDelay}ms (${this.testDelay/1000}s) every 10 tests to avoid rate limits`);
         }
         
         // Reset total delay time tracking
@@ -451,10 +451,12 @@ class LLMBenchmarkFramework {
                 console.log(`🧹 Memory cleanup performed after test ${i + 1}`);
             }
             
-            // Add configurable delay between tests to prevent rate limiting (except after last test)
-            if (i < filteredTests.length - 1) {
+            // Add configurable delay every 10 tests to prevent rate limiting
+            // Apply delay after tests 10, 20, 30, etc. (but not after the last test)
+            if (i < filteredTests.length - 1 && (i + 1) % 10 === 0) {
                 if (this.testDelay > 0) {
-                    console.log(`⏳ [Rate Limit Protection] Waiting ${this.testDelay}ms before next test...`);
+                    const testsRemaining = filteredTests.length - (i + 1);
+                    console.log(`⏳ [Rate Limit Protection] Completed ${i + 1} tests. Waiting ${this.testDelay}ms (${this.testDelay/1000}s) before continuing... (${testsRemaining} tests remaining)`);
                     await new Promise(resolve => setTimeout(resolve, this.testDelay));
                     suiteDelayTime += this.testDelay;
                     this.totalDelayTime += this.testDelay;
@@ -462,6 +464,9 @@ class LLMBenchmarkFramework {
                     // Minimal delay to prevent overwhelming the system
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
+            } else if (i < filteredTests.length - 1) {
+                // Small delay between tests for system stability
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
         }
 

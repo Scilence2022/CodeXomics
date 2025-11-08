@@ -375,16 +375,16 @@ class BenchmarkManager {
                             </select>
                         </div>
                         <div class="config-section">
-                            <h3>Test Delay (Rate Limit)</h3>
+                            <h3>Batch Delay (Rate Limit)</h3>
                             <select id="customTestDelay">
                                 <option value="0">No delay</option>
-                                <option value="1000">1 second</option>
-                                <option value="2000">2 seconds</option>
-                                <option value="3000">3 seconds</option>
-                                <option value="5000" selected>5 seconds</option>
-                                <option value="10000">10 seconds</option>
-                                <option value="15000">15 seconds</option>
+                                <option value="60000" selected>1 minute</option>
+                                <option value="120000">2 minutes</option>
+                                <option value="180000">3 minutes</option>
+                                <option value="240000">4 minutes</option>
+                                <option value="300000">5 minutes</option>
                             </select>
+                            <small style="color: #6c757d; font-size: 12px; margin-top: 8px; display: block;">Delay every 10 tests to avoid rate limits</small>
                         </div>
                     </div>
                     <div class="dialog-footer">
@@ -525,7 +525,7 @@ class BenchmarkManager {
                 includeRawData: dialog.querySelector('#customIncludeRawData').checked,
                 stopOnError: dialog.querySelector('#customStopOnError').checked,
                 timeout: parseInt(dialog.querySelector('#customTimeout').value),
-                testDelay: parseInt(dialog.querySelector('#customTestDelay')?.value || '5000')
+                testDelay: parseInt(dialog.querySelector('#customTestDelay')?.value || '60000')
             };
 
             // Close dialog

@@ -621,18 +621,17 @@ class BenchmarkUI {
                                     </select>
                                 </div>
                                 <div>
-                                    <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Test Delay (Rate Limit):</label>
+                                    <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Batch Delay (Rate Limit):</label>
                                     <select id="testDelay">
                                         <option value="0">No delay</option>
-                                        <option value="1000">1 second</option>
-                                        <option value="2000">2 seconds</option>
-                                        <option value="3000">3 seconds</option>
-                                        <option value="5000" selected>5 seconds</option>
-                                        <option value="10000">10 seconds</option>
-                                        <option value="15000">15 seconds</option>
+                                        <option value="60000" selected>1 minute</option>
+                                        <option value="120000">2 minutes</option>
+                                        <option value="180000">3 minutes</option>
+                                        <option value="240000">4 minutes</option>
+                                        <option value="300000">5 minutes</option>
                                     </select>
                                     <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
-                                        ⏱️ Delay between tests to avoid rate limits
+                                        ⏱️ Delay every 10 tests to avoid rate limits
                                     </small>
                                 </div>
                                 <div>
@@ -3007,7 +3006,7 @@ class BenchmarkUI {
             stopOnError: document.getElementById('stopOnError').checked,
             verboseLogging: document.getElementById('verboseLogging')?.checked || false,
             timeout: parseInt(document.getElementById('testTimeout').value),
-            testDelay: parseInt(document.getElementById('testDelay')?.value || '5000'), // Delay between tests to avoid rate limits
+            testDelay: parseInt(document.getElementById('testDelay')?.value || '60000'), // Delay every 10 tests to avoid rate limits
             concurrency: parseInt(document.getElementById('concurrency')?.value || '1'),
             defaultDirectory: this.getDefaultDirectory(), // CRITICAL: Include default directory
             onProgress: (progress, suiteId, suiteResult) => {
