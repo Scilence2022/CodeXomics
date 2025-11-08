@@ -4,7 +4,7 @@
  */
 class AutomaticSimpleSuite {
     constructor() {
-        this.suiteName = 'Automatic Simple Tests (41)'; // Updated count after adding sequence editing tests
+        this.suiteName = 'Automatic Simple Tests (40)'; // Updated count after adding sequence editing tests
         this.suiteId = 'automatic_simple';
         this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
         this.framework = null;
