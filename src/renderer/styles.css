@@ -3895,6 +3895,13 @@ to {
   -moz-user-select: text;
   -ms-user-select: text;
   cursor: text;
+  /* Automatic text wrapping for long content */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .user-message .message-text {
