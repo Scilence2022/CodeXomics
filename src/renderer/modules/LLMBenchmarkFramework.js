@@ -10,6 +10,8 @@ class LLMBenchmarkFramework {
         this.currentTest = null;
         this.isRunning = false;
         this.testTimeout = 120000; // 2 minutes default timeout
+        this.testDelay = 5000; // 5 seconds default delay between tests to avoid rate limits
+        this.totalDelayTime = 0; // Track total delay time to subtract from final duration
         this.statisticsEngine = new BenchmarkStatistics();
         this.reportGenerator = new BenchmarkReportGenerator();
         
@@ -130,6 +132,15 @@ class LLMBenchmarkFramework {
             this.testTimeout = options.timeout;
             console.log(`🕐 Test timeout set to ${this.testTimeout}ms (${this.testTimeout/1000}s)`);
         }
+        
+        // Set test delay from options if provided
+        if (options.testDelay !== undefined) {
+            this.testDelay = options.testDelay;
+            console.log(`⏱️ Test delay set to ${this.testDelay}ms (${this.testDelay/1000}s) to avoid rate limits`);
+        }
+        
+        // Reset total delay time tracking
+        this.totalDelayTime = 0;
         
         try {
             const results = {
@@ -388,6 +399,9 @@ class LLMBenchmarkFramework {
         // Display test suite start
         this.displayTestSuiteStart(testSuite, filteredTests.length);
         
+        // Track delay time for this suite
+        let suiteDelayTime = 0;
+        
         // Run tests with proper memory management
         for (let i = 0; i < filteredTests.length; i++) {
             const test = filteredTests[i];
@@ -437,14 +451,23 @@ class LLMBenchmarkFramework {
                 console.log(`🧹 Memory cleanup performed after test ${i + 1}`);
             }
             
-            // Add small delay to prevent overwhelming the system
+            // Add configurable delay between tests to prevent rate limiting (except after last test)
             if (i < filteredTests.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+                if (this.testDelay > 0) {
+                    console.log(`⏳ [Rate Limit Protection] Waiting ${this.testDelay}ms before next test...`);
+                    await new Promise(resolve => setTimeout(resolve, this.testDelay));
+                    suiteDelayTime += this.testDelay;
+                    this.totalDelayTime += this.testDelay;
+                } else {
+                    // Minimal delay to prevent overwhelming the system
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
             }
         }
 
         results.endTime = Date.now();
         results.duration = results.endTime - results.startTime;
+        results.delayTime = suiteDelayTime; // Track delay time for this suite
         results.stats = this.statisticsEngine.calculateSuiteStatistics(results.testResults);
 
         // Display test suite completion
@@ -513,8 +536,18 @@ class LLMBenchmarkFramework {
     displayTestSuiteComplete(testSuite, results) {
         const successRate = ((results.stats.passedTests / results.stats.totalTests) * 100).toFixed(1);
         const avgScore = (results.stats.scoreStats?.percentage?.mean || results.stats.scoreStats?.raw?.mean || 0).toFixed(1);
-        const durationMinutes = (results.duration / 60000).toFixed(1);
-        const durationSeconds = (results.duration / 1000).toFixed(1);
+        
+        // Calculate actual test execution time (excluding delays)
+        const actualDuration = results.duration - (results.delayTime || 0);
+        const totalDuration = results.duration;
+        const delayTime = results.delayTime || 0;
+        
+        const actualMinutes = (actualDuration / 60000).toFixed(1);
+        const actualSeconds = (actualDuration / 1000).toFixed(1);
+        const totalMinutes = (totalDuration / 60000).toFixed(1);
+        const totalSeconds = (totalDuration / 1000).toFixed(1);
+        const delayMinutes = (delayTime / 60000).toFixed(1);
+        const delaySeconds = (delayTime / 1000).toFixed(1);
         
         // Determine overall grade and certification
         let certification = '';
@@ -543,7 +576,9 @@ class LLMBenchmarkFramework {
             `${gradeEmoji} **TEST SUITE COMPLETED: ${testSuite.getName()}**<br><br>` +
             
             `**📊 EXECUTIVE SUMMARY:**<br>` +
-            `&nbsp;&nbsp;&nbsp;• Total Execution Time: ${durationMinutes} minutes (${durationSeconds}s)<br>` +
+            `&nbsp;&nbsp;&nbsp;• Total Elapsed Time: ${totalMinutes} minutes (${totalSeconds}s)<br>` +
+            `&nbsp;&nbsp;&nbsp;• Actual Test Time: ${actualMinutes} minutes (${actualSeconds}s)<br>` +
+            (delayTime > 0 ? `&nbsp;&nbsp;&nbsp;• Rate Limit Delays: ${delayMinutes} minutes (${delaySeconds}s)<br>` : '') +
             `&nbsp;&nbsp;&nbsp;• Success Rate: ${successRate}% (${results.stats.passedTests}/${results.stats.totalTests} tests)<br>` +
             `&nbsp;&nbsp;&nbsp;• Average Performance Score: ${avgScore}/100 points<br>` +
             `&nbsp;&nbsp;&nbsp;• Quality Certification: ${certification}<br><br>` +

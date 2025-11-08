@@ -374,6 +374,18 @@ class BenchmarkManager {
                                 <option value="300000">5 minutes</option>
                             </select>
                         </div>
+                        <div class="config-section">
+                            <h3>Test Delay (Rate Limit)</h3>
+                            <select id="customTestDelay">
+                                <option value="0">No delay</option>
+                                <option value="1000">1 second</option>
+                                <option value="2000">2 seconds</option>
+                                <option value="3000">3 seconds</option>
+                                <option value="5000" selected>5 seconds</option>
+                                <option value="10000">10 seconds</option>
+                                <option value="15000">15 seconds</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="dialog-footer">
                         <button class="btn btn-secondary" onclick="this.closest('.benchmark-dialog').style.display='none'">Cancel</button>
@@ -512,7 +524,8 @@ class BenchmarkManager {
                 includeCharts: dialog.querySelector('#customIncludeCharts').checked,
                 includeRawData: dialog.querySelector('#customIncludeRawData').checked,
                 stopOnError: dialog.querySelector('#customStopOnError').checked,
-                timeout: parseInt(dialog.querySelector('#customTimeout').value)
+                timeout: parseInt(dialog.querySelector('#customTimeout').value),
+                testDelay: parseInt(dialog.querySelector('#customTestDelay')?.value || '5000')
             };
 
             // Close dialog
