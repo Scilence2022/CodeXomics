@@ -5767,11 +5767,11 @@ class ActionManager {
         
         // If not forced, show confirmation dialog
         if (!forced) {
-            const shouldClear = confirm(`确定要清除所有${status === 'all' ? '' : status}操作吗？此操作无法撤销。`);
+            const shouldClear = confirm(`Are you sure you want to clear all ${status === 'all' ? '' : status} actions? This action cannot be undone.`);
             if (!shouldClear) {
                 return {
                     success: false,
-                    message: '操作已取消'
+                    message: 'Operation cancelled'
                 };
             }
         }

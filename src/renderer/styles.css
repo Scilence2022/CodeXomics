@@ -4145,6 +4145,11 @@ to {
   background: transparent !important;
   border: none !important;
   color: #1e40af !important;
+  /* Override parent word-wrap for thinking display */
+  white-space: pre !important;
+  overflow-x: auto !important;
+  word-wrap: normal !important;
+  overflow-wrap: normal !important;
 }
 
 .thinking-header {
@@ -4165,6 +4170,11 @@ to {
   line-height: 1.4;
   color: #374151;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  /* Override parent word-wrap settings for proper thinking display */
+  white-space: pre;
+  overflow-x: auto;
+  word-wrap: normal;
+  overflow-wrap: normal;
 }
 
 .thinking-process .message-icon {
