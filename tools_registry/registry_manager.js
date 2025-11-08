@@ -290,7 +290,7 @@ class ToolsRegistryManager {
             sequence: ['sequence', 'dna', 'rna', 'protein', 'amino acid', 'translate', 'translation', 'reverse complement', 'gc content', 'codon', 'orf', 'frame'],
             structure: ['structure', '3d', 'pdb', 'alphafold', 'protein structure'],
             database: ['database', 'uniprot', 'interpro', 'lookup', 'entry'],
-            editing: ['edit', 'modify', 'change', 'replace', 'insert', 'delete'],
+            editing: ['edit', 'modify', 'change', 'replace', 'insert', 'delete', 'copy', 'cut', 'paste', 'clipboard'],
             pathway: ['pathway', 'metabolic', 'kegg', 'reaction', 'enzyme'],
             blast: ['blast', 'similarity', 'align', 'match', 'homolog'],
             plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace']
@@ -542,7 +542,7 @@ class ToolsRegistryManager {
             sequence: ['sequence', 'dna', 'rna', 'protein'],
             structure: ['structure', '3d', 'pdb', 'alphafold'],
             database: ['database', 'uniprot', 'interpro'],
-            editing: ['edit', 'modify', 'change', 'replace'],
+            editing: ['edit', 'modify', 'change', 'replace', 'copy', 'cut', 'paste', 'insert', 'delete', 'clipboard'],
             pathway: ['pathway', 'metabolic', 'kegg'],
             blast: ['blast', 'similarity', 'align'],
             plugin: ['plugin', 'install', 'enable']
@@ -677,6 +677,34 @@ class ToolsRegistryManager {
             if (tool.category === 'navigation' && intent.query.toLowerCase().includes('go')) {
                 score += 30; // Bonus for "go" queries
                 console.log('🔍 [Dynamic Tools] Navigation tool bonus applied for "go" query:', tool.name);
+            }
+
+            // Special bonus for "copy" operations with sequence editing tools
+            if (tool.name === 'copy_sequence' && intent.query.toLowerCase().includes('copy')) {
+                score += 100; // Very high bonus for copy_sequence when "copy" is in query
+                console.log('🔍 [Dynamic Tools] Copy sequence bonus applied:', tool.name);
+            }
+
+            // Special bonus for editing tools when editing keywords are detected
+            if (tool.category === 'sequence_editing' && intent.primary === 'editing') {
+                score += 60; // High bonus for sequence editing tools
+                console.log('🔍 [Dynamic Tools] Sequence editing tool bonus applied:', tool.name);
+                
+                // Additional specific operation bonuses
+                const queryLower = intent.query.toLowerCase();
+                if (tool.name.includes('copy') && queryLower.includes('copy')) {
+                    score += 40;
+                } else if (tool.name.includes('paste') && queryLower.includes('paste')) {
+                    score += 40;
+                } else if (tool.name.includes('cut') && queryLower.includes('cut')) {
+                    score += 40;
+                } else if (tool.name.includes('delete') && queryLower.includes('delete')) {
+                    score += 40;
+                } else if (tool.name.includes('insert') && queryLower.includes('insert')) {
+                    score += 40;
+                } else if (tool.name.includes('replace') && queryLower.includes('replace')) {
+                    score += 40;
+                }
             }
 
             // Usage frequency score
