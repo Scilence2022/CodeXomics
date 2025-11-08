@@ -185,8 +185,6 @@ class ToolsIntegrator {
                         return await this.actionTools.clear_actions(parameters, clientId);
                     case 'get_clipboard_content':
                         return await this.actionTools.get_clipboard_content(parameters, clientId);
-                    case 'undo_last_action':
-                        return await this.actionTools.undo_last_action(parameters, clientId);
                     default:
                         return await this.actionTools.executeClientTool(toolName, parameters, clientId);
                 }

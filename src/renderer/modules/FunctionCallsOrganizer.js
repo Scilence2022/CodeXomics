@@ -142,7 +142,6 @@ class FunctionCallsOrganizer {
                     'execute_actions',
                     'clear_actions',
                     'get_clipboard_content',
-                    'undo_last_action',
                     'codon_usage_analysis',
                     'genome_codon_usage_analysis'
                 ]

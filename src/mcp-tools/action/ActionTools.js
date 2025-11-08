@@ -243,14 +243,7 @@ class ActionTools {
                 }
             },
 
-            undo_last_action: {
-                name: 'undo_last_action',
-                description: 'Attempt to undo the last completed action',
-                parameters: {
-                    type: 'object',
-                    properties: {}
-                }
-            }
+
         };
     }
 
@@ -319,9 +312,7 @@ class ActionTools {
         return await this.executeClientTool('get_clipboard_content', params, clientId);
     }
 
-    async undo_last_action(params, clientId) {
-        return await this.executeClientTool('undo_last_action', params, clientId);
-    }
+
 }
 
 module.exports = ActionTools;

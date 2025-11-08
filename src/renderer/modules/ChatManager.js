@@ -7986,8 +7986,7 @@ ${coreTools}
             'execute_actions': () => this.executeActionTool('execute_actions', parameters),
             'get_action_list': () => this.executeActionTool('get_action_list', parameters),
             'clear_actions': () => this.executeActionTool('clear_actions', parameters),
-            'get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters),
-            'undo_last_action': () => this.executeActionTool('undo_last_action', parameters)
+            'get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters)
         };
         
         if (localTools[toolName]) {
@@ -8114,8 +8113,6 @@ ${coreTools}
                     return await window.actionManager.clearAllActions(clearOptions);
                 case 'get_clipboard_content':
                     return await window.actionManager.getClipboardContent(parameters);
-                case 'undo_last_action':
-                    return await window.actionManager.undoLastAction(parameters);
                 default:
                     console.warn(`Unknown action tool: ${toolName}`);
                     return { error: `Unknown action tool: ${toolName}` };
@@ -9867,10 +9864,6 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.executeActionFunction('getClipboardContent', parameters);
                     break;
                     
-                case 'undo_last_action':
-                    result = await this.executeActionFunction('undoLastAction', parameters);
-                    break;
-                    
                 case 'open_new_tab':
                     result = await this.openNewTab(parameters);
                     break;
@@ -9918,10 +9911,6 @@ ${this.getPluginSystemInfo()}`;
                     
                 case 'getClipboardContent':
                     result = await this.executeActionFunction('getClipboardContent', parameters);
-                    break;
-                    
-                case 'undoLastAction':
-                    result = await this.executeActionFunction('undoLastAction', parameters);
                     break;
                     
                 // Plugin system functions
@@ -10150,8 +10139,7 @@ ${this.getPluginSystemInfo()}`;
                 'get_action_list': () => genomeBrowser.actionManager.showActionList(),
                 'execute_actions': () => genomeBrowser.actionManager.executeAllActions(),
                 'clearActions': () => genomeBrowser.actionManager.clearAllActions(),
-                'getClipboardContent': () => genomeBrowser.actionManager.getClipboardContent(),
-                'undoLastAction': () => genomeBrowser.actionManager.undoLastAction()
+                'getClipboardContent': () => genomeBrowser.actionManager.getClipboardContent()
             };
 
             // Check if function is supported
@@ -10286,8 +10274,7 @@ ${this.getPluginSystemInfo()}`;
             'get_action_list',
             'execute_actions',
             'clear_actions',
-            'get_clipboard_content',
-            'undo_last_action'
+            'get_clipboard_content'
         ];
         
         // Add plugin functions if available

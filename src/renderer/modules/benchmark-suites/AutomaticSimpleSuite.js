@@ -939,27 +939,6 @@ class AutomaticSimpleSuite {
                 evaluator: this.evaluateBasicFunctionCall.bind(this)
             },
             {
-                id: 'edit_auto_09',
-                name: 'Undo Last Action',
-                type: 'function_call',
-                category: 'sequence_editing',
-                complexity: 'simple',
-                evaluation: 'automatic',
-                instruction: 'Undo the last completed sequence editing action.',
-                expectedResult: {
-                    tool_name: 'undo_last_action',
-                    parameters: {
-                        chromosome: '<current_chromosome>',
-                        start: 100000,
-                        end: 600000
-                    }
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 30000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this)
-            },
-            {
                 id: 'edit_auto_10',
                 name: 'Clear Action Queue',
                 type: 'function_call',

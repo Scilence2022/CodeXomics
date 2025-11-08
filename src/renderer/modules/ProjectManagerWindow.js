@@ -2090,22 +2090,6 @@ class ProjectManagerWindow {
 
     // ==================== EDIT MENU METHODS ====================
     
-    undoLastAction() {
-        if (!this.currentProject || !this.currentProject.history) {
-            this.showNotification('No actions to undo', 'info');
-            return;
-        }
-        
-        if (this.currentProject.history.length === 0) {
-            this.showNotification('No actions to undo', 'info');
-            return;
-        }
-        
-        const lastAction = this.currentProject.history.shift();
-        this.showNotification(`Undid: ${lastAction.description}`, 'info');
-        // TODO: Implement actual undo logic based on action type
-    }
-
     redoLastAction() {
         // TODO: Implement redo functionality with redo stack
         this.showNotification('Redo functionality coming soon', 'info');

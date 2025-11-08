@@ -5278,16 +5278,6 @@ class ActionManager {
                 }
             },
 
-            // Undo last action function
-            undoLastAction: {
-                name: 'undoLastAction',
-                description: 'Undo the last completed action',
-                parameters: {
-                    type: 'object',
-                    properties: {}
-                }
-            },
-
             // Get clipboard content function
             getClipboardContent: {
                 name: 'getClipboardContent',
@@ -5365,9 +5355,6 @@ class ActionManager {
 
                 case 'clearActions':
                     return this.functionClearActions(parameters);
-
-                case 'undoLastAction':
-                    return await this.functionUndoLastAction(parameters);
 
                 case 'getClipboardContent':
                     return this.functionGetClipboardContent(parameters);
@@ -5745,30 +5732,6 @@ class ActionManager {
             message: `Cleared ${clearedCount} actions`,
             clearedActions: clearedCount,
             remainingActions: this.actions.length
-        };
-    }
-
-    async functionUndoLastAction(params) {
-        const completedActions = this.actions.filter(action => action.status === this.STATUS.COMPLETED);
-        
-        if (completedActions.length === 0) {
-            throw new Error('No completed actions to undo');
-        }
-
-        // For now, we'll just mark the last action as failed and provide information
-        // Full undo functionality would require maintaining state snapshots
-        const lastAction = completedActions[completedActions.length - 1];
-        
-        return {
-            success: true,
-            message: 'Undo functionality is not yet implemented',
-            lastAction: {
-                id: lastAction.id,
-                type: lastAction.type,
-                target: lastAction.target,
-                details: lastAction.details
-            },
-            note: 'Consider using the rollback feature or manually reversing the operation'
         };
     }
 
@@ -6229,27 +6192,6 @@ class ActionManager {
         };
     }
     
-    /**
-     * Undo last action (UI response function)
-     */
-    undoLastAction() {
-        if (this.actions.length === 0) {
-            this.genomeBrowser.showNotification('No actions to undo', 'warning');
-            return false;
-        }
-        
-        const lastAction = this.actions[this.actions.length - 1];
-        if (lastAction.status === this.STATUS.COMPLETED) {
-            this.actions.pop();
-            this.genomeBrowser.showNotification(`Undid last action: ${lastAction.type}`, 'success');
-            this.updateActionListUI();
-            return true;
-        } else {
-            this.genomeBrowser.showNotification('Cannot undo action that is not completed', 'warning');
-            return false;
-        }
-    }
-
     /**
      * Reset action list to default state
      */

@@ -2733,10 +2733,6 @@
                 });
 
                 // Edit Menu Events
-                ipcRenderer.on('menu-undo', () => {
-                    if (projectManagerWindow) projectManagerWindow.undoLastAction();
-                });
-
                 ipcRenderer.on('menu-redo', () => {
                     if (projectManagerWindow) projectManagerWindow.redoLastAction();
                 });
