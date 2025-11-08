@@ -5760,6 +5760,56 @@ class ActionManager {
     }
 
     /**
+     * Wrapper methods for ChatManager compatibility
+     * These delegate to the function* methods
+     */
+    async copySequence(params) {
+        return await this.functionCopySequence(params);
+    }
+
+    async cutSequence(params) {
+        return await this.functionCutSequence(params);
+    }
+
+    async pasteSequence(params) {
+        return await this.functionPasteSequence(params);
+    }
+
+    async deleteSequence(params) {
+        return await this.functionDeleteSequence(params);
+    }
+
+    async insertSequence(params) {
+        // If parameters include sequence, use function method (no dialog)
+        if (params && params.sequence) {
+            return await this.functionInsertSequence(params);
+        }
+        // Otherwise show modal (UI interaction)
+        this.handleInsertSequence();
+        return { success: false, message: 'Please provide sequence parameters or use the UI dialog' };
+    }
+
+    async replaceSequence(params) {
+        return await this.functionReplaceSequence(params);
+    }
+
+    async executeAllActions(params) {
+        return await this.functionExecuteActions(params || {});
+    }
+
+    async getActionList(params) {
+        return this.functionGetActionList(params || {});
+    }
+
+    async clearAllActions(params) {
+        return this.functionClearActions(params || {});
+    }
+
+    async getClipboardContent(params) {
+        return this.functionGetClipboardContent(params || {});
+    }
+
+    /**
      * Open new tab function for AI integration
      */
     async functionOpenNewTab(params) {
