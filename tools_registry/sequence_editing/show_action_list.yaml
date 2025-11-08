@@ -1,0 +1,87 @@
+# show_action_list.yaml
+name: "show_action_list"
+version: "1.0.0"
+description: "Display the action list interface showing all pending, completed, and failed sequence editing actions with visual management controls"
+category: "sequence_editing"
+keywords: ["show", "display", "action", "list", "interface", "ui", "modal", "view", "manage"]
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: "client"
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: "object"
+  properties:
+    clientId:
+      type: "string"
+      description: "Browser client ID for multi-window support"
+      default: "default"
+  required: []
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: "Show me the action list"
+    tool_call: "show_action_list()"
+    thought: "User wants to view the action list interface to see all pending and completed actions"
+    expected_result: "Action list modal opens displaying all actions with management controls"
+
+  - user_query: "Display the sequence editing queue"
+    tool_call: "show_action_list()"
+    thought: "User wants to view the queue of sequence editing operations"
+    expected_result: "Action list interface appears showing all queued sequence editing actions"
+
+  - user_query: "Open action list window"
+    tool_call: "show_action_list()"
+    thought: "User wants to open the action list management interface"
+    expected_result: "Action list modal is displayed with full management functionality"
+
+  - user_query: "Let me see what actions are queued"
+    tool_call: "show_action_list()"
+    thought: "User wants to inspect the current action queue visually"
+    expected_result: "Action list UI opens showing all pending, completed, and failed actions"
+
+  - user_query: "Show action manager interface"
+    tool_call: "show_action_list()"
+    thought: "User wants to access the action management interface"
+    expected_result: "Action list modal appears with controls for managing actions"
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ["get_action_list", "execute_actions", "clear_actions"]
+  alternatives: ["get_action_list"]
+  prerequisites: []
+  follow_up: ["execute_actions", "clear_actions", "copy_sequence", "cut_sequence"]
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ["ui", "interface", "action", "management", "display"]
+  complexity: "simple"
+  usage_pattern: "common"
+
+# Error handling
+error_handling:
+  modal_not_found: "Returns error if action list modal element not found in DOM"
+  initialization_error: "Returns error if ActionManager not properly initialized"
+  
+# Return value specification
+returns:
+  success: "boolean - Whether the action list modal was successfully displayed"
+  message: "string - Status message about the operation"
+  totalActions: "number - Total number of actions in the queue"
+  pendingActions: "number - Number of pending actions"
+  completedActions: "number - Number of completed actions"
+  failedActions: "number - Number of failed actions"
+  modalState: "string - Current state of the modal (visible/hidden)"

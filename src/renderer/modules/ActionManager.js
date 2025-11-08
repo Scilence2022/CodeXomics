@@ -5357,6 +5357,10 @@ class ActionManager {
                 case 'get_action_list':
                     return this.functionGetActionList(parameters);
 
+                case 'showActionList':
+                case 'show_action_list':
+                    return this.functionShowActionList(parameters);
+
                 case 'executeActions':
                 case 'execute_actions':
                     return await this.functionExecuteActions(parameters);
@@ -5681,6 +5685,53 @@ class ActionManager {
         };
     }
 
+    functionShowActionList(params = {}) {
+        try {
+            // Enable Actions track if not already visible
+            if (this.genomeBrowser && !this.genomeBrowser.visibleTracks.has('actions')) {
+                console.log('🎯 [ActionManager] Enabling Actions track for show_action_list');
+                this.genomeBrowser.enableActionsTrack();
+            }
+            
+            // Update and show the action list modal
+            this.updateActionListUI();
+            const modal = document.getElementById('actionListModal');
+            
+            if (!modal) {
+                throw new Error('Action list modal element not found');
+            }
+            
+            modal.classList.add('show');
+            
+            // Calculate statistics
+            const stats = {
+                total: this.actions.length,
+                pending: this.actions.filter(a => a.status === this.STATUS.PENDING).length,
+                completed: this.actions.filter(a => a.status === this.STATUS.COMPLETED).length,
+                failed: this.actions.filter(a => a.status === this.STATUS.FAILED).length
+            };
+            
+            console.log('✅ [ActionManager] Action list modal displayed', stats);
+            
+            return {
+                success: true,
+                message: 'Action list interface displayed successfully',
+                totalActions: stats.total,
+                pendingActions: stats.pending,
+                completedActions: stats.completed,
+                failedActions: stats.failed,
+                modalState: 'visible'
+            };
+        } catch (error) {
+            console.error('❌ [ActionManager] Failed to show action list:', error);
+            return {
+                success: false,
+                message: `Failed to display action list: ${error.message}`,
+                error: error.message
+            };
+        }
+    }
+
     async functionExecuteActions(params) {
         const { confirm = false } = params;
         
@@ -5811,6 +5862,10 @@ class ActionManager {
 
     async getActionList(params) {
         return this.functionGetActionList(params || {});
+    }
+
+    async showActionListUI(params) {
+        return this.functionShowActionList(params || {});
     }
 
     async clearAllActions(params) {
