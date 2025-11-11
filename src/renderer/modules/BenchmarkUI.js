@@ -3214,6 +3214,16 @@ class BenchmarkUI {
         
         const stats = results.overallStats;
         
+        // Calculate total delay time across all suites
+        let totalDelayTime = 0;
+        results.testSuiteResults.forEach(suite => {
+            totalDelayTime += (suite.delayTime || 0);
+        });
+        
+        // Calculate actual test execution time (excluding delays)
+        const totalDuration = results.duration;
+        const actualDuration = totalDuration - totalDelayTime;
+        
         // Display summary cards
         if (resultsSummary) {
             resultsSummary.innerHTML = `
@@ -3233,10 +3243,22 @@ class BenchmarkUI {
                     <div class="unit">%</div>
                 </div>
                 <div class="summary-card">
-                    <h3>Duration</h3>
-                    <div class="value">${Math.round(results.duration / 1000)}</div>
+                    <h3>Total Elapsed</h3>
+                    <div class="value">${Math.round(totalDuration / 1000)}</div>
                     <div class="unit">seconds</div>
                 </div>
+                <div class="summary-card">
+                    <h3>Actual Test Time</h3>
+                    <div class="value">${Math.round(actualDuration / 1000)}</div>
+                    <div class="unit">seconds</div>
+                </div>
+                ${totalDelayTime > 0 ? `
+                <div class="summary-card">
+                    <h3>Batch Delays</h3>
+                    <div class="value">${Math.round(totalDelayTime / 1000)}</div>
+                    <div class="unit">seconds</div>
+                </div>
+                ` : ''}
             `;
         }
         
@@ -3251,7 +3273,8 @@ class BenchmarkUI {
                                 <span>${suite.suiteName}</span>
                                 <span style="font-size: 14px; color: #6c757d;">
                                     ${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate | 
-                                    ${Math.round(suite.duration / 1000)}s
+                                    ${Math.round((suite.duration - (suite.delayTime || 0)) / 1000)}s actual
+                                    ${suite.delayTime > 0 ? ` (+${Math.round(suite.delayTime / 1000)}s delays)` : ''}
                                 </span>
                             </div>
                         </div>
