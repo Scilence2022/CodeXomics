@@ -611,6 +611,7 @@ class BenchmarkUI {
                                 <div>
                                     <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Test Timeout:</label>
                                     <select id="testTimeout">
+                                        <option value="-1">Use Individual Test Timeouts</option>
                                         <option value="15000">15 seconds</option>
                                         <option value="30000">30 seconds</option>
                                         <option value="60000">60 seconds</option>
@@ -619,6 +620,9 @@ class BenchmarkUI {
                                         <option value="240000">4 minutes</option>
                                         <option value="300000" selected>5 minutes</option>
                                     </select>
+                                    <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
+                                        ⏱️ Global timeout or use individual test settings
+                                    </small>
                                 </div>
                                 <div>
                                     <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Batch Delay (Rate Limit):</label>
@@ -2997,6 +3001,8 @@ class BenchmarkUI {
             selectedSuites.push(cb.id.replace('suite-', ''));
         });
 
+        const timeoutValue = parseInt(document.getElementById('testTimeout').value);
+        
         const config = {
             suites: selectedSuites,
             generateReport: document.getElementById('generateReport').checked,
@@ -3005,7 +3011,8 @@ class BenchmarkUI {
             includeLLMInteractions: document.getElementById('includeLLMInteractions')?.checked !== false, // Default to true
             stopOnError: document.getElementById('stopOnError').checked,
             verboseLogging: document.getElementById('verboseLogging')?.checked || false,
-            timeout: parseInt(document.getElementById('testTimeout').value),
+            timeout: timeoutValue === -1 ? null : timeoutValue, // null means use individual test timeouts
+            useIndividualTimeouts: timeoutValue === -1, // Flag to indicate individual timeout mode
             testDelay: parseInt(document.getElementById('testDelay')?.value || '60000'), // Delay every 10 tests to avoid rate limits
             concurrency: parseInt(document.getElementById('concurrency')?.value || '1'),
             defaultDirectory: this.getDefaultDirectory(), // CRITICAL: Include default directory
@@ -3021,8 +3028,9 @@ class BenchmarkUI {
             suites: config.suites,
             defaultDirectory: config.defaultDirectory,
             timeout: config.timeout,
+            useIndividualTimeouts: config.useIndividualTimeouts,
             testDelay: config.testDelay,
-            otherOptions: Object.keys(config).filter(key => !['suites', 'defaultDirectory', 'timeout', 'testDelay', 'onProgress', 'onTestProgress'].includes(key))
+            otherOptions: Object.keys(config).filter(key => !['suites', 'defaultDirectory', 'timeout', 'useIndividualTimeouts', 'testDelay', 'onProgress', 'onTestProgress'].includes(key))
         });
         
         return config;

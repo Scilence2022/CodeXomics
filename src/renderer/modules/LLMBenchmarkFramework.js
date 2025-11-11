@@ -10,6 +10,7 @@ class LLMBenchmarkFramework {
         this.currentTest = null;
         this.isRunning = false;
         this.testTimeout = 120000; // 2 minutes default timeout
+        this.useIndividualTimeouts = false; // Default to using global timeout
         this.testDelay = 60000; // 1 minute default delay every 10 tests to avoid rate limits
         this.totalDelayTime = 0; // Track total delay time to subtract from final duration
         this.statisticsEngine = new BenchmarkStatistics();
@@ -128,9 +129,17 @@ class LLMBenchmarkFramework {
         const startTime = Date.now();
         
         // Set timeout from options if provided
-        if (options.timeout) {
-            this.testTimeout = options.timeout;
-            console.log(`🕐 Test timeout set to ${this.testTimeout}ms (${this.testTimeout/1000}s)`);
+        // If timeout is null, it means use individual test timeouts
+        if (options.timeout !== undefined) {
+            if (options.timeout === null || options.useIndividualTimeouts) {
+                this.useIndividualTimeouts = true;
+                this.testTimeout = 120000; // Keep default as fallback
+                console.log(`🕐 Using individual test timeout settings (each test controls its own timeout)`);
+            } else {
+                this.useIndividualTimeouts = false;
+                this.testTimeout = options.timeout;
+                console.log(`🕐 Global test timeout set to ${this.testTimeout}ms (${this.testTimeout/1000}s) - overriding individual test timeouts`);
+            }
         }
         
         // Set test delay from options if provided
@@ -344,12 +353,6 @@ class LLMBenchmarkFramework {
         const testSuite = this.testSuites.get(suiteId);
         if (!testSuite) {
             throw new Error(`Test suite not found: ${suiteId}`);
-        }
-
-        // Set timeout from options if provided
-        if (options.timeout) {
-            this.testTimeout = options.timeout;
-            console.log(`🕐 Test timeout set to ${this.testTimeout}ms (${this.testTimeout/1000}s) for suite ${suiteId}`);
         }
 
         const startTime = Date.now();
@@ -695,9 +698,21 @@ class LLMBenchmarkFramework {
         let partialTestResult = null;
         
         try {
-            // Use test-specific timeout if available, otherwise use global timeout
-            const timeoutMs = test.timeout || this.testTimeout;
-            console.log(`⏱️ Running test ${test.id} with timeout: ${timeoutMs}ms (${timeoutMs/1000}s)`);
+            // Determine timeout based on configuration
+            let timeoutMs;
+            if (this.useIndividualTimeouts) {
+                // Use individual test timeout if specified, otherwise use global default
+                timeoutMs = test.timeout || this.testTimeout;
+                console.log(`⏱️ Running test ${test.id} with ${test.timeout ? 'individual' : 'default'} timeout: ${timeoutMs}ms (${timeoutMs/1000}s)`);
+            } else {
+                // Use global timeout, overriding individual test settings
+                timeoutMs = this.testTimeout;
+                if (test.timeout && test.timeout !== timeoutMs) {
+                    console.log(`⏱️ Running test ${test.id} with global timeout: ${timeoutMs}ms (${timeoutMs/1000}s) [overriding individual timeout: ${test.timeout}ms]`);
+                } else {
+                    console.log(`⏱️ Running test ${test.id} with global timeout: ${timeoutMs}ms (${timeoutMs/1000}s)`);
+                }
+            }
             
             // Create a promise that tracks partial progress
             const executeTestWithProgress = async () => {
@@ -829,8 +844,15 @@ class LLMBenchmarkFramework {
         }
 
         try {
-            // Calculate timeout for this test
-            const timeoutMs = test.timeout || this.testTimeout;
+            // Determine timeout based on configuration
+            let timeoutMs;
+            if (this.useIndividualTimeouts) {
+                // Use individual test timeout if specified, otherwise use global default
+                timeoutMs = test.timeout || this.testTimeout;
+            } else {
+                // Use global timeout, overriding individual test settings
+                timeoutMs = this.testTimeout;
+            }
             
             // Check for showFileDialog parameter and warn if found
             if (test.expectedResult && test.expectedResult.parameters && test.expectedResult.parameters.showFileDialog) {

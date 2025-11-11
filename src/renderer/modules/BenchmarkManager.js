@@ -365,6 +365,7 @@ class BenchmarkManager {
                         <div class="config-section">
                             <h3>Timeout</h3>
                             <select id="customTimeout">
+                                <option value="-1">Use Individual Test Timeouts</option>
                                 <option value="15000">15 seconds</option>
                                 <option value="30000">30 seconds</option>
                                 <option value="60000">60 seconds</option>
