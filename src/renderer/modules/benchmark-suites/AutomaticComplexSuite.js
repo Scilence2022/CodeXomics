@@ -173,7 +173,7 @@ class AutomaticComplexSuite {
             
             // NAVIGATION TASKS - Automatic + Complex
             {
-                id: 'nav_auto_05',
+                id: 'nav_auto_01',
                 name: 'Navigate and Zoom Complex Analysis',
                 type: 'workflow',
                 category: 'navigation',
