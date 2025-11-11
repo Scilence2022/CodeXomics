@@ -1472,7 +1472,7 @@ class LLMConfigManager {
     }
 
 
-    async sendMessage(message, context = null) {
+    async sendMessage(message, context = null, memoryContext = null) {
         // Get the best available provider for task model type
         const providerKey = this.getProviderForModelType('task');
         if (!providerKey) {
@@ -1484,19 +1484,19 @@ class LLMConfigManager {
         try {
             switch (providerKey) {
                 case 'openai':
-                    return await this.sendOpenAIMessage(provider, message, context);
+                    return await this.sendOpenAIMessage(provider, message, context, memoryContext);
                 case 'anthropic':
-                    return await this.sendAnthropicMessage(provider, message, context);
+                    return await this.sendAnthropicMessage(provider, message, context, memoryContext);
                 case 'google':
-                    return await this.sendGoogleMessage(provider, message, context);
+                    return await this.sendGoogleMessage(provider, message, context, memoryContext);
                 case 'deepseek':
-                    return await this.sendDeepSeekMessage(provider, message, context);
+                    return await this.sendDeepSeekMessage(provider, message, context, memoryContext);
                 case 'siliconflow':
-                    return await this.sendSiliconFlowMessage(provider, message, context);
+                    return await this.sendSiliconFlowMessage(provider, message, context, memoryContext);
                 case 'openrouter':
-                    return await this.sendOpenRouterMessage(provider, message, context);
+                    return await this.sendOpenRouterMessage(provider, message, context, memoryContext);
                 case 'local':
-                    return await this.sendLocalMessage(provider, message, context);
+                    return await this.sendLocalMessage(provider, message, context, memoryContext);
                 default:
                     throw new Error('Unknown provider type');
             }
@@ -1506,7 +1506,7 @@ class LLMConfigManager {
         }
     }
 
-    async sendMessageWithHistory(conversationHistory, context = null) {
+    async sendMessageWithHistory(conversationHistory, context = null, memoryContext = null) {
         // Get the best available provider for task model type
         const primaryProvider = this.getProviderForModelType('task');
         if (!primaryProvider) {
@@ -1517,7 +1517,7 @@ class LLMConfigManager {
         
         // Try primary provider first
         try {
-            return await this.sendMessageWithProvider(primaryProvider, conversationHistory, context);
+            return await this.sendMessageWithProvider(primaryProvider, conversationHistory, context, memoryContext);
         } catch (error) {
             lastError = error;
             console.warn(`Primary provider ${primaryProvider} failed:`, error.message);
@@ -1533,7 +1533,7 @@ class LLMConfigManager {
                     }
                     
                     try {
-                        const result = await this.sendMessageWithProvider(fallbackProvider, conversationHistory, context);
+                        const result = await this.sendMessageWithProvider(fallbackProvider, conversationHistory, context, memoryContext);
                         
                         // Notify user of successful fallback
                         if (this.app && this.app.showNotification) {
@@ -1555,7 +1555,7 @@ class LLMConfigManager {
     /**
      * Send message using a specific provider
      */
-    async sendMessageWithProvider(providerKey, conversationHistory, context) {
+    async sendMessageWithProvider(providerKey, conversationHistory, context, memoryContext = null) {
         const provider = this.providers[providerKey];
         
         if (!provider || !provider.enabled) {
@@ -1564,19 +1564,19 @@ class LLMConfigManager {
         
         switch (providerKey) {
             case 'openai':
-                return await this.sendOpenAIMessageWithHistory(provider, conversationHistory, context);
+                return await this.sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext);
             case 'anthropic':
-                return await this.sendAnthropicMessageWithHistory(provider, conversationHistory, context);
+                return await this.sendAnthropicMessageWithHistory(provider, conversationHistory, context, memoryContext);
             case 'google':
-                return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context);
+                return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext);
             case 'deepseek':
-                return await this.sendDeepSeekMessageWithHistory(provider, conversationHistory, context);
+                return await this.sendDeepSeekMessageWithHistory(provider, conversationHistory, context, memoryContext);
             case 'siliconflow':
-                return await this.sendSiliconFlowMessageWithHistory(provider, conversationHistory, context);
+                return await this.sendSiliconFlowMessageWithHistory(provider, conversationHistory, context, memoryContext);
             case 'openrouter':
-                return await this.sendOpenRouterMessageWithHistory(provider, conversationHistory, context);
+                return await this.sendOpenRouterMessageWithHistory(provider, conversationHistory, context, memoryContext);
             case 'local':
-                return await this.sendLocalMessageWithHistory(provider, conversationHistory, context);
+                return await this.sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext);
             default:
                 throw new Error('Unknown provider type');
         }
@@ -1621,8 +1621,8 @@ class LLMConfigManager {
         return null;
     }
 
-    async sendOpenAIMessage(provider, message, context) {
-        const messages = this.buildMessages(message, context);
+    async sendOpenAIMessage(provider, message, context, memoryContext = null) {
+        const messages = this.buildMessages(message, context, 'openai', memoryContext);
         console.log('Sending to OpenAI - Request Payload:', JSON.stringify({
             model: provider.model,
             messages: messages,
@@ -1652,7 +1652,7 @@ class LLMConfigManager {
         return data.choices[0].message.content;
     }
 
-    async sendOpenAIMessageWithHistory(provider, conversationHistory, context) {
+    async sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
         console.log('Sending to OpenAI - Request Payload:', JSON.stringify({
             model: provider.model,
             messages: conversationHistory,
@@ -1694,8 +1694,8 @@ class LLMConfigManager {
         );
     }
 
-    async sendAnthropicMessage(provider, message, context) {
-        const messages = this.buildMessages(message, context, 'anthropic');
+    async sendAnthropicMessage(provider, message, context, memoryContext = null) {
+        const messages = this.buildMessages(message, context, 'anthropic', memoryContext);
         console.log('Sending to Anthropic - Request Payload:', JSON.stringify({
             model: provider.model,
             max_tokens: 2000,
@@ -1724,7 +1724,7 @@ class LLMConfigManager {
         return data.content[0].text;
     }
 
-    async sendAnthropicMessageWithHistory(provider, conversationHistory, context) {
+    async sendAnthropicMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
         // Anthropic requires separate system message
         const systemMessage = conversationHistory.find(msg => msg.role === 'system');
         const messages = conversationHistory.filter(msg => msg.role !== 'system');
@@ -1759,8 +1759,8 @@ class LLMConfigManager {
         return data.content[0].text;
     }
 
-    async sendGoogleMessage(provider, message, context) {
-        const prompt = this.buildGooglePrompt(message, context);
+    async sendGoogleMessage(provider, message, context, memoryContext = null) {
+        const prompt = this.buildGooglePrompt(message, context, memoryContext);
         const payload = {
             contents: [{
                 parts: [{ text: prompt }]
@@ -1797,7 +1797,7 @@ class LLMConfigManager {
         }
     }
 
-    async sendGoogleMessageWithHistory(provider, conversationHistory, context) {
+    async sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
         // Google uses a different conversation format
         const contents = [];
         
@@ -1850,8 +1850,8 @@ class LLMConfigManager {
         }
     }
 
-    async sendDeepSeekMessage(provider, message, context) {
-        const messages = this.buildMessages(message, context);
+    async sendDeepSeekMessage(provider, message, context, memoryContext = null) {
+        const messages = this.buildMessages(message, context, 'openai', memoryContext);
         console.log('Sending to DeepSeek - Request Payload:', JSON.stringify({
             model: provider.model,
             messages: messages,
@@ -1881,7 +1881,7 @@ class LLMConfigManager {
         return data.choices[0].message.content;
     }
 
-    async sendDeepSeekMessageWithHistory(provider, conversationHistory, context) {
+    async sendDeepSeekMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
         console.log('Sending to DeepSeek - Request Payload:', JSON.stringify({
             model: provider.model,
             messages: conversationHistory,
@@ -1911,8 +1911,8 @@ class LLMConfigManager {
         return data.choices[0].message.content;
     }
 
-    async sendSiliconFlowMessage(provider, message, context) {
-        const messages = this.buildMessages(message, context);
+    async sendSiliconFlowMessage(provider, message, context, memoryContext = null) {
+        const messages = this.buildMessages(message, context, 'openai', memoryContext);
         console.log('Sending to SiliconFlow - Request Payload:', JSON.stringify({
             model: provider.model,
             messages: messages,
@@ -2022,7 +2022,7 @@ class LLMConfigManager {
         throw lastError;
     }
 
-    async sendSiliconFlowMessageWithHistory(provider, conversationHistory, context) {
+    async sendSiliconFlowMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
         console.log('Sending to SiliconFlow - Request Payload:', JSON.stringify({
             model: provider.model,
             messages: conversationHistory,
@@ -2086,8 +2086,8 @@ class LLMConfigManager {
         );
     }
 
-    async sendOpenRouterMessage(provider, message, context) {
-        const messages = this.buildMessages(message, context);
+    async sendOpenRouterMessage(provider, message, context, memoryContext = null) {
+        const messages = this.buildMessages(message, context, 'openai', memoryContext);
         console.log('Sending to OpenRouter - Request Payload:', JSON.stringify({
             model: provider.model,
             messages: messages,
@@ -2141,7 +2141,7 @@ class LLMConfigManager {
         return data.choices[0]?.message?.content ?? '';
     }
 
-    async sendOpenRouterMessageWithHistory(provider, conversationHistory, context) {
+    async sendOpenRouterMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
         console.log('Sending to OpenRouter - Request Payload:', JSON.stringify({
             model: provider.model,
             messages: conversationHistory,
@@ -2246,8 +2246,8 @@ class LLMConfigManager {
         return null;
     }
 
-    async sendLocalMessage(provider, message, context) {
-        const messages = this.buildMessages(message, context);
+    async sendLocalMessage(provider, message, context, memoryContext = null) {
+        const messages = this.buildMessages(message, context, 'openai', memoryContext);
         
         const apiUrl = `${provider.baseUrl}/chat/completions`;
         const payload = {
@@ -2300,7 +2300,7 @@ class LLMConfigManager {
         }
     }
 
-    async sendLocalMessageWithHistory(provider, conversationHistory, context) {
+    async sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
         const apiUrl = `${provider.baseUrl}/chat/completions`;
         const payload = {
             model: provider.model,
@@ -2350,11 +2350,11 @@ class LLMConfigManager {
     }
 
 
-    buildMessages(userMessage, context, providerType = 'openai') {
+    buildMessages(userMessage, context, providerType = 'openai', memoryContext = null) {
         const messages = [];
         
         // System message with context
-        const systemMessage = this.buildSystemMessage(context);
+        const systemMessage = this.buildSystemMessage(context, userMessage, memoryContext);
         
         if (providerType === 'anthropic') {
             // Anthropic doesn't use system messages in the same way
@@ -2376,8 +2376,8 @@ class LLMConfigManager {
         return messages;
     }
 
-    buildGooglePrompt(userMessage, context) {
-        const systemMessage = this.buildSystemMessage(context);
+    buildGooglePrompt(userMessage, context, memoryContext = null) {
+        const systemMessage = this.buildSystemMessage(context, userMessage, memoryContext);
         return `${systemMessage}
 
 User: ${userMessage}
@@ -2385,7 +2385,7 @@ User: ${userMessage}
 Assistant:`;
     }
 
-    buildSystemMessage(context) {
+    buildSystemMessage(context, userQuery = '', memoryContext = null) {
         let systemMessage = `You are an AI assistant for a CodeXomics application. You help users analyze genomic data, navigate sequences, search for genes, and understand biological features.
 
 You have access to tools that can:
@@ -2421,6 +2421,11 @@ Examples:
 
 If the user is asking a general question that doesn't require a tool, respond normally with conversational text.`;
 
+        // Add memory context if available
+        if (memoryContext) {
+            systemMessage += `\n\n[Memory Context]\n${memoryContext}`;
+        }
+
         if (context && context.genomeBrowser && context.genomeBrowser.currentState) {
             // Debug: Log the actual context structure
             console.log('Context structure for system message:', JSON.stringify(context, null, 2));
@@ -2446,7 +2451,7 @@ Current context summary:
         return systemMessage;
     }
 
-    previewSystemPrompt() {
+    previewSystemPrompt(memoryContext = null) {
         const systemPromptField = document.getElementById('systemPrompt');
         if (!systemPromptField) return;
 
@@ -2473,7 +2478,7 @@ Current context summary:
                     }
                 }
             };
-            previewPrompt = this.buildSystemMessage(sampleContext);
+            previewPrompt = this.buildSystemMessage(sampleContext, '', memoryContext);
         }
 
         // Create modal to show preview

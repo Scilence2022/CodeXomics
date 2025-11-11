@@ -4626,6 +4626,17 @@ class ChatManager {
             const context = this.getCurrentContext();
             console.log('Context for LLM:', context);
             
+            // Get memory context for conversation
+            let memoryContext = null;
+            try {
+                memoryContext = await this.getMemoryContext(message, 'general_chat');
+                if (memoryContext) {
+                    console.log('🧠 Retrieved memory context for conversation');
+                }
+            } catch (error) {
+                console.warn('🧠 Failed to retrieve memory context:', error);
+            }
+            
             // Build initial conversation history including the new message
             let conversationHistory = await this.buildConversationHistory(message);
             console.log('Initial conversation history length:', conversationHistory.length);
@@ -4656,7 +4667,7 @@ class ChatManager {
                 
                 // Send conversation history to configured LLM
                 console.log('Sending to LLM...');
-                const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
+                const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context, memoryContext);
                 
                 // 检查响应是否被中止
                 if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
@@ -5050,7 +5061,7 @@ class ChatManager {
                     content: 'Please provide a final summary of the actions taken and results achieved.'
                 });
                 
-                finalResponse = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
+                finalResponse = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context, memoryContext);
                 console.log('Final summary response:', finalResponse);
             }
             
@@ -5536,12 +5547,20 @@ class ChatManager {
         const useOptimizedPrompt = this.configManager.get('chatboxSettings.useOptimizedPrompt', 
             this.configManager.get('llm.useOptimizedPrompt', true));
         
+        // Get current user query for memory retrieval
+        const currentUserQuery = this.getLastUserQuery() || '';
+        
         // If user has defined a custom system prompt, use it with variable substitution
         if (userSystemPrompt && userSystemPrompt.trim()) {
             const processedPrompt = this.processSystemPromptVariables(userSystemPrompt);
             // Choose context based on optimization setting
             const toolContext = useOptimizedPrompt ? this.getOptimizedToolContext() : this.getCompleteToolContext();
-            return `${processedPrompt}\n\n${toolContext}`;
+            
+            // Add memory context if memory system is enabled
+            const memoryContext = await this.getMemoryContext(currentUserQuery);
+            const memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
+            
+            return `${processedPrompt}\n\n${toolContext}${memorySection}`;
         }
         
         // Check if Dynamic Tools Registry is enabled in settings
@@ -5580,12 +5599,167 @@ class ChatManager {
         
         // For default system message, use optimized version by default
         if (useOptimizedPrompt) {
-            return this.getOptimizedSystemMessage();
+            const systemMessage = this.getOptimizedSystemMessage();
+            // Add memory context if memory system is enabled
+            const memoryContext = await this.getMemoryContext(currentUserQuery);
+            const memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
+            return `${systemMessage}${memorySection}`;
         } else {
-            return this.getBaseSystemMessage();
+            const systemMessage = this.getBaseSystemMessage();
+            // Add memory context if memory system is enabled
+            const memoryContext = await this.getMemoryContext(currentUserQuery);
+            const memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
+            return `${systemMessage}${memorySection}`;
         }
     }
 
+    /**
+     * Retrieve memory context for the current user query
+     * @param {string} userQuery - Current user query for context matching
+     * @returns {Promise<string|null>} - Formatted memory context or null if no relevant memories
+     */
+    async getMemoryContext(userQuery) {
+        try {
+            // Check if memory system is available and enabled
+            if (!this.memorySystem || !this.configManager.get('chatboxSettings.memorySystemEnabled', false)) {
+                return null;
+            }
+            
+            // Check if ChatBox memory system is enabled (separate from Multi-Agent)
+            const memorySystemEnabled = this.configManager.get('chatboxSettings.memorySystemEnabled', false);
+            if (!memorySystemEnabled) {
+                return null;
+            }
+            
+            console.log('🧠 [getMemoryContext] Retrieving memory context for query:', userQuery);
+            
+            // Infer task type and prepare context for memory search
+            const taskType = this.inferTaskType(userQuery);
+            const context = {
+                userQuery: userQuery,
+                currentTime: new Date().toISOString(),
+                sessionId: this.getSessionId(),
+                taskType: taskType
+            };
+            
+            // Call memory system to search for relevant context
+            // For general chat context, we use "chat_context" as function name
+            const memoryContext = await this.memorySystem.retrieveMemoryContext("chat_context", context, context);
+            
+            if (!memoryContext || !memoryContext.results || memoryContext.results.length === 0) {
+                console.log('🧠 [getMemoryContext] No relevant memories found for query');
+                return null;
+            }
+            
+            // Format memory context for LLM
+            const formattedContext = this.formatMemoryContextForLLM(memoryContext);
+            console.log('🧠 [getMemoryContext] Retrieved memory context:', formattedContext);
+            
+            return formattedContext;
+            
+        } catch (error) {
+            console.warn('🧠 [getMemoryContext] Failed to retrieve memory context:', error);
+            return null; // Don't fail the entire system message building process
+        }
+    }
+    
+    /**
+     * Format memory context for LLM consumption
+     * @param {object} memoryContext - Raw memory context from MemorySystem
+     * @returns {string} - Formatted memory context
+     */
+    formatMemoryContextForLLM(memoryContext) {
+        if (!memoryContext || !memoryContext.results || memoryContext.results.length === 0) {
+            return '';
+        }
+        
+        let formatted = '';
+        const results = memoryContext.results.slice(0, 5); // Limit to top 5 most relevant
+        
+        for (const result of results) {
+            // Format each memory entry
+            let memoryText = `• ${result.concept || 'Relevant previous action'}`;
+            
+            // Add relevance score if available
+            if (result.score !== undefined) {
+                memoryText += ` (relevance: ${(result.score * 100).toFixed(1)}%)`;
+            }
+            
+            // Add properties if available
+            if (result.properties) {
+                if (result.properties.usage_count) {
+                    memoryText += ` - used ${result.properties.usage_count} times`;
+                }
+                
+                if (result.properties.success_rate !== undefined) {
+                    memoryText += ` (${Math.round(result.properties.success_rate * 100)}% success rate)`;
+                }
+                
+                if (result.properties.type) {
+                    memoryText += ` - type: ${result.properties.type}`;
+                }
+                
+                if (result.properties.category) {
+                    memoryText += ` - category: ${result.properties.category}`;
+                }
+            }
+            
+            formatted += memoryText + '\n';
+        }
+        
+        if (formatted) {
+            return `Based on previous similar queries, here are relevant patterns:\n${formatted.trim()}`;
+        }
+        
+        return '';
+    }
+    
+    /**
+     * Infer task type from user query for better memory retrieval
+     * @param {string} userQuery - User query to analyze
+     * @returns {string} - Inferred task type
+     */
+    inferTaskType(userQuery) {
+        if (!userQuery) return 'general';
+        
+        const query = userQuery.toLowerCase();
+        
+        // Gene analysis patterns
+        if (query.includes('gene') || query.includes('sequence') || query.includes('protein')) {
+            return 'gene_analysis';
+        }
+        
+        // Search patterns
+        if (query.includes('search') || query.includes('find') || query.includes('lookup')) {
+            return 'search';
+        }
+        
+        // Analysis patterns
+        if (query.includes('analyze') || query.includes('analysis') || query.includes('compare')) {
+            return 'analysis';
+        }
+        
+        // Navigation patterns
+        if (query.includes('navigate') || query.includes('zoom') || query.includes('goto')) {
+            return 'navigation';
+        }
+        
+        // Data retrieval patterns
+        if (query.includes('download') || query.includes('get') || query.includes('fetch')) {
+            return 'data_retrieval';
+        }
+        
+        return 'general';
+    }
+    
+    /**
+     * Get current session ID for memory correlation
+     * @returns {string} - Session identifier
+     */
+    getSessionId() {
+        return this.sessionId || `session_${Date.now()}`;
+    }
+    
     /**
      * Process variables in user-defined system prompts
      * Supports variables like {genome_info}, {current_state}, etc.
