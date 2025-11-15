@@ -110,6 +110,7 @@ class LLMConfigManager {
                     
                     'Pro/moonshotai/Kimi-K2-Instruct-0905',    // Kimi K2 Pro (Latest)
                     'moonshotai/Kimi-K2-Instruct',             // Kimi K2 Standard
+                    'moonshotai/Kimi-K2-Thinking',             // Kimi K2 Thinking (Reasoning)
                     
                     // 🔮 GLM Series (Zhipu AI - Arranged by version and size)
                     
