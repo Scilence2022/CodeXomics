@@ -212,6 +212,7 @@ class MultiAgentSettingsManager {
                     // Kimi Series
                     'Pro/moonshotai/Kimi-K2-Instruct-0905': 'Kimi-K2-Instruct-0905 (Pro)',
                     'moonshotai/Kimi-K2-Instruct': 'Kimi-K2-Instruct',
+                    'moonshotai/Kimi-K2-Thinking': 'Kimi-K2-Thinking (Reasoning)',
                     'ascend-tribe/pangu-pro-moe': 'pangu-pro-moe',
                     'tencent/Hunyuan-A13B-Instruct': 'Hunyuan-A13B-Instruct',
                     'zai-org/GLM-4.5': 'GLM-4.5',
