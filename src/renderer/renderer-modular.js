@@ -3124,7 +3124,8 @@ class GenomeBrowser {
                 'variant': 'variants',
                 'reads': 'reads',
                 'proteins': 'proteins',
-                'wig': 'wigTracks'  // Add WIG tracks to preservation mapping
+                'wig': 'wigTracks',  // Add WIG tracks to preservation mapping
+                'actions': 'actions'  // Add actions track to preservation mapping
                 // Remove 'sequence' since it's now handled as bottom panel, not a regular track
             };
 

@@ -63,19 +63,24 @@ class GenomeDataProxy {
     
     /**
      * Get features/annotations for chromosome
+     * 🔒 CRITICAL FIX: Return a copy to prevent accidental modification of original
      * 
      * @param {string} chr - Chromosome identifier
-     * @returns {Array<Object>} Features array
+     * @returns {Array<Object>} Features array (always a copy)
      */
     getFeatures(chr) {
         this.stats.reads++;
         
         const key = `feat:${chr}`;
         if (this.modifications.has(key)) {
+            // Return the modified version (already a copy in modifications map)
             return this.modifications.get(key);
         }
         
-        return this.original.annotations?.[chr] || [];
+        // 🔒 CRITICAL: Return a SHALLOW COPY to prevent mutation of original
+        // This ensures Copy-on-Write semantics are maintained
+        const originalFeatures = this.original.annotations?.[chr] || [];
+        return [...originalFeatures]; // Shallow copy of array
     }
     
     /**
@@ -95,9 +100,10 @@ class GenomeDataProxy {
     
     /**
      * Get variants for chromosome
+     * 🔒 CRITICAL FIX: Return a copy to prevent accidental modification of original
      * 
      * @param {string} chr - Chromosome identifier
-     * @returns {Array<Object>} Variants array
+     * @returns {Array<Object>} Variants array (always a copy)
      */
     getVariants(chr) {
         this.stats.reads++;
@@ -107,7 +113,9 @@ class GenomeDataProxy {
             return this.modifications.get(key);
         }
         
-        return this.original.variants?.[chr] || [];
+        // 🔒 CRITICAL: Return a SHALLOW COPY to prevent mutation of original
+        const originalVariants = this.original.variants?.[chr] || [];
+        return [...originalVariants]; // Shallow copy of array
     }
     
     /**
@@ -127,9 +135,10 @@ class GenomeDataProxy {
     
     /**
      * Get reads for chromosome
+     * 🔒 CRITICAL FIX: Return a copy to prevent accidental modification of original
      * 
      * @param {string} chr - Chromosome identifier
-     * @returns {Array<Object>} Reads array
+     * @returns {Array<Object>} Reads array (always a copy)
      */
     getReads(chr) {
         this.stats.reads++;
@@ -139,7 +148,9 @@ class GenomeDataProxy {
             return this.modifications.get(key);
         }
         
-        return this.original.reads?.[chr] || [];
+        // 🔒 CRITICAL: Return a SHALLOW COPY to prevent mutation of original
+        const originalReads = this.original.reads?.[chr] || [];
+        return [...originalReads]; // Shallow copy of array
     }
     
     /**
@@ -169,29 +180,40 @@ class GenomeDataProxy {
             memoryUsed: (this.stats.memoryUsed / 1024 / 1024).toFixed(2) + ' MB'
         });
         
+        // Create a deep copy of the original data to avoid modifying it directly
+        const result = {
+            sequence: {},
+            annotations: {},
+            variants: {},
+            reads: {}
+        };
+        
+        // Copy all original data first
+        if (this.original.sequence) {
+            Object.assign(result.sequence, this.original.sequence);
+        }
+        if (this.original.annotations) {
+            Object.assign(result.annotations, this.original.annotations);
+        }
+        if (this.original.variants) {
+            Object.assign(result.variants, this.original.variants);
+        }
+        if (this.original.reads) {
+            Object.assign(result.reads, this.original.reads);
+        }
+        
+        // Apply modifications to the copy
         for (const [key, value] of this.modifications) {
             const [type, chr] = key.split(':');
             
             if (type === 'seq') {
-                if (!this.original.sequence) {
-                    this.original.sequence = {};
-                }
-                this.original.sequence[chr] = value;
+                result.sequence[chr] = value;
             } else if (type === 'feat') {
-                if (!this.original.annotations) {
-                    this.original.annotations = {};
-                }
-                this.original.annotations[chr] = value;
+                result.annotations[chr] = value;
             } else if (type === 'var') {
-                if (!this.original.variants) {
-                    this.original.variants = {};
-                }
-                this.original.variants[chr] = value;
+                result.variants[chr] = value;
             } else if (type === 'reads') {
-                if (!this.original.reads) {
-                    this.original.reads = {};
-                }
-                this.original.reads[chr] = value;
+                result.reads[chr] = value;
             }
         }
         
@@ -199,7 +221,7 @@ class GenomeDataProxy {
         this.stats.memoryUsed = 0;
         this.stats.modifiedChromosomes.clear();
         
-        return this.original;
+        return result;
     }
     
     /**

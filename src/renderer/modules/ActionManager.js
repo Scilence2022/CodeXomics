@@ -133,19 +133,22 @@ class ActionManager {
     
     /**
      * Get features from genome data (supports both proxy and direct access)
+     * 🔒 CRITICAL FIX: Always return a copy to prevent mutation
      * 
      * @param {Object|GenomeDataProxy} genomeData - Genome data or proxy
      * @param {string} chr - Chromosome identifier
-     * @returns {Array<Object>} Features array
+     * @returns {Array<Object>} Features array (always a copy)
      * @private
      */
     getFeaturesFromGenomeData(genomeData, chr) {
         // Check if it's a GenomeDataProxy
         if (genomeData && typeof genomeData.getFeatures === 'function') {
+            // Proxy already returns a copy
             return genomeData.getFeatures(chr);
         }
-        // Direct access
-        return genomeData?.annotations?.[chr] || [];
+        // Direct access - return a COPY to prevent mutation
+        const originalFeatures = genomeData?.annotations?.[chr] || [];
+        return [...originalFeatures]; // Shallow copy
     }
     
     /**
@@ -1525,7 +1528,7 @@ class ActionManager {
      * @param {string} options.saveFile - Optional file path to save the result directly without showing save dialog
      * @returns {Promise<Object>} Execution result
      */
-    async executeAllActions(options = {}) {
+    async executeAllActionsInternal(options = {}) {
         if (this.isExecuting) {
             this.genomeBrowser.showNotification('Actions are already executing', 'warning');
             return {
@@ -1633,7 +1636,7 @@ class ActionManager {
             });
             
             // Step 5: Generate comprehensive GBK file with full history
-            await this.generateComprehensiveGBK(executionActionsCopy, executionGenomeDataProxy, executionId, options.saveFile);
+            const gbkResult = await this.generateComprehensiveGBK(executionActionsCopy, executionGenomeDataProxy, executionId, options.saveFile);
             
             this.genomeBrowser.showNotification(`All ${pendingActionsCopy.length} actions executed successfully`, 'success');
             
@@ -1715,6 +1718,19 @@ class ActionManager {
             console.log(`🔒 [ActionManager] Execution cleanup completed`);
             console.log(`✅ [ActionManager] Original genome data preserved - modifications only in generated GBK file`);
             console.log(`✅ [ActionManager] Sequence modifications cleared - no contamination of original sequence`);
+            
+            // 🔒 CRITICAL FIX: Auto-open GBK file AFTER cleanup completes
+            // This ensures original data is verified and restored before loading modified data
+            if (gbkResult && gbkResult.success) {
+                console.log(`📂 [ActionManager] Auto-opening generated GBK file after cleanup...`);
+                try {
+                    await this.autoOpenGeneratedGBK(gbkResult.genbankContent, gbkResult.filename);
+                    this.genomeBrowser.showNotification(`GBK file generated and opened: ${gbkResult.filename}`, 'success');
+                } catch (error) {
+                    console.error('❌ [ActionManager] Error auto-opening GBK file:', error);
+                    this.genomeBrowser.showNotification('GBK file generated but could not be opened automatically', 'warning');
+                }
+            }
         }
     }
     
@@ -1999,19 +2015,23 @@ class ActionManager {
             // Check if ExportManager is available
             if (!this.genomeBrowser.exportManager) {
                 this.genomeBrowser.showNotification('Export functionality not available', 'error');
-                return;
+                return null;
             }
             
             const chromosomes = Object.keys(this.genomeBrowser.currentSequence || {});
             let genbankContent = '';
             
             for (const chr of chromosomes) {
-                // Apply sequence modifications
-                const modifiedSequence = this.applySequenceModifications(chr, this.genomeBrowser.currentSequence[chr]);
+                // 🔒 CRITICAL FIX: Get sequence from execution proxy, NOT from original data!
+                // Get the original sequence as starting point (execution proxy doesn't store sequences)
+                const originalSeq = this.genomeBrowser.currentSequence[chr];
+                
+                // Apply sequence modifications to the COPY, never to original
+                const modifiedSequence = this.applySequenceModifications(chr, originalSeq);
                 const sequence = modifiedSequence;
                 
-                // Use execution genome data for features
-                const featuresSource = executionGenomeData?.annotations?.[chr] || this.genomeBrowser.currentAnnotations?.[chr] || [];
+                // 🔒 CRITICAL FIX: Use helper method to get features from proxy correctly
+                const featuresSource = this.getFeaturesFromGenomeData(executionGenomeData, chr) || [];
                 const adjustedFeatures = this.adjustFeaturePositions(chr, featuresSource);
                 const features = adjustedFeatures;
                 
@@ -2045,15 +2065,20 @@ class ActionManager {
                 this.downloadTextFile(genbankContent, filename);
             }
             
-            // Auto-open the generated GBK file in a new CodeXomics window
-            await this.autoOpenGeneratedGBK(genbankContent, filename);
+            // 🔒 CRITICAL FIX: Do NOT auto-open during execution!
+            // Return the GBK content and filename for later opening in finally block
+            console.log(`✅ [ActionManager] Comprehensive GBK file generated successfully`);
             
-            this.genomeBrowser.showNotification(`Comprehensive GBK file generated and opened: ${filename}`, 'success');
-            console.log(`✅ [ActionManager] Comprehensive GBK file generated and opened successfully`);
+            return {
+                success: true,
+                genbankContent,
+                filename
+            };
             
         } catch (error) {
             console.error('❌ [ActionManager] Error generating comprehensive GBK:', error);
             this.genomeBrowser.showNotification('Error generating GBK file', 'error');
+            return null;
         }
     }
     
@@ -5733,33 +5758,17 @@ class ActionManager {
     }
 
     async functionExecuteActions(params) {
-        const { confirm = false } = params;
+        // This method is now a simple wrapper that delegates to the actual executeAllActions
+        // The actual implementation is at line ~1528
+        const result = await this.executeAllActionsInternal(params);
         
-        const pendingActions = this.actions.filter(action => action.status === this.STATUS.PENDING);
+        // If the result is successful, return it directly
+        if (result.success) {
+            return result;
+        }
         
-        if (pendingActions.length === 0) {
-            return {
-                success: true,
-                message: 'No pending actions to execute',
-                executedActions: 0
-            };
-        }
-
-        if (this.isExecuting) {
-            throw new Error('Actions are already being executed');
-        }
-
-        try {
-            await this.executeAllActions();
-            
-            return {
-                success: true,
-                message: `Successfully executed ${pendingActions.length} actions`,
-                executedActions: pendingActions.length
-            };
-        } catch (error) {
-            throw new Error(`Failed to execute actions: ${error.message}`);
-        }
+        // If it failed, throw an error with the message
+        throw new Error(result.message || 'Failed to execute actions');
     }
 
     functionClearActions(params) {
@@ -5857,7 +5866,7 @@ class ActionManager {
     }
 
     async executeAllActions(params) {
-        return await this.functionExecuteActions(params || {});
+        return await this.executeAllActionsInternal(params || {});
     }
 
     async getActionList(params) {

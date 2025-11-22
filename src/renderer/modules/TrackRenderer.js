@@ -7812,7 +7812,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         // Find the existing actions track
         const existingActionsTrack = document.querySelector('.actions-track');
         if (!existingActionsTrack) {
-            console.warn('Actions track not found in DOM');
+            // Actions track not yet created - this is normal during initial load
+            console.log('[TrackRenderer] Actions track not yet in DOM, will be created on next render');
             return;
         }
         
