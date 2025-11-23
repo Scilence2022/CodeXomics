@@ -979,7 +979,7 @@ class ProjectManagerWindow {
             <div class="file-card ${isSelected ? 'selected' : ''}" 
                  data-file-id="${file.id}"
                  onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
-                 ondblclick="projectManagerWindow.previewFile('${file.id}')"
+                 ondblclick="projectManagerWindow.showFilePreview('${file.id}')"
                  oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')">
                 <div class="file-icon" style="background-color: ${typeConfig.color}">
                     ${typeConfig.icon}
@@ -992,7 +992,7 @@ class ProjectManagerWindow {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">
+                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview">
                         👁️
                     </button>
                     <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">
@@ -1220,6 +1220,7 @@ class ProjectManagerWindow {
                         this.currentProject.modified = new Date().toISOString();
                         
                         console.log(`✅ Project XML saved: ${result.filePath}`);
+                        this.showNotification('Project saved successfully', 'success');
                         return result.filePath;
                     } else {
                         console.warn('Failed to save project XML:', result.error);
@@ -1229,6 +1230,46 @@ class ProjectManagerWindow {
         } catch (error) {
             console.error('Error saving project as XML:', error);
         }
+    }
+
+    /**
+     * Save current project (Ctrl+S handler)
+     */
+    async saveCurrentProject() {
+        if (!this.currentProject) {
+            this.showNotification('No project to save', 'warning');
+            return;
+        }
+        
+        try {
+            // Update project modification time
+            this.currentProject.modified = new Date().toISOString();
+            
+            // Save to localStorage
+            await this.saveProjects();
+            
+            // Save to XML file (show dialog for manual save)
+            await this.saveProjectAsXML(false);
+            
+            console.log(`💾 Project saved: ${this.currentProject.name}`);
+            
+        } catch (error) {
+            console.error('Error saving current project:', error);
+            this.showNotification(`Failed to save project: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Save project as (for menu)
+     */
+    async saveProjectAs() {
+        if (!this.currentProject) {
+            this.showNotification('No project to save', 'warning');
+            return;
+        }
+        
+        // Always show dialog for Save As
+        await this.saveProjectAsXML(false);
     }
 
     selectFile(fileId, ctrlKey = false) {
@@ -3821,10 +3862,15 @@ Built with ❤️ for the bioinformatics community.
             file.modified = new Date().toISOString();
             
             this.currentProject.modified = new Date().toISOString();
-            this.saveProjects();
+            await this.saveProjects();
+            
+            // Auto-save as XML (without dialog)
+            if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
+                await this.saveProjectAsXML(true);
+            }
             
             this.renderProjectTree();
-            this.renderProjectContent(); // 更新主视图
+            this.renderProjectContent();
             this.showNotification(`File renamed to "${newName}"`, 'success');
             
         } catch (error) {
@@ -3850,10 +3896,15 @@ Built with ❤️ for the bioinformatics community.
             this.selectedFiles.delete(fileId);
             
             this.currentProject.modified = new Date().toISOString();
-            this.saveProjects();
+            await this.saveProjects();
+            
+            // Auto-save as XML (without dialog)
+            if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
+                await this.saveProjectAsXML(true);
+            }
             
             this.renderProjectTree();
-            this.renderProjectContent(); // 更新主视图
+            this.renderProjectContent();
             this.showNotification(`File "${file.name}" deleted`, 'success');
             
         } catch (error) {
@@ -3885,10 +3936,15 @@ Built with ❤️ for the bioinformatics community.
             
             this.currentProject.files.push(duplicatedFile);
             this.currentProject.modified = new Date().toISOString();
-            this.saveProjects();
+            await this.saveProjects();
+            
+            // Auto-save as XML (without dialog)
+            if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
+                await this.saveProjectAsXML(true);
+            }
             
             this.renderProjectTree();
-            this.renderProjectContent(); // 更新主视图
+            this.renderProjectContent();
             this.showNotification(`File duplicated as "${newName}"`, 'success');
             
         } catch (error) {
