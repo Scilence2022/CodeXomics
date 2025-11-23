@@ -1611,8 +1611,10 @@ class ActionManager {
                 // Execute the action using proxy
                 await this.executeActionOnCopy(action, executionActionsCopy, executionGenomeDataProxy);
                 
-                // Update all features after each action execution
-                await this.updateAllFeaturesAfterAction(action, executionGenomeDataProxy);
+                // 🔒 CRITICAL FIX: Do NOT adjust features after each action!
+                // Features will be adjusted ONCE at the end based on ALL modifications
+                // Adjusting after each action causes cumulative double/triple adjustments
+                // await this.updateAllFeaturesAfterAction(action, executionGenomeDataProxy); // REMOVED
                 
                 // Adjust positions of remaining pending actions using enhanced logic
                 this.adjustPendingActionPositionsEnhanced(action, i + 1, executionActionsCopy);
@@ -2030,7 +2032,10 @@ class ActionManager {
                 const modifiedSequence = this.applySequenceModifications(chr, originalSeq);
                 const sequence = modifiedSequence;
                 
-                // 🔒 CRITICAL FIX: Use helper method to get features from proxy correctly
+                // 🔒 CRITICAL FIX: Features are adjusted ONCE here based on ALL modifications
+                // This is the ONLY place where features are filtered/adjusted
+                // executeDeleteSequence() and other methods only RECORD modifications
+                // adjustFeaturePositions() reads from sequenceModifications Map and applies ALL at once
                 const featuresSource = this.getFeaturesFromGenomeData(executionGenomeData, chr) || [];
                 const adjustedFeatures = this.adjustFeaturePositions(chr, featuresSource);
                 const features = adjustedFeatures;
@@ -3348,39 +3353,29 @@ class ActionManager {
             actionId: action.id
         });
         
-        // 🔒 CRITICAL: Only modify execution copy, NEVER original data
-        let deletedFeaturesCount = 0;
+        // 🔒 CRITICAL FIX: Do NOT delete features here!
+        // Features will be filtered/adjusted ONCE at the end in generateComprehensiveGBK()
+        // based on ALL accumulated modifications in sequenceModifications Map
+        // Deleting features here causes double deletion when adjustFeaturePositions() is called
         
-        // Get features from execution copy (proxy or direct)
+        // Count features that will be affected (for reporting only)
+        let deletedFeaturesCount = 0;
         const currentFeatures = this.getFeaturesFromGenomeData(executionGenomeData, chromosome);
         
         if (currentFeatures && currentFeatures.length > 0) {
-            const initialCount = currentFeatures.length;
-            
-            // Store deleted features for potential rollback
-            const deletedFeatures = currentFeatures.filter(feature => 
+            const featuresToDelete = currentFeatures.filter(feature => 
                 feature.start >= start && feature.end <= end
             );
+            deletedFeaturesCount = featuresToDelete.length;
             
-            // Store deleted features in action metadata
-            action.metadata.deletedFeatures = deletedFeatures;
+            // Store deleted features info in action metadata (for reporting only)
+            action.metadata.deletedFeatures = featuresToDelete;
             
-            // Filter out features in deleted region (only in execution copy)
-            const remainingFeatures = currentFeatures.filter(feature => 
-                !(feature.start >= start && feature.end <= end)
-            );
-            
-            // Set filtered features back to execution copy
-            this.setFeaturesInGenomeData(executionGenomeData, chromosome, remainingFeatures);
-            
-            deletedFeaturesCount = initialCount - remainingFeatures.length;
-            
-            console.log('🗑️ [ActionManager] Removed features from deleted region (in execution copy):', {
+            console.log('🗑️ [ActionManager] Features in deleted region (will be removed in final export):', {
                 chromosome: chromosome,
                 region: `${start}-${end}`,
-                deletedFeatures: deletedFeaturesCount,
-                remainingFeatures: remainingFeatures.length,
-                originalDataUntouched: true
+                featuresToDelete: deletedFeaturesCount,
+                note: 'Features NOT deleted yet - will be filtered in final GBK generation'
             });
         }
         
