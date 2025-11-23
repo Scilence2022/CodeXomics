@@ -1643,7 +1643,7 @@
             align-items: center;
             text-align: left;
             height: 120px;
-            min-width: 280px;
+            /* Removed fixed min-width - will be controlled by grid */
         }
 
         .file-card:hover {
@@ -1918,10 +1918,46 @@
         /* 响应式文件网格 */
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
             padding: 20px;
             overflow-y: auto;
+            /* Ensure proper grid layout */
+            align-items: start;
+        }
+
+        /* Grid view specific card adjustments */
+        .file-grid .file-card {
+            /* Remove min-width constraint in grid */
+            min-width: unset;
+            width: 100%;
+            /* More compact layout for grid */
+            padding: 16px;
+            height: auto;
+            min-height: 100px;
+        }
+
+        .file-grid .file-card .file-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 16px;
+            margin-right: 12px;
+        }
+
+        .file-grid .file-card .file-name {
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .file-grid .file-card .file-details {
+            font-size: 10px;
+        }
+
+        .file-grid .file-card .file-action-btn {
+            width: 30px;
+            height: 30px;
+            padding: 6px;
+            font-size: 12px;
         }
 
         /* 按钮样式增强 */
@@ -2048,6 +2084,7 @@
         /* Details视图（表格）样式 */
         .file-details-table {
             width: 100%;
+            min-width: 600px; /* Minimum width to ensure readability */
             border-collapse: collapse;
             background: white;
             border-radius: 12px;
@@ -2057,6 +2094,9 @@
 
         .file-details-table thead {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .file-details-table th {
@@ -2065,12 +2105,48 @@
             font-weight: 600;
             color: #2c3e50;
             border-bottom: 2px solid #e9ecef;
+            white-space: nowrap;
+        }
+
+        /* Responsive column widths */
+        .file-details-table th:nth-child(1) { /* Icon */
+            width: 50px;
+        }
+        .file-details-table th:nth-child(2) { /* Name */
+            width: auto;
+            min-width: 200px;
+        }
+        .file-details-table th:nth-child(3) { /* Type */
+            width: 100px;
+        }
+        .file-details-table th:nth-child(4) { /* Size */
+            width: 100px;
+        }
+        .file-details-table th:nth-child(5) { /* Modified */
+            width: 120px;
+        }
+        .file-details-table th:nth-child(6) { /* Actions */
+            width: 120px;
+            text-align: center;
         }
 
         .file-details-table td {
             padding: 12px 16px;
             border-bottom: 1px solid #e9ecef;
             transition: all 0.2s ease;
+        }
+
+        /* Align actions column to center */
+        .file-details-table td:last-child {
+            text-align: center;
+        }
+
+        /* Ensure name column wraps properly */
+        .file-details-table td:nth-child(2) {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .file-details-table tr {
@@ -2085,6 +2161,20 @@
         .file-details-table tr.selected {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
             color: #667eea;
+        }
+
+        /* Deleted files in table view */
+        .file-details-table tr.file-deleted {
+            background: rgba(220, 53, 69, 0.05);
+            opacity: 0.8;
+        }
+
+        .file-details-table tr.file-deleted:hover {
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+        .file-details-table tr.file-deleted .file-name {
+            color: #dc3545;
         }
 
         .file-details-table .file-icon-small {
@@ -2128,6 +2218,15 @@
             backdrop-filter: blur(20px);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             overflow-x: auto;
+            /* Ensure table doesn't overflow */
+            min-width: 0;
+        }
+
+        /* Table container with horizontal scroll */
+        .file-details-table-container {
+            overflow-x: auto;
+            width: 100%;
+            min-width: 0;
         }
 
         /* 虚拟滚动优化样式 */

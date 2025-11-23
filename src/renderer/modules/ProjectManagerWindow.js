@@ -2487,43 +2487,47 @@ class ProjectManagerWindow {
         }
 
         let html = `
-            <table class="file-details-table">
-                <thead>
-                    <tr>
-                        <th style="width: 40px;"></th>
-                        <th>Name</th>
-                        <th style="width: 100px;">Type</th>
-                        <th style="width: 80px;">Size</th>
-                        <th style="width: 120px;">Modified</th>
-                        <th style="width: 150px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div class="file-details-table-container">
+                <table class="file-details-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th>Name</th>
+                            <th style="width: 100px;">Type</th>
+                            <th style="width: 80px;">Size</th>
+                            <th style="width: 120px;">Modified</th>
+                            <th style="width: 150px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
 
         filteredFiles.forEach(file => {
             const fileType = this.detectFileType(file.name);
             const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
             const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
+            const isDeleted = file.fileExists === false;
 
             html += `
-                <tr class="${isSelected ? 'selected' : ''}"
+                <tr class="${isSelected ? 'selected' : ''} ${isDeleted ? 'file-deleted' : ''}"
                     draggable="true"
                     onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
                     ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
                     oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
                     data-file-id="${file.id}">
                     <td>
-                        <div class="file-icon-small" style="background-color: ${typeConfig.color}">
-                            ${typeConfig.icon}
+                        <div class="file-icon-small" style="background-color: ${isDeleted ? '#dc3545' : typeConfig.color}">
+                            ${isDeleted ? '⚠️' : typeConfig.icon}
                         </div>
                     </td>
-                    <td class="file-name" title="${file.name}">${file.name}</td>
+                    <td class="file-name" title="${file.name}${isDeleted ? ' (File not found on disk)' : ''}">
+                        ${file.name}${isDeleted ? ' <span style="color: #dc3545; font-size: 0.8em;">(Missing)</span>' : ''}
+                    </td>
                     <td>${fileType.toUpperCase()}</td>
                     <td>${this.formatFileSize(file.size || 0)}</td>
                     <td>${file.modified ? this.formatDate(file.modified) : 'Unknown'}</td>
                     <td class="file-actions-details">
-                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview">👁️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview" ${isDeleted ? 'disabled' : ''}>👁️</button>
                         <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">✏️</button>
                         <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">🗑️</button>
                     </td>
@@ -2534,6 +2538,7 @@ class ProjectManagerWindow {
         html += `
                 </tbody>
             </table>
+            </div>
         `;
 
         fileDetails.innerHTML = html;
