@@ -806,17 +806,17 @@ class GenomeBrowser {
         document.getElementById('resetZoomBtn').addEventListener('click', () => this.navigationManager.resetZoom());
 
         // Sequence controls
-        document.getElementById('copySequenceBtn').addEventListener('click', (e) => {
-            // Prevent ActionManager from also handling this event
-            e.stopImmediatePropagation();
-            this.sequenceUtils.copySequence();
-        });
+        // ❌ REMOVED: Copy is now handled by ActionManager
+        // document.getElementById('copySequenceBtn').addEventListener('click', (e) => {
+        //     e.stopImmediatePropagation();
+        //     this.sequenceUtils.copySequence();
+        // });
         document.getElementById('exportBtn').addEventListener('click', () => this.sequenceUtils.exportSequence());
-        document.getElementById('copySequenceHeaderBtn').addEventListener('click', (e) => {
-            // Prevent ActionManager from also handling this event
-            e.stopImmediatePropagation();
-            this.sequenceUtils.copySequence();
-        });
+        // ❌ REMOVED: Copy is now handled by ActionManager
+        // document.getElementById('copySequenceHeaderBtn').addEventListener('click', (e) => {
+        //     e.stopImmediatePropagation();
+        //     this.sequenceUtils.copySequence();
+        // });
         document.getElementById('sequenceSettingsBtn').addEventListener('click', () => {
             if (this.trackRenderer) {
                 this.trackRenderer.openTrackSettings('sequence');

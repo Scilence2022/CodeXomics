@@ -2264,11 +2264,11 @@ class BlastManager {
             console.warn('✗ Query sequence input not found');
         }
 
-        // Paste button
-        const pasteBtn = document.getElementById('pasteSequenceBtn');
+        // Paste button for BLAST query input
+        const pasteBtn = document.getElementById('pasteSequenceInputBtn');
         if (pasteBtn) {
             pasteBtn.addEventListener('click', async () => {
-                console.log('BlastManager: Paste button clicked');
+                console.log('BlastManager: Paste button clicked (BLAST modal)');
                 try {
                     const text = await navigator.clipboard.readText();
                     const textarea = document.getElementById('blastQuerySequence');
@@ -2281,9 +2281,9 @@ class BlastManager {
                     this.showNotification('Failed to paste from clipboard. Please check clipboard permissions.', 'error');
                 }
             });
-            console.log('✓ Paste button listener added');
+            console.log('✓ Paste button listener added (BLAST modal)');
         } else {
-            console.warn('✗ Paste button not found');
+            console.warn('✗ Paste button not found (pasteSequenceInputBtn)');
         }
 
         // Load current region button
