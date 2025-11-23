@@ -974,25 +974,28 @@ class ProjectManagerWindow {
         const fileType = this.detectFileType(file.name);
         const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
         const isSelected = this.selectedFiles.has(file.id);
+        const isDeleted = file.fileExists === false; // Check if file was marked as deleted
         
         return `
-            <div class="file-card ${isSelected ? 'selected' : ''}" 
+            <div class="file-card ${isSelected ? 'selected' : ''} ${isDeleted ? 'file-deleted' : ''}" 
                  data-file-id="${file.id}"
                  onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
                  ondblclick="projectManagerWindow.showFilePreview('${file.id}')"
                  oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')">
-                <div class="file-icon" style="background-color: ${typeConfig.color}">
-                    ${typeConfig.icon}
+                <div class="file-icon" style="background-color: ${isDeleted ? '#dc3545' : typeConfig.color}">
+                    ${isDeleted ? '⚠️' : typeConfig.icon}
                 </div>
                 <div class="file-info">
-                    <div class="file-name" title="${file.name}">${file.name}</div>
+                    <div class="file-name" title="${file.name}${isDeleted ? ' (File not found on disk)' : ''}">
+                        ${file.name}${isDeleted ? ' <span style="color: #dc3545; font-size: 0.8em;">(Missing)</span>' : ''}
+                    </div>
                     <div class="file-details">
                         <span class="file-size">${this.formatFileSize(file.size)}</span>
                         <span class="file-date">${this.formatDate(file.modified)}</span>
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview">
+                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview" ${isDeleted ? 'disabled' : ''}>
                         👁️
                     </button>
                     <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">
@@ -1945,11 +1948,61 @@ class ProjectManagerWindow {
         
         // If a project is currently open, scan its folder for new files
         if (this.currentProject && this.currentProject.location) {
+            // Check file existence for all files
+            await this.checkFilesExistence();
+            
+            // Then scan for new files
             await this.scanAndAddNewFiles();
         }
         
         this.autoRefreshProjectsAndWorkspaces();
         this.showNotification('Projects refreshed manually', 'success');
+    }
+
+    /**
+     * Check if files exist on disk and mark missing ones
+     */
+    async checkFilesExistence() {
+        if (!this.currentProject || !this.currentProject.files) {
+            return;
+        }
+
+        if (!window.electronAPI || !window.electronAPI.checkFileExists) {
+            console.warn('checkFileExists API not available');
+            return;
+        }
+
+        console.log(`🔍 Checking file existence for ${this.currentProject.files.length} files...`);
+        let missingCount = 0;
+
+        for (const file of this.currentProject.files) {
+            const filePath = this.getFileAbsolutePath(file);
+            if (!filePath) {
+                file.fileExists = false;
+                missingCount++;
+                continue;
+            }
+
+            try {
+                const result = await window.electronAPI.checkFileExists(filePath);
+                file.fileExists = result.exists;
+                if (!result.exists) {
+                    missingCount++;
+                    console.log(`⚠️ File missing: ${file.name} (${filePath})`);
+                }
+            } catch (error) {
+                console.error(`Error checking file: ${file.name}`, error);
+                file.fileExists = false;
+                missingCount++;
+            }
+        }
+
+        if (missingCount > 0) {
+            console.log(`⚠️ Found ${missingCount} missing files`);
+            this.showNotification(`Warning: ${missingCount} file(s) not found on disk (marked in red)`, 'warning');
+        } else {
+            console.log('✅ All files exist on disk');
+        }
     }
 
     /**
@@ -3886,9 +3939,21 @@ Built with ❤️ for the bioinformatics community.
         const file = this.findFileById(fileId);
         if (!file) return;
 
-        if (!confirm(`Are you sure you want to delete "${file.name}"?`)) return;
+        if (!confirm(`Are you sure you want to delete "${file.name}"?\n\nThis will delete both the project record AND the physical file from disk.`)) return;
 
         try {
+            // Get the absolute path of the file
+            const filePath = this.getFileAbsolutePath(file);
+            
+            // Delete the physical file from disk
+            if (window.electronAPI && window.electronAPI.deletePhysicalFile && filePath) {
+                const deleteResult = await window.electronAPI.deletePhysicalFile(filePath);
+                if (!deleteResult.success) {
+                    console.warn('Failed to delete physical file:', deleteResult.error);
+                    // Continue anyway to remove from project
+                }
+            }
+            
             // 从项目中移除文件
             this.currentProject.files = this.currentProject.files.filter(f => f.id !== fileId);
             
@@ -3905,7 +3970,7 @@ Built with ❤️ for the bioinformatics community.
             
             this.renderProjectTree();
             this.renderProjectContent();
-            this.showNotification(`File "${file.name}" deleted`, 'success');
+            this.showNotification(`File "${file.name}" deleted from project and disk`, 'success');
             
         } catch (error) {
             console.error('Error deleting file:', error);

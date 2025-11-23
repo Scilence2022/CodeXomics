@@ -1659,6 +1659,28 @@
             box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
         }
 
+        /* Deleted/Missing file styles */
+        .file-card.file-deleted {
+            border-color: #dc3545;
+            background: rgba(220, 53, 69, 0.05);
+            opacity: 0.8;
+        }
+
+        .file-card.file-deleted:hover {
+            border-color: #dc3545;
+            background: rgba(220, 53, 69, 0.1);
+            box-shadow: 0 20px 40px rgba(220, 53, 69, 0.25);
+        }
+
+        .file-card.file-deleted .file-name {
+            color: #dc3545;
+        }
+
+        .file-card.file-deleted .file-action-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
         .file-icon {
             width: 60px;
             height: 60px;

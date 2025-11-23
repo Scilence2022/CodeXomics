@@ -56,6 +56,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveProjectFileDirect: (filePath, content) => ipcRenderer.invoke('saveProjectFileDirect', filePath, content),
     createTempFile: (fileName, content) => ipcRenderer.invoke('createTempFile', fileName, content),
     getFileInfo: (filePath) => ipcRenderer.invoke('getFileInfo', filePath),
+    checkFileExists: (filePath) => ipcRenderer.invoke('checkFileExists', filePath),
+    deletePhysicalFile: (filePath) => ipcRenderer.invoke('deletePhysicalFile', filePath),
     updateRecentProjects: (recentProjects) => ipcRenderer.invoke('updateRecentProjects', recentProjects),
 
       // File copying APIs

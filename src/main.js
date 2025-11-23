@@ -7478,6 +7478,38 @@ ipcMain.handle('getFileInfo', async (event, filePath) => {
   }
 });
 
+// Handle checking if file exists
+ipcMain.handle('checkFileExists', async (event, filePath) => {
+  try {
+    const exists = fs.existsSync(filePath);
+    return { success: true, exists: exists };
+  } catch (error) {
+    return { success: false, exists: false, error: error.message };
+  }
+});
+
+// Handle deleting physical file
+ipcMain.handle('deletePhysicalFile', async (event, filePath) => {
+  try {
+    if (!filePath) {
+      throw new Error('File path is required for deletion');
+    }
+    
+    if (!fs.existsSync(filePath)) {
+      console.log(`File does not exist, skipping deletion: ${filePath}`);
+      return { success: true, message: 'File does not exist' };
+    }
+    
+    // Delete the file
+    fs.unlinkSync(filePath);
+    console.log(`✅ File deleted: ${filePath}`);
+    return { success: true, message: 'File deleted successfully' };
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Function to update recent projects menu
 function updateRecentProjectsMenu(recentProjects = []) {
   const menu = Menu.getApplicationMenu();
