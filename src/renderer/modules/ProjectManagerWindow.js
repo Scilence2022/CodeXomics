@@ -671,9 +671,9 @@ class ProjectManagerWindow {
         
         this.saveProjects();
         
-        // Also save as XML if possible to ensure persistence
+        // Also save as XML if possible to ensure persistence (auto-save without dialog)
         if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
-            this.saveProjectAsXML();
+            this.saveProjectAsXML(true);
         }
         
         this.renderProjectTree();
@@ -1166,9 +1166,9 @@ class ProjectManagerWindow {
         
         this.saveProjects();
         
-        // Also save as XML if possible to ensure persistence
+        // Also save as XML if possible to ensure persistence (auto-save without dialog)
         if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
-            this.saveProjectAsXML();
+            this.saveProjectAsXML(true);
         }
         
         this.renderProjectTree();
@@ -1177,7 +1177,7 @@ class ProjectManagerWindow {
         console.log(`📁 Created folder: ${folderName} at path: ${newPath.join('/')}`);
     }
 
-    async saveProjectAsXML() {
+    async saveProjectAsXML(isAutoSave = false) {
         if (!this.currentProject) return;
         
         try {
@@ -1189,20 +1189,41 @@ class ProjectManagerWindow {
             // Generate XML content
             const xmlContent = this.xmlHandler.projectToXML(this.currentProject);
             
-            if (window.electronAPI && window.electronAPI.saveProjectFile) {
+            if (window.electronAPI) {
                 // Use existing file path or create new one
                 const fileName = this.currentProject.xmlFileName || `${this.currentProject.name}.prj.gai`;
-                const result = await window.electronAPI.saveProjectFile(fileName, xmlContent);
                 
-                if (result.success) {
-                    this.currentProject.xmlFilePath = result.filePath;
-                    this.currentProject.xmlFileName = fileName;
-                    this.currentProject.modified = new Date().toISOString();
+                // If this is auto-save and we have an existing file path, save directly without dialog
+                if (isAutoSave && (this.currentProject.xmlFilePath || this.currentProject.projectFilePath)) {
+                    const existingPath = this.currentProject.xmlFilePath || this.currentProject.projectFilePath;
                     
-                    console.log(`✅ Project XML saved: ${result.filePath}`);
-                    return result.filePath;
-                } else {
-                    console.warn('Failed to save project XML:', result.error);
+                    if (window.electronAPI.saveProjectFileDirect) {
+                        const result = await window.electronAPI.saveProjectFileDirect(existingPath, xmlContent);
+                        
+                        if (result.success) {
+                            this.currentProject.xmlFilePath = result.filePath;
+                            this.currentProject.modified = new Date().toISOString();
+                            
+                            console.log(`✅ Project XML auto-saved: ${result.filePath}`);
+                            return result.filePath;
+                        } else {
+                            console.warn('Failed to auto-save project XML:', result.error);
+                        }
+                    }
+                } else if (window.electronAPI.saveProjectFile) {
+                    // Manual save - show dialog
+                    const result = await window.electronAPI.saveProjectFile(fileName, xmlContent);
+                    
+                    if (result.success) {
+                        this.currentProject.xmlFilePath = result.filePath;
+                        this.currentProject.xmlFileName = fileName;
+                        this.currentProject.modified = new Date().toISOString();
+                        
+                        console.log(`✅ Project XML saved: ${result.filePath}`);
+                        return result.filePath;
+                    } else {
+                        console.warn('Failed to save project XML:', result.error);
+                    }
                 }
             }
         } catch (error) {
@@ -1988,9 +2009,9 @@ class ProjectManagerWindow {
                     // Save changes to both localStorage and XML
                     await this.saveProjects();
                     
-                    // Auto-save as XML to ensure persistence
+                    // Auto-save as XML to ensure persistence (without showing dialog)
                     if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
-                        await this.saveProjectAsXML();
+                        await this.saveProjectAsXML(true); // Pass true to indicate auto-save
                     }
 
                     // Update UI
@@ -3715,9 +3736,9 @@ Built with ❤️ for the bioinformatics community.
         
         this.saveProjects();
         
-        // Also save as XML if possible to ensure persistence
+        // Also save as XML if possible to ensure persistence (auto-save without dialog)
         if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
-            this.saveProjectAsXML();
+            this.saveProjectAsXML(true);
         }
         
         this.closeModal('createSubfolderModal');

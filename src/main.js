@@ -7409,6 +7409,30 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
   }
 });
 
+// Handle saving project file directly without dialog (for auto-save)
+ipcMain.handle('saveProjectFileDirect', async (event, filePath, content) => {
+  try {
+    // 确保文件路径存在
+    if (!filePath) {
+      throw new Error('File path is required for direct save');
+    }
+    
+    // 确保父目录存在
+    const parentDir = path.dirname(filePath);
+    if (!fs.existsSync(parentDir)) {
+      fs.mkdirSync(parentDir, { recursive: true });
+    }
+    
+    // 直接写入文件，不显示对话框
+    fs.writeFileSync(filePath, content, 'utf8');
+    console.log(`✅ Project saved directly: ${filePath}`);
+    return { success: true, filePath: filePath };
+  } catch (error) {
+    console.error('Error saving project file directly:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle creating temporary file
 ipcMain.handle('createTempFile', async (event, fileName, content) => {
   try {

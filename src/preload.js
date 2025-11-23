@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File Save APIs
                   saveFile: (fileName, content) => ipcRenderer.invoke('saveFile', fileName, content),
         saveProjectFile: (fileName, content) => ipcRenderer.invoke('saveProjectFile', fileName, content),
+    saveProjectFileDirect: (filePath, content) => ipcRenderer.invoke('saveProjectFileDirect', filePath, content),
     createTempFile: (fileName, content) => ipcRenderer.invoke('createTempFile', fileName, content),
     getFileInfo: (filePath) => ipcRenderer.invoke('getFileInfo', filePath),
     updateRecentProjects: (recentProjects) => ipcRenderer.invoke('updateRecentProjects', recentProjects),
