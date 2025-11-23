@@ -522,6 +522,35 @@ class ActionManager {
             return;
         }
         
+        // 🔧 FIX: If no active selection, check if clipboard has sourceInfo (from Copy/Cut)
+        // This allows Paste to work immediately after Copy, pasting to the same location
+        if (this.clipboard.sourceInfo && this.clipboard.sourceInfo.chromosome) {
+            const sourceInfo = this.clipboard.sourceInfo;
+            const target = `${sourceInfo.chromosome}:${sourceInfo.start}-${sourceInfo.end}`;
+            const metadata = {
+                chromosome: sourceInfo.chromosome,
+                start: sourceInfo.start,
+                end: sourceInfo.end,
+                strand: sourceInfo.strand || '+',
+                clipboardData: this.clipboard,
+                selectionSource: 'clipboard_source',
+                pasteMode: 'replace' // Paste replaces the source location
+            };
+            
+            this.addAction(
+                this.ACTION_TYPES.PASTE_SEQUENCE,
+                target,
+                `Paste ${this.clipboard.sequence.length} bp to replace ${sourceInfo.end - sourceInfo.start + 1} bp at ${sourceInfo.name || target}`,
+                metadata
+            );
+            
+            this.genomeBrowser.showNotification(
+                `Paste-replace action queued at clipboard source location (${this.clipboard.sequence.length} bp)`, 
+                'success'
+            );
+            return;
+        }
+        
         // If we have a cursor position but no selection, use it for INSERT
         if (this.cursorPosition >= 0 && !isNaN(this.cursorPosition)) {
             // Try to get chromosome from various sources
@@ -538,7 +567,8 @@ class ActionManager {
                     start: this.cursorPosition, 
                     end: this.cursorPosition, 
                     strand: '+',
-                    clipboardData: this.clipboard
+                    clipboardData: this.clipboard,
+                    pasteMode: 'insert' // Paste inserts at cursor
                 };
                 
                 this.addAction(
