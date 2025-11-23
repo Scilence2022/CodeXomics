@@ -4374,7 +4374,8 @@ to {
   overflow: hidden;
 }
 
-.tab-button {
+/* LLM Config Tab Buttons */
+.llm-provider-tabs .tab-button {
   flex: 1;
   padding: 12px 16px;
   background: transparent;
@@ -4387,18 +4388,19 @@ to {
   position: relative;
 }
 
-.tab-button:hover {
+.llm-provider-tabs .tab-button:hover {
   background: #e9ecef;
   color: #495057;
 }
 
-.tab-button.active {
+/* LLM config tabs only - not for BLAST or other specific tab types */
+.llm-provider-tabs .tab-button.active {
   background: white;
   color: #495057;
   font-weight: 600;
 }
 
-.tab-button.active::after {
+.llm-provider-tabs .tab-button.active::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -4518,25 +4520,25 @@ to {
   transform: scale(1.1);
 }
 
-.tab-button::before {
+.llm-provider-tabs .tab-button::before {
   margin-right: 6px;
   font-family: 'Font Awesome 6 Free';
   font-weight: 900;
 }
 
-.tab-button[data-provider="openai"]::before {
+.llm-provider-tabs .tab-button[data-provider="openai"]::before {
   content: '\f544';
 }
 
-.tab-button[data-provider="anthropic"]::before {
+.llm-provider-tabs .tab-button[data-provider="anthropic"]::before {
   content: '\f135';
 }
 
-.tab-button[data-provider="google"]::before {
+.llm-provider-tabs .tab-button[data-provider="google"]::before {
   content: '\f1a0';
 }
 
-.tab-button[data-provider="local"]::before {
+.llm-provider-tabs .tab-button[data-provider="local"]::before {
   content: '\f233';
 }
 
@@ -4826,16 +4828,16 @@ to {
   border-color: #4b5563;
 }
 
-.tab-button {
+.llm-provider-tabs .tab-button {
   color: #9ca3af;
 }
 
-.tab-button:hover {
+.llm-provider-tabs .tab-button:hover {
   background: #4b5563;
   color: #f3f4f6;
 }
 
-.tab-button.active {
+.llm-provider-tabs .tab-button.active {
   background: #1f2937;
   color: #f3f4f6;
 }
@@ -9602,8 +9604,9 @@ to {
   margin-top: 16px;
 }
 
+/* BLAST type buttons - ensure these override any generic .tab-button styles */
 .blast-type-tabs .tab-button {
-  display: flex;
+  display: flex !important;
   flex-direction: column;
   align-items: center;
   padding: 16px 12px;
@@ -9615,7 +9618,7 @@ to {
   text-align: center;
 }
 
-.blast-type-tabs .tab-button:hover {
+.blast-type-tabs .tab-button:hover:not(.active) {
   border-color: #3b82f6;
   background: #f8fafc;
   transform: translateY(-2px);
@@ -9623,10 +9626,10 @@ to {
 }
 
 .blast-type-tabs .tab-button.active {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  color: #1e40af;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6 !important;
+  background: #eff6ff !important;
+  color: #1e40af !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
 .blast-type-tabs .tab-button i {
@@ -10369,16 +10372,16 @@ to {
   color: #e5e7eb;
 }
 
-.blast-type-tabs .tab-button:hover,
+.blast-type-tabs .tab-button:hover:not(.active),
     .service-tab:hover {
   background: #374151;
   border-color: #60a5fa;
 }
 
 .blast-type-tabs .tab-button.active {
-  background: #1e3a8a;
-  border-color: #60a5fa;
-  color: #93c5fd;
+  background: #1e3a8a !important;
+  border-color: #60a5fa !important;
+  color: #93c5fd !important;
 }
 
 .service-tab.active {
@@ -10493,7 +10496,7 @@ to {
 .modal-tabs .tab-button {
   flex: 1;
   padding: 12px 16px;
-  background: none;
+  background: none !important;
   border: none;
   border-bottom: 3px solid transparent;
   color: #6b7280;
@@ -10511,15 +10514,15 @@ to {
   border-radius: 0 8px 0 0;
 }
 
-.modal-tabs .tab-button:hover {
-  background: #f3f4f6;
+.modal-tabs .tab-button:hover:not(.active) {
+  background: #f3f4f6 !important;
   color: #374151;
 }
 
 .modal-tabs .tab-button.active {
-  background: #ffffff;
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
+  background: #ffffff !important;
+  color: #3b82f6 !important;
+  border-bottom-color: #3b82f6 !important;
 }
 
 .tab-content {
@@ -10659,15 +10662,15 @@ to {
   color: #9ca3af;
 }
 
-.modal-tabs .tab-button:hover {
-  background: #374151;
+.modal-tabs .tab-button:hover:not(.active) {
+  background: #374151 !important;
   color: #e5e7eb;
 }
 
 .modal-tabs .tab-button.active {
-  background: #111827;
-  color: #60a5fa;
-  border-bottom-color: #60a5fa;
+  background: #111827 !important;
+  color: #60a5fa !important;
+  border-bottom-color: #60a5fa !important;
 }
 
 .blast-db-management-section .help-text {
@@ -13383,7 +13386,7 @@ to {
   margin-bottom: 20px;
 }
 
-.tab-button {
+.tab-buttons .tab-button {
   flex: 1;
   padding: 12px 16px;
   border: none;
@@ -13400,12 +13403,12 @@ to {
   gap: 8px;
 }
 
-.tab-button:hover {
+.tab-buttons .tab-button:hover {
   background: #f8f9fa;
   color: #333;
 }
 
-.tab-button.active {
+.tab-buttons .tab-button.active {
   color: #007bff;
   border-bottom-color: #007bff;
   background: white;
@@ -13529,18 +13532,19 @@ to {
   color: #ffc107;
 }
 
-.tab-button {
+/* Media query specific LLM tab button adjustments */
+.llm-provider-tabs .tab-button {
   border-bottom: 1px solid #dee2e6;
   text-align: left;
   justify-content: flex-start;
   white-space: nowrap;
 }
 
-.tab-button:last-child {
+.llm-provider-tabs .tab-button:last-child {
   border-bottom: none;
 }
 
-.tab-button.active::after {
+.llm-provider-tabs .tab-button.active::after {
   height: 0;
   border-right: 2px solid #667eea;
   border-bottom: none;

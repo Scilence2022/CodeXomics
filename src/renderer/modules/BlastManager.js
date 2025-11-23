@@ -2382,9 +2382,12 @@ class BlastManager {
         const modalTabButtons = document.querySelectorAll('.modal-tabs .tab-button');
         modalTabButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const tabName = e.target.dataset.tab;
-                console.log('BlastManager: Modal tab clicked:', tabName);
-                this.switchModalTab(tabName);
+                const button = e.target.closest('.tab-button');
+                const tabName = button?.dataset.tab;
+                if (tabName) {
+                    console.log('BlastManager: Modal tab clicked:', tabName);
+                    this.switchModalTab(tabName);
+                }
             });
         });
         console.log(`✓ Modal tab buttons: ${modalTabButtons.length}`);
@@ -3289,11 +3292,20 @@ class BlastManager {
     }
 
     selectBlastType(blastType) {
+        console.log('BlastManager: Selecting BLAST type:', blastType);
+        
         // Update active tab
         document.querySelectorAll('.blast-type-tabs .tab-button').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-blast-type="${blastType}"]`).classList.add('active');
+        
+        const targetBtn = document.querySelector(`.blast-type-tabs .tab-button[data-blast-type="${blastType}"]`);
+        if (targetBtn) {
+            targetBtn.classList.add('active');
+            console.log('BlastManager: Added active class to', blastType, 'button');
+        } else {
+            console.warn('BlastManager: Could not find button for BLAST type:', blastType);
+        }
 
         // Update database options based on BLAST type
         this.updateDatabaseOptions(blastType);
@@ -5364,17 +5376,31 @@ class BlastManager {
     }
 
     switchModalTab(tabName) {
-        // Switch tab buttons
+        console.log('BlastManager: Switching modal tab to:', tabName);
+        
+        // Switch tab buttons - ONLY target modal-tabs, not blast-type-tabs!
         document.querySelectorAll('.modal-tabs .tab-button').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        const targetTab = document.querySelector(`.modal-tabs .tab-button[data-tab="${tabName}"]`);
+        if (targetTab) {
+            targetTab.classList.add('active');
+            console.log('BlastManager: Activated modal tab:', tabName);
+        } else {
+            console.warn('BlastManager: Could not find modal tab button for:', tabName);
+        }
 
         // Switch tab content
-        document.querySelectorAll('.tab-content').forEach(content => {
+        document.querySelectorAll('.blast-modal-body .tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        document.getElementById(`${tabName}-tab`).classList.add('active');
+        
+        const targetContent = document.getElementById(`${tabName}-tab`);
+        if (targetContent) {
+            targetContent.classList.add('active');
+            console.log('BlastManager: Activated tab content:', tabName);
+        }
 
         // Update loaded genome list when switching to database management tab
         if (tabName === 'db-management') {
