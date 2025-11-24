@@ -340,6 +340,68 @@ class BlastManager {
                 // Add BLASTDB to environment
                 execOptions.env = { ...process.env, BLASTDB: localDbPath };
                 
+                // Special handling for makeblastdb - use execFile to avoid shell quoting issues with paths containing spaces
+                if (command.includes('makeblastdb')) {
+                    // Parse the command into executable and arguments
+                    // Remove the executable name to get just the arguments
+                    let commandStr = command.replace(/^makeblastdb\s+/, '');
+                    
+                    const args = [];
+                    // Parse arguments - handle both quoted and unquoted values
+                    let currentArg = '';
+                    let inQuotes = false;
+                    let isFlag = false;
+                    
+                    for (let i = 0; i < commandStr.length; i++) {
+                        const char = commandStr[i];
+                        
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                            continue;
+                        }
+                        
+                        if (char === ' ' && !inQuotes) {
+                            if (currentArg) {
+                                args.push(currentArg);
+                                currentArg = '';
+                                isFlag = false;
+                            }
+                            continue;
+                        }
+                        
+                        currentArg += char;
+                    }
+                    
+                    // Add the last argument
+                    if (currentArg) {
+                        args.push(currentArg);
+                    }
+                    
+                    // Determine makeblastdb executable path
+                    let executable = 'makeblastdb';
+                    if (this.config.blastExecutablePath) {
+                        const blastDir = path.dirname(this.config.blastExecutablePath);
+                        executable = path.join(blastDir, 'makeblastdb' + (process.platform === 'win32' ? '.exe' : ''));
+                        console.log(`BlastManager: Using detected makeblastdb path: ${executable}`);
+                    }
+                    
+                    console.log('BlastManager: Running makeblastdb with execFile');
+                    console.log('BlastManager: Executable:', executable);
+                    console.log('BlastManager: Arguments:', JSON.stringify(args));
+                    console.log('BlastManager: BLASTDB:', localDbPath);
+                    
+                    execFile(executable, args, execOptions, (error, stdout, stderr) => {
+                        if (error) {
+                            console.error('BlastManager: makeblastdb execution error:', error);
+                            console.error('BlastManager: makeblastdb stderr:', stderr);
+                            reject(new Error(`makeblastdb failed: ${error.message}${stderr ? ' STDERR: ' + stderr.trim() : ''}`));
+                            return;
+                        }
+                        resolve(stdout);
+                    });
+                    return; // Exit early - we handled this command
+                }
+                
                 // Use detected BLAST executable path if available
                 if (this.config.blastExecutablePath) {
                     const blastCommands = ['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'];
