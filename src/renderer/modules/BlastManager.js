@@ -387,9 +387,12 @@ class BlastManager {
                 
                 // Special handling for makeblastdb - use execFile to avoid shell quoting issues with paths containing spaces
                 if (command.includes('makeblastdb')) {
+                    console.log('BlastManager: Original makeblastdb command:', command);
+                    
                     // Parse the command into executable and arguments
                     // Remove the executable name to get just the arguments
                     let commandStr = command.replace(/^makeblastdb\s+/, '');
+                    console.log('BlastManager: Command string after removing executable:', commandStr);
                     
                     const args = [];
                     // Parse arguments - handle both quoted and unquoted values
@@ -422,12 +425,16 @@ class BlastManager {
                         args.push(currentArg);
                     }
                     
+                    console.log('BlastManager: Parsed arguments array:', args);
+                    
                     // Determine makeblastdb executable path
                     let executable = 'makeblastdb';
                     if (this.config.blastExecutablePath) {
                         const blastDir = path.dirname(this.config.blastExecutablePath);
                         executable = path.join(blastDir, 'makeblastdb' + (process.platform === 'win32' ? '.exe' : ''));
-                        console.log(`BlastManager: Using detected makeblastdb path: ${executable}`);
+                        console.log(`BlastManager: Using configured makeblastdb path: ${executable}`);
+                    } else {
+                        console.log('BlastManager: No configured path, using system makeblastdb');
                     }
                     
                     console.log('BlastManager: Running makeblastdb with execFile');
@@ -439,6 +446,7 @@ class BlastManager {
                         if (error) {
                             console.error('BlastManager: makeblastdb execution error:', error);
                             console.error('BlastManager: makeblastdb stderr:', stderr);
+                            console.error('BlastManager: Executed command would be:', executable, args.join(' '));
                             reject(new Error(`makeblastdb failed: ${error.message}${stderr ? ' STDERR: ' + stderr.trim() : ''}`));
                             return;
                         }

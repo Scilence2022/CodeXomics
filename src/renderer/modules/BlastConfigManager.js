@@ -421,16 +421,27 @@ class BlastConfigManager {
      */
     loadCurrentConfig() {
         const configDiv = document.getElementById('currentConfig');
+        const pathInput = document.getElementById('blastPathInput');
         
         if (this.config.blastExecutablePath) {
+            // Update the Current Configuration display
             configDiv.innerHTML = `
                 <div style="margin-bottom: 8px;"><strong>Executable Path:</strong> ${this.config.blastExecutablePath}</div>
                 ${this.config.blastVersion ? `<div style="margin-bottom: 8px;"><strong>Version:</strong> v${this.config.blastVersion}</div>` : ''}
                 ${this.config.lastDetection ? `<div style="margin-bottom: 8px;"><strong>Last Detection:</strong> ${new Date(this.config.lastDetection).toLocaleString()}</div>` : ''}
                 ${this.config.detectedPaths?.directory ? `<div><strong>Installation Directory:</strong> ${this.config.detectedPaths.directory}</div>` : ''}
             `;
+            
+            // Populate the manual input field with saved path
+            if (pathInput) {
+                pathInput.value = this.config.blastExecutablePath;
+            }
         } else {
             configDiv.innerHTML = '<div style="color: #666;">No BLAST+ configuration found. Please detect or configure manually.</div>';
+            // Clear the input field if no config
+            if (pathInput) {
+                pathInput.value = '';
+            }
         }
     }
 
