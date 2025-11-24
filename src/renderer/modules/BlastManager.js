@@ -432,6 +432,22 @@ class BlastManager {
                     
                     console.log('BlastManager: Parsed arguments array:', args);
                     
+                    // DEBUG: Write arguments to a temp file for inspection
+                    try {
+                        const fs = require('fs');
+                        const os = require('os');
+                        const debugPath = path.join(os.tmpdir(), 'makeblastdb-args-debug.json');
+                        fs.writeFileSync(debugPath, JSON.stringify({
+                            executable: executable,
+                            args: args,
+                            originalCommand: command,
+                            timestamp: new Date().toISOString()
+                        }, null, 2));
+                        console.log('BlastManager: Debug info written to:', debugPath);
+                    } catch (debugError) {
+                        console.error('BlastManager: Failed to write debug info:', debugError);
+                    }
+                    
                     // Determine makeblastdb executable path
                     let executable = 'makeblastdb';
                     if (this.config.blastExecutablePath) {
@@ -1698,6 +1714,8 @@ class BlastManager {
 
     // Quick database creation for current genome
     async createQuickDatabase(dbType) {
+        let dbId; // Define at function scope for error handler
+        
         try {
             // Check if there's a currently loaded genome in currentSequence
             if (!this.app?.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
@@ -1727,7 +1745,7 @@ class BlastManager {
             // Create database name and ID
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
             const dbName = `${genomeName}_${dbType === 'nucl' ? 'nucleotide' : 'protein'}_${timestamp}`;
-            const dbId = `quick_${dbName.replace(/[^a-zA-Z0-9_]/g, '_')}_${Date.now()}`;
+            dbId = `quick_${dbName.replace(/[^a-zA-Z0-9_]/g, '_')}_${Date.now()}`;
 
             // Get all sequences from the loaded genome and format as FASTA
             let fastaContent = '';
