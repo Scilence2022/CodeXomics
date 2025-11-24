@@ -3442,15 +3442,21 @@ class BlastManager {
     selectBlastType(blastType) {
         console.log('BlastManager: Selecting BLAST type:', blastType);
         
-        // Update active tab
-        document.querySelectorAll('.blast-type-tabs .tab-button').forEach(btn => {
+        // CRITICAL FIX: Remove active class from ALL buttons first
+        const allButtons = document.querySelectorAll('.blast-type-tabs .tab-button');
+        console.log(`BlastManager: Found ${allButtons.length} BLAST type buttons`);
+        
+        allButtons.forEach(btn => {
             btn.classList.remove('active');
+            console.log(`BlastManager: Removed active from button:`, btn.dataset.blastType);
         });
         
+        // Add active class ONLY to the selected button
         const targetBtn = document.querySelector(`.blast-type-tabs .tab-button[data-blast-type="${blastType}"]`);
         if (targetBtn) {
             targetBtn.classList.add('active');
             console.log('BlastManager: Added active class to', blastType, 'button');
+            console.log('BlastManager: Button classList:', targetBtn.classList.toString());
         } else {
             console.warn('BlastManager: Could not find button for BLAST type:', blastType);
         }
