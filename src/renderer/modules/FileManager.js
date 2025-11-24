@@ -688,6 +688,23 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     }
 
     async parseFasta() {
+        // Auto-set working directory to the FASTA file's directory
+        if (this.currentFile?.path) {
+            const path = require('path');
+            const fileDir = path.dirname(this.currentFile.path);
+            console.log(`📁 Auto-setting working directory to: ${fileDir}`);
+            
+            // Call set_working_directory through ChatManager if available
+            if (this.genomeBrowser?.chatManager) {
+                try {
+                    await this.genomeBrowser.chatManager.setWorkingDirectory({ directory_path: fileDir });
+                    console.log('✅ Working directory set successfully');
+                } catch (error) {
+                    console.warn('⚠️ Failed to set working directory:', error);
+                }
+            }
+        }
+        
         const lines = this.currentFile.data.split('\n');
         const sequences = {};
         let currentSeq = null;
@@ -726,6 +743,13 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             this.genomeBrowser.tabManager.onGenomeLoaded(sequences, this.currentFile?.path);
         }
         
+        // Show notification about working directory
+        if (this.currentFile?.path) {
+            const path = require('path');
+            const fileDir = path.dirname(this.currentFile.path);
+            this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
+        }
+        
         // Select first chromosome by default
         const firstChr = Object.keys(sequences)[0];
         if (firstChr) {
@@ -739,6 +763,24 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         if (!this.currentFile?.data) {
             throw new Error('No file data available for GenBank parsing');
         }
+        
+        // Auto-set working directory to the GBK file's directory
+        if (this.currentFile?.path) {
+            const path = require('path');
+            const fileDir = path.dirname(this.currentFile.path);
+            console.log(`📁 Auto-setting working directory to: ${fileDir}`);
+            
+            // Call set_working_directory through ChatManager if available
+            if (this.genomeBrowser?.chatManager) {
+                try {
+                    await this.genomeBrowser.chatManager.setWorkingDirectory({ directory_path: fileDir });
+                    console.log('✅ Working directory set successfully');
+                } catch (error) {
+                    console.warn('⚠️ Failed to set working directory:', error);
+                }
+            }
+        }
+        
         const lines = this.currentFile.data.split('\n');
         console.log(`📄 Total lines to parse: ${lines.length}`);
         
@@ -993,6 +1035,13 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         // Update all tabs with loaded genome data
         if (this.genomeBrowser.tabManager) {
             this.genomeBrowser.tabManager.onGenomeLoaded(sequences, this.currentFile?.path);
+        }
+        
+        // Show notification about working directory
+        if (this.currentFile?.path) {
+            const path = require('path');
+            const fileDir = path.dirname(this.currentFile.path);
+            this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
         }
         
         // Select first chromosome by default

@@ -667,10 +667,13 @@ class BlastManager {
         const path = require('path');
         const outputPath = path.join(targetDir, dbName);
         
+        // Build command - will be parsed into arguments for execFile
         let command = `makeblastdb -in "${inputFile}" -dbtype ${dbType} -out "${outputPath}"`;
         
         if (title) {
-            command += ` -title "${title}"`;
+            // Sanitize title: replace hyphens and spaces with underscores to prevent argument parsing errors
+            const sanitizedTitle = title.replace(/[-\s]+/g, '_');
+            command += ` -title "${sanitizedTitle}"`;
         }
         
         if (parseSeqids) {
