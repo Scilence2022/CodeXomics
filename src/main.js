@@ -2041,6 +2041,12 @@ function createMenu() {
             createBlastInstallerWindow();
           }
         },
+        {
+          label: 'Configure BLAST Tools',
+          click: () => {
+            createBlastConfigWindow();
+          }
+        },
         // Add custom external tools dynamically
         ...(global.customExternalTools ? getCustomExternalToolsMenuItems() : []),
         { type: 'separator' },
@@ -4268,6 +4274,55 @@ function createBlastInstallerWindow() {
   }
 }
 
+// Create BLAST Configuration Window
+function createBlastConfigWindow() {
+  try {
+    const blastConfigWindow = new BrowserWindow({
+      width: 1000,
+      height: 750,
+      minWidth: 900,
+      minHeight: 650,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'Configure BLAST Tools - CodeXomics',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false,
+      resizable: true,
+      minimizable: true,
+      maximizable: false
+    });
+
+    blastConfigWindow.loadFile(path.join(__dirname, 'blast-config.html'));
+
+    blastConfigWindow.once('ready-to-show', () => {
+      blastConfigWindow.show();
+      // Set specialized menu for BLAST config window
+      createToolWindowMenu(blastConfigWindow, 'BLAST Configuration');
+    });
+
+    blastConfigWindow.on('closed', () => {
+      // Clean up menu template
+      toolMenuTemplates.delete(blastConfigWindow.id);
+      
+      // If this was the active window, restore main window menu
+      if (currentActiveWindow === blastConfigWindow) {
+        currentActiveWindow = null;
+        createMenu();
+      }
+      console.log('BLAST Configuration window closed');
+    });
+
+    console.log('BLAST Configuration window created');
+
+  } catch (error) {
+    console.error('Failed to open BLAST Configuration:', error);
+  }
+}
+
 // Create specialized menu for Deep Gene Research window
 function createDeepGeneResearchMenu(deepGeneResearchWindow) {
   const template = [
@@ -6288,6 +6343,12 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+Alt+B',
           click: () => {
             createBlastInstallerWindow();
+          }
+        },
+        {
+          label: 'Configure BLAST Tools',
+          click: () => {
+            createBlastConfigWindow();
           }
         },
         { type: 'separator' },

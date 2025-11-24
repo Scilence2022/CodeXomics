@@ -19,6 +19,9 @@ class BlastManager {
         // Get ConfigManager instance from app
         this.configManager = app.configManager || null;
         
+        // Load saved BLAST configuration if available
+        const savedBlastConfig = this.loadSavedBlastConfig();
+        
         // BLAST configuration
         this.config = {
             ncbiBaseUrl: 'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi',
@@ -29,7 +32,10 @@ class BlastManager {
             localBlastPath: this.getPlatformBlastPath(), // Platform-specific BLAST+ path
             localDbPath: this.getPlatformDbPath(), // Platform-specific database path
             localDatabases: new Map(), // Will store local database information
-            supportedLocalFormats: ['fasta', 'fa', 'fas', 'txt', 'gb', 'gbk', 'genbank']
+            supportedLocalFormats: ['fasta', 'fa', 'fas', 'txt', 'gb', 'gbk', 'genbank'],
+            // Load saved configuration
+            blastExecutablePath: savedBlastConfig?.blastExecutablePath || null,
+            installedBlastVersion: savedBlastConfig?.blastVersion || null
         };
         
         // Custom databases for this project
@@ -41,6 +47,45 @@ class BlastManager {
         this.initializeDatabaseManagement().catch(error => {
             console.error('Failed to initialize database management:', error);
         });
+    }
+
+    /**
+     * Load saved BLAST configuration from file
+     */
+    loadSavedBlastConfig() {
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const os = require('os');
+            
+            const homeDir = os.homedir();
+            const platform = os.platform();
+            
+            let configDir;
+            if (platform === 'win32') {
+                const appData = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+                configDir = path.join(appData, 'GenomeAIStudio');
+            } else if (platform === 'darwin') {
+                configDir = path.join(homeDir, 'Library', 'Application Support', 'GenomeAIStudio');
+            } else {
+                configDir = path.join(homeDir, '.config', 'GenomeAIStudio');
+            }
+            
+            const configPath = path.join(configDir, 'blast-config.json');
+            
+            if (fs.existsSync(configPath)) {
+                const data = fs.readFileSync(configPath, 'utf8');
+                const config = JSON.parse(data);
+                console.log('BlastManager: Loaded saved BLAST configuration:', config);
+                return config;
+            } else {
+                console.log('BlastManager: No saved BLAST configuration found');
+            }
+        } catch (error) {
+            console.error('BlastManager: Failed to load saved BLAST configuration:', error);
+        }
+        
+        return null;
     }
 
     /**
