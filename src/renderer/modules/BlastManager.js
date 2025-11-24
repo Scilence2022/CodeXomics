@@ -1750,18 +1750,76 @@ class BlastManager {
             const dbName = `${genomeName}_${dbType === 'nucl' ? 'nucleotide' : 'protein'}_${timestamp}`;
             dbId = `quick_${dbName.replace(/[^a-zA-Z0-9_]/g, '_')}_${Date.now()}`;
 
-            // Get all sequences from the loaded genome and format as FASTA
+            // Generate FASTA content based on database type
             let fastaContent = '';
-            Object.keys(sequences).forEach(chromName => {
-                const sequence = sequences[chromName];
-                if (sequence) {
-                    fastaContent += `>${chromName}\n`;
-                    // Split sequence into lines of 80 characters (FASTA standard)
-                    for (let i = 0; i < sequence.length; i += 80) {
-                        fastaContent += sequence.substring(i, i + 80) + '\n';
+            
+            if (dbType === 'nucl') {
+                // Nucleotide database: use genomic sequences directly
+                Object.keys(sequences).forEach(chromName => {
+                    const sequence = sequences[chromName];
+                    if (sequence) {
+                        fastaContent += `>${chromName}\n`;
+                        // Split sequence into lines of 80 characters (FASTA standard)
+                        for (let i = 0; i < sequence.length; i += 80) {
+                            fastaContent += sequence.substring(i, i + 80) + '\n';
+                        }
                     }
+                });
+            } else if (dbType === 'prot') {
+                // Protein database: use exportManager's tested protein export functionality
+                if (!this.app?.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
+                    throw new Error('No annotation data loaded. Protein database requires CDS features.');
                 }
-            });
+                
+                if (!this.app?.exportManager) {
+                    throw new Error('Export manager not available');
+                }
+                
+                console.log('Using tested exportProteinFasta functionality for protein database creation');
+                
+                // Use the same algorithm as exportProteinAsFasta in ExportManager
+                const chromosomes = Object.keys(this.app.currentAnnotations);
+                const processedFeatures = new Set(); // Track processed features to avoid duplicates
+
+                chromosomes.forEach(chr => {
+                    const sequence = this.app.currentSequence[chr];
+                    const features = this.app.currentAnnotations[chr] || [];
+                    
+                    features.forEach(feature => {
+                        // Only process CDS features, skip gene features to avoid duplication
+                        if (feature.type === 'CDS') {
+                            // Create unique identifier to avoid duplicates
+                            const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
+                            
+                            if (!processedFeatures.has(featureId)) {
+                                processedFeatures.add(featureId);
+                                
+                                const cdsSequence = this.app.exportManager.extractFeatureSequence(sequence, feature);
+                                // ExtractFeatureSequence already handles reverse complement, so translate directly
+                                const proteinSequence = this.app.exportManager.translateDNA(cdsSequence);
+                                
+                                // Remove trailing asterisks (stop codons) from protein sequence
+                                const cleanProteinSequence = proteinSequence.replace(/\*+$/, '');
+                                
+                                const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+                                
+                                fastaContent += `>${header}\n`;
+                                
+                                // Split sequence into lines of 80 characters
+                                for (let i = 0; i < cleanProteinSequence.length; i += 80) {
+                                    fastaContent += cleanProteinSequence.substring(i, i + 80) + '\n';
+                                }
+                            }
+                        }
+                    });
+                });
+                
+                if (!fastaContent) {
+                    throw new Error('No protein-coding features (CDS) found in annotations');
+                }
+                
+                console.log(`Generated protein FASTA from ${processedFeatures.size} CDS features`);
+            }
 
             if (!fastaContent) {
                 throw new Error('No sequence data found in loaded genome');
@@ -1784,12 +1842,9 @@ class BlastManager {
             // Update UI to show creating status
             this.populateAvailableDatabasesList();
 
-            // Check if we need to create a FASTA file from GBK source
-            const fastaFilePath = await this.createFastaFileIfNeeded(genomeName, fastaContent);
-
-            // For protein database, we need to translate the sequences
-            if (dbType === 'prot') {
-                fastaContent = this.translateSequencesToProtein(fastaContent);
+            // Check if we need to create a FASTA file from GBK source (only for nucleotide)
+            if (dbType === 'nucl') {
+                const fastaFilePath = await this.createFastaFileIfNeeded(genomeName, fastaContent);
             }
 
             // Create temporary file
