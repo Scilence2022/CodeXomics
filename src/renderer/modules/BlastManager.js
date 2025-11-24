@@ -306,7 +306,7 @@ class BlastManager {
 
     async runCommand(command, workingDirectory = null) {
         return new Promise((resolve, reject) => {
-            const { exec } = require('child_process');
+            const { exec, execFile } = require('child_process');
             const path = require('path');
             const fs = require('fs');
 
@@ -314,10 +314,34 @@ class BlastManager {
             const isBlastCommand = ['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'].some(cmd => command.startsWith(cmd));
 
             let finalCommand = command;
+            let execOptions = { maxBuffer: 10 * 1024 * 1024 }; // 10MB buffer
+            
+            if (workingDirectory) {
+                execOptions.cwd = workingDirectory;
+                console.log('BlastManager: Setting working directory to:', workingDirectory);
+            }
+            
             if (isBlastCommand) {
+                // Set BLASTDB environment variable
+                const localDbPath = this.getCurrentDatabasePath();
+                
+                // Check if BLASTDB directory exists, create it if it doesn't
+                if (!fs.existsSync(localDbPath)) {
+                    try {
+                        fs.mkdirSync(localDbPath, { recursive: true });
+                        console.log('BlastManager: Created BLASTDB directory:', localDbPath);
+                    } catch (error) {
+                        console.error('BlastManager: Failed to create BLASTDB directory:', error);
+                        reject(new Error(`Failed to create BLASTDB directory: ${error.message}`));
+                        return;
+                    }
+                }
+                
+                // Add BLASTDB to environment
+                execOptions.env = { ...process.env, BLASTDB: localDbPath };
+                
                 // Use detected BLAST executable path if available
                 if (this.config.blastExecutablePath) {
-                    // Replace the BLAST command with the full path
                     const blastCommands = ['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'];
                     for (const cmd of blastCommands) {
                         if (command.startsWith(cmd)) {
@@ -330,34 +354,8 @@ class BlastManager {
                     }
                 }
                 
-                // Set BLASTDB environment variable for the command
-                const localDbPath = this.getCurrentDatabasePath(); // Use current database path
-                
-                // Check if BLASTDB directory exists, create it if it doesn't
-                if (!fs.existsSync(localDbPath)) {
-                    try {
-                        // Use synchronous directory creation in this context
-                        fs.mkdirSync(localDbPath, { recursive: true });
-                        console.log('BlastManager: Created BLASTDB directory:', localDbPath);
-                    } catch (error) {
-                        console.error('BlastManager: Failed to create BLASTDB directory:', error);
-                        reject(new Error(`Failed to create BLASTDB directory: ${error.message}`));
-                        return;
-                    }
-                }
-                
-                // For paths with spaces, we need to ensure proper escaping
-                // On macOS/Linux, we can use single quotes to preserve spaces
-                const escapedDbPath = localDbPath.includes(' ') ? `'${localDbPath}'` : localDbPath;
-                finalCommand = `BLASTDB=${escapedDbPath} ${finalCommand}`;
-                console.log('BlastManager: Running BLAST command with BLASTDB set:', finalCommand);
-            }
-
-            // Set execution options
-            const execOptions = {};
-            if (workingDirectory) {
-                execOptions.cwd = workingDirectory;
-                console.log('BlastManager: Setting working directory to:', workingDirectory);
+                console.log('BlastManager: Running BLAST command with BLASTDB:', localDbPath);
+                console.log('BlastManager: Command:', finalCommand);
             }
 
             exec(finalCommand, execOptions, (error, stdout, stderr) => {
