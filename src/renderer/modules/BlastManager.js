@@ -432,6 +432,16 @@ class BlastManager {
                     
                     console.log('BlastManager: Parsed arguments array:', args);
                     
+                    // Determine makeblastdb executable path
+                    let executable = 'makeblastdb';
+                    if (this.config.blastExecutablePath) {
+                        const blastDir = path.dirname(this.config.blastExecutablePath);
+                        executable = path.join(blastDir, 'makeblastdb' + (process.platform === 'win32' ? '.exe' : ''));
+                        console.log(`BlastManager: Using configured makeblastdb path: ${executable}`);
+                    } else {
+                        console.log('BlastManager: No configured path, using system makeblastdb');
+                    }
+                    
                     // DEBUG: Write arguments to a temp file for inspection
                     try {
                         const fs = require('fs');
@@ -446,16 +456,6 @@ class BlastManager {
                         console.log('BlastManager: Debug info written to:', debugPath);
                     } catch (debugError) {
                         console.error('BlastManager: Failed to write debug info:', debugError);
-                    }
-                    
-                    // Determine makeblastdb executable path
-                    let executable = 'makeblastdb';
-                    if (this.config.blastExecutablePath) {
-                        const blastDir = path.dirname(this.config.blastExecutablePath);
-                        executable = path.join(blastDir, 'makeblastdb' + (process.platform === 'win32' ? '.exe' : ''));
-                        console.log(`BlastManager: Using configured makeblastdb path: ${executable}`);
-                    } else {
-                        console.log('BlastManager: No configured path, using system makeblastdb');
                     }
                     
                     console.log('BlastManager: Running makeblastdb with execFile');
