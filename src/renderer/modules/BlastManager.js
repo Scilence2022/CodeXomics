@@ -3701,7 +3701,18 @@ class BlastManager {
 
     collectSearchParameters() {
         const sequence = this.cleanSequence(document.getElementById('blastQuerySequence').value);
+        
+        // DEBUG: Check all BLAST type buttons and their states
+        console.log('=== Collecting BLAST parameters ===');
+        const allTypeButtons = document.querySelectorAll('.blast-type-tabs .tab-button');
+        console.log(`Total BLAST type buttons found: ${allTypeButtons.length}`);
+        allTypeButtons.forEach(btn => {
+            console.log(`Button ${btn.dataset.blastType}: active=${btn.classList.contains('active')}, classList=${btn.classList.toString()}`);
+        });
+        
         const blastType = document.querySelector('.blast-type-tabs .tab-button.active')?.dataset.blastType;
+        console.log(`Selected blastType from active button: ${blastType}`);
+        
         const database = document.getElementById('blastDatabase').value;
         const evalue = document.getElementById('blastEvalue').value;
         const maxTargets = document.getElementById('blastMaxTargets').value;
@@ -3712,7 +3723,7 @@ class BlastManager {
         const lowComplexity = document.getElementById('blastLowComplexity').checked;
         const service = document.querySelector('.service-tabs .service-tab.active')?.dataset.service;
 
-        return {
+        const params = {
             sequence,
             blastType,
             database,
@@ -3725,6 +3736,9 @@ class BlastManager {
             lowComplexity,
             service
         };
+        
+        console.log('Collected parameters:', params);
+        return params;
     }
 
     validateSearchParameters(params) {
