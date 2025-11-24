@@ -370,6 +370,10 @@ class BlastManager {
                 // Set BLASTDB environment variable
                 const localDbPath = this.getCurrentDatabasePath();
                 
+                console.log('BlastManager: Detected BLAST command, isBlastCommand:', isBlastCommand);
+                console.log('BlastManager: Command includes makeblastdb:', command.includes('makeblastdb'));
+                console.log('BlastManager: Full command:', command);
+                
                 // Check if BLASTDB directory exists, create it if it doesn't
                 if (!fs.existsSync(localDbPath)) {
                     try {
@@ -387,6 +391,7 @@ class BlastManager {
                 
                 // Special handling for makeblastdb - use execFile to avoid shell quoting issues with paths containing spaces
                 if (command.includes('makeblastdb')) {
+                    console.log('========== ENTERING EXECFILE CODE PATH FOR MAKEBLASTDB ==========');
                     console.log('BlastManager: Original makeblastdb command:', command);
                     
                     // Parse the command into executable and arguments
