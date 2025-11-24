@@ -773,8 +773,8 @@ class LLMConfigManager {
             });
         }
 
-        // Provider tabs
-        document.querySelectorAll('.tab-button').forEach(button => {
+        // Provider tabs - ONLY select tabs in LLM config modal
+        document.querySelectorAll('#llmConfigModal .tab-button').forEach(button => {
             button.addEventListener('click', () => {
                 this.switchProviderTab(button.dataset.provider);
             });
@@ -922,8 +922,8 @@ class LLMConfigManager {
     }
 
     switchProviderTab(provider) {
-        // Update tab buttons
-        document.querySelectorAll('.tab-button').forEach(btn => {
+        // Update tab buttons - ONLY in LLM config modal
+        document.querySelectorAll('#llmConfigModal .tab-button').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.provider === provider);
             // Remove focus from all buttons to prevent blue outline
             btn.blur();
