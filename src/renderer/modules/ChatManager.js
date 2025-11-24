@@ -4161,6 +4161,15 @@ class ChatManager {
         const appDiv = document.getElementById('app');
         appDiv.insertAdjacentHTML('beforeend', chatHTML);
 
+        // Ensure ChatBox is visible by default
+        const chatPanel = document.getElementById('llmChatPanel');
+        if (chatPanel) {
+            // Check if there's a saved visibility state
+            const savedVisibility = this.configManager.get('chat.visible', true);
+            chatPanel.style.display = savedVisibility ? 'flex' : 'none';
+            console.log('ChatBox created with visibility:', savedVisibility ? 'visible' : 'hidden');
+        }
+
         // Setup dragging and resizing
         this.setupChatDragging();
         this.setupChatResizing();
@@ -4412,7 +4421,36 @@ class ChatManager {
     toggleChatVisibility() {
         const chatPanel = document.getElementById('llmChatPanel');
         if (chatPanel) {
-            chatPanel.style.display = chatPanel.style.display === 'none' ? 'flex' : 'none';
+            const isVisible = chatPanel.style.display !== 'none';
+            chatPanel.style.display = isVisible ? 'none' : 'flex';
+            
+            // Save visibility state
+            this.configManager.set('chat.visible', !isVisible);
+            console.log('ChatBox visibility toggled:', isVisible ? 'hidden' : 'visible');
+        }
+    }
+
+    /**
+     * Force show the ChatBox interface
+     */
+    showChatBox() {
+        const chatPanel = document.getElementById('llmChatPanel');
+        if (chatPanel) {
+            chatPanel.style.display = 'flex';
+            this.configManager.set('chat.visible', true);
+            console.log('ChatBox forced to visible');
+        }
+    }
+
+    /**
+     * Hide the ChatBox interface
+     */
+    hideChatBox() {
+        const chatPanel = document.getElementById('llmChatPanel');
+        if (chatPanel) {
+            chatPanel.style.display = 'none';
+            this.configManager.set('chat.visible', false);
+            console.log('ChatBox hidden');
         }
     }
 
