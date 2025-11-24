@@ -30,14 +30,35 @@ const http = require('http');
 
 // Import the organized tools integrator
 const ToolsIntegrator = require('./mcp-tools/ToolsIntegrator.js');
+const AuthenticationManager = require('./mcp-tools/AuthenticationManager.js');
+const ToolCategoryManager = require('./mcp-tools/ToolCategoryManager.js');
+const ConnectionHealthMonitor = require('./mcp-tools/ConnectionHealthMonitor.js');
 
 class StandardClaudeMCPServer {
-    constructor(httpPort = 3002, wsPort = 3003, mainWindow = null) {
+    constructor(httpPort = 3002, wsPort = 3003, mainWindow = null, authConfig = {}) {
         this.httpPort = httpPort;
         this.wsPort = wsPort;
         this.mainWindow = mainWindow;
         this.pendingRequests = new Map();
         this.activeConnections = new Set();
+        
+        // Initialize authentication manager
+        this.authManager = new AuthenticationManager({
+            requireAuth: authConfig.requireAuth !== false,
+            enableLocalBypass: authConfig.enableLocalBypass !== false,
+            developmentMode: authConfig.developmentMode || false,
+            masterKey: authConfig.masterKey || null,
+            ...authConfig
+        });
+        
+        // Initialize tool category manager
+        this.toolCategoryManager = new ToolCategoryManager();
+        
+        // Initialize connection health monitor
+        this.healthMonitor = new ConnectionHealthMonitor();
+        
+        // Track client bridge connections (for remote tool execution)
+        this.clientBridges = new Map();
         
         // Connection state tracking
         this.isInitialized = false;
@@ -208,10 +229,31 @@ class StandardClaudeMCPServer {
         this.app.use(cors({
             origin: '*',
             methods: ['GET', 'POST', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Cache-Control']
+            allowedHeaders: ['Content-Type', 'Cache-Control', 'Authorization']
         }));
         
         this.app.use(express.json());
+        
+        // Authentication middleware for protected endpoints
+        this.authMiddleware = (req, res, next) => {
+            // Health check endpoint is always public
+            if (req.path === '/health' || req.path === '/mcp') {
+                return next();
+            }
+            
+            const authResult = this.authManager.authenticateRequest(req);
+            
+            if (!authResult.valid) {
+                return res.status(401).json({
+                    error: 'Unauthorized',
+                    message: authResult.error || 'Invalid or missing authentication'
+                });
+            }
+            
+            // Attach session to request
+            req.mcpSession = authResult;
+            next();
+        };
         
         // Request logging
         this.app.use((req, res, next) => {
@@ -222,45 +264,67 @@ class StandardClaudeMCPServer {
             next();
         });
         
-        // Health check endpoint
+        // Health check endpoint (public)
         this.app.get('/health', (req, res) => {
+            const systemHealth = this.healthMonitor.getSystemHealth();
+            
             res.json({
-                status: 'healthy',
+                status: systemHealth.status,
                 serverReady: this.isInitialized,
                 mainWindowReady: !!(this.mainWindow && !this.mainWindow.isDestroyed()),
-                activeConnections: this.activeConnections.size,
+                hasClientBridge: this.clientBridges.size > 0,
+                connections: systemHealth.connections,
                 protocolVersion: this.protocolVersion,
+                uptime: systemHealth.uptime,
+                metrics: systemHealth.metrics,
                 timestamp: Date.now()
             });
         });
         
-        // Server info endpoint
+        // Server info endpoint (public)
         this.app.get('/mcp', (req, res) => {
             const tools = this.toolsIntegrator.getAvailableTools();
+            const categorized = this.toolCategoryManager.categorizeTools(tools);
+            const authStats = this.authManager.getStatistics();
+            
             res.json({
                 name: 'codexomics',
                 version: '1.0.0',
-                description: 'CodeXomics MCP Server',
+                description: 'CodeXomics MCP Server - Remote Bioinformatics Tool Access',
                 protocolVersion: this.protocolVersion,
                 capabilities: {
                     tools: true,
-                    logging: true
+                    logging: true,
+                    authentication: this.authManager.config.requireAuth,
+                    clientBridge: this.clientBridges.size > 0
                 },
                 toolCount: tools.length,
+                toolCategories: {
+                    serverSide: categorized.serverOnly.length,
+                    clientSide: categorized.clientOnly.length,
+                    hybrid: categorized.hybrid.length
+                },
                 transport: {
-                    sse: `http://localhost:${this.httpPort}/sse`
+                    sse: `http://localhost:${this.httpPort}/sse`,
+                    websocket: `ws://localhost:${this.wsPort}`,
+                    clientBridge: `http://localhost:${this.httpPort}/bridge`
+                },
+                authentication: {
+                    required: this.authManager.config.requireAuth,
+                    localBypass: this.authManager.config.enableLocalBypass,
+                    activeSessions: authStats.activeSessions
                 },
                 status: this.isInitialized ? 'ready' : 'initializing'
             });
         });
         
         // SSE endpoint for Claude Desktop
-        this.app.get('/sse', (req, res) => {
+        this.app.get('/sse', this.authMiddleware, (req, res) => {
             this.handleSSEConnection(req, res);
         });
         
         // POST endpoint for MCP clients that use HTTP POST
-        this.app.post('/sse', async (req, res) => {
+        this.app.post('/sse', this.authMiddleware, async (req, res) => {
             // Monitor connection events
             req.on('close', () => {
                 console.log('🔌 POST request connection closed');
@@ -277,8 +341,33 @@ class StandardClaudeMCPServer {
             this.handleSSEConnection(req, res);
         });
         
+        // Client Bridge endpoints - For remote execution of client-side tools
+        this.app.post('/bridge/register', this.authMiddleware, (req, res) => {
+            this.handleClientBridgeRegistration(req, res);
+        });
+        
+        this.app.post('/bridge/unregister', this.authMiddleware, (req, res) => {
+            this.handleClientBridgeUnregistration(req, res);
+        });
+        
+        this.app.post('/bridge/execute', this.authMiddleware, async (req, res) => {
+            await this.handleClientBridgeExecution(req, res);
+        });
+        
+        this.app.get('/bridge/status', this.authMiddleware, (req, res) => {
+            res.json({
+                registered: this.clientBridges.size > 0,
+                bridges: Array.from(this.clientBridges.values()).map(b => ({
+                    id: b.id,
+                    registeredAt: b.registeredAt,
+                    lastActivity: b.lastActivity,
+                    capabilities: b.capabilities
+                }))
+            });
+        });
+        
         // POST endpoint for root path
-        this.app.post('/', async (req, res) => {
+        this.app.post('/', this.authMiddleware, async (req, res) => {
             // Monitor connection events
             req.on('close', () => {
                 console.log('🔌 POST request connection closed');
@@ -306,6 +395,23 @@ class StandardClaudeMCPServer {
         this.wsServer.on('connection', (ws, req) => {
             console.log('🔗 New WebSocket connection from:', req.socket.remoteAddress);
             
+            // WebSocket connections need to authenticate via first message
+            let authenticated = false;
+            let sessionId = null;
+            let connectionId = null;
+            
+            // Set authentication timeout
+            const authTimeout = setTimeout(() => {
+                if (!authenticated) {
+                    console.log('❌ WebSocket authentication timeout');
+                    ws.send(JSON.stringify({
+                        type: 'error',
+                        error: 'Authentication timeout. Please send auth message within 10 seconds.'
+                    }));
+                    ws.close(1008, 'Authentication timeout');
+                }
+            }, 10000);
+            
             // Track connection
             this.wsConnections.add(ws);
             console.log(`📊 WebSocket connections: ${this.wsConnections.size}`);
@@ -314,10 +420,78 @@ class StandardClaudeMCPServer {
             ws.on('message', async (data) => {
                 try {
                     const message = JSON.parse(data.toString());
+                    
+                    // Handle authentication message first
+                    if (!authenticated) {
+                        if (message.type === 'authenticate') {
+                            clearTimeout(authTimeout);
+                            
+                            const apiKey = message.apiKey || message.headers?.Authorization;
+                            
+                            if (!apiKey) {
+                                ws.send(JSON.stringify({
+                                    type: 'error',
+                                    error: 'Missing API key in authentication message'
+                                }));
+                                ws.close(1008, 'Missing API key');
+                                return;
+                            }
+                            
+                            // Validate API key
+                            const authResult = this.authManager.validateApiKey(apiKey, {
+                                type: 'websocket',
+                                ip: req.socket.remoteAddress,
+                                userAgent: req.headers['user-agent']
+                            });
+                            
+                            if (!authResult.valid) {
+                                ws.send(JSON.stringify({
+                                    type: 'error',
+                                    error: authResult.error || 'Authentication failed'
+                                }));
+                                ws.close(1008, 'Authentication failed');
+                                return;
+                            }
+                            
+                            authenticated = true;
+                            sessionId = authResult.sessionId;
+                            connectionId = `ws_${sessionId}`;
+                            
+                            // Register with health monitor
+                            this.healthMonitor.registerConnection(connectionId, {
+                                type: 'websocket',
+                                ip: req.socket.remoteAddress,
+                                userAgent: req.headers['user-agent'],
+                                sessionId
+                            });
+                            
+                            // Send authentication success
+                            ws.send(JSON.stringify({
+                                type: 'authenticated',
+                                sessionId,
+                                serverId: 'unified-claude-mcp',
+                                capabilities: ['tools', 'logging'],
+                                expiresAt: authResult.expiresAt
+                            }));
+                            
+                            console.log(`✅ WebSocket authenticated: ${connectionId}`);
+                            return;
+                        } else {
+                            ws.send(JSON.stringify({
+                                type: 'error',
+                                error: 'Please authenticate first'
+                            }));
+                            return;
+                        }
+                    }
+                    
+                    // Update activity
+                    this.healthMonitor.updateActivity(connectionId);
+                    
                     console.log('📥 WebSocket message:', message);
                     
                     // Handle MCP-style messages
-                    const response = await this.handleWebSocketMessage(message);
+                    const response = await this.handleWebSocketMessage(message, sessionId);
                     if (response) {
                         ws.send(JSON.stringify(response));
                     }
@@ -339,6 +513,11 @@ class StandardClaudeMCPServer {
             ws.on('close', () => {
                 console.log('🔌 WebSocket connection closed');
                 this.wsConnections.delete(ws);
+                
+                if (connectionId) {
+                    this.healthMonitor.unregisterConnection(connectionId);
+                }
+                
                 console.log(`📊 WebSocket connections: ${this.wsConnections.size}`);
             });
             
@@ -346,6 +525,10 @@ class StandardClaudeMCPServer {
             ws.on('error', (error) => {
                 console.error('❌ WebSocket error:', error);
                 this.wsConnections.delete(ws);
+                
+                if (connectionId) {
+                    this.healthMonitor.unregisterConnection(connectionId);
+                }
             });
             
             // Send initial connection confirmation
@@ -364,8 +547,21 @@ class StandardClaudeMCPServer {
         console.log('✅ WebSocket server configured');
     }
     
-    async handleWebSocketMessage(message) {
+    async handleWebSocketMessage(message, sessionId) {
         const { method, params, id, jsonrpc } = message;
+        
+        // Validate session
+        const sessionValidation = this.authManager.validateSession(sessionId);
+        if (!sessionValidation.valid) {
+            return {
+                jsonrpc: '2.0',
+                error: {
+                    code: -32001,
+                    message: sessionValidation.error || 'Invalid session'
+                },
+                id
+            };
+        }
         
         // Handle different message types
         switch (method) {
@@ -438,9 +634,21 @@ class StandardClaudeMCPServer {
         console.log('🔄 New SSE connection request');
         
         try {
+            // Create connection ID
+            const connectionId = `sse_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const sessionId = req.mcpSession?.sessionId;
+            
             // Set CORS headers before creating transport
             res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
+            res.setHeader('Access-Control-Allow-Headers', 'Cache-Control, Authorization');
+            
+            // Register with health monitor
+            this.healthMonitor.registerConnection(connectionId, {
+                type: 'sse',
+                ip: req.ip,
+                userAgent: req.get('User-Agent'),
+                sessionId
+            });
             
             // Create SSE transport - this will handle setting SSE headers
             const transport = new SSEServerTransport('/sse', res);
@@ -457,22 +665,26 @@ class StandardClaudeMCPServer {
             req.on('close', () => {
                 console.log('🔌 SSE connection closed by client');
                 this.activeConnections.delete(transport);
+                this.healthMonitor.unregisterConnection(connectionId);
                 console.log(`📊 Active connections: ${this.activeConnections.size}`);
             });
             
             req.on('error', (error) => {
                 console.error('❌ SSE connection error:', error);
                 this.activeConnections.delete(transport);
+                this.healthMonitor.unregisterConnection(connectionId);
             });
             
             res.on('error', (error) => {
                 console.error('❌ SSE response error:', error);
                 this.activeConnections.delete(transport);
+                this.healthMonitor.unregisterConnection(connectionId);
             });
             
             res.on('close', () => {
                 console.log('🔌 SSE response closed');
                 this.activeConnections.delete(transport);
+                this.healthMonitor.unregisterConnection(connectionId);
             });
             
         } catch (error) {
@@ -733,10 +945,33 @@ class StandardClaudeMCPServer {
     }
     
     async executeToolOnClient(toolName, parameters, clientId) {
-        if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-            throw new Error('Main window not available. Please ensure CodeXomics is running.');
+        // Check if this tool requires client-side execution
+        const validation = this.toolCategoryManager.validateExecution(
+            toolName,
+            this.mainWindow || this.clientBridges.size > 0
+        );
+        
+        if (!validation.valid) {
+            throw new Error(validation.error);
         }
         
+        // Try local Electron IPC first if available
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            return await this.executeViaElectronIPC(toolName, parameters, clientId);
+        }
+        
+        // Try client bridge if available
+        if (this.clientBridges.size > 0) {
+            return await this.executeViaClientBridge(toolName, parameters, clientId);
+        }
+        
+        throw new Error(
+            `Tool '${toolName}' requires a connected CodeXomics client. ` +
+            `No local client or remote bridge available.`
+        );
+    }
+    
+    async executeViaElectronIPC(toolName, parameters, clientId) {
         const requestId = `mcp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
         return new Promise((resolve, reject) => {
@@ -754,13 +989,141 @@ class StandardClaudeMCPServer {
             });
             
             // Send tool execution request to main process
-            console.log(`📡 [MCP Server] Sending tool execution to main process: ${toolName}`);
+            console.log(`📡 [MCP Server] Sending tool execution via Electron IPC: ${toolName}`);
             this.mainWindow.webContents.send('tool-execution', {
                 requestId,
                 toolName,
                 parameters,
                 clientId
             });
+        });
+    }
+    
+    async executeViaClientBridge(toolName, parameters, clientId) {
+        // Get first available bridge (TODO: implement bridge selection strategy)
+        const bridge = Array.from(this.clientBridges.values())[0];
+        
+        if (!bridge) {
+            throw new Error('No client bridge available');
+        }
+        
+        const requestId = `bridge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                bridge.pendingRequests.delete(requestId);
+                reject(new Error(`Bridge tool execution timeout for ${toolName}`));
+            }, 30000);
+            
+            bridge.pendingRequests.set(requestId, {
+                resolve,
+                reject,
+                timeout
+            });
+            
+            // Send execution request to bridge
+            console.log(`📡 [MCP Server] Sending tool execution via Bridge: ${toolName}`);
+            
+            // The bridge client will poll for pending requests
+            bridge.lastActivity = Date.now();
+        });
+    }
+    
+    handleClientBridgeRegistration(req, res) {
+        const { bridgeId, capabilities } = req.body;
+        
+        if (!bridgeId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Bridge ID required'
+            });
+        }
+        
+        const bridge = {
+            id: bridgeId,
+            sessionId: req.mcpSession.sessionId,
+            registeredAt: Date.now(),
+            lastActivity: Date.now(),
+            capabilities: capabilities || [],
+            pendingRequests: new Map(),
+            responseQueue: []
+        };
+        
+        this.clientBridges.set(bridgeId, bridge);
+        
+        console.log(`✅ Client bridge registered: ${bridgeId}`);
+        
+        res.json({
+            success: true,
+            bridgeId,
+            message: 'Bridge registered successfully'
+        });
+    }
+    
+    handleClientBridgeUnregistration(req, res) {
+        const { bridgeId } = req.body;
+        
+        if (this.clientBridges.delete(bridgeId)) {
+            console.log(`🔌 Client bridge unregistered: ${bridgeId}`);
+            
+            res.json({
+                success: true,
+                message: 'Bridge unregistered successfully'
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Bridge not found'
+            });
+        }
+    }
+    
+    async handleClientBridgeExecution(req, res) {
+        const { bridgeId, requestId, result, error } = req.body;
+        
+        const bridge = this.clientBridges.get(bridgeId);
+        
+        if (!bridge) {
+            return res.status(404).json({
+                success: false,
+                error: 'Bridge not found'
+            });
+        }
+        
+        bridge.lastActivity = Date.now();
+        
+        // If this is a response to a pending request
+        if (requestId) {
+            const pendingRequest = bridge.pendingRequests.get(requestId);
+            
+            if (pendingRequest) {
+                clearTimeout(pendingRequest.timeout);
+                bridge.pendingRequests.delete(requestId);
+                
+                if (error) {
+                    pendingRequest.reject(new Error(error));
+                } else {
+                    pendingRequest.resolve(result);
+                }
+            }
+            
+            return res.json({
+                success: true,
+                message: 'Response recorded'
+            });
+        }
+        
+        // Return any pending execution requests for this bridge
+        const pending = Array.from(bridge.pendingRequests.entries())
+            .map(([id, req]) => ({
+                requestId: id,
+                toolName: req.toolName,
+                parameters: req.parameters
+            }));
+        
+        res.json({
+            success: true,
+            pendingRequests: pending
         });
     }
     
@@ -827,6 +1190,24 @@ class StandardClaudeMCPServer {
         console.log('🛑 Stopping Standard Claude MCP Server');
         
         try {
+            // Cleanup health monitor
+            if (this.healthMonitor) {
+                this.healthMonitor.destroy();
+            }
+            
+            // Cleanup authentication manager
+            if (this.authManager) {
+                this.authManager.destroy();
+            }
+            
+            // Close all client bridges
+            for (const [bridgeId, bridge] of this.clientBridges.entries()) {
+                for (const [reqId, req] of bridge.pendingRequests.entries()) {
+                    clearTimeout(req.timeout);
+                    req.reject(new Error('Server stopping'));
+                }
+            }
+            this.clientBridges.clear();
             // Close HTTP server
             if (this.httpServer) {
                 await new Promise((resolve) => {
@@ -871,10 +1252,13 @@ class StandardClaudeMCPServer {
             isInitialized: this.isInitialized,
             activeConnections: this.activeConnections.size,
             wsConnections: this.wsConnections.size,
+            clientBridges: this.clientBridges.size,
             pendingRequests: this.pendingRequests.size,
             mainWindowReady: !!(this.mainWindow && !this.mainWindow.isDestroyed()),
             protocolVersion: this.protocolVersion,
-            clientInfo: this.clientInfo
+            clientInfo: this.clientInfo,
+            systemHealth: this.healthMonitor.getSystemHealth(),
+            authenticationEnabled: this.authManager.config.requireAuth
         };
     }
     

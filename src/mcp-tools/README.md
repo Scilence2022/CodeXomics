@@ -1,6 +1,72 @@
 # MCP Tools - Organized Architecture
 
-This directory contains the organized architecture for the Claude MCP Server tools, providing a modular and maintainable approach to genomics tool integration.
+This directory contains the organized architecture for the Claude MCP Server tools, providing a modular and maintainable approach to genomics tool integration with **enterprise-grade security** for remote access.
+
+## 🔐 Security Features (NEW)
+
+The MCP server now includes comprehensive security features for safe remote access:
+
+### API Key Authentication
+- **AuthenticationManager** (`AuthenticationManager.js`): Secure API key validation and session management
+- **Session-based Access**: Time-limited sessions with automatic expiration
+- **Local Bypass**: Connections from localhost can bypass authentication (configurable)
+- **Development Mode**: Auto-generates API keys for development
+
+### WebSocket Authentication Protocol
+- Clients must authenticate within 10 seconds of connection
+- Session validation on every message
+- Automatic disconnection on authentication failure
+
+### Client Bridge for Remote Tool Execution
+- Secure HTTP/REST bridge for remote execution of client-side tools
+- Allows remote agents to access tools that require browser context
+- Bridge registration with session validation
+
+### Tool Category Separation
+- **Server-side tools**: Can execute remotely without client connection
+- **Client-side tools**: Require connected CodeXomics browser
+- Clear error messages when tools cannot execute remotely
+
+### Connection Health Monitoring
+- Real-time monitoring of all connections
+- Ping/pong health checks
+- Automatic cleanup of stale connections
+- Performance metrics tracking
+
+### Usage Examples
+
+**Start with authentication enabled:**
+```bash
+MCP_AUTH_REQUIRED=true MCP_MASTER_KEY=your-secret-key node start-unified-claude-mcp-server.js
+```
+
+**Development mode (auto-generates key):**
+```bash
+MCP_DEV_MODE=true node start-unified-claude-mcp-server.js
+# API key will be printed to console
+```
+
+**Command line options:**
+```bash
+node start-unified-claude-mcp-server.js --require-auth --master-key=your-key
+node start-unified-claude-mcp-server.js --dev-mode --http-port=3002 --ws-port=3003
+```
+
+**Authenticate WebSocket connection:**
+```javascript
+const ws = new WebSocket('ws://localhost:3003');
+ws.onopen = () => {
+    ws.send(JSON.stringify({
+        type: 'authenticate',
+        apiKey: 'your-api-key'
+    }));
+};
+```
+
+**Authenticate HTTP request:**
+```bash
+curl -H "Authorization: Bearer your-api-key" http://localhost:3002/mcp
+```
 
 ## Architecture Overview
 
