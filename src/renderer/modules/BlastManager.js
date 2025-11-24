@@ -1809,11 +1809,20 @@ class BlastManager {
                 try {
                     // Get target directory for database files (same as genome file directory)
                     const currentFile = this.app?.fileManager?.currentFile;
-                    let outputDir = this.config.localDbPath; // Default fallback
+                    let outputDir = null;
                     
-                    if (currentFile && currentFile.info?.path) {
-                        outputDir = require('path').dirname(currentFile.info.path);
+                    // Try to get the directory from the current file path
+                    if (currentFile && currentFile.path) {
+                        outputDir = require('path').dirname(currentFile.path);
                         console.log(`BlastManager: Creating database in genome directory: ${outputDir}`);
+                    } else if (currentFile && currentFile.info?.path) {
+                        // Fallback: try info.path
+                        outputDir = require('path').dirname(currentFile.info.path);
+                        console.log(`BlastManager: Creating database in genome directory (from info.path): ${outputDir}`);
+                    } else {
+                        // Last resort: use the directory of the temp file
+                        outputDir = require('path').dirname(tempFile);
+                        console.log(`BlastManager: Using temp file directory for database: ${outputDir}`);
                     }
 
                     await this.createLocalDatabase({
