@@ -144,7 +144,9 @@
         }
 
         body.compact-mode .sidebar {
-            width: 100%;
+            width: 100% !important;
+            flex-basis: 100% !important;
+            max-width: 100% !important;
             border-right: none;
         }
 
@@ -441,6 +443,7 @@
         
         .sidebar {
             width: 320px;
+            flex-shrink: 0; /* 防止侧边栏被压缩 */
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             border-right: 1px solid rgba(255, 255, 255, 0.3);

@@ -73,6 +73,9 @@ class ProjectManagerWindow {
         // 初始化Header事件和设置
         this.initializeHeaderEvents();
         
+        // 初始化侧边栏分隔器
+        this.initializeSidebarSplitter();
+        
         console.log('Project Manager Window initialized successfully');
     }
 
@@ -475,11 +478,11 @@ class ProjectManagerWindow {
                      style="margin-left: ${indent}px;"
                      data-folder-path="${JSON.stringify(folder.path).replace(/"/g, '&quot;')}">
                     <div class="tree-item-content">
-                        <div class="tree-icon tree-main-icon" onclick="event.stopPropagation(); projectManagerWindow.toggleFolderExpansion('${folderId}')"
+                        <div class="tree-icon tree-main-icon" onclick="event.stopPropagation(); projectManagerWindow.toggleFolderExpansion('${folderId}', ${JSON.stringify(folder.path).replace(/"/g, '&quot;')})"
                              style="cursor: ${hasChildren ? 'pointer' : 'default'};">
                             ${combinedIcon}
                         </div>
-                        <span class="tree-label" onclick="projectManagerWindow.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})">${folder.name}</span>
+                        <span class="tree-label" onclick="${this.isCompactMode ? `projectManagerWindow.toggleFolderExpansion('${folderId}', ${JSON.stringify(folder.path).replace(/"/g, '&quot;')})` : `projectManagerWindow.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})`}">${folder.name}</span>
                         <div class="tree-file-count">${folderFiles.length}</div>
                         <div class="tree-actions">
                             <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFolderContextMenu(event, ${JSON.stringify(folder.path).replace(/"/g, '&quot;')})" title="More options">⋯</button>
@@ -560,8 +563,9 @@ class ProjectManagerWindow {
 
     /**
      * 切换文件夹展开状态
+     * 在Simple Mode下，点击文件夹时自动展开并在目录树中显示文件
      */
-    toggleFolderExpansion(folderId) {
+    toggleFolderExpansion(folderId, folderPath = null) {
         if (!this.expandedFolders) {
             this.expandedFolders = new Set();
         }
@@ -570,6 +574,13 @@ class ProjectManagerWindow {
             this.expandedFolders.delete(folderId);
         } else {
             this.expandedFolders.add(folderId);
+            
+            // 在Simple Mode下，展开文件夹时同时导航到该文件夹
+            if (this.isCompactMode && folderPath) {
+                this.currentPath = folderPath;
+                this.renderProjectContent();
+                this.updateContentTitle();
+            }
         }
         
         this.renderProjectTree();
@@ -3743,6 +3754,173 @@ Built with ❤️ for the bioinformatics community.
                 compactToggle.checked = this.isCompactMode;
             }
         }, 200);
+    }
+
+    /**
+     * 初始化侧边栏分隔器（Splitter）拖拽功能
+     */
+    initializeSidebarSplitter() {
+        console.log('🔧 Initializing sidebar splitter...');
+        
+        const splitter = document.getElementById('sidebarSplitter');
+        const sidebar = document.querySelector('.sidebar');
+        const contentArea = document.querySelector('.content-area');
+        
+        if (!splitter || !sidebar || !contentArea) {
+            console.warn('⚠️ Sidebar splitter elements not found:', {
+                splitter: !!splitter,
+                sidebar: !!sidebar,
+                contentArea: !!contentArea
+            });
+            return;
+        }
+        
+        console.log('✅ Sidebar splitter elements found, setting up drag functionality');
+
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        const startResize = (e) => {
+            isResizing = true;
+            startX = e.clientX || (e.touches && e.touches[0].clientX);
+            startWidth = sidebar.offsetWidth;
+            
+            // Add visual feedback
+            splitter.classList.add('active');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            
+            console.log('🖱️ Splitter drag started at', startX, 'sidebar width:', startWidth);
+            
+            e.preventDefault();
+        };
+
+        const doResize = (e) => {
+            if (!isResizing) return;
+            
+            const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+            const deltaX = currentX - startX;
+            const requestedWidth = startWidth + deltaX;
+            
+            // Constrain sidebar width between 200px and 50% of window width
+            const minWidth = 200;
+            const maxWidth = window.innerWidth * 0.5;
+            const newWidth = Math.max(minWidth, Math.min(maxWidth, requestedWidth));
+            
+            // Update sidebar width
+            sidebar.style.width = `${newWidth}px`;
+            sidebar.style.flexBasis = `${newWidth}px`;
+            
+            e.preventDefault();
+        };
+
+        const stopResize = () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            
+            // Remove visual feedback
+            splitter.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            
+            // Save the new width to localStorage
+            const finalWidth = sidebar.offsetWidth;
+            localStorage.setItem('projectManager_sidebarWidth', `${finalWidth}px`);
+            
+            console.log('✅ Splitter drag ended, saved width:', finalWidth);
+            
+            // Trigger resize event for any dependent components
+            window.dispatchEvent(new Event('resize'));
+        };
+
+        // Auto-reset to default width on double-click
+        const autoResetWidth = () => {
+            console.log('🔄 Resetting sidebar to default width');
+            
+            // Add visual feedback
+            splitter.classList.add('auto-resetting');
+            
+            // Reset to default width with smooth transition
+            sidebar.style.transition = 'width 0.3s ease, flex-basis 0.3s ease';
+            sidebar.style.width = '320px';
+            sidebar.style.flexBasis = '320px';
+            
+            // Save the reset width
+            localStorage.setItem('projectManager_sidebarWidth', '320px');
+            
+            // Trigger resize event
+            window.dispatchEvent(new Event('resize'));
+            
+            // Remove transition and animation classes after animation completes
+            setTimeout(() => {
+                sidebar.style.transition = '';
+                splitter.classList.remove('auto-resetting');
+            }, 300);
+        };
+
+        // Mouse events
+        splitter.addEventListener('mousedown', startResize);
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+
+        // Touch events for mobile/tablet
+        splitter.addEventListener('touchstart', startResize, { passive: false });
+        document.addEventListener('touchmove', doResize, { passive: false });
+        document.addEventListener('touchend', stopResize);
+
+        // Double-click for auto-reset
+        splitter.addEventListener('dblclick', autoResetWidth);
+
+        // Keyboard navigation for accessibility
+        splitter.setAttribute('tabindex', '0');
+        splitter.setAttribute('role', 'separator');
+        splitter.setAttribute('aria-label', 'Resize sidebar');
+        
+        splitter.addEventListener('keydown', (e) => {
+            const step = 10; // pixels to move per keypress
+            let deltaX = 0;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    deltaX = -step;
+                    break;
+                case 'ArrowRight':
+                    deltaX = step;
+                    break;
+                case 'Home':
+                    autoResetWidth();
+                    e.preventDefault();
+                    return;
+                default:
+                    return;
+            }
+            
+            e.preventDefault();
+            
+            // Apply keyboard movement
+            const currentWidth = sidebar.offsetWidth;
+            const requestedWidth = currentWidth + deltaX;
+            const minWidth = 200;
+            const maxWidth = window.innerWidth * 0.5;
+            const newWidth = Math.max(minWidth, Math.min(maxWidth, requestedWidth));
+            
+            sidebar.style.width = `${newWidth}px`;
+            sidebar.style.flexBasis = `${newWidth}px`;
+            localStorage.setItem('projectManager_sidebarWidth', `${newWidth}px`);
+            window.dispatchEvent(new Event('resize'));
+        });
+
+        // Load saved sidebar width
+        const savedWidth = localStorage.getItem('projectManager_sidebarWidth');
+        if (savedWidth) {
+            sidebar.style.width = savedWidth;
+            sidebar.style.flexBasis = savedWidth;
+            console.log('📏 Loaded saved sidebar width:', savedWidth);
+        }
+
+        console.log('✅ Sidebar splitter initialized successfully');
     }
 
     /**
