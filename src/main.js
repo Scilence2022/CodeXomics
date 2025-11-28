@@ -2035,10 +2035,10 @@ function createMenu() {
           }
         },
         {
-          label: 'Install BLAST+ Tools',
+          label: 'Download BLAST+ Tools',
           accelerator: 'CmdOrCtrl+Alt+B',
           click: () => {
-            createBlastInstallerWindow();
+            createBlastDownloaderWindow();
           }
         },
         {
@@ -4225,10 +4225,10 @@ function createGeneAnnotationRefineWindow() {
   }
 }
 
-// Create BLAST+ Installer Window
-function createBlastInstallerWindow() {
+// Create BLAST+ Downloader Window
+function createBlastDownloaderWindow() {
   try {
-    const blastInstallerWindow = new BrowserWindow({
+    const blastDownloaderWindow = new BrowserWindow({
       width: 1200,
       height: 800,
       minWidth: 1000,
@@ -4239,7 +4239,7 @@ function createBlastInstallerWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'BLAST+ Tools Installer - CodeXomics',
+      title: 'BLAST+ Tools Downloader - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
       resizable: true,
@@ -4247,30 +4247,30 @@ function createBlastInstallerWindow() {
       maximizable: true
     });
 
-    blastInstallerWindow.loadFile(path.join(__dirname, 'blast-installer.html'));
+    blastDownloaderWindow.loadFile(path.join(__dirname, 'blast-downloader.html'));
 
-    blastInstallerWindow.once('ready-to-show', () => {
-      blastInstallerWindow.show();
-      // Set specialized menu for BLAST installer window
-      createToolWindowMenu(blastInstallerWindow, 'BLAST+ Installer');
+    blastDownloaderWindow.once('ready-to-show', () => {
+      blastDownloaderWindow.show();
+      // Set specialized menu for BLAST downloader window
+      createToolWindowMenu(blastDownloaderWindow, 'BLAST+ Downloader');
     });
 
-    blastInstallerWindow.on('closed', () => {
+    blastDownloaderWindow.on('closed', () => {
       // 清理菜单模板
-      toolMenuTemplates.delete(blastInstallerWindow.id);
+      toolMenuTemplates.delete(blastDownloaderWindow.id);
       
       // 如果关闭的是当前活动窗口，恢复主窗口菜单
-      if (currentActiveWindow === blastInstallerWindow) {
+      if (currentActiveWindow === blastDownloaderWindow) {
         currentActiveWindow = null;
         createMenu(); // 直接调用createMenu()来恢复主窗口菜单
       }
-      console.log('BLAST+ Installer window closed');
+      console.log('BLAST+ Downloader window closed');
     });
 
-    console.log('BLAST+ Installer window created');
+    console.log('BLAST+ Downloader window created');
 
   } catch (error) {
-    console.error('Failed to open BLAST+ Installer:', error);
+    console.error('Failed to open BLAST+ Downloader:', error);
   }
 }
 
@@ -5247,9 +5247,9 @@ ipcMain.on('open-evo2-window', () => {
   createEvo2Window();
 });
 
-ipcMain.on('open-blast-installer-window', () => {
-  console.log('IPC: Opening BLAST+ Installer window...');
-  createBlastInstallerWindow();
+ipcMain.on('open-blast-downloader-window', () => {
+  console.log('IPC: Opening BLAST+ Downloader window...');
+  createBlastDownloaderWindow();
 });
 
 ipcMain.on('open-gene-annotation-refine', (event, data) => {
@@ -6339,10 +6339,10 @@ function createProjectManagerMenu(projectManagerWindow) {
         },
         { type: 'separator' },
         {
-          label: 'Install BLAST+ Tools',
+          label: 'Download BLAST+ Tools',
           accelerator: 'CmdOrCtrl+Alt+B',
           click: () => {
-            createBlastInstallerWindow();
+            createBlastDownloaderWindow();
           }
         },
         {
