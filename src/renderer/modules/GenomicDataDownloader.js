@@ -168,13 +168,6 @@ class GenomicDataDownloader {
             
             // 获取当前项目信息
             this.getCurrentProject();
-            
-            // If no project is available after a short delay, show no project info
-            setTimeout(() => {
-                if (!this.currentProject) {
-                    this.setActiveProject(null);
-                }
-            }, 1000);
         }
     }
     
@@ -194,6 +187,9 @@ class GenomicDataDownloader {
     setActiveProject(projectInfo) {
         this.currentProject = projectInfo;
         console.log('🗂️ Active project set:', projectInfo);
+        
+        // Clear any existing project status banners first
+        this.clearProjectStatusBanner();
         
         // Update default output directory to project folder or show default options
         if (projectInfo && projectInfo.dataFolderPath) {
@@ -220,12 +216,21 @@ class GenomicDataDownloader {
         }
     }
     
+    clearProjectStatusBanner() {
+        const databaseInfo = document.getElementById('databaseInfo');
+        if (databaseInfo) {
+            // Remove any existing project status banners (both active and no-project)
+            const existingBanners = databaseInfo.querySelectorAll('[data-project-status-banner]');
+            existingBanners.forEach(banner => banner.remove());
+        }
+    }
+    
     showProjectInfo(projectInfo) {
         const databaseInfo = document.getElementById('databaseInfo');
         if (databaseInfo && projectInfo) {
-            // Add project info to the database info panel
+            // Create project info banner with data attribute for easy identification
             const projectInfoHtml = `
-                <div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                <div data-project-status-banner="active" style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                     <h4 style="margin: 0 0 10px 0; color: #2e7d32;">📁 Active Project - Smart File Organization</h4>
                     <p style="margin: 0; color: #424242;"><strong>Name:</strong> ${projectInfo.name || 'Unnamed Project'}</p>
                     <p style="margin: 0; color: #424242;"><strong>Data Folder:</strong> ${projectInfo.dataFolderPath || 'Not set'}</p>
@@ -249,25 +254,25 @@ class GenomicDataDownloader {
                 </div>
             `;
             
-            // Insert project info before existing database info
-            databaseInfo.innerHTML = projectInfoHtml + databaseInfo.innerHTML;
+            // Insert project info at the beginning
+            databaseInfo.insertAdjacentHTML('afterbegin', projectInfoHtml);
         }
     }
     
     showNoProjectInfo() {
         const databaseInfo = document.getElementById('databaseInfo');
         if (databaseInfo) {
-            // Add no project info to the database info panel
+            // Create no project info banner with data attribute for easy identification
             const noProjectInfoHtml = `
-                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                <div data-project-status-banner="none" style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                     <h4 style="margin: 0 0 10px 0; color: #856404;">📂 No Active Project</h4>
                     <p style="margin: 0; color: #856404;">You can download files without a project.</p>
                     <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 14px;">Select a download directory manually using the "Select Directory" button below.</p>
                 </div>
             `;
             
-            // Insert no project info before existing database info
-            databaseInfo.innerHTML = noProjectInfoHtml + databaseInfo.innerHTML;
+            // Insert no project info at the beginning
+            databaseInfo.insertAdjacentHTML('afterbegin', noProjectInfoHtml);
         }
     }
     
@@ -292,12 +297,20 @@ class GenomicDataDownloader {
             }
             
             if (databaseInfo) {
-                databaseInfo.innerHTML = `
+                // Save existing project status banner before updating
+                const existingBanner = databaseInfo.querySelector('[data-project-status-banner]');
+                const bannerHTML = existingBanner ? existingBanner.outerHTML : '';
+                
+                // Update database info
+                const dbInfoHTML = `
                     <h3>${config.name}</h3>
                     <p>${config.description}</p>
                     <p><strong>API Endpoint:</strong> ${config.baseUrl}</p>
                     <p><strong>Max Results:</strong> ${config.retmax}</p>
                 `;
+                
+                // Restore project status banner + new database info
+                databaseInfo.innerHTML = bannerHTML + dbInfoHTML;
             }
             
             // 设置数据库特定选项
@@ -538,7 +551,24 @@ class GenomicDataDownloader {
                 this.showStatusMessage(`Found ${results.length} results`, 'success');
                 this.enableDownloadButtons();
             } else {
-                this.showStatusMessage('No results found', 'info');
+                // Provide helpful suggestions based on download type and search term
+                let helpMessage = 'No results found. ';
+                
+                if (this.currentDownloadType === 'ncbi-unified') {
+                    const ncbiDb = document.getElementById('ncbiDatabase')?.value;
+                    
+                    if (ncbiDb === 'genome' && /^\d+$/.test(searchTerm.trim())) {
+                        helpMessage += 'Try: (1) Switch to "RefSeq Genomes" database, or (2) Search "Escherichia coli" instead of strain number.';
+                    } else if (/^\d+$/.test(searchTerm.trim())) {
+                        helpMessage += 'For strain numbers like "1655", try searching the full organism name like "Escherichia coli K-12 MG1655".';
+                    } else {
+                        helpMessage += 'Try: (1) Use different search terms, (2) Switch database type, or (3) Add organism filter.';
+                    }
+                } else {
+                    helpMessage += 'Try using different search terms or check your query.';
+                }
+                
+                this.showStatusMessage(helpMessage, 'info');
             }
             
         } catch (error) {
@@ -566,6 +596,14 @@ class GenomicDataDownloader {
             query += ` AND ${minLength}:${maxLength}[SLEN]`;
         }
         
+        // Special handling for genome database
+        if (config.searchDb === 'genome') {
+            console.warn('⚠️ NCBI Genome database in E-utilities is deprecated. Switching to NCBI Datasets API...');
+            
+            // Use the new NCBI Datasets API instead of E-utilities
+            return await this.searchNCBIDatasets(searchTerm, resultsLimit);
+        }
+        
         // Special handling for assembly database (RefSeq genomes)
         if (config.searchDb === 'assembly') {
             // Optimize query for assembly database
@@ -577,10 +615,19 @@ class GenomicDataDownloader {
             query += ' AND ("latest refseq"[Filter] OR "refseq"[Filter])';
         }
         
+        // Special handling for nucleotide database with numeric-only searches
+        if (config.searchDb === 'nucleotide' && /^\d+$/.test(searchTerm.trim())) {
+            // Could be an accession number, GI, or taxonomy ID
+            console.log('🔍 Numeric search in nucleotide database - searching as accession, GI, or taxonomy ID');
+            // Search in multiple fields
+            query = `${searchTerm}[Accession] OR ${searchTerm}[GI] OR txid${searchTerm}[Organism]`;
+        }
+        
         // NCBI E-utilities搜索
         const searchUrl = `${config.baseUrl}esearch.fcgi?db=${config.searchDb}&term=${encodeURIComponent(query)}&retmax=${resultsLimit}&retmode=json`;
         
         console.log('NCBI Search URL:', searchUrl); // Debug logging
+        console.log('NCBI Search Query:', query); // Debug logging
         
         const searchResponse = await fetch(searchUrl);
         const searchData = await searchResponse.json();
@@ -588,6 +635,10 @@ class GenomicDataDownloader {
         console.log('NCBI Search Response:', searchData); // Debug logging
         
         if (!searchData.esearchresult?.idlist?.length) {
+            // Provide helpful error message
+            if (config.searchDb === 'genome' && /^\d+$/.test(searchTerm.trim())) {
+                console.log('⚠️ No results in genome database. Try searching "Escherichia coli" or using Assembly/Nucleotide database.');
+            }
             return [];
         }
         
@@ -674,6 +725,97 @@ class GenomicDataDownloader {
                 
             default:
                 return baseResult;
+        }
+    }
+    
+    /**
+     * Search using NCBI Datasets API v2 (modern API for genomes)
+     * This replaces the deprecated E-utilities genome database
+     */
+    async searchNCBIDatasets(searchTerm, resultsLimit = 25) {
+        console.log('🆕 Using NCBI Datasets API v2 for genome search...');
+        
+        try {
+            let apiUrl;
+            let taxonId = null;
+            
+            // Detect if search term is a taxonomy ID (numeric only)
+            if (/^\d+$/.test(searchTerm.trim())) {
+                taxonId = searchTerm.trim();
+                console.log(`🔍 Detected taxonomy ID: ${taxonId}`);
+                // Use taxon endpoint directly
+                apiUrl = `https://api.ncbi.nlm.nih.gov/datasets/v2alpha/genome/taxon/${taxonId}/dataset_report?limit=${resultsLimit}`;
+            } else {
+                // Search by organism name - first get taxonomy ID
+                console.log(`🔍 Searching for organism: ${searchTerm}`);
+                const taxonSearchUrl = `https://api.ncbi.nlm.nih.gov/datasets/v2alpha/taxonomy/taxon_suggest/${encodeURIComponent(searchTerm)}`;
+                
+                const taxonResponse = await fetch(taxonSearchUrl);
+                if (!taxonResponse.ok) {
+                    console.error('❌ Failed to search taxonomy:', taxonResponse.statusText);
+                    throw new Error(`Taxonomy search failed: ${taxonResponse.statusText}`);
+                }
+                
+                const taxonData = await taxonResponse.json();
+                console.log('Taxonomy search results:', taxonData);
+                
+                if (taxonData.sci_name_and_ids && taxonData.sci_name_and_ids.length > 0) {
+                    taxonId = taxonData.sci_name_and_ids[0].tax_id;
+                    console.log(`✅ Found taxonomy ID: ${taxonId} for ${taxonData.sci_name_and_ids[0].sci_name}`);
+                    apiUrl = `https://api.ncbi.nlm.nih.gov/datasets/v2alpha/genome/taxon/${taxonId}/dataset_report?limit=${resultsLimit}`;
+                } else {
+                    console.warn('⚠️ No taxonomy found for search term');
+                    return [];
+                }
+            }
+            
+            // Fetch genome data from Datasets API
+            console.log('Datasets API URL:', apiUrl);
+            const response = await fetch(apiUrl);
+            
+            if (!response.ok) {
+                console.error('❌ Datasets API request failed:', response.statusText);
+                throw new Error(`Datasets API failed: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('Datasets API Response:', data);
+            
+            if (!data.reports || data.reports.length === 0) {
+                console.log('⚠️ No genome data found for this taxon');
+                return [];
+            }
+            
+            // Process results
+            const results = [];
+            for (const report of data.reports.slice(0, resultsLimit)) {
+                const assembly = report.assembly_info || {};
+                const organism = report.organism || {};
+                const accession = assembly.assembly_accession || 'Unknown';
+                
+                results.push({
+                    id: accession,
+                    accession: accession,
+                    title: assembly.assembly_name || organism.organism_name || 'No title available',
+                    organism: organism.organism_name || 'Unknown',
+                    length: assembly.total_sequence_length || 0,
+                    description: `Assembly: ${accession} | Level: ${assembly.assembly_level || 'Unknown'} | Status: ${assembly.assembly_status || 'Unknown'}`,
+                    database: 'genome-datasets',
+                    assemblyLevel: assembly.assembly_level || 'Unknown',
+                    assemblyStatus: assembly.assembly_status || 'Unknown',
+                    submitter: assembly.submitter || 'Unknown',
+                    taxonId: organism.tax_id || taxonId,
+                    // Use Datasets API download URL
+                    downloadUrl: `https://api.ncbi.nlm.nih.gov/datasets/v2alpha/genome/accession/${accession}/download?include_annotation_type=GENOME_FASTA&include_annotation_type=GENOME_GFF&include_annotation_type=RNA_FASTA&include_annotation_type=CDS_FASTA&include_annotation_type=PROT_FASTA&include_annotation_type=SEQUENCE_REPORT&filename=${accession}.zip`
+                });
+            }
+            
+            console.log(`✅ Found ${results.length} genome(s) using Datasets API`);
+            return results;
+            
+        } catch (error) {
+            console.error('Error searching NCBI Datasets API:', error);
+            throw new Error(`Datasets API search failed: ${error.message}`);
         }
     }
     
@@ -873,6 +1015,7 @@ class GenomicDataDownloader {
                 case 'sra':
                     return { category: 'sequencing_data', icon: '🧬', color: '#9c27b0' };
                 case 'assembly':
+                case 'genome-datasets':  // New Datasets API genomes
                     return { category: 'genomes', icon: '🧬', color: '#4caf50' };
                 case 'pubmed':
                     return { category: 'literature', icon: '📚', color: '#ff9800' };

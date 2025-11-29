@@ -7976,9 +7976,17 @@ function createGenomicDownloadWindow(downloadType) {
         // Request current project info from Project Manager
         projectManagerWindows[0].webContents.send('request-current-project-for-download');
         
+        // Track if we received a response
+        let responseReceived = false;
+        
         // Listen for project info response
         const handleProjectInfo = (event, projectInfo) => {
           console.log('📥 Received project info from Project Manager:', projectInfo);
+          responseReceived = true;
+          // Update the global current active project
+          if (projectInfo) {
+            setActiveProject(projectInfo);
+          }
           downloadWindow.webContents.send('set-active-project', projectInfo);
           // Remove the listener after receiving the response
           ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
@@ -7988,10 +7996,14 @@ function createGenomicDownloadWindow(downloadType) {
         
         // Fallback timeout - if no response in 1 second, use current active project
         setTimeout(() => {
-          ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
-          const fallbackProject = getCurrentProjectInfo();
-          console.log('⏰ Using fallback project info:', fallbackProject);
-          downloadWindow.webContents.send('set-active-project', fallbackProject);
+          if (!responseReceived) {
+            ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
+            const fallbackProject = getCurrentProjectInfo();
+            console.log('⏰ Using fallback project info:', fallbackProject);
+            downloadWindow.webContents.send('set-active-project', fallbackProject);
+          } else {
+            console.log('✅ Project info already received from Project Manager, skipping fallback');
+          }
         }, 1000);
       } else {
         // No Project Manager window found, use current active project
