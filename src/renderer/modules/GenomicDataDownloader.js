@@ -1441,6 +1441,15 @@ class GenomicDataDownloader {
         const filename = `${item.accession}${extension}`;
         const outputPath = `${this.outputDirectory}/${filename}`;
         
+        // Generate the correct download URL based on selected file format
+        let downloadUrl = item.downloadUrl;
+        
+        // For NCBI databases, regenerate URL with correct format (except genome-datasets which uses package downloads)
+        if ((item.database === 'nucleotide' || item.database === 'protein' || item.database === 'genome') && item.database !== 'genome-datasets') {
+            downloadUrl = this.getNCBIDownloadUrlWithFormat(item.id, item.database, fileFormat);
+            console.log(`🔄 Regenerated download URL for ${fileFormat} format:`, downloadUrl);
+        }
+        
         // Enhance project info with database context for better categorization
         const enhancedProjectInfo = {
             ...this.currentProject,
@@ -1448,18 +1457,50 @@ class GenomicDataDownloader {
                 database: item.database,
                 downloadType: this.currentDownloadType,
                 fileFormat: fileFormat,
-                sourceUrl: item.downloadUrl
+                sourceUrl: downloadUrl
             }
         };
         
         // 使用Electron的下载API，传递增强的项目信息
-        const result = await window.electronAPI.downloadFile(item.downloadUrl, outputPath, enhancedProjectInfo);
+        const result = await window.electronAPI.downloadFile(downloadUrl, outputPath, enhancedProjectInfo);
         
         if (!result.success) {
             throw new Error(result.error || 'Download failed');
         }
         
         return result;
+    }
+    
+    /**
+     * Get NCBI download URL with specific format
+     * This method generates the correct efetch URL based on user-selected file format
+     */
+    getNCBIDownloadUrlWithFormat(id, database, fileFormat) {
+        const baseUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
+        
+        // Map user-selected format to NCBI rettype parameter
+        const formatToRettype = {
+            'fasta': 'fasta',
+            'genbank': 'gb',      // GenBank format
+            'gff': 'gff3',        // GFF3 format
+            'embl': 'embl'        // EMBL format
+        };
+        
+        const rettype = formatToRettype[fileFormat] || 'fasta';
+        
+        // For some databases and formats, we need different parameters
+        let retmode = 'text';
+        
+        // Assembly database doesn't support efetch, return FTP link instead
+        if (database === 'assembly') {
+            console.warn('⚠️ Assembly database requires FTP download, format may not be changeable');
+            return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=${database}&id=${id}&retmode=json`;
+        }
+        
+        const url = `${baseUrl}?db=${database}&id=${id}&rettype=${rettype}&retmode=${retmode}`;
+        console.log(`🎯 Generated ${fileFormat} download URL:`, url);
+        
+        return url;
     }
     
     getFileExtension(format) {
