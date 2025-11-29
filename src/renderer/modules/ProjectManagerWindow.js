@@ -3452,8 +3452,49 @@ System Information:
                         throw new Error('Invalid project data structure');
                     }
                     
+                    // If there's a current project open, show dialog to ask user's choice
+                    if (this.currentProject && this.currentProject.name) {
+                        console.log('⚠️ Current project exists, showing open dialog...');
+                        
+                        if (window.electronAPI.showProjectOpenDialog) {
+                            const dialogResult = await window.electronAPI.showProjectOpenDialog(project.name);
+                            
+                            if (!dialogResult.success) {
+                                throw new Error('Failed to show project open dialog');
+                            }
+                            
+                            // Handle user's choice
+                            switch (dialogResult.choice) {
+                                case 0: // Open in Current Window
+                                    console.log('📝 User chose: Open in Current Window');
+                                    // Continue with normal project loading (will close current project)
+                                    break;
+                                    
+                                case 1: // Open in New Window
+                                    console.log('🆕 User chose: Open in New Window');
+                                    if (window.electronAPI.openProjectInNewProcess) {
+                                        const newProcessResult = await window.electronAPI.openProjectInNewProcess(filePath);
+                                        if (newProcessResult.success) {
+                                            this.showNotification(`Opening "${project.name}" in new window...`, 'success');
+                                        } else {
+                                            throw new Error('Failed to open project in new window: ' + newProcessResult.error);
+                                        }
+                                    }
+                                    return; // Don't load in current window
+                                    
+                                case 2: // Cancel
+                                default:
+                                    console.log('❌ User chose: Cancel');
+                                    this.showNotification('Project opening cancelled', 'info');
+                                    return; // Don't load the project
+                            }
+                        }
+                    }
+                    
                     // Set up project paths for new directory structure
                     project.projectFilePath = filePath;
+                    
+                    // ... existing code ...
                     
                     // 检查是否为新结构（Project.GAI 在项目目录内）
                     if (fileName === 'Project.GAI') {

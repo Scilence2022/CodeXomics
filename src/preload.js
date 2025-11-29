@@ -112,6 +112,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCurrentProject: () => ipcRenderer.invoke('getCurrentProject'),
   setActiveProject: (projectInfo) => ipcRenderer.invoke('setActiveProject', projectInfo),
   
+  // Project opening options
+  showProjectOpenDialog: (projectName) => ipcRenderer.invoke('show-project-open-dialog', projectName),
+  openProjectInNewProcess: (filePath) => ipcRenderer.invoke('open-project-in-new-process', filePath),
+  
   // Event listeners for genomic downloader
   onSetDownloadType: (callback) => {
     ipcRenderer.on('set-download-type', (event, downloadType) => {

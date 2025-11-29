@@ -2356,8 +2356,31 @@ app.whenReady().then(() => {
   // Set up environment variables for system command execution
   setupEnvironmentVariables();
   
+  // Check if app was launched with --open-project argument
+  const args = process.argv.slice(1);
+  const openProjectIndex = args.indexOf('--open-project');
+  let projectToOpen = null;
+  
+  if (openProjectIndex !== -1 && args[openProjectIndex + 1]) {
+    projectToOpen = args[openProjectIndex + 1];
+    console.log('📂 App launched with project file:', projectToOpen);
+  }
+  
   createWindow();
   createMenu();
+  
+  // If a project file was specified, open Project Manager with that project
+  if (projectToOpen) {
+    setTimeout(() => {
+      const pmWindow = createProjectManagerWindow();
+      if (pmWindow) {
+        pmWindow.webContents.once('did-finish-load', () => {
+          pmWindow.webContents.send('menu-open-project', projectToOpen);
+          console.log('✅ Sent open-project command to Project Manager');
+        });
+      }
+    }, 1000);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -5753,7 +5776,17 @@ ipcMain.on('focus-main-window', () => {
 
 // Create Project Manager Window
 function createProjectManagerWindow() {
-  try {
+  try {  // Check if Project Manager window already exists in this process
+    const existingPMWindow = BrowserWindow.getAllWindows().find(win => 
+      win.getTitle().includes('Project Manager') && !win.isDestroyed()
+    );
+    
+    if (existingPMWindow) {
+      console.log('ℹ️ Project Manager window already exists in this process, focusing existing window...');
+      existingPMWindow.focus();
+      return existingPMWindow;
+    }
+    
     const projectManagerWindow = new BrowserWindow({
       width: 1200,
       height: 800,
@@ -5771,6 +5804,8 @@ function createProjectManagerWindow() {
       maximizable: true,
       show: false
     });
+    
+    // ... existing code ...
     
     // Create Project Manager specific menu
     const projectManagerMenu = createProjectManagerMenu(projectManagerWindow);
@@ -6626,6 +6661,59 @@ function createProjectManagerMenu(projectManagerWindow) {
 }
 
 // ========== PROJECT MANAGER IPC HANDLERS ==========
+
+// Handler for showing project open dialog
+ipcMain.handle('show-project-open-dialog', async (event, projectName) => {
+  try {
+    const { response } = await dialog.showMessageBox({
+      type: 'question',
+      buttons: ['Open in Current Window', 'Open in New Window', 'Cancel'],
+      defaultId: 0,
+      title: 'Open Project',
+      message: `Open "${projectName}"?`,
+      detail: `Choose how to open this project:\n\n` +
+              `• Open in Current Window: Close current project and open new project here\n` +
+              `• Open in New Window: Keep current project and open new project in a new application instance\n` +
+              `• Cancel: Don't open the project`,
+      noLink: true
+    });
+    
+    return { success: true, choice: response }; // 0 = current, 1 = new, 2 = cancel
+  } catch (error) {
+    console.error('Error showing project open dialog:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler for opening project in new process
+ipcMain.handle('open-project-in-new-process', async (event, filePath) => {
+  try {
+    const { spawn } = require('child_process');
+    const electronPath = process.execPath;
+    const appPath = app.getAppPath();
+    
+    console.log('🚀 Starting new application instance...');
+    console.log('   Electron path:', electronPath);
+    console.log('   App path:', appPath);
+    console.log('   Project file:', filePath);
+    
+    // Start new process with project file path as argument
+    const child = spawn(electronPath, [appPath, '--open-project', filePath], {
+      detached: true,
+      stdio: 'ignore'
+    });
+    
+    child.unref();
+    
+    console.log('✅ New application instance started with PID:', child.pid);
+    return { success: true, pid: child.pid };
+  } catch (error) {
+    console.error('Error opening project in new process:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ... existing code ...
 
 // Handle project directory selection
 ipcMain.handle('selectProjectDirectory', async () => {
