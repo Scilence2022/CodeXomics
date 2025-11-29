@@ -167,10 +167,12 @@ class GenomicDataDownloader {
             });
             
             // Listen for menu actions (Copy, Paste, Cut, Select All)
-            window.electronAPI.on('tool-menu-action', (event, action, ...args) => {
-                console.log('📋 Menu action received:', action);
-                this.handleMenuAction(action, ...args);
-            });
+            if (window.electronAPI.ipcRenderer) {
+                window.electronAPI.ipcRenderer.on('tool-menu-action', (event, action, ...args) => {
+                    console.log('📋 Menu action received:', action);
+                    this.handleMenuAction(action, ...args);
+                });
+            }
             
             // 获取当前项目信息
             this.getCurrentProject();
