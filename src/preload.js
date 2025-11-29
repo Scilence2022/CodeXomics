@@ -153,7 +153,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         'menu-open-external-editor', 'menu-open-file-explorer', 'menu-preferences',
         'menu-help', 'menu-keyboard-shortcuts', 'menu-user-guide', 'menu-file-formats',
         'menu-best-practices', 'menu-report-issue', 'menu-send-feedback', 'menu-about',
-        'request-current-project-for-download'
+        'request-current-project-for-download', 'tool-menu-action'
       ];
       
       if (validChannels.includes(channel)) {

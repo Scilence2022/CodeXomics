@@ -166,8 +166,73 @@ class GenomicDataDownloader {
                 this.setActiveProject(projectInfo);
             });
             
+            // Listen for menu actions (Copy, Paste, Cut, Select All)
+            window.electronAPI.on('tool-menu-action', (event, action, ...args) => {
+                console.log('📋 Menu action received:', action);
+                this.handleMenuAction(action, ...args);
+            });
+            
             // 获取当前项目信息
             this.getCurrentProject();
+        }
+    }
+    
+    /**
+     * Handle menu actions from Edit menu (Copy, Paste, Cut, Select All)
+     */
+    handleMenuAction(action, ...args) {
+        const activeElement = document.activeElement;
+        
+        switch (action) {
+            case 'copy':
+                // If focused on input/textarea, let browser handle it
+                if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                    document.execCommand('copy');
+                } else {
+                    // Copy selected text from anywhere
+                    const selection = window.getSelection();
+                    if (selection && selection.toString()) {
+                        navigator.clipboard.writeText(selection.toString());
+                        console.log('✅ Copied to clipboard:', selection.toString());
+                    }
+                }
+                break;
+                
+            case 'paste':
+                // Only paste to input/textarea elements
+                if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                    navigator.clipboard.readText().then(text => {
+                        document.execCommand('insertText', false, text);
+                        console.log('✅ Pasted from clipboard');
+                    }).catch(err => {
+                        console.error('Paste failed:', err);
+                    });
+                }
+                break;
+                
+            case 'cut':
+                // If focused on input/textarea, let browser handle it
+                if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                    document.execCommand('cut');
+                }
+                break;
+                
+            case 'select-all':
+                // If focused on input/textarea, select all in that field
+                if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                    activeElement.select();
+                } else {
+                    // Select all text on page
+                    const range = document.createRange();
+                    range.selectNodeContents(document.body);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+                break;
+                
+            default:
+                console.log('Unhandled menu action:', action);
         }
     }
     
