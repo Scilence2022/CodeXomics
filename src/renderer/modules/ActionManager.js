@@ -2047,14 +2047,53 @@ class ActionManager {
                 options: {}
             });
             
+            // Determine default save directory from currently opened file
+            let defaultDirectory = null;
+            const currentFile = this.genomeBrowser.fileManager?.currentFile;
+            
+            if (currentFile && currentFile.path) {
+                const path = require('path');
+                defaultDirectory = path.dirname(currentFile.path);
+                console.log(`📁 [ActionManager] Using current file directory as default: ${defaultDirectory}`);
+            }
+            
             // Save the comprehensive GBK file
-            const filename = saveFile || `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
+            const baseFilename = `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
+            const filename = saveFile || (defaultDirectory ? require('path').join(defaultDirectory, baseFilename) : baseFilename);
             
             if (saveFile) {
                 await this.saveTextFileToFile(genbankContent, saveFile);
                 console.log(`📁 [ActionManager] GBK file saved to: ${saveFile}`);
             } else {
-                this.downloadTextFile(genbankContent, filename);
+                // Use Electron save dialog with default directory
+                if (window.electronAPI && window.electronAPI.showSaveDialog) {
+                    try {
+                        const result = await window.electronAPI.showSaveDialog({
+                            title: 'Save Modified Genome as GenBank File',
+                            defaultPath: filename, // This includes the full path if defaultDirectory exists
+                            filters: [
+                                { name: 'GenBank Files', extensions: ['gbk', 'gb', 'genbank'] },
+                                { name: 'All Files', extensions: ['*'] }
+                            ]
+                        });
+                        
+                        if (!result.canceled && result.filePath) {
+                            await this.saveTextFileToFile(genbankContent, result.filePath);
+                            console.log(`📁 [ActionManager] GBK file saved to: ${result.filePath}`);
+                            // Update filename for return value
+                            filename = result.filePath;
+                        } else {
+                            console.log(`⚠️ [ActionManager] Save dialog cancelled`);
+                            return null;
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ [ActionManager] Electron save dialog failed, using fallback:', error);
+                        this.downloadTextFile(genbankContent, baseFilename);
+                    }
+                } else {
+                    // Fallback to browser download
+                    this.downloadTextFile(genbankContent, baseFilename);
+                }
             }
             
             console.log(`✅ [ActionManager] Comprehensive GBK file generated successfully`);
