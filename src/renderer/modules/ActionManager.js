@@ -170,35 +170,8 @@ class ActionManager {
         }
     }
     
-    /**
-     * DEPRECATED: Backup original annotations
-     * 
-     * @deprecated Since v2.0 - Original data is never modified, backups not needed
-     */
-    ensureOriginalAnnotationsBackup() {
-        // NO-OP: Original data is never modified in v2.0
-        // All modifications happen on execution copy/proxy only
-    }
-    
-    /**
-     * DEPRECATED: Restore features from original backup
-     * 
-     * @deprecated Since v2.0 - Original data is never modified, restore not needed
-     */
-    restoreOriginalFeatures() {
-        console.warn('[DEPRECATED] restoreOriginalFeatures() is deprecated. Original data is never modified in v2.0');
-        // NO-OP: Original data is never modified, nothing to restore
-    }
-    
-    /**
-     * DEPRECATED: Clear original annotations backup
-     * 
-     * @deprecated Since v2.0 - Original data is never modified, backups not needed
-     */
-    clearOriginalAnnotationsBackup() {
-        // NO-OP: Original data is never modified in v2.0
-        this.originalAnnotations = null;
-    }
+    // Deprecated methods removed - original data is never modified in v2.0
+    // All modifications happen on execution copy/proxy only
     
     initializeEventListeners() {
         // Wait for DOM to be ready before setting up event listeners
@@ -2035,6 +2008,8 @@ class ActionManager {
     
     /**
      * Generate comprehensive GBK file with full action history
+     * Uses unified GenBankExporter for consistent, maintainable output
+     * 
      * @param {Array} executionActionsCopy - Copy of executed actions
      * @param {Object} executionGenomeData - Genome data with modifications
      * @param {string} executionId - Unique execution identifier
@@ -2044,64 +2019,44 @@ class ActionManager {
         try {
             console.log(`📄 [ActionManager] Generating comprehensive GBK file with action history`);
             
-            // Check if ExportManager is available
             if (!this.genomeBrowser.exportManager) {
                 this.genomeBrowser.showNotification('Export functionality not available', 'error');
                 return null;
             }
             
-            const chromosomes = Object.keys(this.genomeBrowser.currentSequence || {});
-            let genbankContent = '';
-            
-            for (const chr of chromosomes) {
-                // 🔒 CRITICAL FIX: Get sequence from execution proxy, NOT from original data!
-                // Get the original sequence as starting point (execution proxy doesn't store sequences)
-                const originalSeq = this.genomeBrowser.currentSequence[chr];
-                
-                // Apply sequence modifications to the COPY, never to original
-                const modifiedSequence = this.applySequenceModifications(chr, originalSeq);
-                const sequence = modifiedSequence;
-                
-                // 🔒 CRITICAL FIX: Features are adjusted ONCE here based on ALL modifications
-                // This is the ONLY place where features are filtered/adjusted
-                // executeDeleteSequence() and other methods only RECORD modifications
-                // adjustFeaturePositions() reads from sequenceModifications Map and applies ALL at once
-                const featuresSource = this.getFeaturesFromGenomeData(executionGenomeData, chr) || [];
-                const adjustedFeatures = this.adjustFeaturePositions(chr, featuresSource);
-                const features = adjustedFeatures;
-                
-                // Get executed actions for this chromosome
-                const executedActions = executionActionsCopy.filter(action => 
-                    action.status === this.STATUS.COMPLETED && 
-                    action.metadata?.chromosome === chr
-                );
-                
-                // Generate GenBank content for this chromosome using original format
-                const chrContent = this.generateChromosomeGBKContentOriginal(
-                    chr, 
-                    sequence, 
-                    features, 
-                    executedActions, 
-                    executionId
-                );
-                
-                genbankContent += chrContent + '\n';
+            // Initialize GenBankExporter if not already created
+            if (!this.genbankExporter) {
+                this.genbankExporter = new GenBankExporter(this.genomeBrowser);
             }
+            
+            const chromosomes = Object.keys(this.genomeBrowser.currentSequence || {});
+            
+            // Use unified GenBankExporter - eliminates 400+ lines of duplicate code
+            const genbankContent = this.genbankExporter.exportGenBank({
+                chromosomes,
+                getSequence: (chr) => {
+                    const originalSeq = this.genomeBrowser.currentSequence[chr];
+                    return this.applySequenceModifications(chr, originalSeq);
+                },
+                getFeatures: (chr) => {
+                    const featuresSource = this.getFeaturesFromGenomeData(executionGenomeData, chr) || [];
+                    return this.adjustFeaturePositions(chr, featuresSource);
+                },
+                executedActions: executionActionsCopy.filter(a => a.status === this.STATUS.COMPLETED),
+                executionId,
+                options: {}
+            });
             
             // Save the comprehensive GBK file
             const filename = saveFile || `genome_actions_${new Date().toISOString().slice(0, 10)}_${executionId}.gbk`;
             
             if (saveFile) {
-                // Save directly to the specified file path
                 await this.saveTextFileToFile(genbankContent, saveFile);
-                console.log(`📁 [ActionManager] GBK file saved directly to: ${saveFile}`);
+                console.log(`📁 [ActionManager] GBK file saved to: ${saveFile}`);
             } else {
-                // Use the default download method which shows the save dialog
                 this.downloadTextFile(genbankContent, filename);
             }
             
-            // 🔒 CRITICAL FIX: Do NOT auto-open during execution!
-            // Return the GBK content and filename for later opening in finally block
             console.log(`✅ [ActionManager] Comprehensive GBK file generated successfully`);
             
             return {
@@ -2118,248 +2073,52 @@ class ActionManager {
     }
     
     /**
-     * Generate GBK content for a single chromosome using original GenBank format
+     * DEPRECATED: Generate GBK content for a single chromosome
+     * @deprecated Use GenBankExporter.exportGenBank() instead
+     * This method is kept for backward compatibility but now uses Gen BankExporter internally
      */
     generateChromosomeGBKContentOriginal(chromosome, sequence, features, executedActions, executionId) {
-        let content = '';
+        console.warn('[DEPRECATED] generateChromosomeGBKContentOriginal() is deprecated. Use GenBankExporter instead.');
         
-        // Get original source features if available
-        const sourceFeatures = this.genomeBrowser.sourceFeatures?.[chromosome] || {};
-        const originalAnnotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
-        
-        // Determine sequence type and topology
-        const isCircular = sourceFeatures.mol_type?.includes('circular') || 
-                          (originalAnnotations.find(f => f.type === 'source' && f.qualifiers?.mol_type?.includes('circular'))) ||
-                          false;
-        const topology = isCircular ? 'circular' : 'linear';
-        
-        // Get organism information
-        const organism = sourceFeatures.organism || 
-                        originalAnnotations.find(f => f.type === 'source')?.qualifiers?.organism ||
-                        'Unknown organism';
-        
-        // Get strain information
-        const strain = sourceFeatures.strain || 
-                      originalAnnotations.find(f => f.type === 'source')?.qualifiers?.strain ||
-                      '';
-        
-        // GenBank LOCUS line (exactly as original format)
-        const locusName = chromosome.length > 16 ? chromosome.substring(0, 16) : chromosome.padEnd(16);
-        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '-');
-        content += `LOCUS       ${locusName} ${sequence.length} bp    DNA     ${topology}   UNK ${dateStr}\n`;
-        
-        // Add comprehensive action history as COMMENT section
-        if (executedActions.length > 0) {
-            content += `COMMENT     ========================================================================\n`;
-            content += `COMMENT     CodeXomics Action Manager - Execution Report\n`;
-            content += `COMMENT     ========================================================================\n`;
-            content += `COMMENT     Execution ID: ${executionId}\n`;
-            content += `COMMENT     Total Actions Executed: ${executedActions.length}\n`;
-            content += `COMMENT     Execution Date: ${new Date().toISOString()}\n`;
-            content += `COMMENT     \n`;
-            
-            executedActions.forEach((action, index) => {
-                content += `COMMENT     ------------------------------------------------------------------------\n`;
-                content += `COMMENT     Action ${index + 1}: ${action.type.replace(/_/g, ' ').toUpperCase()}\n`;
-                content += `COMMENT       Action ID: ${action.id}\n`;
-                content += `COMMENT       Target: ${action.target}\n`;
-                content += `COMMENT       Description: ${action.details || 'N/A'}\n`;
-                
-                if (action.metadata) {
-                    if (action.metadata.start && action.metadata.end) {
-                        content += `COMMENT       Position: ${action.metadata.start}-${action.metadata.end}\n`;
-                        content += `COMMENT       Length: ${action.metadata.end - action.metadata.start + 1} bp\n`;
-                    }
-                    if (action.metadata.strand) {
-                        content += `COMMENT       Strand: ${action.metadata.strand}\n`;
-                    }
-                    if (action.metadata.chromosome) {
-                        content += `COMMENT       Chromosome: ${action.metadata.chromosome}\n`;
-                    }
-                }
-                
-                if (action.executionStart) {
-                    content += `COMMENT       Executed: ${new Date(action.executionStart).toISOString()}\n`;
-                }
-                if (action.actualTime) {
-                    content += `COMMENT       Duration: ${action.actualTime}ms\n`;
-                }
-                
-                if (action.result) {
-                    if (action.result.sequenceLength) {
-                        content += `COMMENT       Result Sequence Length: ${action.result.sequenceLength} bp\n`;
-                    }
-                    if (action.result.featuresCount !== undefined) {
-                        content += `COMMENT       Affected Features: ${action.result.featuresCount}\n`;
-                    }
-                    if (action.result.operation) {
-                        content += `COMMENT       Operation: ${action.result.operation}\n`;
-                    }
-                }
-                
-                content += `COMMENT     \n`;
-            });
-            
-            content += `COMMENT     ========================================================================\n`;
+        if (!this.genbankExporter) {
+            this.genbankExporter = new GenBankExporter(this.genomeBrowser);
         }
         
-        // DEFINITION line
-        const definition = sourceFeatures.note || 
-                          originalAnnotations.find(f => f.type === 'source')?.qualifiers?.note ||
-                          `${chromosome} - Modified by CodeXomics Action Manager`;
-        content += `DEFINITION  ${definition}\n`;
-        
-        // ACCESSION line
-        const dbXrefArray = Array.isArray(sourceFeatures.db_xref) ? sourceFeatures.db_xref : [];
-        const originalDbXref = originalAnnotations.find(f => f.type === 'source')?.qualifiers?.db_xref;
-        const originalDbXrefArray = Array.isArray(originalDbXref) ? originalDbXref : [];
-        const accession = dbXrefArray.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
-                         originalDbXrefArray.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
-                         chromosome;
-        content += `ACCESSION   ${accession}\n`;
-        
-        // VERSION line
-        content += `VERSION     ${accession}\n`;
-        
-        // KEYWORDS line
-        const keywords = sourceFeatures.serotype || sourceFeatures.serovar || 
-                        originalAnnotations.find(f => f.type === 'source')?.qualifiers?.serotype ||
-                        originalAnnotations.find(f => f.type === 'source')?.qualifiers?.serovar ||
-                        'genome editing, sequence modification';
-        content += `KEYWORDS    ${keywords}\n`;
-        
-        // SOURCE line
-        content += `SOURCE      .\n`;
-        
-        // ORGANISM line
-        content += `  ORGANISM  ${organism}\n`;
-        
-        // Add organism qualifiers if available
-        if (strain) {
-            content += `            strain=${strain}\n`;
-        }
-        if (sourceFeatures.host) {
-            content += `            host=${sourceFeatures.host}\n`;
-        }
-        if (sourceFeatures.country) {
-            content += `            country=${sourceFeatures.country}\n`;
-        }
-        if (sourceFeatures.collection_date) {
-            content += `            collection_date=${sourceFeatures.collection_date}\n`;
-        }
-        
-        // FEATURES section
-        content += `FEATURES             Location/Qualifiers\n`;
-        
-        // Add source feature first
-        content += `     source          1..${sequence.length}\n`;
-        content += `                     /organism="${organism}"\n`;
-        content += `                     /mol_type="genomic DNA"\n`;
-        if (strain) {
-            content += `                     /strain="${strain}"\n`;
-        }
-        if (sourceFeatures.host) {
-            content += `                     /host="${sourceFeatures.host}"\n`;
-        }
-        if (sourceFeatures.country) {
-            content += `                     /country="${sourceFeatures.country}"\n`;
-        }
-        if (sourceFeatures.collection_date) {
-            content += `                     /collection_date="${sourceFeatures.collection_date}"\n`;
-        }
-        if (sourceFeatures.isolation_source) {
-            content += `                     /isolation_source="${sourceFeatures.isolation_source}"\n`;
-        }
-        
-        // Add all other features with original qualifiers
-        features.forEach(feature => {
-            if (feature.type === 'source') return; // Already added above
-            
-            const location = this.formatGenBankLocation(feature);
-            content += `     ${feature.type.padEnd(16)} ${location}\n`;
-            
-            // Add all qualifiers from the original feature
-            if (feature.qualifiers) {
-                Object.entries(feature.qualifiers).forEach(([key, value]) => {
-                    if (value === true) {
-                        content += `                     /${key}\n`;
-                    } else if (value && value !== '') {
-                        // Handle multi-line qualifiers
-                        const valueStr = String(value);
-                        if (valueStr.length > 60) {
-                            // Split long qualifiers
-                            const lines = this.wrapQualifierValue(valueStr, 60);
-                            lines.forEach((line, index) => {
-                                if (index === 0) {
-                                    content += `                     /${key}="${line}"\n`;
-                                } else {
-                                    content += `                     "${line}"\n`;
-                                }
-                            });
-                        } else {
-                            content += `                     /${key}="${valueStr}"\n`;
-                        }
-                    }
-                });
-            }
+        return this.genbankExporter.generateChromosomeContent({
+            chromosome,
+            sequence,
+            features,
+            actions: executedActions,
+            executionId,
+            options: {}
         });
-        
-        // ORIGIN section
-        content += `ORIGIN\n`;
-        
-        // Add sequence in GenBank format (60 chars per line, numbered)
-        for (let i = 0; i < sequence.length; i += 60) {
-            const lineNum = (i + 1).toString().padStart(9);
-            const seqLine = sequence.substring(i, i + 60).toLowerCase();
-            const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
-            content += `${lineNum} ${formattedSeq}\n`;
-        }
-        
-        // End of record
-        content += `//\n`;
-        
-        return content;
     }
     
     /**
-     * Format GenBank location string
+     * DEPRECATED: Format GenBank location string
+     * @deprecated Use GenBankExporter.formatLocation() instead
      */
     formatGenBankLocation(feature) {
-        if (feature.strand === -1) {
-            return `complement(${feature.start}..${feature.end})`;
-        } else {
-            return `${feature.start}..${feature.end}`;
+        if (!this.genbankExporter) {
+            this.genbankExporter = new GenBankExporter(this.genomeBrowser);
         }
+        return this.genbankExporter.formatLocation(feature);
     }
     
     /**
-     * Wrap long qualifier values
+     * DEPRECATED: Wrap long qualifier values
+     * @deprecated Use GenBankExporter.wrapQualifierValue() instead
      */
     wrapQualifierValue(value, maxLength) {
-        const lines = [];
-        let currentLine = '';
-        
-        const words = value.split(' ');
-        for (const word of words) {
-            if (currentLine.length + word.length + 1 <= maxLength) {
-                currentLine += (currentLine ? ' ' : '') + word;
-            } else {
-                if (currentLine) {
-                    lines.push(currentLine);
-                }
-                currentLine = word;
-            }
+        if (!this.genbankExporter) {
+            this.genbankExporter = new GenBankExporter(this.genomeBrowser);
         }
-        
-        if (currentLine) {
-            lines.push(currentLine);
-        }
-        
-        return lines;
+        return this.genbankExporter.wrapQualifierValue(value, maxLength);
     }
 
     /**
-     * Generate GBK content for a single chromosome (legacy method)
+     * DEPRECATED: Generate GBK content for a single chromosome (legacy method)
+     * @deprecated Use GenBankExporter.exportGenBank() instead
      */
     generateChromosomeGBKContent(chromosome, sequence, features, executedActions, executionId) {
         let content = '';
@@ -3428,9 +3187,6 @@ class ActionManager {
     async executeInsertSequence(action, executionGenomeData = null) {
         const { chromosome, start, insertSequence } = action.metadata;
         
-        // Ensure original annotations are backed up before any modification
-        this.ensureOriginalAnnotationsBackup();
-        
         console.log('➕ [ActionManager] Executing insert sequence action:', {
             actionId: action.id,
             target: action.target,
@@ -3463,9 +3219,6 @@ class ActionManager {
     async executeReplaceSequence(action, executionGenomeData = null) {
         const { chromosome, start, end, newSequence } = action.metadata;
         const originalLength = end - start + 1;
-        
-        // Ensure original annotations are backed up before any modification
-        this.ensureOriginalAnnotationsBackup();
         
         console.log('🔄 [ActionManager] Executing replace sequence action:', {
             actionId: action.id,
@@ -3983,9 +3736,6 @@ class ActionManager {
      */
     async executeSequenceEdit(action, executionGenomeData = null) {
         const { changeSummary, originalSequence, modifiedSequence } = action.metadata;
-        
-        // Ensure original annotations are backed up before any modification
-        this.ensureOriginalAnnotationsBackup();
         
         console.log('🔧 [ActionManager] Executing sequence edit action:', {
             actionId: action.id,
