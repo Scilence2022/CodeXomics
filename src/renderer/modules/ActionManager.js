@@ -1753,7 +1753,7 @@ class ActionManager {
             
             // 🔒 CRITICAL FIX: Auto-open GBK file AFTER cleanup completes
             // This ensures original data is verified and restored before loading modified data
-            if (gbkResult && gbkResult.success) {
+            if (typeof gbkResult !== 'undefined' && gbkResult && gbkResult.success) {
                 console.log(`📂 [ActionManager] Auto-opening generated GBK file after cleanup...`);
                 try {
                     await this.autoOpenGeneratedGBK(gbkResult.genbankContent, gbkResult.filename);
@@ -2210,8 +2210,11 @@ class ActionManager {
         content += `DEFINITION  ${definition}\n`;
         
         // ACCESSION line
-        const accession = sourceFeatures.db_xref?.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
-                         originalAnnotations.find(f => f.type === 'source')?.qualifiers?.db_xref?.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
+        const dbXrefArray = Array.isArray(sourceFeatures.db_xref) ? sourceFeatures.db_xref : [];
+        const originalDbXref = originalAnnotations.find(f => f.type === 'source')?.qualifiers?.db_xref;
+        const originalDbXrefArray = Array.isArray(originalDbXref) ? originalDbXref : [];
+        const accession = dbXrefArray.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
+                         originalDbXrefArray.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
                          chromosome;
         content += `ACCESSION   ${accession}\n`;
         
