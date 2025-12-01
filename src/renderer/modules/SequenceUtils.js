@@ -1699,12 +1699,11 @@ class SequenceUtils {
             // Secondary: Also show showNotification if available
             if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
                 this.genomeBrowser.showNotification(copyMessage, 'success');
-            }
             } else {
-                // Fallback to status bar update if uiManager is not available
-                console.log('🔧 [SequenceUtils] Using fallback status update');
+                // Fallback to status bar update if no notification systems
                 const statusElement = document.getElementById('statusText');
                 if (statusElement) {
+                    console.log('📐 [SequenceUtils] Using fallback status update');
                     statusElement.textContent = copyMessage;
                     // Add visual feedback for copy success
                     statusElement.style.color = '#10b981';
