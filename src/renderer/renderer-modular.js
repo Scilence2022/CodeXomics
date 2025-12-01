@@ -795,16 +795,8 @@ class GenomeBrowser {
         document.getElementById('resetZoomBtn').addEventListener('click', () => this.navigationManager.resetZoom());
 
         // Sequence controls
-        // Re-enable direct copy button handler as backup to ActionManager
-        const copyBtn = document.getElementById('copySequenceBtn');
-        if (copyBtn) {
-            copyBtn.addEventListener('click', (e) => {
-                e.stopImmediatePropagation();
-                if (this.sequenceUtils) {
-                    this.sequenceUtils.copySequence();
-                }
-            });
-        }
+        // ✅ Copy button is now fully handled by ActionManager (see ActionManager.js line 188-191)
+        // No duplicate listener needed here to avoid event conflicts
         document.getElementById('exportBtn').addEventListener('click', () => this.sequenceUtils.exportSequence());
         // ❌ REMOVED: Copy is now handled by ActionManager
         // document.getElementById('copySequenceHeaderBtn').addEventListener('click', (e) => {

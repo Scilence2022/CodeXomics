@@ -1604,7 +1604,91 @@ class SequenceUtils {
     }
 
     // Sequence operations
+    /**
+     * Copy sequence to system clipboard with proper error handling and FASTA formatting
+     * @param {string} sequence - The DNA sequence to copy
+     * @param {object} selectionInfo - Information about the selection (chromosome, start, end, name)
+     * @param {string} copyMessage - Custom message to display (optional)
+     * @returns {Promise<boolean>} - True if copy succeeded, false otherwise
+     */
+    async copyToSystemClipboard(sequence, selectionInfo, copyMessage = null) {
+        try {
+            // Format as FASTA
+            const fastaHeader = `>${selectionInfo.name || selectionInfo.chromosome}:${selectionInfo.start + 1}-${selectionInfo.end + 1}`;
+            const fastaContent = `${fastaHeader}\n${sequence}`;
+            
+            // Try using navigator.clipboard API
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(fastaContent);
+                console.log('✅ [SequenceUtils] Sequence copied to system clipboard (API)');
+            } else {
+                // Fallback: Use textarea to copy
+                const textArea = document.createElement('textarea');
+                textArea.value = fastaContent;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                console.log('✅ [SequenceUtils] Sequence copied to system clipboard (fallback)');
+            }
+            
+            // Show success notification
+            const message = copyMessage || `✅ Copied ${sequence.length} bp to clipboard`;
+            console.log('🔔 [SequenceUtils] Attempting to show notification:', message);
+            console.log('🔔 [SequenceUtils] genomeBrowser available:', !!this.genomeBrowser);
+            console.log('🔔 [SequenceUtils] uiManager available:', !!(this.genomeBrowser && this.genomeBrowser.uiManager));
+            
+            if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                console.log('📢 [SequenceUtils] Using UIManager.updateStatus');
+                this.genomeBrowser.uiManager.updateStatus(message, { 
+                    highlight: true,
+                    color: '#10b981',
+                    duration: 4000
+                });
+            } else if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
+                console.log('📢 [SequenceUtils] Using showNotification');
+                this.genomeBrowser.showNotification(message, 'success');
+            } else {
+                // Fallback to status bar
+                console.log('📢 [SequenceUtils] Using fallback status bar');
+                const statusElement = document.getElementById('statusText');
+                console.log('📢 [SequenceUtils] statusElement found:', !!statusElement);
+                if (statusElement) {
+                    statusElement.textContent = message;
+                    statusElement.style.color = '#10b981';
+                    statusElement.style.fontWeight = 'bold';
+                    statusElement.style.fontSize = '14px';
+                    setTimeout(() => {
+                        statusElement.style.color = '';
+                        statusElement.style.fontWeight = '';
+                        statusElement.style.fontSize = '';
+                    }, 4000);
+                }
+            }
+            
+            return true;
+        } catch (err) {
+            console.error('❌ [SequenceUtils] Failed to copy to system clipboard:', err);
+            
+            // Show error notification
+            const errorMessage = '❌ Failed to copy to clipboard';
+            if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                this.genomeBrowser.uiManager.updateStatus(errorMessage, {
+                    highlight: true,
+                    color: '#ef4444',
+                    duration: 3000
+                });
+            }
+            
+            return false;
+        }
+    }
+    
     copySequence() {
+        console.log('🔖 [SequenceUtils] copySequence() called!');
+        
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) {
             const errorMessage = 'No sequence to copy';
@@ -1673,68 +1757,79 @@ class SequenceUtils {
         }
         
         // Create FASTA format for gene sequences and manual selections
+        let selectionInfo;
         if (copySource === 'gene') {
             const geneSeq = this.genomeBrowser.sequenceSelection;
-            const fastaHeader = `>${geneSeq.geneName} ${currentChr}:${geneSeq.start}-${geneSeq.end}`;
-            textToCopy = `${fastaHeader}\n${textToCopy}`;
+            selectionInfo = {
+                chromosome: currentChr,
+                start: geneSeq.start - 1,
+                end: geneSeq.end,
+                name: geneSeq.geneName
+            };
         } else if (copySource === 'manual') {
             const manualSelection = this.genomeBrowser.currentSequenceSelection;
-            const fastaHeader = `>${currentChr}:${manualSelection.start + 1}-${manualSelection.end + 1}`;
-            textToCopy = `${fastaHeader}\n${textToCopy}`;
+            selectionInfo = {
+                chromosome: currentChr,
+                start: manualSelection.start,
+                end: manualSelection.end + 1,
+                name: null
+            };
+        } else {
+            // For text and visible selections, just use navigator.clipboard directly
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // ... existing code ...
+                console.log('🔧 [SequenceUtils] Copy successful, updating status:', copyMessage);
+                console.log('🔧 [SequenceUtils] UIManager available:', !!(this.genomeBrowser && this.genomeBrowser.uiManager));
+                
+                if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                    this.genomeBrowser.uiManager.updateStatus(copyMessage, { 
+                        highlight: true,
+                        color: '#10b981',
+                        duration: 4000
+                    });
+                }
+                // ... existing code ...
+                if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
+                    this.genomeBrowser.showNotification(copyMessage, 'success');
+                } else {
+                    const statusElement = document.getElementById('statusText');
+                    if (statusElement) {
+                        console.log('📐 [SequenceUtils] Using fallback status update');
+                        statusElement.textContent = copyMessage;
+                        statusElement.style.color = '#10b981';
+                        statusElement.style.fontWeight = 'bold';
+                        statusElement.style.fontSize = '14px';
+                        setTimeout(() => {
+                            statusElement.style.color = '';
+                            statusElement.style.fontWeight = '';
+                            statusElement.style.fontSize = '';
+                        }, 4000);
+                    }
+                }
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                const errorMessage = '❌ Failed to copy to clipboard';
+                if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                    this.genomeBrowser.uiManager.updateStatus(errorMessage, {
+                        highlight: true,
+                        color: '#ef4444',
+                        duration: 3000
+                    });
+                }
+                if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
+                    this.genomeBrowser.showNotification(errorMessage, 'error');
+                } else {
+                    const statusElement = document.getElementById('statusText');
+                    if (statusElement) {
+                        statusElement.textContent = errorMessage;
+                    }
+                }
+            });
+            return;
         }
         
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            // Update status bar instead of showing alert
-            console.log('🔧 [SequenceUtils] Copy successful, updating status:', copyMessage);
-            console.log('🔧 [SequenceUtils] UIManager available:', !!(this.genomeBrowser && this.genomeBrowser.uiManager));
-            
-            if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-                this.genomeBrowser.uiManager.updateStatus(copyMessage, { 
-                    highlight: true,
-                    color: '#10b981',
-                    duration: 4000
-                });
-            }
-            
-            // Secondary: Also show showNotification if available
-            if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
-                this.genomeBrowser.showNotification(copyMessage, 'success');
-            } else {
-                // Fallback to status bar update if no notification systems
-                const statusElement = document.getElementById('statusText');
-                if (statusElement) {
-                    console.log('📐 [SequenceUtils] Using fallback status update');
-                    statusElement.textContent = copyMessage;
-                    // Add visual feedback for copy success
-                    statusElement.style.color = '#10b981';
-                    statusElement.style.fontWeight = 'bold';
-                    statusElement.style.fontSize = '14px';
-                    setTimeout(() => {
-                        statusElement.style.color = '';
-                        statusElement.style.fontWeight = '';
-                        statusElement.style.fontSize = '';
-                    }, 4000);
-                }
-            }
-        }).catch(err => {
-            console.error('Failed to copy: ', err);
-            const errorMessage = '❌ Failed to copy to clipboard';
-            if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-                this.genomeBrowser.uiManager.updateStatus(errorMessage, {
-                    highlight: true,
-                    color: '#ef4444',
-                    duration: 3000
-                });
-            }
-            if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
-                this.genomeBrowser.showNotification(errorMessage, 'error');
-            } else {
-                const statusElement = document.getElementById('statusText');
-                if (statusElement) {
-                    statusElement.textContent = errorMessage;
-                }
-            }
-        });
+        // Use copyToSystemClipboard for gene and manual selections
+        this.copyToSystemClipboard(textToCopy, selectionInfo, copyMessage);
     }
 
     exportSequence() {

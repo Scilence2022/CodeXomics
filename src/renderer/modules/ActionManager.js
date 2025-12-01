@@ -180,6 +180,7 @@ class ActionManager {
             
             // Action menu listeners
             const copyBtn = document.getElementById('copySequenceBtn');
+            const copyHeaderBtn = document.getElementById('copySequenceHeaderBtn'); // Copy button in sequence track header
             const cutBtn = document.getElementById('cutSequenceBtn');
             const pasteBtn = document.getElementById('pasteSequenceBtn');
             const deleteBtn = document.getElementById('deleteSequenceBtn');
@@ -187,7 +188,11 @@ class ActionManager {
             const executeBtn = document.getElementById('executeActionsBtn');
             if (copyBtn) {
                 copyBtn.addEventListener('click', () => this.handleCopySequence());
-                console.log('✅ Copy sequence listener added');
+                console.log('✅ Copy sequence action listener added (Actions dropdown)');
+            }
+            if (copyHeaderBtn) {
+                copyHeaderBtn.addEventListener('click', () => this.handleSimpleSequenceCopy());
+                console.log('✅ Copy sequence header button listener added (Sequence track)');
             }
             if (cutBtn) {
                 cutBtn.addEventListener('click', () => this.handleCutSequence());
@@ -361,11 +366,15 @@ class ActionManager {
     }
     
     /**
-     * Handle copy sequence action
+     * Handle copy sequence action (for Actions workflow)
+     * Creates a copy action in the action queue for genome editing
      */
     async handleCopySequence() {
+        console.log('🖱️ [ActionManager] Copy action button clicked!');
+        
         // Try to create action directly from current selections
         const selectionInfo = this.getActiveSelection();
+        console.log('🔍 [ActionManager] Selection info:', selectionInfo);
         if (selectionInfo && selectionInfo.hasSelection) {
             // Immediately get sequence and set clipboard for copy
             const sequence = await this.getSequenceForRegion(
@@ -397,64 +406,31 @@ class ActionManager {
                     features: comprehensiveData.features.length
                 });
                 
-                // CRITICAL FIX: Copy to system clipboard for sequence track selections
-                await this.copyToSystemClipboard(sequence, selectionInfo);
+                // Also copy to system clipboard for convenience
+                if (this.genomeBrowser && this.genomeBrowser.sequenceUtils) {
+                    await this.genomeBrowser.sequenceUtils.copyToSystemClipboard(sequence, selectionInfo);
+                }
             }
             
+            // Create copy action for workflow
             this.createActionFromSelection('copy', selectionInfo);
         } else {
-            // Try to use SequenceUtils copy as fallback
-            if (this.genomeBrowser && this.genomeBrowser.sequenceUtils) {
-                this.genomeBrowser.sequenceUtils.copySequence();
-            } else {
-                this.showSequenceSelectionModal('copy');
-            }
+            this.showSequenceSelectionModal('copy');
         }
     }
     
     /**
-     * Copy sequence to system clipboard with proper error handling
-     * Handles the "Document is not focused" error by using reliable copy method
+     * Handle simple sequence copy (for sequence track copy button)
+     * This is a simple read-only copy operation like CMD+C
      */
-    async copyToSystemClipboard(sequence, selectionInfo) {
-        try {
-            // Format as FASTA
-            const fastaHeader = `>${selectionInfo.name || selectionInfo.chromosome}:${selectionInfo.start + 1}-${selectionInfo.end + 1}`;
-            const fastaContent = `${fastaHeader}
-${sequence}`;
-            
-            // Try using navigator.clipboard API
-            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                await navigator.clipboard.writeText(fastaContent);
-                console.log('✅ [ActionManager] Sequence copied to system clipboard (API)');
-                
-                // Show success notification
-                const message = `✅ Copied ${sequence.length} bp to clipboard`;
-                if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-                    this.genomeBrowser.uiManager.updateStatus(message, { highlight: true });
-                } else if (this.genomeBrowser && this.genomeBrowser.showNotification) {
-                    this.genomeBrowser.showNotification(message, 'success');
-                }
-            } else {
-                // Fallback: Use textarea to copy
-                const textArea = document.createElement('textarea');
-                textArea.value = fastaContent;
-                textArea.style.position = 'fixed';
-                textArea.style.left = '-999999px';
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                
-                console.log('✅ [ActionManager] Sequence copied to system clipboard (fallback)');
-                const message = `✅ Copied ${sequence.length} bp to clipboard`;
-                if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-                    this.genomeBrowser.uiManager.updateStatus(message, { highlight: true });
-                }
-            }
-        } catch (err) {
-            console.error('❌ [ActionManager] Failed to copy to system clipboard:', err);
-            // Don't fail the entire operation, just log the error
+    handleSimpleSequenceCopy() {
+        console.log('🔖 [ActionManager] Simple sequence copy - delegating to SequenceUtils');
+        
+        // Delegate to SequenceUtils for simple clipboard copy
+        if (this.genomeBrowser && this.genomeBrowser.sequenceUtils) {
+            this.genomeBrowser.sequenceUtils.copySequence();
+        } else {
+            console.warn('⚠️ [ActionManager] SequenceUtils not available');
         }
     }
     
