@@ -396,11 +396,65 @@ class ActionManager {
                     sequence: sequence.length + ' bp',
                     features: comprehensiveData.features.length
                 });
+                
+                // CRITICAL FIX: Copy to system clipboard for sequence track selections
+                await this.copyToSystemClipboard(sequence, selectionInfo);
             }
             
             this.createActionFromSelection('copy', selectionInfo);
         } else {
-            this.showSequenceSelectionModal('copy');
+            // Try to use SequenceUtils copy as fallback
+            if (this.genomeBrowser && this.genomeBrowser.sequenceUtils) {
+                this.genomeBrowser.sequenceUtils.copySequence();
+            } else {
+                this.showSequenceSelectionModal('copy');
+            }
+        }
+    }
+    
+    /**
+     * Copy sequence to system clipboard with proper error handling
+     * Handles the "Document is not focused" error by using reliable copy method
+     */
+    async copyToSystemClipboard(sequence, selectionInfo) {
+        try {
+            // Format as FASTA
+            const fastaHeader = `>${selectionInfo.name || selectionInfo.chromosome}:${selectionInfo.start + 1}-${selectionInfo.end + 1}`;
+            const fastaContent = `${fastaHeader}
+${sequence}`;
+            
+            // Try using navigator.clipboard API
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(fastaContent);
+                console.log('✅ [ActionManager] Sequence copied to system clipboard (API)');
+                
+                // Show success notification
+                const message = `✅ Copied ${sequence.length} bp to clipboard`;
+                if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                    this.genomeBrowser.uiManager.updateStatus(message, { highlight: true });
+                } else if (this.genomeBrowser && this.genomeBrowser.showNotification) {
+                    this.genomeBrowser.showNotification(message, 'success');
+                }
+            } else {
+                // Fallback: Use textarea to copy
+                const textArea = document.createElement('textarea');
+                textArea.value = fastaContent;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                console.log('✅ [ActionManager] Sequence copied to system clipboard (fallback)');
+                const message = `✅ Copied ${sequence.length} bp to clipboard`;
+                if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                    this.genomeBrowser.uiManager.updateStatus(message, { highlight: true });
+                }
+            }
+        } catch (err) {
+            console.error('❌ [ActionManager] Failed to copy to system clipboard:', err);
+            // Don't fail the entire operation, just log the error
         }
     }
     

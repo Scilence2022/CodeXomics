@@ -7761,7 +7761,7 @@ class GenomeBrowser {
                 isSelecting = true;
                 selectionStart = this.getSequencePosition(e.target);
                 // Clear all existing selections when starting a new manual selection
-                this.clearAllSelections();
+                this.clearSequenceSelection();
                 e.preventDefault();
             }
         };
