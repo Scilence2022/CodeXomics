@@ -184,6 +184,7 @@ class ActionManager {
             const cutBtn = document.getElementById('cutSequenceBtn');
             const pasteBtn = document.getElementById('pasteSequenceBtn');
             const deleteBtn = document.getElementById('deleteSequenceBtn');
+            const insertBtn = document.getElementById('insertSequenceBtn');
             const showListBtn = document.getElementById('showActionListBtn');
             const executeBtn = document.getElementById('executeActionsBtn');
             if (copyBtn) {
@@ -205,6 +206,10 @@ class ActionManager {
             if (deleteBtn) {
                 deleteBtn.addEventListener('click', () => this.handleDeleteSequence());
                 console.log('✅ Delete sequence listener added');
+            }
+            if (insertBtn) {
+                insertBtn.addEventListener('click', () => this.handleInsertSequence());
+                console.log('✅ Insert sequence listener added');
             }
             if (showListBtn) {
                 showListBtn.addEventListener('click', () => this.showActionList());
@@ -622,6 +627,25 @@ class ActionManager {
             this.createActionFromSelection('delete', selectionInfo);
         } else {
             this.showSequenceSelectionModal('delete');
+        }
+    }
+    
+    /**
+     * Handle insert sequence action
+     * Inserts sequence at cursor position or prompts user for sequence and position
+     */
+    handleInsertSequence() {
+        console.log('📋 [ActionManager] Insert sequence action initiated');
+        
+        // Check if cursor is positioned
+        const cursorPosition = this.genomeBrowser.sequenceUtils?.getCursorPosition();
+        
+        if (cursorPosition !== null && cursorPosition >= 0) {
+            // Cursor is positioned - prompt for sequence to insert
+            this.promptInsertSequence(cursorPosition);
+        } else {
+            // No cursor - show modal to select position and enter sequence
+            this.showInsertSequenceModal();
         }
     }
     
@@ -1428,6 +1452,116 @@ class ActionManager {
             modal.classList.remove('show');
         }
         this.currentOperation = null;
+    }
+    
+    /**
+     * Prompt user to enter sequence for insertion at cursor position
+     * @param {number} position - The cursor position where sequence will be inserted
+     */
+    promptInsertSequence(position) {
+        const chromosome = this.genomeBrowser.currentChromosome;
+        if (!chromosome) {
+            this.genomeBrowser.showNotification('No chromosome selected', 'error');
+            return;
+        }
+        
+        // Create a simple prompt for sequence input
+        const sequenceInput = prompt(
+            `Enter sequence to insert at position ${position + 1} on ${chromosome}:\n\n` +
+            'You can enter DNA sequence (A, T, G, C) or paste from clipboard.\n' +
+            'Example: ATCGATCG'
+        );
+        
+        if (!sequenceInput || sequenceInput.trim() === '') {
+            console.log('🚫 [ActionManager] Insert cancelled - no sequence provided');
+            return;
+        }
+        
+        // Validate and clean sequence
+        const cleanSequence = sequenceInput.trim().toUpperCase().replace(/[^ATGCN]/g, '');
+        
+        if (cleanSequence.length === 0) {
+            this.genomeBrowser.showNotification('Invalid sequence - must contain valid DNA bases (A, T, G, C)', 'error');
+            return;
+        }
+        
+        // Create insert action
+        this.createInsertAction(chromosome, position, cleanSequence);
+    }
+    
+    /**
+     * Show modal for insert sequence (when no cursor is set)
+     */
+    showInsertSequenceModal() {
+        // For now, use a simple prompt-based approach
+        // In the future, this could be enhanced with a dedicated modal UI
+        const chromosome = this.genomeBrowser.currentChromosome;
+        if (!chromosome) {
+            this.genomeBrowser.showNotification('No chromosome selected', 'error');
+            return;
+        }
+        
+        const positionInput = prompt(
+            `Enter position where you want to insert sequence on ${chromosome}:\n\n` +
+            'Tip: Click on a base in the sequence track to set cursor position.'
+        );
+        
+        if (!positionInput || positionInput.trim() === '') {
+            console.log('🚫 [ActionManager] Insert cancelled - no position provided');
+            return;
+        }
+        
+        const position = parseInt(positionInput) - 1; // Convert to 0-based
+        
+        if (isNaN(position) || position < 0) {
+            this.genomeBrowser.showNotification('Invalid position - must be a positive number', 'error');
+            return;
+        }
+        
+        // Now prompt for sequence
+        this.promptInsertSequence(position);
+    }
+    
+    /**
+     * Create insert action with sequence and position
+     * @param {string} chromosome - Target chromosome
+     * @param {number} position - Insert position (0-based)
+     * @param {string} sequence - Sequence to insert
+     */
+    createInsertAction(chromosome, position, sequence) {
+        const target = `${chromosome}:${position + 1}`;
+        const metadata = {
+            chromosome,
+            position,
+            insertSequence: sequence,
+            insertLength: sequence.length
+        };
+        
+        const description = `Insert ${sequence.length} bp at ${chromosome}:${position + 1}`;
+        
+        // Add the action
+        const actionId = this.addAction(
+            this.ACTION_TYPES.INSERT_SEQUENCE,
+            target,
+            description,
+            metadata
+        );
+        
+        // Show confirmation
+        this.genomeBrowser.showNotification(
+            `Insert action created: ${sequence.length} bp at position ${position + 1}`,
+            'success'
+        );
+        
+        console.log('✅ [ActionManager] Insert action created:', {
+            actionId,
+            chromosome,
+            position: position + 1,
+            sequenceLength: sequence.length,
+            sequence: sequence.substring(0, 20) + (sequence.length > 20 ? '...' : '')
+        });
+        
+        return actionId;
     }
     
     /**
@@ -3306,19 +3440,22 @@ class ActionManager {
      * Execute insert sequence action
      */
     async executeInsertSequence(action, executionGenomeData = null) {
-        const { chromosome, start, insertSequence } = action.metadata;
+        // Support both 'position' and 'start' fields for compatibility
+        const { chromosome, position, start, insertSequence } = action.metadata;
+        const insertPosition = position !== undefined ? position : start;
         
         console.log('➕ [ActionManager] Executing insert sequence action:', {
             actionId: action.id,
             target: action.target,
-            region: `${chromosome}:${start}`,
-            insertLength: insertSequence.length
+            region: `${chromosome}:${insertPosition + 1}`,
+            insertLength: insertSequence.length,
+            usingExecutionCopy: !!executionGenomeData
         });
         
         // Record the sequence modification
         this.recordSequenceModification(chromosome, {
             type: 'insert',
-            position: start,
+            position: insertPosition,
             sequence: insertSequence,
             length: insertSequence.length,
             actionId: action.id
@@ -3330,7 +3467,7 @@ class ActionManager {
             target: action.target,
             chromosome: chromosome,
             insertedSequence: insertSequence,
-            position: start
+            position: insertPosition
         };
     }
     

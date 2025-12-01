@@ -55,13 +55,15 @@ class SequenceUtils {
             lastRenderStart: 0
         };
         
-        // DEPRECATED: Cursor management for View Mode (scheduled for removal)
+        // Cursor management for sequence editing/insertion
         this.cursor = {
-            position: -1,        // Absolute genome position
+            position: -1,        // Absolute genome position where cursor is placed
+            lineNumber: -1,      // Line number in sequence display
+            offset: -1,          // Position within the line
             element: null,       // DOM element for cursor
             visible: false,      // Cursor visibility state
-            blinking: false,     // Blinking animation state
-            color: '#000000'     // Default cursor color (black)
+            blinking: true,      // Blinking animation state (active by default)
+            color: '#007bff'     // Cursor color (blue)
         };
         
         // Drag optimization
@@ -228,6 +230,211 @@ class SequenceUtils {
         this.dragOptimization.lastRenderTime = Date.now();
         renderFunction();
         return true; // Render was executed
+    }
+    
+    /**
+     * Set cursor position at a specific genome location
+     * @param {number} position - Absolute genome position (0-based)
+     */
+    setCursorPosition(position) {
+        console.log('📌 [SequenceUtils] Setting cursor at position:', position);
+        
+        this.cursor.position = position;
+        this.cursor.visible = true;
+        
+        // Update cursor visual in the sequence display
+        this.renderCursor();
+        
+        // Notify ActionManager about cursor position change
+        if (this.genomeBrowser.actionManager) {
+            this.genomeBrowser.actionManager.cursorPosition = position;
+        }
+    }
+    
+    /**
+     * Get current cursor position
+     * @returns {number} Absolute genome position or -1 if no cursor
+     */
+    getCursorPosition() {
+        return this.cursor.visible ? this.cursor.position : -1;
+    }
+    
+    /**
+     * Clear cursor from display
+     */
+    clearCursor() {
+        if (this.cursor.element && this.cursor.element.parentNode) {
+            this.cursor.element.parentNode.removeChild(this.cursor.element);
+        }
+        
+        this.cursor.position = -1;
+        this.cursor.visible = false;
+        this.cursor.element = null;
+        
+        console.log('📌 [SequenceUtils] Cursor cleared');
+    }
+    
+    /**
+     * Render cursor at current position in sequence display
+     */
+    renderCursor() {
+        if (!this.cursor.visible || this.cursor.position < 0) {
+            return;
+        }
+        
+        // Clear existing cursor
+        if (this.cursor.element && this.cursor.element.parentNode) {
+            this.cursor.element.parentNode.removeChild(this.cursor.element);
+            this.cursor.element = null;
+        }
+        
+        // Find the position in the sequence display
+        const sequenceContent = document.getElementById('sequenceContent');
+        if (!sequenceContent) return;
+        
+        const start = this.genomeBrowser.currentPosition.start;
+        const relativePos = this.cursor.position - start;
+        
+        // Check if cursor is in visible range
+        if (relativePos < 0) {
+            console.log('📌 [SequenceUtils] Cursor before visible range');
+            return;
+        }
+        
+        // Find the correct line and position within that line
+        const sequenceLines = sequenceContent.querySelectorAll('.sequence-line');
+        let basesPerLine = 100; // Default
+        
+        // Get actual bases per line from first line
+        if (sequenceLines.length > 0) {
+            const firstBasesDiv = sequenceLines[0].querySelector('.sequence-bases');
+            if (firstBasesDiv) {
+                const spans = firstBasesDiv.querySelectorAll('span');
+                basesPerLine = spans.length;
+            }
+        }
+        
+        const lineIndex = Math.floor(relativePos / basesPerLine);
+        const posInLine = relativePos % basesPerLine;
+        
+        if (lineIndex >= sequenceLines.length) {
+            console.log('📌 [SequenceUtils] Cursor after visible range');
+            return;
+        }
+        
+        const targetLine = sequenceLines[lineIndex];
+        const basesDiv = targetLine.querySelector('.sequence-bases');
+        if (!basesDiv) return;
+        
+        const baseSpans = basesDiv.querySelectorAll('span');
+        
+        // Create cursor element
+        const cursorElement = document.createElement('span');
+        cursorElement.className = 'sequence-cursor';
+        cursorElement.style.cssText = `
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: ${this.cursor.color};
+            margin: 0 -1px;
+            vertical-align: text-bottom;
+            animation: cursor-blink 1s step-end infinite;
+        `;
+        
+        // Insert cursor before the target base
+        if (posInLine < baseSpans.length) {
+            basesDiv.insertBefore(cursorElement, baseSpans[posInLine]);
+        } else {
+            // Cursor at end of line
+            basesDiv.appendChild(cursorElement);
+        }
+        
+        this.cursor.element = cursorElement;
+        this.cursor.lineNumber = lineIndex;
+        this.cursor.offset = posInLine;
+        
+        console.log(`✅ [SequenceUtils] Cursor rendered at line ${lineIndex}, offset ${posInLine}`);
+    }
+    
+    /**
+     * Handle click on sequence base to position cursor
+     * @param {MouseEvent} event - Click event
+     */
+    handleSequenceClick(event) {
+        // Only handle clicks on base spans
+        if (!event.target.matches('.sequence-bases span')) {
+            return;
+        }
+        
+        // Get the position of the clicked base
+        const position = this.getSequencePosition(event.target);
+        if (position === null) return;
+        
+        // Determine if click is on left or right half of base
+        const rect = event.target.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const baseWidth = rect.width;
+        
+        // If clicked on right half, position cursor after the base
+        const cursorPosition = (clickX > baseWidth / 2) ? position + 1 : position;
+        
+        // Set cursor at this position
+        this.setCursorPosition(cursorPosition);
+        
+        console.log(`🖌️ [SequenceUtils] Sequence clicked at position ${cursorPosition}`);
+    }
+    
+    /**
+     * Get absolute genome position from a base span element
+     * @param {HTMLElement} baseSpan - The span element containing a base
+     * @returns {number|null} Absolute genome position or null if not found
+     */
+    getSequencePosition(baseSpan) {
+        // Find the parent sequence line
+        const lineGroup = baseSpan.closest('.sequence-line-group');
+        if (!lineGroup) return null;
+        
+        const sequenceLine = lineGroup.querySelector('.sequence-line');
+        if (!sequenceLine) return null;
+        
+        // Get the position label to determine line start
+        const positionSpan = sequenceLine.querySelector('.sequence-position');
+        if (!positionSpan) return null;
+        
+        // Parse the position (it's 1-based, so convert to 0-based)
+        const lineStartPos = parseInt(positionSpan.textContent.replace(/,/g, '')) - 1;
+        
+        // Find the offset within the line
+        const basesDiv = sequenceLine.querySelector('.sequence-bases');
+        if (!basesDiv) return null;
+        
+        const baseSpans = Array.from(basesDiv.querySelectorAll('span'));
+        const offset = baseSpans.indexOf(baseSpan);
+        
+        if (offset === -1) return null;
+        
+        return lineStartPos + offset;
+    }
+    
+    /**
+     * Attach click handlers to sequence container for cursor positioning
+     * @param {HTMLElement} container - The sequence content container
+     */
+    attachSequenceClickHandlers(container) {
+        // Remove any existing click handlers to avoid duplicates
+        const existingHandler = container._cursorClickHandler;
+        if (existingHandler) {
+            container.removeEventListener('click', existingHandler);
+        }
+        
+        // Create and attach new click handler
+        const clickHandler = (event) => this.handleSequenceClick(event);
+        container.addEventListener('click', clickHandler);
+        
+        // Store reference for cleanup
+        container._cursorClickHandler = clickHandler;
+        
+        console.log('✅ [SequenceUtils] Cursor click handlers attached to sequence container');
     }
 
     // Sequence display methods
@@ -936,6 +1143,9 @@ class SequenceUtils {
         this.addProteinTranslationsConditional(tempDiv, chromosome, subsequence, viewStart, viewEnd, annotations);
         
         container.appendChild(tempDiv);
+        
+        // Add click event listener for cursor positioning
+        this.attachSequenceClickHandlers(container);
         
         // Log container info for debugging
         const totalLines = Math.ceil(subsequence.length / optimalLineLength);

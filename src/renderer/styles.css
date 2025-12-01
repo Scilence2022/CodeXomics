@@ -1480,6 +1480,48 @@
   margin: 0 1px;
 }
 
+/* Sequence Cursor Styles */
+.sequence-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background-color: #007bff;
+  margin: 0 -1px;
+  vertical-align: text-bottom;
+  animation: cursor-blink 1s step-end infinite;
+  position: relative;
+  z-index: 100;
+}
+
+@keyframes cursor-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.sequence-bases {
+  position: relative;
+  cursor: text;
+}
+
+.sequence-bases span {
+  position: relative;
+  cursor: pointer;
+}
+
+.sequence-bases span:hover::after {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: rgba(0, 123, 255, 0.3);
+}
+
 .protein-seq span {
   margin: 0 1px;
   padding: 1px 2px;
