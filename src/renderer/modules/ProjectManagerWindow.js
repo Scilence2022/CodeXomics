@@ -8,6 +8,7 @@ class ProjectManagerWindow {
         this.currentProject = null;
         this.currentPath = [];
         this.selectedFiles = new Set();
+        this.recentProjects = []; // Track recent projects
         this.sortBy = 'name';
         this.showHiddenFiles = false;
         this.showFileExtensions = true;
@@ -310,6 +311,7 @@ class ProjectManagerWindow {
                 
                 // Step 4: Add to project list and update UI
                 this.projects.set(projectId, project);
+                this.addToRecentProjects(projectId);
                 await this.saveProjects();
                 
                 this.renderProjectTree();
@@ -595,6 +597,9 @@ class ProjectManagerWindow {
         
         if (this.currentProject) {
             this.currentProject.metadata.lastOpened = new Date().toISOString();
+            
+            // Add to recent projects
+            this.addToRecentProjects(projectId);
             
             // 自动展开选中的项目
             if (!this.expandedProjects) {
@@ -1796,6 +1801,7 @@ class ProjectManagerWindow {
         try {
             const projectsData = {
                 projects: Object.fromEntries(this.projects),
+                recentProjects: this.recentProjects,
                 lastSaved: new Date().toISOString()
             };
             
@@ -1804,6 +1810,9 @@ class ProjectManagerWindow {
                 if (!result.success) {
                     throw new Error(result.error);
                 }
+                
+                // Update the menu with recent projects
+                await this.updateRecentProjectsMenu();
             } else {
                 // 浏览器环境下保存到localStorage
                 localStorage.setItem('genomeExplorer_projects', JSON.stringify(projectsData));
@@ -1834,12 +1843,63 @@ class ProjectManagerWindow {
             
             if (projectsData && projectsData.projects) {
                 this.projects = new Map(Object.entries(projectsData.projects));
+                this.recentProjects = projectsData.recentProjects || [];
+                
+                // Update the menu with recent projects
+                await this.updateRecentProjectsMenu();
             }
             
             console.log(`Loaded ${this.projects.size} projects`);
         } catch (error) {
             console.error('Error loading projects:', error);
             this.projects = new Map();
+            this.recentProjects = [];
+        }
+    }
+
+    /**
+     * 添加到最近项目
+     */
+    addToRecentProjects(projectId) {
+        this.recentProjects = this.recentProjects.filter(id => id !== projectId);
+        this.recentProjects.unshift(projectId);
+        this.recentProjects = this.recentProjects.slice(0, 10); // 只保留最近10个
+    }
+
+    /**
+     * 清除最近项目
+     */
+    async clearRecentProjects() {
+        this.recentProjects = [];
+        await this.saveProjects();
+        this.showNotification('Recent projects cleared', 'success');
+        console.log('Recent projects cleared');
+    }
+
+    /**
+     * 更新最近项目菜单
+     */
+    async updateRecentProjectsMenu() {
+        try {
+            if (!window.electronAPI || !window.electronAPI.updateRecentProjects) {
+                return;
+            }
+            
+            // Convert recent project IDs to project objects with needed info
+            const recentProjectsData = this.recentProjects
+                .map(id => this.projects.get(id))
+                .filter(project => project != null)
+                .map(project => ({
+                    id: project.id,
+                    name: project.name,
+                    filePath: project.filePath || project.projectFilePath || project.xmlFilePath,
+                    location: project.location
+                }));
+            
+            await window.electronAPI.updateRecentProjects(recentProjectsData);
+            console.log('Recent projects menu updated');
+        } catch (error) {
+            console.error('Error updating recent projects menu:', error);
         }
     }
 
@@ -3524,6 +3584,7 @@ System Information:
                     // Set as current project
                     this.currentProject = project;
                     this.projects.set(project.id, project);
+                    this.addToRecentProjects(project.id);
                     await this.saveProjects();
                     
                     // Update UI

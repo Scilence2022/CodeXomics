@@ -2899,16 +2899,46 @@ class GenomeBrowser {
             }
         });
 
-        ipcRenderer.on('open-recent-project', (event, project) => {
+        ipcRenderer.on('open-recent-project', async (event, project) => {
             console.log('📂 Opening recent project:', project);
-            this.showNotification(`Opening recent project: ${project.name}`, 'info');
-            // TODO: 实现最近项目打开逻辑
+            try {
+                // Check if the project file exists
+                if (project.filePath) {
+                    // Open the project manager window if not already open
+                    const projectManagerWindow = await this.openProjectManagerWindow();
+                    
+                    if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
+                        // Load the project from the file
+                        await projectManagerWindow.projectManagerWindow.loadProjectFromFile(project.filePath);
+                        this.showNotification(`Opened project: ${project.name}`, 'success');
+                    } else {
+                        this.showNotification('Failed to open Project Manager window', 'error');
+                    }
+                } else {
+                    this.showNotification('Project file path not found', 'warning');
+                }
+            } catch (error) {
+                console.error('Error opening recent project:', error);
+                this.showNotification(`Failed to open project: ${error.message}`, 'error');
+            }
         });
 
-        ipcRenderer.on('clear-recent-projects', () => {
+        ipcRenderer.on('clear-recent-projects', async () => {
             console.log('🗑️ Clear recent projects requested');
-            this.showNotification('Recent projects cleared', 'info');
-            // TODO: 实现清除最近项目逻辑
+            try {
+                const projectManagerWindow = await this.openProjectManagerWindow();
+                
+                if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
+                    // Clear recent projects in ProjectManager
+                    projectManagerWindow.projectManagerWindow.clearRecentProjects();
+                    this.showNotification('Recent projects cleared', 'success');
+                } else {
+                    this.showNotification('Failed to open Project Manager window', 'warning');
+                }
+            } catch (error) {
+                console.error('Error clearing recent projects:', error);
+                this.showNotification('Failed to clear recent projects', 'error');
+            }
         });
 
         // Handle MCP tool calls for action functions

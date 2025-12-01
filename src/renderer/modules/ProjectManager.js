@@ -1207,6 +1207,43 @@ class ProjectManager {
     }
 
     /**
+     * 清除最近项目
+     */
+    async clearRecentProjects() {
+        this.recentProjects = [];
+        await this.saveProjects();
+        this.showNotification('Recent projects cleared', 'success');
+        console.log('Recent projects cleared');
+    }
+
+    /**
+     * 更新最近项目菜单
+     */
+    async updateRecentProjectsMenu() {
+        try {
+            if (!window.electronAPI || !window.electronAPI.updateRecentProjects) {
+                return;
+            }
+            
+            // Convert recent project IDs to project objects with needed info
+            const recentProjectsData = this.recentProjects
+                .map(id => this.projects.get(id))
+                .filter(project => project != null)
+                .map(project => ({
+                    id: project.id,
+                    name: project.name,
+                    filePath: project.filePath || project.projectFilePath || project.xmlFilePath,
+                    location: project.location
+                }));
+            
+            await window.electronAPI.updateRecentProjects(recentProjectsData);
+            console.log('Recent projects menu updated');
+        } catch (error) {
+            console.error('Error updating recent projects menu:', error);
+        }
+    }
+
+    /**
      * 更新活动树项目
      */
     updateActiveTreeItem(projectId = null) {
@@ -1281,6 +1318,9 @@ class ProjectManager {
                 if (!result.success) {
                     throw new Error(result.error);
                 }
+                
+                // Update the menu with recent projects
+                await this.updateRecentProjectsMenu();
             } else {
                 // 浏览器环境下保存到localStorage
                 localStorage.setItem('genomeExplorer_projects', JSON.stringify(projectsData));
@@ -1446,6 +1486,9 @@ class ProjectManager {
             if (projectsData) {
                 this.projects = new Map(Object.entries(projectsData.projects || {}));
                 this.recentProjects = projectsData.recentProjects || [];
+                
+                // Update the menu with recent projects
+                await this.updateRecentProjectsMenu();
             }
             
             console.log(`Loaded ${this.projects.size} projects`);
