@@ -708,6 +708,10 @@ class UIManager {
                 
                 // Update toggle button state after resize
                 this.updateToggleButtonStates();
+                
+                // CRITICAL FIX: Recalculate canvas-based track widths after splitter resize
+                // This fixes the issue where coverage visualization becomes too narrow
+                this.recalculateCanvasTrackWidths();
             }
         });
         
@@ -757,6 +761,10 @@ class UIManager {
                     this.showSidebarIfHidden();
                 }
                 this.updateToggleButtonStates();
+                
+                // CRITICAL FIX: Recalculate canvas-based track widths after keyboard resize
+                // This fixes the issue where coverage visualization becomes too narrow
+                this.recalculateCanvasTrackWidths();
             }
         });
         
@@ -766,6 +774,10 @@ class UIManager {
             sidebar.style.flex = 'none';
             this.showSidebarIfHidden();
             this.updateToggleButtonStates();
+            
+            // CRITICAL FIX: Recalculate canvas-based track widths after dblclick resize
+            // This fixes the issue where coverage visualization becomes too narrow
+            this.recalculateCanvasTrackWidths();
         });
     }
 
@@ -931,11 +943,56 @@ class UIManager {
             // Refresh all SVG-based tracks to prevent text stretching
             this.refreshSVGTracks();
             
+            // CRITICAL FIX: Recalculate canvas-based track widths after splitter resize
+            this.recalculateCanvasTrackWidths();
+            
             // Update genome navigation bar if exists
             if (this.genomeBrowser.genomeNavigationBar) {
                 this.genomeBrowser.genomeNavigationBar.resizeCanvas();
                 this.genomeBrowser.genomeNavigationBar.draw();
             }
+        }
+    }
+    
+    /**
+     * Recalculate canvas-based track widths after container width changes (e.g., splitter move)
+     * This fixes the issue where coverage visualization becomes too narrow after splitter adjustment
+     */
+    recalculateCanvasTrackWidths() {
+        // Recalculate coverage visualization widths
+        const coverageElements = document.querySelectorAll('.coverage-visualization svg');
+        coverageElements.forEach(svg => {
+            const container = svg.closest('.coverage-visualization');
+            if (container) {
+                const newWidth = container.offsetWidth;
+                console.log('📊 Updating coverage visualization width:', newWidth);
+                svg.setAttribute('width', newWidth);
+            }
+        });
+        
+        // Recalculate canvas-based reads visualization widths
+        const canvasContainers = document.querySelectorAll('.reads-canvas-container');
+        canvasContainers.forEach(container => {
+            const canvas = container.querySelector('canvas');
+            if (canvas) {
+                const newWidth = container.offsetWidth;
+                const containerRect = container.getBoundingClientRect();
+                const newCanvasWidth = Math.max(containerRect.width, 800);
+                console.log('🎨 Updating canvas width:', newCanvasWidth);
+                
+                // Update canvas dimensions
+                canvas.width = newCanvasWidth * (window.devicePixelRatio || 1);
+                canvas.style.width = newCanvasWidth + 'px';
+            }
+        });
+        
+        // Trigger re-render for any CanvasSequenceRenderer instances
+        if (typeof window !== 'undefined' && window.canvasSequenceRenderers) {
+            window.canvasSequenceRenderers.forEach(renderer => {
+                if (renderer && renderer.recalculateLayout) {
+                    renderer.recalculateLayout();
+                }
+            });
         }
     }
     
