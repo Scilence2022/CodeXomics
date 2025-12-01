@@ -795,11 +795,16 @@ class GenomeBrowser {
         document.getElementById('resetZoomBtn').addEventListener('click', () => this.navigationManager.resetZoom());
 
         // Sequence controls
-        // ❌ REMOVED: Copy is now handled by ActionManager
-        // document.getElementById('copySequenceBtn').addEventListener('click', (e) => {
-        //     e.stopImmediatePropagation();
-        //     this.sequenceUtils.copySequence();
-        // });
+        // Re-enable direct copy button handler as backup to ActionManager
+        const copyBtn = document.getElementById('copySequenceBtn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', (e) => {
+                e.stopImmediatePropagation();
+                if (this.sequenceUtils) {
+                    this.sequenceUtils.copySequence();
+                }
+            });
+        }
         document.getElementById('exportBtn').addEventListener('click', () => this.sequenceUtils.exportSequence());
         // ❌ REMOVED: Copy is now handled by ActionManager
         // document.getElementById('copySequenceHeaderBtn').addEventListener('click', (e) => {

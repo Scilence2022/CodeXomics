@@ -1689,7 +1689,17 @@ class SequenceUtils {
             console.log('🔧 [SequenceUtils] UIManager available:', !!(this.genomeBrowser && this.genomeBrowser.uiManager));
             
             if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-                this.genomeBrowser.uiManager.updateStatus(copyMessage, { highlight: true });
+                this.genomeBrowser.uiManager.updateStatus(copyMessage, { 
+                    highlight: true,
+                    color: '#10b981',
+                    duration: 4000
+                });
+            }
+            
+            // Secondary: Also show showNotification if available
+            if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
+                this.genomeBrowser.showNotification(copyMessage, 'success');
+            }
             } else {
                 // Fallback to status bar update if uiManager is not available
                 console.log('🔧 [SequenceUtils] Using fallback status update');
@@ -1697,19 +1707,28 @@ class SequenceUtils {
                 if (statusElement) {
                     statusElement.textContent = copyMessage;
                     // Add visual feedback for copy success
-                    statusElement.style.color = '#4CAF50';
+                    statusElement.style.color = '#10b981';
                     statusElement.style.fontWeight = 'bold';
+                    statusElement.style.fontSize = '14px';
                     setTimeout(() => {
                         statusElement.style.color = '';
                         statusElement.style.fontWeight = '';
-                    }, 3000);
+                        statusElement.style.fontSize = '';
+                    }, 4000);
                 }
             }
         }).catch(err => {
             console.error('Failed to copy: ', err);
-            const errorMessage = 'Failed to copy to clipboard';
+            const errorMessage = '❌ Failed to copy to clipboard';
             if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-                this.genomeBrowser.uiManager.updateStatus(errorMessage);
+                this.genomeBrowser.uiManager.updateStatus(errorMessage, {
+                    highlight: true,
+                    color: '#ef4444',
+                    duration: 3000
+                });
+            }
+            if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
+                this.genomeBrowser.showNotification(errorMessage, 'error');
             } else {
                 const statusElement = document.getElementById('statusText');
                 if (statusElement) {
