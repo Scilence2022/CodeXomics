@@ -366,6 +366,10 @@ class SequenceUtils {
             return;
         }
         
+        // Prevent sequence selection from triggering
+        event.stopPropagation();
+        event.preventDefault();
+        
         // Get the position of the clicked base
         const position = this.getSequencePosition(event.target);
         if (position === null) return;
@@ -424,17 +428,18 @@ class SequenceUtils {
         // Remove any existing click handlers to avoid duplicates
         const existingHandler = container._cursorClickHandler;
         if (existingHandler) {
-            container.removeEventListener('click', existingHandler);
+            container.removeEventListener('mousedown', existingHandler, true);
         }
         
-        // Create and attach new click handler
+        // Create and attach new mousedown handler with capture phase
+        // This ensures it fires BEFORE the selection handler
         const clickHandler = (event) => this.handleSequenceClick(event);
-        container.addEventListener('click', clickHandler);
+        container.addEventListener('mousedown', clickHandler, true);
         
         // Store reference for cleanup
         container._cursorClickHandler = clickHandler;
         
-        console.log('✅ [SequenceUtils] Cursor click handlers attached to sequence container');
+        console.log('✅ [SequenceUtils] Cursor click handlers attached to sequence container (capture phase)');
     }
 
     // Sequence display methods
