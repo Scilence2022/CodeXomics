@@ -4268,6 +4268,14 @@ class TrackRenderer {
             }
             this.canvasRenderers.set(trackId, canvasRenderer);
             
+            // CRITICAL: Store renderer globally for UIManager to access during splitter resize
+            if (typeof window !== 'undefined') {
+                if (!window.canvasReadsRenderers) {
+                    window.canvasReadsRenderers = [];
+                }
+                window.canvasReadsRenderers.push(canvasRenderer);
+            }
+            
             // Append canvas container to track content
             trackContent.appendChild(canvasContainer);
             

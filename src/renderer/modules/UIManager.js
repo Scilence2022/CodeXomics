@@ -957,9 +957,32 @@ class UIManager {
     /**
      * Recalculate canvas-based track widths after container width changes (e.g., splitter move)
      * This fixes the issue where coverage visualization becomes too narrow after splitter adjustment
+     * CRITICAL FIX: Now properly updates both Canvas renderer internal widths and SVG viewBox dimensions
      */
     recalculateCanvasTrackWidths() {
-        // Recalculate coverage visualization widths
+        console.log('📐 [UIManager] Starting canvas track width recalculation after splitter adjustment');
+        
+        // CRITICAL FIX: Update SVG reads tracks with new viewBox width
+        const readsSvgs = document.querySelectorAll('.reads-svg-container');
+        readsSvgs.forEach(svg => {
+            const trackContent = svg.closest('.track-content');
+            if (trackContent) {
+                // Force layout calculation
+                trackContent.style.width = '100%';
+                const newContainerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+                
+                // Get current SVG height from viewBox
+                const viewBox = svg.getAttribute('viewBox') || '0 0 800 150';
+                const viewBoxParts = viewBox.split(' ');
+                const svgHeight = viewBoxParts.length >= 4 ? parseFloat(viewBoxParts[3]) : 150;
+                
+                // Update viewBox with new width
+                svg.setAttribute('viewBox', `0 0 ${newContainerWidth} ${svgHeight}`);
+                console.log('📊 Updated reads SVG viewBox width:', newContainerWidth);
+            }
+        });
+        
+        // Update coverage visualization SVG widths
         const coverageElements = document.querySelectorAll('.coverage-visualization svg');
         coverageElements.forEach(svg => {
             const container = svg.closest('.coverage-visualization');
@@ -970,21 +993,15 @@ class UIManager {
             }
         });
         
-        // Recalculate canvas-based reads visualization widths
-        const canvasContainers = document.querySelectorAll('.reads-canvas-container');
-        canvasContainers.forEach(container => {
-            const canvas = container.querySelector('canvas');
-            if (canvas) {
-                const newWidth = container.offsetWidth;
-                const containerRect = container.getBoundingClientRect();
-                const newCanvasWidth = Math.max(containerRect.width, 800);
-                console.log('🎨 Updating canvas width:', newCanvasWidth);
-                
-                // Update canvas dimensions
-                canvas.width = newCanvasWidth * (window.devicePixelRatio || 1);
-                canvas.style.width = newCanvasWidth + 'px';
-            }
-        });
+        // CRITICAL FIX: Call updateWidth() on all CanvasReadsRenderer instances to recalculate their internal widths
+        if (typeof window !== 'undefined' && window.canvasReadsRenderers) {
+            console.log('🎨 Found', window.canvasReadsRenderers.length, 'Canvas reads renderers to update');
+            window.canvasReadsRenderers.forEach(renderer => {
+                if (renderer && typeof renderer.updateWidth === 'function') {
+                    renderer.updateWidth();
+                }
+            });
+        }
         
         // Trigger re-render for any CanvasSequenceRenderer instances
         if (typeof window !== 'undefined' && window.canvasSequenceRenderers) {
@@ -994,6 +1011,8 @@ class UIManager {
                 }
             });
         }
+        
+        console.log('✅ Canvas track width recalculation completed');
     }
     
     /**

@@ -775,6 +775,41 @@ class CanvasReadsRenderer {
         this.canvas.style.transform = '';
     }
     
+    // Update canvas width after container size changes (e.g., splitter adjustment)
+    updateWidth() {
+        console.log('🔄 [CanvasReadsRenderer] Updating canvas width after container resize');
+        
+        const oldWidth = this.canvasWidth;
+        
+        // Recalculate container width
+        const containerRect = this.container.getBoundingClientRect();
+        this.canvasWidth = Math.max(containerRect.width, 800);
+        
+        console.log('📐 [CanvasReadsRenderer] Width update:', {
+            oldWidth: oldWidth,
+            newWidth: this.canvasWidth,
+            changed: oldWidth !== this.canvasWidth
+        });
+        
+        // Only re-render if width actually changed
+        if (oldWidth !== this.canvasWidth) {
+            // Update canvas dimensions
+            this.canvas.width = this.canvasWidth * this.devicePixelRatio;
+            this.canvas.style.width = this.canvasWidth + 'px';
+            
+            // Re-scale context for high-DPI displays
+            this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio);
+            
+            // Update text metrics if showing sequences
+            if (this.options.showSequences) {
+                this.calculateTextMetrics();
+            }
+            
+            // Re-render with new width
+            this.render();
+        }
+    }
+    
     // Update with new read data
     updateReads(newReadRows, newViewport = null) {
         console.log('🔄 [CanvasReadsRenderer] Updating reads data');
