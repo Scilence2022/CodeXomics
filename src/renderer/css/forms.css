@@ -82,6 +82,30 @@
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
+/* Validation and Help Text */
+.validation-message {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.validation-message.success {
+    color: #10b981;
+}
+
+.validation-message.error {
+    color: #ef4444;
+}
+
+.form-help,
+small.form-help {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
 /* Application Specific Inputs */
 .search-input,
 .position-input {

@@ -278,6 +278,10 @@ class ActionManager {
         document.getElementById('endPositionSeq')?.addEventListener('input', () => this.updateSequencePreview());
         document.getElementById('strandSelectSeq')?.addEventListener('change', () => this.updateSequencePreview());
         
+        // Insert sequence modal listeners
+        document.getElementById('confirmSequenceInsert')?.addEventListener('click', () => this.confirmSequenceInsert());
+        document.getElementById('insertSequenceText')?.addEventListener('input', (e) => this.validateInsertSequence(e.target.value));
+        
         // Sequence selection modal close handlers
         const sequenceModal = document.getElementById('sequenceSelectionModal');
         if (sequenceModal) {
@@ -293,11 +297,28 @@ class ActionManager {
             });
         }
         
+        // Insert sequence modal close handlers
+        const insertModal = document.getElementById('sequenceInsertModal');
+        if (insertModal) {
+            insertModal.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', () => this.closeInsertSequenceModal());
+            });
+            
+            // Close when clicking outside
+            insertModal.addEventListener('click', (e) => {
+                if (e.target.id === 'sequenceInsertModal') {
+                    this.closeInsertSequenceModal();
+                }
+            });
+        }
+        
         // Close modals with Escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (document.getElementById('sequenceSelectionModal')?.classList.contains('show')) {
                     this.closeSequenceSelectionModal();
+                } else if (document.getElementById('sequenceInsertModal')?.classList.contains('show')) {
+                    this.closeInsertSequenceModal();
                 } else if (document.getElementById('actionListModal')?.classList.contains('show')) {
                     this.closeActionList();
                 }
@@ -1455,6 +1476,109 @@ class ActionManager {
     }
     
     /**
+     * Close insert sequence modal
+     */
+    closeInsertSequenceModal() {
+        const modal = document.getElementById('sequenceInsertModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+    
+    /**
+     * Validate insert sequence input
+     * @param {string} sequence - The sequence to validate
+     */
+    validateInsertSequence(sequence) {
+        const validationSpan = document.getElementById('sequenceValidation');
+        if (!validationSpan) return true;
+        
+        if (!sequence || sequence.trim() === '') {
+            validationSpan.textContent = '';
+            validationSpan.className = 'validation-message';
+            return false;
+        }
+        
+        // Check for invalid characters
+        const invalidChars = sequence.match(/[^ATGCNatgcn\s]/g);
+        if (invalidChars) {
+            validationSpan.textContent = `⚠️ Invalid characters: ${[...new Set(invalidChars)].join(', ')}`;
+            validationSpan.className = 'validation-message error';
+            return false;
+        }
+        
+        // Clean sequence (remove whitespace)
+        const cleanSequence = sequence.replace(/\s/g, '').toUpperCase();
+        validationSpan.textContent = `✅ Valid sequence (${cleanSequence.length} bp)`;
+        validationSpan.className = 'validation-message success';
+        return true;
+    }
+    
+    /**
+     * Confirm sequence insert from modal
+     */
+    confirmSequenceInsert() {
+        const chromosomeSelect = document.getElementById('chromosomeSelectInsert');
+        const positionInput = document.getElementById('insertPositionSeq');
+        const sequenceTextarea = document.getElementById('insertSequenceText');
+        
+        if (!chromosomeSelect || !positionInput || !sequenceTextarea) {
+            this.genomeBrowser.showNotification('Insert form elements not found', 'error');
+            return;
+        }
+        
+        const chromosome = chromosomeSelect.value;
+        const positionStr = positionInput.value;
+        const sequence = sequenceTextarea.value;
+        
+        // Validation
+        if (!chromosome) {
+            this.genomeBrowser.showNotification('Please select a chromosome', 'error');
+            return;
+        }
+        
+        if (!positionStr || positionStr.trim() === '') {
+            this.genomeBrowser.showNotification('Please enter insert position', 'error');
+            return;
+        }
+        
+        const position = parseInt(positionStr) - 1; // Convert to 0-based
+        
+        if (isNaN(position) || position < 0) {
+            this.genomeBrowser.showNotification('Invalid position - must be a positive number', 'error');
+            return;
+        }
+        
+        if (!sequence || sequence.trim() === '') {
+            this.genomeBrowser.showNotification('Please enter sequence to insert', 'error');
+            return;
+        }
+        
+        // Validate and clean sequence
+        const cleanSequence = sequence.replace(/\s/g, '').toUpperCase().replace(/[^ATGCN]/g, '');
+        
+        if (cleanSequence.length === 0) {
+            this.genomeBrowser.showNotification('Invalid sequence - must contain valid DNA bases (A, T, G, C)', 'error');
+            return;
+        }
+        
+        // Check if position is within chromosome bounds
+        if (this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[chromosome]) {
+            const chromosomeLength = this.genomeBrowser.currentSequence[chromosome].length;
+            if (position > chromosomeLength) {
+                this.genomeBrowser.showNotification(`Position (${position + 1}) exceeds chromosome length (${chromosomeLength})`, 'error');
+                return;
+            }
+        }
+        
+        // Create insert action
+        this.createInsertAction(chromosome, position, cleanSequence);
+        
+        // Close modal
+        this.closeInsertSequenceModal();
+    }
+    
+    /**
      * Prompt user to enter sequence for insertion at cursor position
      * @param {number} position - The cursor position where sequence will be inserted
      */
@@ -1465,61 +1589,67 @@ class ActionManager {
             return;
         }
         
-        // Create a simple prompt for sequence input
-        const sequenceInput = prompt(
-            `Enter sequence to insert at position ${position + 1} on ${chromosome}:\n\n` +
-            'You can enter DNA sequence (A, T, G, C) or paste from clipboard.\n' +
-            'Example: ATCGATCG'
-        );
-        
-        if (!sequenceInput || sequenceInput.trim() === '') {
-            console.log('🚫 [ActionManager] Insert cancelled - no sequence provided');
-            return;
-        }
-        
-        // Validate and clean sequence
-        const cleanSequence = sequenceInput.trim().toUpperCase().replace(/[^ATGCN]/g, '');
-        
-        if (cleanSequence.length === 0) {
-            this.genomeBrowser.showNotification('Invalid sequence - must contain valid DNA bases (A, T, G, C)', 'error');
-            return;
-        }
-        
-        // Create insert action
-        this.createInsertAction(chromosome, position, cleanSequence);
+        // Show insert modal with position pre-filled
+        this.showInsertSequenceModal(chromosome, position);
     }
     
     /**
      * Show modal for insert sequence (when no cursor is set)
+     * @param {string} chromosome - Target chromosome (optional)
+     * @param {number} position - Insert position (optional, 0-based)
      */
-    showInsertSequenceModal() {
-        // For now, use a simple prompt-based approach
-        // In the future, this could be enhanced with a dedicated modal UI
-        const chromosome = this.genomeBrowser.currentChromosome;
-        if (!chromosome) {
-            this.genomeBrowser.showNotification('No chromosome selected', 'error');
+    showInsertSequenceModal(chromosome = null, position = null) {
+        const modal = document.getElementById('sequenceInsertModal');
+        if (!modal) {
+            this.genomeBrowser.showNotification('Insert modal not found', 'error');
             return;
         }
         
-        const positionInput = prompt(
-            `Enter position where you want to insert sequence on ${chromosome}:\n\n` +
-            'Tip: Click on a base in the sequence track to set cursor position.'
-        );
-        
-        if (!positionInput || positionInput.trim() === '') {
-            console.log('🚫 [ActionManager] Insert cancelled - no position provided');
-            return;
+        // Populate chromosome dropdown
+        const chromosomeSelect = document.getElementById('chromosomeSelectInsert');
+        if (chromosomeSelect && this.genomeBrowser.currentSequence) {
+            chromosomeSelect.innerHTML = '<option value="">Select chromosome...</option>';
+            Object.keys(this.genomeBrowser.currentSequence).forEach(chr => {
+                const option = document.createElement('option');
+                option.value = chr;
+                option.textContent = chr;
+                if (chr === (chromosome || this.genomeBrowser.currentChromosome)) {
+                    option.selected = true;
+                }
+                chromosomeSelect.appendChild(option);
+            });
         }
         
-        const position = parseInt(positionInput) - 1; // Convert to 0-based
-        
-        if (isNaN(position) || position < 0) {
-            this.genomeBrowser.showNotification('Invalid position - must be a positive number', 'error');
-            return;
+        // Set position if provided (convert to 1-based for display)
+        const positionInput = document.getElementById('insertPositionSeq');
+        if (positionInput && position !== null) {
+            positionInput.value = position + 1;
+            positionInput.readOnly = true; // Lock position when cursor is set
+        } else if (positionInput) {
+            positionInput.value = '';
+            positionInput.readOnly = false;
         }
         
-        // Now prompt for sequence
-        this.promptInsertSequence(position);
+        // Clear sequence textarea
+        const sequenceTextarea = document.getElementById('insertSequenceText');
+        if (sequenceTextarea) {
+            sequenceTextarea.value = '';
+        }
+        
+        // Clear validation message
+        const validationSpan = document.getElementById('sequenceValidation');
+        if (validationSpan) {
+            validationSpan.textContent = '';
+            validationSpan.className = 'validation-message';
+        }
+        
+        // Show modal
+        modal.classList.add('show');
+        
+        // Focus on sequence textarea
+        if (sequenceTextarea) {
+            setTimeout(() => sequenceTextarea.focus(), 100);
+        }
     }
     
     /**
