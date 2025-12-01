@@ -79,11 +79,7 @@ class ChatManager {
         this.isSmartExecutionEnabled = true; // 可配置开关
         this.initializeSmartExecutor();
         
-        // Initialize Conversation Evolution Integration
-        this.evolutionManager = null;
-        this.currentConversationData = null;
-        this.evolutionEnabled = true;
-        this.initializeEvolutionIntegration();
+        // Removed Conversation Evolution Integration (cleanup completed)
         
         // Initialize Dynamic Tools Registry System
         this.dynamicTools = null;
@@ -530,75 +526,6 @@ class ChatManager {
         } catch (error) {
             // Failed to initialize SmartExecutor
             this.isSmartExecutionEnabled = false;
-        }
-    }
-
-    /**
-     * Initialize Conversation Evolution Integration
-     */
-    async initializeEvolutionIntegration() {
-        try {
-            // Initializing Evolution integration...
-            
-            // Check if ConversationEvolutionManager is available globally
-            let evolutionManagerFound = false;
-            
-            if (typeof window !== 'undefined') {
-                if (window.evolutionManager) {
-                    this.evolutionManager = window.evolutionManager;
-                    evolutionManagerFound = true;
-                    // Evolution Manager connected to ChatBox via window.evolutionManager
-                } else if (window.conversationEvolutionManager) {
-                    this.evolutionManager = window.conversationEvolutionManager;
-                    evolutionManagerFound = true;
-                    // Evolution Manager connected to ChatBox via window.conversationEvolutionManager
-                }
-            }
-            
-            if (!evolutionManagerFound) {
-                // Evolution Manager not available yet, setting up polling...
-                
-                // Set up aggressive polling for Evolution Manager
-                let pollCount = 0;
-                const maxPolls = 50; // 10 seconds with 200ms intervals
-                
-                const pollForEvolutionManager = () => {
-                    pollCount++;
-                    
-                    if (window.evolutionManager || window.conversationEvolutionManager) {
-                        this.evolutionManager = window.evolutionManager || window.conversationEvolutionManager;
-                        // Evolution Manager connected to ChatBox (poll ${pollCount})
-                        
-                        // Immediately sync current conversation if it exists
-                        if (this.currentConversationData && this.currentConversationData.events.length > 0) {
-                            // Syncing existing conversation data to Evolution Manager
-                            this.syncCurrentConversationToEvolution();
-                        }
-                        
-                        return;
-                    }
-                    
-                    if (pollCount < maxPolls) {
-                        setTimeout(pollForEvolutionManager, 200);
-                    } else {
-                        // Evolution Manager not found after polling timeout
-                    }
-                };
-                
-                setTimeout(pollForEvolutionManager, 100);
-            }
-            
-            // Initialize current conversation data structure
-            this.resetCurrentConversationData();
-            
-            // If Evolution Manager is already connected, sync immediately
-            if (evolutionManagerFound && this.currentConversationData) {
-                // Performing initial sync to Evolution Manager
-                this.syncCurrentConversationToEvolution();
-            }
-            
-        } catch (error) {
-            // Failed to initialize Evolution integration
         }
     }
 
@@ -1467,60 +1394,6 @@ class ChatManager {
             initialized: this.dynamicTools !== null,
             status: this.dynamicTools ? this.dynamicTools.getIntegrationStatus() : null
         };
-    }
-
-    /**
-     * Connect to Evolution Manager (called when Evolution Manager becomes available)
-     */
-    connectToEvolutionManager(evolutionManager) {
-        if (evolutionManager && this.evolutionEnabled) {
-            this.evolutionManager = evolutionManager;
-            // [ChatManager] Evolution Manager connected to ChatBox successfully
-            
-            // If there's a current conversation in progress, sync it
-            if (this.currentConversationData && this.currentConversationData.events.length > 0) {
-                this.syncCurrentConversationToEvolution();
-            }
-        }
-    }
-
-    /**
-     * Reset current conversation data structure
-     */
-    resetCurrentConversationData() {
-        this.currentConversationData = {
-            id: this.generateConversationId(),
-            startTime: new Date().toISOString(),
-            endTime: null,
-            events: [],
-            context: this.getCurrentContext(),
-            stats: {
-                messageCount: 0,
-                userMessageCount: 0,
-                assistantMessageCount: 0,
-                errorCount: 0,
-                successCount: 0,
-                toolCallCount: 0,
-                failureCount: 0,
-                thinkingProcessCount: 0
-            },
-            metadata: {
-                source: 'chatbox',
-                chatboxVersion: window.VERSION_INFO ? window.VERSION_INFO.fullVersion : '0.3.0-beta',
-                features: {
-                    thinkingProcess: this.showThinkingProcess,
-                    toolCalls: this.showToolCalls,
-                    smartExecution: this.isSmartExecutionEnabled
-                }
-            }
-        };
-    }
-
-    /**
-     * Generate unique conversation ID
-     */
-    generateConversationId() {
-        return `chatbox_conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
     setupMCPServerEventHandlers() {
@@ -17813,61 +17686,6 @@ ${this.getPluginSystemInfo()}`;
         }
     }
 
-    /**
-     * Debounced save to Evolution storage
-     */
-    debouncedSaveToEvolution() {
-        if (this._evolutionSaveTimeout) {
-            clearTimeout(this._evolutionSaveTimeout);
-        }
-        
-        this._evolutionSaveTimeout = setTimeout(() => {
-            this.syncCurrentConversationToEvolution();
-        }, 2000); // Save every 2 seconds
-    }
-
-    /**
-     * Sync current conversation to Evolution storage
-     */
-    syncCurrentConversationToEvolution() {
-        if (!this.evolutionManager || !this.currentConversationData) {
-            return;
-        }
-
-        try {
-            // Update end time
-            this.currentConversationData.endTime = new Date().toISOString();
-            
-            // Send to Evolution Manager
-            if (typeof this.evolutionManager.addConversationData === 'function') {
-                this.evolutionManager.addConversationData(this.currentConversationData);
-                console.log('🧬 Synced conversation data to Evolution storage');
-            } else {
-                console.warn('🧬 Evolution Manager does not support addConversationData method');
-            }
-        } catch (error) {
-            console.error('❌ Failed to sync conversation to Evolution storage:', error);
-        }
-    }
-
-    /**
-     * Start new conversation for Evolution tracking
-     */
-    startNewConversationForEvolution() {
-        // Finalize current conversation
-        if (this.currentConversationData && this.currentConversationData.events.length > 0) {
-            this.syncCurrentConversationToEvolution();
-        }
-
-        // Reset for new conversation
-        this.resetCurrentConversationData();
-        
-        console.log('🧬 Started new conversation for Evolution tracking:', this.currentConversationData.id);
-    }
-
-    /**
-     * Override startNewChat to include Evolution tracking
-     */
     startNewChat() {
         console.log('Starting new chat...');
         
@@ -17880,31 +17698,7 @@ ${this.getPluginSystemInfo()}`;
             this.configManager.addChatMessage('--- CONVERSATION_SEPARATOR ---', 'system');
         }
         
-        // Start new conversation for Evolution tracking
-        this.startNewConversationForEvolution();
-        
         this.showNotification('✅ New conversation started', 'success');
-    }
-
-    /**
-     * Get Evolution data summary for debugging
-     */
-    getEvolutionDataSummary() {
-        if (!this.currentConversationData) {
-            return 'No conversation data available';
-        }
-
-        const stats = this.currentConversationData.stats;
-        return {
-            conversationId: this.currentConversationData.id,
-            startTime: this.currentConversationData.startTime,
-            endTime: this.currentConversationData.endTime,
-            eventCount: this.currentConversationData.events.length,
-            statistics: stats,
-            evolutionManagerConnected: !!this.evolutionManager,
-            lastEventType: this.currentConversationData.events.length > 0 ? 
-                this.currentConversationData.events[this.currentConversationData.events.length - 1].type : 'none'
-        };
     }
 
     /**

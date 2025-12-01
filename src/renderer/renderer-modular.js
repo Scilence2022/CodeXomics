@@ -434,18 +434,7 @@ class GenomeBrowser {
             console.error('❌ Error initializing VisualizationToolsManager:', error);
         }
         
-        // Step 5.8: Initialize Conversation Evolution System
-        console.log('🧬 About to initialize ConversationEvolutionManager...');
-        try {
-            this.conversationEvolutionManager = new ConversationEvolutionManager(this, this.configManager, this.chatManager);
-            this.evolutionInterfaceManager = new EvolutionInterfaceManager(this.conversationEvolutionManager, this.configManager);
-            
-            window.conversationEvolutionManager = this.conversationEvolutionManager; // Make globally available
-            window.evolutionInterfaceManager = this.evolutionInterfaceManager; // Make globally available
-            console.log('✅ ConversationEvolutionManager initialized successfully');
-        } catch (error) {
-            console.error('❌ Error initializing ConversationEvolutionManager:', error);
-        }
+        // Step 5.8: Removed Conversation Evolution System (cleanup completed)
         
         // Add global tool validation function for debugging
         window.validateAllTools = () => {

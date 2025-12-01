@@ -4929,15 +4929,6 @@ class LLMBenchmarkFramework {
                 return this.reconstructInteractionDataFromCachedResponse(test, this.chatManager.lastResponse, error);
             }
             
-            // Try to get data from ConversationEvolution system
-            if (window.evolutionManager && window.evolutionManager.getRecentConversations) {
-                const recentConversations = window.evolutionManager.getRecentConversations(1);
-                if (recentConversations && recentConversations.length > 0) {
-                    console.log('Found recent conversation data from Evolution system');
-                    return this.reconstructInteractionDataFromEvolution(test, recentConversations[0], error);
-                }
-            }
-            
             console.log('No recoverable LLM interaction data found');
             return null;
             
@@ -5034,51 +5025,6 @@ class LLMBenchmarkFramework {
                 ],
                 errorLogs: [error.message],
                 recoveryLogs: ['Data recovered from cached response']
-            }
-        };
-    }
-
-    /**
-     * Reconstruct interaction data from Evolution system
-     */
-    reconstructInteractionDataFromEvolution(test, conversationData, error) {
-        return {
-            timestamp: new Date().toISOString(),
-            testId: test.id,
-            testName: test.name,
-            
-            request: {
-                instruction: test.instruction,
-                timestamp: conversationData.timestamp || new Date().toISOString(),
-                requestId: `evolution_${test.id}_${Date.now()}`
-            },
-            
-            response: {
-                content: conversationData.lastResponse || null,
-                timestamp: conversationData.timestamp || new Date().toISOString(),
-                responseId: `evolution_resp_${test.id}_${Date.now()}`,
-                recovered: true,
-                recoveryReason: 'evolution_system'
-            },
-            
-            analysis: {
-                isError: true,
-                errorDetails: error.message,
-                taskCompleted: false,
-                confidence: 0,
-                recoveredData: true,
-                timeoutOccurred: error.message.includes('timeout')
-            },
-            
-            detailedLogs: {
-                totalLogs: 3,
-                consoleLogs: [
-                    `Test ${test.id} started`,
-                    `LLM interaction tracked by Evolution system`,
-                    `Test failed: ${error.message}`
-                ],
-                errorLogs: [error.message],
-                recoveryLogs: ['Data recovered from Evolution system']
             }
         };
     }
