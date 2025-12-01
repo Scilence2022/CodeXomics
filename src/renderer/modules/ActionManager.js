@@ -2039,8 +2039,20 @@ class ActionManager {
                     return this.applySequenceModifications(chr, originalSeq);
                 },
                 getFeatures: (chr) => {
+                    // 🔒 CRITICAL: Get features from execution copy - these are ALREADY modified
+                    // During action execution, features were:
+                    // 1. Removed from cut regions (executeCutSequence)
+                    // 2. Removed from paste-replace target regions (executePasteSequence)
+                    // 3. Added from clipboard with adjusted positions (copyFeaturesFromClipboard)
+                    // Therefore, we should NOT call adjustFeaturePositions again!
                     const featuresSource = this.getFeaturesFromGenomeData(executionGenomeData, chr) || [];
-                    return this.adjustFeaturePositions(chr, featuresSource);
+                    console.log(`📊 [ActionManager] Getting features for GBK export (${chr}):`, {
+                        totalFeatures: featuresSource.length,
+                        featureNames: featuresSource.map(f => f.name || f.type).join(', '),
+                        note: 'Features already adjusted during execution - NOT calling adjustFeaturePositions'
+                    });
+                    // ⚠️ DO NOT call adjustFeaturePositions here - features are already correct!
+                    return featuresSource;
                 },
                 executedActions: executionActionsCopy.filter(a => a.status === this.STATUS.COMPLETED),
                 executionId,
@@ -2995,8 +3007,8 @@ class ActionManager {
         const { chromosome, start, end } = action.metadata;
         const clipboardData = action.metadata.clipboardData;
         
-        // Ensure original annotations are backed up before any modification
-        this.ensureOriginalAnnotationsBackup();
+        // 🔒 CRITICAL: All modifications happen on executionGenomeData (proxy/copy)
+        // Original data is never modified (Copy-on-Write architecture)
         
         if (!clipboardData) {
             throw new Error('No clipboard data available for pasting');
@@ -3006,7 +3018,9 @@ class ActionManager {
             actionId: action.id,
             target: action.target,
             clipboardFeatures: clipboardData.comprehensiveData?.features?.length || 0,
-            hasComprehensiveData: !!clipboardData.comprehensiveData
+            hasComprehensiveData: !!clipboardData.comprehensiveData,
+            operation: isInsert ? 'paste-insert' : 'paste-replace',
+            targetRegion: `${chromosome}:${start}-${end}`
         });
         
         // Determine if this is an insert or replace based on start/end
@@ -3036,6 +3050,36 @@ class ActionManager {
             });
         }
         
+        // 🔧 CRITICAL FIX: For paste-replace, remove features in target region BEFORE adding new features
+        let removedFeaturesCount = 0;
+        if (!isInsert) {
+            // This is a paste-replace operation - remove features in target region first
+            const currentFeatures = this.getFeaturesFromGenomeData(executionGenomeData, chromosome);
+            
+            if (currentFeatures && currentFeatures.length > 0) {
+                const initialCount = currentFeatures.length;
+                
+                // Filter out features that are completely within the replaced region
+                const remainingFeatures = currentFeatures.filter(feature => 
+                    !(feature.start >= start && feature.end <= end)
+                );
+                
+                // Set filtered features back to execution copy
+                this.setFeaturesInGenomeData(executionGenomeData, chromosome, remainingFeatures);
+                
+                removedFeaturesCount = initialCount - remainingFeatures.length;
+                
+                console.log('🗑️ [ActionManager] Removed features from paste-replace target region:', {
+                    chromosome: chromosome,
+                    targetRegion: `${start}-${end}`,
+                    removedFeatures: removedFeaturesCount,
+                    removedFeatureNames: currentFeatures.filter(f => f.start >= start && f.end <= end).map(f => f.name || f.type),
+                    remainingFeatures: remainingFeatures.length,
+                    note: 'Features in target region removed before pasting new features'
+                });
+            }
+        }
+        
         // Handle features copying and position adjustment
         let copiedFeaturesCount = 0;
         if (clipboardData.comprehensiveData && clipboardData.comprehensiveData.features && clipboardData.comprehensiveData.features.length > 0) {
@@ -3049,7 +3093,8 @@ class ActionManager {
             target: action.target,
             source: clipboardData.source,
             chromosome: chromosome,
-            copiedFeaturesCount: copiedFeaturesCount
+            copiedFeaturesCount: copiedFeaturesCount,
+            removedFeaturesCount: removedFeaturesCount  // Track removed features in target region
         };
         
         if (isInsert) {
