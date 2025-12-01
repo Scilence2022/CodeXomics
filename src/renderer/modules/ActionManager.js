@@ -2910,6 +2910,13 @@ class ActionManager {
         // 🔧 CRITICAL FIX: Use execution genome data copy for collecting comprehensive data
         const comprehensiveData = await this.collectComprehensiveData(chromosome, start, end, strand, executionGenomeData);
         
+        console.log('📋 [ActionManager] Copy operation completed:', {
+            source: `${chromosome}:${start}-${end}`,
+            sequenceLength: sequence.length,
+            featuresCount: comprehensiveData.features?.length || 0,
+            featureNames: comprehensiveData.features?.map(f => f.name || f.type).join(', ') || 'none'
+        });
+        
         // Clipboard should already be set when the action was created
         // Update it with comprehensive data if needed
         if (this.clipboard && this.clipboard.sequence === sequence) {
@@ -3637,8 +3644,17 @@ class ActionManager {
         
         const before = sequence.substring(0, startIndex);
         const after = sequence.substring(endIndex);
+        const replacedLength = end - start + 1;
         
-        console.log(`🔄 [ActionManager] Replacing ${end - start + 1} bp with ${newSequence.length} bp at position ${start}-${end}`);
+        console.log(`🔄 [ActionManager] Replacing sequence:`, {
+            position: `${start}-${end}`,
+            replacedLength: replacedLength,
+            newLength: newSequence.length,
+            lengthChange: newSequence.length - replacedLength,
+            beforeLength: sequence.length,
+            afterLength: before.length + newSequence.length + after.length
+        });
+        
         return before + newSequence + after;
     }
     
