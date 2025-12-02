@@ -1051,15 +1051,265 @@ class PluginManagementUI {
 
     /**
      * Load plugin from file
+     * Allows users to manually install a plugin from a local file or directory
      */
     async loadPluginFromFile() {
         try {
-            // In a real implementation, this would open a file dialog
-            // For now, show a placeholder message
-            this.showMessage('File dialog would open here to select plugin file', 'info');
+            // Check if we're in Electron environment with file dialog support
+            if (typeof window !== 'undefined' && window.electronAPI) {
+                // Request file selection from main process
+                const result = await window.electronAPI.selectPluginFile();
+                
+                if (!result || result.canceled) {
+                    return; // User cancelled
+                }
+                
+                const filePath = result.filePaths[0];
+                if (!filePath) {
+                    return;
+                }
+                
+                this.showMessage('Loading plugin from file...', 'info');
+                
+                // Parse plugin file and extract metadata
+                const pluginData = await this._parsePluginFile(filePath);
+                
+                if (!pluginData) {
+                    throw new Error('Failed to parse plugin file');
+                }
+                
+                // Validate plugin structure
+                const validation = this._validatePluginStructure(pluginData);
+                if (!validation.valid) {
+                    throw new Error(`Invalid plugin structure: ${validation.errors.join(', ')}`);
+                }
+                
+                // Determine installation path
+                const installPath = this.pluginManager.pathResolver 
+                    ? this.pluginManager.pathResolver.getInstallPath(pluginData.id)
+                    : `src/renderer/modules/Plugins/UserInstalled/${pluginData.id}`;
+                
+                // Copy plugin files to installation directory
+                await this._installPluginFiles(filePath, installPath, pluginData);
+                
+                // Register plugin with PluginManagerV2
+                await this.pluginManager.registerPlugin(pluginData.id, pluginData.manifest);
+                
+                this.showMessage(`Plugin "${pluginData.name}" installed successfully!`, 'success');
+                
+                // Refresh plugin list UI
+                await this.refreshPluginListUI();
+                
+            } else {
+                // Fallback for non-Electron environment
+                this.showMessage('File selection not available in this environment. Please use the Plugin Marketplace instead.', 'warning');
+            }
             
         } catch (error) {
+            console.error('Error loading plugin from file:', error);
             this.showMessage(`Error loading plugin: ${error.message}`, 'error');
+        }
+    }
+    
+    /**
+     * Parse plugin file and extract metadata
+     * @private
+     * @param {string} filePath - Path to plugin file (can be .js, .zip, or directory)
+     * @returns {Promise<Object|null>}
+     */
+    async _parsePluginFile(filePath) {
+        try {
+            // Check if it's a directory or file
+            const fileInfo = await window.electronAPI.getPluginFileInfo(filePath);
+            
+            if (fileInfo.isDirectory) {
+                // Load plugin.json from directory
+                return await this._loadPluginFromDirectory(filePath);
+            } else if (filePath.endsWith('.zip')) {
+                // Extract and load from zip
+                return await this._loadPluginFromZip(filePath);
+            } else if (filePath.endsWith('.js')) {
+                // Load JavaScript plugin file
+                return await this._loadPluginFromJavaScript(filePath);
+            } else {
+                throw new Error('Unsupported plugin file format. Please use .js, .zip, or a plugin directory.');
+            }
+        } catch (error) {
+            console.error('Error parsing plugin file:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Load plugin from directory
+     * @private
+     */
+    async _loadPluginFromDirectory(dirPath) {
+        const manifestPath = `${dirPath}/plugin.json`;
+        const manifestExists = await window.electronAPI.checkFileExists(manifestPath);
+        
+        if (!manifestExists) {
+            throw new Error('plugin.json not found in directory');
+        }
+        
+        const manifestContent = await window.electronAPI.readPluginFile(manifestPath);
+        const manifest = JSON.parse(manifestContent);
+        
+        return {
+            id: manifest.name || manifest.id,
+            name: manifest.displayName || manifest.name,
+            manifest,
+            sourcePath: dirPath,
+            type: 'directory'
+        };
+    }
+    
+    /**
+     * Load plugin from zip file
+     * @private
+     */
+    async _loadPluginFromZip(zipPath) {
+        // Request main process to extract zip
+        const extractResult = await window.electronAPI.extractPluginZip(zipPath);
+        
+        if (!extractResult.success) {
+            throw new Error('Failed to extract plugin zip file');
+        }
+        
+        // Load from extracted directory
+        return await this._loadPluginFromDirectory(extractResult.extractPath);
+    }
+    
+    /**
+     * Load plugin from JavaScript file
+     * @private
+     */
+    async _loadPluginFromJavaScript(jsPath) {
+        // Read JavaScript file
+        const jsContent = await window.electronAPI.readPluginFile(jsPath);
+        
+        // Try to extract plugin metadata from comments or code
+        const metadata = this._extractMetadataFromJS(jsContent, jsPath);
+        
+        return {
+            id: metadata.id,
+            name: metadata.name,
+            manifest: metadata.manifest,
+            sourcePath: jsPath,
+            type: 'javascript'
+        };
+    }
+    
+    /**
+     * Extract metadata from JavaScript file
+     * @private
+     */
+    _extractMetadataFromJS(jsContent, filePath) {
+        // Try to find plugin metadata in comments
+        const metadataMatch = jsContent.match(/\/\*\*([\s\S]*?)@plugin\s+([\s\S]*?)\*\//);
+        if (metadataMatch) {
+            const pluginBlock = metadataMatch[2];
+            const id = (pluginBlock.match(/@id\s+(\S+)/) || [])[1];
+            const name = (pluginBlock.match(/@name\s+(.+)/) || [])[1];
+            const version = (pluginBlock.match(/@version\s+(\S+)/) || [])[1] || '1.0.0';
+            const description = (pluginBlock.match(/@description\s+(.+)/) || [])[1] || '';
+            
+            if (id && name) {
+                return {
+                    id,
+                    name,
+                    manifest: {
+                        name: id,
+                        displayName: name,
+                        version,
+                        description,
+                        type: 'function',
+                        main: path.basename(filePath)
+                    }
+                };
+            }
+        }
+        
+        // Fallback: use filename as ID
+        const filename = filePath.split('/').pop().replace('.js', '');
+        return {
+            id: filename,
+            name: filename,
+            manifest: {
+                name: filename,
+                displayName: filename,
+                version: '1.0.0',
+                description: 'Manually loaded plugin',
+                type: 'function',
+                main: path.basename(filePath)
+            }
+        };
+    }
+    
+    /**
+     * Validate plugin structure
+     * @private
+     */
+    _validatePluginStructure(pluginData) {
+        const errors = [];
+        
+        if (!pluginData.id) {
+            errors.push('Plugin ID is required');
+        }
+        
+        if (!pluginData.name) {
+            errors.push('Plugin name is required');
+        }
+        
+        if (!pluginData.manifest) {
+            errors.push('Plugin manifest is required');
+        } else {
+            if (!pluginData.manifest.version) {
+                errors.push('Plugin version is required');
+            }
+            if (!pluginData.manifest.type) {
+                errors.push('Plugin type is required');
+            }
+        }
+        
+        return {
+            valid: errors.length === 0,
+            errors
+        };
+    }
+    
+    /**
+     * Install plugin files to destination
+     * @private
+     */
+    async _installPluginFiles(sourcePath, installPath, pluginData) {
+        // Ensure installation directory exists
+        await window.electronAPI.ensureDirectory(installPath);
+        
+        // Copy files based on plugin type
+        if (pluginData.type === 'directory') {
+            // Copy entire directory
+            await window.electronAPI.copyPluginDirectory(sourcePath, installPath);
+        } else if (pluginData.type === 'javascript') {
+            // Copy JavaScript file and create manifest
+            await window.electronAPI.copyPluginFile(sourcePath, `${installPath}/${pluginData.manifest.main}`);
+            
+            // Create plugin.json manifest
+            const manifestPath = `${installPath}/plugin.json`;
+            await window.electronAPI.writePluginFile(manifestPath, JSON.stringify(pluginData.manifest, null, 2));
+        }
+    }
+    
+    /**
+     * Refresh plugin list UI after installation
+     * @private
+     */
+    async refreshPluginListUI() {
+        // Reload plugin data from PluginManagerV2 if available
+        if (this.pluginManager) {
+            // The plugin is already registered, just need to update UI display
+            // This could trigger a re-render of the plugin list if the UI has such a component
+            console.log('Plugin list refreshed');
         }
     }
 

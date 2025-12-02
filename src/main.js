@@ -2489,7 +2489,149 @@ ipcMain.handle('list-plugins', async (event, pluginPath) => {
     return { success: false, error: error.message, plugins: [] };
   }
 });
-// ===== End Plugin Path Resolution Handlers =====
+
+/**
+ * Select plugin file for manual installation
+ */
+ipcMain.handle('select-plugin-file', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Select Plugin File or Directory',
+    properties: ['openFile', 'openDirectory'],
+    filters: [
+      { name: 'Plugin Files', extensions: ['js', 'zip'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+  return result;
+});
+
+/**
+ * Get plugin file information
+ */
+ipcMain.handle('get-plugin-file-info', async (event, filePath) => {
+  try {
+    const stats = fs.statSync(filePath);
+    return {
+      exists: true,
+      isDirectory: stats.isDirectory(),
+      isFile: stats.isFile(),
+      size: stats.size,
+      modified: stats.mtime
+    };
+  } catch (error) {
+    return {
+      exists: false,
+      error: error.message
+    };
+  }
+});
+
+/**
+ * Read plugin file content
+ */
+ipcMain.handle('read-plugin-file', async (event, filePath) => {
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch (error) {
+    throw new Error(`Failed to read plugin file: ${error.message}`);
+  }
+});
+
+/**
+ * Check if file exists
+ */
+ipcMain.handle('check-file-exists', async (event, filePath) => {
+  return fs.existsSync(filePath);
+});
+
+/**
+ * Extract plugin zip file
+ */
+ipcMain.handle('extract-plugin-zip', async (event, zipPath) => {
+  try {
+    // Create temp directory for extraction
+    const tempDir = path.join(app.getPath('temp'), `plugin-${Date.now()}`);
+    fs.mkdirSync(tempDir, { recursive: true });
+    
+    // Note: This is a placeholder - you'll need to add a zip extraction library
+    // For now, return error indicating zip extraction not implemented
+    return {
+      success: false,
+      error: 'ZIP extraction not yet implemented. Please extract manually and select the plugin directory.'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+/**
+ * Copy plugin directory
+ */
+ipcMain.handle('copy-plugin-directory', async (event, sourcePath, destPath) => {
+  try {
+    // Recursive directory copy
+    const copyRecursive = (src, dest) => {
+      if (!fs.existsSync(dest)) {
+        fs.mkdirSync(dest, { recursive: true });
+      }
+      
+      const entries = fs.readdirSync(src, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        
+        if (entry.isDirectory()) {
+          copyRecursive(srcPath, destPath);
+        } else {
+          fs.copyFileSync(srcPath, destPath);
+        }
+      }
+    };
+    
+    copyRecursive(sourcePath, destPath);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to copy plugin directory:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Copy single plugin file
+ */
+ipcMain.handle('copy-plugin-file', async (event, sourcePath, destPath) => {
+  try {
+    const destDir = path.dirname(destPath);
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+    fs.copyFileSync(sourcePath, destPath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Write plugin file (for creating manifests, etc.)
+ */
+ipcMain.handle('write-plugin-file', async (event, filePath, content) => {
+  try {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filePath, content, 'utf8');
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+// ===== End Plugin File Loading Handlers =====
 
 // IPC handlers
 ipcMain.handle('read-file', async (event, filePath) => {

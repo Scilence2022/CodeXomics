@@ -141,6 +141,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPluginPaths: () => ipcRenderer.invoke('get-plugin-paths'),
   ensureDirectory: (dirPath) => ipcRenderer.invoke('ensure-directory', dirPath),
   listPlugins: (pluginPath) => ipcRenderer.invoke('list-plugins', pluginPath),
+  
+  // Plugin file loading APIs
+  selectPluginFile: () => ipcRenderer.invoke('select-plugin-file'),
+  getPluginFileInfo: (filePath) => ipcRenderer.invoke('get-plugin-file-info', filePath),
+  readPluginFile: (filePath) => ipcRenderer.invoke('read-plugin-file', filePath),
+  checkFileExists: (filePath) => ipcRenderer.invoke('check-file-exists', filePath),
+  extractPluginZip: (zipPath) => ipcRenderer.invoke('extract-plugin-zip', zipPath),
+  copyPluginDirectory: (sourcePath, destPath) => ipcRenderer.invoke('copy-plugin-directory', sourcePath, destPath),
+  copyPluginFile: (sourcePath, destPath) => ipcRenderer.invoke('copy-plugin-file', sourcePath, destPath),
+  writePluginFile: (filePath, content) => ipcRenderer.invoke('write-plugin-file', filePath, content),
 
   // Expose ipcRenderer for menu system event handling
   ipcRenderer: {
