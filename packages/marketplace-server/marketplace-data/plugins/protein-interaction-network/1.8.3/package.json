@@ -1,0 +1,27 @@
+{
+  "name": "protein-interaction-network",
+  "version": "1.8.3",
+  "description": "Interactive protein-protein interaction network analysis and visualization",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"No tests specified\""
+  },
+  "keywords": [
+    "protein",
+    "network",
+    "interaction",
+    "visualization",
+    "bioinformatics",
+    "ppi"
+  ],
+  "author": "NetworkBioLab",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/genomeexplorer/protein-networks.git"
+  },
+  "homepage": "https://github.com/genomeexplorer/protein-networks",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
