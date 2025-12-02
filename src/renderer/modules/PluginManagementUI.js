@@ -3,6 +3,10 @@
  * Designed exclusively for PluginManagerV2 - no legacy compatibility
  * Enhanced with local storage persistence for settings
  */
+
+// Import electron ipcRenderer for IPC communication
+const { ipcRenderer } = require('electron');
+
 class PluginManagementUI {
     constructor(pluginManager, configManager) {
         if (!pluginManager || pluginManager.constructor.name !== 'PluginManagerV2') {
@@ -948,7 +952,7 @@ class PluginManagementUI {
 
         try {
             // Scan plugin directories for available plugins
-            const scanResult = await window.electronAPI.scanPluginDirectory();
+            const scanResult = await ipcRenderer.invoke('scan-plugin-directory');
             
             if (!scanResult.success) {
                 throw new Error(scanResult.error || 'Failed to scan plugin directory');
@@ -1140,9 +1144,9 @@ class PluginManagementUI {
     async loadPluginFromFile() {
         try {
             // Check if we're in Electron environment with file dialog support
-            if (typeof window !== 'undefined' && window.electronAPI) {
+            if (typeof ipcRenderer !== 'undefined') {
                 // Request file selection from main process
-                const result = await window.electronAPI.selectPluginFile();
+                const result = await ipcRenderer.invoke('select-plugin-file');
                 
                 if (!result || result.canceled) {
                     return; // User cancelled
@@ -1204,7 +1208,7 @@ class PluginManagementUI {
     async _parsePluginFile(filePath) {
         try {
             // Check if it's a directory or file
-            const fileInfo = await window.electronAPI.getPluginFileInfo(filePath);
+            const fileInfo = await ipcRenderer.invoke('get-plugin-file-info', filePath);
             
             if (fileInfo.isDirectory) {
                 // Load plugin.json from directory
@@ -1230,13 +1234,13 @@ class PluginManagementUI {
      */
     async _loadPluginFromDirectory(dirPath) {
         const manifestPath = `${dirPath}/plugin.json`;
-        const manifestExists = await window.electronAPI.checkFileExists(manifestPath);
+        const manifestExists = await ipcRenderer.invoke('check-file-exists', manifestPath);
         
         if (!manifestExists) {
             throw new Error('plugin.json not found in directory');
         }
         
-        const manifestContent = await window.electronAPI.readPluginFile(manifestPath);
+        const manifestContent = await ipcRenderer.invoke('read-plugin-file', manifestPath);
         const manifest = JSON.parse(manifestContent);
         
         return {
@@ -1254,7 +1258,7 @@ class PluginManagementUI {
      */
     async _loadPluginFromZip(zipPath) {
         // Request main process to extract zip
-        const extractResult = await window.electronAPI.extractPluginZip(zipPath);
+        const extractResult = await ipcRenderer.invoke('extract-plugin-zip', zipPath);
         
         if (!extractResult.success) {
             throw new Error('Failed to extract plugin zip file');
@@ -1270,7 +1274,7 @@ class PluginManagementUI {
      */
     async _loadPluginFromJavaScript(jsPath) {
         // Read JavaScript file
-        const jsContent = await window.electronAPI.readPluginFile(jsPath);
+        const jsContent = await ipcRenderer.invoke('read-plugin-file', jsPath);
         
         // Try to extract plugin metadata from comments or code
         const metadata = this._extractMetadataFromJS(jsContent, jsPath);
@@ -1368,19 +1372,19 @@ class PluginManagementUI {
      */
     async _installPluginFiles(sourcePath, installPath, pluginData) {
         // Ensure installation directory exists
-        await window.electronAPI.ensureDirectory(installPath);
+        await ipcRenderer.invoke('ensure-directory', installPath);
         
         // Copy files based on plugin type
         if (pluginData.type === 'directory') {
             // Copy entire directory
-            await window.electronAPI.copyPluginDirectory(sourcePath, installPath);
+            await ipcRenderer.invoke('copy-plugin-directory', sourcePath, installPath);
         } else if (pluginData.type === 'javascript') {
             // Copy JavaScript file and create manifest
-            await window.electronAPI.copyPluginFile(sourcePath, `${installPath}/${pluginData.manifest.main}`);
+            await ipcRenderer.invoke('copy-plugin-file', sourcePath, `${installPath}/${pluginData.manifest.main}`);
             
             // Create plugin.json manifest
             const manifestPath = `${installPath}/plugin.json`;
-            await window.electronAPI.writePluginFile(manifestPath, JSON.stringify(pluginData.manifest, null, 2));
+            await ipcRenderer.invoke('write-plugin-file', manifestPath, JSON.stringify(pluginData.manifest, null, 2));
         }
     }
     
@@ -1662,7 +1666,7 @@ class PluginManagementUI {
     async browsePluginDirectory() {
         try {
             // Get current plugin paths
-            const result = await window.electronAPI.scanPluginDirectory();
+            const result = await ipcRenderer.invoke('scan-plugin-directory');
             
             if (!result.success) {
                 this.showMessage('Failed to access plugin directories', 'error');
@@ -1672,7 +1676,7 @@ class PluginManagementUI {
             const paths = result.paths;
             
             // Open directory selection dialog
-            const selectedDir = await window.electronAPI.showDirectoryDialog({
+            const selectedDir = await ipcRenderer.invoke('show-directory-dialog', {
                 title: 'Browse Plugin Directory',
                 defaultPath: paths.userPluginsPath || paths.builtinPluginsPath,
                 buttonLabel: 'Open Plugin Directory'
@@ -1682,7 +1686,7 @@ class PluginManagementUI {
                 const dirPath = selectedDir.filePaths[0];
                 
                 // Open the directory in the system file explorer
-                await window.electronAPI.openFolderInExplorer(dirPath);
+                await ipcRenderer.invoke('openFolderInExplorer', dirPath);
                 
                 this.showMessage(`Opened plugin directory: ${dirPath}`, 'success');
                 
