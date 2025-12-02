@@ -1,6 +1,14 @@
 /**
  * PluginManagerV2 - Modern plugin system core for GenomeExplorer
- * Advanced plugin management with integrated marketplace, resource management, and security
+ * 
+ * Enhanced with VS Code-inspired extension architecture:
+ * - Extension Context for lifecycle management
+ * - Contribution Registry for extension points
+ * - Command Registry for unified command handling
+ * - Activation Events for lazy loading
+ * - Disposable pattern for resource cleanup
+ * 
+ * @see core/ExtensionService.js for the new architecture
  */
 class PluginManagerV2 {
     constructor(app, configManager = null, options = {}) {
@@ -13,6 +21,7 @@ class PluginManagerV2 {
             enableSecurityValidation: true,
             enableDependencyResolution: true,
             enableAutoUpdates: true,
+            enableNewArchitecture: true, // Enable VS Code-inspired architecture
             maxConcurrentExecutions: 5,
             defaultPermissions: {
                 'genome.read': true,
@@ -30,6 +39,13 @@ class PluginManagerV2 {
         this.promptProvider = null;
         this.eventBus = new EventTarget();
         
+        // New architecture components (VS Code-inspired)
+        this.extensionService = null;
+        this.contributionRegistry = null;
+        this.commandRegistry = null;
+        this.activationService = null;
+        this.pluginBridge = null;
+        
         // Plugin registries - separated by type for better organization
         this.pluginRegistry = {
             function: new Map(),
@@ -40,6 +56,9 @@ class PluginManagerV2 {
         // Plugin metadata and state
         this.pluginMetadata = new Map();
         this.pluginExecutors = new Map();
+        
+        // Extension contexts for each plugin (new architecture)
+        this.extensionContexts = new Map();
         
         // System state
         this.isInitialized = false;
@@ -86,12 +105,17 @@ class PluginManagerV2 {
                 console.log('✅ PluginResourceManager initialized');
             }
             
-            // 3. Initialize Plugin Prompt Provider
+            // 3. Initialize new architecture components if enabled
+            if (this.options.enableNewArchitecture) {
+                await this._initializeNewArchitecture();
+            }
+            
+            // 4. Initialize Plugin Prompt Provider
             const { default: PluginPromptProvider } = await import('./PluginPromptProvider.js');
             this.promptProvider = new PluginPromptProvider();
             console.log('✅ PluginPromptProvider initialized');
             
-            // 3. Initialize Plugin Marketplace
+            // 5. Initialize Plugin Marketplace
             if (this.options.enableMarketplace !== false) {
                 this.marketplace = new PluginMarketplace(this, this.configManager, {
                     enableSecurityValidation: this.options.enableSecurityValidation,
@@ -101,15 +125,15 @@ class PluginManagerV2 {
                 console.log('✅ PluginMarketplace initialized');
             }
             
-            // 4. Load and register built-in plugins
+            // 6. Load and register built-in plugins
             await this.loadBuiltinPlugins();
             console.log('✅ Built-in plugins loaded');
             
-            // 5. Set up event listeners
+            // 7. Set up event listeners
             this.setupEventListeners();
             console.log('✅ Event listeners configured');
             
-            // 6. Set global reference
+            // 8. Set global reference
             if (typeof window !== 'undefined') {
                 window.pluginManagerV2 = this;
             }
@@ -123,6 +147,68 @@ class PluginManagerV2 {
             console.error('❌ PluginManagerV2 initialization failed:', error);
             throw error;
         }
+    }
+
+    /**
+     * Initialize VS Code-inspired architecture components
+     * @private
+     */
+    async _initializeNewArchitecture() {
+        console.log('🔧 Initializing VS Code-inspired architecture...');
+        
+        try {
+            // Check if core modules are available
+            if (typeof ContributionRegistry !== 'undefined') {
+                this.contributionRegistry = new ContributionRegistry();
+                console.log('✅ ContributionRegistry initialized');
+            }
+            
+            if (typeof CommandRegistry !== 'undefined') {
+                this.commandRegistry = new CommandRegistry();
+                console.log('✅ CommandRegistry initialized');
+            }
+            
+            if (typeof ActivationEventsService !== 'undefined') {
+                this.activationService = new ActivationEventsService();
+                this.activationService.setActivationHandler(
+                    this._handleExtensionActivation.bind(this)
+                );
+                console.log('✅ ActivationEventsService initialized');
+            }
+            
+            if (typeof ExtensionService !== 'undefined') {
+                this.extensionService = new ExtensionService({
+                    storageBackend: this.configManager
+                });
+                await this.extensionService.initialize();
+                console.log('✅ ExtensionService initialized');
+            }
+            
+            // Create bridge for backward compatibility
+            if (typeof PluginManagerBridge !== 'undefined' && this.extensionService) {
+                this.pluginBridge = new PluginManagerBridge(this, this.extensionService);
+                console.log('✅ PluginManagerBridge initialized');
+            }
+            
+            console.log('✅ VS Code-inspired architecture initialized');
+            
+        } catch (error) {
+            console.warn('⚠️ New architecture initialization failed, falling back to legacy:', error);
+            // Continue with legacy system
+        }
+    }
+
+    /**
+     * Handle extension activation request
+     * @private
+     * @param {string} extensionId 
+     * @param {string} trigger 
+     * @param {string} event 
+     */
+    async _handleExtensionActivation(extensionId, trigger, event) {
+        console.log(`Activating extension ${extensionId} via ${trigger}`);
+        // This will be called by the activation service when an extension needs activation
+        // The actual activation is handled by the extension service
     }
 
     /**
@@ -537,6 +623,9 @@ class PluginManagerV2 {
                 await this.initializePluginExecutors(pluginId, pluginDefinition);
             }
             
+            // Register with new architecture if available
+            await this._registerWithNewArchitecture(pluginId, pluginDefinition);
+            
             this.emitEvent('plugin-registered', { pluginId, type: pluginDefinition.type });
             console.log(`✅ Plugin registered: ${pluginId} (${pluginDefinition.type})`);
             
@@ -544,6 +633,98 @@ class PluginManagerV2 {
             console.error(`❌ Failed to register plugin ${pluginId}:`, error);
             throw error;
         }
+    }
+
+    /**
+     * Register plugin with new VS Code-inspired architecture
+     * @private
+     * @param {string} pluginId 
+     * @param {Object} pluginDefinition 
+     */
+    async _registerWithNewArchitecture(pluginId, pluginDefinition) {
+        // Register contributions if ContributionRegistry is available
+        if (this.contributionRegistry) {
+            const contributions = this._convertToContributions(pluginId, pluginDefinition);
+            if (Object.keys(contributions).length > 0) {
+                this.contributionRegistry.registerContributions(pluginId, contributions);
+            }
+        }
+        
+        // Register commands if CommandRegistry is available
+        if (this.commandRegistry && pluginDefinition.functions) {
+            for (const [funcName, funcDef] of Object.entries(pluginDefinition.functions)) {
+                const commandId = `${pluginId}.${funcName}`;
+                
+                this.commandRegistry.registerCommand(commandId, async (params) => {
+                    return await this.executeFunction(pluginId, funcName, params);
+                }, {
+                    title: funcDef.description || funcName,
+                    category: pluginDefinition.category || 'Plugins',
+                    extensionId: pluginId
+                });
+            }
+        }
+        
+        // Register with activation service if available
+        if (this.activationService) {
+            this.activationService.registerExtension(pluginId, {
+                activationEvents: ['onStartupFinished'],
+                extensionDependencies: []
+            });
+        }
+        
+        // Create extension context for lifecycle management
+        if (typeof ExtensionContext !== 'undefined') {
+            const context = new ExtensionContext({
+                extension: {
+                    id: pluginId,
+                    name: pluginDefinition.name,
+                    version: pluginDefinition.version
+                },
+                extensionPath: `/plugins/${pluginId}`,
+                storageBackend: this.configManager
+            });
+            this.extensionContexts.set(pluginId, context);
+        }
+    }
+
+    /**
+     * Convert legacy plugin definition to contribution format
+     * @private
+     * @param {string} pluginId 
+     * @param {Object} pluginDefinition 
+     * @returns {Object}
+     */
+    _convertToContributions(pluginId, pluginDefinition) {
+        const contributions = {};
+        
+        // Convert functions to function contributions
+        if (pluginDefinition.functions) {
+            contributions.functions = {};
+            
+            for (const [funcName, funcDef] of Object.entries(pluginDefinition.functions)) {
+                contributions.functions[funcName] = {
+                    name: funcName,
+                    description: funcDef.description || '',
+                    parameters: funcDef.parameters || { type: 'object', properties: {} },
+                    category: pluginDefinition.category || 'general'
+                };
+            }
+        }
+        
+        // Convert visualizations
+        if (pluginDefinition.type === 'visualization') {
+            contributions.visualizations = {
+                [pluginId]: {
+                    id: pluginId,
+                    name: pluginDefinition.name,
+                    description: pluginDefinition.description,
+                    supportedDataTypes: pluginDefinition.supportedDataTypes || []
+                }
+            };
+        }
+        
+        return contributions;
     }
 
     /**
@@ -921,7 +1102,7 @@ class PluginManagerV2 {
      * Get system statistics
      */
     getSystemStats() {
-        return {
+        const stats = {
             plugins: {
                 total: this.getTotalPluginCount(),
                 byType: {
@@ -934,6 +1115,28 @@ class PluginManagerV2 {
             resources: this.resourceManager ? this.resourceManager.getResourceStats() : null,
             api: this.api ? this.api.getStats() : null
         };
+        
+        // Add new architecture stats if available
+        if (this.contributionRegistry) {
+            stats.contributions = this.contributionRegistry.getStats();
+        }
+        
+        if (this.commandRegistry) {
+            stats.commands = this.commandRegistry.getStats();
+        }
+        
+        if (this.activationService) {
+            stats.activation = this.activationService.getStats();
+        }
+        
+        if (this.extensionService) {
+            stats.extensionService = this.extensionService.getStats();
+        }
+        
+        stats.extensionContexts = this.extensionContexts.size;
+        stats.newArchitectureEnabled = this.options.enableNewArchitecture;
+        
+        return stats;
     }
 
     /**
@@ -1029,6 +1232,40 @@ class PluginManagerV2 {
         if (this.resourceManager) {
             this.resourceManager.destroy();
         }
+        
+        // Dispose new architecture components
+        if (this.extensionService) {
+            this.extensionService.dispose().catch(console.error);
+            this.extensionService = null;
+        }
+        
+        if (this.contributionRegistry) {
+            this.contributionRegistry.dispose();
+            this.contributionRegistry = null;
+        }
+        
+        if (this.commandRegistry) {
+            this.commandRegistry.dispose();
+            this.commandRegistry = null;
+        }
+        
+        if (this.activationService) {
+            this.activationService.dispose();
+            this.activationService = null;
+        }
+        
+        if (this.pluginBridge) {
+            this.pluginBridge.dispose().catch(console.error);
+            this.pluginBridge = null;
+        }
+        
+        // Dispose extension contexts
+        for (const context of this.extensionContexts.values()) {
+            if (context && typeof context.dispose === 'function') {
+                context.dispose().catch(console.error);
+            }
+        }
+        this.extensionContexts.clear();
         
         // Clear registries
         Object.values(this.pluginRegistry).forEach(registry => registry.clear());
