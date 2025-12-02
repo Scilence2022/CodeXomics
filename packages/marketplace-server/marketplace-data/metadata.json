@@ -93,16 +93,7 @@
         "interaction",
         "visualization"
       ],
-      "dependencies": [
-        {
-          "id": "graph-libs",
-          "version": ">=3.0.0"
-        },
-        {
-          "id": "visualization-engine",
-          "version": ">=2.1.0"
-        }
-      ],
+      "dependencies": [],
       "screenshots": [
         "https://example.com/screenshots/protein-network-1.png"
       ],
