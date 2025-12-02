@@ -828,7 +828,16 @@ class PluginMarketplace {
                 tags: plugin.tags || [],
                 homepage: plugin.homepage,
                 repository: plugin.repository,
-                license: plugin.license
+                license: plugin.license,
+                // Add required fields for visualization plugins
+                ...(plugin.type === 'visualization' ? {
+                    supportedDataTypes: plugin.supportedDataTypes || ['generic'],
+                    executor: plugin.executor || function(data) { return data; }
+                } : {}),
+                // Add required fields for function plugins
+                ...(plugin.type === 'function' ? {
+                    functions: plugin.functions || {}
+                } : {})
             }
         };
     }
