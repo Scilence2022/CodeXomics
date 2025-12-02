@@ -659,9 +659,62 @@ class PluginMarketplace {
      */
     async findPluginInRemoteSource(source, pluginId) {
         try {
-            // Simulate API call
-            const response = await this.simulatePluginDetailsAPI(source, pluginId);
-            return response.plugin;
+            // Try direct endpoint first if available
+            const directUrl = `${source.url}/plugins/${pluginId}`;
+            try {
+                const directResp = await fetch(directUrl, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    signal: AbortSignal.timeout(8000)
+                });
+                if (directResp.ok) {
+                    const plugin = await directResp.json();
+                    if (plugin && plugin.id === pluginId) {
+                        plugin.downloadUrl = plugin.downloadUrl || `${source.url}/plugins/${plugin.id}/${plugin.version}/download`;
+                        plugin.source = source;
+                        return plugin;
+                    }
+                }
+            } catch (e) {
+                // Continue to list fallback
+            }
+
+            // Fallback: query the plugin list and filter by id
+            const listUrl = `${source.url}/plugins`;
+            const response = await fetch(listUrl, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: AbortSignal.timeout(10000)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            // Handle both array and object response shapes from server
+            let plugin = null;
+            if (Array.isArray(data)) {
+                // Direct array format
+                plugin = data.find(p => p && p.id === pluginId) || null;
+            } else if (Array.isArray(data.plugins)) {
+                // Array nested in plugins property
+                plugin = data.plugins.find(p => p && p.id === pluginId) || null;
+            } else if (data.plugins && typeof data.plugins === 'object') {
+                // Object mapping format (current server format)
+                plugin = data.plugins[pluginId] || null;
+            }
+
+            if (!plugin) {
+                return null;
+            }
+
+            // Ensure download URL exists
+            plugin.downloadUrl = plugin.downloadUrl || `${source.url}/plugins/${plugin.id}/${plugin.version}/download`;
+            plugin.source = source;
+
+            return plugin;
         } catch (error) {
             console.warn(`Failed to find plugin ${pluginId} in source ${source.id}:`, error);
             return null;
