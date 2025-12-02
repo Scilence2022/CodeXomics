@@ -1,5 +1,5 @@
 console.log('Executing src/renderer/renderer-modular.js');
-const { ipcRenderer } = require('electron');
+// ipcRenderer is already declared globally by PluginManagementUI.js (loaded earlier)
 const path = require('path');
 
 // Force reload - timestamp: 2025-05-31 15:01
