@@ -6464,7 +6464,6 @@ class GenomeBrowser {
         };
         
         // Open Deep Gene Research window with parameters via IPC
-        const { ipcRenderer } = require('electron');
         ipcRenderer.send('open-deep-gene-research-window', params);
         
         // Update status
@@ -6488,8 +6487,6 @@ class GenomeBrowser {
             }
 
             // Open the Gene Annotation Refine tool window
-            const { ipcRenderer } = require('electron');
-            
             // Send message to main process to open the tool window
             ipcRenderer.send('open-gene-annotation-refine', {
                 gene: selectedGene.name || selectedGene.locusTag,
