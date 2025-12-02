@@ -268,6 +268,68 @@ class PluginManagerV2 {
     }
 
     /**
+     * Uninstall a plugin from the system
+     */
+    async uninstallPlugin(pluginId) {
+        try {
+            console.log(`🗑️ Uninstalling plugin: ${pluginId}`);
+            
+            // Find plugin in registries
+            let pluginType = null;
+            let plugin = null;
+            
+            for (const [type, registry] of Object.entries(this.pluginRegistry)) {
+                if (registry.has(pluginId)) {
+                    pluginType = type;
+                    plugin = registry.get(pluginId);
+                    break;
+                }
+            }
+            
+            if (!plugin) {
+                throw new Error(`Plugin ${pluginId} not found`);
+            }
+            
+            // Dispose extension context if exists (new architecture)
+            if (this.extensionContexts.has(pluginId)) {
+                const context = this.extensionContexts.get(pluginId);
+                if (context.subscriptions) {
+                    context.subscriptions.forEach(disposable => {
+                        if (disposable.dispose) disposable.dispose();
+                    });
+                }
+                this.extensionContexts.delete(pluginId);
+            }
+            
+            // Remove from registry
+            this.pluginRegistry[pluginType].delete(pluginId);
+            
+            // Remove metadata and executors
+            this.pluginMetadata.delete(pluginId);
+            this.pluginExecutors.delete(pluginId);
+            
+            // Remove from usage stats
+            this.metrics.pluginUsageStats.delete(pluginId);
+            
+            // Emit uninstall event
+            this.emitEvent('plugin-uninstalled', { pluginId, type: pluginType });
+            
+            console.log(`✅ Plugin ${pluginId} uninstalled successfully`);
+            
+            return {
+                success: true,
+                pluginId,
+                type: pluginType,
+                uninstalledAt: Date.now()
+            };
+            
+        } catch (error) {
+            console.error(`❌ Failed to uninstall plugin ${pluginId}:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Enhanced plugin registration with validation and metadata
      */
     async registerPlugin(pluginId, pluginDefinition) {

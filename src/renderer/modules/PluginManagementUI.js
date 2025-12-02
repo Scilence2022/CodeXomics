@@ -798,6 +798,11 @@ class PluginManagementUI {
                         <i class="fas ${statusClass === 'enabled' ? 'fa-pause' : 'fa-play'}"></i>
                         ${statusClass === 'enabled' ? 'Disable' : 'Enable'}
                     </button>
+                    <button class="btn btn-sm btn-danger" onclick="pluginManagementUI.uninstallPlugin('${pluginId}', '${type}')" 
+                            title="Uninstall plugin">
+                        <i class="fas fa-trash"></i>
+                        Uninstall
+                    </button>
                 </div>
             </div>
             <div class="plugin-description">
@@ -939,6 +944,57 @@ class PluginManagementUI {
         
         // Debug logging
         console.log(`🔧 Plugin ${pluginId} toggled: ${action}, saved: ${saveSuccess}`);
+    }
+
+    /**
+     * Uninstall a plugin from the system
+     */
+    async uninstallPlugin(pluginId, type) {
+        // Confirm uninstallation
+        const plugin = type === 'function' 
+            ? this.pluginManager.pluginRegistry.function.get(pluginId)
+            : type === 'visualization'
+            ? this.pluginManager.pluginRegistry.visualization.get(pluginId)
+            : this.pluginManager.pluginRegistry.utility?.get(pluginId);
+        
+        if (!plugin) {
+            this.showMessage(`Plugin "${pluginId}" not found`, 'error');
+            return;
+        }
+        
+        const confirmed = confirm(
+            `Are you sure you want to uninstall "${plugin.name}"?\n\n` +
+            `This will remove the plugin from the system. This action cannot be undone.`
+        );
+        
+        if (!confirmed) {
+            return;
+        }
+        
+        try {
+            console.log(`🗑️ Uninstalling plugin: ${pluginId}`);
+            
+            // Call PluginManagerV2 uninstall method
+            await this.pluginManager.uninstallPlugin(pluginId);
+            
+            // Remove from local storage plugin states
+            if (this.settings.pluginStates && this.settings.pluginStates[pluginId]) {
+                delete this.settings.pluginStates[pluginId];
+                this.saveSettingsToStorage();
+            }
+            
+            // Refresh UI
+            this.refreshPluginLists();
+            
+            // Show success message
+            this.showMessage(`Plugin "${plugin.name}" has been uninstalled successfully`, 'success');
+            
+            console.log(`✅ Plugin ${pluginId} uninstalled successfully`);
+            
+        } catch (error) {
+            console.error(`❌ Failed to uninstall plugin ${pluginId}:`, error);
+            this.showMessage(`Failed to uninstall plugin: ${error.message}`, 'error');
+        }
     }
 
     /**
