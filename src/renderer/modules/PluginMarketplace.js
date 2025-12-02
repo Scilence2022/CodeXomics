@@ -121,7 +121,7 @@ class PluginMarketplace {
     }
 
     /**
-     * Load installed plugins registry
+     * Load installed plugins registry and restore them to PluginManagerV2
      */
     async loadInstalledPlugins() {
         const installedData = this.configManager?.get('marketplace.installed') || {};
@@ -138,7 +138,73 @@ class PluginMarketplace {
             });
         }
         
-        console.log(`📋 Loaded ${this.installedPlugins.size} installed plugins`);
+        console.log(`📋 Loaded ${this.installedPlugins.size} installed plugins from registry`);
+        
+        // Restore installed plugins to PluginManagerV2
+        await this.restoreInstalledPlugins();
+    }
+    
+    /**
+     * Restore installed plugins by re-registering them with PluginManagerV2
+     */
+    async restoreInstalledPlugins() {
+        if (this.installedPlugins.size === 0) {
+            console.log('📋 No installed plugins to restore');
+            return;
+        }
+        
+        console.log(`🔄 Restoring ${this.installedPlugins.size} installed plugins to PluginManagerV2...`);
+        
+        let restoredCount = 0;
+        let failedCount = 0;
+        
+        for (const [pluginId, pluginInfo] of this.installedPlugins) {
+            try {
+                // Check if plugin is already registered
+                const existingPlugin = this.pluginManager.getPlugin(pluginId);
+                if (existingPlugin) {
+                    console.log(`✅ Plugin ${pluginId} already registered`);
+                    restoredCount++;
+                    continue;
+                }
+                
+                // Get plugin manifest from stored data
+                const manifest = pluginInfo.manifest || {
+                    id: pluginId,
+                    name: pluginInfo.name || pluginId,
+                    description: pluginInfo.description || '',
+                    version: pluginInfo.version,
+                    author: pluginInfo.author || 'Unknown',
+                    category: pluginInfo.category || 'general',
+                    type: pluginInfo.type || 'function',
+                    dependencies: pluginInfo.dependencies || [],
+                    tags: pluginInfo.tags || [],
+                    homepage: pluginInfo.homepage || '',
+                    repository: pluginInfo.repository || '',
+                    license: pluginInfo.license || 'Unknown',
+                    // Type-specific fields
+                    ...(pluginInfo.type === 'visualization' ? {
+                        supportedDataTypes: pluginInfo.supportedDataTypes || ['generic'],
+                        executor: pluginInfo.executor || function(data) { return data; }
+                    } : {}),
+                    ...(pluginInfo.type === 'function' ? {
+                        functions: pluginInfo.functions || {}
+                    } : {})
+                };
+                
+                // Re-register plugin with PluginManagerV2
+                await this.pluginManager.registerPlugin(pluginId, manifest);
+                
+                console.log(`✅ Restored plugin: ${pluginId}`);
+                restoredCount++;
+                
+            } catch (error) {
+                console.error(`❌ Failed to restore plugin ${pluginId}:`, error);
+                failedCount++;
+            }
+        }
+        
+        console.log(`✅ Plugin restoration complete: ${restoredCount} restored, ${failedCount} failed`);
     }
 
     /**
@@ -741,20 +807,49 @@ class PluginMarketplace {
     }
 
     /**
-     * Register installed plugin
+     * Register installed plugin with complete manifest data
      */
     registerInstalledPlugin(plugin, installResult) {
+        // Get complete manifest from plugin manager if available
+        const installedPlugin = this.pluginManager.getPlugin(plugin.id);
+        const manifest = installedPlugin || plugin;
+        
         this.installedPlugins.set(plugin.id, {
             id: plugin.id,
             version: plugin.version,
             source: plugin.source?.id || 'unknown',
             installedAt: installResult.installedAt,
             dependencies: plugin.dependencies || [],
-            autoUpdate: true
+            autoUpdate: true,
+            // Store complete manifest data for restoration
+            manifest: {
+                id: manifest.id,
+                name: manifest.name,
+                description: manifest.description,
+                version: manifest.version,
+                author: manifest.author,
+                category: manifest.category,
+                type: manifest.type,
+                dependencies: manifest.dependencies || [],
+                tags: manifest.tags || [],
+                homepage: manifest.homepage,
+                repository: manifest.repository,
+                license: manifest.license,
+                // Type-specific fields
+                ...(manifest.type === 'visualization' ? {
+                    supportedDataTypes: manifest.supportedDataTypes || ['generic'],
+                    executor: manifest.executor
+                } : {}),
+                ...(manifest.type === 'function' ? {
+                    functions: manifest.functions || {}
+                } : {})
+            }
         });
         
-        // Save to config
+        // Save to config immediately
         this.saveInstalledPluginsRegistry();
+        
+        console.log(`💾 Saved ${plugin.id} to installed plugins registry`);
     }
 
     /**

@@ -983,6 +983,13 @@ class PluginManagementUI {
                 this.saveSettingsToStorage();
             }
             
+            // Remove from marketplace installed registry
+            if (this.pluginManager.marketplace) {
+                this.pluginManager.marketplace.installedPlugins.delete(pluginId);
+                this.pluginManager.marketplace.saveInstalledPluginsRegistry();
+                console.log(`💾 Removed ${pluginId} from marketplace registry`);
+            }
+            
             // Refresh UI
             this.refreshPluginLists();
             
