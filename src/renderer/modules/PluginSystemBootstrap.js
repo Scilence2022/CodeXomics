@@ -1,27 +1,27 @@
 /**
- * PluginSystemBootstrap - Modern plugin system initialization for GenomeExplorer
- * Provides clean startup and initialization for PluginManagerV2 with marketplace
+ * PluginSystemBootstrap - Modern extension system initialization for GenomeExplorer
+ * Provides clean startup and initialization for the VS Code-inspired extension system
  */
 class PluginSystemBootstrap {
     constructor() {
         this.isInitialized = false;
         this.initializationPromise = null;
         this.requiredModules = [
-            "PluginAPI",
-            "PluginResourceManager", 
-            "PluginMarketplace",
-            "PluginDependencyResolver",
-            "PluginSecurityValidator",
-            "PluginUpdateManager",
-            "PluginManagerV2",
-            "PluginMarketplaceUI"
+            "ExtensionManager",
+            "ExtensionHost",
+            "ExtensionAPIProxy",
+            "RPCProtocol",
+            "ExtensionContext",
+            "ExtensionManifest",
+            "SecurityManager",
+            "LifecycleManager"
         ];
         
         console.log("🚀 PluginSystemBootstrap initialized");
     }
 
     /**
-     * Initialize the complete plugin system
+     * Initialize the complete extension system
      */
     async initialize(app, configManager = null) {
         if (this.initializationPromise) {
@@ -37,63 +37,49 @@ class PluginSystemBootstrap {
      */
     async _performInitialization(app, configManager) {
         try {
-            console.log("🔧 Starting PluginManagerV2 system initialization...");
+            console.log("🔧 Starting VS Code-inspired extension system initialization...");
 
-            // 1. Load all required modules
-            await this.loadAllModules();
+            // 1. Import all required modules
+            const ExtensionManager = require('./extensions/ExtensionManager');
             
-            // 2. Verify all modules are available
-            this.verifyModulesLoaded();
-            
-            // 3. Initialize PluginManagerV2
-            const pluginManager = new PluginManagerV2(app, configManager, {
-                enableResourceManagement: true,
+            // 2. Initialize the new ExtensionManager
+            const extensionManager = new ExtensionManager(app, configManager, {
+                enableExtensionHost: true,
                 enableMarketplace: true,
-                enableSecurityValidation: true,
-                enableDependencyResolution: true,
                 enableAutoUpdates: true,
-                enableCaching: true
+                enableSecurityValidation: true
             });
 
-            // 4. Wait for complete initialization
-            await new Promise(resolve => {
-                const checkInit = () => {
-                    if (pluginManager.isInitialized) {
-                        resolve();
-                    } else {
-                        setTimeout(checkInit, 100);
-                    }
-                };
-                setTimeout(checkInit, 100);
-            });
+            // 3. Initialize the extension system
+            await extensionManager.initialize();
 
-            // 5. Initialize Plugin Management UI
-            const pluginManagementUI = new PluginManagementUI(pluginManager, configManager);
-            
-            // 6. Set global references
+            // 4. Set global references
             if (typeof window !== "undefined") {
-                window.pluginManagerV2 = pluginManager;
-                window.pluginManagementUI = pluginManagementUI;
+                window.extensionManager = extensionManager;
+                window.pluginManagerV2 = extensionManager; // Keep backwards compatibility
             }
 
             this.isInitialized = true;
-            console.log("✅ PluginManagerV2 system initialization complete");
+            console.log("✅ VS Code-inspired extension system initialization complete");
             
             return {
-                pluginManager,
-                pluginManagementUI,
+                extensionManager,
                 success: true,
-                message: "Plugin system initialized successfully"
+                message: "Extension system initialized successfully"
             };
 
         } catch (error) {
-            console.error("❌ Plugin system initialization failed:", error);
-            throw new Error(`Plugin system initialization failed: ${error.message}`);
+            console.error("❌ Extension system initialization failed:", error);
+            throw new Error(`Extension system initialization failed: ${error.message}`);
         }
     }
 }
 
 // Export for use
-if (typeof window !== "undefined") {
+if (typeof module !== "undefined" && module.exports) {
+    // CommonJS export for Node.js testing
+    module.exports = PluginSystemBootstrap;
+} else if (typeof window !== "undefined") {
+    // Browser export for global access
     window.PluginSystemBootstrap = PluginSystemBootstrap;
 }

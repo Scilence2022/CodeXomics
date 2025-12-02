@@ -218,66 +218,85 @@ class ChatManager {
      */
     initializePluginManager() {
         try {
-            // Check if PluginManagerV2 is already available globally
-            if (typeof PluginManagerV2 !== 'undefined') {
-                this.pluginManager = new PluginManagerV2(this.app, this.configManager);
-                // PluginManagerV2 integrated successfully from global
-                
-                // Listen to enhanced plugin events
-                this.pluginManager.on('system-initialized', (data) => {
-                    // Plugin system initialized
-                });
-                
-                this.pluginManager.on('function-executed', (data) => {
-                    // Plugin function executed
-                });
-                
-                this.pluginManager.on('function-error', (data) => {
-                    // Plugin function error
-                });
-                
-                this.pluginManager.on('plugin-registered', (data) => {
-                    // Plugin registered
-                });
-                
+            // Check if ExtensionManager is already available globally
+            if (typeof window !== 'undefined' && window.extensionManager) {
+                this.pluginManager = window.extensionManager;
+                // Extension system integrated successfully from global
+                this.setupPluginManagerEvents();
+                console.log('✅ Extension system already initialized globally');
+            } else if (typeof ExtensionManager !== 'undefined') {
+                // ExtensionManager available in scope
+                this.pluginManager = new ExtensionManager(this.app, this.configManager);
+                this.setupPluginManagerEvents();
+                console.log('✅ ExtensionManager initialized from scope');
             } else {
-                // PluginManagerV2 not available, loading dynamically...
-                this.loadPluginManager();
+                // ExtensionManager not available, loading dynamically...
+                this.loadExtensionManager();
             }
         } catch (error) {
-            // Failed to initialize PluginManagerV2
+            // Failed to initialize extension system
+            console.error('❌ Failed to initialize extension system:', error);
         }
+    }
+
+    setupPluginManagerEvents() {
+        // Listen to extension events
+        this.pluginManager.on('system-initialized', (data) => {
+            // Extension system initialized
+        });
+        
+        this.pluginManager.on('function-executed', (data) => {
+            // Extension function executed
+        });
+        
+        this.pluginManager.on('function-error', (data) => {
+            // Extension function error
+        });
+        
+        this.pluginManager.on('plugin-registered', (data) => {
+            // Extension registered
+        });
+        
+        this.pluginManager.on('extension-activated', (data) => {
+            // Extension activated
+        });
     }
 
     /**
      * Load Plugin Manager V2 dynamically
      */
     async loadPluginManager() {
+        // Deprecated - use loadExtensionManager instead
+        console.warn('loadPluginManager is deprecated, using loadExtensionManager instead');
+        await this.loadExtensionManager();
+    }
+
+    /**
+     * Load Extension Manager dynamically
+     */
+    async loadExtensionManager() {
         try {
-            // Load new plugin system files in correct order
-            await this.loadScript('modules/PluginAPI.js');
-            await this.loadScript('modules/PluginResourceManager.js');
-            await this.loadScript('modules/PluginMarketplace.js');
-            await this.loadScript('modules/PluginDependencyResolver.js');
-            await this.loadScript('modules/PluginSecurityValidator.js');
-            await this.loadScript('modules/PluginUpdateManager.js');
-            await this.loadScript('modules/PluginManagerV2.js');
+            // Load ExtensionManager dynamically
+            const ExtensionManager = require('./extensions/ExtensionManager');
+            this.pluginManager = new ExtensionManager(this.app, this.configManager);
             
-            // Load supporting files
-            await this.loadScript('modules/PluginUtils.js');
-            await this.loadScript('modules/PluginImplementations.js');
-            await this.loadScript('modules/PluginVisualization.js');
+            // Initialize the extension system
+            await this.pluginManager.initialize();
             
-            // Initialize after loading
-            if (typeof PluginManagerV2 !== 'undefined') {
-                this.pluginManager = new PluginManagerV2(this.app, this.configManager);
-                // PluginManagerV2 loaded and initialized successfully
-            } else {
-                throw new Error('PluginManagerV2 failed to load');
+            // Set up events
+            this.setupPluginManagerEvents();
+            
+            // Set global reference for consistency
+            if (typeof window !== 'undefined') {
+                window.extensionManager = this.pluginManager;
+                window.pluginManagerV2 = this.pluginManager; // Keep backwards compatibility
             }
+            
+            console.log('✅ Extension system loaded and initialized successfully');
         } catch (error) {
-            // Failed to load PluginManagerV2
-            throw new Error('PluginManagerV2 is required for ChatManager functionality');
+            // Failed to load ExtensionManager
+            console.error('❌ Failed to load ExtensionManager:', error);
+            throw new Error('Extension system is required for ChatManager functionality');
         }
     }
 
