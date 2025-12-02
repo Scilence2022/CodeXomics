@@ -819,9 +819,16 @@ class PluginMarketplace {
             manifest: {
                 id: plugin.id,
                 name: plugin.name,
+                description: plugin.description,
                 version: plugin.version,
+                author: plugin.author,
+                category: plugin.category,
                 type: plugin.type,
-                dependencies: plugin.dependencies
+                dependencies: plugin.dependencies || [],
+                tags: plugin.tags || [],
+                homepage: plugin.homepage,
+                repository: plugin.repository,
+                license: plugin.license
             }
         };
     }
