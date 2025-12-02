@@ -128,15 +128,23 @@ Download the latest version (v0.523beta) for your platform:
 git clone https://github.com/Scilence2022/CodeXomics.git
 cd CodeXomics
 
-# Install dependencies
+# Install dependencies (includes workspace packages)
 npm install
 
 # Run in development mode
 npm start
 
+# Run with marketplace server
+npm run start-with-marketplace
+
+# Run full stack (app + MCP + marketplace)
+npm run start-full
+
 # Build for production
 npm run build
 ```
+
+> **Note**: CodeXomics uses npm workspaces for better code organization. See [WORKSPACE_QUICKSTART.md](WORKSPACE_QUICKSTART.md) for detailed workspace commands.
 
 ## 📖 Quick Start
 

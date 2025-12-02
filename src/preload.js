@@ -79,6 +79,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Window management
   closeWindow: () => ipcRenderer.send('close-resource-manager'),
   
+  // Plugin management APIs
+  scanPluginDirectory: () => ipcRenderer.invoke('scan-plugin-directory'),
+  readPluginFile: (filePath) => ipcRenderer.invoke('read-plugin-file', filePath),
+  loadPluginMetadata: (pluginPath) => ipcRenderer.invoke('load-plugin-metadata', pluginPath),
+  
   // Event listeners
   onResourceUpdate: (callback) => {
     ipcRenderer.on('resource-update', callback);

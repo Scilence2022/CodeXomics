@@ -944,44 +944,95 @@ class PluginManagementUI {
         const container = document.getElementById('pluginDirectoryList');
         if (!container) return;
 
-        container.innerHTML = '<div class="loading">Loading available plugins...</div>';
+        container.innerHTML = '<div class="loading">Scanning plugin directory...</div>';
 
         try {
-            // This would typically scan the plugin directory
-            // For now, show example plugins that could be loaded
-            const availablePlugins = [
-                {
-                    id: 'sequence-alignment-plugin',
-                    name: 'Sequence Alignment Plugin',
-                    description: 'Advanced sequence alignment and comparison tools',
-                    version: '1.0.0',
-                    author: 'Community',
-                    file: 'SequenceAlignmentPlugin.js'
-                },
-                {
-                    id: 'phylogenetic-analysis-plugin',
-                    name: 'Phylogenetic Analysis Plugin',
-                    description: 'Enhanced phylogenetic tree construction and analysis',
-                    version: '1.2.0',
-                    author: 'Research Team',
-                    file: 'PhylogeneticAnalysisPlugin.js'
-                }
-            ];
+            // Scan plugin directories for available plugins
+            const scanResult = await window.electronAPI.scanPluginDirectory();
+            
+            if (!scanResult.success) {
+                throw new Error(scanResult.error || 'Failed to scan plugin directory');
+            }
+            
+            const availablePlugins = scanResult.plugins || [];
+            
+            console.log(`📂 Found ${availablePlugins.length} plugins in directory`);
+            console.log('Plugin paths:', scanResult.paths);
+            
+            // Filter out already installed/registered plugins
+            const installedPluginIds = new Set();
+            if (this.pluginManager && this.pluginManager.getAllPlugins) {
+                const installedPlugins = this.pluginManager.getAllPlugins();
+                installedPlugins.forEach(plugin => {
+                    if (plugin.id) installedPluginIds.add(plugin.id);
+                });
+            }
+            
+            // Show only plugins that aren't already loaded
+            const unloadedPlugins = availablePlugins.filter(plugin => 
+                !installedPluginIds.has(plugin.id)
+            );
 
             container.innerHTML = '';
             
             if (availablePlugins.length === 0) {
-                container.innerHTML = '<div class="no-plugins">No additional plugins available in directory</div>';
+                container.innerHTML = `
+                    <div class="no-plugins">
+                        <i class="fas fa-folder-open" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
+                        <p>No external plugins found in plugin directory</p>
+                        <small>Plugin directories:</small>
+                        <small style="display: block; margin-top: 5px; font-family: monospace;">${scanResult.paths?.builtinPluginsPath || 'N/A'}</small>
+                        <small style="display: block; font-family: monospace;">${scanResult.paths?.userPluginsPath || 'N/A'}</small>
+                        <div style="margin-top: 15px;">
+                            <p style="color: #666;">External plugins can be:</p>
+                            <ul style="text-align: left; display: inline-block; margin-top: 10px;">
+                                <li>Plugin directories with <code>plugin.json</code> manifest</li>
+                                <li>Standalone <code>.js</code> files with JSDoc metadata</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (unloadedPlugins.length === 0 && availablePlugins.length > 0) {
+                container.innerHTML = `
+                    <div class="info-message">
+                        <i class="fas fa-check-circle" style="font-size: 48px; color: #4CAF50; margin-bottom: 10px;"></i>
+                        <p>All ${availablePlugins.length} plugin(s) found in the directory are already loaded</p>
+                        <small>Check the "Installed Plugins" tab to manage them</small>
+                    </div>
+                `;
                 return;
             }
 
-            availablePlugins.forEach(plugin => {
+            // Display plugin statistics
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'plugin-scan-stats';
+            statsDiv.innerHTML = `
+                <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                    <strong>Plugin Scan Results:</strong> 
+                    Found ${availablePlugins.length} plugin(s) | 
+                    ${unloadedPlugins.length} available to install | 
+                    ${availablePlugins.length - unloadedPlugins.length} already loaded
+                </div>
+            `;
+            container.appendChild(statsDiv);
+
+            // Display each available plugin
+            unloadedPlugins.forEach(plugin => {
                 const pluginCard = this.createAvailablePluginCard(plugin);
                 container.appendChild(pluginCard);
             });
 
         } catch (error) {
-            container.innerHTML = '<div class="error">Error loading available plugins</div>';
+            container.innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; opacity: 0.5; margin-bottom: 10px;"></i>
+                    <p>Error loading available plugins</p>
+                    <small>${error.message}</small>
+                </div>
+            `;
             console.error('Error loading available plugins:', error);
         }
     }
@@ -994,6 +1045,36 @@ class PluginManagementUI {
         card.className = 'plugin-card available-plugin';
         card.dataset.pluginId = plugin.id;
 
+        // Prepare function list if available
+        let functionsHtml = '';
+        if (plugin.functions && plugin.functions.length > 0) {
+            const functionList = plugin.functions.slice(0, 5).map(fn => {
+                const funcName = typeof fn === 'string' ? fn : (fn.name || 'unknown');
+                return `<li><code>${funcName}</code></li>`;
+            }).join('');
+            const moreCount = plugin.functions.length > 5 ? plugin.functions.length - 5 : 0;
+            
+            functionsHtml = `
+                <div class="plugin-functions" style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
+                    <strong style="font-size: 13px; color: #555;"><i class="fas fa-code"></i> Functions (${plugin.functions.length}):</strong>
+                    <ul style="margin: 5px 0 0 20px; font-size: 12px; color: #666;">
+                        ${functionList}
+                        ${moreCount > 0 ? `<li style="color: #999;">... and ${moreCount} more</li>` : ''}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        // Prepare plugin type badge
+        const typeBadge = plugin.type === 'builtin' 
+            ? '<span class="badge" style="background: #2196F3; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Built-in Path</span>'
+            : '<span class="badge" style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">User Plugin</span>';
+        
+        // Prepare manifest status
+        const manifestBadge = plugin.hasManifest
+            ? '<span style="color: #4CAF50; font-size: 12px;"><i class="fas fa-check-circle"></i> Has manifest</span>'
+            : '<span style="color: #FF9800; font-size: 12px;"><i class="fas fa-file-code"></i> Standalone file</span>';
+
         card.innerHTML = `
             <div class="plugin-header">
                 <div class="plugin-info">
@@ -1003,9 +1084,10 @@ class PluginManagementUI {
                     </h5>
                     <span class="plugin-version">v${plugin.version}</span>
                     <span class="plugin-status status-available">Available</span>
+                    ${typeBadge}
                 </div>
                 <div class="plugin-actions">
-                    <button class="btn btn-sm btn-success" onclick="pluginManagementUI.installPlugin('${plugin.id}')">
+                    <button class="btn btn-sm btn-success" onclick="pluginManagementUI.installPlugin('${plugin.id}', '${plugin.path}')">
                         <i class="fas fa-download"></i>
                         Install
                     </button>
@@ -1023,7 +1105,9 @@ class PluginManagementUI {
                     <i class="fas fa-file-code"></i>
                     ${plugin.file}
                 </span>
+                ${manifestBadge}
             </div>
+            ${functionsHtml}
         `;
 
         return card;
@@ -1576,8 +1660,41 @@ class PluginManagementUI {
      * Browse plugin directory
      */
     async browsePluginDirectory() {
-        // In a real implementation, this would open a directory dialog
-        this.showMessage('Directory browser would open here', 'info');
+        try {
+            // Get current plugin paths
+            const result = await window.electronAPI.scanPluginDirectory();
+            
+            if (!result.success) {
+                this.showMessage('Failed to access plugin directories', 'error');
+                return;
+            }
+            
+            const paths = result.paths;
+            
+            // Open directory selection dialog
+            const selectedDir = await window.electronAPI.showDirectoryDialog({
+                title: 'Browse Plugin Directory',
+                defaultPath: paths.userPluginsPath || paths.builtinPluginsPath,
+                buttonLabel: 'Open Plugin Directory'
+            });
+            
+            if (selectedDir && !selectedDir.canceled && selectedDir.filePaths.length > 0) {
+                const dirPath = selectedDir.filePaths[0];
+                
+                // Open the directory in the system file explorer
+                await window.electronAPI.openFolderInExplorer(dirPath);
+                
+                this.showMessage(`Opened plugin directory: ${dirPath}`, 'success');
+                
+                // Refresh the plugin list after browsing
+                setTimeout(() => {
+                    this.loadAvailablePlugins();
+                }, 500);
+            }
+        } catch (error) {
+            console.error('Error browsing plugin directory:', error);
+            this.showMessage(`Error: ${error.message}`, 'error');
+        }
     }
 
     /**

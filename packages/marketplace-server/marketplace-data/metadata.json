@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2025-06-27T07:06:32.567Z",
+  "lastUpdated": "2025-12-02T14:57:06.749Z",
   "plugins": {
     "genomic-variant-caller": {
       "id": "genomic-variant-caller",
@@ -42,6 +42,9 @@
       "rating": 4.7,
       "downloads": 15847,
       "lastUpdated": "2024-11-20T10:30:00Z",
+      "status": "published",
+      "submittedBy": "admin",
+      "submittedAt": "2024-11-01T00:00:00Z",
       "changelog": {
         "2.4.1": "Fixed compatibility with latest genome builds",
         "2.4.0": "Added support for structural variants",
@@ -106,6 +109,9 @@
       "rating": 4.9,
       "downloads": 8934,
       "lastUpdated": "2024-11-18T14:22:00Z",
+      "status": "published",
+      "submittedBy": "admin",
+      "submittedAt": "2024-10-15T00:00:00Z",
       "changelog": {
         "1.8.3": "Performance improvements for large networks",
         "1.8.2": "Added new layout algorithms",
@@ -169,6 +175,9 @@
       "rating": 4.6,
       "downloads": 12234,
       "lastUpdated": "2024-11-19T16:45:00Z",
+      "status": "published",
+      "submittedBy": "admin",
+      "submittedAt": "2024-09-20T00:00:00Z",
       "changelog": {
         "3.1.0": "Added batch effect correction",
         "3.0.2": "Improved memory efficiency",
@@ -232,6 +241,9 @@
       "rating": 4.8,
       "downloads": 6789,
       "lastUpdated": "2024-11-17T12:15:00Z",
+      "status": "published",
+      "submittedBy": "admin",
+      "submittedAt": "2024-08-10T00:00:00Z",
       "changelog": {
         "2.7.2": "Bug fixes in bootstrap calculation",
         "2.7.1": "Performance optimization",
@@ -256,9 +268,11 @@
       }
     }
   },
+  "pendingSubmissions": {},
   "stats": {
     "totalPlugins": 4,
     "totalDownloads": 43804,
+    "totalSubmissions": 0,
     "categories": {
       "variant-analysis": 1,
       "network-analysis": 1,

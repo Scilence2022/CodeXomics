@@ -2545,6 +2545,215 @@ ipcMain.handle('check-file-exists', async (event, filePath) => {
 });
 
 /**
+ * Scan plugin directory for all plugin files
+ * Looks for both directories with plugin.json and standalone .js files
+ */
+ipcMain.handle('scan-plugin-directory', async () => {
+  try {
+    const paths = await (async () => {
+      const isDevelopment = !app.isPackaged;
+      if (isDevelopment) {
+        return {
+          isDevelopment,
+          builtinPluginsPath: path.join(__dirname, 'renderer', 'modules', 'Plugins'),
+          userPluginsPath: path.join(__dirname, 'renderer', 'modules', 'Plugins', 'UserInstalled')
+        };
+      } else {
+        return {
+          isDevelopment,
+          builtinPluginsPath: path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins'),
+          userPluginsPath: path.join(app.getPath('userData'), 'plugins')
+        };
+      }
+    })();
+    
+    const plugins = [];
+    
+    // Scan both plugin directories
+    const dirsToScan = [
+      { path: paths.builtinPluginsPath, type: 'builtin' },
+      { path: paths.userPluginsPath, type: 'user' }
+    ];
+    
+    for (const dirInfo of dirsToScan) {
+      if (!fs.existsSync(dirInfo.path)) {
+        continue;
+      }
+      
+      const items = fs.readdirSync(dirInfo.path, { withFileTypes: true });
+      
+      for (const item of items) {
+        const itemPath = path.join(dirInfo.path, item.name);
+        
+        // Check for plugin directories with plugin.json
+        if (item.isDirectory()) {
+          const manifestPath = path.join(itemPath, 'plugin.json');
+          if (fs.existsSync(manifestPath)) {
+            try {
+              const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+              plugins.push({
+                id: manifest.id || item.name,
+                name: manifest.name || item.name,
+                description: manifest.description || 'No description available',
+                version: manifest.version || '1.0.0',
+                author: manifest.author || 'Unknown',
+                category: manifest.category || 'general',
+                type: dirInfo.type,
+                file: item.name,
+                path: itemPath,
+                hasManifest: true,
+                functions: manifest.functions || [],
+                main: manifest.main || 'index.js'
+              });
+            } catch (error) {
+              console.error(`Failed to parse manifest for ${item.name}:`, error);
+            }
+          }
+        }
+        // Check for standalone .js files that might be plugins
+        else if (item.isFile() && item.name.endsWith('.js') && item.name !== 'index.js') {
+          try {
+            // Read first few lines to check for plugin metadata
+            const content = fs.readFileSync(itemPath, 'utf8');
+            const lines = content.split('\n').slice(0, 50);
+            
+            // Look for plugin metadata in comments or class definition
+            let pluginName = item.name.replace('.js', '');
+            let pluginDescription = 'JavaScript plugin file';
+            let pluginVersion = '1.0.0';
+            let pluginAuthor = 'Unknown';
+            
+            // Try to extract metadata from comments
+            for (const line of lines) {
+              const nameMatch = line.match(/@name\s+(.+)/);
+              const descMatch = line.match(/@description\s+(.+)/);
+              const versionMatch = line.match(/@version\s+(.+)/);
+              const authorMatch = line.match(/@author\s+(.+)/);
+              
+              if (nameMatch) pluginName = nameMatch[1].trim();
+              if (descMatch) pluginDescription = descMatch[1].trim();
+              if (versionMatch) pluginVersion = versionMatch[1].trim();
+              if (authorMatch) pluginAuthor = authorMatch[1].trim();
+            }
+            
+            plugins.push({
+              id: item.name.replace('.js', ''),
+              name: pluginName,
+              description: pluginDescription,
+              version: pluginVersion,
+              author: pluginAuthor,
+              category: 'general',
+              type: dirInfo.type,
+              file: item.name,
+              path: itemPath,
+              hasManifest: false,
+              isStandalone: true
+            });
+          } catch (error) {
+            console.error(`Failed to read plugin file ${item.name}:`, error);
+          }
+        }
+      }
+    }
+    
+    return {
+      success: true,
+      plugins,
+      paths: {
+        builtinPluginsPath: paths.builtinPluginsPath,
+        userPluginsPath: paths.userPluginsPath
+      }
+    };
+  } catch (error) {
+    console.error('Failed to scan plugin directory:', error);
+    return {
+      success: false,
+      error: error.message,
+      plugins: []
+    };
+  }
+});
+
+/**
+ * Load detailed metadata for a specific plugin
+ */
+ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
+  try {
+    const stats = fs.statSync(pluginPath);
+    
+    if (stats.isDirectory()) {
+      // Try to load plugin.json
+      const manifestPath = path.join(pluginPath, 'plugin.json');
+      if (fs.existsSync(manifestPath)) {
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        return { success: true, metadata: manifest };
+      }
+      
+      // Try to load from package.json
+      const packagePath = path.join(pluginPath, 'package.json');
+      if (fs.existsSync(packagePath)) {
+        const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+        return {
+          success: true,
+          metadata: {
+            id: pkg.name,
+            name: pkg.name,
+            description: pkg.description || 'No description',
+            version: pkg.version,
+            author: pkg.author || 'Unknown',
+            main: pkg.main || 'index.js'
+          }
+        };
+      }
+    } else if (stats.isFile() && pluginPath.endsWith('.js')) {
+      // Parse JavaScript file for metadata
+      const content = fs.readFileSync(pluginPath, 'utf8');
+      const lines = content.split('\n');
+      
+      const metadata = {
+        id: path.basename(pluginPath, '.js'),
+        name: path.basename(pluginPath, '.js'),
+        description: 'No description',
+        version: '1.0.0',
+        author: 'Unknown',
+        functions: []
+      };
+      
+      // Extract metadata from JSDoc comments
+      for (let i = 0; i < Math.min(100, lines.length); i++) {
+        const line = lines[i];
+        if (line.includes('@name')) metadata.name = line.split('@name')[1].trim();
+        if (line.includes('@description')) metadata.description = line.split('@description')[1].trim();
+        if (line.includes('@version')) metadata.version = line.split('@version')[1].trim();
+        if (line.includes('@author')) metadata.author = line.split('@author')[1].trim();
+      }
+      
+      // Try to extract function names
+      const functionMatches = content.match(/(?:async\s+)?function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?function|(?:async\s+)?(\w+)\s*\(/g);
+      if (functionMatches) {
+        metadata.functions = functionMatches.map(match => {
+          const name = match.match(/\w+/g)[match.includes('function') ? 1 : 0];
+          return { name };
+        });
+      }
+      
+      return { success: true, metadata };
+    }
+    
+    return {
+      success: false,
+      error: 'Not a valid plugin file or directory'
+    };
+  } catch (error) {
+    console.error('Failed to load plugin metadata:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+/**
  * Extract plugin zip file
  */
 ipcMain.handle('extract-plugin-zip', async (event, zipPath) => {

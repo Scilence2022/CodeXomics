@@ -115,6 +115,11 @@ class PluginMarketplaceConfig {
         return this.currentConfig.submission || {};
     }
 
+    updateSubmissionConfig(newSubmissionConfig) {
+        this.currentConfig.submission = { ...this.currentConfig.submission, ...newSubmissionConfig };
+        return this.saveConfig();
+    }
+
     async testSource(source) {
         try {
             console.log(`🔍 Testing connection to ${source.name}...`);
