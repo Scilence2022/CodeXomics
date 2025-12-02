@@ -4591,8 +4591,8 @@ class ChatManager {
                 // 更新思考过程 - 添加更详细的信息
                 if (this.showThinkingProcess) {
                     this.updateThinkingMessage(`<br><br>🤖 <strong>Round ${currentRound}/${maxRounds}</strong>`);
-                    this.updateThinkingMessage(`<br>📤 Sending request to LLM...`);
-                    this.updateThinkingMessage(`<br>📚 Conversation history: ${conversationHistory.length} messages`);
+                    this.updateThinkingMessage(`📤 Sending request to LLM...`);
+                    this.updateThinkingMessage(`📚 Conversation history: ${conversationHistory.length} messages`);
                 }
                 
                 // Send conversation history to configured LLM
@@ -4616,7 +4616,7 @@ class ChatManager {
                 
                 // 显示LLM的思考过程（如果响应包含思考标签）
                 if (this.showThinkingProcess) {
-                    this.updateThinkingMessage(`<br>✅ Response received (${response ? response.length : 0} chars)`);
+                    this.updateThinkingMessage(`✅ Response received (${response ? response.length : 0} chars)`);
                     this.displayLLMThinking(response);
                 }
                 
@@ -4633,9 +4633,9 @@ class ChatManager {
                 // Display tool detection information
                 if (this.showThinkingProcess) {
                     if (toolsToExecute.length > 0) {
-                        this.updateThinkingMessage(`<br>🔍 Detected ${toolsToExecute.length} tool call(s): ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
+                        this.updateThinkingMessage(`🔍 Detected ${toolsToExecute.length} tool call(s): ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
                     } else {
-                        this.updateThinkingMessage(`<br>💬 No tool calls detected - conversational response`);
+                        this.updateThinkingMessage(`💬 No tool calls detected - conversational response`);
                     }
                 }
                 
@@ -4645,7 +4645,7 @@ class ChatManager {
                     const shouldAllow = this.shouldAllowToolExecution(tool, conversationHistory, currentRound, []);
                     if (!shouldAllow) {
                         console.log(`🚫 [Policy] Blocking execution of: ${tool.tool_name}`);
-                        this.showThinkingProcess && this.updateThinkingMessage(`<br>🚫 Policy blocked: ${tool.tool_name}`);
+                        this.showThinkingProcess && this.updateThinkingMessage(`🚫 Policy blocked: ${tool.tool_name}`);
                         return false;
                     }
                     console.log(`✅ [Policy] Allowing execution of: ${tool.tool_name}`);
@@ -4653,7 +4653,7 @@ class ChatManager {
                 });
                 
                 if (this.showThinkingProcess && toolsBeforeFilter > toolsToExecute.length) {
-                    this.updateThinkingMessage(`<br>⚠️ Filtered ${toolsBeforeFilter - toolsToExecute.length} tool(s) by execution policy`);
+                    this.updateThinkingMessage(`⚠️ Filtered ${toolsBeforeFilter - toolsToExecute.length} tool(s) by execution policy`);
                 }
                 
                 // CRITICAL FIX: If current response has no tools, check previous assistant messages 
@@ -4741,7 +4741,7 @@ class ChatManager {
                     // Show thinking process for tool execution
                     if (this.showThinkingProcess) {
                         this.updateThinkingMessage(`<br><br>⚡ <strong>Preparing tool execution...</strong>`);
-                        this.updateThinkingMessage(`<br>🛠️ Tools to execute: ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
+                        this.updateThinkingMessage(`🛠️ Tools to execute: ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
                     }
                     
                     // 显示工具调用信息
@@ -4752,7 +4752,7 @@ class ChatManager {
                         
                         // Show execution start in thinking process
                         if (this.showThinkingProcess) {
-                            this.updateThinkingMessage(`<br>🚀 Starting execution...`);
+                            this.updateThinkingMessage(`🚀 Starting execution...`);
                         }
                         
                         // 检查是否被中止
@@ -4857,14 +4857,14 @@ class ChatManager {
                         if (this.showThinkingProcess) {
                             const successCount = toolResults.filter(r => r.success).length;
                             const failCount = toolResults.filter(r => !r.success).length;
-                            this.updateThinkingMessage(`<br>✅ Execution completed: ${successCount} successful, ${failCount} failed`);
+                            this.updateThinkingMessage(`✅ Execution completed: ${successCount} successful, ${failCount} failed`);
                             
                             // Show details for each tool
                             toolResults.forEach(result => {
                                 if (result.success) {
-                                    this.updateThinkingMessage(`<br>&nbsp;&nbsp;✅ ${result.tool}: Success`);
+                                    this.updateThinkingMessage(`&nbsp;&nbsp;✅ ${result.tool}: Success`);
                                 } else {
-                                    this.updateThinkingMessage(`<br>&nbsp;&nbsp;❌ ${result.tool}: Failed - ${result.error}`);
+                                    this.updateThinkingMessage(`&nbsp;&nbsp;❌ ${result.tool}: Failed - ${result.error}`);
                                 }
                             });
                         }
@@ -17198,7 +17198,9 @@ ${this.getPluginSystemInfo()}`;
         if (thinkingDiv) {
             const thinkingContent = thinkingDiv.querySelector('.thinking-content');
             if (thinkingContent) {
-                thinkingContent.innerHTML += '<br>' + message;
+                // Add line break only if message doesn't start with &nbsp; (indented text)
+                const separator = message.startsWith('&nbsp;') ? '\n' : '\n';
+                thinkingContent.textContent += separator + message;
             }
         } else {
             this.addThinkingMessage(message);
@@ -17221,25 +17223,26 @@ ${this.getPluginSystemInfo()}`;
             const thinkingContent = thinkingMatch[1].trim();
             // 格式化思考内容，使其更易读
             const formattedThinking = this.formatThinkingContent(thinkingContent);
-            this.updateThinkingMessage(`<br>💭 <strong>Model reasoning:</strong><br>&nbsp;&nbsp;${formattedThinking.replace(/\n/g, '<br>&nbsp;&nbsp;')}`);
+            this.updateThinkingMessage(`💭 <strong>Model reasoning:</strong>`);
+            this.updateThinkingMessage(`&nbsp;&nbsp;${formattedThinking.replace(/\n/g, '\n&nbsp;&nbsp;')}`);
         }
         
         // 检查是否有工具调用，并显示参数提取过程
         if (response.includes('tool_name') || response.includes('function_name')) {
-            this.updateThinkingMessage(`<br>🔧 Analyzing tool call structure...`);
+            this.updateThinkingMessage(`🔧 Analyzing tool call structure...`);
             
             // Extract and display parameter information
             try {
                 const toolCall = this.parseToolCall(response);
                 if (toolCall) {
                     const paramCount = Object.keys(toolCall.parameters || {}).length;
-                    this.updateThinkingMessage(`<br>&nbsp;&nbsp;✅ Tool identified: <strong>${toolCall.tool_name}</strong>`);
-                    this.updateThinkingMessage(`<br>&nbsp;&nbsp;📊 Parameters extracted: ${paramCount} parameter(s)`);
+                    this.updateThinkingMessage(`&nbsp;&nbsp;✅ Tool identified: <strong>${toolCall.tool_name}</strong>`);
+                    this.updateThinkingMessage(`&nbsp;&nbsp;📊 Parameters extracted: ${paramCount} parameter(s)`);
                     
                     // Display parameter details
                     if (paramCount > 0) {
                         const paramKeys = Object.keys(toolCall.parameters);
-                        this.updateThinkingMessage(`<br>&nbsp;&nbsp;🔑 Keys: ${paramKeys.join(', ')}`);
+                        this.updateThinkingMessage(`&nbsp;&nbsp;🔑 Keys: ${paramKeys.join(', ')}`);
                     }
                 }
             } catch (e) {
@@ -17247,9 +17250,9 @@ ${this.getPluginSystemInfo()}`;
             }
         } else if (response && response.length > 0) {
             // No tool call - this is a conversational response
-            this.updateThinkingMessage(`<br>💬 Conversational response generated`);
+            this.updateThinkingMessage(`💬 Conversational response generated`);
             if (response.length > 100) {
-                this.updateThinkingMessage(`<br>&nbsp;&nbsp;📝 Response preview: "${response.substring(0, 100)}..."`);
+                this.updateThinkingMessage(`&nbsp;&nbsp;📝 Response preview: "${response.substring(0, 100)}..."`);
             }
         }
     }

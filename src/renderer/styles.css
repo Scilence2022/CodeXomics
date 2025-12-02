@@ -4212,11 +4212,11 @@ to {
   line-height: 1.4;
   color: #374151;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  /* Override parent word-wrap settings for proper thinking display */
-  white-space: pre;
+  /* Use pre-wrap to preserve line breaks but wrap long lines */
+  white-space: pre-wrap;
   overflow-x: auto;
-  word-wrap: normal;
-  overflow-wrap: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .thinking-process .message-icon {
