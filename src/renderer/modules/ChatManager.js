@@ -4530,12 +4530,26 @@ class ChatManager {
             console.log('🔧 Early completion enabled:', enableEarlyCompletion);
             console.log('🔧 LLM config raw value:', this.configManager.get('llm.functionCallRounds'));
             
-            // 显示思考过程
-            this.showThinkingProcess && this.addThinkingMessage(`🔄 Starting request processing (max rounds: ${maxRounds})`);
+            // 显示详细的思考过程
+            this.showThinkingProcess && this.addThinkingMessage(`🔄 <strong>Starting request processing</strong> (max rounds: ${maxRounds})<br>` +
+                `📝 <strong>User Query:</strong> ${message.substring(0, 200)}${message.length > 200 ? '...' : ''}`);
 
             // Get current studio context
             const context = this.getCurrentContext();
             console.log('Context for LLM:', context);
+            
+            // Display context information
+            if (this.showThinkingProcess && context) {
+                const contextInfo = [];
+                if (context.currentFile) contextInfo.push(`📄 Current file: ${context.currentFile}`);
+                if (context.selectedFeatures && context.selectedFeatures.length > 0) {
+                    contextInfo.push(`🎯 Selected features: ${context.selectedFeatures.length}`);
+                }
+                if (context.genomeLoaded) contextInfo.push(`🧬 Genome loaded: Yes`);
+                if (contextInfo.length > 0) {
+                    this.updateThinkingMessage(`<br>📊 <strong>Current Context:</strong><br>&nbsp;&nbsp;${contextInfo.join('<br>&nbsp;&nbsp;')}`);
+                }
+            }
             
             // Get memory context for conversation
             let memoryContext = null;
@@ -4543,6 +4557,7 @@ class ChatManager {
                 memoryContext = await this.getMemoryContext(message, 'general_chat');
                 if (memoryContext) {
                     console.log('🧠 Retrieved memory context for conversation');
+                    this.showThinkingProcess && this.updateThinkingMessage(`<br>🧠 Memory context retrieved: ${Object.keys(memoryContext).length} memory items`);
                 }
             } catch (error) {
                 console.warn('🧠 Failed to retrieve memory context:', error);
@@ -4573,8 +4588,12 @@ class ChatManager {
                 currentRound++;
                 console.log(`=== FUNCTION CALL ROUND ${currentRound}/${maxRounds} ===`);
                 
-                // 更新思考过程
-                this.showThinkingProcess && this.updateThinkingMessage(`🤖 Round ${currentRound}/${maxRounds} thinking...`);
+                // 更新思考过程 - 添加更详细的信息
+                if (this.showThinkingProcess) {
+                    this.updateThinkingMessage(`<br><br>🤖 <strong>Round ${currentRound}/${maxRounds}</strong>`);
+                    this.updateThinkingMessage(`<br>📤 Sending request to LLM...`);
+                    this.updateThinkingMessage(`<br>📚 Conversation history: ${conversationHistory.length} messages`);
+                }
                 
                 // Send conversation history to configured LLM
                 console.log('Sending to LLM...');
@@ -4596,7 +4615,10 @@ class ChatManager {
                 console.log('========================');
                 
                 // 显示LLM的思考过程（如果响应包含思考标签）
-                this.showThinkingProcess && this.displayLLMThinking(response);
+                if (this.showThinkingProcess) {
+                    this.updateThinkingMessage(`<br>✅ Response received (${response ? response.length : 0} chars)`);
+                    this.displayLLMThinking(response);
+                }
                 
                 // CRITICAL FIX: Check for tool calls FIRST, before task completion
                 // This prevents early completion from skipping tool execution
@@ -4608,16 +4630,31 @@ class ChatManager {
                 // Determine which tools to execute
                 let toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
                 
+                // Display tool detection information
+                if (this.showThinkingProcess) {
+                    if (toolsToExecute.length > 0) {
+                        this.updateThinkingMessage(`<br>🔍 Detected ${toolsToExecute.length} tool call(s): ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
+                    } else {
+                        this.updateThinkingMessage(`<br>💬 No tool calls detected - conversational response`);
+                    }
+                }
+                
                 // Apply intelligent tool execution policies instead of simple re-executable sets
+                const toolsBeforeFilter = toolsToExecute.length;
                 toolsToExecute = toolsToExecute.filter(tool => {
                     const shouldAllow = this.shouldAllowToolExecution(tool, conversationHistory, currentRound, []);
                     if (!shouldAllow) {
                         console.log(`🚫 [Policy] Blocking execution of: ${tool.tool_name}`);
+                        this.showThinkingProcess && this.updateThinkingMessage(`<br>🚫 Policy blocked: ${tool.tool_name}`);
                         return false;
                     }
                     console.log(`✅ [Policy] Allowing execution of: ${tool.tool_name}`);
                     return true;
                 });
+                
+                if (this.showThinkingProcess && toolsBeforeFilter > toolsToExecute.length) {
+                    this.updateThinkingMessage(`<br>⚠️ Filtered ${toolsBeforeFilter - toolsToExecute.length} tool(s) by execution policy`);
+                }
                 
                 // CRITICAL FIX: If current response has no tools, check previous assistant messages 
                 // in conversation history for unexecuted tool calls
@@ -4701,11 +4738,22 @@ class ChatManager {
                     console.log('Tools to execute:', toolsToExecute.map(t => t.tool_name));
                     console.log('==========================');
                     
+                    // Show thinking process for tool execution
+                    if (this.showThinkingProcess) {
+                        this.updateThinkingMessage(`<br><br>⚡ <strong>Preparing tool execution...</strong>`);
+                        this.updateThinkingMessage(`<br>🛠️ Tools to execute: ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
+                    }
+                    
                     // 显示工具调用信息
                     this.showToolCalls && await this.addToolCallMessage(toolsToExecute);
                     
                     try {
                         console.log('Executing tool(s)...');
+                        
+                        // Show execution start in thinking process
+                        if (this.showThinkingProcess) {
+                            this.updateThinkingMessage(`<br>🚀 Starting execution...`);
+                        }
                         
                         // 检查是否被中止
                         if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
@@ -4804,6 +4852,22 @@ class ChatManager {
                         }
                         
                         console.log('Tool execution completed. Results:', toolResults);
+                        
+                        // Show execution results in thinking process
+                        if (this.showThinkingProcess) {
+                            const successCount = toolResults.filter(r => r.success).length;
+                            const failCount = toolResults.filter(r => !r.success).length;
+                            this.updateThinkingMessage(`<br>✅ Execution completed: ${successCount} successful, ${failCount} failed`);
+                            
+                            // Show details for each tool
+                            toolResults.forEach(result => {
+                                if (result.success) {
+                                    this.updateThinkingMessage(`<br>&nbsp;&nbsp;✅ ${result.tool}: Success`);
+                                } else {
+                                    this.updateThinkingMessage(`<br>&nbsp;&nbsp;❌ ${result.tool}: Failed - ${result.error}`);
+                                }
+                            });
+                        }
                         
                         // BENCHMARK INTEGRATION: Track function calls and results for benchmark access
                         if (this.lastExecutionData) {
@@ -17157,12 +17221,36 @@ ${this.getPluginSystemInfo()}`;
             const thinkingContent = thinkingMatch[1].trim();
             // 格式化思考内容，使其更易读
             const formattedThinking = this.formatThinkingContent(thinkingContent);
-            this.updateThinkingMessage(`💭 Model thinking:\n\n${formattedThinking}`);
+            this.updateThinkingMessage(`<br>💭 <strong>Model reasoning:</strong><br>&nbsp;&nbsp;${formattedThinking.replace(/\n/g, '<br>&nbsp;&nbsp;')}`);
         }
         
-        // 检查是否有工具调用分析
+        // 检查是否有工具调用，并显示参数提取过程
         if (response.includes('tool_name') || response.includes('function_name')) {
-            this.updateThinkingMessage('🔧 Analyzing required tool calls...');
+            this.updateThinkingMessage(`<br>🔧 Analyzing tool call structure...`);
+            
+            // Extract and display parameter information
+            try {
+                const toolCall = this.parseToolCall(response);
+                if (toolCall) {
+                    const paramCount = Object.keys(toolCall.parameters || {}).length;
+                    this.updateThinkingMessage(`<br>&nbsp;&nbsp;✅ Tool identified: <strong>${toolCall.tool_name}</strong>`);
+                    this.updateThinkingMessage(`<br>&nbsp;&nbsp;📊 Parameters extracted: ${paramCount} parameter(s)`);
+                    
+                    // Display parameter details
+                    if (paramCount > 0) {
+                        const paramKeys = Object.keys(toolCall.parameters);
+                        this.updateThinkingMessage(`<br>&nbsp;&nbsp;🔑 Keys: ${paramKeys.join(', ')}`);
+                    }
+                }
+            } catch (e) {
+                console.warn('Error analyzing tool call:', e);
+            }
+        } else if (response && response.length > 0) {
+            // No tool call - this is a conversational response
+            this.updateThinkingMessage(`<br>💬 Conversational response generated`);
+            if (response.length > 100) {
+                this.updateThinkingMessage(`<br>&nbsp;&nbsp;📝 Response preview: "${response.substring(0, 100)}..."`);
+            }
         }
     }
 
