@@ -668,7 +668,9 @@ class PluginMarketplace {
                     signal: AbortSignal.timeout(8000)
                 });
                 if (directResp.ok) {
-                    const plugin = await directResp.json();
+                    const directData = await directResp.json();
+                    // Handle wrapped response {success, data: {plugin}}
+                    const plugin = directData.data?.plugin || directData.plugin || directData;
                     if (plugin && plugin.id === pluginId) {
                         plugin.downloadUrl = plugin.downloadUrl || `${source.url}/plugins/${plugin.id}/${plugin.version}/download`;
                         plugin.source = source;
@@ -691,7 +693,10 @@ class PluginMarketplace {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const responseData = await response.json();
+
+            // Unwrap server response: {success: true, data: {plugins: [...]}}
+            const data = responseData.data || responseData;
 
             // Handle both array and object response shapes from server
             let plugin = null;
@@ -699,14 +704,15 @@ class PluginMarketplace {
                 // Direct array format
                 plugin = data.find(p => p && p.id === pluginId) || null;
             } else if (Array.isArray(data.plugins)) {
-                // Array nested in plugins property
+                // Array nested in plugins property (current server format)
                 plugin = data.plugins.find(p => p && p.id === pluginId) || null;
             } else if (data.plugins && typeof data.plugins === 'object') {
-                // Object mapping format (current server format)
+                // Object mapping format
                 plugin = data.plugins[pluginId] || null;
             }
 
             if (!plugin) {
+                console.log(`Plugin ${pluginId} not found in response:`, data);
                 return null;
             }
 
