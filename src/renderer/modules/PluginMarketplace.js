@@ -227,66 +227,18 @@ class PluginMarketplace {
         }
     }
 
-    /**
-     * Search in local plugin directory
-     */
-    async searchLocalSource(source, query, filters) {
-        // Simulate local directory search
-        // In real implementation, this would scan local filesystem
-        const mockLocalPlugins = [
-            {
-                id: 'local-sequence-analyzer',
-                name: 'Advanced Sequence Analyzer',
-                description: 'Local development version of sequence analysis tools',
-                version: '1.0.0-dev',
-                author: 'Local Developer',
-                category: 'sequence-analysis',
-                tags: ['sequence', 'analysis', 'local'],
-                type: 'function',
-                size: 156000,
-                dependencies: []
-            }
-        ];
-        
-        return mockLocalPlugins.filter(plugin => 
-            plugin.name.toLowerCase().includes(query.toLowerCase()) ||
-            plugin.description.toLowerCase().includes(query.toLowerCase()) ||
-            plugin.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
-        );
-    }
 
     /**
      * Search in remote marketplace
      */
     async searchRemoteSource(source, query, filters) {
         try {
-            // Check if this is a real API endpoint (localhost server)
-            if (source.url.includes('localhost:3001')) {
-                console.log(`🌐 Calling real API: ${source.url}/plugins`);
-                return this.callRealMarketplaceAPI(source, query, filters);
-            } else {
-                // Simulate API call for non-existent remote marketplaces
-                console.log(`🎭 Simulating API for: ${source.id}`);
-                const mockResponse = await this.simulateMarketplaceAPI(source, query, filters);
-                return mockResponse.plugins || [];
-            }
+            console.log(`🌐 Calling marketplace API: ${source.url}/plugins`);
+            return this.callRealMarketplaceAPI(source, query, filters);
             
         } catch (error) {
             console.error(`❌ Failed to search in source ${source.id}:`, error);
             source.errorCount++;
-            
-            // If real API failed, fallback to simulation
-            if (source.url.includes('localhost:3001')) {
-                console.log(`🔄 Falling back to simulation for ${source.id}`);
-                try {
-                    const mockResponse = await this.simulateMarketplaceAPI(source, query, filters);
-                    return mockResponse.plugins || [];
-                } catch (fallbackError) {
-                    console.error(`❌ Fallback simulation also failed:`, fallbackError);
-                    return [];
-                }
-            }
-            
             return [];
         }
     }
@@ -350,106 +302,7 @@ class PluginMarketplace {
         }
     }
 
-    /**
-     * Simulate marketplace API response
-     */
-    async simulateMarketplaceAPI(source, query, filters) {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
-        
-        const mockPlugins = [
-            {
-                id: 'advanced-phylogenetics',
-                name: 'Advanced Phylogenetic Analysis',
-                description: 'Comprehensive phylogenetic tree construction and analysis toolkit',
-                version: '2.1.0',
-                author: 'Bioinformatics Lab',
-                category: 'phylogenetics',
-                tags: ['phylogeny', 'evolution', 'trees'],
-                type: 'function',
-                size: 2340000,
-                downloadUrl: `${source.url}/plugins/advanced-phylogenetics/2.1.0/download`,
-                dependencies: [
-                    { id: 'sequence-utils', version: '>=1.0.0' },
-                    { id: 'math-libs', version: '>=2.0.0' }
-                ],
-                rating: 4.8,
-                downloads: 15234,
-                lastUpdated: '2024-11-15'
-            },
-            {
-                id: 'protein-folding-predictor',
-                name: 'Protein Folding Predictor',
-                description: 'AI-powered protein structure prediction and folding analysis',
-                version: '1.5.2',
-                author: 'ML Research Group',
-                category: 'protein-analysis',
-                tags: ['protein', 'folding', 'ml', 'ai'],
-                type: 'function',
-                size: 4560000,
-                downloadUrl: `${source.url}/plugins/protein-folding-predictor/1.5.2/download`,
-                dependencies: [
-                    { id: 'ml-core', version: '>=3.0.0' },
-                    { id: 'protein-utils', version: '>=1.2.0' }
-                ],
-                rating: 4.6,
-                downloads: 8921,
-                lastUpdated: '2024-11-10'
-            },
-            {
-                id: 'network-analysis-suite',
-                name: 'Network Analysis Suite',
-                description: 'Comprehensive biological network analysis and visualization',
-                version: '3.0.1',
-                author: 'Network Biology Team',
-                category: 'network-analysis',
-                tags: ['network', 'graph', 'visualization', 'analysis'],
-                type: 'visualization',
-                size: 1890000,
-                downloadUrl: `${source.url}/plugins/network-analysis-suite/3.0.1/download`,
-                dependencies: [
-                    { id: 'graph-libs', version: '>=2.5.0' },
-                    { id: 'visualization-engine', version: '>=1.8.0' }
-                ],
-                rating: 4.9,
-                downloads: 12456,
-                lastUpdated: '2024-11-12'
-            },
-            {
-                id: 'sequence-alignment-pro',
-                name: 'Sequence Alignment Pro',
-                description: 'Professional multiple sequence alignment with advanced algorithms',
-                version: '2.3.0',
-                author: 'Alignment Algorithms Inc',
-                category: 'sequence-analysis',
-                tags: ['alignment', 'sequence', 'multiple', 'professional'],
-                type: 'function',
-                size: 3120000,
-                downloadUrl: `${source.url}/plugins/sequence-alignment-pro/2.3.0/download`,
-                dependencies: [
-                    { id: 'sequence-utils', version: '>=1.1.0' },
-                    { id: 'alignment-core', version: '>=2.0.0' }
-                ],
-                rating: 4.7,
-                downloads: 9876,
-                lastUpdated: '2024-11-08'
-            }
-        ];
-        
-        // Filter based on query
-        const filteredPlugins = mockPlugins.filter(plugin => 
-            plugin.name.toLowerCase().includes(query.toLowerCase()) ||
-            plugin.description.toLowerCase().includes(query.toLowerCase()) ||
-            plugin.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
-            plugin.category.toLowerCase().includes(query.toLowerCase())
-        );
-        
-        return {
-            plugins: filteredPlugins,
-            total: filteredPlugins.length,
-            source: source.id
-        };
-    }
+
 
     /**
      * Apply search filters to results
@@ -636,22 +489,20 @@ class PluginMarketplace {
      * Find plugin in local source
      */
     async findPluginInLocalSource(source, pluginId) {
-        // Simulate local plugin discovery
-        const localPlugins = {
-            'local-sequence-analyzer': {
-                id: 'local-sequence-analyzer',
-                name: 'Advanced Sequence Analyzer',
-                description: 'Local development version of sequence analysis tools',
-                version: '1.0.0-dev',
-                author: 'Local Developer',
-                category: 'sequence-analysis',
-                type: 'function',
-                dependencies: [],
-                downloadUrl: `${source.url}/${pluginId}`
-            }
-        };
-        
-        return localPlugins[pluginId] || null;
+        try {
+            // Read plugin manifest from local file system
+            const pluginPath = source.url.replace('file://', '');
+            const manifestPath = `${pluginPath}/${pluginId}/manifest.json`;
+            
+            // For browser environment, we can't access file system directly
+            // This would need to be implemented via IPC in Electron
+            console.warn('Local plugin source not fully implemented - requires IPC bridge');
+            return null;
+            
+        } catch (error) {
+            console.error(`Failed to read local plugin ${pluginId}:`, error);
+            return null;
+        }
     }
 
     /**
@@ -727,37 +578,7 @@ class PluginMarketplace {
         }
     }
 
-    /**
-     * Simulate plugin details API
-     */
-    async simulatePluginDetailsAPI(source, pluginId) {
-        await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
-        
-        const mockPlugins = {
-            'advanced-phylogenetics': {
-                id: 'advanced-phylogenetics',
-                name: 'Advanced Phylogenetic Analysis',
-                description: 'Comprehensive phylogenetic tree construction and analysis toolkit',
-                version: '2.1.0',
-                author: 'Bioinformatics Lab',
-                category: 'phylogenetics',
-                type: 'function',
-                size: 2340000,
-                downloadUrl: `${source.url}/plugins/advanced-phylogenetics/2.1.0/download`,
-                dependencies: [
-                    { id: 'sequence-utils', version: '>=1.0.0' },
-                    { id: 'math-libs', version: '>=2.0.0' }
-                ]
-            }
-        };
-        
-        const plugin = mockPlugins[pluginId];
-        if (!plugin) {
-            throw new Error(`Plugin ${pluginId} not found`);
-        }
-        
-        return { plugin };
-    }
+
 
     /**
      * Execute install plan
@@ -803,43 +624,66 @@ class PluginMarketplace {
     }
 
     /**
-     * Download plugin
+     * Download plugin from marketplace
      */
     async downloadPlugin(plugin) {
         console.log(`⬇️ Downloading ${plugin.id} from ${plugin.downloadUrl}...`);
         
-        // Simulate download
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-        
-        // Simulate downloaded plugin data
-        return {
-            pluginId: plugin.id,
-            version: plugin.version,
-            data: `// Mock plugin code for ${plugin.id}\n// Version: ${plugin.version}`,
-            manifest: {
-                id: plugin.id,
-                name: plugin.name,
-                description: plugin.description,
-                version: plugin.version,
-                author: plugin.author,
-                category: plugin.category,
-                type: plugin.type,
-                dependencies: plugin.dependencies || [],
-                tags: plugin.tags || [],
-                homepage: plugin.homepage,
-                repository: plugin.repository,
-                license: plugin.license,
-                // Add required fields for visualization plugins
-                ...(plugin.type === 'visualization' ? {
-                    supportedDataTypes: plugin.supportedDataTypes || ['generic'],
-                    executor: plugin.executor || function(data) { return data; }
-                } : {}),
-                // Add required fields for function plugins
-                ...(plugin.type === 'function' ? {
-                    functions: plugin.functions || {}
-                } : {})
+        try {
+            const response = await fetch(plugin.downloadUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/zip, application/octet-stream',
+                    'User-Agent': 'GenomeExplorer/2.0.0'
+                },
+                signal: AbortSignal.timeout(60000) // 60 second timeout for download
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-        };
+            
+            // Get plugin package data (zip or tarball)
+            const blob = await response.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+            
+            console.log(`✅ Downloaded ${plugin.id} (${blob.size} bytes)`);
+            
+            // Return downloaded data with manifest from server metadata
+            return {
+                pluginId: plugin.id,
+                version: plugin.version,
+                data: arrayBuffer,
+                blob: blob,
+                manifest: {
+                    id: plugin.id,
+                    name: plugin.name,
+                    description: plugin.description,
+                    version: plugin.version,
+                    author: plugin.author,
+                    category: plugin.category,
+                    type: plugin.type,
+                    dependencies: plugin.dependencies || [],
+                    tags: plugin.tags || [],
+                    homepage: plugin.homepage,
+                    repository: plugin.repository,
+                    license: plugin.license,
+                    // Add required fields for visualization plugins
+                    ...(plugin.type === 'visualization' ? {
+                        supportedDataTypes: plugin.supportedDataTypes || ['generic'],
+                        executor: plugin.executor || function(data) { return data; }
+                    } : {}),
+                    // Add required fields for function plugins
+                    ...(plugin.type === 'function' ? {
+                        functions: plugin.functions || {}
+                    } : {})
+                }
+            };
+            
+        } catch (error) {
+            console.error(`❌ Failed to download ${plugin.id}:`, error);
+            throw new Error(`Download failed: ${error.message}`);
+        }
     }
 
     /**
@@ -848,19 +692,27 @@ class PluginMarketplace {
     async installDownloadedPlugin(downloadResult) {
         console.log(`🔧 Installing ${downloadResult.pluginId}...`);
         
-        // Simulate installation process
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Register with plugin manager
-        if (this.pluginManager) {
-            await this.pluginManager.registerPlugin(downloadResult.pluginId, downloadResult.manifest);
+        try {
+            // Register plugin with plugin manager
+            // The plugin manager will handle loading and initialization
+            if (this.pluginManager) {
+                await this.pluginManager.registerPlugin(downloadResult.pluginId, downloadResult.manifest);
+            } else {
+                throw new Error('Plugin manager not available');
+            }
+            
+            console.log(`✅ Successfully installed ${downloadResult.pluginId}`);
+            
+            return {
+                success: true,
+                installedAt: new Date(),
+                installPath: `/plugins/${downloadResult.pluginId}`
+            };
+            
+        } catch (error) {
+            console.error(`❌ Failed to install ${downloadResult.pluginId}:`, error);
+            throw new Error(`Installation failed: ${error.message}`);
         }
-        
-        return {
-            success: true,
-            installedAt: new Date(),
-            installPath: `/plugins/${downloadResult.pluginId}`
-        };
     }
 
     /**
@@ -996,20 +848,46 @@ class PluginMarketplace {
     }
 
     /**
-     * Sync specific source
+     * Sync specific source - fetch latest plugin index
      */
     async syncSource(sourceId) {
         const source = this.marketplaceSources.get(sourceId);
-        console.log(`🔄 Syncing source: ${source.name}`);
+        console.log(`🔄 Syncing source: ${source.name || sourceId}`);
         
-        // Clear old cache for this source
-        this.clearCacheForSource(sourceId);
-        
-        // For remote sources, this would fetch the latest plugin index
-        // For now, we'll just simulate the sync
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        console.log(`✅ Source ${source.name} synced successfully`);
+        try {
+            // Clear old cache for this source
+            this.clearCacheForSource(sourceId);
+            
+            // Fetch latest plugin index from source
+            const url = `${source.url}/plugins`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'GenomeExplorer/2.0.0'
+                },
+                signal: AbortSignal.timeout(15000) // 15 second timeout
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const pluginList = data.data?.plugins || data.plugins || [];
+            
+            // Update source's plugin cache
+            source.plugins.clear();
+            pluginList.forEach(plugin => {
+                source.plugins.set(plugin.id, plugin);
+            });
+            
+            console.log(`✅ Source ${source.name || sourceId} synced successfully (${pluginList.length} plugins)`);
+            
+        } catch (error) {
+            console.error(`❌ Failed to sync source ${sourceId}:`, error);
+            throw error;
+        }
     }
 
     /**
