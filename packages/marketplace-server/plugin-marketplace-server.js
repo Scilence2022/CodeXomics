@@ -529,7 +529,7 @@ app.get('/api/v1/plugins/:id/:version/download', async (req, res) => {
         
         // For now, serve a mock plugin package
         // In production, this would serve the actual plugin zip file from PLUGINS_DIR
-        const pluginPackagePath = path.join(PLUGINS_DIR, id, version, `${id}.zip`);
+        const pluginPackagePath = path.join(PLUGINS_DIR, id, `${id}.zip`);
         
         // Check if actual plugin file exists
         try {
