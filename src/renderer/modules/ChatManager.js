@@ -12224,14 +12224,45 @@ ${this.getPluginSystemInfo()}`;
         console.log('🧬 [ChatManager] Starting genome-wide codon usage analysis:', params);
         
         if (!this.app || !this.app.currentAnnotations) {
+            console.error('❌ [ChatManager] No genome data loaded');
+            console.error('App exists:', !!this.app);
+            console.error('currentAnnotations exists:', !!this.app?.currentAnnotations);
             throw new Error('No genome data loaded');
         }
+        
+        // Debug: Log the current annotations structure
+        console.log('🔍 [ChatManager] currentAnnotations structure:', {
+            type: typeof this.app.currentAnnotations,
+            isArray: Array.isArray(this.app.currentAnnotations),
+            keys: Object.keys(this.app.currentAnnotations),
+            keysCount: Object.keys(this.app.currentAnnotations).length,
+            sample: Object.keys(this.app.currentAnnotations).slice(0, 3)
+        });
         
         // Get all chromosomes to analyze
         const chromosomes = chromosome ? [chromosome] : Object.keys(this.app.currentAnnotations);
         
+        console.log('📊 [ChatManager] Chromosomes to analyze:', {
+            requested: chromosome,
+            found: chromosomes,
+            count: chromosomes.length
+        });
+        
         if (chromosomes.length === 0) {
-            throw new Error('No chromosomes found in loaded genome');
+            console.error('❌ [ChatManager] No chromosomes found');
+            console.error('Available keys in currentAnnotations:', Object.keys(this.app.currentAnnotations));
+            console.error('Data structure type:', typeof this.app.currentAnnotations);
+            console.error('Is array?', Array.isArray(this.app.currentAnnotations));
+            
+            // Check alternative data sources
+            if (this.app.annotations) {
+                console.log('🔍 Found alternative: app.annotations', Object.keys(this.app.annotations));
+            }
+            if (this.app.genomeData) {
+                console.log('🔍 Found alternative: app.genomeData', Object.keys(this.app.genomeData));
+            }
+            
+            throw new Error('No chromosomes found in loaded genome. The genome file may not have been loaded properly or the annotation data is empty.');
         }
         
         // Genetic code and synonymous codon groups
