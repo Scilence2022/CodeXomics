@@ -2421,6 +2421,76 @@ ipcMain.on('tool-response', (event, response) => {
   }
 });
 
+// ===== Plugin Path Resolution IPC Handlers =====
+/**
+ * Get plugin paths for both built-in and user-installed plugins
+ * Returns different paths based on whether app is packaged
+ */
+ipcMain.handle('get-plugin-paths', async () => {
+  const isDevelopment = !app.isPackaged;
+  
+  let builtinPluginsPath;
+  let userPluginsPath;
+  
+  if (isDevelopment) {
+    // Development: use source directory
+    builtinPluginsPath = path.join(__dirname, 'renderer', 'modules', 'Plugins');
+    userPluginsPath = path.join(__dirname, 'renderer', 'modules', 'Plugins', 'UserInstalled');
+  } else {
+    // Production: builtin plugins are in ASAR, user plugins in userData
+    builtinPluginsPath = path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins');
+    userPluginsPath = path.join(app.getPath('userData'), 'plugins');
+  }
+  
+  return {
+    isDevelopment,
+    builtinPluginsPath,
+    userPluginsPath
+  };
+});
+
+/**
+ * Ensure a directory exists, creating it if necessary
+ */
+ipcMain.handle('ensure-directory', async (event, dirPath) => {
+  try {
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+      console.log('Created directory:', dirPath);
+    }
+    return { success: true, path: dirPath };
+  } catch (error) {
+    console.error('Failed to create directory:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * List all plugins in a given directory
+ */
+ipcMain.handle('list-plugins', async (event, pluginPath) => {
+  try {
+    if (!fs.existsSync(pluginPath)) {
+      return { success: true, plugins: [] };
+    }
+    
+    const items = fs.readdirSync(pluginPath, { withFileTypes: true });
+    const plugins = items
+      .filter(item => item.isDirectory())
+      .map(item => ({
+        id: item.name,
+        path: path.join(pluginPath, item.name),
+        hasManifest: fs.existsSync(path.join(pluginPath, item.name, 'plugin.json'))
+      }));
+    
+    return { success: true, plugins };
+  } catch (error) {
+    console.error('Failed to list plugins:', error);
+    return { success: false, error: error.message, plugins: [] };
+  }
+});
+// ===== End Plugin Path Resolution Handlers =====
+
 // IPC handlers
 ipcMain.handle('read-file', async (event, filePath) => {
   try {

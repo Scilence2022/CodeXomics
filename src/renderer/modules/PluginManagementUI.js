@@ -18,7 +18,9 @@ class PluginManagementUI {
         // Default settings structure
         this.defaultSettings = {
             // Plugin system settings
-            pluginDirectory: 'src/renderer/modules/Plugins',
+            pluginDirectory: 'src/renderer/modules/Plugins', // Legacy - replaced by path resolver
+            builtinPluginsPath: null, // Set dynamically by path resolver
+            userPluginsPath: null,    // Set dynamically by path resolver
             enablePluginSandbox: true,
             enablePluginDebug: false,
             
@@ -1071,10 +1073,18 @@ class PluginManagementUI {
         const enableDebug = document.getElementById('enablePluginDebug');
 
         if (pluginDirectory) {
-            // Use local storage value if available, otherwise use configManager or default
-            pluginDirectory.value = this.settings.pluginDirectory || 
-                                  this.configManager?.get('pluginDirectory') || 
-                                  'src/renderer/modules/Plugins';
+            // Use path resolver if available for production-ready paths
+            if (this.pluginManager.pathResolver) {
+                const builtinPath = this.pluginManager.pathResolver.getBuiltinPluginsPath();
+                const userPath = this.pluginManager.pathResolver.getUserPluginsPath();
+                pluginDirectory.value = `Built-in: ${builtinPath}\nUser: ${userPath}`;
+                pluginDirectory.title = `Built-in plugins (read-only): ${builtinPath}\nUser plugins (writable): ${userPath}`;
+            } else {
+                // Fallback to legacy behavior
+                pluginDirectory.value = this.settings.pluginDirectory || 
+                                      this.configManager?.get('pluginDirectory') || 
+                                      'src/renderer/modules/Plugins';
+            }
         }
 
         if (enableSandbox) {

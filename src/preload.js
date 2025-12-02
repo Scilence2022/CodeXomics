@@ -137,6 +137,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File reading API for project manager
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
 
+  // Plugin path resolution APIs
+  getPluginPaths: () => ipcRenderer.invoke('get-plugin-paths'),
+  ensureDirectory: (dirPath) => ipcRenderer.invoke('ensure-directory', dirPath),
+  listPlugins: (pluginPath) => ipcRenderer.invoke('list-plugins', pluginPath),
+
   // Expose ipcRenderer for menu system event handling
   ipcRenderer: {
     on: (channel, listener) => {

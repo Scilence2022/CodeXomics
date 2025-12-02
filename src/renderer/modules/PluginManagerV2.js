@@ -7,8 +7,10 @@
  * - Command Registry for unified command handling
  * - Activation Events for lazy loading
  * - Disposable pattern for resource cleanup
+ * - Production-ready path resolution for packaged apps
  * 
  * @see core/ExtensionService.js for the new architecture
+ * @see PluginPathResolver.js for path resolution
  */
 class PluginManagerV2 {
     constructor(app, configManager = null, options = {}) {
@@ -38,6 +40,9 @@ class PluginManagerV2 {
         this.marketplace = null;
         this.promptProvider = null;
         this.eventBus = new EventTarget();
+        
+        // Path resolver for production-ready plugin loading
+        this.pathResolver = null;
         
         // New architecture components (VS Code-inspired)
         this.extensionService = null;
@@ -92,6 +97,17 @@ class PluginManagerV2 {
     async _performInitialization() {
         try {
             console.log('🔧 Initializing PluginManagerV2 components...');
+            
+            // 0. Initialize Path Resolver for production-ready plugin loading
+            if (typeof window !== 'undefined' && window.pluginPathResolver) {
+                this.pathResolver = window.pluginPathResolver;
+                await this.pathResolver.initialize();
+                console.log('✅ PluginPathResolver initialized');
+                console.log('  Built-in plugins path:', this.pathResolver.getBuiltinPluginsPath());
+                console.log('  User plugins path:', this.pathResolver.getUserPluginsPath());
+            } else {
+                console.warn('⚠️ PluginPathResolver not available, using fallback paths');
+            }
             
             // 1. Initialize PluginAPI with permissions
             this.api = new PluginAPI(this.app, this.options.defaultPermissions);
@@ -428,7 +444,11 @@ class PluginManagerV2 {
         });
 
         // UniProt Database Search Plugin
-        const uniprotPlugin = new (await import('./Plugins/UniProtSearchPlugin.js')).default(this.app, this.configManager);
+        const uniprotPath = this.pathResolver 
+            ? `${this.pathResolver.getBuiltinPluginsPath()}/UniProtSearchPlugin.js`
+            : './Plugins/UniProtSearchPlugin.js';
+        
+        const uniprotPlugin = new (await import(uniprotPath)).default(this.app, this.configManager);
         
         // Get plugin metadata from the plugin itself
         const uniprotMetadata = uniprotPlugin.constructor.getPluginMetadata();
