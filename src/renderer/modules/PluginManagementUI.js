@@ -685,7 +685,7 @@ class PluginManagementUI {
             this.loadPluginSettings();
             // Initialize storage info when settings tab is opened
             setTimeout(() => {
-                this.updateStorageInfoDisplay();
+                this.updateStorageInfo();
             }, 100);
         }
     }
