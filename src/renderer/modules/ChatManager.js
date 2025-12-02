@@ -17229,9 +17229,8 @@ ${this.getPluginSystemInfo()}`;
         if (thinkingDiv) {
             const thinkingContent = thinkingDiv.querySelector('.thinking-content');
             if (thinkingContent) {
-                // Add line break only if message doesn't start with &nbsp; (indented text)
-                const separator = message.startsWith('&nbsp;') ? '\n' : '\n';
-                thinkingContent.textContent += separator + message;
+                // Use innerHTML to properly render HTML tags and entities
+                thinkingContent.innerHTML += '\n' + message;
             }
         } else {
             this.addThinkingMessage(message);

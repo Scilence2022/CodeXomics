@@ -4209,11 +4209,11 @@ to {
 
 .thinking-content {
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.6;
   color: #374151;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  /* Use pre-wrap to preserve line breaks but wrap long lines */
-  white-space: pre-wrap;
+  /* Use pre-line to preserve line breaks and wrap long lines */
+  white-space: pre-line;
   overflow-x: auto;
   word-wrap: break-word;
   overflow-wrap: break-word;
