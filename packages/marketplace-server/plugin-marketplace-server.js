@@ -499,6 +499,120 @@ app.get('/api/v1/plugins/:id', (req, res) => {
 });
 
 /**
+ * GET /api/v1/plugins/:id/:version/download
+ * Download plugin package file
+ */
+app.get('/api/v1/plugins/:id/:version/download', async (req, res) => {
+    try {
+        const { id, version } = req.params;
+        const plugin = pluginMetadata.plugins[id];
+        
+        if (!plugin) {
+            return res.status(404).json({
+                success: false,
+                error: 'Plugin not found'
+            });
+        }
+        
+        if (plugin.version !== version) {
+            return res.status(404).json({
+                success: false,
+                error: 'Plugin version not found',
+                message: `Version ${version} not found. Available version: ${plugin.version}`
+            });
+        }
+        
+        // Increment download count
+        plugin.downloads = (plugin.downloads || 0) + 1;
+        pluginMetadata.stats.totalDownloads++;
+        await saveMetadata();
+        
+        // For now, serve a mock plugin package
+        // In production, this would serve the actual plugin zip file from PLUGINS_DIR
+        const pluginPackagePath = path.join(PLUGINS_DIR, id, version, `${id}.zip`);
+        
+        // Check if actual plugin file exists
+        try {
+            await fs.access(pluginPackagePath);
+            // File exists, serve it
+            console.log(`📦 Serving plugin file: ${pluginPackagePath}`);
+            res.download(pluginPackagePath, `${id}-${version}.zip`);
+        } catch (error) {
+            // File doesn't exist, create mock plugin package
+            console.log(`⚠️  Plugin file not found, creating mock package for ${id}`);
+            
+            // Create a minimal mock plugin package
+            const mockManifest = {
+                id: plugin.id,
+                name: plugin.name,
+                description: plugin.description,
+                version: plugin.version,
+                author: plugin.author,
+                category: plugin.category,
+                type: plugin.type,
+                dependencies: plugin.dependencies || [],
+                tags: plugin.tags || [],
+                homepage: plugin.homepage,
+                repository: plugin.repository,
+                license: plugin.license,
+                main: 'index.js',
+                ...(plugin.type === 'visualization' ? {
+                    supportedDataTypes: plugin.supportedDataTypes || ['generic'],
+                } : {}),
+                ...(plugin.type === 'function' ? {
+                    functions: plugin.functions || {}
+                } : {})
+            };
+            
+            const mockIndexJs = `// ${plugin.name} v${plugin.version}
+// Auto-generated plugin package
+
+module.exports = {
+    activate() {
+        console.log('${plugin.name} activated');
+    },
+    deactivate() {
+        console.log('${plugin.name} deactivated');
+    }
+};`;
+            
+            // Send as JSON response with package data
+            res.json({
+                success: true,
+                data: {
+                    pluginId: plugin.id,
+                    version: plugin.version,
+                    manifest: mockManifest,
+                    files: {
+                        'manifest.json': JSON.stringify(mockManifest, null, 2),
+                        'index.js': mockIndexJs,
+                        'README.md': `# ${plugin.name}
+
+${plugin.description}
+
+Version: ${plugin.version}
+Author: ${plugin.author}
+License: ${plugin.license}`
+                    },
+                    size: plugin.size,
+                    checksum: plugin.security.checksum
+                },
+                message: 'Mock plugin package (actual file will be available after plugin submission)',
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Download plugin error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error',
+            message: error.message
+        });
+    }
+});
+
+/**
  * POST /api/v1/plugins/:id/download
  * Track plugin download
  */

@@ -633,7 +633,7 @@ class PluginMarketplace {
             const response = await fetch(plugin.downloadUrl, {
                 method: 'GET',
                 headers: {
-                    'Accept': 'application/zip, application/octet-stream',
+                    'Accept': 'application/json, application/zip, application/octet-stream',
                     'User-Agent': 'GenomeExplorer/2.0.0'
                 },
                 signal: AbortSignal.timeout(60000) // 60 second timeout for download
@@ -643,42 +643,67 @@ class PluginMarketplace {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
-            // Get plugin package data (zip or tarball)
-            const blob = await response.blob();
-            const arrayBuffer = await blob.arrayBuffer();
+            const contentType = response.headers.get('content-type');
+            let downloadResult;
             
-            console.log(`✅ Downloaded ${plugin.id} (${blob.size} bytes)`);
-            
-            // Return downloaded data with manifest from server metadata
-            return {
-                pluginId: plugin.id,
-                version: plugin.version,
-                data: arrayBuffer,
-                blob: blob,
-                manifest: {
-                    id: plugin.id,
-                    name: plugin.name,
-                    description: plugin.description,
-                    version: plugin.version,
-                    author: plugin.author,
-                    category: plugin.category,
-                    type: plugin.type,
-                    dependencies: plugin.dependencies || [],
-                    tags: plugin.tags || [],
-                    homepage: plugin.homepage,
-                    repository: plugin.repository,
-                    license: plugin.license,
-                    // Add required fields for visualization plugins
-                    ...(plugin.type === 'visualization' ? {
-                        supportedDataTypes: plugin.supportedDataTypes || ['generic'],
-                        executor: plugin.executor || function(data) { return data; }
-                    } : {}),
-                    // Add required fields for function plugins
-                    ...(plugin.type === 'function' ? {
-                        functions: plugin.functions || {}
-                    } : {})
+            if (contentType && contentType.includes('application/json')) {
+                // Server returned JSON (mock plugin package)
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Download failed');
                 }
-            };
+                
+                console.log(`✅ Downloaded ${plugin.id} as JSON package`);
+                
+                // Use manifest from server response
+                downloadResult = {
+                    pluginId: plugin.id,
+                    version: plugin.version,
+                    data: data.data.files, // JSON package files
+                    manifest: data.data.manifest
+                };
+                
+            } else {
+                // Server returned binary file (actual zip/tarball)
+                const blob = await response.blob();
+                const arrayBuffer = await blob.arrayBuffer();
+                
+                console.log(`✅ Downloaded ${plugin.id} (${blob.size} bytes)`);
+                
+                // Return downloaded binary data with manifest from plugin metadata
+                downloadResult = {
+                    pluginId: plugin.id,
+                    version: plugin.version,
+                    data: arrayBuffer,
+                    blob: blob,
+                    manifest: {
+                        id: plugin.id,
+                        name: plugin.name,
+                        description: plugin.description,
+                        version: plugin.version,
+                        author: plugin.author,
+                        category: plugin.category,
+                        type: plugin.type,
+                        dependencies: plugin.dependencies || [],
+                        tags: plugin.tags || [],
+                        homepage: plugin.homepage,
+                        repository: plugin.repository,
+                        license: plugin.license,
+                        // Add required fields for visualization plugins
+                        ...(plugin.type === 'visualization' ? {
+                            supportedDataTypes: plugin.supportedDataTypes || ['generic'],
+                            executor: plugin.executor || function(data) { return data; }
+                        } : {}),
+                        // Add required fields for function plugins
+                        ...(plugin.type === 'function' ? {
+                            functions: plugin.functions || {}
+                        } : {})
+                    }
+                };
+            }
+            
+            return downloadResult;
             
         } catch (error) {
             console.error(`❌ Failed to download ${plugin.id}:`, error);
