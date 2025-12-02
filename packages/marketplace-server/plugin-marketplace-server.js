@@ -539,7 +539,7 @@ app.get('/api/v1/plugins/:id/:version/download', async (req, res) => {
             res.download(pluginPackagePath, `${id}-${version}.zip`);
         } catch (error) {
             // File doesn't exist, create mock plugin package
-            console.log(`⚠️  Plugin file not found, creating mock package for ${id}`);
+            console.log(`📦 Creating mock package for ${id} (no uploaded file available)`);
             
             // Create a minimal mock plugin package
             const mockManifest = {
