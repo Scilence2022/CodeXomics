@@ -2096,19 +2096,6 @@ function createMenu() {
           click: () => {
             sendToCurrentMainWindow('show-plugin-marketplace');
           }
-        },
-        { type: 'separator' },
-        {
-          label: 'Smart Execution Demo',
-          click: () => {
-            sendToCurrentMainWindow('show-smart-execution-demo');
-          }
-        },
-        {
-          label: 'Plugin Function Calling Test',
-          click: () => {
-            sendToCurrentMainWindow('show-plugin-function-calling-test');
-          }
         }
       ]
     },
@@ -2755,56 +2742,6 @@ ipcMain.handle('mcp-server-status', async () => {
   };
 });
 
-// Handle opening smart execution demo
-ipcMain.on('open-smart-execution-demo', (event) => {
-  try {
-    // Create a new window for the Smart Execution Demo
-    const demoWindow = new BrowserWindow({
-      width: 1200,
-      height: 800,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        enableRemoteModule: false
-      },
-      title: 'Smart Execution Demo - CodeXomics',
-      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
-      show: false // Don't show until ready
-    });
-
-    const demoPath = path.join(__dirname, '..', 'test', 'smart-execution-demo.html');
-    
-    // Check if file exists
-    if (fs.existsSync(demoPath)) {
-      demoWindow.loadFile(demoPath);
-    } else {
-      console.error('Smart execution demo file not found:', demoPath);
-      // Try alternative path (for development)
-      const altPath = path.join(__dirname, 'test', 'smart-execution-demo.html');
-      if (fs.existsSync(altPath)) {
-        demoWindow.loadFile(altPath);
-      } else {
-        console.error('Smart execution demo file not found at alternative path:', altPath);
-        demoWindow.destroy();
-        return;
-      }
-    }
-
-    // Show window when ready
-    demoWindow.once('ready-to-show', () => {
-      demoWindow.show();
-    });
-
-    // Handle window closed
-    demoWindow.on('closed', () => {
-      console.log('Smart Execution Demo window closed');
-    });
-
-  } catch (error) {
-    console.error('Failed to open smart execution demo:', error);
-  }
-});
-
 // Handle opening resource manager
 ipcMain.on('open-resource-manager', (event) => {
   try {
@@ -3081,58 +3018,6 @@ function createCircosWindow() {
     console.error('Failed to open Circos Genome Plotter:', error);
   }
 }
-
-
-
-// Handle opening plugin function calling test
-ipcMain.on('open-plugin-function-calling-test', (event) => {
-  try {
-    // Create new window for the plugin function calling test
-    const testWindow = new BrowserWindow({
-      width: 1200,
-      height: 800,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        enableRemoteModule: false
-      },
-      title: 'Plugin Function Calling Test - CodeXomics',
-      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
-      show: false
-    });
-
-    const testPath = path.join(__dirname, '..', 'test', 'plugin-function-calling-test.html');
-    
-    // Check if file exists
-    if (fs.existsSync(testPath)) {
-      testWindow.loadFile(testPath);
-    } else {
-      console.error('Plugin function calling test file not found:', testPath);
-      // Try alternative path (for development)
-      const altPath = path.join(__dirname, 'test', 'plugin-function-calling-test.html');
-      if (fs.existsSync(altPath)) {
-        testWindow.loadFile(altPath);
-      } else {
-        console.error('Plugin function calling test file not found at alternative path:', altPath);
-        testWindow.destroy();
-        return;
-      }
-    }
-
-    // Show window when ready
-    testWindow.once('ready-to-show', () => {
-      testWindow.show();
-    });
-
-    // Handle window closed
-    testWindow.on('closed', () => {
-      console.log('Plugin Function Calling Test window closed');
-    });
-
-  } catch (error) {
-    console.error('Failed to open plugin function calling test:', error);
-  }
-});
 
 
 

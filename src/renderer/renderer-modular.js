@@ -900,9 +900,6 @@ class GenomeBrowser {
         
         // Debug Tools modal
         document.getElementById('debugToolsBtn')?.addEventListener('click', () => this.showDebugToolsModal());
-        
-        // Smart Execution Demo button
-        document.getElementById('smartExecutionDemoBtn')?.addEventListener('click', () => this.showSmartExecutionDemo());
     }
 
     showMCPSettingsModal() {
@@ -2597,26 +2594,7 @@ class GenomeBrowser {
         });
 
         ipcRenderer.on('show-smart-execution-demo', () => {
-            this.showSmartExecutionDemo();
-        });
-
-        // Handle Plugin Function Calling Test
-        ipcRenderer.on('show-plugin-function-calling-test', () => {
-            console.log('🧪 Plugin Function Calling Test requested from main menu');
-            
-            try {
-                // Check if test file exists and open it
-                const testPath = path.join(__dirname, '..', 'test', 'plugin-function-calling-test.html');
-                const { shell } = require('electron');
-                
-                // For now, we'll use IPC to request the main process to open it
-                ipcRenderer.send('open-plugin-function-calling-test');
-                
-                this.showNotification('Plugin Function Calling Test window is opening...', 'info');
-            } catch (error) {
-                console.error('Failed to open Plugin Function Calling Test:', error);
-                this.showNotification('Unable to open Plugin Function Calling Test window', 'error');
-            }
+            // Feature removed - no longer available
         });
 
         // Handle Resource Manager
@@ -8432,21 +8410,6 @@ class GenomeBrowser {
                 }
             }, 300);
         }, 3000);
-    }
-
-    /**
-     * Show Smart Execution Demo page
-     */
-    showSmartExecutionDemo() {
-        try {
-            // Use IPC to request opening the demo from main process
-            ipcRenderer.send('open-smart-execution-demo');
-            
-            this.showNotification('智能执行演示窗口正在打开...', 'info');
-        } catch (error) {
-            console.error('Failed to open Smart Execution Demo:', error);
-            this.showNotification('无法打开智能执行演示页面', 'error');
-        }
     }
 
     /**
