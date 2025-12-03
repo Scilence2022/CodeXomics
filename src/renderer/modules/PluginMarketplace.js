@@ -145,6 +145,23 @@ class PluginMarketplace {
             console.log('✅ ConfigManager initialization complete, loading installed plugins...');
         }
         
+        // First, check localStorage directly for debugging
+        try {
+            const rawData = localStorage.getItem('marketplaceSettings');
+            if (rawData) {
+                const parsed = JSON.parse(rawData);
+                console.log('🔍 Direct localStorage check (marketplaceSettings):', {
+                    hasInstalled: !!parsed.installed,
+                    installedCount: Object.keys(parsed.installed || {}).length,
+                    installedIds: Object.keys(parsed.installed || {})
+                });
+            } else {
+                console.warn('⚠️  No marketplaceSettings found in localStorage');
+            }
+        } catch (e) {
+            console.error('❌ Error reading localStorage directly:', e);
+        }
+        
         const installedData = this.configManager?.get('marketplace.installed') || {};
         
         console.log('📊 ConfigManager returned installed data:', {
@@ -181,12 +198,15 @@ class PluginMarketplace {
         }
         
         console.log(`🔄 Restoring ${this.installedPlugins.size} installed plugins to PluginManagerV2...`);
+        console.log('📋 Plugins to restore:', Array.from(this.installedPlugins.keys()));
         
         let restoredCount = 0;
         let failedCount = 0;
         
         for (const [pluginId, pluginInfo] of this.installedPlugins) {
             try {
+                console.log(`🔄 Attempting to restore plugin: ${pluginId}`);
+                
                 // Check if plugin is already registered
                 const existingPlugin = this.pluginManager.getPlugin(pluginId);
                 if (existingPlugin) {
@@ -219,11 +239,26 @@ class PluginMarketplace {
                     } : {})
                 };
                 
+                console.log(`📦 Restoring plugin manifest:`, {
+                    id: manifest.id,
+                    name: manifest.name,
+                    type: manifest.type,
+                    version: manifest.version,
+                    hasManifest: !!pluginInfo.manifest
+                });
+                
                 // Re-register plugin with PluginManagerV2
                 await this.pluginManager.registerPlugin(pluginId, manifest);
                 
-                console.log(`✅ Restored plugin: ${pluginId}`);
-                restoredCount++;
+                // Verify registration
+                const verifyPlugin = this.pluginManager.getPlugin(pluginId);
+                if (verifyPlugin) {
+                    console.log(`✅ Restored and verified plugin: ${pluginId}`);
+                    restoredCount++;
+                } else {
+                    console.error(`❌ Plugin ${pluginId} registration returned but plugin not found!`);
+                    failedCount++;
+                }
                 
             } catch (error) {
                 console.error(`❌ Failed to restore plugin ${pluginId}:`, error);
@@ -232,6 +267,13 @@ class PluginMarketplace {
         }
         
         console.log(`✅ Plugin restoration complete: ${restoredCount} restored, ${failedCount} failed`);
+        
+        // Final verification - log all registered plugins
+        console.log('📊 Final plugin registry state:', {
+            functionPlugins: Array.from(this.pluginManager.pluginRegistry.function?.keys() || []),
+            visualizationPlugins: Array.from(this.pluginManager.pluginRegistry.visualization?.keys() || []),
+            utilityPlugins: Array.from(this.pluginManager.pluginRegistry.utility?.keys() || [])
+        });
     }
 
     /**
