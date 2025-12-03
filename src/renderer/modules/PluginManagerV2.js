@@ -899,6 +899,99 @@ class PluginManagerV2 {
     }
 
     /**
+     * Execute visualization plugin by tool call format
+     * Supports both "pluginId.visualize" and "pluginId.renderNetwork" tool calls
+     * @param {string} toolName - Full tool name (e.g., "protein-interaction-network.visualize")
+     * @param {Object} parameters - Tool parameters including data
+     * @returns {Promise<HTMLElement|Object>} Visualization result or DOM element
+     */
+    async executeVisualizationTool(toolName, parameters = {}) {
+        const parts = toolName.split('.');
+        if (parts.length < 2) {
+            throw new Error(`Invalid visualization tool name format: ${toolName}. Use: pluginId.functionName`);
+        }
+        
+        const pluginId = parts[0];
+        const functionName = parts[1]; // visualize, renderNetwork, etc.
+        
+        console.log(`🎨 [PluginManagerV2] Executing visualization tool: ${toolName}`);
+        
+        // Check if this is a visualization plugin
+        if (!this.pluginRegistry.visualization.has(pluginId)) {
+            // Try function plugins for backward compatibility
+            if (this.pluginRegistry.function.has(pluginId)) {
+                return await this.executeFunctionByName(toolName, parameters);
+            }
+            throw new Error(`Visualization plugin not found: ${pluginId}`);
+        }
+        
+        const plugin = this.pluginRegistry.visualization.get(pluginId);
+        const data = parameters.data || parameters;
+        
+        // Execute visualization using the correct method
+        // Priority: executor > renderNetwork > visualize
+        try {
+            let result;
+            
+            if (plugin.executor && typeof plugin.executor === 'function') {
+                console.log(`🎨 [PluginManagerV2] Using plugin.executor for ${pluginId}`);
+                result = await plugin.executor(data);
+            } else if (plugin.renderNetwork && typeof plugin.renderNetwork === 'function') {
+                console.log(`🎨 [PluginManagerV2] Using plugin.renderNetwork for ${pluginId}`);
+                result = await plugin.renderNetwork(data);
+            } else if (plugin.visualize && typeof plugin.visualize === 'function') {
+                console.log(`🎨 [PluginManagerV2] Using plugin.visualize for ${pluginId}`);
+                result = await plugin.visualize(data);
+            } else {
+                throw new Error(`Plugin ${pluginId} does not have a valid visualization method (executor/renderNetwork/visualize)`);
+            }
+            
+            console.log(`✅ [PluginManagerV2] Visualization tool ${toolName} executed successfully`);
+            
+            // Update metrics
+            this.metrics.totalExecutions++;
+            this.metrics.successfulExecutions++;
+            
+            // Emit event
+            this.emit('visualization-executed', {
+                pluginId,
+                toolName,
+                success: true
+            });
+            
+            return result;
+            
+        } catch (error) {
+            console.error(`❌ [PluginManagerV2] Visualization tool ${toolName} failed:`, error);
+            
+            this.metrics.totalExecutions++;
+            this.metrics.failedExecutions++;
+            
+            this.emit('visualization-error', {
+                pluginId,
+                toolName,
+                error: error.message
+            });
+            
+            throw error;
+        }
+    }
+
+    /**
+     * Check if a tool name refers to a visualization plugin
+     * @param {string} toolName - Tool name to check
+     * @returns {boolean}
+     */
+    isVisualizationTool(toolName) {
+        if (!toolName || !toolName.includes('.')) {
+            return false;
+        }
+        
+        const pluginId = toolName.split('.')[0];
+        return this.pluginRegistry.visualization.has(pluginId);
+    }
+
+    /**
      * Get system statistics
      */
     getSystemStats() {

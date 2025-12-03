@@ -245,7 +245,12 @@ class ChatManager {
                 
                 this.pluginManager.on('plugin-registered', (data) => {
                     // Plugin registered
+                    // Notify Dynamic Tools about plugin state change
+                    this.onPluginStateChanged();
                 });
+                
+                // Connect PluginManager to Dynamic Tools after initialization
+                this.connectPluginManagerToDynamicTools();
                 
             } else {
                 // PluginManagerV2 not available, loading dynamically...
@@ -626,6 +631,9 @@ class ChatManager {
                 if (initialized) {
                     // Dynamic Tools Registry System initialized
                     // Loaded from path
+                    
+                    // Connect PluginManager to Dynamic Tools Bridge
+                    this.connectPluginManagerToDynamicTools();
                 } else {
                     // Dynamic Tools Registry System failed to initialize, using fallback
                     this.dynamicToolsEnabled = false;
@@ -1303,6 +1311,58 @@ class ChatManager {
             // [ChatManager] Error initializing working directory
             // Fallback to current process directory
             this.currentWorkingDirectory = process.cwd();
+        }
+    }
+
+    /**
+     * Connect PluginManager to Dynamic Tools Registry
+     * This enables plugin tools to be discovered and included in the LLM system prompt
+     */
+    connectPluginManagerToDynamicTools() {
+        if (this.dynamicTools && this.pluginManager) {
+            try {
+                this.dynamicTools.setPluginManager(this.pluginManager);
+                console.log('✅ [ChatManager] PluginManager connected to Dynamic Tools Bridge');
+                
+                // Get initial stats
+                const stats = this.dynamicTools.integrationStatus;
+                console.log(`📊 [ChatManager] Dynamic Tools status: ${stats.pluginToolsLoaded || 0} plugin tools integrated`);
+                
+                // Also register plugin tools with FunctionCallsOrganizer
+                if (this.smartExecutor && this.smartExecutor.organizer) {
+                    this.smartExecutor.organizer.registerPluginTools(this.pluginManager);
+                }
+            } catch (error) {
+                console.error('❌ [ChatManager] Failed to connect PluginManager to Dynamic Tools:', error);
+            }
+        } else {
+            // Either dynamicTools or pluginManager is not ready, retry when both are available
+            if (!this.dynamicTools) {
+                console.log('⚠️ [ChatManager] Dynamic Tools not initialized yet, will connect later');
+            }
+            if (!this.pluginManager) {
+                console.log('⚠️ [ChatManager] PluginManager not initialized yet, will connect later');
+            }
+        }
+    }
+
+    /**
+     * Notify Dynamic Tools Registry when plugins are installed/uninstalled
+     * Call this method after plugin installation or removal to update the tools cache
+     */
+    onPluginStateChanged() {
+        if (this.dynamicTools && this.dynamicTools.pluginBridge) {
+            this.dynamicTools.invalidatePluginCache();
+            console.log('🔄 [ChatManager] Plugin state changed, Dynamic Tools cache invalidated');
+            
+            // Re-connect to ensure fresh plugin list
+            this.connectPluginManagerToDynamicTools();
+        }
+        
+        // Also update FunctionCallsOrganizer
+        if (this.smartExecutor && this.smartExecutor.organizer && this.pluginManager) {
+            this.smartExecutor.organizer.registerPluginTools(this.pluginManager);
+            console.log('🔌 [ChatManager] FunctionCallsOrganizer updated with plugin tools');
         }
     }
 
@@ -10084,9 +10144,18 @@ ${this.getPluginSystemInfo()}`;
                     
                 // Plugin system functions
                 default:
-                    // Try to execute as plugin function
+                    // Check if this is a visualization plugin tool first
                     if (this.pluginManager && toolName.includes('.')) {
                         try {
+                            // Check for visualization plugin tools
+                            if (this.pluginManager.isVisualizationTool && this.pluginManager.isVisualizationTool(toolName)) {
+                                console.log(`🎨 [ChatManager] Executing visualization tool: ${toolName}`);
+                                result = await this.pluginManager.executeVisualizationTool(toolName, parameters);
+                                console.log(`✅ Visualization tool ${toolName} executed successfully`);
+                                break;
+                            }
+                            
+                            // Try regular plugin function execution
                             result = await this.pluginManager.executeFunctionByName(toolName, parameters);
                             console.log(`Plugin function ${toolName} executed successfully:`, result);
                             break;

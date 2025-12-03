@@ -1,11 +1,15 @@
 /**
  * FunctionCallsOrganizer - 组织和优化function calls的执行策略
  * 按照功能类型分类执行，优化ChatBox响应速度和准确性
+ * Enhanced with dynamic plugin tools integration
  */
 class FunctionCallsOrganizer {
     constructor(chatManager) {
         this.chatManager = chatManager;
         this.app = chatManager.app;
+        
+        // Track dynamically registered plugin tools
+        this.dynamicPluginTools = new Map();
         
         // 功能分类定义
         this.functionCategories = {
@@ -198,8 +202,10 @@ class FunctionCallsOrganizer {
                 priority: 5,
                 description: "Plugin Manager V2 - Visualization plugins",
                 functions: [
-                    // These are handled by getAvailableVisualizations()
-                    // and rendered automatically with data
+                    // Visualization plugins are dynamically registered
+                    // Base tools registered here, dynamic tools added via registerPluginTools()
+                    'protein-interaction-network.visualize',
+                    'protein-interaction-network.renderNetwork'
                 ]
             },
             
@@ -660,6 +666,115 @@ class FunctionCallsOrganizer {
             };
         }
         return stats;
+    }
+
+    /**
+     * Register plugin tools dynamically from PluginManagerV2
+     * Called when plugins are installed/activated
+     * @param {PluginManagerV2} pluginManager - The plugin manager instance
+     */
+    registerPluginTools(pluginManager) {
+        if (!pluginManager) {
+            console.warn('⚠️ [FunctionCallsOrganizer] No plugin manager provided');
+            return;
+        }
+
+        try {
+            console.log('🔌 [FunctionCallsOrganizer] Registering plugin tools...');
+
+            // Clear existing dynamic tools
+            this.dynamicPluginTools.clear();
+
+            // Get visualization plugins
+            const visualizations = pluginManager.getAvailableVisualizations ? 
+                pluginManager.getAvailableVisualizations() : [];
+
+            for (const viz of visualizations) {
+                const toolName = `${viz.id}.visualize`;
+                const renderName = `${viz.id}.renderNetwork`;
+
+                this.dynamicPluginTools.set(toolName, {
+                    type: 'visualization',
+                    pluginId: viz.id,
+                    name: viz.name,
+                    category: 'pluginVisualizations'
+                });
+
+                this.dynamicPluginTools.set(renderName, {
+                    type: 'visualization',
+                    pluginId: viz.id,
+                    name: viz.name,
+                    category: 'pluginVisualizations'
+                });
+
+                // Add to function category if not already present
+                if (!this.functionCategories.pluginVisualizations.functions.includes(toolName)) {
+                    this.functionCategories.pluginVisualizations.functions.push(toolName);
+                }
+                if (!this.functionCategories.pluginVisualizations.functions.includes(renderName)) {
+                    this.functionCategories.pluginVisualizations.functions.push(renderName);
+                }
+            }
+
+            // Get function plugins
+            const functionPlugins = pluginManager.getAllFunctions ? 
+                pluginManager.getAllFunctions() : [];
+
+            for (const func of functionPlugins) {
+                const toolName = `${func.pluginId}.${func.name}`;
+                
+                this.dynamicPluginTools.set(toolName, {
+                    type: 'function',
+                    pluginId: func.pluginId,
+                    name: func.name,
+                    category: 'pluginFunctions'
+                });
+
+                // Add to function category if not already present
+                if (!this.functionCategories.pluginFunctions.functions.includes(toolName)) {
+                    this.functionCategories.pluginFunctions.functions.push(toolName);
+                }
+            }
+
+            // Rebuild function mapping
+            this.functionToCategory = this.buildFunctionMapping();
+
+            console.log(`✅ [FunctionCallsOrganizer] Registered ${this.dynamicPluginTools.size} plugin tools`);
+            console.log('   - Visualization tools:', this.functionCategories.pluginVisualizations.functions.length);
+            console.log('   - Function tools:', this.functionCategories.pluginFunctions.functions.length);
+
+        } catch (error) {
+            console.error('❌ [FunctionCallsOrganizer] Error registering plugin tools:', error);
+        }
+    }
+
+    /**
+     * Check if a tool is a dynamically registered plugin tool
+     * @param {string} toolName - Tool name to check
+     * @returns {boolean}
+     */
+    isPluginTool(toolName) {
+        return this.dynamicPluginTools.has(toolName) || toolName.includes('.');
+    }
+
+    /**
+     * Get plugin tool information
+     * @param {string} toolName - Tool name
+     * @returns {Object|null}
+     */
+    getPluginToolInfo(toolName) {
+        return this.dynamicPluginTools.get(toolName) || null;
+    }
+
+    /**
+     * Get all registered plugin tools
+     * @returns {Array}
+     */
+    getAllPluginTools() {
+        return Array.from(this.dynamicPluginTools.entries()).map(([name, info]) => ({
+            name,
+            ...info
+        }));
     }
 }
 

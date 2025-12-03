@@ -1,23 +1,51 @@
 /**
  * System Integration for Dynamic Tools Registry
  * Integrates the tools registry with existing CodeXomics components
+ * Enhanced with Plugin Tools Bridge for seamless plugin integration
  */
 
 const ToolsRegistryManager = require('./registry_manager');
 const BuiltInToolsIntegration = require('./builtin_tools_integration');
+const PluginToolsBridge = require('./plugin_tools_bridge');
 const path = require('path');
 
 class SystemIntegration {
     constructor() {
         this.registryManager = new ToolsRegistryManager();
         this.builtInTools = new BuiltInToolsIntegration();
+        this.pluginBridge = new PluginToolsBridge();
         this.integrationStatus = {
             initialized: false,
             lastUpdate: null,
             toolsLoaded: 0,
             categoriesLoaded: 0,
-            builtInToolsLoaded: 0
+            builtInToolsLoaded: 0,
+            pluginToolsLoaded: 0
         };
+    }
+
+    /**
+     * Set the plugin manager for plugin tools integration
+     * @param {PluginManagerV2} pluginManager - The plugin manager instance
+     */
+    setPluginManager(pluginManager) {
+        if (pluginManager) {
+            this.pluginBridge.setPluginManager(pluginManager);
+            console.log('✅ [System Integration] PluginManager connected to tools bridge');
+            
+            // Update plugin tools count
+            const pluginTools = this.pluginBridge.getAllPluginTools();
+            this.integrationStatus.pluginToolsLoaded = pluginTools.length;
+            console.log(`🔌 [System Integration] ${pluginTools.length} plugin tools registered`);
+        }
+    }
+
+    /**
+     * Invalidate plugin tools cache (call when plugins are installed/uninstalled)
+     */
+    invalidatePluginCache() {
+        this.pluginBridge.invalidateCache();
+        console.log('🔄 [System Integration] Plugin tools cache invalidated');
     }
 
     /**
@@ -211,6 +239,10 @@ class SystemIntegration {
             const builtInRelevance = this.builtInTools.analyzeBuiltInToolRelevance(userQuery);
             console.log('🔧 [System Integration] Built-in tools analysis:', builtInRelevance.length, 'relevant tools');
             
+            // Get relevant plugin tools via PluginToolsBridge
+            const pluginTools = this.pluginBridge.getRelevantPluginTools(userQuery, 15);
+            console.log('🔌 [System Integration] Plugin tools found:', pluginTools.length);
+            
             // Add tool detection logging for Song's benchmark system
             if (builtInRelevance.length > 0) {
                 console.log('📋 [Tool Detection Recording] Built-in tools detected:');
@@ -296,18 +328,25 @@ class SystemIntegration {
                 }
             }
             // Merge built-in tools with registry tools (built-in tools first for priority)
-            const combinedTools = [...relevantBuiltInTools, ...registryPromptData.tools];
+            // Then add plugin tools at the end
+            const combinedTools = [...relevantBuiltInTools, ...registryPromptData.tools, ...pluginTools];
+            
+            // Generate plugin tools prompt section
+            const pluginToolsPromptSection = this.pluginBridge.generatePluginToolsPromptSection(userQuery);
             
             // Create enhanced prompt data
             const enhancedPromptData = {
                 tools: combinedTools,
                 toolDescriptions: registryPromptData.toolDescriptions,
                 sampleUsages: registryPromptData.sampleUsages,
-                totalTools: combinedTools.length
+                totalTools: combinedTools.length,
+                pluginToolsSection: pluginToolsPromptSection,
+                pluginToolsCount: pluginTools.length
             };
             
             console.log('🎯 [System Integration] Final tool count:', enhancedPromptData.totalTools, 
-                       '(Built-in:', relevantBuiltInTools.length, '+ Registry:', registryPromptData.tools.length, ')');
+                       '(Built-in:', relevantBuiltInTools.length, '+ Registry:', registryPromptData.tools.length, 
+                       '+ Plugins:', pluginTools.length, ')');
             
             // Comprehensive tool detection recording for Song's benchmark evaluation system
             if (typeof window !== 'undefined' && window.songBenchmarkDebug) {
@@ -348,6 +387,7 @@ class SystemIntegration {
                 toolCount: enhancedPromptData.totalTools,
                 builtInToolsIncluded: relevantBuiltInTools.length,
                 registryToolsIncluded: registryPromptData.tools.length,
+                pluginToolsIncluded: pluginTools.length,
                 generationTime: Date.now()
             };
         } catch (error) {
@@ -357,14 +397,19 @@ class SystemIntegration {
     }
 
     /**
-     * Build the complete system prompt with dynamic tools and built-in tool integration
+     * Build the complete system prompt with dynamic tools, built-in tools, and plugin integration
      */
     buildSystemPrompt(promptData, context) {
-        const { tools, toolDescriptions, sampleUsages } = promptData;
+        const { tools, toolDescriptions, sampleUsages, pluginToolsSection } = promptData;
         
-        // Separate built-in tools from external tools
+        // Separate built-in tools from external tools and plugin tools
         const builtInTools = tools.filter(tool => tool.execution_type === 'built-in' || tool.implementation?.type === 'built-in');
-        const externalTools = tools.filter(tool => tool.execution_type !== 'built-in' && tool.implementation?.type !== 'built-in');
+        const pluginTools = tools.filter(tool => tool.source === 'plugin');
+        const externalTools = tools.filter(tool => 
+            tool.execution_type !== 'built-in' && 
+            tool.implementation?.type !== 'built-in' && 
+            tool.source !== 'plugin'
+        );
         
         // Build detailed genome browser state information
         let genomeStateInfo = '';
@@ -400,6 +445,14 @@ class SystemIntegration {
             return `- **${tool.name}**: ${tool.description}\n  Parameters: ${params}`;
         }).join('\n');
 
+        // Generate plugin tools description
+        const pluginToolDescriptions = pluginTools.map(tool => {
+            const params = Object.entries(tool.parameters?.properties || {})
+                .map(([name, param]) => `${name}: ${param.type} - ${param.description || ''}`)
+                .join(', ');
+            return `- **${tool.name}** (Plugin: ${tool.plugin_name}): ${tool.description}\n  Parameters: ${params || 'See plugin documentation'}`;
+        }).join('\n');
+
         return `# CodeXomics - Enhanced Dynamic Tools System
 
 You are an advanced AI assistant for CodeXomics, equipped with ${tools.length} dynamically selected tools based on the user's query.
@@ -408,15 +461,20 @@ You are an advanced AI assistant for CodeXomics, equipped with ${tools.length} d
 ${genomeStateInfo}
 - **Network Status**: ${context.hasNetwork ? 'Connected' : 'Offline'}
 - **Authentication**: ${context.hasAuth ? 'Authenticated' : 'Not authenticated'}
-- **Active Tools**: ${tools.length} tools available (${builtInTools.length} built-in, ${externalTools.length} external)
+- **Active Tools**: ${tools.length} tools available (${builtInTools.length} built-in, ${externalTools.length} external, ${pluginTools.length} plugin)
 
 ## 🔧 Built-in Tools (Directly Available)
 
 ${builtInToolDescriptions || 'No built-in tools selected for this query.'}
 
-## 🌐 External Tools (Via MCP/Plugin System)
+## 🌐 External Tools (Via MCP)
 
 ${externalToolDescriptions || 'No external tools selected for this query.'}
+
+## 🔌 Plugin Tools (Via Plugin System)
+
+${pluginToolDescriptions || 'No plugin tools selected for this query.'}
+${pluginToolsSection || ''}
 
 ## 📚 Tool Usage Examples
 
@@ -469,7 +527,8 @@ ${'```'}
 - **Database Tools**: Use for external data retrieval
 - **AI Tools**: Use for advanced AI-powered analysis
 - **Editing Tools**: Use for sequence manipulation
-- **Plugin Tools**: Use for extended functionality
+- **Plugin Tools**: Use for extended functionality (invoked as plugin-id.function-name)
+- **Visualization Plugins**: Use for data visualization (e.g., protein-interaction-network.visualize)
 
 ## 📊 Performance Optimization
 
@@ -479,7 +538,9 @@ ${'```'}
 - Tool usage is tracked for continuous optimization
 - Failed tools are automatically retried with fallback options
 
-Remember: You have access to the most relevant tools for the user's specific query, with built-in tools prioritized for file loading and core operations. Use them effectively to provide comprehensive genomic analysis and assistance.`;
+Remember: You have access to the most relevant tools for the user's specific query, with built-in tools prioritized for file loading and core operations. Plugin tools extend your capabilities with specialized visualizations and analyses. Use them effectively to provide comprehensive genomic analysis and assistance.
+
+**PLUGIN TOOL INVOCATION FORMAT**: To call a plugin tool, use the format "plugin-id.function-name", e.g., {"tool_name": "protein-interaction-network.visualize", "parameters": {...}}`;
     }
 
     /**
