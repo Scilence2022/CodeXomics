@@ -674,8 +674,8 @@ class PluginMarketplace {
                 // Install plugin
                 const installResult = await this.installDownloadedPlugin(downloadResult);
                 
-                // Register as installed
-                this.registerInstalledPlugin(plugin, installResult);
+                // Register as installed (await to ensure persistence)
+                await this.registerInstalledPlugin(plugin, installResult);
                 
                 results.push({
                     pluginId: plugin.id,
@@ -821,7 +821,7 @@ class PluginMarketplace {
     /**
      * Register installed plugin with complete manifest data
      */
-    registerInstalledPlugin(plugin, installResult) {
+    async registerInstalledPlugin(plugin, installResult) {
         // Get complete manifest from plugin manager if available
         const installedPlugin = this.pluginManager.getPlugin(plugin.id);
         const manifest = installedPlugin || plugin;
@@ -858,16 +858,16 @@ class PluginMarketplace {
             }
         });
         
-        // Save to config immediately
-        this.saveInstalledPluginsRegistry();
+        // Save to config immediately (await to ensure persistence)
+        await this.saveInstalledPluginsRegistry();
         
         console.log(`💾 Saved ${plugin.id} to installed plugins registry`);
     }
 
     /**
-     * Save installed plugins registry to ConfigManager
+     * Save installed plugins registry to ConfigManager (with immediate persistence)
      */
-    saveInstalledPluginsRegistry() {
+    async saveInstalledPluginsRegistry() {
         if (this.configManager) {
             const registryData = {};
             for (const [id, plugin] of this.installedPlugins) {
@@ -879,16 +879,45 @@ class PluginMarketplace {
                 pluginIds: Object.keys(registryData)
             });
             
-            this.configManager.set('marketplace.installed', registryData);
+            // Use immediate save to ensure persistence (bypasses debounce)
+            // This is critical for plugin installation - data must be written to localStorage immediately
+            if (this.configManager.setAndSaveImmediate) {
+                const success = await this.configManager.setAndSaveImmediate('marketplace.installed', registryData);
+                if (success) {
+                    console.log('✅ Plugin registry saved to localStorage immediately');
+                } else {
+                    console.error('❌ Failed to save plugin registry immediately');
+                }
+            } else {
+                // Fallback to regular set (for backward compatibility)
+                this.configManager.set('marketplace.installed', registryData);
+                console.warn('⚠️  Using debounced save (setAndSaveImmediate not available)');
+            }
             
-            // Verify save was successful
+            // Verify save was successful by reading from ConfigManager
             setTimeout(() => {
                 const savedData = this.configManager.get('marketplace.installed');
                 console.log('✅ Verified saved data in ConfigManager:', {
                     pluginCount: Object.keys(savedData || {}).length,
                     pluginIds: Object.keys(savedData || {})
                 });
-            }, 100);
+                
+                // Also verify localStorage directly
+                try {
+                    const localStorageData = localStorage.getItem('marketplaceSettings');
+                    if (localStorageData) {
+                        const parsed = JSON.parse(localStorageData);
+                        console.log('✅ Verified data in localStorage:', {
+                            hasInstalled: !!parsed.installed,
+                            pluginCount: Object.keys(parsed.installed || {}).length
+                        });
+                    } else {
+                        console.warn('⚠️  marketplaceSettings not found in localStorage');
+                    }
+                } catch (e) {
+                    console.error('❌ Error verifying localStorage:', e);
+                }
+            }, 200);
         } else {
             console.warn('⚠️  ConfigManager not available, cannot save installed plugins registry');
         }

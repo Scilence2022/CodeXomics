@@ -1072,6 +1072,41 @@ class ConfigManager {
             console.error('Error setting config value:', error);
         }
     }
+    
+    /**
+     * Set configuration value and save immediately (bypasses debounce)
+     * Use this for critical data that must persist immediately
+     * @param {string} path - Configuration path (e.g., 'marketplace.installed')
+     * @param {any} value - Value to set
+     */
+    async setAndSaveImmediate(path, value) {
+        try {
+            // Ensure initialization is complete
+            await this.waitForInitialization();
+            
+            const keys = path.split('.');
+            let obj = this.config;
+            
+            for (let i = 0; i < keys.length - 1; i++) {
+                const key = keys[i];
+                if (!(key in obj) || typeof obj[key] !== 'object') {
+                    obj[key] = {};
+                }
+                obj = obj[key];
+            }
+            
+            obj[keys[keys.length - 1]] = value;
+            
+            // Save immediately without debounce
+            console.log(`💾 Immediate save triggered for: ${path}`);
+            await this.saveConfig();
+            
+            return true;
+        } catch (error) {
+            console.error('Error in setAndSaveImmediate:', error);
+            return false;
+        }
+    }
 
     /**
      * Add chat message to history

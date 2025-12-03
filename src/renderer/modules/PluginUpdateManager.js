@@ -308,7 +308,7 @@ class PluginUpdateManager {
         installedPlugin.updatedAt = new Date();
         
         // Save updated registry
-        this.marketplace.saveInstalledPluginsRegistry();
+        await this.marketplace.saveInstalledPluginsRegistry();
         
         return { success: true };
     }
@@ -374,7 +374,7 @@ class PluginUpdateManager {
             currentPlugin.rolledBackFrom = currentVersion;
             
             // Save updated registry
-            this.marketplace.saveInstalledPluginsRegistry();
+            await this.marketplace.saveInstalledPluginsRegistry();
             
             this.stats.rollbacks++;
             
