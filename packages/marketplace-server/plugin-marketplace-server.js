@@ -97,77 +97,27 @@ async function initializeServer() {
  */
 async function initializeSamplePlugins() {
     const samplePlugins = {
-        'genomic-variant-caller': {
-            id: 'genomic-variant-caller',
-            name: 'Genomic Variant Caller',
-            description: 'Advanced genomic variant calling with machine learning enhancement',
-            version: '2.4.1',
-            author: 'BioinformaticsTeam',
-            category: 'variant-analysis',
-            type: 'function',
-            tags: ['variants', 'genomics', 'snp', 'indel', 'ml'],
-            size: 4850000,
-            homepage: 'https://github.com/genomeexplorer/variant-caller',
-            repository: 'https://github.com/genomeexplorer/variant-caller.git',
-            license: 'MIT',
-            keywords: ['genomics', 'variants', 'bioinformatics'],
-            dependencies: [
-                { id: 'sequence-utils', version: '>=2.1.0' },
-                { id: 'ml-core', version: '>=1.5.0' }
-            ],
-            screenshots: [
-                'https://example.com/screenshots/variant-caller-1.png',
-                'https://example.com/screenshots/variant-caller-2.png'
-            ],
-            rating: 4.7,
-            downloads: 15847,
-            lastUpdated: '2024-11-20T10:30:00Z',
-            status: 'published',
-            submittedBy: 'admin',
-            submittedAt: '2024-11-01T00:00:00Z',
-            changelog: {
-                '2.4.1': 'Fixed compatibility with latest genome builds',
-                '2.4.0': 'Added support for structural variants',
-                '2.3.0': 'Machine learning enhancement for accuracy'
-            },
-            compatibility: {
-                genomeExplorer: '>=2.0.0',
-                platforms: ['windows', 'macos', 'linux']
-            },
-            security: {
-                checksum: 'sha256:abc123def456...',
-                signature: 'verified',
-                scanResults: {
-                    malware: false,
-                    suspicious: false,
-                    lastScanned: '2024-11-20T08:00:00Z'
-                }
-            }
-        },
         'protein-interaction-network': {
             id: 'protein-interaction-network',
             name: 'Protein Interaction Network Visualizer',
-            description: 'Interactive protein-protein interaction network analysis and visualization',
+            description: 'Interactive protein-protein interaction network analysis and visualization with real biological data',
             version: '1.8.3',
             author: 'NetworkBioLab',
             category: 'network-analysis',
             type: 'visualization',
-            tags: ['protein', 'interaction', 'network', 'ppi', 'visualization'],
+            tags: ['protein', 'interaction', 'network', 'ppi', 'visualization', 'p53', 'pathway'],
             size: 3240000,
             homepage: 'https://github.com/genomeexplorer/protein-networks',
             repository: 'https://github.com/genomeexplorer/protein-networks.git',
             license: 'Apache-2.0',
-            keywords: ['protein', 'network', 'interaction', 'visualization'],
-            dependencies: [
-                { id: 'graph-libs', version: '>=3.0.0' },
-                { id: 'visualization-engine', version: '>=2.1.0' }
-            ],
+            keywords: ['protein', 'network', 'interaction', 'visualization', 'biological-pathways'],
+            dependencies: [],
             screenshots: [
                 'https://example.com/screenshots/protein-network-1.png'
             ],
             rating: 4.9,
-            downloads: 8934,
-            lastUpdated: '2024-11-18T14:22:00Z',
+            downloads: 8954,
+            lastUpdated: '2024-12-03T14:22:00Z',
             status: 'published',
             submittedBy: 'admin',
             submittedAt: '2024-10-15T00:00:00Z',
@@ -186,100 +136,7 @@ async function initializeSamplePlugins() {
                 scanResults: {
                     malware: false,
                     suspicious: false,
-                    lastScanned: '2024-11-18T09:00:00Z'
-                }
-            }
-        },
-        'rna-seq-analyzer': {
-            id: 'rna-seq-analyzer',
-            name: 'RNA-Seq Differential Expression Analyzer',
-            description: 'Comprehensive RNA-Seq data analysis with statistical testing',
-            version: '3.1.0',
-            author: 'RNASeqGroup',
-            category: 'rna-analysis',
-            type: 'function',
-            tags: ['rna-seq', 'differential-expression', 'statistics', 'transcriptomics'],
-            size: 5670000,
-            homepage: 'https://github.com/genomeexplorer/rna-seq-analyzer',
-            repository: 'https://github.com/genomeexplorer/rna-seq-analyzer.git',
-            license: 'GPL-3.0',
-            keywords: ['rna', 'transcriptomics', 'differential-expression'],
-            dependencies: [
-                { id: 'stats-utils', version: '>=2.0.0' },
-                { id: 'genomic-ranges', version: '>=1.3.0' }
-            ],
-            screenshots: [
-                'https://example.com/screenshots/rna-seq-1.png',
-                'https://example.com/screenshots/rna-seq-2.png'
-            ],
-            rating: 4.6,
-            downloads: 12234,
-            lastUpdated: '2024-11-19T16:45:00Z',
-            status: 'published',
-            submittedBy: 'admin',
-            submittedAt: '2024-09-20T00:00:00Z',
-            changelog: {
-                '3.1.0': 'Added batch effect correction',
-                '3.0.2': 'Improved memory efficiency',
-                '3.0.0': 'Major refactor with new algorithms'
-            },
-            compatibility: {
-                genomeExplorer: '>=2.0.0',
-                platforms: ['windows', 'macos', 'linux']
-            },
-            security: {
-                checksum: 'sha256:ghi345jkl678...',
-                signature: 'verified',
-                scanResults: {
-                    malware: false,
-                    suspicious: false,
-                    lastScanned: '2024-11-19T11:00:00Z'
-                }
-            }
-        },
-        'phylogenetic-tree-builder': {
-            id: 'phylogenetic-tree-builder',
-            name: 'Advanced Phylogenetic Tree Builder',
-            description: 'Maximum likelihood and Bayesian phylogenetic inference',
-            version: '2.7.2',
-            author: 'PhyloLab',
-            category: 'phylogenetics',
-            type: 'function',
-            tags: ['phylogeny', 'evolution', 'tree', 'maximum-likelihood', 'bayesian'],
-            size: 7890000,
-            homepage: 'https://github.com/genomeexplorer/phylo-builder',
-            repository: 'https://github.com/genomeexplorer/phylo-builder.git',
-            license: 'BSD-3-Clause',
-            keywords: ['phylogenetics', 'evolution', 'tree-building'],
-            dependencies: [
-                { id: 'sequence-alignment', version: '>=2.0.0' },
-                { id: 'tree-utils', version: '>=1.8.0' }
-            ],
-            screenshots: [
-                'https://example.com/screenshots/phylo-1.png'
-            ],
-            rating: 4.8,
-            downloads: 6789,
-            lastUpdated: '2024-11-17T12:15:00Z',
-            status: 'published',
-            submittedBy: 'admin',
-            submittedAt: '2024-08-10T00:00:00Z',
-            changelog: {
-                '2.7.2': 'Bug fixes in bootstrap calculation',
-                '2.7.1': 'Performance optimization',
-                '2.7.0': 'Added support for partitioned models'
-            },
-            compatibility: {
-                genomeExplorer: '>=2.0.0',
-                platforms: ['windows', 'macos', 'linux']
-            },
-            security: {
-                checksum: 'sha256:jkl901mno234...',
-                signature: 'verified',
-                scanResults: {
-                    malware: false,
-                    suspicious: false,
-                    lastScanned: '2024-11-17T08:30:00Z'
+                    lastScanned: '2024-12-03T09:00:00Z'
                 }
             }
         }
@@ -387,12 +244,12 @@ app.get('/api/v1/plugins', (req, res) => {
             );
         }
         
-        // Apply filters
-        if (category) {
+        // Apply filters (treat 'all' as no filter)
+        if (category && category !== 'all') {
             plugins = plugins.filter(plugin => plugin.category === category);
         }
         
-        if (type) {
+        if (type && type !== 'all') {
             plugins = plugins.filter(plugin => plugin.type === type);
         }
         

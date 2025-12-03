@@ -387,12 +387,12 @@ app.get('/api/v1/plugins', (req, res) => {
             );
         }
         
-        // Apply filters
-        if (category) {
+        // Apply filters (treat 'all' as no filter)
+        if (category && category !== 'all') {
             plugins = plugins.filter(plugin => plugin.category === category);
         }
         
-        if (type) {
+        if (type && type !== 'all') {
             plugins = plugins.filter(plugin => plugin.type === type);
         }
         

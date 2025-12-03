@@ -19,14 +19,10 @@ class PluginMarketplaceUI {
             source: 'all'
         };
         
-        // Draggable functionality
-        this.dragManager = null;
-        this.initializeDragManager();
-        
         // Initialize configuration and submission components
         this.initializeComponents();
         
-        console.log('🎨 PluginMarketplaceUI initialized with draggable functionality');
+        console.log('🎨 PluginMarketplaceUI initialized (using ModalDragManager for drag functionality)');
     }
 
     initializeComponents() {
@@ -41,76 +37,7 @@ class PluginMarketplaceUI {
         }
     }
 
-    /**
-     * Initialize drag manager for marketplace window
-     */
-    initializeDragManager() {
-        // Create a lightweight drag manager for the marketplace
-        this.dragManager = {
-            isDragging: false,
-            startX: 0,
-            startY: 0,
-            offsetX: 0,
-            offsetY: 0,
-            draggedElement: null,
 
-            startDrag: (element, e) => {
-                if (e.target.closest('button') || e.target.closest('input')) return;
-                
-                this.isDragging = true;
-                this.draggedElement = element;
-                
-                const rect = element.getBoundingClientRect();
-                this.startX = rect.left;
-                this.startY = rect.top;
-                this.offsetX = e.clientX - this.startX;
-                this.offsetY = e.clientY - this.startY;
-                
-                element.classList.add('marketplace-dragging');
-                document.body.style.cursor = 'move';
-                document.body.style.userSelect = 'none';
-                
-                document.addEventListener('mousemove', this.doDrag);
-                document.addEventListener('mouseup', this.stopDrag);
-            },
-
-            doDrag: (e) => {
-                if (!this.isDragging || !this.draggedElement) return;
-                
-                e.preventDefault();
-                
-                const newX = e.clientX - this.offsetX;
-                const newY = e.clientY - this.offsetY;
-                
-                // Constrain to viewport
-                const rect = this.draggedElement.getBoundingClientRect();
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
-                
-                const constrainedX = Math.max(0, Math.min(newX, viewportWidth - rect.width));
-                const constrainedY = Math.max(0, Math.min(newY, viewportHeight - rect.height));
-                
-                this.draggedElement.style.left = `${constrainedX}px`;
-                this.draggedElement.style.top = `${constrainedY}px`;
-            },
-
-            stopDrag: () => {
-                if (!this.isDragging) return;
-                
-                this.isDragging = false;
-                if (this.draggedElement) {
-                    this.draggedElement.classList.remove('marketplace-dragging');
-                }
-                this.draggedElement = null;
-                
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-                
-                document.removeEventListener('mousemove', this.doDrag);
-                document.removeEventListener('mouseup', this.stopDrag);
-            }
-        };
-    }
 
     /**
      * Open the plugin marketplace window
@@ -142,8 +69,8 @@ class PluginMarketplaceUI {
         marketplaceWindow.id = 'plugin-marketplace-window';
         marketplaceWindow.className = 'marketplace-modal';
         marketplaceWindow.innerHTML = `
-            <div class="marketplace-content" id="marketplace-modal-content">
-                <div class="marketplace-header draggable-header" id="marketplace-header">
+            <div class="modal-content draggable" id="marketplace-modal-content">
+                <div class="modal-header draggable-handle" id="marketplace-header">
                     <div class="header-content">
                         <div class="header-left">
                             <span class="drag-indicator">⋮⋮</span>
@@ -157,11 +84,11 @@ class PluginMarketplaceUI {
                             <button onclick="pluginMarketplaceUI.resetPosition()" 
                                     class="header-btn" title="Reset Position">🔄</button>
                             <button onclick="pluginMarketplaceUI.closeMarketplace()" 
-                                    class="header-btn close-btn">×</button>
+                                    class="modal-close header-btn close-btn">×</button>
                         </div>
                     </div>
                 </div>
-                <div class="marketplace-body">
+                <div class="modal-body marketplace-body">
                     <div id="marketplace-content">
                         <div class="marketplace-controls">
                             <h3>Available Plugins</h3>
@@ -169,9 +96,11 @@ class PluginMarketplaceUI {
                                 <input type="text" id="plugin-search" placeholder="Search plugins..." 
                                        class="search-input">
                                 <button onclick="pluginMarketplaceUI.searchPlugins()" 
-                                        class="control-btn primary">Search</button>
+                                        class="control-btn primary">🔍 Search</button>
+                                <button onclick="pluginMarketplaceUI.clearSearch()" 
+                                        class="control-btn secondary" id="clear-search-btn" style="display: none;">✕ Clear</button>
                                 <button onclick="pluginMarketplaceUI.refreshPlugins()" 
-                                        class="control-btn secondary">Refresh</button>
+                                        class="control-btn secondary">🔄 Refresh</button>
                             </div>
                         </div>
                         <div id="plugin-list" class="plugin-list"></div>
@@ -189,8 +118,11 @@ class PluginMarketplaceUI {
         
         document.body.appendChild(marketplaceWindow);
         
-        // Setup draggable functionality
+        // Setup draggable functionality using ModalDragManager
         this.setupDraggable();
+        
+        // Setup search input event listeners
+        this.setupSearchInput();
         
         this.loadPluginList();
         this.checkConnectionStatus();
@@ -219,7 +151,8 @@ class PluginMarketplaceUI {
                 justify-content: center;
             }
 
-            .marketplace-content {
+            /* Use standard modal-content class for consistency with ModalDragManager */
+            #marketplace-modal-content {
                 background: white;
                 border-radius: 12px;
                 box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
@@ -229,27 +162,25 @@ class PluginMarketplaceUI {
                 max-height: 95vh;
                 display: flex;
                 flex-direction: column;
-                position: relative;
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
             }
 
-            .marketplace-content.marketplace-dragging {
-                transform: scale(1.02);
+            #marketplace-modal-content.dragging {
                 box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
                 z-index: 10001;
             }
 
-            .marketplace-header {
+            #marketplace-header {
                 background: linear-gradient(135deg, #4CAF50, #45a049);
                 color: white;
                 border-radius: 12px 12px 0 0;
-                padding: 0;
+                padding: 0 !important;
                 cursor: move;
                 user-select: none;
                 position: relative;
+                border-bottom: none !important;
             }
 
-            .marketplace-header:hover {
+            #marketplace-header:hover {
                 background: linear-gradient(135deg, #45a049, #3d8b40);
             }
 
@@ -258,6 +189,7 @@ class PluginMarketplaceUI {
                 justify-content: space-between;
                 align-items: center;
                 padding: 15px 20px;
+                width: 100%;
             }
 
             .header-left {
@@ -266,13 +198,13 @@ class PluginMarketplaceUI {
                 gap: 12px;
             }
 
-            .drag-indicator {
+            #marketplace-header .drag-indicator {
                 font-size: 14px;
                 opacity: 0.7;
                 transition: opacity 0.2s ease;
             }
 
-            .marketplace-header:hover .drag-indicator {
+            #marketplace-header:hover .drag-indicator {
                 opacity: 1;
             }
 
@@ -280,12 +212,14 @@ class PluginMarketplaceUI {
                 margin: 0;
                 font-size: 18px;
                 font-weight: 600;
+                white-space: nowrap;
             }
 
             .header-controls {
                 display: flex;
                 gap: 8px;
                 align-items: center;
+                flex-shrink: 0;
             }
 
             .header-btn {
@@ -458,33 +392,71 @@ class PluginMarketplaceUI {
     }
 
     /**
-     * Setup draggable functionality for the marketplace window
+     * Setup draggable functionality for the marketplace window using ModalDragManager
      */
     setupDraggable() {
-        const marketplaceContent = document.getElementById('marketplace-modal-content');
-        const header = document.getElementById('marketplace-header');
-        
-        if (!marketplaceContent || !header) return;
-        
-        header.addEventListener('mousedown', (e) => {
-            this.dragManager.startDrag(marketplaceContent, e);
+        // Use the global ModalDragManager if available
+        if (window.modalDragManager) {
+            // Set the data-modal-content attribute on the header for ModalDragManager
+            const header = document.getElementById('marketplace-header');
+            if (header) {
+                header.setAttribute('data-modal-content', '#plugin-marketplace-window');
+            }
+            
+            // Make the marketplace draggable
+            window.modalDragManager.makeDraggable('#plugin-marketplace-window');
+            console.log('✅ Plugin Marketplace made draggable using ModalDragManager');
+        } else {
+            console.warn('⚠️ ModalDragManager not available, marketplace will not be draggable');
+        }
+    }
+
+    /**
+     * Setup search input event listeners for Enter key and real-time feedback
+     */
+    setupSearchInput() {
+        const searchInput = document.getElementById('plugin-search');
+        if (!searchInput) return;
+
+        // Handle Enter key press
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.searchPlugins();
+            }
         });
+
+        // Optional: Real-time search as user types (debounced)
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const value = e.target.value.trim();
+            
+            // Show/hide clear button based on input
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (clearBtn) {
+                clearBtn.style.display = value ? 'inline-block' : 'none';
+            }
+
+            // Debounced search (optional - can be removed if too aggressive)
+            // searchTimeout = setTimeout(() => {
+            //     if (value !== this.searchQuery) {
+            //         this.searchPlugins();
+            //     }
+            // }, 500);
+        });
+
+        console.log('✅ Search input event listeners attached');
     }
 
     /**
      * Reset marketplace window position to center
      */
     resetPosition() {
-        const marketplaceContent = document.getElementById('marketplace-modal-content');
-        if (!marketplaceContent) return;
-        
-        marketplaceContent.style.position = '';
-        marketplaceContent.style.left = '';
-        marketplaceContent.style.top = '';
-        marketplaceContent.style.margin = '';
-        marketplaceContent.style.transform = '';
-        
-        console.log('🔄 Marketplace position reset to center');
+        if (window.modalDragManager) {
+            window.modalDragManager.resetPosition('#plugin-marketplace-window');
+            console.log('🔄 Plugin Marketplace position reset to center');
+        }
     }
 
     async loadPluginList() {
@@ -492,23 +464,47 @@ class PluginMarketplaceUI {
         if (!pluginList) return;
 
         try {
-            document.getElementById('marketplace-status').textContent = 'Loading plugins...';
+            const statusElement = document.getElementById('marketplace-status');
             
-            const plugins = await this.marketplace.searchPlugins('', {});
+            // Show loading state with search context
+            if (this.searchQuery) {
+                statusElement.textContent = `Searching for "${this.searchQuery}"...`;
+            } else {
+                statusElement.textContent = 'Loading plugins...';
+            }
+            
+            // Use the search query set by searchPlugins() method
+            const searchQuery = this.searchQuery || '';
+            const plugins = await this.marketplace.searchPlugins(searchQuery, this.filters);
+            
+            console.log(`📄 Loaded ${plugins.length} plugins${searchQuery ? ` for query: "${searchQuery}"` : ''}`);
             
             if (plugins.length === 0) {
+                const noResultsMessage = searchQuery ? 
+                    `No plugins found for "${searchQuery}"` : 
+                    'No plugins available';
+                    
                 pluginList.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #666;">
-                        <div style="font-size: 48px; margin-bottom: 20px;">📦</div>
-                        <h3>No plugins available</h3>
-                        <p>Check your marketplace server connection or submit the first plugin!</p>
+                        <div style="font-size: 48px; margin-bottom: 20px;">📎</div>
+                        <h3>${noResultsMessage}</h3>
+                        <p>${searchQuery ? 
+                            'Try a different search term or clear the search to see all plugins.' : 
+                            'Check your marketplace server connection or submit the first plugin!'}</p>
+                        ${searchQuery ? 
+                            `<button onclick="pluginMarketplaceUI.clearSearch()" 
+                                    style="background: #2196F3; color: white; border: none; 
+                                           padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px; margin-right: 10px;">
+                                Clear Search
+                            </button>` : ''}
                         <button onclick="pluginMarketplaceUI.showSubmissionDialog()" 
                                 style="background: #4CAF50; color: white; border: none; 
                                        padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">
-                            Submit First Plugin
+                            Submit ${searchQuery ? 'Plugin' : 'First Plugin'}
                         </button>
                     </div>
                 `;
+                statusElement.textContent = searchQuery ? `No results for "${searchQuery}"` : 'No plugins available';
                 return;
             }
 
@@ -603,17 +599,71 @@ class PluginMarketplaceUI {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
+    /**
+     * Execute search based on search input
+     */
     async searchPlugins() {
         const searchInput = document.getElementById('plugin-search');
         if (searchInput) {
-            this.searchQuery = searchInput.value.trim();
-            await this.loadPluginList();
+            const newQuery = searchInput.value.trim();
+            
+            // Only reload if query actually changed
+            if (newQuery !== this.searchQuery) {
+                this.searchQuery = newQuery;
+                console.log(`🔍 Searching for: "${this.searchQuery || '(all plugins)'}"`);
+                
+                // Show/hide clear button
+                const clearBtn = document.getElementById('clear-search-btn');
+                if (clearBtn) {
+                    clearBtn.style.display = this.searchQuery ? 'inline-block' : 'none';
+                }
+                
+                await this.loadPluginList();
+            } else {
+                console.log('🔍 Search query unchanged, skipping reload');
+            }
         }
     }
 
+    /**
+     * Clear search and show all plugins
+     */
+    async clearSearch() {
+        console.log('✖️ Clearing search query');
+        
+        const searchInput = document.getElementById('plugin-search');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        
+        this.searchQuery = '';
+        
+        // Hide clear button
+        const clearBtn = document.getElementById('clear-search-btn');
+        if (clearBtn) {
+            clearBtn.style.display = 'none';
+        }
+        
+        await this.loadPluginList();
+    }
+
+    /**
+     * Refresh plugin list (clears cache and reloads)
+     */
     async refreshPlugins() {
+        console.log('🔄 Refreshing plugin list (clearing cache)...');
+        
+        // Clear search cache in marketplace
+        if (this.marketplace && this.marketplace.searchCache) {
+            this.marketplace.searchCache.clear();
+            console.log('✅ Search cache cleared');
+        }
+        
+        // Reload the current view (with or without search query)
         await this.loadPluginList();
         await this.checkConnectionStatus();
+        
+        console.log('✅ Plugin list refreshed');
     }
 
     async installPlugin(pluginId) {

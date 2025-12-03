@@ -2362,9 +2362,130 @@ class PluginManagementUI {
     }
 
     /**
-     * Run comprehensive test for a plugin
+     * Run comprehensive test for a plugin with real demonstrations
      */
     async runPluginTest(pluginId, type) {
+        let plugin;
+        
+        if (type === 'function') {
+            plugin = this.pluginManager.pluginRegistry.function.get(pluginId);
+        } else if (type === 'visualization') {
+            plugin = this.pluginManager.pluginRegistry.visualization.get(pluginId);
+        } else if (type === 'utility') {
+            plugin = this.pluginManager.pluginRegistry.utility?.get(pluginId);
+        }
+
+        if (!plugin) {
+            this.showMessage(`Plugin "${pluginId}" not found`, 'error');
+            return;
+        }
+
+        if (plugin.enabled === false) {
+            this.showMessage(`Plugin "${plugin.name}" is disabled. Enable it first to run tests.`, 'warning');
+            return;
+        }
+
+        // Show loading message
+        this.showMessage(`Starting interactive demonstration for "${plugin.name}"...`, 'info');
+
+        // Use real test demonstrator for supported plugins
+        if (typeof PluginRealTestDemonstrator !== 'undefined' && this.isRealTestSupported(pluginId)) {
+            this.showRealTestDemonstration(pluginId, plugin, type);
+        } else if (this.testFramework) {
+            // Use test framework if available
+            this.testFramework.openPluginTestInterface(pluginId, plugin, type);
+        } else {
+            // Fallback to enhanced test window
+            this.showEnhancedPluginTestWindow(pluginId, plugin, type);
+        }
+    }
+
+    /**
+     * Check if real test demonstration is supported for plugin
+     */
+    isRealTestSupported(pluginId) {
+        const supportedPlugins = [
+            'protein-interaction-network',
+            'gene-regulatory-network',
+            'phylogenetic-tree',
+            'sequence-alignment'
+        ];
+        return supportedPlugins.includes(pluginId);
+    }
+
+    /**
+     * Show real test demonstration window
+     */
+    showRealTestDemonstration(pluginId, plugin, type) {
+        // Make plugin manager globally accessible for the demo window
+        if (!window.pluginManager) {
+            window.pluginManager = this.pluginManager;
+            console.log('🔗 Plugin manager attached to window for demo access');
+        }
+        
+        // Create test window
+        const testWindow = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+        
+        if (!testWindow) {
+            this.showMessage('Failed to open demo window. Please allow popups.', 'error');
+            return;
+        }
+        
+        // Initialize demonstrator
+        const demonstrator = new PluginRealTestDemonstrator(this.pluginManager);
+        
+        testWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Plugin Interactive Demo - ${plugin.name}</title>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+                ${demonstrator.generateTestStyles()}
+            </head>
+            <body>
+                ${demonstrator.generateInteractiveTestUI(pluginId, plugin, type)}
+                <script>
+                    // Make plugin manager available from opener window
+                    console.log('🔍 Checking for plugin manager in opener window...');
+                    
+                    if (window.opener && window.opener.pluginManager) {
+                        window.pluginManager = window.opener.pluginManager;
+                        console.log('✅ Plugin manager successfully loaded from opener');
+                    } else {
+                        console.error('❌ Plugin manager not found in opener window');
+                        console.log('Available in opener:', window.opener ? Object.keys(window.opener).filter(k => k.includes('plugin') || k.includes('Plugin')) : 'No opener');
+                    }
+                    
+                    ${demonstrator.generateTestScript(pluginId, plugin, type)}
+                    
+                    // Initialize copy/paste menu manager after page loads
+                    window.addEventListener('load', () => {
+                        console.log('🏛️ Initializing Plugin Test Window Menu Manager...');
+                        
+                        // Load PluginTestWindowMenuManager from opener
+                        if (window.opener && window.opener.PluginTestWindowMenuManager) {
+                            const MenuManager = window.opener.PluginTestWindowMenuManager;
+                            new MenuManager(window);
+                            console.log('✅ Copy/Paste menu system initialized successfully');
+                        } else {
+                            console.warn('⚠️ PluginTestWindowMenuManager not found in opener window');
+                        }
+                    });
+                </script>
+            </body>
+            </html>
+        `);
+
+        testWindow.document.close();
+        testWindow.focus();
+    }
+
+    /**
+     * Run comprehensive test for a plugin (old version - now replaced by real test demonstrator)
+     */
+    async runPluginTestOld(pluginId, type) {
         let plugin;
         
         if (type === 'function') {
@@ -2576,6 +2697,19 @@ class PluginManagementUI {
                     ${typeof PluginTestHelpers !== 'undefined' ? 
                         PluginTestHelpers.generateEnhancedTestScript(pluginId, plugin, type) : 
                         this.generateEnhancedTestScript(pluginId, plugin, type)}
+                    
+                    // Initialize copy/paste menu manager
+                    window.addEventListener('load', () => {
+                        console.log('🏛️ Initializing Plugin Test Window Menu Manager...');
+                        
+                        if (window.opener && window.opener.PluginTestWindowMenuManager) {
+                            const MenuManager = window.opener.PluginTestWindowMenuManager;
+                            new MenuManager(window);
+                            console.log('✅ Copy/Paste menu system initialized');
+                        } else {
+                            console.warn('⚠️ PluginTestWindowMenuManager not available');
+                        }
+                    });
                 </script>
             </body>
             </html>

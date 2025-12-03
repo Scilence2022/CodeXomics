@@ -323,19 +323,31 @@ class PluginMarketplace {
             const cached = this.searchCache.get(searchKey);
             if (Date.now() - cached.timestamp < this.options.cacheTimeout) {
                 this.stats.totalSearches++;
+                const cacheAge = Math.round((Date.now() - cached.timestamp) / 1000);
+                console.log(`📦 Returning ${cached.results.length} cached plugins (cached ${cacheAge}s ago)`);
                 return cached.results;
+            } else {
+                console.log('⏰ Cache expired, fetching fresh data from server');
+                this.searchCache.delete(searchKey);
             }
         }
         
         try {
             console.log(`🔍 Searching plugins: "${query}"`);
+            console.log(`📊 Marketplace sources available: ${this.marketplaceSources.size}`);
+            console.log(`📋 Sources:`, Array.from(this.marketplaceSources.entries()).map(([id, src]) => ({
+                id, url: src.url, enabled: src.enabled
+            })));
             
             const searchPromises = [];
             
             // Search across all enabled sources
             for (const [sourceId, source] of this.marketplaceSources) {
                 if (source.enabled) {
+                    console.log(`✅ Adding search for source: ${sourceId} (${source.url})`);
                     searchPromises.push(this.searchInSource(sourceId, query, filters));
+                } else {
+                    console.log(`⏭️ Skipping disabled source: ${sourceId}`);
                 }
             }
             
@@ -450,6 +462,13 @@ class PluginMarketplace {
             
             const data = await response.json();
             
+            console.log(`📡 API Response:`, {
+                success: data.success,
+                pluginCount: data.data?.plugins?.length || 0,
+                hasData: !!data.data,
+                hasPagination: !!data.data?.pagination
+            });
+            
             if (!data.success) {
                 throw new Error(data.message || 'API returned error');
             }
@@ -481,11 +500,13 @@ class PluginMarketplace {
     applySearchFilters(results, filters) {
         let filtered = results;
         
-        if (filters.category) {
+        // Apply category filter (treat 'all' as no filter)
+        if (filters.category && filters.category !== 'all') {
             filtered = filtered.filter(plugin => plugin.category === filters.category);
         }
         
-        if (filters.type) {
+        // Apply type filter (treat 'all' as no filter)
+        if (filters.type && filters.type !== 'all') {
             filtered = filtered.filter(plugin => plugin.type === filters.type);
         }
         
