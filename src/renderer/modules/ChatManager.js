@@ -10176,6 +10176,12 @@ ${this.getPluginSystemInfo()}`;
             
             console.log(`Local tool ${toolName} execution result:`, result);
             
+            // Handle visualization plugin DOM elements
+            if (result && result instanceof HTMLElement) {
+                console.log(`🎨 [ChatManager] Visualization DOM element detected, displaying in chat`);
+                this.displayVisualizationInChat(toolName, result, parameters);
+            }
+            
             // Show agent execution result if multi-agent system is enabled
             if (multiAgentEnabled && showAgentInfo) {
                 const executionTime = Date.now() - startTime;
@@ -10599,6 +10605,195 @@ ${this.getPluginSystemInfo()}`;
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/`(.*?)`/g, '<code>$1</code>')
             .replace(/\n/g, '<br>');
+    }
+
+    /**
+     * Display visualization DOM element in chat interface
+     * @param {string} toolName - Name of the visualization tool
+     * @param {HTMLElement} domElement - DOM element to display
+     * @param {Object} parameters - Tool parameters for context
+     */
+    displayVisualizationInChat(toolName, domElement, parameters = {}) {
+        try {
+            console.log(`🎨 [ChatManager] Displaying visualization: ${toolName}`);
+            
+            const messagesContainer = document.getElementById('chatMessages');
+            if (!messagesContainer) {
+                console.error('❌ [ChatManager] Chat messages container not found');
+                return;
+            }
+            
+            // Create visualization message container
+            const vizMessage = document.createElement('div');
+            vizMessage.className = 'chat-message assistant-message visualization-message';
+            vizMessage.style.cssText = `
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border: none;
+                border-radius: 12px;
+                padding: 0;
+                margin: 12px 0;
+                max-width: 90%;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+            `;
+            
+            // Create header
+            const vizHeader = document.createElement('div');
+            vizHeader.style.cssText = `
+                padding: 12px 16px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                color: white;
+                font-weight: 600;
+                font-size: 14px;
+            `;
+            vizHeader.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-chart-network" style="font-size: 16px;"></i>
+                    <span>🎨 Visualization: ${this.formatToolName(toolName)}</span>
+                </div>
+                <button class="viz-expand-btn" title="Expand" style="
+                    background: rgba(255,255,255,0.2);
+                    border: none;
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                ">
+                    <i class="fas fa-expand-alt"></i>
+                </button>
+            `;
+            
+            // Create content container
+            const vizContent = document.createElement('div');
+            vizContent.className = 'visualization-content';
+            vizContent.style.cssText = `
+                background: white;
+                padding: 16px;
+                border-radius: 0 0 12px 12px;
+                min-height: 200px;
+                max-height: 600px;
+                overflow: auto;
+            `;
+            
+            // Validate and append DOM element
+            if (domElement instanceof Node) {
+                // Style the visualization element
+                domElement.style.width = '100%';
+                domElement.style.minHeight = '300px';
+                vizContent.appendChild(domElement);
+                console.log('✅ [ChatManager] Visualization DOM element appended successfully');
+            } else {
+                console.error('❌ [ChatManager] Invalid DOM element', domElement);
+                vizContent.innerHTML = '<div style="color: #e74c3c; padding: 20px; text-align: center;">Invalid visualization element</div>';
+            }
+            
+            // Assemble message
+            vizMessage.appendChild(vizHeader);
+            vizMessage.appendChild(vizContent);
+            messagesContainer.appendChild(vizMessage);
+            
+            // Add expand functionality
+            const expandBtn = vizHeader.querySelector('.viz-expand-btn');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', () => {
+                    this.expandVisualization(domElement, toolName);
+                });
+            }
+            
+            // Scroll to show the visualization
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Track in Evolution data
+            this.addToEvolutionData({
+                type: 'visualization_displayed',
+                timestamp: new Date().toISOString(),
+                toolName: toolName,
+                parameters: parameters,
+                success: true
+            });
+            
+        } catch (error) {
+            console.error('❌ [ChatManager] Error displaying visualization:', error);
+        }
+    }
+
+    /**
+     * Format tool name for display
+     * @param {string} toolName - Tool name (e.g., "protein-interaction-network.visualize")
+     * @returns {string} Formatted name
+     */
+    formatToolName(toolName) {
+        return toolName
+            .split('.')
+            .map(part => part.replace(/-/g, ' '))
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' → ');
+    }
+
+    /**
+     * Expand visualization in full-screen modal
+     * @param {HTMLElement} element - Visualization element
+     * @param {string} toolName - Tool name
+     */
+    expandVisualization(element, toolName) {
+        // Create modal
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        `;
+        
+        // Clone the element for modal display
+        const clonedElement = element.cloneNode(true);
+        clonedElement.style.width = '90%';
+        clonedElement.style.height = '80%';
+        clonedElement.style.maxWidth = '1200px';
+        clonedElement.style.background = 'white';
+        clonedElement.style.borderRadius = '8px';
+        clonedElement.style.padding = '20px';
+        
+        // Add close button
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '<i class="fas fa-times"></i> Close';
+        closeBtn.style.cssText = `
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        closeBtn.onclick = () => document.body.removeChild(modal);
+        
+        modal.appendChild(clonedElement);
+        modal.appendChild(closeBtn);
+        document.body.appendChild(modal);
+        
+        // Close on escape key
+        const escHandler = (e) => {
+            if (e.key === 'Escape' && document.body.contains(modal)) {
+                document.body.removeChild(modal);
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
     }
 
     showTypingIndicator() {
