@@ -641,11 +641,71 @@ class PluginManagementUI {
     /**
      * Show the plugin management modal
      */
-    showPluginModal() {
+    async showPluginModal() {
         const modal = document.getElementById('pluginManagementModal');
         if (modal) {
             modal.style.display = 'block';
+            
+            // Before refreshing, ensure marketplace has restored installed plugins
+            await this.ensureMarketplacePluginsRestored();
+            
             this.refreshPluginLists();
+        }
+    }
+    
+    /**
+     * Ensure marketplace has restored installed plugins to PluginManagerV2
+     * This syncs marketplace.installed with the plugin registry
+     */
+    async ensureMarketplacePluginsRestored() {
+        try {
+            // Check if there's a marketplace instance available
+            const marketplace = window.pluginMarketplace || this.pluginManager?.marketplace;
+            
+            if (!marketplace) {
+                console.log('📋 No marketplace instance found, skipping restore check');
+                return;
+            }
+            
+            // Wait for marketplace initialization if needed
+            if (!marketplace.isInitialized && marketplace.waitForInitialization) {
+                console.log('⏳ Waiting for marketplace initialization...');
+                await marketplace.waitForInitialization();
+            }
+            
+            // Check if there are installed plugins in marketplace that aren't in registry
+            const marketplaceInstalled = marketplace.installedPlugins || new Map();
+            const registryFunctions = this.pluginManager.pluginRegistry.function;
+            const registryVisualizations = this.pluginManager.pluginRegistry.visualization;
+            
+            console.log('🔍 Checking plugin sync status:', {
+                marketplaceCount: marketplaceInstalled.size,
+                registryFunctionCount: registryFunctions.size,
+                registryVisualizationCount: registryVisualizations.size
+            });
+            
+            // If marketplace has plugins but registry is empty or missing some, restore them
+            if (marketplaceInstalled.size > 0) {
+                const totalRegistryCount = registryFunctions.size + registryVisualizations.size;
+                
+                if (totalRegistryCount < marketplaceInstalled.size) {
+                    console.log('🔄 Marketplace has more plugins than registry, restoring...');
+                    
+                    // Trigger marketplace restore
+                    if (marketplace.restoreInstalledPlugins) {
+                        await marketplace.restoreInstalledPlugins();
+                        console.log('✅ Marketplace plugins restored to registry');
+                    }
+                } else {
+                    console.log('✅ Plugin registry is up to date with marketplace');
+                }
+            } else {
+                console.log('📋 No installed plugins found in marketplace');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error ensuring marketplace plugins restored:', error);
+            // Continue anyway - don't block UI from showing
         }
     }
 

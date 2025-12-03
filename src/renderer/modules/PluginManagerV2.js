@@ -182,6 +182,10 @@ class PluginManagerV2 {
             // 8. Set global reference
             if (typeof window !== 'undefined') {
                 window.pluginManagerV2 = this;
+                // Expose marketplace globally for Plugin Management UI
+                if (this.marketplace) {
+                    window.pluginMarketplace = this.marketplace;
+                }
             }
             
             this.isInitialized = true;

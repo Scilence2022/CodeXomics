@@ -594,12 +594,20 @@ class PluginMarketplace {
                 throw new Error(`Plugin ${pluginId} not found in marketplace`);
             }
             
-            // 2. Check if already installed
+            // 2. Check if already installed and registered
             if (this.installedPlugins.has(pluginId) && !options.force) {
                 const installed = this.installedPlugins.get(pluginId);
                 if (this.compareVersions(installed.version, plugin.version) >= 0) {
-                    console.log(`✅ Plugin ${pluginId} is already up to date`);
-                    return { success: true, action: 'already-installed' };
+                    // Also verify it's actually registered in PluginManagerV2
+                    const isRegistered = this.pluginManager.getPlugin(pluginId);
+                    
+                    if (isRegistered) {
+                        console.log(`✅ Plugin ${pluginId} is already up to date and registered`);
+                        return { success: true, action: 'already-installed' };
+                    } else {
+                        console.log(`⚠️ Plugin ${pluginId} is in marketplace but not registered, re-registering...`);
+                        // Fall through to re-install and register
+                    }
                 }
             }
             
