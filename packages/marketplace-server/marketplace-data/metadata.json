@@ -98,7 +98,7 @@
         "https://example.com/screenshots/protein-network-1.png"
       ],
       "rating": 4.9,
-      "downloads": 8949,
+      "downloads": 8950,
       "lastUpdated": "2024-11-18T14:22:00Z",
       "status": "published",
       "submittedBy": "admin",
@@ -262,7 +262,7 @@
   "pendingSubmissions": {},
   "stats": {
     "totalPlugins": 4,
-    "totalDownloads": 43819,
+    "totalDownloads": 43820,
     "totalSubmissions": 0,
     "categories": {
       "variant-analysis": 1,

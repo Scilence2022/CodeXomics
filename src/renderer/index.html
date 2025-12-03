@@ -4183,6 +4183,23 @@ Supported formats:
     <script src="modules/ExternalToolsManager.js"></script>
     <script src="modules/ExternalToolsSystemTest.js"></script>
     <script src="modules/MCPServerManager.js"></script>
+    
+    <!-- Modern Plugin System V2 - MUST load before ChatManager -->
+    <script src="modules/PluginPathResolver.js"></script>
+    <script src="modules/PluginAPI.js"></script>
+    <script src="modules/PluginResourceManager.js"></script>
+    <script src="modules/PluginDependencyResolver.js"></script>
+    <script src="modules/PluginSecurityValidator.js"></script>
+    <script src="modules/PluginUpdateManager.js"></script>
+    <script src="modules/PluginMarketplace.js"></script>
+    <script src="modules/PluginManagerV2.js"></script>
+    <script src="modules/PluginMarketplaceConfig.js"></script>
+    <script src="modules/PluginSubmissionUI.js"></script>
+    <script src="modules/PluginMarketplaceUI.js"></script>
+    <script src="modules/PluginManagementUI.js"></script>
+    <script src="modules/PluginSystemBootstrap.js"></script>
+    
+    <!-- ChatManager - loads AFTER plugin system -->
     <script src="modules/ChatManager.js"></script>
     
     <!-- LLM Benchmark Framework -->
@@ -4214,21 +4231,6 @@ Supported formats:
     <script src="modules/ProteinStructureViewer.js"></script>
     <script src="modules/BlastManager.js"></script>
     <script src="modules/MicrobeGenomicsFunctions.js"></script>
-    
-    <!-- Modern Plugin System V2 -->
-    <script src="modules/PluginPathResolver.js"></script>
-    <script src="modules/PluginAPI.js"></script>
-    <script src="modules/PluginResourceManager.js"></script>
-    <script src="modules/PluginMarketplace.js"></script>
-    <script src="modules/PluginDependencyResolver.js"></script>
-    <script src="modules/PluginSecurityValidator.js"></script>
-    <script src="modules/PluginUpdateManager.js"></script>
-    <script src="modules/PluginManagerV2.js"></script>
-    <script src="modules/PluginMarketplaceConfig.js"></script>
-<script src="modules/PluginSubmissionUI.js"></script>
-<script src="modules/PluginMarketplaceUI.js"></script>
-<script src="modules/PluginManagementUI.js"></script>
-<script src="modules/PluginSystemBootstrap.js"></script>
     
     <!-- Plugin Testing and Development -->
     <script src="modules/PluginTestManager.js"></script>
