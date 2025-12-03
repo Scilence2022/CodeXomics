@@ -350,6 +350,25 @@ class ConfigManager {
                 debugMode: false,
                 lastSaved: null,
                 analysisHistory: []
+            },
+            marketplace: {
+                sources: [
+                    { id: 'localhost', url: 'http://localhost:3001/api/v1', priority: 0, enabled: true },
+                    { id: 'official', url: 'https://plugins.genomeexplorer.org/api/v1', priority: 1, enabled: false },
+                    { id: 'community', url: 'https://community-plugins.genomeexplorer.org/api/v1', priority: 2, enabled: false }
+                ],
+                installed: {},
+                settings: {
+                    autoUpdate: true,
+                    updateCheckInterval: 86400000, // 24 hours
+                    enableSecurityValidation: false,
+                    enableDependencyResolution: true
+                },
+                metadata: {
+                    lastSync: null,
+                    totalInstalls: 0,
+                    lastUpdated: null
+                }
             }
         };
     }
@@ -591,6 +610,18 @@ class ConfigManager {
             if (appSettings) {
                 this.config.app = { ...this.config.app, ...JSON.parse(appSettings) };
                 console.log('App settings loaded from localStorage');
+            }
+            
+            // Load marketplace settings and installed plugins
+            const marketplaceSettings = localStorage.getItem('marketplaceSettings');
+            if (marketplaceSettings) {
+                this.config.marketplace = { ...this.config.marketplace, ...JSON.parse(marketplaceSettings) };
+                console.log('Marketplace settings loaded from localStorage:', {
+                    installed: Object.keys(this.config.marketplace.installed || {}).length,
+                    sources: this.config.marketplace.sources?.length
+                });
+            } else {
+                console.log('No marketplace settings found in localStorage');
             }
 
             // Load BLAST databases (migration from localStorage)
@@ -891,7 +922,14 @@ class ConfigManager {
             // Save app settings with validation
             localStorage.setItem('appSettings', this.safeStringify(this.config.app));
             
+            // Save marketplace settings and installed plugins
+            localStorage.setItem('marketplaceSettings', this.safeStringify(this.config.marketplace));
+            
             console.log('Configuration saved to localStorage with size validation');
+            console.log('Marketplace data saved:', {
+                installed: Object.keys(this.config.marketplace?.installed || {}).length,
+                sources: this.config.marketplace?.sources?.length
+            });
         } catch (error) {
             console.error('Error saving configuration to localStorage:', error);
             
