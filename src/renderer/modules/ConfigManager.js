@@ -96,7 +96,8 @@ class ConfigManager {
                         chat: electronAPI_path.join(configDir, 'chat-history.json'),
                         app: electronAPI_path.join(configDir, 'app-settings.json'),
                         evolution: electronAPI_path.join(configDir, 'conversation-evolution-data.json'),
-                        blast: electronAPI_path.join(configDir, 'blast-databases.json')
+                        blast: electronAPI_path.join(configDir, 'blast-databases.json'),
+                        marketplace: electronAPI_path.join(configDir, 'marketplace-settings.json')
                     };
                     console.log('electronAPI config paths:', paths);
                     console.log('=== getConfigPath Debug End (electronAPI success) ===');
@@ -132,7 +133,8 @@ class ConfigManager {
                                 chat: path.join(configDir, 'chat-history.json'),
                                 app: path.join(configDir, 'app-settings.json'),
                                 evolution: path.join(configDir, 'conversation-evolution-data.json'),
-                                blast: path.join(configDir, 'blast-databases.json')
+                                blast: path.join(configDir, 'blast-databases.json'),
+                                marketplace: path.join(configDir, 'marketplace-settings.json')
                             };
                             
                             console.log('Final config paths using require:');
@@ -546,7 +548,8 @@ class ConfigManager {
                 chat: this.configPath.chat,
                 app: this.configPath.app,
                 evolution: this.configPath.evolution,
-                blast: this.configPath.blast
+                blast: this.configPath.blast,
+                marketplace: this.configPath.marketplace
             };
 
             for (const [section, filePath] of Object.entries(configFiles)) {
@@ -558,6 +561,29 @@ class ConfigManager {
                     this.config[section] = this.mergeConfig(this.config[section], sectionConfig);
                 } else {
                     console.log(`${section} config file does not exist`);
+                    
+                    // Special handling for marketplace: migrate from localStorage if file doesn't exist
+                    if (section === 'marketplace') {
+                        console.log('🔄 Attempting to migrate marketplace settings from localStorage...');
+                        try {
+                            const marketplaceSettings = localStorage.getItem('marketplaceSettings');
+                            if (marketplaceSettings) {
+                                const parsed = JSON.parse(marketplaceSettings);
+                                this.config.marketplace = { ...this.config.marketplace, ...parsed };
+                                console.log('✅ Marketplace settings migrated from localStorage:', {
+                                    installed: Object.keys(this.config.marketplace.installed || {}).length,
+                                    sources: this.config.marketplace.sources?.length
+                                });
+                                // Save to file for future loads
+                                await fs.writeFile(filePath, JSON.stringify(this.config.marketplace, null, 2));
+                                console.log('💾 Marketplace settings saved to file:', filePath);
+                            } else {
+                                console.log('No marketplace settings found in localStorage to migrate');
+                            }
+                        } catch (migrationError) {
+                            console.error('Failed to migrate marketplace settings from localStorage:', migrationError);
+                        }
+                    }
                 }
             }
 
@@ -853,7 +879,8 @@ class ConfigManager {
                 [this.configPath.chat]: this.config.chat,
                 [this.configPath.app]: this.config.app,
                 [this.configPath.evolution]: this.config.evolution || this.getDefaultEvolutionConfig(),
-                [this.configPath.blast]: this.config.blast
+                [this.configPath.blast]: this.config.blast,
+                [this.configPath.marketplace]: this.config.marketplace
             };
 
             for (const [filePath, data] of Object.entries(configFiles)) {
