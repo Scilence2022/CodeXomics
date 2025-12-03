@@ -8469,6 +8469,13 @@ class GenomeBrowser {
             attempts++;
             
             try {
+                // Wait for ChatManager's plugin manager to be fully initialized
+                if (this.chatManager && this.chatManager.waitForPluginManager) {
+                    console.log('🔄 Waiting for ChatManager.pluginManager to be ready...');
+                    await this.chatManager.waitForPluginManager();
+                    console.log('✅ ChatManager.pluginManager is ready');
+                }
+                
                 if (this.chatManager && this.chatManager.pluginManager) {
                     this.pluginManagementUI = new PluginManagementUI(this.chatManager.pluginManager, this.configManager);
                     window.pluginManagementUI = this.pluginManagementUI; // Make globally available for onclick handlers

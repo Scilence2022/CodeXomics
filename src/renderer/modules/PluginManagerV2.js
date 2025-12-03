@@ -93,6 +93,19 @@ class PluginManagerV2 {
         this.initializationPromise = this._performInitialization();
         return this.initializationPromise;
     }
+    
+    /**
+     * Wait for plugin system initialization to complete
+     * @returns {Promise<void>}
+     */
+    async waitForInitialization() {
+        if (this.isInitialized) {
+            return;
+        }
+        if (this.initializationPromise) {
+            await this.initializationPromise;
+        }
+    }
 
     async _performInitialization() {
         try {

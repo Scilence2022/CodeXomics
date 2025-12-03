@@ -52,8 +52,8 @@ class ChatManager {
         // Initialize MicrobeGenomicsFunctions
         this.initializeMicrobeGenomicsFunctions();
         
-        // Initialize Plugin Manager
-        this.initializePluginManager();
+        // Initialize Plugin Manager (async - stores promise for awaiting)
+        this._pluginManagerReady = this.initializePluginManager();
         
         // Initialize Plugin Function Calls Integrator
         this.pluginFunctionCallsIntegrator = null;
@@ -216,12 +216,16 @@ class ChatManager {
     /**
      * Initialize Plugin Manager V2 integration
      */
-    initializePluginManager() {
+    async initializePluginManager() {
         try {
             // Check if PluginManagerV2 is already available globally
             if (typeof PluginManagerV2 !== 'undefined') {
                 this.pluginManager = new PluginManagerV2(this.app, this.configManager);
-                // PluginManagerV2 integrated successfully from global
+                
+                // Wait for plugin system to fully initialize (including marketplace and installed plugins)
+                console.log('🔄 Waiting for PluginManagerV2 initialization...');
+                await this.pluginManager.waitForInitialization();
+                console.log('✅ PluginManagerV2 fully initialized');
                 
                 // Listen to enhanced plugin events
                 this.pluginManager.on('system-initialized', (data) => {
@@ -242,10 +246,23 @@ class ChatManager {
                 
             } else {
                 // PluginManagerV2 not available, loading dynamically...
-                this.loadPluginManager();
+                await this.loadPluginManager();
             }
         } catch (error) {
-            // Failed to initialize PluginManagerV2
+            console.error('❌ Failed to initialize PluginManagerV2:', error);
+        }
+    }
+    
+    /**
+     * Wait for plugin manager to be fully initialized
+     * @returns {Promise<void>}
+     */
+    async waitForPluginManager() {
+        if (this._pluginManagerReady) {
+            await this._pluginManagerReady;
+        }
+        if (this.pluginManager && this.pluginManager.waitForInitialization) {
+            await this.pluginManager.waitForInitialization();
         }
     }
 
