@@ -953,7 +953,7 @@ class PluginManagerV2 {
             this.metrics.successfulExecutions++;
             
             // Emit event
-            this.emit('visualization-executed', {
+            this.emitEvent('visualization-executed', {
                 pluginId,
                 toolName,
                 success: true
@@ -967,7 +967,7 @@ class PluginManagerV2 {
             this.metrics.totalExecutions++;
             this.metrics.failedExecutions++;
             
-            this.emit('visualization-error', {
+            this.emitEvent('visualization-error', {
                 pluginId,
                 toolName,
                 error: error.message

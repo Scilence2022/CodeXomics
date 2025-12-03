@@ -10146,21 +10146,27 @@ ${this.getPluginSystemInfo()}`;
                 default:
                     // Check if this is a visualization plugin tool first
                     if (this.pluginManager && toolName.includes('.')) {
-                        try {
-                            // Check for visualization plugin tools
-                            if (this.pluginManager.isVisualizationTool && this.pluginManager.isVisualizationTool(toolName)) {
-                                console.log(`🎨 [ChatManager] Executing visualization tool: ${toolName}`);
+                        // Check for visualization plugin tools
+                        if (this.pluginManager.isVisualizationTool && this.pluginManager.isVisualizationTool(toolName)) {
+                            console.log(`🎨 [ChatManager] Executing visualization tool: ${toolName}`);
+                            try {
                                 result = await this.pluginManager.executeVisualizationTool(toolName, parameters);
                                 console.log(`✅ Visualization tool ${toolName} executed successfully`);
                                 break;
+                            } catch (vizError) {
+                                console.error(`❌ [ChatManager] Visualization tool ${toolName} failed:`, vizError);
+                                throw new Error(`Visualization plugin execution failed: ${vizError.message}`);
                             }
-                            
-                            // Try regular plugin function execution
+                        }
+                        
+                        // Try regular plugin function execution
+                        try {
                             result = await this.pluginManager.executeFunctionByName(toolName, parameters);
-                            console.log(`Plugin function ${toolName} executed successfully:`, result);
+                            console.log(`✅ Plugin function ${toolName} executed successfully:`, result);
                             break;
                         } catch (pluginError) {
-                            console.warn(`Plugin function execution failed: ${pluginError.message}`);
+                            console.error(`❌ [ChatManager] Plugin function ${toolName} failed:`, pluginError);
+                            throw new Error(`Plugin function execution failed: ${pluginError.message}`);
                         }
                     }
                     
