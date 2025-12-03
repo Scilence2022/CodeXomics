@@ -332,6 +332,17 @@ class PluginMarketplace {
     createDefaultVisualizationRenderer(pluginId, pluginName) {
         return async function renderNetworkVisualization(data) {
             console.log(`🎨 Rendering visualization for ${pluginName}...`);
+            console.log('🔍 Data received:',  {dataType: typeof data, hasNodes: data?.nodes !== undefined, hasEdges: data?.edges !== undefined, data});
+            
+            // Validate input data
+            if (!data || typeof data !== 'object') {
+                const error = 'Invalid data: expected object with nodes and edges';
+                console.error(error, data);
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = 'padding: 20px; color: #f56565; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px;';
+                errorDiv.innerHTML = `<strong>❌ Rendering Error:</strong><br>${error}`;
+                return errorDiv;
+            }
             
             // Parse data if needed
             if (typeof data === 'string') {
@@ -339,6 +350,10 @@ class PluginMarketplace {
                     data = JSON.parse(data);
                 } catch (e) {
                     console.error('Failed to parse data:', e);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = 'padding: 20px; color: #f56565; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px;';
+                    errorDiv.innerHTML = `<strong>❌ Parse Error:</strong><br>${e.message}`;
+                    return errorDiv;
                 }
             }
             
