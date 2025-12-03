@@ -105,8 +105,19 @@ class PluginManagerV2 {
                 console.log('✅ PluginPathResolver initialized');
                 console.log('  Built-in plugins path:', this.pathResolver.getBuiltinPluginsPath());
                 console.log('  User plugins path:', this.pathResolver.getUserPluginsPath());
+            } else if (typeof window !== 'undefined' && window.PluginPathResolver) {
+                // Fallback: Create instance if class exists but singleton doesn't
+                console.log('⚠️  window.pluginPathResolver not found, creating new instance');
+                this.pathResolver = new window.PluginPathResolver();
+                await this.pathResolver.initialize();
+                window.pluginPathResolver = this.pathResolver;
+                console.log('✅ PluginPathResolver instance created and initialized');
+                console.log('  Built-in plugins path:', this.pathResolver.getBuiltinPluginsPath());
+                console.log('  User plugins path:', this.pathResolver.getUserPluginsPath());
             } else {
-                console.warn('⚠️ PluginPathResolver not available, using fallback paths');
+                console.warn('⚠️  PluginPathResolver not available, using fallback paths');
+                console.warn('  This may cause issues in production environments');
+                console.warn('  Ensure PluginPathResolver.js is loaded before PluginManagerV2.js');
             }
             
             // 1. Initialize PluginAPI with permissions
