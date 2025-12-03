@@ -265,14 +265,23 @@ class PluginMarketplace {
                         repository: pluginInfo.repository || '',
                         license: pluginInfo.license || 'Unknown',
                         // Type-specific fields
-                        ...(pluginInfo.type === 'visualization' ? {
-                            supportedDataTypes: pluginInfo.supportedDataTypes || ['generic'],
-                            executor: pluginInfo.executor || function(data) { return data; }
-                        } : {}),
                         ...(pluginInfo.type === 'function' ? {
                             functions: pluginInfo.functions || {}
                         } : {})
                     };
+                }
+                
+                // For visualization plugins, ensure they have a working render method
+                if (manifest.type === 'visualization' || pluginInfo.type === 'visualization') {
+                    manifest.type = 'visualization';
+                    manifest.supportedDataTypes = manifest.supportedDataTypes || pluginInfo.supportedDataTypes || ['generic'];
+                    
+                    // Create a working renderer function since functions can't be serialized to JSON
+                    manifest.executor = this.createDefaultVisualizationRenderer(pluginId, manifest.name || pluginId);
+                    manifest.renderNetwork = manifest.executor;
+                    manifest.visualize = manifest.executor;
+                    
+                    console.log(`🎨 Added visualization renderer for plugin: ${pluginId}`);
                 }
                 
                 console.log(`📦 Restoring plugin manifest:`, {
@@ -280,7 +289,8 @@ class PluginMarketplace {
                     name: manifest.name,
                     type: manifest.type,
                     version: manifest.version,
-                    loadedFromDisk
+                    loadedFromDisk,
+                    hasExecutor: typeof manifest.executor === 'function'
                 });
                 
                 // Re-register plugin with PluginManagerV2
@@ -310,6 +320,185 @@ class PluginMarketplace {
             visualizationPlugins: Array.from(this.pluginManager.pluginRegistry.visualization?.keys() || []),
             utilityPlugins: Array.from(this.pluginManager.pluginRegistry.utility?.keys() || [])
         });
+    }
+    
+    /**
+     * Create a default visualization renderer for marketplace-installed plugins
+     * Since functions cannot be serialized to JSON, we need to recreate them on restore
+     * @param {string} pluginId - Plugin identifier
+     * @param {string} pluginName - Plugin display name
+     * @returns {Function} A function that renders network data as SVG
+     */
+    createDefaultVisualizationRenderer(pluginId, pluginName) {
+        return async function renderNetworkVisualization(data) {
+            console.log(`🎨 Rendering visualization for ${pluginName}...`);
+            
+            // Parse data if needed
+            if (typeof data === 'string') {
+                try {
+                    data = JSON.parse(data);
+                } catch (e) {
+                    console.error('Failed to parse data:', e);
+                }
+            }
+            
+            // Validate data structure
+            const nodes = data.nodes || [];
+            const edges = data.edges || [];
+            
+            // Create container
+            const container = document.createElement('div');
+            container.className = 'plugin-network-container';
+            container.style.cssText = `
+                width: 100%;
+                height: 600px;
+                background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                position: relative;
+                overflow: hidden;
+            `;
+            
+            // Create SVG canvas
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+            svg.setAttribute('viewBox', '0 0 800 600');
+            container.appendChild(svg);
+            
+            // Calculate node positions (simple force-directed layout simulation)
+            const width = 800;
+            const height = 600;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.min(width, height) * 0.35;
+            
+            const nodePositions = new Map();
+            nodes.forEach((node, i) => {
+                const angle = (2 * Math.PI * i) / nodes.length;
+                nodePositions.set(node.id, {
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY + radius * Math.sin(angle),
+                    ...node
+                });
+            });
+            
+            // Render edges
+            const edgesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            edgesGroup.setAttribute('class', 'edges');
+            edges.forEach(edge => {
+                const source = nodePositions.get(edge.source);
+                const target = nodePositions.get(edge.target);
+                
+                if (source && target) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', source.x);
+                    line.setAttribute('y1', source.y);
+                    line.setAttribute('x2', target.x);
+                    line.setAttribute('y2', target.y);
+                    
+                    const confidence = edge.confidence || 0.5;
+                    const color = confidence > 0.8 ? '#4CAF50' : confidence > 0.5 ? '#FF9800' : '#f44336';
+                    line.setAttribute('stroke', color);
+                    line.setAttribute('stroke-width', Math.max(1, confidence * 3));
+                    line.setAttribute('opacity', '0.6');
+                    edgesGroup.appendChild(line);
+                }
+            });
+            svg.appendChild(edgesGroup);
+            
+            // Render nodes
+            const nodesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            nodesGroup.setAttribute('class', 'nodes');
+            nodePositions.forEach((node, nodeId) => {
+                // Node circle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', node.x);
+                circle.setAttribute('cy', node.y);
+                circle.setAttribute('r', '20');
+                
+                const colors = {
+                    'protein': '#4CAF50',
+                    'enzyme': '#2196F3',
+                    'receptor': '#FF9800',
+                    'transcription_factor': '#9C27B0',
+                    'gene': '#E91E63',
+                    'default': '#607D8B'
+                };
+                circle.setAttribute('fill', colors[node.type] || colors.default);
+                circle.setAttribute('stroke', '#333');
+                circle.setAttribute('stroke-width', '2');
+                circle.style.cursor = 'pointer';
+                
+                // Hover effect
+                circle.addEventListener('mouseenter', () => {
+                    circle.setAttribute('r', '25');
+                    circle.setAttribute('stroke-width', '3');
+                });
+                circle.addEventListener('mouseleave', () => {
+                    circle.setAttribute('r', '20');
+                    circle.setAttribute('stroke-width', '2');
+                });
+                
+                nodesGroup.appendChild(circle);
+                
+                // Node label
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', node.x);
+                text.setAttribute('y', node.y - 28);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('font-size', '12');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('fill', '#333');
+                text.textContent = (node.name || nodeId).substring(0, 20);
+                nodesGroup.appendChild(text);
+            });
+            svg.appendChild(nodesGroup);
+            
+            // Add info panel
+            const info = document.createElement('div');
+            info.style.cssText = `
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 12px 16px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            `;
+            info.innerHTML = `
+                <strong style="color: #667eea;">🔬 ${pluginName}</strong><br>
+                <span style="color: #666;">Nodes: ${nodes.length} | Edges: ${edges.length}</span>
+            `;
+            container.appendChild(info);
+            
+            // Add legend
+            const legend = document.createElement('div');
+            legend.style.cssText = `
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            `;
+            legend.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 6px;">Node Types</div>
+                <div><span style="display: inline-block; width: 12px; height: 12px; background: #4CAF50; border-radius: 50%; margin-right: 6px;"></span>Protein</div>
+                <div><span style="display: inline-block; width: 12px; height: 12px; background: #2196F3; border-radius: 50%; margin-right: 6px;"></span>Enzyme</div>
+                <div><span style="display: inline-block; width: 12px; height: 12px; background: #FF9800; border-radius: 50%; margin-right: 6px;"></span>Receptor</div>
+            `;
+            container.appendChild(legend);
+            
+            console.log(`✅ Visualization rendered: ${nodes.length} nodes, ${edges.length} edges`);
+            
+            return container;
+        };
     }
 
     /**
