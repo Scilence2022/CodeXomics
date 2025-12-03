@@ -28,6 +28,7 @@ class PluginMarketplace {
         this.searchCache = new Map();
         this.lastCacheUpdate = 0;
         this.isInitialized = false;
+        this._initializationPromise = null;
         
         // Event system
         this.eventBus = new EventTarget();
@@ -42,7 +43,21 @@ class PluginMarketplace {
         };
         
         console.log('🛒 PluginMarketplace initializing...');
-        this.initialize();
+        // Store the promise so callers can wait for initialization
+        this._initializationPromise = this.initialize();
+    }
+    
+    /**
+     * Wait for marketplace initialization to complete
+     * @returns {Promise<void>}
+     */
+    async waitForInitialization() {
+        if (this.isInitialized) {
+            return;
+        }
+        if (this._initializationPromise) {
+            await this._initializationPromise;
+        }
     }
 
     /**

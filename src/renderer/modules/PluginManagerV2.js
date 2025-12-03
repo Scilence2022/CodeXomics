@@ -149,7 +149,10 @@ class PluginManagerV2 {
                     enableDependencyResolution: this.options.enableDependencyResolution,
                     enableAutoUpdates: this.options.enableAutoUpdates
                 });
-                console.log('✅ PluginMarketplace initialized');
+                // Wait for marketplace async initialization to complete
+                // This ensures installed plugins are restored before system-initialized event
+                await this.marketplace.waitForInitialization();
+                console.log('✅ PluginMarketplace initialized and plugins restored');
             }
             
             // 6. Load and register built-in plugins
