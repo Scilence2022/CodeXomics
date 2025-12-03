@@ -124,7 +124,19 @@ class PluginMarketplace {
      * Load installed plugins registry and restore them to PluginManagerV2
      */
     async loadInstalledPlugins() {
+        // Wait for ConfigManager to finish initializing before reading data
+        if (this.configManager && this.configManager.waitForInitialization) {
+            await this.configManager.waitForInitialization();
+            console.log('✅ ConfigManager initialization complete, loading installed plugins...');
+        }
+        
         const installedData = this.configManager?.get('marketplace.installed') || {};
+        
+        console.log('📊 ConfigManager returned installed data:', {
+            hasData: Object.keys(installedData).length > 0,
+            pluginCount: Object.keys(installedData).length,
+            pluginIds: Object.keys(installedData)
+        });
         
         for (const [pluginId, pluginInfo] of Object.entries(installedData)) {
             this.installedPlugins.set(pluginId, {
@@ -853,7 +865,7 @@ class PluginMarketplace {
     }
 
     /**
-     * Save installed plugins registry
+     * Save installed plugins registry to ConfigManager
      */
     saveInstalledPluginsRegistry() {
         if (this.configManager) {
@@ -861,7 +873,24 @@ class PluginMarketplace {
             for (const [id, plugin] of this.installedPlugins) {
                 registryData[id] = plugin;
             }
+            
+            console.log('💾 Saving installed plugins registry:', {
+                pluginCount: Object.keys(registryData).length,
+                pluginIds: Object.keys(registryData)
+            });
+            
             this.configManager.set('marketplace.installed', registryData);
+            
+            // Verify save was successful
+            setTimeout(() => {
+                const savedData = this.configManager.get('marketplace.installed');
+                console.log('✅ Verified saved data in ConfigManager:', {
+                    pluginCount: Object.keys(savedData || {}).length,
+                    pluginIds: Object.keys(savedData || {})
+                });
+            }, 100);
+        } else {
+            console.warn('⚠️  ConfigManager not available, cannot save installed plugins registry');
         }
     }
 
