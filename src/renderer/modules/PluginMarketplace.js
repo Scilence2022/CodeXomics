@@ -2,8 +2,11 @@
  * PluginMarketplace - Advanced plugin distribution and management system
  * Supports multiple plugin sources, dependency resolution, and secure installation
  */
+console.log('📦 [DEBUG] PluginMarketplace.js file loaded at:', new Date().toISOString());
+
 class PluginMarketplace {
     constructor(pluginManagerV2, configManager, options = {}) {
+        console.log('📦 [DEBUG] PluginMarketplace constructor called');
         this.pluginManager = pluginManagerV2;
         this.configManager = configManager;
         this.options = {

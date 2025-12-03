@@ -217,9 +217,12 @@ class ChatManager {
      * Initialize Plugin Manager V2 integration
      */
     async initializePluginManager() {
+        console.log('📦 [DEBUG] ChatManager.initializePluginManager() called');
+        console.log('📦 [DEBUG] PluginManagerV2 available:', typeof PluginManagerV2 !== 'undefined');
         try {
             // Check if PluginManagerV2 is already available globally
             if (typeof PluginManagerV2 !== 'undefined') {
+                console.log('📦 [DEBUG] Creating new PluginManagerV2 instance...');
                 this.pluginManager = new PluginManagerV2(this.app, this.configManager);
                 
                 // Wait for plugin system to fully initialize (including marketplace and installed plugins)

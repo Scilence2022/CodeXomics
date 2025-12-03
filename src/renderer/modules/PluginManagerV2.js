@@ -12,8 +12,11 @@
  * @see core/ExtensionService.js for the new architecture
  * @see PluginPathResolver.js for path resolution
  */
+console.log('🔧 [DEBUG] PluginManagerV2.js file loaded at:', new Date().toISOString());
+
 class PluginManagerV2 {
     constructor(app, configManager = null, options = {}) {
+        console.log('🔧 [DEBUG] PluginManagerV2 constructor called');
         this.app = app;
         this.configManager = configManager;
         this.options = {
