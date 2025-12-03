@@ -620,7 +620,27 @@ class PluginRealTestDemonstrator {
      * Generate interactive test script
      */
     generateTestScript(pluginId, plugin, type) {
-        const demoDataJSON = JSON.stringify(this.demoData[pluginId] || {});
+        // Pre-process demo data: generators cannot be serialized to JSON,
+        // so we must execute them and store the result as static data
+        const rawDemoData = this.demoData[pluginId] || {};
+        const processedDemoData = {};
+        
+        for (const [key, demo] of Object.entries(rawDemoData)) {
+            if (demo.generator && typeof demo.generator === 'function') {
+                // Execute generator and store result as static data
+                console.log(`📊 Pre-generating data for demo: ${demo.name}`);
+                processedDemoData[key] = {
+                    name: demo.name,
+                    description: demo.description,
+                    data: demo.generator() // Execute the generator
+                };
+            } else {
+                // Keep static data as-is
+                processedDemoData[key] = demo;
+            }
+        }
+        
+        const demoDataJSON = JSON.stringify(processedDemoData);
         
         return `
             const demoData = ${demoDataJSON};
