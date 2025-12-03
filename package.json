@@ -65,6 +65,7 @@
   "dependencies": {
     "@gmod/bam": "^6.0.4",
     "@modelcontextprotocol/sdk": "^1.15.1",
+    "adm-zip": "^0.5.16",
     "cors": "^2.8.5",
     "css-purge": "^3.1.8",
     "d3": "^7.8.5",

@@ -320,7 +320,29 @@ class PluginManagerV2 {
                 throw new Error(`Plugin ${pluginId} not found`);
             }
             
-            // Dispose extension context if exists (new architecture)
+            // 1. Delete plugin files from disk
+            if (this.pathResolver && typeof window !== 'undefined' && window.electronAPI?.deletePluginFiles) {
+                const installPath = this.pathResolver.getInstallPath(pluginId);
+                console.log(`🗑️ Deleting plugin files from: ${installPath}`);
+                
+                try {
+                    const deleteResult = await window.electronAPI.deletePluginFiles({
+                        pluginId,
+                        installPath
+                    });
+                    
+                    if (deleteResult.success) {
+                        console.log(`✅ Plugin files deleted from disk`);
+                    } else {
+                        console.warn(`⚠️  Failed to delete plugin files: ${deleteResult.error}`);
+                    }
+                } catch (deleteError) {
+                    console.warn(`⚠️  Error deleting plugin files:`, deleteError);
+                    // Continue with uninstall even if file deletion fails
+                }
+            }
+            
+            // 2. Dispose extension context if exists (new architecture)
             if (this.extensionContexts.has(pluginId)) {
                 const context = this.extensionContexts.get(pluginId);
                 if (context.subscriptions) {
@@ -331,17 +353,17 @@ class PluginManagerV2 {
                 this.extensionContexts.delete(pluginId);
             }
             
-            // Remove from registry
+            // 3. Remove from registry
             this.pluginRegistry[pluginType].delete(pluginId);
             
-            // Remove metadata and executors
+            // 4. Remove metadata and executors
             this.pluginMetadata.delete(pluginId);
             this.pluginExecutors.delete(pluginId);
             
-            // Remove from usage stats
+            // 5. Remove from usage stats
             this.metrics.pluginUsageStats.delete(pluginId);
             
-            // Emit uninstall event
+            // 6. Emit uninstall event (PluginMarketplace listens to this)
             this.emitEvent('plugin-uninstalled', { pluginId, type: pluginType });
             
             console.log(`✅ Plugin ${pluginId} uninstalled successfully`);

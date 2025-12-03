@@ -156,6 +156,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   copyPluginDirectory: (sourcePath, destPath) => ipcRenderer.invoke('copy-plugin-directory', sourcePath, destPath),
   copyPluginFile: (sourcePath, destPath) => ipcRenderer.invoke('copy-plugin-file', sourcePath, destPath),
   writePluginFile: (filePath, content) => ipcRenderer.invoke('write-plugin-file', filePath, content),
+  
+  // Plugin installation and persistence APIs
+  writePluginFiles: (options) => ipcRenderer.invoke('write-plugin-files', options),
+  loadPluginFromDisk: (options) => ipcRenderer.invoke('load-plugin-from-disk', options),
+  deletePluginFiles: (options) => ipcRenderer.invoke('delete-plugin-files', options),
 
   // Expose ipcRenderer for menu system event handling
   ipcRenderer: {

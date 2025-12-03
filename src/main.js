@@ -2840,6 +2840,213 @@ ipcMain.handle('write-plugin-file', async (event, filePath, content) => {
     return { success: false, error: error.message };
   }
 });
+
+/**
+ * Write complete plugin package to disk
+ * Handles both JSON (mock packages) and ZIP (real packages) data
+ */
+ipcMain.handle('write-plugin-files', async (event, options) => {
+  const { pluginId, installPath, data, manifest } = options;
+  
+  console.log(`[Main] Writing plugin files for ${pluginId} to ${installPath}`);
+  
+  try {
+    // Create plugin directory if it doesn't exist
+    if (!fs.existsSync(installPath)) {
+      fs.mkdirSync(installPath, { recursive: true });
+      console.log(`[Main] Created plugin directory: ${installPath}`);
+    }
+    
+    // Write manifest file (plugin.json)
+    const manifestPath = path.join(installPath, 'plugin.json');
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+    console.log(`[Main] Wrote manifest to: ${manifestPath}`);
+    
+    // Handle the plugin data
+    if (data) {
+      if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'number') {
+        // Binary data sent as byte array - could be a ZIP file
+        const zipPath = path.join(installPath, `${pluginId}.zip`);
+        const buffer = Buffer.from(data);
+        fs.writeFileSync(zipPath, buffer);
+        console.log(`[Main] Wrote ZIP file (${buffer.length} bytes): ${zipPath}`);
+        
+        // Try to extract the ZIP file using native zlib if it's a valid zip
+        try {
+          const AdmZip = require('adm-zip');
+          const zip = new AdmZip(buffer);
+          zip.extractAllTo(installPath, true);
+          // Remove the zip file after extraction
+          fs.unlinkSync(zipPath);
+          console.log(`[Main] Extracted ZIP file to ${installPath}`);
+        } catch (extractError) {
+          // If adm-zip is not available or extraction fails, keep the ZIP for manual extraction
+          console.log(`[Main] ZIP extraction not available, keeping ZIP file: ${extractError.message}`);
+        }
+        
+      } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+        // Binary data (ArrayBuffer/TypedArray) - should not normally reach here after IPC
+        const zipPath = path.join(installPath, `${pluginId}.zip`);
+        const buffer = Buffer.from(data);
+        fs.writeFileSync(zipPath, buffer);
+        console.log(`[Main] Wrote binary data (${buffer.length} bytes): ${zipPath}`);
+        
+      } else if (typeof data === 'object' && !Array.isArray(data)) {
+        // JSON package (mock package with files object)
+        for (const [filename, content] of Object.entries(data)) {
+          const filePath = path.join(installPath, filename);
+          const fileDir = path.dirname(filePath);
+          
+          if (!fs.existsSync(fileDir)) {
+            fs.mkdirSync(fileDir, { recursive: true });
+          }
+          
+          // Handle different content types
+          if (typeof content === 'string') {
+            fs.writeFileSync(filePath, content, 'utf8');
+          } else if (typeof content === 'object') {
+            fs.writeFileSync(filePath, JSON.stringify(content, null, 2), 'utf8');
+          }
+          
+          console.log(`[Main] Wrote file: ${filePath}`);
+        }
+      }
+    }
+    
+    // Create an index.js entry point if not provided
+    const indexPath = path.join(installPath, 'index.js');
+    if (!fs.existsSync(indexPath)) {
+      const defaultIndex = `// Plugin: ${pluginId}\n// Auto-generated entry point\nmodule.exports = ${JSON.stringify(manifest, null, 2)};\n`;
+      fs.writeFileSync(indexPath, defaultIndex, 'utf8');
+      console.log(`[Main] Created default index.js`);
+    }
+    
+    console.log(`[Main] Plugin ${pluginId} installed successfully to ${installPath}`);
+    
+    return { 
+      success: true, 
+      installPath,
+      files: fs.readdirSync(installPath)
+    };
+    
+  } catch (error) {
+    console.error(`[Main] Failed to write plugin files for ${pluginId}:`, error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});
+
+/**
+ * Load plugin from disk for restoration
+ */
+ipcMain.handle('load-plugin-from-disk', async (event, options) => {
+  const { pluginId, installPath } = options;
+  
+  console.log(`[Main] Loading plugin ${pluginId} from ${installPath}`);
+  
+  try {
+    // Check if plugin directory exists
+    if (!fs.existsSync(installPath)) {
+      return { 
+        success: false, 
+        error: `Plugin directory not found: ${installPath}` 
+      };
+    }
+    
+    // Read manifest
+    const manifestPath = path.join(installPath, 'plugin.json');
+    if (!fs.existsSync(manifestPath)) {
+      return { 
+        success: false, 
+        error: `Plugin manifest not found: ${manifestPath}` 
+      };
+    }
+    
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    
+    // List all files in plugin directory
+    const files = fs.readdirSync(installPath);
+    
+    // Read index.js if exists
+    let indexContent = null;
+    const indexPath = path.join(installPath, 'index.js');
+    if (fs.existsSync(indexPath)) {
+      indexContent = fs.readFileSync(indexPath, 'utf8');
+    }
+    
+    console.log(`[Main] Loaded plugin ${pluginId} with ${files.length} files`);
+    
+    return {
+      success: true,
+      pluginId,
+      manifest,
+      files,
+      indexContent,
+      installPath
+    };
+    
+  } catch (error) {
+    console.error(`[Main] Failed to load plugin ${pluginId}:`, error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});
+
+/**
+ * Delete plugin files from disk (for uninstallation)
+ */
+ipcMain.handle('delete-plugin-files', async (event, options) => {
+  const { pluginId, installPath } = options;
+  
+  console.log(`[Main] Deleting plugin ${pluginId} from ${installPath}`);
+  
+  try {
+    // Check if plugin directory exists
+    if (!fs.existsSync(installPath)) {
+      console.log(`[Main] Plugin directory doesn't exist, nothing to delete: ${installPath}`);
+      return { 
+        success: true, 
+        message: 'Plugin directory already deleted' 
+      };
+    }
+    
+    // Recursively delete the plugin directory
+    const deleteRecursive = (dirPath) => {
+      if (fs.existsSync(dirPath)) {
+        fs.readdirSync(dirPath).forEach((file) => {
+          const curPath = path.join(dirPath, file);
+          if (fs.lstatSync(curPath).isDirectory()) {
+            deleteRecursive(curPath);
+          } else {
+            fs.unlinkSync(curPath);
+          }
+        });
+        fs.rmdirSync(dirPath);
+      }
+    };
+    
+    deleteRecursive(installPath);
+    
+    console.log(`[Main] Deleted plugin directory: ${installPath}`);
+    
+    return {
+      success: true,
+      pluginId,
+      deletedPath: installPath
+    };
+    
+  } catch (error) {
+    console.error(`[Main] Failed to delete plugin ${pluginId}:`, error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});
 // ===== End Plugin File Loading Handlers =====
 
 // IPC handlers

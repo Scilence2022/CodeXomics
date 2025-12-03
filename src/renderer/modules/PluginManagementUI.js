@@ -830,6 +830,9 @@ class PluginManagementUI {
     /**
      * Show plugin details
      */
+    /**
+     * Show enhanced plugin details with comprehensive information
+     */
     showPluginDetails(pluginId, type) {
         let plugin;
         
@@ -849,45 +852,615 @@ class PluginManagementUI {
 
         if (!plugin) return;
 
-        let detailsHTML = `
-            <h4><i class="fas ${type === 'function' ? 'fa-code' : 'fa-chart-bar'}"></i> ${plugin.name}</h4>
-            <p><strong>Version:</strong> ${plugin.version}</p>
-            <p><strong>Author:</strong> ${plugin.author || 'Unknown'}</p>
-            <p><strong>Description:</strong> ${plugin.description}</p>
-            <p><strong>Type:</strong> ${type === 'function' ? 'Function Plugin' : 'Visualization Plugin'}</p>
-        `;
-
-        if (type === 'function' && plugin.functions) {
-            detailsHTML += '<h5>Available Functions:</h5><ul>';
-            Object.entries(plugin.functions).forEach(([funcName, func]) => {
-                detailsHTML += `<li><strong>${funcName}:</strong> ${func.description}</li>`;
-            });
-            detailsHTML += '</ul>';
-        } else if (type === 'visualization' && plugin.supportedDataTypes) {
-            detailsHTML += `<h5>Supported Data Types:</h5><ul>`;
-            plugin.supportedDataTypes.forEach(dataType => {
-                detailsHTML += `<li>${dataType}</li>`;
-            });
-            detailsHTML += '</ul>';
-        }
-
-        // Show in a simple alert for now (could be enhanced with a proper modal)
-        const detailsWindow = window.open('', '_blank', 'width=600,height=400,scrollbars=yes');
+        // Get plugin metadata and stats
+        const metadata = this.pluginManager.pluginMetadata?.get(pluginId) || {};
+        const usageStats = this.pluginManager.metrics?.pluginUsageStats?.get(pluginId) || {};
+        const installPath = this.pluginManager.pathResolver?.getInstallPath(pluginId) || 'Unknown';
+        
+        // Build comprehensive details HTML
+        const detailsWindow = window.open('', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
         detailsWindow.document.write(`
-            <html>
-                <head>
-                    <title>Plugin Details - ${plugin.name}</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; padding: 20px; }
-                        h4 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-                        h5 { color: #555; margin-top: 20px; }
-                        ul { margin-left: 20px; }
-                        li { margin-bottom: 5px; }
-                    </style>
-                </head>
-                <body>${detailsHTML}</body>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Plugin Details - ${plugin.name}</title>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+                <style>
+                    ${this.getPluginDetailsStyles()}
+                </style>
+            </head>
+            <body>
+                <div class="details-container">
+                    ${this.generatePluginDetailsContent(plugin, type, metadata, usageStats, installPath)}
+                </div>
+                <script>
+                    ${this.generatePluginDetailsScript(pluginId, plugin, type)}
+                </script>
+            </body>
             </html>
         `);
+        detailsWindow.document.close();
+        detailsWindow.focus();
+    }
+
+    /**
+     * Get styles for plugin details window
+     */
+    getPluginDetailsStyles() {
+        return `
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 20px;
+                color: #2d3748;
+                line-height: 1.6;
+            }
+            
+            .details-container {
+                max-width: 900px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                overflow: hidden;
+            }
+            
+            .details-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 30px;
+                position: relative;
+            }
+            
+            .details-header h1 {
+                font-size: 28px;
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .details-header p {
+                opacity: 0.9;
+                font-size: 16px;
+            }
+            
+            .version-badge {
+                background: rgba(255, 255, 255, 0.2);
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 14px;
+                font-weight: 600;
+                backdrop-filter: blur(10px);
+            }
+            
+            .details-tabs {
+                display: flex;
+                background: #f7fafc;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            
+            .tab-btn {
+                flex: 1;
+                padding: 16px 24px;
+                background: none;
+                border: none;
+                border-bottom: 3px solid transparent;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                color: #718096;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            }
+            
+            .tab-btn:hover {
+                background: white;
+                color: #667eea;
+            }
+            
+            .tab-btn.active {
+                color: #667eea;
+                border-bottom-color: #667eea;
+                background: white;
+            }
+            
+            .tab-content {
+                display: none;
+                padding: 30px;
+            }
+            
+            .tab-content.active {
+                display: block;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .info-card {
+                background: #f7fafc;
+                padding: 20px;
+                border-radius: 8px;
+                border-left: 4px solid #667eea;
+            }
+            
+            .info-card h3 {
+                font-size: 14px;
+                color: #718096;
+                margin-bottom: 8px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            .info-card p {
+                font-size: 18px;
+                font-weight: 600;
+                color: #2d3748;
+            }
+            
+            .section {
+                margin-bottom: 30px;
+            }
+            
+            .section h2 {
+                font-size: 20px;
+                margin-bottom: 16px;
+                color: #2d3748;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            .section h2 i {
+                color: #667eea;
+            }
+            
+            .function-list, .data-type-list {
+                list-style: none;
+            }
+            
+            .function-item, .data-type-item {
+                background: #f7fafc;
+                padding: 16px;
+                margin-bottom: 12px;
+                border-radius: 8px;
+                border-left: 3px solid #667eea;
+            }
+            
+            .function-item h4 {
+                color: #667eea;
+                margin-bottom: 8px;
+                font-size: 16px;
+            }
+            
+            .function-item p {
+                color: #718096;
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+            
+            .params-code {
+                background: #2d3748;
+                color: #a0aec0;
+                padding: 12px;
+                border-radius: 6px;
+                font-family: 'Courier New', monospace;
+                font-size: 13px;
+                overflow-x: auto;
+                white-space: pre-wrap;
+            }
+            
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 16px;
+            }
+            
+            .stat-box {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 20px;
+                border-radius: 8px;
+                text-align: center;
+            }
+            
+            .stat-box h3 {
+                font-size: 32px;
+                margin-bottom: 8px;
+            }
+            
+            .stat-box p {
+                font-size: 14px;
+                opacity: 0.9;
+            }
+            
+            .action-buttons {
+                display: flex;
+                gap: 12px;
+                margin-top: 20px;
+            }
+            
+            .btn {
+                flex: 1;
+                padding: 12px 24px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                transition: all 0.2s;
+            }
+            
+            .btn-primary {
+                background: #667eea;
+                color: white;
+            }
+            
+            .btn-primary:hover {
+                background: #5568d3;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+            
+            .btn-secondary {
+                background: #718096;
+                color: white;
+            }
+            
+            .btn-secondary:hover {
+                background: #5a6c7d;
+                transform: translateY(-2px);
+            }
+            
+            .dependency-list {
+                background: #f7fafc;
+                padding: 16px;
+                border-radius: 8px;
+            }
+            
+            .dependency-item {
+                padding: 8px 0;
+                border-bottom: 1px solid #e2e8f0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .dependency-item:last-child {
+                border-bottom: none;
+            }
+            
+            .no-dependencies {
+                color: #718096;
+                font-style: italic;
+                text-align: center;
+                padding: 20px;
+            }
+            
+            .installation-info {
+                background: #ebf8ff;
+                border-left: 4px solid #3182ce;
+                padding: 16px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+            
+            .installation-info h3 {
+                color: #2c5282;
+                margin-bottom: 12px;
+            }
+            
+            .installation-info code {
+                background: rgba(0, 0, 0, 0.05);
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-family: 'Courier New', monospace;
+                font-size: 13px;
+            }
+        `;
+    }
+
+    /**
+     * Generate comprehensive plugin details content
+     */
+    generatePluginDetailsContent(plugin, type, metadata, usageStats, installPath) {
+        return `
+            <div class="details-header">
+                <h1>
+                    <i class="fas ${type === 'function' ? 'fa-code' : 'fa-chart-bar'}"></i>
+                    ${plugin.name}
+                    <span class="version-badge">v${plugin.version}</span>
+                </h1>
+                <p>${plugin.description || 'No description available'}</p>
+            </div>
+            
+            <div class="details-tabs">
+                <button class="tab-btn active" data-tab="overview">
+                    <i class="fas fa-info-circle"></i>
+                    Overview
+                </button>
+                <button class="tab-btn" data-tab="features">
+                    <i class="fas ${type === 'function' ? 'fa-code' : 'fa-chart-bar'}"></i>
+                    ${type === 'function' ? 'Functions' : 'Visualizations'}
+                </button>
+                <button class="tab-btn" data-tab="usage">
+                    <i class="fas fa-chart-line"></i>
+                    Usage Stats
+                </button>
+                <button class="tab-btn" data-tab="technical">
+                    <i class="fas fa-cog"></i>
+                    Technical
+                </button>
+            </div>
+            
+            <div class="tab-content active" id="overview-tab">
+                ${this.generateOverviewTabContent(plugin, type, metadata, installPath)}
+            </div>
+            
+            <div class="tab-content" id="features-tab">
+                ${type === 'function' ? 
+                    this.generateFunctionsTabContent(plugin) : 
+                    this.generateVisualizationsTabContent(plugin)}
+            </div>
+            
+            <div class="tab-content" id="usage-tab">
+                ${this.generateUsageStatsTabContent(plugin, usageStats)}
+            </div>
+            
+            <div class="tab-content" id="technical-tab">
+                ${this.generateTechnicalTabContent(plugin, metadata, installPath)}
+            </div>
+        `;
+    }
+
+    /**
+     * Generate overview tab content
+     */
+    generateOverviewTabContent(plugin, type, metadata, installPath) {
+        return `
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Plugin Type</h3>
+                    <p><i class="fas ${type === 'function' ? 'fa-code' : 'fa-chart-bar'}"></i> ${type === 'function' ? 'Function' : 'Visualization'}</p>
+                </div>
+                <div class="info-card">
+                    <h3>Version</h3>
+                    <p>${plugin.version}</p>
+                </div>
+                <div class="info-card">
+                    <h3>Author</h3>
+                    <p>${plugin.author || 'Unknown'}</p>
+                </div>
+                <div class="info-card">
+                    <h3>Status</h3>
+                    <p><i class="fas fa-circle" style="color: ${plugin.enabled !== false ? '#48bb78' : '#f56565'}"></i> ${plugin.enabled !== false ? 'Enabled' : 'Disabled'}</p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2><i class="fas fa-file-alt"></i> Description</h2>
+                <p>${plugin.description || 'No description available'}</p>
+            </div>
+            
+            ${plugin.category ? `
+                <div class="section">
+                    <h2><i class="fas fa-tag"></i> Category</h2>
+                    <p>${plugin.category}</p>
+                </div>
+            ` : ''}
+            
+            ${plugin.tags && plugin.tags.length > 0 ? `
+                <div class="section">
+                    <h2><i class="fas fa-tags"></i> Tags</h2>
+                    <p>${plugin.tags.join(', ')}</p>
+                </div>
+            ` : ''}
+            
+            ${plugin.license ? `
+                <div class="section">
+                    <h2><i class="fas fa-balance-scale"></i> License</h2>
+                    <p>${plugin.license}</p>
+                </div>
+            ` : ''}
+            
+            ${plugin.homepage || plugin.repository ? `
+                <div class="section">
+                    <h2><i class="fas fa-link"></i> Links</h2>
+                    ${plugin.homepage ? `<p><a href="${plugin.homepage}" target="_blank"><i class="fas fa-home"></i> Homepage</a></p>` : ''}
+                    ${plugin.repository ? `<p><a href="${plugin.repository}" target="_blank"><i class="fab fa-github"></i> Repository</a></p>` : ''}
+                </div>
+            ` : ''}
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="window.opener.pluginManagementUI.runPluginTest('${plugin.id || plugin.name}', '${type}'); window.close();">
+                    <i class="fas fa-vial"></i> Run Tests
+                </button>
+                <button class="btn btn-secondary" onclick="window.close()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Generate functions tab content
+     */
+    generateFunctionsTabContent(plugin) {
+        if (!plugin.functions || Object.keys(plugin.functions).length === 0) {
+            return '<p class="no-dependencies">No functions defined</p>';
+        }
+        
+        return `
+            <div class="section">
+                <h2><i class="fas fa-code"></i> Available Functions (${Object.keys(plugin.functions).length})</h2>
+                <ul class="function-list">
+                    ${Object.entries(plugin.functions).map(([funcName, func]) => `
+                        <li class="function-item">
+                            <h4><i class="fas fa-function"></i> ${funcName}</h4>
+                            <p>${func.description || 'No description'}</p>
+                            ${func.parameters ? `
+                                <div class="params-code">${JSON.stringify(func.parameters, null, 2)}</div>
+                            ` : ''}
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    /**
+     * Generate visualizations tab content
+     */
+    generateVisualizationsTabContent(plugin) {
+        const dataTypes = plugin.supportedDataTypes || [];
+        
+        return `
+            <div class="section">
+                <h2><i class="fas fa-chart-bar"></i> Supported Data Types (${dataTypes.length})</h2>
+                ${dataTypes.length > 0 ? `
+                    <ul class="data-type-list">
+                        ${dataTypes.map(dataType => `
+                            <li class="data-type-item">
+                                <h4><i class="fas fa-database"></i> ${dataType}</h4>
+                                <p>Visualization support for ${dataType} format</p>
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : '<p class="no-dependencies">No supported data types defined</p>'}
+            </div>
+            
+            ${plugin.executor ? `
+                <div class="section">
+                    <h2><i class="fas fa-play"></i> Executor Function</h2>
+                    <p>Custom executor function is defined for rendering visualizations</p>
+                </div>
+            ` : ''}
+        `;
+    }
+
+    /**
+     * Generate usage stats tab content
+     */
+    generateUsageStatsTabContent(plugin, usageStats) {
+        const usageCount = usageStats.count || plugin.usageCount || 0;
+        const lastUsed = usageStats.lastUsed || plugin.lastUsed;
+        const avgExecutionTime = usageStats.avgExecutionTime || 0;
+        const errorCount = usageStats.errorCount || 0;
+        
+        return `
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <h3>${usageCount}</h3>
+                    <p>Times Used</p>
+                </div>
+                <div class="stat-box">
+                    <h3>${errorCount}</h3>
+                    <p>Errors</p>
+                </div>
+                <div class="stat-box">
+                    <h3>${avgExecutionTime.toFixed(2)}ms</h3>
+                    <p>Avg Execution</p>
+                </div>
+                <div class="stat-box">
+                    <h3>${usageCount > 0 ? ((usageCount - errorCount) / usageCount * 100).toFixed(1) : '100'}%</h3>
+                    <p>Success Rate</p>
+                </div>
+            </div>
+            
+            ${lastUsed ? `
+                <div class="section">
+                    <h2><i class="fas fa-clock"></i> Last Used</h2>
+                    <p>${new Date(lastUsed).toLocaleString()}</p>
+                </div>
+            ` : '<p class="no-dependencies" style="margin-top: 20px;">No usage data available yet</p>'}
+        `;
+    }
+
+    /**
+     * Generate technical tab content
+     */
+    generateTechnicalTabContent(plugin, metadata, installPath) {
+        return `
+            <div class="installation-info">
+                <h3><i class="fas fa-folder"></i> Installation Path</h3>
+                <p><code>${installPath}</code></p>
+            </div>
+            
+            <div class="section">
+                <h2><i class="fas fa-puzzle-piece"></i> Dependencies</h2>
+                ${plugin.dependencies && plugin.dependencies.length > 0 ? `
+                    <div class="dependency-list">
+                        ${plugin.dependencies.map(dep => `
+                            <div class="dependency-item">
+                                <span><i class="fas fa-cube"></i> ${dep}</span>
+                                <span style="color: #48bb78;"><i class="fas fa-check-circle"></i> Installed</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p class="no-dependencies">No dependencies</p>'}
+            </div>
+            
+            ${metadata.registeredAt ? `
+                <div class="section">
+                    <h2><i class="fas fa-calendar-plus"></i> Registration Info</h2>
+                    <p>Registered: ${new Date(metadata.registeredAt).toLocaleString()}</p>
+                </div>
+            ` : ''}
+            
+            <div class="section">
+                <h2><i class="fas fa-info-circle"></i> Plugin ID</h2>
+                <p><code>${plugin.id || plugin.name}</code></p>
+            </div>
+        `;
+    }
+
+    /**
+     * Generate JavaScript for plugin details window
+     */
+    generatePluginDetailsScript(pluginId, plugin, type) {
+        return `
+            // Tab switching
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabName = btn.dataset.tab;
+                    
+                    // Remove active class from all tabs and contents
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    btn.classList.add('active');
+                    document.getElementById(tabName + '-tab').classList.add('active');
+                });
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    window.close();
+                }
+            });
+            
+            console.log('Plugin Details loaded for: ${plugin.name}');
+        `;
     }
 
     /**
@@ -975,6 +1548,7 @@ class PluginManagementUI {
             console.log(`🗑️ Uninstalling plugin: ${pluginId}`);
             
             // Call PluginManagerV2 uninstall method
+            // This will also trigger plugin-uninstalled event which marketplace handles
             await this.pluginManager.uninstallPlugin(pluginId);
             
             // Remove from local storage plugin states
@@ -983,12 +1557,8 @@ class PluginManagementUI {
                 this.saveSettingsToStorage();
             }
             
-            // Remove from marketplace installed registry
-            if (this.pluginManager.marketplace) {
-                this.pluginManager.marketplace.installedPlugins.delete(pluginId);
-                await this.pluginManager.marketplace.saveInstalledPluginsRegistry();
-                console.log(`💾 Removed ${pluginId} from marketplace registry`);
-            }
+            // Note: Marketplace registry is updated via event handler in PluginMarketplace
+            // so we don't need to manually remove it here
             
             // Refresh UI
             this.refreshPluginLists();

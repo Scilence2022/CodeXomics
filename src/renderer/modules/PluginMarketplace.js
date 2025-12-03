@@ -193,6 +193,7 @@ class PluginMarketplace {
     
     /**
      * Restore installed plugins by re-registering them with PluginManagerV2
+     * First attempts to load from disk, then falls back to manifest in localStorage
      */
     async restoreInstalledPlugins() {
         if (this.installedPlugins.size === 0) {
@@ -218,36 +219,68 @@ class PluginMarketplace {
                     continue;
                 }
                 
-                // Get plugin manifest from stored data
-                const manifest = pluginInfo.manifest || {
-                    id: pluginId,
-                    name: pluginInfo.name || pluginId,
-                    description: pluginInfo.description || '',
-                    version: pluginInfo.version,
-                    author: pluginInfo.author || 'Unknown',
-                    category: pluginInfo.category || 'general',
-                    type: pluginInfo.type || 'function',
-                    dependencies: pluginInfo.dependencies || [],
-                    tags: pluginInfo.tags || [],
-                    homepage: pluginInfo.homepage || '',
-                    repository: pluginInfo.repository || '',
-                    license: pluginInfo.license || 'Unknown',
-                    // Type-specific fields
-                    ...(pluginInfo.type === 'visualization' ? {
-                        supportedDataTypes: pluginInfo.supportedDataTypes || ['generic'],
-                        executor: pluginInfo.executor || function(data) { return data; }
-                    } : {}),
-                    ...(pluginInfo.type === 'function' ? {
-                        functions: pluginInfo.functions || {}
-                    } : {})
-                };
+                // Try to load plugin from disk first
+                let manifest = null;
+                let loadedFromDisk = false;
+                
+                if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.loadPluginFromDisk) {
+                    const installPath = this.pluginManager.pathResolver 
+                        ? this.pluginManager.pathResolver.getInstallPath(pluginId)
+                        : `/plugins/${pluginId}`;
+                    
+                    console.log(`💾 Attempting to load plugin from disk: ${installPath}`);
+                    
+                    try {
+                        const diskResult = await window.electronAPI.loadPluginFromDisk({
+                            pluginId,
+                            installPath
+                        });
+                        
+                        if (diskResult.success) {
+                            manifest = diskResult.manifest;
+                            loadedFromDisk = true;
+                            console.log(`✅ Loaded plugin ${pluginId} from disk`);
+                        } else {
+                            console.warn(`⚠️  Plugin ${pluginId} not found on disk: ${diskResult.error}`);
+                        }
+                    } catch (diskError) {
+                        console.warn(`⚠️  Failed to load plugin ${pluginId} from disk:`, diskError);
+                    }
+                }
+                
+                // Fall back to manifest from localStorage if not loaded from disk
+                if (!manifest) {
+                    console.log(`📝 Using stored manifest for plugin: ${pluginId}`);
+                    manifest = pluginInfo.manifest || {
+                        id: pluginId,
+                        name: pluginInfo.name || pluginId,
+                        description: pluginInfo.description || '',
+                        version: pluginInfo.version,
+                        author: pluginInfo.author || 'Unknown',
+                        category: pluginInfo.category || 'general',
+                        type: pluginInfo.type || 'function',
+                        dependencies: pluginInfo.dependencies || [],
+                        tags: pluginInfo.tags || [],
+                        homepage: pluginInfo.homepage || '',
+                        repository: pluginInfo.repository || '',
+                        license: pluginInfo.license || 'Unknown',
+                        // Type-specific fields
+                        ...(pluginInfo.type === 'visualization' ? {
+                            supportedDataTypes: pluginInfo.supportedDataTypes || ['generic'],
+                            executor: pluginInfo.executor || function(data) { return data; }
+                        } : {}),
+                        ...(pluginInfo.type === 'function' ? {
+                            functions: pluginInfo.functions || {}
+                        } : {})
+                    };
+                }
                 
                 console.log(`📦 Restoring plugin manifest:`, {
                     id: manifest.id,
                     name: manifest.name,
                     type: manifest.type,
                     version: manifest.version,
-                    hasManifest: !!pluginInfo.manifest
+                    loadedFromDisk
                 });
                 
                 // Re-register plugin with PluginManagerV2
@@ -856,8 +889,56 @@ class PluginMarketplace {
         console.log(`🔧 Installing ${downloadResult.pluginId}...`);
         
         try {
-            // Register plugin with plugin manager
-            // The plugin manager will handle loading and initialization
+            // 1. Get installation path from path resolver
+            const installPath = this.pluginManager.pathResolver 
+                ? this.pluginManager.pathResolver.getInstallPath(downloadResult.pluginId)
+                : `/plugins/${downloadResult.pluginId}`;
+            
+            console.log(`💾 Plugin will be installed to: ${installPath}`);
+            
+            // 2. Write plugin files to disk (if we have actual file data)
+            if (downloadResult.blob || downloadResult.data) {
+                console.log(`📦 Writing plugin files to disk...`);
+                
+                try {
+                    // Use Electron IPC to write files to user plugins directory
+                    if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.writePluginFiles) {
+                        // Convert data to serializable format for IPC
+                        let serializableData = downloadResult.data;
+                        
+                        if (downloadResult.blob instanceof Blob) {
+                            // Convert Blob to ArrayBuffer then to Uint8Array for IPC serialization
+                            const arrayBuffer = await downloadResult.blob.arrayBuffer();
+                            serializableData = Array.from(new Uint8Array(arrayBuffer));
+                            console.log(`📦 Converted Blob to array (${serializableData.length} bytes)`);
+                        } else if (downloadResult.data instanceof ArrayBuffer) {
+                            // Convert ArrayBuffer to Uint8Array array for IPC serialization
+                            serializableData = Array.from(new Uint8Array(downloadResult.data));
+                            console.log(`📦 Converted ArrayBuffer to array (${serializableData.length} bytes)`);
+                        } else if (typeof downloadResult.data === 'object' && !Array.isArray(downloadResult.data)) {
+                            // JSON package with files object - already serializable
+                            serializableData = downloadResult.data;
+                            console.log(`📦 Using JSON package data`);
+                        }
+                        
+                        await window.electronAPI.writePluginFiles({
+                            pluginId: downloadResult.pluginId,
+                            installPath: installPath,
+                            data: serializableData,
+                            manifest: downloadResult.manifest
+                        });
+                        console.log(`✅ Plugin files written to disk at ${installPath}`);
+                    } else {
+                        console.warn('⚠️  electronAPI.writePluginFiles not available, plugin files not written to disk');
+                        console.warn('⚠️  Plugin will only exist in memory and will be lost on restart');
+                    }
+                } catch (writeError) {
+                    console.error(`❌ Failed to write plugin files to disk:`, writeError);
+                    console.warn('⚠️  Continuing with in-memory registration only');
+                }
+            }
+            
+            // 3. Register plugin with plugin manager (in-memory registration)
             if (this.pluginManager) {
                 await this.pluginManager.registerPlugin(downloadResult.pluginId, downloadResult.manifest);
             } else {
@@ -869,7 +950,7 @@ class PluginMarketplace {
             return {
                 success: true,
                 installedAt: new Date(),
-                installPath: `/plugins/${downloadResult.pluginId}`
+                installPath: installPath
             };
             
         } catch (error) {
@@ -1009,6 +1090,20 @@ class PluginMarketplace {
         if (this.pluginManager) {
             this.pluginManager.on('plugin-registered', (data) => {
                 this.emitEvent('marketplace-plugin-activated', data);
+            });
+            
+            // Handle plugin uninstall - remove from installed registry and persist
+            this.pluginManager.on('plugin-uninstalled', async (data) => {
+                const { pluginId } = data;
+                console.log(`🗑️ Marketplace received plugin-uninstalled event for: ${pluginId}`);
+                
+                if (this.installedPlugins.has(pluginId)) {
+                    this.installedPlugins.delete(pluginId);
+                    await this.saveInstalledPluginsRegistry();
+                    console.log(`✅ Removed ${pluginId} from marketplace installed registry`);
+                }
+                
+                this.emitEvent('marketplace-plugin-uninstalled', data);
             });
         }
     }
