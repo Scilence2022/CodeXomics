@@ -1,5 +1,5 @@
 console.log('Executing src/renderer/renderer-modular.js');
-// ipcRenderer is already declared globally by PluginManagementUI.js (loaded earlier)
+// ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 const path = require('path');
 
 // Force reload - timestamp: 2025-05-31 15:01

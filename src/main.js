@@ -5009,6 +5009,7 @@ async function createProGenFixerWindow() {
 }
 async function createDeepGeneResearchWindow(params = {}) {
   try {
+    console.log('🚀 Starting Deep Gene Research window creation...');
     // Get the URL from General Settings
     let deepGeneResearchUrl = 'http://43.196.74.134:3000'; // Default fallback
     
@@ -5016,6 +5017,7 @@ async function createDeepGeneResearchWindow(params = {}) {
       // Get the main window to access GeneralSettingsManager directly
       const mainWindow = getCurrentMainWindow();
       if (mainWindow && mainWindow.webContents) {
+        console.log('📋 Getting settings from main window...');
         const settings = await mainWindow.webContents.executeJavaScript(`
           if (window.genomeBrowser && window.genomeBrowser.generalSettingsManager) {
             window.genomeBrowser.generalSettingsManager.getSettings();
@@ -5024,22 +5026,24 @@ async function createDeepGeneResearchWindow(params = {}) {
           }
         `);
         
+        console.log('📋 Settings retrieved:', settings);
+        
         if (settings && settings.deepGeneResearchUrl) {
           deepGeneResearchUrl = settings.deepGeneResearchUrl;
-          console.log('Using Deep Gene Research URL from settings:', deepGeneResearchUrl);
+          console.log('✅ Using Deep Gene Research URL from settings:', deepGeneResearchUrl);
         } else {
-          console.log('No Deep Gene Research URL found in settings, using default:', deepGeneResearchUrl);
+          console.log('⚠️ No Deep Gene Research URL found in settings, using default:', deepGeneResearchUrl);
           // Show notification to user about using default URL
           showSettingsWarning('Deep Gene Research URL not configured', 
             'Using default URL (http://43.196.74.134:3000). You can configure the URL in General Settings → Features → External Tools.');
         }
       } else {
-        console.log('Main window not available, using default URL:', deepGeneResearchUrl);
+        console.log('⚠️ Main window not available, using default URL:', deepGeneResearchUrl);
         showSettingsWarning('Main window not available', 
           'Using default URL (http://43.196.74.134:3000). Please ensure the main window is open.');
       }
     } catch (error) {
-      console.warn('Failed to get Deep Gene Research URL from settings, using default:', error.message);
+      console.warn('❌ Failed to get Deep Gene Research URL from settings, using default:', error.message);
       // Show error notification to user
       showSettingsError('Failed to load Deep Gene Research settings', 
         `Using default URL (http://43.196.74.134:3000) due to error: ${error.message}. Please check your settings configuration.`);
@@ -5057,7 +5061,7 @@ async function createDeepGeneResearchWindow(params = {}) {
       deepGeneResearchUrl += '?' + urlParams.toString();
     }
     
-    console.log('Creating Deep Gene Research window:', deepGeneResearchUrl);
+    console.log('🔧 Creating Deep Gene Research window with URL:', deepGeneResearchUrl);
     
     const deepGeneResearchWindow = new BrowserWindow({
       width: 1600,
@@ -5083,14 +5087,21 @@ async function createDeepGeneResearchWindow(params = {}) {
       autoHideMenuBar: false
     });
 
-    // Load the Deep Gene Research URL
-    deepGeneResearchWindow.loadURL(deepGeneResearchUrl); 
+    console.log('✅ Deep Gene Research BrowserWindow created successfully');
 
-    // Show window when ready
+    // Load the Deep Gene Research URL
+    console.log('🌐 Loading Deep Gene Research URL...');
+    await deepGeneResearchWindow.loadURL(deepGeneResearchUrl);
+    console.log('✅ Deep Gene Research URL loaded successfully');
+    
+    // Show the window when ready
     deepGeneResearchWindow.once('ready-to-show', () => {
+      console.log('🎉 Deep Gene Research window ready to show');
       deepGeneResearchWindow.show();
+      deepGeneResearchWindow.focus();
       // Set specialized menu for Deep Gene Research window
       createDeepGeneResearchMenu(deepGeneResearchWindow);
+      console.log('✅ Deep Gene Research window opened successfully');
       
       // Enable keyboard shortcuts for copy/paste
       deepGeneResearchWindow.webContents.executeJavaScript(`
@@ -5127,6 +5138,22 @@ async function createDeepGeneResearchWindow(params = {}) {
       `);
     });
 
+    // Also try to show immediately after load
+    console.log('🚀 Attempting immediate show...');
+    deepGeneResearchWindow.show();
+    deepGeneResearchWindow.focus();
+
+    // Fallback: Show window after a timeout if ready-to-show doesn't fire
+    setTimeout(() => {
+      if (!deepGeneResearchWindow.isDestroyed() && !deepGeneResearchWindow.isVisible()) {
+        console.log('⚠️ Deep Gene Research window ready-to-show timeout, forcing show');
+        deepGeneResearchWindow.show();
+        deepGeneResearchWindow.focus();
+        // Also set menu if it hasn't been set yet
+        createDeepGeneResearchMenu(deepGeneResearchWindow);
+      }
+    }, 3000);
+
     // Handle window closed
     deepGeneResearchWindow.on('closed', () => {
       // Clean up menu template
@@ -5142,7 +5169,9 @@ async function createDeepGeneResearchWindow(params = {}) {
 
     // Handle navigation errors
     deepGeneResearchWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-      console.error('Failed to load Deep Gene Research:', errorDescription);
+      console.error('❌ Deep Gene Research window failed to load:', errorDescription);
+      console.error('❌ Error code:', errorCode);
+      console.error('❌ Validated URL:', validatedURL);
       
       // Show error page
       deepGeneResearchWindow.loadURL(`data:text/html,
@@ -5170,7 +5199,46 @@ async function createDeepGeneResearchWindow(params = {}) {
       `);
     });
 
-    console.log('Deep Gene Research window created successfully');
+    // Add additional event listeners for debugging
+    deepGeneResearchWindow.webContents.on('did-start-loading', () => {
+      console.log('🔄 Deep Gene Research window started loading...');
+    });
+
+    deepGeneResearchWindow.webContents.on('did-finish-load', () => {
+      console.log('✅ Deep Gene Research window finished loading');
+    });
+
+    deepGeneResearchWindow.webContents.on('dom-ready', () => {
+      console.log('📄 Deep Gene Research window DOM ready');
+    });
+
+    // Track window visibility and focus
+    deepGeneResearchWindow.on('show', () => {
+      console.log('👁️ Deep Gene Research window shown');
+    });
+
+    deepGeneResearchWindow.on('hide', () => {
+      console.log('🙈 Deep Gene Research window hidden');
+    });
+
+    deepGeneResearchWindow.on('focus', () => {
+      console.log('🎯 Deep Gene Research window focused');
+    });
+
+    deepGeneResearchWindow.on('blur', () => {
+      console.log('😴 Deep Gene Research window blurred');
+    });
+
+    // Check window state after creation
+    setTimeout(() => {
+      console.log('🔍 Deep Gene Research window state check:');
+      console.log(`  - Destroyed: ${deepGeneResearchWindow.isDestroyed()}`);
+      console.log(`  - Visible: ${deepGeneResearchWindow.isVisible()}`);
+      console.log(`  - Focused: ${deepGeneResearchWindow.isFocused()}`);
+      console.log(`  - Minimized: ${deepGeneResearchWindow.isMinimized()}`);
+    }, 4000);
+
+    console.log('🎯 Deep Gene Research window creation process completed');
 
   } catch (error) {
     console.error('Error creating Deep Gene Research window:', error);

@@ -7,6 +7,12 @@
 // Import electron ipcRenderer for IPC communication
 const { ipcRenderer } = require('electron');
 
+// Expose ipcRenderer globally for use in other modules
+// This is needed for renderer-modular.js and other modules that need IPC communication
+if (typeof window !== 'undefined') {
+    window.ipcRenderer = ipcRenderer;
+}
+
 class PluginManagementUI {
     constructor(pluginManager, configManager) {
         if (!pluginManager || pluginManager.constructor.name !== 'PluginManagerV2') {
