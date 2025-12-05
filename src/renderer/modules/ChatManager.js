@@ -10598,37 +10598,193 @@ ${this.getPluginSystemInfo()}`;
         }
     }
 
+    /**
+     * Enhanced Markdown formatting with proper rendering
+     * Handles code blocks, lists, headers, links, tables, and more
+     */
     formatMessage(message) {
-        // Trim leading/trailing whitespace and remove excessive indentation
-        let formattedMessage = message;
+        // Trim leading/trailing whitespace
+        let formattedMessage = message.trim();
         
-        // Remove leading whitespace from the entire message
-        formattedMessage = formattedMessage.trim();
-        
-        // Split into lines and remove common leading whitespace
+        // Remove common leading whitespace while preserving relative indentation
         const lines = formattedMessage.split('\n');
         if (lines.length > 1) {
-            // Find the minimum indentation (excluding empty lines)
             const nonEmptyLines = lines.filter(line => line.trim().length > 0);
-            const minIndent = Math.min(...nonEmptyLines.map(line => {
-                const match = line.match(/^(\s*)/);
-                return match ? match[1].length : 0;
-            }));
-            
-            // Remove the common indentation from all lines
-            if (minIndent > 0) {
-                formattedMessage = lines.map(line => {
-                    return line.length > 0 ? line.substring(minIndent) : line;
-                }).join('\n');
+            if (nonEmptyLines.length > 0) {
+                const minIndent = Math.min(...nonEmptyLines.map(line => {
+                    const match = line.match(/^(\s*)/);
+                    return match ? match[1].length : 0;
+                }));
+                
+                if (minIndent > 0) {
+                    formattedMessage = lines.map(line => {
+                        return line.length > 0 ? line.substring(minIndent) : line;
+                    }).join('\n');
+                }
             }
         }
         
-        // Convert markdown-like formatting
-        return formattedMessage
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/`(.*?)`/g, '<code>$1</code>')
+        // Use marked library for proper Markdown rendering if available
+        if (typeof marked !== 'undefined' && marked.parse) {
+            try {
+                // Configure marked options for better rendering
+                marked.setOptions({
+                    breaks: true,        // Enable GFM line breaks
+                    gfm: true,          // Enable GitHub Flavored Markdown
+                    headerIds: false,   // Disable header IDs for security
+                    mangle: false,      // Don't mangle email addresses
+                    sanitize: false,    // We'll handle sanitization separately
+                    smartLists: true,   // Use smarter list behavior
+                    smartypants: true,  // Use smart typography
+                    xhtml: false        // Don't use XHTML tags
+                });
+                
+                // Parse markdown to HTML
+                const htmlContent = marked.parse(formattedMessage);
+                
+                // Sanitize the HTML output to prevent XSS while preserving formatting
+                return this.sanitizeHTML(htmlContent);
+            } catch (error) {
+                console.error('Markdown parsing error:', error);
+                // Fallback to basic formatting if marked fails
+                return this.basicMarkdownFormat(formattedMessage);
+            }
+        }
+        
+        // Fallback to basic formatting if marked is not available
+        return this.basicMarkdownFormat(formattedMessage);
+    }
+    
+    /**
+     * Basic Markdown formatting fallback
+     * Used when marked library is not available
+     */
+    basicMarkdownFormat(text) {
+        return text
+            // Code blocks (```)
+            .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+            // Inline code
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            // Bold
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+            // Italic
+            .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+            .replace(/_([^_]+)_/g, '<em>$1</em>')
+            // Headers
+            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+            // Links
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+            // Unordered lists
+            .replace(/^[*+-] (.+)$/gm, '<li>$1</li>')
+            // Ordered lists
+            .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+            // Line breaks
             .replace(/\n/g, '<br>');
+    }
+    
+    /**
+     * Sanitize HTML to prevent XSS attacks while preserving formatting
+     * Allows safe HTML tags and attributes
+     */
+    sanitizeHTML(html) {
+        // Allow these HTML tags
+        const allowedTags = [
+            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'code', 'pre',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'ul', 'ol', 'li',
+            'a', 'img',
+            'blockquote', 'hr',
+            'table', 'thead', 'tbody', 'tr', 'th', 'td',
+            'div', 'span',
+            'del', 'ins', 'sup', 'sub'
+        ];
+        
+        // Allow these attributes
+        const allowedAttributes = {
+            'a': ['href', 'title', 'target', 'rel'],
+            'img': ['src', 'alt', 'title', 'width', 'height'],
+            'code': ['class'],
+            'pre': ['class'],
+            'div': ['class'],
+            'span': ['class']
+        };
+        
+        // Create a temporary DOM element for parsing
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        
+        // Recursively sanitize the DOM
+        const sanitizeNode = (node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                return node.cloneNode(true);
+            }
+            
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const tagName = node.tagName.toLowerCase();
+                
+                // Remove disallowed tags
+                if (!allowedTags.includes(tagName)) {
+                    // Return text content only for disallowed tags
+                    const textNode = document.createTextNode(node.textContent);
+                    return textNode;
+                }
+                
+                // Create new element
+                const newElement = document.createElement(tagName);
+                
+                // Copy allowed attributes
+                if (allowedAttributes[tagName]) {
+                    Array.from(node.attributes).forEach(attr => {
+                        if (allowedAttributes[tagName].includes(attr.name)) {
+                            // Special handling for links to ensure they're safe
+                            if (tagName === 'a' && attr.name === 'href') {
+                                const href = attr.value;
+                                // Only allow http, https, and mailto links
+                                if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+                                    newElement.setAttribute(attr.name, attr.value);
+                                }
+                            } else {
+                                newElement.setAttribute(attr.name, attr.value);
+                            }
+                        }
+                    });
+                    
+                    // Add security attributes for links
+                    if (tagName === 'a' && !newElement.hasAttribute('target')) {
+                        newElement.setAttribute('target', '_blank');
+                    }
+                    if (tagName === 'a' && !newElement.hasAttribute('rel')) {
+                        newElement.setAttribute('rel', 'noopener noreferrer');
+                    }
+                }
+                
+                // Recursively sanitize children
+                Array.from(node.childNodes).forEach(child => {
+                    const sanitizedChild = sanitizeNode(child);
+                    if (sanitizedChild) {
+                        newElement.appendChild(sanitizedChild);
+                    }
+                });
+                
+                return newElement;
+            }
+            
+            return null;
+        };
+        
+        // Sanitize all child nodes
+        const sanitizedDiv = document.createElement('div');
+        Array.from(tempDiv.childNodes).forEach(child => {
+            const sanitizedChild = sanitizeNode(child);
+            if (sanitizedChild) {
+                sanitizedDiv.appendChild(sanitizedChild);
+            }
+        });
+        
+        return sanitizedDiv.innerHTML;
     }
 
     /**
