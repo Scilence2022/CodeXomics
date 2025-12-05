@@ -316,6 +316,85 @@
     color: #495057;
 }
 
+/* Storage Information Styles */
+.storage-info-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.storage-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.storage-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.storage-stat .stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.storage-stat .stat-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.storage-stat .stat-value i {
+    font-size: 14px;
+}
+
+.storage-actions {
+    margin-top: 8px;
+}
+
+.storage-actions .button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.storage-actions .button-group .btn {
+    flex: 1;
+    min-width: 140px;
+    white-space: nowrap;
+}
+
+/* Responsive adjustments for storage stats */
+@media (max-width: 768px) {
+    .storage-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .storage-actions .button-group {
+        flex-direction: column;
+    }
+    
+    .storage-actions .button-group .btn {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
 /* Track Settings Modal */
 .track-settings-modal .modal-content {
     max-width: 600px;

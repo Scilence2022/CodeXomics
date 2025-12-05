@@ -10599,8 +10599,32 @@ ${this.getPluginSystemInfo()}`;
     }
 
     formatMessage(message) {
+        // Trim leading/trailing whitespace and remove excessive indentation
+        let formattedMessage = message;
+        
+        // Remove leading whitespace from the entire message
+        formattedMessage = formattedMessage.trim();
+        
+        // Split into lines and remove common leading whitespace
+        const lines = formattedMessage.split('\n');
+        if (lines.length > 1) {
+            // Find the minimum indentation (excluding empty lines)
+            const nonEmptyLines = lines.filter(line => line.trim().length > 0);
+            const minIndent = Math.min(...nonEmptyLines.map(line => {
+                const match = line.match(/^(\s*)/);
+                return match ? match[1].length : 0;
+            }));
+            
+            // Remove the common indentation from all lines
+            if (minIndent > 0) {
+                formattedMessage = lines.map(line => {
+                    return line.length > 0 ? line.substring(minIndent) : line;
+                }).join('\n');
+            }
+        }
+        
         // Convert markdown-like formatting
-        return message
+        return formattedMessage
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/`(.*?)`/g, '<code>$1</code>')

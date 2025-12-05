@@ -607,35 +607,6 @@ class PluginManagementUI {
                 this.browsePluginDirectory();
             });
         }
-
-        // Storage Management Actions
-        const exportSettingsBtn = document.getElementById('exportPluginSettingsBtn');
-        if (exportSettingsBtn) {
-            exportSettingsBtn.addEventListener('click', () => {
-                this.exportSettings();
-            });
-        }
-
-        const importSettingsBtn = document.getElementById('importPluginSettingsBtn');
-        if (importSettingsBtn) {
-            importSettingsBtn.addEventListener('click', () => {
-                this.importSettings();
-            });
-        }
-
-        const resetSettingsBtn = document.getElementById('resetPluginSettingsBtn');
-        if (resetSettingsBtn) {
-            resetSettingsBtn.addEventListener('click', () => {
-                this.resetSettingsToDefaults();
-            });
-        }
-
-        const viewDetailsBtn = document.getElementById('viewStorageDetailsBtn');
-        if (viewDetailsBtn) {
-            viewDetailsBtn.addEventListener('click', () => {
-                this.showStorageDetails();
-            });
-        }
     }
 
     /**
@@ -2180,6 +2151,7 @@ class PluginManagementUI {
      */
     updateStorageInfo() {
         const storageInfo = this.getStorageInfo();
+        const pluginCount = Object.keys(this.settings.pluginStates || {}).length;
         
         // Add storage info to settings tab if not already present
         let storageInfoElement = document.getElementById('plugin-storage-info');
@@ -2191,11 +2163,18 @@ class PluginManagementUI {
                 storageInfoElement.className = 'settings-section';
                 
                 storageInfoElement.innerHTML = `
-                    <h4><i class="fas fa-database"></i> Storage Information</h4>
+                    <h4><i class="fas fa-database"></i> Storage Information & Auto-Save</h4>
                     <div class="storage-info-content">
                         <div class="storage-stats">
                             <div class="storage-stat">
-                                <span class="stat-label">Settings Size:</span>
+                                <span class="stat-label">Settings Status:</span>
+                                <span class="stat-value" id="storage-status">
+                                    <i class="fas fa-check-circle" style="color: #48bb78;"></i>
+                                    ${storageInfo.exists ? 'Active' : 'Not Found'}
+                                </span>
+                            </div>
+                            <div class="storage-stat">
+                                <span class="stat-label">Storage Size:</span>
                                 <span class="stat-value" id="storage-size">${storageInfo.sizeFormatted || '0 Bytes'}</span>
                             </div>
                             <div class="storage-stat">
@@ -2203,27 +2182,61 @@ class PluginManagementUI {
                                 <span class="stat-value" id="last-saved">${storageInfo.lastSaved ? new Date(storageInfo.lastSaved).toLocaleString() : 'Never'}</span>
                             </div>
                             <div class="storage-stat">
+                                <span class="stat-label">Tracked Plugins:</span>
+                                <span class="stat-value" id="tracked-plugins">${pluginCount}</span>
+                            </div>
+                            <div class="storage-stat">
                                 <span class="stat-label">Version:</span>
                                 <span class="stat-value">${storageInfo.version || '1.0.0'}</span>
                             </div>
+                            <div class="storage-stat">
+                                <span class="stat-label">Auto-Save:</span>
+                                <span class="stat-value">
+                                    <i class="fas fa-check-circle" style="color: #48bb78;"></i> Enabled
+                                </span>
+                            </div>
                         </div>
+                        
+                        <div class="auto-save-config" style="margin: 16px 0; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #48bb78;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                <i class="fas fa-cog" style="color: #48bb78;"></i>
+                                <strong>Auto-Save Configuration</strong>
+                            </div>
+                            <ul style="margin: 8px 0 0 0; padding-left: 24px; font-size: 13px; line-height: 1.8;">
+                                <li><i class="fas fa-clock" style="color: #6c757d; margin-right: 6px;"></i>Settings saved every <strong>30 seconds</strong></li>
+                                <li><i class="fas fa-window-close" style="color: #6c757d; margin-right: 6px;"></i>Settings saved when <strong>app closes</strong></li>
+                                <li><i class="fas fa-eye-slash" style="color: #6c757d; margin-right: 6px;"></i>Settings saved when tab becomes <strong>inactive</strong></li>
+                                <li><i class="fas fa-toggle-on" style="color: #6c757d; margin-right: 6px;"></i>Plugin states saved when <strong>toggled</strong></li>
+                            </ul>
+                        </div>
+                        
+                        <small class="help-text">
+                            <i class="fas fa-info-circle"></i>
+                            Plugin settings are automatically saved to local storage with multiple triggers to ensure data persistence
+                        </small>
                         <div class="storage-actions">
-                            <button id="exportSettingsBtn" class="btn btn-info btn-sm">
-                                <i class="fas fa-download"></i>
-                                Export Settings
-                            </button>
-                            <button id="importSettingsBtn" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-upload"></i>
-                                Import Settings
-                            </button>
-                            <button id="resetSettingsBtn" class="btn btn-warning btn-sm">
-                                <i class="fas fa-undo"></i>
-                                Reset to Defaults
-                            </button>
-                            <button id="viewStorageDetailsBtn" class="btn btn-primary btn-sm">
-                                <i class="fas fa-info-circle"></i>
-                                View Details
-                            </button>
+                            <label style="display: block; margin: 10px 0 8px 0; font-weight: 500;">Storage Actions:</label>
+                            <div class="button-group">
+                                <button id="exportSettingsBtn" class="btn btn-info btn-sm">
+                                    <i class="fas fa-download"></i>
+                                    Export Settings
+                                </button>
+                                <button id="importSettingsBtn" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-upload"></i>
+                                    Import Settings
+                                </button>
+                                <button id="resetSettingsBtn" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-undo"></i>
+                                    Reset to Defaults
+                                </button>
+                                <button id="viewStorageDetailsBtn" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-info-circle"></i>
+                                    View Details
+                                </button>
+                            </div>
+                            <small class="help-text" style="margin-top: 8px; display: block;">
+                                Export settings to backup, import from backup file, or reset to factory defaults
+                            </small>
                         </div>
                     </div>
                 `;
@@ -2235,15 +2248,26 @@ class PluginManagementUI {
             }
         } else {
             // Update existing storage info
+            const statusElement = storageInfoElement.querySelector('#storage-status');
             const sizeElement = storageInfoElement.querySelector('#storage-size');
             const lastSavedElement = storageInfoElement.querySelector('#last-saved');
+            const trackedPluginsElement = storageInfoElement.querySelector('#tracked-plugins');
             
+            if (statusElement) {
+                statusElement.innerHTML = `
+                    <i class="fas fa-check-circle" style="color: #48bb78;"></i>
+                    ${storageInfo.exists ? 'Active' : 'Not Found'}
+                `;
+            }
             if (sizeElement) {
                 sizeElement.textContent = storageInfo.sizeFormatted || '0 Bytes';
             }
             if (lastSavedElement) {
                 lastSavedElement.textContent = storageInfo.lastSaved ? 
                     new Date(storageInfo.lastSaved).toLocaleString() : 'Never';
+            }
+            if (trackedPluginsElement) {
+                trackedPluginsElement.textContent = pluginCount;
             }
         }
     }
