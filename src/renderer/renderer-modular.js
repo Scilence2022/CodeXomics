@@ -7727,11 +7727,15 @@ class GenomeBrowser {
         let isSelecting = false;
         let selectionStart = null;
         let selectionEnd = null;
+        let mouseDownPosition = null; // Track initial mouse position
+        let hasMoved = false; // Track if mouse has actually moved
         
         const mousedownHandler = (e) => {
             if (e.target.matches('.sequence-bases span')) {
                 isSelecting = true;
                 selectionStart = this.getSequencePosition(e.target);
+                mouseDownPosition = selectionStart; // Store initial position
+                hasMoved = false; // Reset movement flag
                 // Clear all existing selections when starting a new manual selection
                 this.clearSequenceSelection();
                 e.preventDefault();
@@ -7740,20 +7744,35 @@ class GenomeBrowser {
         
         const mousemoveHandler = (e) => {
             if (isSelecting && e.target.matches('.sequence-bases span')) {
-                selectionEnd = this.getSequencePosition(e.target);
-                this.updateSequenceSelection(selectionStart, selectionEnd);
+                const currentPosition = this.getSequencePosition(e.target);
+                
+                // Check if mouse has actually moved to a different base
+                if (currentPosition && mouseDownPosition && 
+                    currentPosition.position !== mouseDownPosition.position) {
+                    hasMoved = true;
+                    selectionEnd = currentPosition;
+                    this.updateSequenceSelection(selectionStart, selectionEnd);
+                }
             }
         };
         
         const mouseupHandler = () => {
-            if (isSelecting && selectionStart && selectionEnd) {
+            // Only finalize selection if there was actual movement (drag)
+            // Single click should not create a selection
+            if (isSelecting && hasMoved && selectionStart && selectionEnd) {
                 this.finalizeSequenceSelection(selectionStart, selectionEnd);
             }
+            // Reset all selection state
             isSelecting = false;
+            hasMoved = false;
+            mouseDownPosition = null;
         };
         
         const docMouseupHandler = () => {
+            // Also reset movement tracking when mouse up occurs outside
             isSelecting = false;
+            hasMoved = false;
+            mouseDownPosition = null;
         };
         
         // Store listeners for cleanup
