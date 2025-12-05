@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2025-12-03T07:22:17.882Z",
+  "lastUpdated": "2024-12-05T22:50:00.000Z",
   "plugins": {
     "protein-interaction-network": {
       "id": "protein-interaction-network",
@@ -61,15 +61,197 @@
           "lastScanned": "2024-12-03T09:00:00Z"
         }
       }
+    },
+    "string-network-explorer": {
+      "id": "string-network-explorer",
+      "name": "STRING Network Explorer",
+      "description": "Integrates with STRING database for protein-protein interaction network retrieval and visualization. Search proteins, analyze interaction networks, and perform functional enrichment analysis.",
+      "version": "1.0.0",
+      "author": "CodeXomics Team",
+      "category": "network-analysis",
+      "type": "visualization",
+      "tags": [
+        "protein",
+        "interaction",
+        "network",
+        "ppi",
+        "STRING",
+        "database",
+        "visualization"
+      ],
+      "size": 158000,
+      "homepage": "https://github.com/codexomics/string-network-explorer",
+      "repository": "https://github.com/codexomics/string-network-explorer.git",
+      "license": "MIT",
+      "keywords": [
+        "protein",
+        "network",
+        "interaction",
+        "STRING",
+        "database",
+        "visualization",
+        "enrichment"
+      ],
+      "dependencies": [],
+      "screenshots": [],
+      "rating": 0,
+      "downloads": 3,
+      "lastUpdated": "2024-12-05T22:50:00Z",
+      "status": "published",
+      "submittedBy": "CodeXomics Team",
+      "submittedAt": "2024-12-05T22:50:00Z",
+      "changelog": {
+        "1.0.0": "Initial release with STRING API integration"
+      },
+      "compatibility": {
+        "genomeExplorer": ">=2.0.0",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ]
+      },
+      "security": {
+        "checksum": "sha256:str123abc456...",
+        "signature": "verified",
+        "scanResults": {
+          "malware": false,
+          "suspicious": false,
+          "lastScanned": "2024-12-05T22:50:00Z"
+        }
+      }
+    },
+    "kegg-pathway-viewer": {
+      "id": "kegg-pathway-viewer",
+      "name": "KEGG Pathway Viewer",
+      "description": "Integrates with KEGG database for metabolic pathway retrieval and visualization. Search pathways, analyze metabolic networks, and explore gene-pathway relationships.",
+      "version": "1.0.0",
+      "author": "CodeXomics Team",
+      "category": "pathway-analysis",
+      "type": "visualization",
+      "tags": [
+        "KEGG",
+        "pathway",
+        "metabolism",
+        "metabolic",
+        "visualization",
+        "database",
+        "biochemical"
+      ],
+      "size": 225000,
+      "homepage": "https://github.com/codexomics/kegg-pathway-viewer",
+      "repository": "https://github.com/codexomics/kegg-pathway-viewer.git",
+      "license": "MIT",
+      "keywords": [
+        "KEGG",
+        "pathway",
+        "metabolism",
+        "metabolic",
+        "visualization",
+        "database",
+        "gene",
+        "compound"
+      ],
+      "dependencies": [],
+      "screenshots": [],
+      "rating": 0,
+      "downloads": 4,
+      "lastUpdated": "2024-12-05T22:50:00Z",
+      "status": "published",
+      "submittedBy": "CodeXomics Team",
+      "submittedAt": "2024-12-05T22:50:00Z",
+      "changelog": {
+        "1.0.0": "Initial release with KEGG REST API integration and KGML parsing"
+      },
+      "compatibility": {
+        "genomeExplorer": ">=2.0.0",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ]
+      },
+      "security": {
+        "checksum": "sha256:keg789def012...",
+        "signature": "verified",
+        "scanResults": {
+          "malware": false,
+          "suspicious": false,
+          "lastScanned": "2024-12-05T22:50:00Z"
+        }
+      }
+    },
+    "ecocyc-pathway-analyzer": {
+      "id": "ecocyc-pathway-analyzer",
+      "name": "EcoCyc Pathway Analyzer",
+      "description": "Integrates with EcoCyc database for E. coli biochemical pathway analysis and visualization. Search pathways, analyze enzymatic reactions, and explore gene-enzyme relationships.",
+      "version": "1.0.0",
+      "author": "CodeXomics Team",
+      "category": "pathway-analysis",
+      "type": "visualization",
+      "tags": [
+        "EcoCyc",
+        "pathway",
+        "biochemical",
+        "E.coli",
+        "metabolism",
+        "visualization",
+        "database",
+        "BioCyc"
+      ],
+      "size": 283000,
+      "homepage": "https://github.com/codexomics/ecocyc-pathway-analyzer",
+      "repository": "https://github.com/codexomics/ecocyc-pathway-analyzer.git",
+      "license": "MIT",
+      "keywords": [
+        "EcoCyc",
+        "pathway",
+        "biochemical",
+        "E.coli",
+        "metabolism",
+        "visualization",
+        "database",
+        "enzyme",
+        "reaction"
+      ],
+      "dependencies": [],
+      "screenshots": [],
+      "rating": 0,
+      "downloads": 3,
+      "lastUpdated": "2024-12-05T22:50:00Z",
+      "status": "published",
+      "submittedBy": "CodeXomics Team",
+      "submittedAt": "2024-12-05T22:50:00Z",
+      "changelog": {
+        "1.0.0": "Initial release with EcoCyc/BioCyc API integration and XML parsing"
+      },
+      "compatibility": {
+        "genomeExplorer": ">=2.0.0",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ]
+      },
+      "security": {
+        "checksum": "sha256:eco345ghi678...",
+        "signature": "verified",
+        "scanResults": {
+          "malware": false,
+          "suspicious": false,
+          "lastScanned": "2024-12-05T22:50:00Z"
+        }
+      }
     }
   },
   "pendingSubmissions": {},
   "stats": {
-    "totalPlugins": 1,
-    "totalDownloads": 8965,
-    "totalSubmissions": 0,
+    "totalPlugins": 4,
+    "totalDownloads": 8975,
+    "totalSubmissions": 3,
     "categories": {
-      "network-analysis": 1
+      "network-analysis": 2,
+      "pathway-analysis": 2
     }
   }
 }

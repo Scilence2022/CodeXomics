@@ -1,0 +1,87 @@
+{
+  "id": "kegg-pathway-viewer",
+  "name": "KEGG Pathway Viewer",
+  "description": "Integrates with KEGG database for metabolic pathway retrieval and visualization. Search pathways, analyze metabolic networks, and explore gene-pathway relationships.",
+  "version": "1.0.0",
+  "author": "CodeXomics Team",
+  "category": "pathway-analysis",
+  "type": "visualization",
+  "main": "index.js",
+  "tags": [
+    "KEGG",
+    "pathway",
+    "metabolism",
+    "metabolic",
+    "visualization",
+    "database",
+    "biochemical"
+  ],
+  "keywords": [
+    "KEGG",
+    "pathway",
+    "metabolism",
+    "metabolic",
+    "visualization",
+    "database",
+    "gene",
+    "compound"
+  ],
+  "dependencies": [],
+  "homepage": "https://github.com/codexomics/kegg-pathway-viewer",
+  "repository": "https://github.com/codexomics/kegg-pathway-viewer.git",
+  "license": "MIT",
+  "supportedDataTypes": [
+    "metabolic-pathway",
+    "kegg-pathway",
+    "pathway-data",
+    "generic"
+  ],
+  "compatibility": {
+    "genomeExplorer": ">=2.0.0",
+    "platforms": [
+      "windows",
+      "macos",
+      "linux"
+    ]
+  },
+  "contributes": {
+    "visualizations": {
+      "kegg-pathway": {
+        "id": "kegg-pathway",
+        "name": "KEGG Metabolic Pathway",
+        "description": "Visualize metabolic pathways from KEGG database with genes, compounds, and reactions",
+        "supportedDataTypes": [
+          "metabolic-pathway",
+          "kegg-pathway",
+          "pathway-data"
+        ]
+      }
+    },
+    "commands": [
+      {
+        "command": "kegg-viewer.searchPathway",
+        "title": "Search KEGG Pathway",
+        "description": "Search for metabolic pathways by keyword in KEGG database"
+      },
+      {
+        "command": "kegg-viewer.getPathwayDetails",
+        "title": "Get Pathway Details",
+        "description": "Retrieve detailed pathway information including KGML data"
+      },
+      {
+        "command": "kegg-viewer.findPathwaysByGene",
+        "title": "Find Pathways by Gene",
+        "description": "Find all pathways containing a specific gene"
+      },
+      {
+        "command": "kegg-viewer.getCompoundInfo",
+        "title": "Get Compound Info",
+        "description": "Retrieve detailed compound information from KEGG"
+      }
+    ]
+  },
+  "permissions": {
+    "network": true,
+    "external-api": ["https://rest.kegg.jp"]
+  }
+}

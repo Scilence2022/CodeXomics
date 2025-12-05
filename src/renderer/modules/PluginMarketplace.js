@@ -1171,9 +1171,96 @@ class PluginMarketplace {
                 }
             }
             
-            // 3. Register plugin with plugin manager (in-memory registration)
+            // 3. Load and instantiate the plugin to get proper definition
+            let pluginDefinition;
+            
+            if (downloadResult.data && typeof downloadResult.data === 'object' && downloadResult.data['index.js']) {
+                // We have the plugin code in the download result
+                try {
+                    console.log(`📦 Loading plugin code for ${downloadResult.pluginId}...`);
+                    
+                    // Create a temporary script element to load the plugin code
+                    const pluginCode = downloadResult.data['index.js'];
+                    
+                    // Use Function constructor to evaluate the module code in a controlled context
+                    // Create a module-like environment
+                    const moduleExports = {};
+                    const moduleContext = {
+                        module: { exports: moduleExports },
+                        exports: moduleExports,
+                        console: console,
+                        document: document,
+                        window: window
+                    };
+                    
+                    // Wrap the code to make it work in our context
+                    const wrappedCode = `
+                        (function(module, exports, console, document, window) {
+                            ${pluginCode}
+                            return module.exports;
+                        })
+                    `;
+                    
+                    const PluginClass = eval(wrappedCode)(
+                        moduleContext.module,
+                        moduleContext.exports,
+                        moduleContext.console,
+                        moduleContext.document,
+                        moduleContext.window
+                    );
+                    
+                    console.log(`✅ Plugin class loaded for ${downloadResult.pluginId}`);
+                    
+                    // Create a mock ExtensionContext to capture registrations
+                    const mockContext = {
+                        subscriptions: [],
+                        registerCommand: function(command, handler) {
+                            this.subscriptions.push({ type: 'command', command, handler });
+                            return { dispose: () => {} };
+                        },
+                        registerVisualization: function(vizDef) {
+                            this.visualizationDef = vizDef;
+                            return { dispose: () => {} };
+                        }
+                    };
+                    
+                    // Instantiate and activate the plugin to capture its registrations
+                    const pluginInstance = new PluginClass();
+                    if (typeof pluginInstance.activate === 'function') {
+                        pluginInstance.activate(mockContext);
+                        console.log(`✅ Plugin activated, captured registrations`);
+                    }
+                    
+                    // Build the complete plugin definition from manifest and registrations
+                    pluginDefinition = {
+                        ...downloadResult.manifest,
+                        // Add executor and supportedDataTypes from visualization registration
+                        ...(mockContext.visualizationDef ? {
+                            executor: mockContext.visualizationDef.executor,
+                            supportedDataTypes: mockContext.visualizationDef.supportedDataTypes || downloadResult.manifest.supportedDataTypes
+                        } : {})
+                    };
+                    
+                    console.log(`✅ Plugin definition built:`, {
+                        id: pluginDefinition.id,
+                        type: pluginDefinition.type,
+                        hasExecutor: !!pluginDefinition.executor,
+                        supportedDataTypes: pluginDefinition.supportedDataTypes
+                    });
+                    
+                } catch (loadError) {
+                    console.error(`❌ Failed to load plugin code for ${downloadResult.pluginId}:`, loadError);
+                    // Fall back to manifest-only registration
+                    pluginDefinition = downloadResult.manifest;
+                }
+            } else {
+                // No code available, use manifest only
+                pluginDefinition = downloadResult.manifest;
+            }
+            
+            // 4. Register plugin with plugin manager (in-memory registration)
             if (this.pluginManager) {
-                await this.pluginManager.registerPlugin(downloadResult.pluginId, downloadResult.manifest);
+                await this.pluginManager.registerPlugin(downloadResult.pluginId, pluginDefinition);
             } else {
                 throw new Error('Plugin manager not available');
             }

@@ -395,68 +395,54 @@ app.get('/api/v1/plugins/:id/:version/download', async (req, res) => {
             console.log(`📦 Serving plugin file: ${pluginPackagePath}`);
             res.download(pluginPackagePath, `${id}-${version}.zip`);
         } catch (error) {
-            // File doesn't exist, create mock plugin package
-            console.log(`📦 Creating mock package for ${id} (no uploaded file available)`);
+            // File doesn't exist - check for directory structure with real files
+            const pluginDir = path.join(PLUGINS_DIR, id, version);
+            const indexPath = path.join(pluginDir, 'index.js');
+            const manifestPath = path.join(pluginDir, 'manifest.json');
+            const readmePath = path.join(pluginDir, 'README.md');
             
-            // Create a minimal mock plugin package
-            const mockManifest = {
-                id: plugin.id,
-                name: plugin.name,
-                description: plugin.description,
-                version: plugin.version,
-                author: plugin.author,
-                category: plugin.category,
-                type: plugin.type,
-                dependencies: plugin.dependencies || [],
-                tags: plugin.tags || [],
-                homepage: plugin.homepage,
-                repository: plugin.repository,
-                license: plugin.license,
-                main: 'index.js',
-                ...(plugin.type === 'visualization' ? {
-                    supportedDataTypes: plugin.supportedDataTypes || ['generic'],
-                } : {}),
-                ...(plugin.type === 'function' ? {
-                    functions: plugin.functions || {}
-                } : {})
-            };
-            
-            const mockIndexJs = `// ${plugin.name} v${plugin.version}
-// Auto-generated plugin package
-
-module.exports = {
-    activate() {
-        console.log('${plugin.name} activated');
-    },
-    deactivate() {
-        console.log('${plugin.name} deactivated');
-    }
-};`;
-            
-            // Send as JSON response with package data
-            res.json({
-                success: true,
-                data: {
-                    pluginId: plugin.id,
-                    version: plugin.version,
-                    manifest: mockManifest,
-                    files: {
-                        'manifest.json': JSON.stringify(mockManifest, null, 2),
-                        'index.js': mockIndexJs,
-                        'README.md': `# ${plugin.name}
-
-${plugin.description}
-
-Version: ${plugin.version}
-Author: ${plugin.author}
-License: ${plugin.license}`
+            try {
+                await fs.access(indexPath);
+                await fs.access(manifestPath);
+                
+                // Real plugin files exist - read and send them
+                const [indexJs, manifestJson, readmeMd] = await Promise.all([
+                    fs.readFile(indexPath, 'utf-8'),
+                    fs.readFile(manifestPath, 'utf-8'),
+                    fs.readFile(readmePath, 'utf-8').catch(() => `# ${plugin.name}\n\n${plugin.description}`)
+                ]);
+                
+                const manifest = JSON.parse(manifestJson);
+                
+                console.log(`📦 Serving real plugin files for ${id} from ${pluginDir}`);
+                
+                res.json({
+                    success: true,
+                    data: {
+                        pluginId: plugin.id,
+                        version: plugin.version,
+                        manifest: manifest,
+                        files: {
+                            'manifest.json': manifestJson,
+                            'index.js': indexJs,
+                            'README.md': readmeMd
+                        },
+                        size: plugin.size,
+                        checksum: plugin.security.checksum
                     },
-                    size: plugin.size,
-                    checksum: plugin.security.checksum
-                },
-                message: 'Mock plugin package (actual file will be available after plugin submission)',
-                timestamp: new Date().toISOString()
-            });
+                    message: 'Plugin package downloaded successfully',
+                    timestamp: new Date().toISOString()
+                });
+                
+            } catch (fileError) {
+                // Neither zip nor directory files exist - this should not happen
+                console.error(`❌ Plugin files not found for ${id}:`, fileError);
+                res.status(404).json({
+                    success: false,
+                    error: 'Plugin files not found',
+                    message: `Plugin ${id} is registered but files are missing. Please contact the plugin author.`
+                });
+            }
         }
         
     } catch (error) {

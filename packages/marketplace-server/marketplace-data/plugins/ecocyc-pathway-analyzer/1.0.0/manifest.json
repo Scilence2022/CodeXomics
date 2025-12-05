@@ -1,0 +1,94 @@
+{
+  "id": "ecocyc-pathway-analyzer",
+  "name": "EcoCyc Pathway Analyzer",
+  "description": "Integrates with EcoCyc database for E. coli biochemical pathway analysis and visualization. Search pathways, analyze enzymatic reactions, and explore gene-enzyme relationships.",
+  "version": "1.0.0",
+  "author": "CodeXomics Team",
+  "category": "pathway-analysis",
+  "type": "visualization",
+  "main": "index.js",
+  "tags": [
+    "EcoCyc",
+    "pathway",
+    "biochemical",
+    "E.coli",
+    "metabolism",
+    "visualization",
+    "database",
+    "BioCyc"
+  ],
+  "keywords": [
+    "EcoCyc",
+    "pathway",
+    "biochemical",
+    "E.coli",
+    "metabolism",
+    "visualization",
+    "database",
+    "enzyme",
+    "reaction"
+  ],
+  "dependencies": [],
+  "homepage": "https://github.com/codexomics/ecocyc-pathway-analyzer",
+  "repository": "https://github.com/codexomics/ecocyc-pathway-analyzer.git",
+  "license": "MIT",
+  "supportedDataTypes": [
+    "biochemical-pathway",
+    "ecocyc-pathway",
+    "metabolic-pathway",
+    "generic"
+  ],
+  "compatibility": {
+    "genomeExplorer": ">=2.0.0",
+    "platforms": [
+      "windows",
+      "macos",
+      "linux"
+    ]
+  },
+  "contributes": {
+    "visualizations": {
+      "ecocyc-pathway": {
+        "id": "ecocyc-pathway",
+        "name": "EcoCyc Biochemical Pathway",
+        "description": "Visualize E. coli biochemical pathways from EcoCyc database with reactions, enzymes, and metabolites",
+        "supportedDataTypes": [
+          "biochemical-pathway",
+          "ecocyc-pathway",
+          "metabolic-pathway"
+        ]
+      }
+    },
+    "commands": [
+      {
+        "command": "ecocyc-analyzer.searchPathway",
+        "title": "Search EcoCyc Pathway",
+        "description": "Search for biochemical pathways in EcoCyc database"
+      },
+      {
+        "command": "ecocyc-analyzer.getPathwayDetails",
+        "title": "Get Pathway Details",
+        "description": "Retrieve detailed pathway information from EcoCyc"
+      },
+      {
+        "command": "ecocyc-analyzer.getGenePathways",
+        "title": "Get Gene Pathways",
+        "description": "Find all pathways containing a specific gene"
+      },
+      {
+        "command": "ecocyc-analyzer.getEnzymeInfo",
+        "title": "Get Enzyme Info",
+        "description": "Retrieve detailed enzyme information from EcoCyc"
+      },
+      {
+        "command": "ecocyc-analyzer.getReactionDetails",
+        "title": "Get Reaction Details",
+        "description": "Retrieve detailed enzymatic reaction information"
+      }
+    ]
+  },
+  "permissions": {
+    "network": true,
+    "external-api": ["https://websvc.biocyc.org"]
+  }
+}

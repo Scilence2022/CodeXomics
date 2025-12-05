@@ -1,0 +1,81 @@
+{
+  "id": "string-network-explorer",
+  "name": "STRING Network Explorer",
+  "description": "Integrates with STRING database for protein-protein interaction network retrieval and visualization. Search proteins, analyze interaction networks, and perform functional enrichment analysis.",
+  "version": "1.0.0",
+  "author": "CodeXomics Team",
+  "category": "network-analysis",
+  "type": "visualization",
+  "main": "index.js",
+  "tags": [
+    "protein",
+    "interaction",
+    "network",
+    "ppi",
+    "STRING",
+    "database",
+    "visualization"
+  ],
+  "keywords": [
+    "protein",
+    "network",
+    "interaction",
+    "STRING",
+    "database",
+    "visualization",
+    "enrichment"
+  ],
+  "dependencies": [],
+  "homepage": "https://github.com/codexomics/string-network-explorer",
+  "repository": "https://github.com/codexomics/string-network-explorer.git",
+  "license": "MIT",
+  "supportedDataTypes": [
+    "protein-interaction",
+    "string-network",
+    "ppi-network",
+    "generic"
+  ],
+  "compatibility": {
+    "genomeExplorer": ">=2.0.0",
+    "platforms": [
+      "windows",
+      "macos",
+      "linux"
+    ]
+  },
+  "contributes": {
+    "visualizations": {
+      "string-network": {
+        "id": "string-network",
+        "name": "STRING Protein Network",
+        "description": "Visualize protein-protein interactions from STRING database as an interactive network graph with confidence scores",
+        "supportedDataTypes": [
+          "protein-interaction",
+          "string-network",
+          "ppi-network"
+        ]
+      }
+    },
+    "commands": [
+      {
+        "command": "string-explorer.search",
+        "title": "Search Protein Interactions",
+        "description": "Search for protein interactions in STRING database"
+      },
+      {
+        "command": "string-explorer.getNetwork",
+        "title": "Get Protein Network",
+        "description": "Retrieve detailed protein-protein interaction network from STRING"
+      },
+      {
+        "command": "string-explorer.getEnrichment",
+        "title": "Get Enrichment Analysis",
+        "description": "Perform functional enrichment analysis using STRING data"
+      }
+    ]
+  },
+  "permissions": {
+    "network": true,
+    "external-api": ["https://string-db.org/api"]
+  }
+}

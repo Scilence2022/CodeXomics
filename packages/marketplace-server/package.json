@@ -11,7 +11,7 @@
   },
   "keywords": [
     "genome",
-    "bioinformatics", 
+    "bioinformatics",
     "plugins",
     "marketplace",
     "server",
@@ -20,8 +20,8 @@
   "author": "GenomeExplorer Team",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
     "cors": "^2.8.5",
+    "express": "^4.22.1",
     "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
