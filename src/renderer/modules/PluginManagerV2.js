@@ -587,6 +587,31 @@ class PluginManagerV2 {
     }
 
     /**
+     * 🔒 SECURITY: Validate that a plugin is enabled before execution
+     * @param {string} pluginId - Plugin ID to validate
+     * @param {Object} plugin - Plugin object (optional, will be fetched if not provided)
+     * @throws {Error} If plugin is disabled
+     */
+    validatePluginEnabled(pluginId, plugin = null) {
+        const targetPlugin = plugin || this.getPlugin(pluginId);
+        
+        if (!targetPlugin) {
+            throw new Error(`Plugin not found: ${pluginId}`);
+        }
+        
+        if (targetPlugin.enabled === false) {
+            const pluginName = targetPlugin.name || pluginId;
+            console.error(`🚫 [PluginManagerV2] Blocked execution of disabled plugin: ${pluginId}`);
+            throw new Error(
+                `Plugin "${pluginName}" is disabled. Please enable it in Plugin Management before use.`
+            );
+        }
+        
+        console.log(`✅ [PluginManagerV2] Plugin ${pluginId} is enabled, execution allowed`);
+        return true;
+    }
+
+    /**
      * Execute plugin function with resource management
      */
     async executeFunction(pluginId, functionName, parameters = {}) {
@@ -599,6 +624,9 @@ class PluginManagerV2 {
             if (!plugin) {
                 throw new Error(`Plugin not found: ${pluginId}`);
             }
+            
+            // 🔒 SECURITY: Validate plugin is enabled
+            this.validatePluginEnabled(pluginId, plugin);
             
             const functionDef = plugin.functions?.[functionName];
             if (!functionDef) {
@@ -926,6 +954,10 @@ class PluginManagerV2 {
         }
         
         const plugin = this.pluginRegistry.visualization.get(pluginId);
+        
+        // 🔒 SECURITY: Validate plugin is enabled
+        this.validatePluginEnabled(pluginId, plugin);
+        
         const data = parameters.data || parameters;
         
         // Execute visualization using the correct method
@@ -979,6 +1011,7 @@ class PluginManagerV2 {
 
     /**
      * Check if a tool name refers to a visualization plugin
+     * 🔒 SECURITY: Only returns true for ENABLED visualization plugins
      * @param {string} toolName - Tool name to check
      * @returns {boolean}
      */
@@ -988,7 +1021,13 @@ class PluginManagerV2 {
         }
         
         const pluginId = toolName.split('.')[0];
-        return this.pluginRegistry.visualization.has(pluginId);
+        if (!this.pluginRegistry.visualization.has(pluginId)) {
+            return false;
+        }
+        
+        // 🔒 SECURITY: Only return true if plugin is enabled
+        const plugin = this.pluginRegistry.visualization.get(pluginId);
+        return plugin.enabled !== false;
     }
 
     /**

@@ -117,6 +117,12 @@ class PluginToolsBridge {
                 if (!registry || !(registry instanceof Map)) continue;
                 
                 for (const [pluginId, plugin] of registry) {
+                    // 🔒 SECURITY: Only export enabled plugins to tool registry
+                    if (plugin.enabled === false) {
+                        console.log(`🔒 PluginToolsBridge: Skipping disabled plugin: ${pluginId}`);
+                        continue;
+                    }
+                    
                     const tools = this.convertPluginToTools(pluginId, plugin, type);
                     pluginTools.push(...tools);
                 }
