@@ -8529,7 +8529,7 @@ WORKFLOW EXAMPLES:
 
 • Gene Analysis Workflow:
   1. {"tool_name": "search_gene_by_name", "parameters": {"name": "lysC"}}
-  2. {"tool_name": "get_coding_sequence", "parameters": {"identifier": "lysC"}}
+  2. {"tool_name": "get_coding_sequence", "parameters": {"gene_name": "lysC"}}
   3. {"tool_name": "translate_sequence", "parameters": {"sequence": "ATGCGC..."}}
 
 • Sequence Insertion Workflow:
@@ -8689,7 +8689,7 @@ MicrobeGenomicsFunctions Examples:
 - Codon usage: {"tool_name": "analyze_codon_usage", "parameters": {"dna": "ATGAAATAG"}}
 - Predict RBS: {"tool_name": "predict_rbs", "parameters": {"seq": "AGGAGG"}}
 - Predict terminator: {"tool_name": "predict_terminator", "parameters": {"seq": "ATGCGCTATCG"}}
-- Get coding sequence: {"tool_name": "get_coding_sequence", "parameters": {"identifier": "lacZ"}}
+- Get coding sequence: {"tool_name": "get_coding_sequence", "parameters": {"gene_name": "lacZ"}}
 - Get multiple CDS: {"tool_name": "get_multiple_coding_sequences", "parameters": {"identifiers": ["lacZ", "lacY", "lacA"]}}
 - Navigation controls: {"tool_name": "scroll_left", "parameters": {"bp": 1000}} or {"tool_name": "zoom_in", "parameters": {"factor": 2}}
 
@@ -11335,7 +11335,10 @@ ${this.getPluginSystemInfo()}`;
     }
 
     async getCodingSequence(params) {
-        const { identifier, includeProtein = true, format = 'object' } = params;
+        // Support both 'identifier' and 'gene_name' parameters for compatibility
+        // YAML schema uses 'gene_name', but legacy code uses 'identifier'
+        const identifier = params.identifier || params.gene_name;
+        const { includeProtein = true, format = 'object' } = params;
         
         if (!identifier) {
             throw new Error('Gene identifier (name or locus_tag) is required');
