@@ -68,7 +68,7 @@
       "description": "Integrates with STRING database for protein-protein interaction network retrieval and visualization. Search proteins, analyze interaction networks, and perform functional enrichment analysis.",
       "version": "1.0.0",
       "author": "CodeXomics Team",
-      "category": "network-analysis",
+      "category": "database-integration",
       "type": "visualization",
       "tags": [
         "protein",
@@ -95,7 +95,7 @@
       "dependencies": [],
       "screenshots": [],
       "rating": 0,
-      "downloads": 3,
+      "downloads": 7,
       "lastUpdated": "2024-12-05T22:50:00Z",
       "status": "published",
       "submittedBy": "CodeXomics Team",
@@ -127,7 +127,7 @@
       "description": "Integrates with KEGG database for metabolic pathway retrieval and visualization. Search pathways, analyze metabolic networks, and explore gene-pathway relationships.",
       "version": "1.0.0",
       "author": "CodeXomics Team",
-      "category": "pathway-analysis",
+      "category": "database-integration",
       "type": "visualization",
       "tags": [
         "KEGG",
@@ -155,7 +155,7 @@
       "dependencies": [],
       "screenshots": [],
       "rating": 0,
-      "downloads": 4,
+      "downloads": 5,
       "lastUpdated": "2024-12-05T22:50:00Z",
       "status": "published",
       "submittedBy": "CodeXomics Team",
@@ -187,7 +187,7 @@
       "description": "Integrates with EcoCyc database for E. coli biochemical pathway analysis and visualization. Search pathways, analyze enzymatic reactions, and explore gene-enzyme relationships.",
       "version": "1.0.0",
       "author": "CodeXomics Team",
-      "category": "pathway-analysis",
+      "category": "database-integration",
       "type": "visualization",
       "tags": [
         "EcoCyc",
@@ -217,7 +217,7 @@
       "dependencies": [],
       "screenshots": [],
       "rating": 0,
-      "downloads": 3,
+      "downloads": 5,
       "lastUpdated": "2024-12-05T22:50:00Z",
       "status": "published",
       "submittedBy": "CodeXomics Team",
@@ -247,11 +247,11 @@
   "pendingSubmissions": {},
   "stats": {
     "totalPlugins": 4,
-    "totalDownloads": 8975,
+    "totalDownloads": 8982,
     "totalSubmissions": 3,
     "categories": {
-      "network-analysis": 2,
-      "pathway-analysis": 2
+      "network-analysis": 1,
+      "database-integration": 3
     }
   }
 }

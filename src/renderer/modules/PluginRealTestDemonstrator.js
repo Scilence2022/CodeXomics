@@ -21,7 +21,11 @@ class PluginRealTestDemonstrator {
             'protein-interaction-network': this.getProteinNetworkDemoData(),
             'gene-regulatory-network': this.getGeneNetworkDemoData(),
             'phylogenetic-tree': this.getPhylogeneticDemoData(),
-            'sequence-alignment': this.getAlignmentDemoData()
+            'sequence-alignment': this.getAlignmentDemoData(),
+            // Database integration plugins
+            'string-network-explorer': this.getStringNetworkDemoData(),
+            'kegg-pathway-viewer': this.getKeggPathwayDemoData(),
+            'ecocyc-pathway-analyzer': this.getEcocycPathwayDemoData()
         };
     }
 
@@ -236,6 +240,231 @@ class PluginRealTestDemonstrator {
                     metadata: {
                         gene: 'BRCA1',
                         region: 'Exon 1'
+                    }
+                }
+            }
+        };
+    }
+
+    /**
+     * Get STRING Network Explorer demo data
+     * Real biological example: p53 tumor suppressor pathway
+     */
+    getStringNetworkDemoData() {
+        return {
+            basic: {
+                name: 'p53 Tumor Suppressor Network',
+                description: 'Core p53 signaling pathway proteins',
+                data: {
+                    nodes: [
+                        { 
+                            id: 'TP53', 
+                            name: 'TP53', 
+                            type: 'protein',
+                            properties: {
+                                function: 'Tumor suppressor',
+                                location: 'Nucleus',
+                                expression: 0.85
+                            }
+                        },
+                        { 
+                            id: 'MDM2', 
+                            name: 'MDM2', 
+                            type: 'protein',
+                            properties: {
+                                function: 'E3 ubiquitin ligase',
+                                location: 'Nucleus/Cytoplasm',
+                                expression: 0.72
+                            }
+                        },
+                        { 
+                            id: 'ATM', 
+                            name: 'ATM', 
+                            type: 'protein',
+                            properties: {
+                                function: 'DNA damage kinase',
+                                location: 'Nucleus',
+                                expression: 0.68
+                            }
+                        }
+                    ],
+                    edges: [
+                        { source: 'TP53', target: 'MDM2', confidence: 950, type: 'regulation' },
+                        { source: 'ATM', target: 'TP53', confidence: 880, type: 'phosphorylation' }
+                    ],
+                    metadata: {
+                        database: 'STRING',
+                        organism: 'Homo sapiens',
+                        interactionCount: 2
+                    }
+                }
+            },
+            complex: {
+                name: 'DNA Damage Response Network',
+                description: 'Extended network with 8 proteins in DNA repair pathway',
+                data: {
+                    nodes: [
+                        { id: 'TP53', name: 'TP53', type: 'protein', properties: { function: 'Tumor suppressor' } },
+                        { id: 'MDM2', name: 'MDM2', type: 'protein', properties: { function: 'E3 ubiquitin ligase' } },
+                        { id: 'ATM', name: 'ATM', type: 'protein', properties: { function: 'DNA damage kinase' } },
+                        { id: 'CHEK2', name: 'CHEK2', type: 'protein', properties: { function: 'Checkpoint kinase' } },
+                        { id: 'BRCA1', name: 'BRCA1', type: 'protein', properties: { function: 'DNA repair' } },
+                        { id: 'RAD51', name: 'RAD51', type: 'protein', properties: { function: 'Recombinase' } },
+                        { id: 'ATR', name: 'ATR', type: 'protein', properties: { function: 'Replication stress kinase' } },
+                        { id: 'P21', name: 'P21', type: 'protein', properties: { function: 'CDK inhibitor' } }
+                    ],
+                    edges: [
+                        { source: 'ATM', target: 'TP53', confidence: 880, type: 'phosphorylation' },
+                        { source: 'ATM', target: 'CHEK2', confidence: 920, type: 'phosphorylation' },
+                        { source: 'CHEK2', target: 'TP53', confidence: 850, type: 'phosphorylation' },
+                        { source: 'TP53', target: 'MDM2', confidence: 950, type: 'regulation' },
+                        { source: 'TP53', target: 'P21', confidence: 930, type: 'activation' },
+                        { source: 'BRCA1', target: 'RAD51', confidence: 860, type: 'regulation' },
+                        { source: 'ATR', target: 'CHEK2', confidence: 810, type: 'phosphorylation' },
+                        { source: 'ATM', target: 'BRCA1', confidence: 870, type: 'phosphorylation' }
+                    ],
+                    metadata: {
+                        database: 'STRING',
+                        organism: 'Homo sapiens',
+                        interactionCount: 8,
+                        pathway: 'DNA damage response'
+                    }
+                }
+            }
+        };
+    }
+
+    /**
+     * Get KEGG Pathway Viewer demo data
+     * Real biological example: Glycolysis pathway
+     */
+    getKeggPathwayDemoData() {
+        return {
+            basic: {
+                name: 'Glycolysis Initial Steps',
+                description: 'First three reactions of glycolysis pathway',
+                data: {
+                    nodes: [
+                        { id: 'C00031', name: 'D-Glucose', type: 'compound', properties: { formula: 'C6H12O6' } },
+                        { id: 'R00299', name: 'Hexokinase', type: 'reaction', properties: { ec: '2.7.1.1' } },
+                        { id: 'C00668', name: 'D-Glucose 6-phosphate', type: 'compound', properties: { formula: 'C6H13O9P' } },
+                        { id: 'R00771', name: 'Phosphoglucose isomerase', type: 'reaction', properties: { ec: '5.3.1.9' } },
+                        { id: 'C00085', name: 'D-Fructose 6-phosphate', type: 'compound', properties: { formula: 'C6H13O9P' } }
+                    ],
+                    edges: [
+                        { source: 'C00031', target: 'R00299', type: 'substrate' },
+                        { source: 'R00299', target: 'C00668', type: 'product' },
+                        { source: 'C00668', target: 'R00771', type: 'substrate' },
+                        { source: 'R00771', target: 'C00085', type: 'product' }
+                    ],
+                    metadata: {
+                        database: 'KEGG',
+                        pathway: 'Glycolysis / Gluconeogenesis',
+                        pathwayId: 'map00010',
+                        organism: 'Generic'
+                    }
+                }
+            },
+            complex: {
+                name: 'Complete Glycolysis Pathway',
+                description: 'Full glycolysis pathway from glucose to pyruvate',
+                data: {
+                    nodes: [
+                        { id: 'C00031', name: 'D-Glucose', type: 'compound' },
+                        { id: 'R00299', name: 'Hexokinase', type: 'reaction' },
+                        { id: 'C00668', name: 'Glucose-6P', type: 'compound' },
+                        { id: 'R00771', name: 'PGI', type: 'reaction' },
+                        { id: 'C00085', name: 'Fructose-6P', type: 'compound' },
+                        { id: 'R00756', name: 'PFK', type: 'reaction' },
+                        { id: 'C00354', name: 'Fructose-1,6P2', type: 'compound' },
+                        { id: 'R01068', name: 'Aldolase', type: 'reaction' },
+                        { id: 'C00118', name: 'G3P', type: 'compound' },
+                        { id: 'C00022', name: 'Pyruvate', type: 'compound' }
+                    ],
+                    edges: [
+                        { source: 'C00031', target: 'R00299', type: 'substrate' },
+                        { source: 'R00299', target: 'C00668', type: 'product' },
+                        { source: 'C00668', target: 'R00771', type: 'substrate' },
+                        { source: 'R00771', target: 'C00085', type: 'product' },
+                        { source: 'C00085', target: 'R00756', type: 'substrate' },
+                        { source: 'R00756', target: 'C00354', type: 'product' },
+                        { source: 'C00354', target: 'R01068', type: 'substrate' },
+                        { source: 'R01068', target: 'C00118', type: 'product' }
+                    ],
+                    metadata: {
+                        database: 'KEGG',
+                        pathway: 'Glycolysis',
+                        pathwayId: 'map00010',
+                        reactionCount: 8
+                    }
+                }
+            }
+        };
+    }
+
+    /**
+     * Get EcoCyc Pathway Analyzer demo data
+     * Real biological example: E. coli metabolic pathways
+     */
+    getEcocycPathwayDemoData() {
+        return {
+            basic: {
+                name: 'L-Arabinose Degradation',
+                description: 'E. coli arabinose catabolism pathway',
+                data: {
+                    nodes: [
+                        { id: 'L-ARABINOSE', name: 'L-Arabinose', type: 'compound' },
+                        { id: 'ARAA-RXN', name: 'L-arabinose isomerase', type: 'reaction' },
+                        { id: 'L-RIBULOSE', name: 'L-Ribulose', type: 'compound' },
+                        { id: 'ARAB-RXN', name: 'L-ribulokinase', type: 'reaction' },
+                        { id: 'L-RIBULOSE-5P', name: 'L-Ribulose 5-phosphate', type: 'compound' }
+                    ],
+                    edges: [
+                        { source: 'L-ARABINOSE', target: 'ARAA-RXN', type: 'substrate' },
+                        { source: 'ARAA-RXN', target: 'L-RIBULOSE', type: 'product' },
+                        { source: 'L-RIBULOSE', target: 'ARAB-RXN', type: 'substrate' },
+                        { source: 'ARAB-RXN', target: 'L-RIBULOSE-5P', type: 'product' }
+                    ],
+                    metadata: {
+                        database: 'EcoCyc',
+                        organism: 'Escherichia coli K-12',
+                        pathway: 'L-arabinose degradation I'
+                    }
+                }
+            },
+            complex: {
+                name: 'TCA Cycle in E. coli',
+                description: 'Complete tricarboxylic acid cycle',
+                data: {
+                    nodes: [
+                        { id: 'ACETYL-COA', name: 'Acetyl-CoA', type: 'compound' },
+                        { id: 'CIT', name: 'Citrate', type: 'compound' },
+                        { id: 'ACON-C', name: 'cis-Aconitate', type: 'compound' },
+                        { id: 'THREO-DS-ISO-CITRATE', name: 'Isocitrate', type: 'compound' },
+                        { id: '2-OXOGLUTARATE', name: '2-Oxoglutarate', type: 'compound' },
+                        { id: 'SUC-COA', name: 'Succinyl-CoA', type: 'compound' },
+                        { id: 'SUC', name: 'Succinate', type: 'compound' },
+                        { id: 'FUM', name: 'Fumarate', type: 'compound' },
+                        { id: 'MAL', name: 'Malate', type: 'compound' },
+                        { id: 'OXALACETIC_ACID', name: 'Oxaloacetate', type: 'compound' }
+                    ],
+                    edges: [
+                        { source: 'ACETYL-COA', target: 'CIT', type: 'substrate' },
+                        { source: 'CIT', target: 'ACON-C', type: 'transformation' },
+                        { source: 'ACON-C', target: 'THREO-DS-ISO-CITRATE', type: 'transformation' },
+                        { source: 'THREO-DS-ISO-CITRATE', target: '2-OXOGLUTARATE', type: 'transformation' },
+                        { source: '2-OXOGLUTARATE', target: 'SUC-COA', type: 'transformation' },
+                        { source: 'SUC-COA', target: 'SUC', type: 'transformation' },
+                        { source: 'SUC', target: 'FUM', type: 'transformation' },
+                        { source: 'FUM', target: 'MAL', type: 'transformation' },
+                        { source: 'MAL', target: 'OXALACETIC_ACID', type: 'transformation' },
+                        { source: 'OXALACETIC_ACID', target: 'CIT', type: 'condensation' }
+                    ],
+                    metadata: {
+                        database: 'EcoCyc',
+                        organism: 'Escherichia coli K-12',
+                        pathway: 'TCA cycle I (aerobic)',
+                        cyclical: true
                     }
                 }
             }

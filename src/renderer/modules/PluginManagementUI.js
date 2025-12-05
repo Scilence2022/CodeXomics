@@ -2498,7 +2498,11 @@ class PluginManagementUI {
             'protein-interaction-network',
             'gene-regulatory-network',
             'phylogenetic-tree',
-            'sequence-alignment'
+            'sequence-alignment',
+            // Database integration plugins
+            'string-network-explorer',
+            'kegg-pathway-viewer',
+            'ecocyc-pathway-analyzer'
         ];
         return supportedPlugins.includes(pluginId);
     }
