@@ -426,9 +426,14 @@ class SequenceUtils {
      */
     attachSequenceClickHandlers(container) {
         // Remove any existing click handlers to avoid duplicates
-        const existingHandler = container._cursorClickHandler;
-        if (existingHandler) {
-            container.removeEventListener('mousedown', existingHandler, true);
+        const existingClickHandler = container._cursorClickHandler;
+        if (existingClickHandler) {
+            container.removeEventListener('mousedown', existingClickHandler, true);
+        }
+        
+        const existingLeaveHandler = container._cursorLeaveHandler;
+        if (existingLeaveHandler) {
+            container.removeEventListener('mouseleave', existingLeaveHandler);
         }
         
         // Create and attach new mousedown handler with capture phase
@@ -436,10 +441,15 @@ class SequenceUtils {
         const clickHandler = (event) => this.handleSequenceClick(event);
         container.addEventListener('mousedown', clickHandler, true);
         
-        // Store reference for cleanup
-        container._cursorClickHandler = clickHandler;
+        // Create and attach mouseleave handler to hide cursor when mouse exits
+        const leaveHandler = () => this.clearCursor();
+        container.addEventListener('mouseleave', leaveHandler);
         
-        console.log('✅ [SequenceUtils] Cursor click handlers attached to sequence container (capture phase)');
+        // Store references for cleanup
+        container._cursorClickHandler = clickHandler;
+        container._cursorLeaveHandler = leaveHandler;
+        
+        console.log('✅ [SequenceUtils] Cursor click and leave handlers attached to sequence container');
     }
 
     // Sequence display methods
