@@ -352,9 +352,9 @@
     background: #94a3b8;
 }
 
-/* User message markdown styling */
+/* User message markdown styling - Enhanced for better readability */
 .user-message .message-text {
-    color: #f9fafb;
+    color: #ffffff;
 }
 
 .user-message .message-text h1,
@@ -364,36 +364,94 @@
 .user-message .message-text h5,
 .user-message .message-text h6 {
     color: #ffffff;
-    border-bottom-color: rgba(255, 255, 255, 0.3);
+    border-bottom-color: rgba(255, 255, 255, 0.4);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.user-message .message-text p {
+    color: #ffffff;
 }
 
 .user-message .message-text a {
-    color: #a5b4fc;
+    color: #e0e7ff;
+    border-bottom-color: rgba(224, 231, 255, 0.5);
 }
 
 .user-message .message-text a:hover {
-    color: #c7d2fe;
+    color: #ffffff;
+    border-bottom-color: #ffffff;
 }
 
 .user-message .message-text code {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.35);
     color: #fef3c7;
+    text-shadow: none;
 }
 
 .user-message .message-text pre {
-    background: rgba(0, 0, 0, 0.2);
-    border-color: rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.25);
+    border-color: rgba(255, 255, 255, 0.3);
+    border-left-color: rgba(255, 255, 255, 0.6);
 }
 
 .user-message .message-text pre code {
-    color: #f9fafb;
+    color: #ffffff;
+    background: transparent;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .user-message .message-text blockquote {
-    background: rgba(255, 255, 255, 0.1);
-    border-left-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.15);
+    border-left-color: rgba(255, 255, 255, 0.6);
     color: #f3f4f6;
+}
+
+.user-message .message-text strong,
+.user-message .message-text b {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.user-message .message-text em,
+.user-message .message-text i {
+    color: #f3f4f6;
+}
+
+.user-message .message-text hr {
+    border-top-color: rgba(255, 255, 255, 0.3);
+}
+
+.user-message .message-text table {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.user-message .message-text table th,
+.user-message .message-text table td {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+}
+
+.user-message .message-text table th {
+    background: rgba(255, 255, 255, 0.2);
+    font-weight: 600;
+}
+
+.user-message .message-text table tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.user-message .message-text table tr:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.user-message .message-text ul,
+.user-message .message-text ol {
+    color: #ffffff;
+}
+
+.user-message .message-text li {
+    color: #ffffff;
 }
 
 /* Responsive adjustments */
