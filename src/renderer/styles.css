@@ -3926,10 +3926,10 @@ to {
 
 .message-text {
   background: white;
-  padding: 14px 18px;
-  border-radius: 16px;
+  padding: 10px 14px;
+  border-radius: 14px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.5;
   border: 1px solid #e9ecef;
   flex: 1;
   user-select: text;
