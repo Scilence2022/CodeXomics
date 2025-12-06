@@ -3985,7 +3985,6 @@ class ChatManager {
                                 <i class="fas fa-robot message-icon"></i>
                                 <div class="message-text">
                                     <p>🧬 <strong>Welcome to your AI Genomics Assistant!</strong> I can help you with comprehensive genome analysis:</p>
-                                    
                                     <div class="capability-section">
                                         <p><strong>🔍 Navigation & Search:</strong></p>
                                         <ul>
@@ -3995,7 +3994,6 @@ class ChatManager {
                                             <li>"Show me the bidA gene details"</li>
                                         </ul>
                                     </div>
-                                    
                                     <div class="capability-section">
                                         <p><strong>🧪 Molecular Biology Tools:</strong></p>
                                         <ul>
@@ -4005,7 +4003,6 @@ class ChatManager {
                                             <li>"Translate this gene to protein"</li>
                                         </ul>
                                     </div>
-                                    
                                     <div class="capability-section">
                                         <p><strong>📊 Sequence Analysis:</strong></p>
                                         <ul>
@@ -4015,7 +4012,6 @@ class ChatManager {
                                             <li>"Compare these two genomic regions"</li>
                                         </ul>
                                     </div>
-                                    
                                     <div class="capability-section">
                                         <p><strong>🔖 Organization & Export:</strong></p>
                                         <ul>
@@ -4025,7 +4021,6 @@ class ChatManager {
                                             <li>"Show file information summary"</li>
                                         </ul>
                                     </div>
-                                    
                                     <p><em>💡 Tip: You can ask questions in natural language! Try "What restriction enzymes cut here?" or "Find intergenic regions longer than 500bp"</em></p>
                                 </div>
                             </div>

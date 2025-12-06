@@ -438,9 +438,12 @@
 }
 
 .welcome-screen .welcome-icon {
-    font-size: 4rem;
+    font-size: 5rem;
     margin-bottom: 20px;
-    opacity: 0.9;
+    opacity: 1;
+    filter: drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3));
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .welcome-screen .welcome-content h2 {

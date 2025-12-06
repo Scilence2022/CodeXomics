@@ -3987,6 +3987,20 @@ to {
   user-select: text;
 }
 
+/* Compact spacing for welcome message */
+.welcome-message .message-text {
+  line-height: 1.4;
+}
+
+.welcome-message .message-text > p:first-child {
+  margin-bottom: 4px;
+}
+
+.welcome-message .message-text > p:last-child {
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
 .message-text code {
   background: rgba(0, 0, 0, 0.1);
   padding: 2px 4px;
@@ -5533,15 +5547,15 @@ to {
 }
 
 .capability-section {
-  margin: 16px 0;
-  padding: 16px;
+  margin: 6px 0;
+  padding: 10px 14px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: var(--radius-md);
   border-left: 4px solid var(--primary-color);
 }
 
 .capability-section p {
-  margin-bottom: 8px;
+  margin: 0 0 4px 0;
   font-weight: 600;
 }
 
@@ -5551,9 +5565,10 @@ to {
 }
 
 .capability-section li {
-  margin: 6px 0;
+  margin: 2px 0;
   color: var(--text-secondary);
   font-style: italic;
+  line-height: 1.4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -13683,8 +13698,8 @@ to {
 }
 
 .capability-section {
-  padding: 12px;
-  margin: 12px 0;
+  padding: 10px 12px;
+  margin: 6px 0;
 }
 
 .chat-actions {
