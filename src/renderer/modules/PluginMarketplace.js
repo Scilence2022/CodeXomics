@@ -1094,6 +1094,8 @@ class PluginMarketplace {
                         homepage: plugin.homepage,
                         repository: plugin.repository,
                         license: plugin.license,
+                        // Include contributes for commands, visualizations, etc.
+                        ...(plugin.contributes ? { contributes: plugin.contributes } : {}),
                         // Add required fields for visualization plugins
                         ...(plugin.type === 'visualization' ? {
                             supportedDataTypes: plugin.supportedDataTypes || ['generic'],
@@ -1314,6 +1316,8 @@ class PluginMarketplace {
                 homepage: manifest.homepage,
                 repository: manifest.repository,
                 license: manifest.license,
+                // Include contributes for commands, visualizations, etc.
+                ...(manifest.contributes ? { contributes: manifest.contributes } : {}),
                 // Type-specific fields
                 ...(manifest.type === 'visualization' ? {
                     supportedDataTypes: manifest.supportedDataTypes || ['generic'],

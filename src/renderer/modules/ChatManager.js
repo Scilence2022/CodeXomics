@@ -4281,7 +4281,12 @@ class ChatManager {
         });
 
         document.getElementById('configBtn')?.addEventListener('click', () => {
-            this.showConfigOptions();
+            // Open ChatBox Settings modal, consistent with main menu Options -> ChatBox Settings
+            if (this.chatBoxSettingsManager) {
+                this.chatBoxSettingsManager.showSettingsModal();
+            } else {
+                console.warn('ChatBoxSettingsManager not initialized');
+            }
         });
 
         document.getElementById('suggestionsBtn')?.addEventListener('click', () => {

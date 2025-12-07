@@ -1,7 +1,7 @@
 /**
  * Protein Interaction Network Visualizer Plugin
  * Version: 1.8.3
- * Author: NetworkBioLab
+ * Author: CodeXomics Team
  * License: Apache-2.0
  * 
  * Interactive protein-protein interaction network analysis and visualization

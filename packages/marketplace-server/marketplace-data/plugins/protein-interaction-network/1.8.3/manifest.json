@@ -3,7 +3,7 @@
   "name": "Protein Interaction Network Visualizer",
   "description": "Interactive protein-protein interaction network analysis and visualization",
   "version": "1.8.3",
-  "author": "NetworkBioLab",
+  "author": "CodeXomics Team",
   "category": "network-analysis",
   "type": "visualization",
   "main": "index.js",
