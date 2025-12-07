@@ -1214,8 +1214,10 @@ class PluginMarketplace {
                     // Create a mock ExtensionContext to capture registrations
                     const mockContext = {
                         subscriptions: [],
+                        commandHandlers: new Map(),  // Store command handlers
                         registerCommand: function(command, handler) {
                             this.subscriptions.push({ type: 'command', command, handler });
+                            this.commandHandlers.set(command, handler);  // Save handler for later use
                             return { dispose: () => {} };
                         },
                         registerVisualization: function(vizDef) {
@@ -1234,6 +1236,10 @@ class PluginMarketplace {
                     // Build the complete plugin definition from manifest and registrations
                     pluginDefinition = {
                         ...downloadResult.manifest,
+                        // Store plugin instance for command execution
+                        _instance: pluginInstance,
+                        // Store command handlers
+                        _commandHandlers: mockContext.commandHandlers,
                         // Add executor and supportedDataTypes from visualization registration
                         ...(mockContext.visualizationDef ? {
                             executor: mockContext.visualizationDef.executor,

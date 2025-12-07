@@ -39,6 +39,11 @@ class PluginToolsBridge {
                 'protein', 'interaction', 'network', 'ppi', 'visualize', 
                 'pathway', 'p53', 'mdm2', 'node', 'edge', 'graph'
             ],
+            'string-network-explorer': [
+                'string', 'protein', 'interaction', 'search', 'database',
+                'ppi', 'network', 'confidence', 'score', 'enrichment',
+                'functional', 'physical', 'partner', 'gene', 'species'
+            ],
             'genomic-analysis': [
                 'gc', 'content', 'motif', 'diversity', 'compare', 'region',
                 'sequence', 'analysis', 'genomic'
@@ -182,6 +187,110 @@ class PluginToolsBridge {
         
         // Handle visualization plugins
         if (type === 'visualization') {
+            // IMPORTANT: Check if plugin has command handlers (e.g., STRING, KEGG, EcoCyc)
+            // These plugins should expose their commands as separate tools, not just visualize
+            if (plugin._commandHandlers && plugin._commandHandlers.size > 0) {
+                // Create tools for each registered command
+                for (const [commandId, handler] of plugin._commandHandlers) {
+                    const commandName = commandId.split('.').pop(); // e.g., 'search' from 'string-explorer.search'
+                    const toolName = `${pluginId}.${commandName}`;
+                    
+                    // Get command metadata from manifest if available
+                    const commandMeta = this.getCommandMetadata(plugin, commandId);
+                    
+                    // Define specific parameter schemas for known commands
+                    let parameters = {
+                        type: 'object',
+                        properties: {},
+                        required: []
+                    };
+                    
+                    // STRING Network Explorer specific command parameters
+                    if (pluginId === 'string-network-explorer') {
+                        if (commandName === 'searchProteinInteractions' || commandName === 'search') {
+                            parameters = {
+                                type: 'object',
+                                properties: {
+                                    proteins: {
+                                        type: 'array',
+                                        description: 'Array of protein names or identifiers to search (e.g., ["TP53", "MDM2", "BRCA1"])',
+                                        items: { type: 'string' }
+                                    },
+                                    species: {
+                                        type: 'string',
+                                        description: 'NCBI Taxonomy ID (default: 9606 for human)',
+                                        default: '9606'
+                                    },
+                                    requiredScore: {
+                                        type: 'number',
+                                        description: 'Minimum interaction confidence score (0-1000, default: 400)',
+                                        default: 400
+                                    },
+                                    networkType: {
+                                        type: 'string',
+                                        description: 'Type of network: physical or functional',
+                                        enum: ['physical', 'functional'],
+                                        default: 'physical'
+                                    }
+                                },
+                                required: ['proteins']
+                            };
+                        } else if (commandName === 'getNetwork') {
+                            parameters = {
+                                type: 'object',
+                                properties: {
+                                    proteins: {
+                                        type: 'array',
+                                        description: 'Array of protein names',
+                                        items: { type: 'string' }
+                                    },
+                                    species: { type: 'string', default: '9606' },
+                                    requiredScore: { type: 'number', default: 400 },
+                                    limit: { type: 'number', description: 'Max interaction partners', default: 50 }
+                                },
+                                required: ['proteins']
+                            };
+                        } else if (commandName === 'getEnrichment') {
+                            parameters = {
+                                type: 'object',
+                                properties: {
+                                    proteins: {
+                                        type: 'array',
+                                        description: 'Array of protein names',
+                                        items: { type: 'string' }
+                                    },
+                                    species: { type: 'string', default: '9606' },
+                                    categories: {
+                                        type: 'array',
+                                        description: 'GO categories to analyze',
+                                        items: { type: 'string' },
+                                        default: ['Process', 'Component', 'Function']
+                                    }
+                                },
+                                required: ['proteins']
+                            };
+                        }
+                    }
+                    
+                    tools.push({
+                        name: toolName,
+                        description: commandMeta?.description || `${commandId.split('.')[1]} - ${plugin.name}`,
+                        category: 'plugin_commands',
+                        priority: 2,  // High priority for data fetching commands
+                        source: 'plugin',
+                        plugin_type: 'command',
+                        plugin_id: pluginId,
+                        plugin_name: plugin.name || pluginId,
+                        parameters: parameters,
+                        execution: {
+                            method: 'pluginCommand',
+                            command_id: commandId,
+                            plugin_id: pluginId
+                        }
+                    });
+                }
+            }
+            
             // Create the primary visualization tool
             const visualizeTool = {
                 name: `${pluginId}.visualize`,
@@ -253,6 +362,20 @@ class PluginToolsBridge {
         }
         
         return tools;
+    }
+    
+    /**
+     * Get command metadata from plugin manifest
+     * @param {Object} plugin - Plugin object
+     * @param {string} commandId - Command ID
+     * @returns {Object|null} Command metadata
+     */
+    getCommandMetadata(plugin, commandId) {
+        if (!plugin.contributes || !plugin.contributes.commands) {
+            return null;
+        }
+        
+        return plugin.contributes.commands.find(cmd => cmd.command === commandId) || null;
     }
     
     /**
@@ -395,6 +518,14 @@ class PluginToolsBridge {
         
         prompt += 'PLUGIN TOOL EXAMPLES:\n';
         
+        // Add STRING Network Explorer specific workflow example
+        if (pluginGroups.has('string-network-explorer')) {
+            prompt += `\n**STRING Network Explorer Workflow:**\n`;
+            prompt += `1. Search proteins: {"tool_name": "string-network-explorer.search", "parameters": {"proteins": ["TP53", "MDM2"], "species": "9606", "requiredScore": 400}}\n`;
+            prompt += `2. Visualize results: {"tool_name": "string-network-explorer.visualize", "parameters": {"data": <result_from_search>}}\n`;
+            prompt += `\nIMPORTANT: For STRING plugin, always call 'search' or 'getNetwork' first to fetch data, then use 'visualize' to display it.\n`;
+        }
+        
         // Add specific examples
         if (pluginGroups.has('protein-interaction-network')) {
             prompt += `- Visualize protein network: {"tool_name": "protein-interaction-network.visualize", "parameters": {"data": {"nodes": [{"id": "TP53", "name": "TP53", "type": "protein"}, {"id": "MDM2", "name": "MDM2", "type": "protein"}], "edges": [{"source": "TP53", "target": "MDM2", "confidence": 0.9}]}}}\n`;
@@ -402,13 +533,14 @@ class PluginToolsBridge {
         
         // Add generic examples based on available tools
         for (const tool of tools.slice(0, 3)) {
-            if (tool.plugin_type !== 'visualization') {
+            if (tool.plugin_type !== 'visualization' && tool.plugin_type !== 'command') {
                 const exampleParams = this.generateExampleParameters(tool);
                 prompt += `- ${tool.description}: {"tool_name": "${tool.name}", "parameters": ${JSON.stringify(exampleParams)}}\n`;
             }
         }
         
         prompt += '\nNOTE: Plugin tools use the format "plugin-id.function-name" for invocation.\n';
+        prompt += 'For database plugins (STRING, KEGG, EcoCyc), call search/fetch commands BEFORE visualization commands.\n';
         
         return prompt;
     }

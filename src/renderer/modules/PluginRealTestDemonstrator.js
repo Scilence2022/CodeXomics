@@ -248,88 +248,42 @@ class PluginRealTestDemonstrator {
 
     /**
      * Get STRING Network Explorer demo data
-     * Real biological example: p53 tumor suppressor pathway
+     * Uses real-time data from STRING database API
      */
     getStringNetworkDemoData() {
         return {
             basic: {
                 name: 'p53 Tumor Suppressor Network',
-                description: 'Core p53 signaling pathway proteins',
-                data: {
-                    nodes: [
-                        { 
-                            id: 'TP53', 
-                            name: 'TP53', 
-                            type: 'protein',
-                            properties: {
-                                function: 'Tumor suppressor',
-                                location: 'Nucleus',
-                                expression: 0.85
-                            }
-                        },
-                        { 
-                            id: 'MDM2', 
-                            name: 'MDM2', 
-                            type: 'protein',
-                            properties: {
-                                function: 'E3 ubiquitin ligase',
-                                location: 'Nucleus/Cytoplasm',
-                                expression: 0.72
-                            }
-                        },
-                        { 
-                            id: 'ATM', 
-                            name: 'ATM', 
-                            type: 'protein',
-                            properties: {
-                                function: 'DNA damage kinase',
-                                location: 'Nucleus',
-                                expression: 0.68
-                            }
-                        }
-                    ],
-                    edges: [
-                        { source: 'TP53', target: 'MDM2', confidence: 950, type: 'regulation' },
-                        { source: 'ATM', target: 'TP53', confidence: 880, type: 'phosphorylation' }
-                    ],
-                    metadata: {
-                        database: 'STRING',
-                        organism: 'Homo sapiens',
-                        interactionCount: 2
-                    }
-                }
+                description: 'Core p53 signaling pathway proteins - Real-time STRING data',
+                searchConfig: {
+                    proteins: ['TP53', 'MDM2', 'ATM'],
+                    species: '9606',  // Homo sapiens
+                    requiredScore: 400,
+                    networkType: 'physical'
+                },
+                isRealTimeSearch: true
             },
             complex: {
                 name: 'DNA Damage Response Network',
-                description: 'Extended network with 8 proteins in DNA repair pathway',
-                data: {
-                    nodes: [
-                        { id: 'TP53', name: 'TP53', type: 'protein', properties: { function: 'Tumor suppressor' } },
-                        { id: 'MDM2', name: 'MDM2', type: 'protein', properties: { function: 'E3 ubiquitin ligase' } },
-                        { id: 'ATM', name: 'ATM', type: 'protein', properties: { function: 'DNA damage kinase' } },
-                        { id: 'CHEK2', name: 'CHEK2', type: 'protein', properties: { function: 'Checkpoint kinase' } },
-                        { id: 'BRCA1', name: 'BRCA1', type: 'protein', properties: { function: 'DNA repair' } },
-                        { id: 'RAD51', name: 'RAD51', type: 'protein', properties: { function: 'Recombinase' } },
-                        { id: 'ATR', name: 'ATR', type: 'protein', properties: { function: 'Replication stress kinase' } },
-                        { id: 'P21', name: 'P21', type: 'protein', properties: { function: 'CDK inhibitor' } }
-                    ],
-                    edges: [
-                        { source: 'ATM', target: 'TP53', confidence: 880, type: 'phosphorylation' },
-                        { source: 'ATM', target: 'CHEK2', confidence: 920, type: 'phosphorylation' },
-                        { source: 'CHEK2', target: 'TP53', confidence: 850, type: 'phosphorylation' },
-                        { source: 'TP53', target: 'MDM2', confidence: 950, type: 'regulation' },
-                        { source: 'TP53', target: 'P21', confidence: 930, type: 'activation' },
-                        { source: 'BRCA1', target: 'RAD51', confidence: 860, type: 'regulation' },
-                        { source: 'ATR', target: 'CHEK2', confidence: 810, type: 'phosphorylation' },
-                        { source: 'ATM', target: 'BRCA1', confidence: 870, type: 'phosphorylation' }
-                    ],
-                    metadata: {
-                        database: 'STRING',
-                        organism: 'Homo sapiens',
-                        interactionCount: 8,
-                        pathway: 'DNA damage response'
-                    }
-                }
+                description: 'Extended network with 8 proteins in DNA repair pathway - Real-time STRING data',
+                searchConfig: {
+                    proteins: ['TP53', 'MDM2', 'ATM', 'CHEK2', 'BRCA1', 'RAD51', 'ATR', 'CDKN1A'],
+                    species: '9606',  // Homo sapiens
+                    requiredScore: 400,
+                    networkType: 'physical'
+                },
+                isRealTimeSearch: true
+            },
+            oncogene: {
+                name: 'Oncogene Network Analysis',
+                description: 'Key oncogenes and tumor suppressors - Real-time STRING data',
+                searchConfig: {
+                    proteins: ['TP53', 'BRCA1', 'BRCA2', 'MYC', 'RAS', 'APC'],
+                    species: '9606',
+                    requiredScore: 500,
+                    networkType: 'physical'
+                },
+                isRealTimeSearch: true
             }
         };
     }
@@ -920,8 +874,20 @@ class PluginRealTestDemonstrator {
                 if (!demo) return;
                 
                 const dataDisplay = document.getElementById('dataDisplay');
-                const data = demo.generator ? demo.generator() : demo.data;
-                dataDisplay.textContent = JSON.stringify(data, null, 2);
+                
+                if (demo.isRealTimeSearch && demo.searchConfig) {
+                    // Display search configuration for real-time demos
+                    const displayData = {
+                        demoType: 'Real-Time STRING Search',
+                        searchConfiguration: demo.searchConfig,
+                        note: 'This demo will fetch live data from STRING database when executed'
+                    };
+                    dataDisplay.textContent = JSON.stringify(displayData, null, 2);
+                } else {
+                    // Display static data
+                    const data = demo.generator ? demo.generator() : demo.data;
+                    dataDisplay.textContent = JSON.stringify(data, null, 2);
+                }
             }
 
             // Run demo
@@ -939,11 +905,60 @@ class PluginRealTestDemonstrator {
                 const startTime = Date.now();
                 
                 try {
-                    // Get data
-                    const data = demo.generator ? demo.generator() : demo.data;
-                    log('Dataset loaded:', 'success');
-                    log('  Nodes: ' + (data.nodes ? data.nodes.length : 'N/A'), 'info');
-                    log('  Edges: ' + (data.edges ? data.edges.length : 'N/A'), 'info');
+                    let data;
+                    
+                    // Check if this is a real-time STRING search
+                    if (demo.isRealTimeSearch && demo.searchConfig) {
+                        log('🔍 Fetching real-time data from STRING database...', 'info');
+                        log('  Proteins: ' + demo.searchConfig.proteins.join(', '), 'info');
+                        log('  Species: ' + demo.searchConfig.species + ' (Homo sapiens)', 'info');
+                        log('  Required Score: ' + demo.searchConfig.requiredScore, 'info');
+                        
+                        // Get plugin manager
+                        const pluginManager = window.opener?.pluginManager || window.pluginManager;
+                        if (!pluginManager) {
+                            throw new Error('Plugin manager not available. Please ensure the parent window is open.');
+                        }
+                        
+                        // Get STRING plugin from visualization registry
+                        const stringPlugin = pluginManager.pluginRegistry.visualization.get('string-network-explorer');
+                        if (!stringPlugin) {
+                            throw new Error('STRING Network Explorer plugin not found');
+                        }
+                        
+                        log('✅ STRING plugin found', 'success');
+                        log('📡 Calling STRING API...', 'info');
+                        
+                        // Try to execute command via stored handler
+                        let searchResult = null;
+                        
+                        if (stringPlugin._commandHandlers && stringPlugin._commandHandlers.has('string-explorer.search')) {
+                            // Use stored command handler
+                            const commandHandler = stringPlugin._commandHandlers.get('string-explorer.search');
+                            searchResult = await commandHandler(demo.searchConfig);
+                        } else if (stringPlugin._instance && typeof stringPlugin._instance.searchProteinInteractions === 'function') {
+                            // Fallback: Use plugin instance method directly
+                            searchResult = await stringPlugin._instance.searchProteinInteractions(demo.searchConfig);
+                        } else {
+                            throw new Error('STRING search method not accessible. Plugin may not be properly installed.');
+                        }
+                        
+                        if (!searchResult || !searchResult.success) {
+                            throw new Error('STRING API search failed');
+                        }
+                        
+                        data = searchResult.data;
+                        log('✅ Real-time data retrieved from STRING database', 'success');
+                        log('  Nodes: ' + data.nodes.length, 'info');
+                        log('  Edges: ' + data.edges.length, 'info');
+                        log('  Avg Confidence: ' + (data.edges.reduce((sum, e) => sum + (e.confidence || 0), 0) / data.edges.length).toFixed(2), 'info');
+                    } else {
+                        // Get static demo data
+                        data = demo.generator ? demo.generator() : demo.data;
+                        log('Dataset loaded:', 'success');
+                        log('  Nodes: ' + (data.nodes ? data.nodes.length : 'N/A'), 'info');
+                        log('  Edges: ' + (data.edges ? data.edges.length : 'N/A'), 'info');
+                    }
                     
                     // Get plugin from opener window
                     const pluginManager = window.opener?.pluginManager || window.pluginManager;

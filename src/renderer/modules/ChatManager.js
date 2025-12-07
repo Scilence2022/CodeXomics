@@ -10139,7 +10139,7 @@ ${this.getPluginSystemInfo()}`;
                     
                 // Plugin system functions
                 default:
-                    // Check if this is a visualization plugin tool first
+                    // Check if this is a plugin tool
                     if (this.pluginManager && toolName.includes('.')) {
                         // Check for visualization plugin tools
                         if (this.pluginManager.isVisualizationTool && this.pluginManager.isVisualizationTool(toolName)) {
@@ -10151,6 +10151,36 @@ ${this.getPluginSystemInfo()}`;
                             } catch (vizError) {
                                 console.error(`❌ [ChatManager] Visualization tool ${toolName} failed:`, vizError);
                                 throw new Error(`Visualization plugin execution failed: ${vizError.message}`);
+                            }
+                        }
+                        
+                        // Check if this is a plugin command
+                        // Commands are tools that call registered command handlers (e.g., STRING search)
+                        const plugin = this.pluginManager.getPlugin(toolName.split('.')[0]);
+                        if (plugin && plugin._commandHandlers) {
+                            // Extract command name from tool name (e.g., 'search' from 'string-network-explorer.search')
+                            const commandName = toolName.split('.').slice(1).join('.');
+                            
+                            // Try to find the full command ID by checking registered commands
+                            let commandId = null;
+                            for (const [registeredCommandId] of plugin._commandHandlers) {
+                                if (registeredCommandId.endsWith(`.${commandName}`) || registeredCommandId === commandName) {
+                                    commandId = registeredCommandId;
+                                    break;
+                                }
+                            }
+                            
+                            if (commandId && plugin._commandHandlers.has(commandId)) {
+                                console.log(`🚀 [ChatManager] Executing plugin command: ${commandId}`);
+                                try {
+                                    const commandHandler = plugin._commandHandlers.get(commandId);
+                                    result = await commandHandler(parameters);
+                                    console.log(`✅ Plugin command ${commandId} executed successfully:`, result);
+                                    break;
+                                } catch (cmdError) {
+                                    console.error(`❌ [ChatManager] Plugin command ${commandId} failed:`, cmdError);
+                                    throw new Error(`Plugin command execution failed: ${cmdError.message}`);
+                                }
                             }
                         }
                         

@@ -803,9 +803,20 @@ class PluginManagementUI {
         card.dataset.pluginId = pluginId;
         card.dataset.pluginType = type;
 
-        const functionsCount = type === 'function' ? 
-            Object.keys(plugin.functions || {}).length : 
-            plugin.supportedDataTypes ? plugin.supportedDataTypes.length : 0;
+        // Calculate function/tool count
+        let toolsCount = 0;
+        let toolsLabel = '';
+        
+        if (type === 'function') {
+            toolsCount = Object.keys(plugin.functions || {}).length;
+            toolsLabel = `${toolsCount} function${toolsCount !== 1 ? 's' : ''}`;
+        } else {
+            // For visualization plugins, count commands + data types
+            const commandsCount = plugin.contributes?.commands?.length || 0;
+            const dataTypesCount = plugin.supportedDataTypes?.length || 0;
+            toolsCount = commandsCount + dataTypesCount;
+            toolsLabel = `${commandsCount} command${commandsCount !== 1 ? 's' : ''}, ${dataTypesCount} data type${dataTypesCount !== 1 ? 's' : ''}`;
+        }
 
         const statusClass = plugin.enabled !== false ? 'enabled' : 'disabled';
         const statusText = plugin.enabled !== false ? 'Enabled' : 'Disabled';
@@ -850,9 +861,9 @@ class PluginManagementUI {
                     <i class="fas fa-user"></i>
                     ${plugin.author || 'Unknown'}
                 </span>
-                <span class="plugin-functions">
-                    <i class="fas ${type === 'function' ? 'fa-cogs' : 'fa-layer-group'}"></i>
-                    ${functionsCount} ${type === 'function' ? 'function(s)' : 'data type(s)'}
+                <span class="plugin-functions" title="${toolsLabel}">
+                    <i class="fas ${type === 'function' ? 'fa-cogs' : 'fa-toolbox'}"></i>
+                    ${toolsLabel}
                 </span>
                 <span class="plugin-registered">
                     <i class="fas fa-clock"></i>
@@ -1365,16 +1376,56 @@ class PluginManagementUI {
      */
     generateVisualizationsTabContent(plugin) {
         const dataTypes = plugin.supportedDataTypes || [];
+        const commands = plugin.contributes?.commands || [];
+        const visualizations = plugin.contributes?.visualizations || {};
         
         return `
+            <!-- Commands Section -->
+            ${commands.length > 0 ? `
+                <div class="section">
+                    <h2><i class="fas fa-terminal"></i> Available Commands (${commands.length})</h2>
+                    <ul class="function-list">
+                        ${commands.map(cmd => `
+                            <li class="function-item">
+                                <h4><i class="fas fa-bolt"></i> ${cmd.command}</h4>
+                                <p><strong>Title:</strong> ${cmd.title}</p>
+                                <p><strong>Description:</strong> ${cmd.description || 'No description available'}</p>
+                                ${cmd.category ? `<p><strong>Category:</strong> <span style="color: #667eea;">${cmd.category}</span></p>` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+            
+            <!-- Visualizations Section -->
+            ${Object.keys(visualizations).length > 0 ? `
+                <div class="section">
+                    <h2><i class="fas fa-paint-brush"></i> Visualization Renderers (${Object.keys(visualizations).length})</h2>
+                    <ul class="function-list">
+                        ${Object.entries(visualizations).map(([vizId, viz]) => `
+                            <li class="function-item">
+                                <h4><i class="fas fa-chart-area"></i> ${viz.name || vizId}</h4>
+                                <p><strong>ID:</strong> <code>${viz.id || vizId}</code></p>
+                                <p><strong>Description:</strong> ${viz.description || 'No description available'}</p>
+                                ${viz.supportedDataTypes ? `
+                                    <p><strong>Supported Data Types:</strong></p>
+                                    <div class="params-code">${viz.supportedDataTypes.join(', ')}</div>
+                                ` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+            
+            <!-- Data Types Section -->
             <div class="section">
-                <h2><i class="fas fa-chart-bar"></i> Supported Data Types (${dataTypes.length})</h2>
+                <h2><i class="fas fa-database"></i> Supported Data Types (${dataTypes.length})</h2>
                 ${dataTypes.length > 0 ? `
                     <ul class="data-type-list">
                         ${dataTypes.map(dataType => `
                             <li class="data-type-item">
-                                <h4><i class="fas fa-database"></i> ${dataType}</h4>
-                                <p>Visualization support for ${dataType} format</p>
+                                <h4><i class="fas fa-file-code"></i> ${dataType}</h4>
+                                <p>Visualization support for <code>${dataType}</code> format data</p>
                             </li>
                         `).join('')}
                     </ul>
@@ -1383,8 +1434,33 @@ class PluginManagementUI {
             
             ${plugin.executor ? `
                 <div class="section">
-                    <h2><i class="fas fa-play"></i> Executor Function</h2>
-                    <p>Custom executor function is defined for rendering visualizations</p>
+                    <h2><i class="fas fa-play-circle"></i> Executor Function</h2>
+                    <div class="info-card">
+                        <p>✅ Custom executor function is defined for rendering visualizations</p>
+                        <p style="margin-top: 8px; color: #718096;">This plugin can programmatically generate visual representations of data.</p>
+                    </div>
+                </div>
+            ` : ''}
+            
+            <!-- Permissions Section -->
+            ${plugin.permissions ? `
+                <div class="section">
+                    <h2><i class="fas fa-shield-alt"></i> Permissions</h2>
+                    <div class="dependency-list">
+                        ${plugin.permissions.network ? '<div class="dependency-item"><span><i class="fas fa-network-wired"></i> Network Access</span><span style="color: #48bb78;"><i class="fas fa-check"></i> Granted</span></div>' : ''}
+                        ${plugin.permissions['external-api'] ? `
+                            <div class="dependency-item">
+                                <span><i class="fas fa-globe"></i> External API</span>
+                                <span style="color: #48bb78;"><i class="fas fa-check"></i> ${Array.isArray(plugin.permissions['external-api']) ? plugin.permissions['external-api'].length + ' endpoint(s)' : 'Enabled'}</span>
+                            </div>
+                            ${Array.isArray(plugin.permissions['external-api']) ? `
+                                <div style="margin-top: 10px; padding: 12px; background: #f7fafc; border-radius: 6px;">
+                                    <p style="font-weight: bold; margin-bottom: 6px;">Allowed Endpoints:</p>
+                                    ${plugin.permissions['external-api'].map(url => `<p style="font-size: 12px; color: #718096; margin: 4px 0;">• <code>${url}</code></p>`).join('')}
+                                </div>
+                            ` : ''}
+                        ` : ''}
+                    </div>
                 </div>
             ` : ''}
         `;
