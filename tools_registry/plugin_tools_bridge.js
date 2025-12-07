@@ -33,36 +33,151 @@ class PluginToolsBridge {
             'visualization': 4 // Lower priority for visualization plugins
         };
         
-        // Keywords for relevance scoring
-        this.pluginKeywords = {
-            'protein-interaction-network': [
-                'protein', 'interaction', 'network', 'ppi', 'visualize', 
-                'pathway', 'p53', 'mdm2', 'node', 'edge', 'graph'
-            ],
-            'string-network-explorer': [
-                'string', 'protein', 'interaction', 'search', 'database',
-                'ppi', 'network', 'confidence', 'score', 'enrichment',
-                'functional', 'physical', 'partner', 'gene', 'species'
-            ],
-            'genomic-analysis': [
-                'gc', 'content', 'motif', 'diversity', 'compare', 'region',
-                'sequence', 'analysis', 'genomic'
-            ],
-            'phylogenetic-analysis': [
-                'phylogenetic', 'tree', 'evolution', 'distance', 'newick',
-                'ancestor', 'branch', 'clade'
-            ],
-            'biological-networks': [
-                'network', 'gene', 'regulatory', 'centrality', 'community',
-                'hub', 'interaction', 'topology'
-            ],
-            'ml-analysis': [
-                'machine learning', 'predict', 'classify', 'model', 'ml',
-                'neural', 'deep learning', 'training'
-            ]
+        // Keyword extraction configuration
+        this.keywordConfig = {
+            // Extract from manifest fields
+            extractFromFields: ['keywords', 'tags', 'category'],
+            // Auto-generate from description
+            enableDescriptionParsing: true,
+            // Minimum keyword length
+            minKeywordLength: 3,
+            // Common stop words to exclude
+            stopWords: new Set(['the', 'and', 'for', 'with', 'from', 'this', 'that', 'are', 'was', 'will'])
         };
         
+        // Cache for extracted plugin keywords
+        this.pluginKeywordsCache = new Map();
+        
         console.log('PluginToolsBridge initialized');
+    }
+    
+    /**
+     * Extract keywords from plugin metadata
+     * @param {string} pluginId - Plugin ID
+     * @param {Object} plugin - Plugin definition
+     * @returns {Array<string>} Extracted keywords
+     */
+    extractPluginKeywords(pluginId, plugin) {
+        // Check cache first
+        if (this.pluginKeywordsCache.has(pluginId)) {
+            return this.pluginKeywordsCache.get(pluginId);
+        }
+        
+        const keywords = new Set();
+        
+        // 1. Extract from explicitly defined keyword fields
+        for (const field of this.keywordConfig.extractFromFields) {
+            const value = plugin[field];
+            if (Array.isArray(value)) {
+                value.forEach(kw => {
+                    if (typeof kw === 'string' && kw.length >= this.keywordConfig.minKeywordLength) {
+                        keywords.add(kw.toLowerCase());
+                    }
+                });
+            } else if (typeof value === 'string') {
+                if (value.length >= this.keywordConfig.minKeywordLength) {
+                    keywords.add(value.toLowerCase());
+                }
+            }
+        }
+        
+        // 2. Parse plugin ID (convert kebab-case to words)
+        if (pluginId) {
+            const idWords = pluginId.split(/[-_]/);
+            idWords.forEach(word => {
+                if (word.length >= this.keywordConfig.minKeywordLength && 
+                    !this.keywordConfig.stopWords.has(word.toLowerCase())) {
+                    keywords.add(word.toLowerCase());
+                }
+            });
+        }
+        
+        // 3. Extract from description if enabled
+        if (this.keywordConfig.enableDescriptionParsing && plugin.description) {
+            const descWords = this.parseDescription(plugin.description);
+            descWords.forEach(word => keywords.add(word));
+        }
+        
+        // 4. Extract from plugin name
+        if (plugin.name) {
+            const nameWords = plugin.name.split(/\s+/);
+            nameWords.forEach(word => {
+                const cleaned = word.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                if (cleaned.length >= this.keywordConfig.minKeywordLength && 
+                    !this.keywordConfig.stopWords.has(cleaned)) {
+                    keywords.add(cleaned);
+                }
+            });
+        }
+        
+        // 5. Extract from command descriptions
+        if (plugin.contributes && plugin.contributes.commands) {
+            plugin.contributes.commands.forEach(cmd => {
+                if (cmd.description) {
+                    const cmdWords = this.parseDescription(cmd.description);
+                    cmdWords.forEach(word => keywords.add(word));
+                }
+                // Extract from command ID
+                if (cmd.command) {
+                    const cmdParts = cmd.command.split(/[.\-_]/);
+                    cmdParts.forEach(part => {
+                        if (part.length >= this.keywordConfig.minKeywordLength && 
+                            !this.keywordConfig.stopWords.has(part.toLowerCase())) {
+                            keywords.add(part.toLowerCase());
+                        }
+                    });
+                }
+            });
+        }
+        
+        // 6. Extract from supportedDataTypes
+        if (plugin.supportedDataTypes) {
+            plugin.supportedDataTypes.forEach(dataType => {
+                const typeParts = dataType.split(/[-_]/);
+                typeParts.forEach(part => {
+                    if (part.length >= this.keywordConfig.minKeywordLength && 
+                        !this.keywordConfig.stopWords.has(part.toLowerCase())) {
+                        keywords.add(part.toLowerCase());
+                    }
+                });
+            });
+        }
+        
+        const result = Array.from(keywords);
+        
+        // Cache the result
+        this.pluginKeywordsCache.set(pluginId, result);
+        
+        console.log(`📝 Extracted ${result.length} keywords for ${pluginId}:`, result.slice(0, 10));
+        
+        return result;
+    }
+    
+    /**
+     * Parse description text to extract meaningful keywords
+     * @param {string} description - Description text
+     * @returns {Array<string>} Extracted keywords
+     */
+    parseDescription(description) {
+        const keywords = new Set();
+        
+        // Split by common delimiters and clean
+        const words = description
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, ' ')
+            .split(/\s+/);
+        
+        words.forEach(word => {
+            // Remove common suffixes
+            const cleaned = word.replace(/(ing|tion|ment|ness|ity)$/, '');
+            
+            if (cleaned.length >= this.keywordConfig.minKeywordLength && 
+                !this.keywordConfig.stopWords.has(cleaned)) {
+                keywords.add(cleaned);
+            }
+        });
+        
+        return Array.from(keywords);
     }
     
     /**
@@ -81,6 +196,9 @@ class PluginToolsBridge {
     invalidateCache() {
         this.cachedPluginTools = null;
         this.cacheTimestamp = 0;
+        // Also clear keyword cache when plugin tools change
+        this.pluginKeywordsCache.clear();
+        console.log('📦 PluginToolsBridge cache invalidated (tools + keywords)');
     }
     
     /**
@@ -413,11 +531,16 @@ class PluginToolsBridge {
                 }
             }
             
-            // Check plugin-specific keywords
-            const keywords = this.pluginKeywords[tool.plugin_id] || [];
-            for (const keyword of keywords) {
-                if (queryLower.includes(keyword.toLowerCase())) {
-                    score += 20;
+            // Check plugin-specific keywords (dynamically extracted)
+            if (this.pluginManager) {
+                const plugin = this.pluginManager.getPlugin(tool.plugin_id);
+                if (plugin) {
+                    const keywords = this.extractPluginKeywords(tool.plugin_id, plugin);
+                    for (const keyword of keywords) {
+                        if (queryLower.includes(keyword.toLowerCase())) {
+                            score += 20;
+                        }
+                    }
                 }
             }
             

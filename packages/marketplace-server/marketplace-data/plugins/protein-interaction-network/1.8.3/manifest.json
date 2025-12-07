@@ -18,7 +18,13 @@
     "protein",
     "network",
     "interaction",
-    "visualization"
+    "visualization",
+    "ppi",
+    "pathway",
+    "node",
+    "edge",
+    "graph",
+    "layout"
   ],
   "dependencies": [],
   "homepage": "https://github.com/genomeexplorer/protein-networks",
