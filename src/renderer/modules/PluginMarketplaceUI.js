@@ -531,22 +531,16 @@ class PluginMarketplaceUI {
                 return `
                 <div style="border: 1px solid ${isInstalled ? '#4CAF50' : '#ddd'}; border-radius: 6px; padding: 15px; 
                            margin-bottom: 15px; background: ${isInstalled ? '#f1f8f4' : '#f9f9f9'}; position: relative;">
-                    ${isInstalled ? `
+                    ${isInstalled && needsUpdate ? `
                         <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; align-items: center;">
-                            <span style="background: #4CAF50; color: white; padding: 3px 10px; 
-                                       border-radius: 12px; font-size: 11px; font-weight: 600;">
-                                ✓ INSTALLED
+                            <span style="background: #FF9800; color: white; padding: 3px 10px; 
+                                       border-radius: 12px; font-size: 11px; font-weight: 600; animation: pulse 2s infinite;">
+                                ⚡ UPDATE AVAILABLE
                             </span>
-                            ${needsUpdate ? `
-                                <span style="background: #FF9800; color: white; padding: 3px 10px; 
-                                           border-radius: 12px; font-size: 11px; font-weight: 600; animation: pulse 2s infinite;">
-                                    ⚡ UPDATE AVAILABLE
-                                </span>
-                            ` : ''}
                         </div>
                     ` : ''}
                     <div style="display: flex; justify-content: space-between; align-items: start;">
-                        <div style="flex: 1; ${isInstalled ? 'padding-right: 140px;' : ''}">
+                        <div style="flex: 1; ${isInstalled && needsUpdate ? 'padding-right: 140px;' : ''}">
                             <h4 style="margin: 0 0 5px 0;">
                                 ${plugin.name} v${plugin.version}
                                 ${isInstalled && installedVersion ? `

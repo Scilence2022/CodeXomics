@@ -214,12 +214,16 @@ class PluginPathResolver {
 const pluginPathResolver = new PluginPathResolver();
 
 // Export for different module systems
+// In Electron renderer, both module and window exist, so we need to set both
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         PluginPathResolver,
         pluginPathResolver
     };
-} else if (typeof window !== 'undefined') {
+}
+
+// Always register on window if available (critical for browser-style script loading)
+if (typeof window !== 'undefined') {
     window.PluginPathResolver = PluginPathResolver;
     window.pluginPathResolver = pluginPathResolver;
     console.log('✅ PluginPathResolver singleton registered on window object');

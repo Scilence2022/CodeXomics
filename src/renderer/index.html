@@ -2561,15 +2561,40 @@ Supported formats:
                     <div id="settings-plugins-tab" class="tab-content">
                         <div class="settings-section">
                             <h4><i class="fas fa-folder-open"></i> Plugin Directories</h4>
+                            <p class="help-text" style="margin-bottom: 15px;">
+                                CodeXomics uses two separate plugin directories:
+                            </p>
+                            
+                            <!-- Built-in Plugins Directory -->
                             <div class="form-group">
-                                <label for="pluginDirectory">Default Plugin Directory:</label>
-                                <div class="input-group">
-                                    <input type="text" id="pluginDirectory" class="input-full" value="src/renderer/modules/Plugins" readonly>
-                                    <button id="browsePluginDir" class="btn btn-secondary">
-                                        <i class="fas fa-folder-open"></i>
-                                        Browse
-                                    </button>
-                                </div>
+                                <label for="builtinPluginDirectory">
+                                    <i class="fas fa-box"></i> Built-in Plugins Directory (Read-only):
+                                </label>
+                                <input type="text" 
+                                       id="builtinPluginDirectory" 
+                                       class="input-full" 
+                                       readonly 
+                                       style="background-color: #f5f5f5; cursor: not-allowed;"
+                                       title="Built-in plugins bundled with the application">
+                                <small class="help-text">
+                                    Pre-installed plugins that come with the application
+                                </small>
+                            </div>
+                            
+                            <!-- User Plugins Directory -->
+                            <div class="form-group">
+                                <label for="userPluginDirectory">
+                                    <i class="fas fa-user"></i> User Plugins Directory (Writable):
+                                </label>
+                                <input type="text" 
+                                       id="userPluginDirectory" 
+                                       class="input-full" 
+                                       readonly
+                                       style="background-color: #f0f8ff;"
+                                       title="Plugins installed from the marketplace">
+                                <small class="help-text">
+                                    Marketplace-installed plugins are stored here
+                                </small>
                             </div>
                         </div>
                         

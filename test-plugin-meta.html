@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Plugin Meta</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .plugin-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .plugin-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Plugin Meta Structure</h1>
+    <div class="plugin-meta">
+        <span class="plugin-author">
+            <i class="fas fa-user"></i>
+            CodeXomics Team
+        </span>
+        <span class="plugin-functions" title="2 commands, 3 data types">
+            <i class="fas fa-toolbox"></i>
+            2 commands, 3 data types
+        </span>
+        <span class="plugin-registered">
+            <i class="fas fa-clock"></i>
+            Unknown
+        </span>
+    </div>
+    
+    <script>
+        // Check the structure of the plugin-meta element
+        const pluginMeta = document.querySelector('.plugin-meta');
+        console.log('Plugin meta children:', pluginMeta.children);
+        
+        // Check for any pseudo-elements
+        const computedStyle = window.getComputedStyle(pluginMeta);
+        console.log('Before content:', computedStyle.content);
+        console.log('After content:', computedStyle.content);
+    </script>
+</body>
+</html>

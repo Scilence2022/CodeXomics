@@ -3,12 +3,12 @@
  * Showcases actual plugin functionality with interactive demonstrations
  * 
  * This class serves as a UNIFIED ENTRY POINT that:
- * 1. Dynamically discovers plugin-specific demo scripts (plugin/demo.js)
+ * 1. Dynamically loads plugin-specific demo scripts (plugin/demo.js)
  * 2. Delegates demo execution to plugin-owned demo modules
  * 3. Provides UI framework and common utilities
- * 4. Falls back to legacy centralized demos for backward compatibility
+ * 4. Requires PluginPathResolver to be initialized before use
  * 
- * @version 3.0.0 - Modular Architecture
+ * @version 4.0.0 - Strict Modular Architecture (No Legacy Fallback)
  * @author GenomeAIStudio Team
  */
 
@@ -16,18 +16,151 @@ class PluginRealTestDemonstrator {
     constructor(pluginManager) {
         this.pluginManager = pluginManager;
         this.demoModules = new Map(); // Plugin-specific demo modules
-        this.demoData = this.initializeDemoData(); // Legacy fallback data
         this.testResults = new Map();
-        this.pluginBasePath = this.resolvePluginBasePath();
+        // Note: pluginBasePath removed - now using dynamic path resolution per plugin
     }
 
     /**
-     * Resolve base path for plugin marketplace data
+     * Resolve demo.js path for a plugin
+     * Searches multiple locations: installed plugins, marketplace source, built-in plugins
+     * @param {string} pluginId - Plugin identifier  
+     * @param {string} version - Plugin version
+     * @returns {string} Absolute path to demo.js
+     * @throws {Error} If demo.js cannot be found in any location
      */
-    resolvePluginBasePath() {
-        // For Electron renderer process
+    resolvePluginDemoPath(pluginId, version) {
         const path = require('path');
-        return path.join(__dirname, '../../../packages/marketplace-server/marketplace-data/plugins');
+        const fs = require('fs');
+        
+        // Get project root path using multiple strategies
+        let basePath = null;
+        
+        // Strategy 1: Use __dirname (most reliable in Electron renderer with Node.js integration)
+        // __dirname for this file is: <project>/src/renderer/modules/
+        // So we need to go up 3 levels to get project root
+        if (typeof __dirname !== 'undefined' && __dirname) {
+            const potentialRoot = path.resolve(__dirname, '..', '..', '..');
+            if (fs.existsSync(path.join(potentialRoot, 'package.json'))) {
+                basePath = potentialRoot;
+            }
+        }
+        
+        // Strategy 2: Use Electron's app path if available (async call stored as property)
+        if (!basePath && typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getAppPath) {
+            try {
+                const appPath = window.electronAPI.getAppPath();
+                if (appPath && fs.existsSync(path.join(appPath, 'package.json'))) {
+                    basePath = appPath;
+                }
+            } catch (e) {
+                // Ignore error, try next strategy
+            }
+        }
+        
+        // Strategy 3: Use process.cwd() and search upward for package.json
+        if (!basePath) {
+            let searchPath = process.cwd();
+            // Search up to 10 levels up for project root
+            for (let i = 0; i < 10; i++) {
+                if (fs.existsSync(path.join(searchPath, 'package.json'))) {
+                    // Verify it's our project by checking for specific directories
+                    if (fs.existsSync(path.join(searchPath, 'src', 'renderer', 'modules'))) {
+                        basePath = searchPath;
+                        break;
+                    }
+                }
+                const parentPath = path.dirname(searchPath);
+                if (parentPath === searchPath) break; // Reached root
+                searchPath = parentPath;
+            }
+        }
+        
+        // Strategy 4: Fallback - look for the path relative to common locations
+        if (!basePath) {
+            const fallbackPaths = [
+                path.join(process.env.HOME || '', 'Github-Repos', 'GenomeAIStudio_1'),
+                path.join(process.env.HOME || '', 'GenomeAIStudio_1'),
+                process.cwd()
+            ];
+            for (const fallbackPath of fallbackPaths) {
+                if (fs.existsSync(path.join(fallbackPath, 'package.json')) &&
+                    fs.existsSync(path.join(fallbackPath, 'src', 'renderer', 'modules'))) {
+                    basePath = fallbackPath;
+                    break;
+                }
+            }
+        }
+        
+        // If still no basePath, use process.cwd() as last resort
+        if (!basePath) {
+            basePath = process.cwd();
+        }
+        
+        console.log(`🔍 Resolving demo path for ${pluginId}@${version}`);
+        console.log(`  Base path: ${basePath}`);
+        console.log(`  Has package.json: ${fs.existsSync(path.join(basePath, 'package.json'))}`);
+        
+        // Define search locations in priority order
+        const searchLocations = [
+            // 1. User-installed plugins directory
+            path.join(basePath, 'src/renderer/modules/Plugins/UserInstalled', pluginId, version, 'demo.js'),
+            
+            // 2. Marketplace server source (development) - with version
+            path.join(basePath, 'packages/marketplace-server/marketplace-data/plugins', pluginId, version, 'demo.js'),
+            
+            // 3. Built-in plugins directory
+            path.join(basePath, 'src/renderer/modules/Plugins', pluginId, version, 'demo.js'),
+            
+            // 4. Marketplace without version subdirectory (fallback)
+            path.join(basePath, 'packages/marketplace-server/marketplace-data/plugins', pluginId, 'demo.js'),
+        ];
+        
+        // Search for demo.js in each location
+        for (const demoPath of searchLocations) {
+            console.log(`  Checking: ${demoPath}`);
+            try {
+                if (fs.existsSync(demoPath)) {
+                    console.log(`✅ Found demo.js at: ${demoPath}`);
+                    return demoPath;
+                }
+            } catch (error) {
+                console.log(`  ⚠️ Error checking ${demoPath}:`, error.message);
+            }
+        }
+        
+        // If PathResolver is available, try its paths too
+        const pathResolver = this.pluginManager?.pathResolver;
+        if (pathResolver && pathResolver._isInitialized) {
+            const userPluginsPath = pathResolver.getUserPluginsPath();
+            const builtinPluginsPath = pathResolver.getBuiltinPluginsPath();
+            
+            const resolverPaths = [
+                path.join(basePath, userPluginsPath, pluginId, version, 'demo.js'),
+                path.join(basePath, builtinPluginsPath, pluginId, version, 'demo.js'),
+            ];
+            
+            for (const demoPath of resolverPaths) {
+                if (!searchLocations.includes(demoPath)) {
+                    console.log(`  Checking (resolver): ${demoPath}`);
+                    try {
+                        if (fs.existsSync(demoPath)) {
+                            console.log(`✅ Found demo.js at: ${demoPath}`);
+                            return demoPath;
+                        }
+                    } catch (error) {
+                        console.log(`  ⚠️ Error checking ${demoPath}:`, error.message);
+                    }
+                }
+            }
+        }
+        
+        // Not found in any location
+        throw new Error(
+            `Demo file not found for plugin "${pluginId}@${version}".\n` +
+            `Searched locations:\n` +
+            searchLocations.map(p => `  - ${p}`).join('\n') +
+            `\nEnsure demo.js exists in one of these locations.`
+        );
     }
 
     /**
@@ -54,33 +187,46 @@ class PluginRealTestDemonstrator {
                 return null;
             }
 
-            // Construct path to plugin demo script
+            // Resolve path to plugin demo script - will throw if PathResolver not ready
             const version = plugin.version || '1.0.0';
-            const demoPath = `${this.pluginBasePath}/${pluginId}/${version}/demo.js`;
+            const demoPath = this.resolvePluginDemoPath(pluginId, version);
             
             console.log(`🔍 Attempting to load demo module: ${demoPath}`);
 
             // Dynamic import (for ES modules)
             let DemoClass;
             try {
-                // Try browser-style script loading for renderer process
-                const response = await fetch(`file://${demoPath}`);
-                if (!response.ok) throw new Error('Demo file not found');
-                
-                const scriptContent = await response.text();
-                eval(scriptContent); // Execute script to define class
-                
-                // Get class from global scope based on plugin ID
-                const className = this.getDemoClassName(pluginId);
-                DemoClass = window[className];
-                
-                if (!DemoClass) {
-                    throw new Error(`Demo class ${className} not found after loading`);
-                }
-            } catch (fetchError) {
-                // Fallback: Try require for CommonJS
-                console.log(`  Trying require() fallback...`);
+                // Try Node.js require() for Electron renderer process
+                console.log(`  Trying require() for installed plugin demo...`);
                 DemoClass = require(demoPath);
+                
+                // Handle ES module default export
+                if (DemoClass && DemoClass.__esModule && DemoClass.default) {
+                    DemoClass = DemoClass.default;
+                }
+                
+            } catch (requireError) {
+                console.log(`  require() failed: ${requireError.message}`);
+                console.log(`  Trying browser-style fetch fallback...`);
+                
+                try {
+                    // Fallback: Try browser-style script loading
+                    const response = await fetch(`file://${demoPath}`);
+                    if (!response.ok) throw new Error('Demo file not found via fetch');
+                    
+                    const scriptContent = await response.text();
+                    eval(scriptContent); // Execute script to define class
+                    
+                    // Get class from global scope based on plugin ID
+                    const className = this.getDemoClassName(pluginId);
+                    DemoClass = window[className];
+                    
+                    if (!DemoClass) {
+                        throw new Error(`Demo class ${className} not found after loading`);
+                    }
+                } catch (fetchError) {
+                    throw new Error(`Both require() and fetch() failed. Demo file may not exist at: ${demoPath}`);
+                }
             }
 
             // Get plugin instance (from _instance property stored during installation)
@@ -96,9 +242,19 @@ class PluginRealTestDemonstrator {
             return demoInstance;
 
         } catch (error) {
-            console.warn(`⚠️ Failed to load demo module for ${pluginId}:`, error.message);
-            console.log(`  Falling back to legacy centralized demo data`);
-            return null;
+            // Re-throw initialization errors with clear context
+            if (error.message.includes('PluginPathResolver not initialized')) {
+                throw new Error(
+                    `Cannot load plugin demo: ${error.message}\n` +
+                    `Plugin: ${pluginId}\n` +
+                    `Please ensure the plugin system is fully initialized before running tests.`
+                );
+            }
+            
+            // Re-throw other errors with plugin context
+            throw new Error(
+                `Failed to load demo module for plugin "${pluginId}": ${error.message}`
+            );
         }
     }
 
@@ -109,381 +265,31 @@ class PluginRealTestDemonstrator {
         const classMap = {
             'string-network-explorer': 'STRINGNetworkDemo',
             'kegg-pathway-viewer': 'KEGGPathwayDemo',
-            'ecocyc-pathway-analyzer': 'EcoCycPathwayDemo'
+            'ecocyc-pathway-analyzer': 'EcoCycPathwayDemo',
+            'protein-interaction-network': 'ProteinNetworkDemo'
         };
         return classMap[pluginId] || null;
     }
 
     /**
-     * Get demo data for plugin (tries modular demo first, falls back to legacy)
+     * Get demo data for plugin - requires plugin-specific demo.js
      * @param {string} pluginId - Plugin identifier
      * @returns {Promise<Object>} Demo scenarios
+     * @throws {Error} If demo module cannot be loaded
      */
     async getDemoData(pluginId) {
-        // Try to load plugin-specific demo module
+        // Load plugin-specific demo module (will throw if not available)
         const demoModule = await this.loadPluginDemo(pluginId);
         
-        if (demoModule && demoModule.demoData) {
-            console.log(`📦 Using modular demo data for ${pluginId}`);
-            return demoModule.demoData;
+        if (!demoModule || !demoModule.demoData) {
+            throw new Error(
+                `Plugin "${pluginId}" demo module loaded but does not provide demoData. ` +
+                `Ensure the demo.js file exports a class with a demoData property.`
+            );
         }
         
-        // Fallback to legacy centralized data
-        console.log(`📦 Using legacy demo data for ${pluginId}`);
-        return this.demoData[pluginId] || {};
-    }
-
-    /**
-     * Initialize comprehensive demo data for different plugin types
-     */
-    initializeDemoData() {
-        return {
-            'protein-interaction-network': this.getProteinNetworkDemoData(),
-            'gene-regulatory-network': this.getGeneNetworkDemoData(),
-            'phylogenetic-tree': this.getPhylogeneticDemoData(),
-            'sequence-alignment': this.getAlignmentDemoData(),
-            // Database integration plugins
-            'string-network-explorer': this.getStringNetworkDemoData(),
-            'kegg-pathway-viewer': this.getKeggPathwayDemoData(),
-            'ecocyc-pathway-analyzer': this.getEcocycPathwayDemoData()
-        };
-    }
-
-    /**
-     * Get protein interaction network demo data
-     * Real biological example: p53 tumor suppressor pathway
-     */
-    getProteinNetworkDemoData() {
-        return {
-            basic: {
-                name: 'Basic Protein-Protein Interactions',
-                description: 'Simple 3-protein interaction network',
-                data: {
-                    nodes: [
-                        { 
-                            id: 'TP53', 
-                            name: 'TP53 (Tumor protein p53)', 
-                            type: 'protein',
-                            properties: {
-                                function: 'Tumor suppressor',
-                                location: 'Nucleus',
-                                mw: '43.7 kDa',
-                                expression: 0.85
-                            }
-                        },
-                        { 
-                            id: 'MDM2', 
-                            name: 'MDM2 (E3 ubiquitin-protein ligase)', 
-                            type: 'enzyme',
-                            properties: {
-                                function: 'Ubiquitin ligase',
-                                location: 'Nucleus/Cytoplasm',
-                                mw: '56.9 kDa',
-                                expression: 0.72
-                            }
-                        },
-                        { 
-                            id: 'ATM', 
-                            name: 'ATM (Serine-protein kinase)', 
-                            type: 'enzyme',
-                            properties: {
-                                function: 'DNA damage response',
-                                location: 'Nucleus',
-                                mw: '350.6 kDa',
-                                expression: 0.68
-                            }
-                        }
-                    ],
-                    edges: [
-                        { 
-                            source: 'TP53', 
-                            target: 'MDM2', 
-                            confidence: 0.95,
-                            type: 'regulation',
-                            properties: {
-                                interaction: 'Direct binding',
-                                effect: 'MDM2 ubiquitinates p53',
-                                evidence: 'Experimental'
-                            }
-                        },
-                        { 
-                            source: 'ATM', 
-                            target: 'TP53', 
-                            confidence: 0.88,
-                            type: 'phosphorylation',
-                            properties: {
-                                interaction: 'Post-translational modification',
-                                effect: 'Stabilizes p53',
-                                evidence: 'Experimental'
-                            }
-                        }
-                    ],
-                    metadata: {
-                        organism: 'Homo sapiens',
-                        pathway: 'p53 signaling pathway',
-                        database: 'STRING v12.0'
-                    }
-                }
-            },
-            complex: {
-                name: 'DNA Damage Response Network',
-                description: 'Complex network with 8 proteins involved in DNA damage response',
-                data: {
-                    nodes: [
-                        { id: 'TP53', name: 'TP53', type: 'protein', properties: { function: 'Tumor suppressor', expression: 0.85 } },
-                        { id: 'MDM2', name: 'MDM2', type: 'enzyme', properties: { function: 'E3 ubiquitin ligase', expression: 0.72 } },
-                        { id: 'ATM', name: 'ATM', type: 'enzyme', properties: { function: 'Kinase', expression: 0.68 } },
-                        { id: 'CHEK2', name: 'CHEK2', type: 'enzyme', properties: { function: 'Checkpoint kinase', expression: 0.65 } },
-                        { id: 'BRCA1', name: 'BRCA1', type: 'protein', properties: { function: 'DNA repair', expression: 0.78 } },
-                        { id: 'RAD51', name: 'RAD51', type: 'enzyme', properties: { function: 'Recombinase', expression: 0.71 } },
-                        { id: 'PTEN', name: 'PTEN', type: 'enzyme', properties: { function: 'Phosphatase', expression: 0.63 } },
-                        { id: 'AKT1', name: 'AKT1', type: 'enzyme', properties: { function: 'Kinase', expression: 0.81 } }
-                    ],
-                    edges: [
-                        { source: 'TP53', target: 'MDM2', confidence: 0.95, type: 'regulation' },
-                        { source: 'ATM', target: 'TP53', confidence: 0.88, type: 'phosphorylation' },
-                        { source: 'ATM', target: 'CHEK2', confidence: 0.91, type: 'phosphorylation' },
-                        { source: 'CHEK2', target: 'TP53', confidence: 0.85, type: 'phosphorylation' },
-                        { source: 'ATM', target: 'BRCA1', confidence: 0.87, type: 'phosphorylation' },
-                        { source: 'BRCA1', target: 'RAD51', confidence: 0.82, type: 'recruitment' },
-                        { source: 'PTEN', target: 'AKT1', confidence: 0.92, type: 'inhibition' },
-                        { source: 'AKT1', target: 'MDM2', confidence: 0.79, type: 'phosphorylation' },
-                        { source: 'MDM2', target: 'TP53', confidence: 0.95, type: 'ubiquitination' }
-                    ],
-                    metadata: {
-                        organism: 'Homo sapiens',
-                        pathway: 'DNA damage response',
-                        networkType: 'protein-interaction'
-                    }
-                }
-            },
-            performance: {
-                name: 'Large Scale Network (Performance Test)',
-                description: 'Stress test with 50 proteins and 100+ interactions',
-                generator: () => {
-                    const nodes = [];
-                    const edges = [];
-                    const proteinTypes = ['protein', 'enzyme', 'receptor', 'transcription_factor'];
-                    
-                    // Generate 50 nodes
-                    for (let i = 0; i < 50; i++) {
-                        nodes.push({
-                            id: `PROT${i}`,
-                            name: `Protein ${i}`,
-                            type: proteinTypes[i % proteinTypes.length],
-                            properties: {
-                                expression: Math.random(),
-                                mw: `${(20 + Math.random() * 80).toFixed(1)} kDa`
-                            }
-                        });
-                    }
-                    
-                    // Generate random interactions
-                    for (let i = 0; i < 120; i++) {
-                        const source = Math.floor(Math.random() * 50);
-                        const target = Math.floor(Math.random() * 50);
-                        if (source !== target) {
-                            edges.push({
-                                source: `PROT${source}`,
-                                target: `PROT${target}`,
-                                confidence: 0.5 + Math.random() * 0.5,
-                                type: ['binding', 'phosphorylation', 'regulation'][Math.floor(Math.random() * 3)]
-                            });
-                        }
-                    }
-                    
-                    return { nodes, edges, metadata: { networkType: 'large-scale-test' } };
-                }
-            }
-        };
-    }
-
-    /**
-     * Get gene regulatory network demo data
-     */
-    getGeneNetworkDemoData() {
-        return {
-            basic: {
-                name: 'Lac Operon Regulatory Network',
-                description: 'Classic bacterial gene regulation system',
-                data: {
-                    nodes: [
-                        { id: 'lacI', name: 'lacI', type: 'transcription_factor', properties: { regulation: 'repressor' } },
-                        { id: 'lacZ', name: 'lacZ', type: 'gene', properties: { product: 'β-galactosidase' } },
-                        { id: 'lacY', name: 'lacY', type: 'gene', properties: { product: 'Permease' } },
-                        { id: 'lacA', name: 'lacA', type: 'gene', properties: { product: 'Transacetylase' } }
-                    ],
-                    edges: [
-                        { source: 'lacI', target: 'lacZ', type: 'repression', confidence: 0.95 },
-                        { source: 'lacI', target: 'lacY', type: 'repression', confidence: 0.95 },
-                        { source: 'lacI', target: 'lacA', type: 'repression', confidence: 0.95 }
-                    ]
-                }
-            }
-        };
-    }
-
-    /**
-     * Get phylogenetic tree demo data
-     */
-    getPhylogeneticDemoData() {
-        return {
-            basic: {
-                name: 'Mammalian Evolution',
-                description: 'Phylogenetic relationship of common mammals',
-                data: {
-                    newick: '((Human:0.1,Chimp:0.1):0.2,(Gorilla:0.15,(Orangutan:0.2,Gibbon:0.25):0.1):0.15);',
-                    metadata: {
-                        type: 'phylogenetic',
-                        method: 'Maximum Likelihood',
-                        species: 5
-                    }
-                }
-            }
-        };
-    }
-
-    /**
-     * Get sequence alignment demo data
-     */
-    getAlignmentDemoData() {
-        return {
-            basic: {
-                name: 'BRCA1 Gene Alignment',
-                description: 'Multiple sequence alignment of BRCA1 across species',
-                data: {
-                    sequences: [
-                        { id: 'Human', sequence: 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGA' },
-                        { id: 'Mouse', sequence: 'ATGGATTTATCTGCTCTTCGTGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGA' },
-                        { id: 'Rat', sequence: 'ATGGATTTATCTGCTCTTCGTGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGA' }
-                    ],
-                    metadata: {
-                        gene: 'BRCA1',
-                        region: 'Exon 1'
-                    }
-                }
-            }
-        };
-    }
-
-    /**
-     * Get STRING Network Explorer demo data
-     * Uses real-time data from STRING database API
-     */
-    getStringNetworkDemoData() {
-        return {
-            basic: {
-                name: 'p53 Tumor Suppressor Network',
-                description: 'Core p53 signaling pathway proteins - Real-time STRING data',
-                searchConfig: {
-                    proteins: ['TP53', 'MDM2', 'ATM'],
-                    species: '9606',  // Homo sapiens
-                    requiredScore: 400,
-                    networkType: 'physical'
-                },
-                isRealTimeSearch: true
-            },
-            complex: {
-                name: 'DNA Damage Response Network',
-                description: 'Extended network with 8 proteins in DNA repair pathway - Real-time STRING data',
-                searchConfig: {
-                    proteins: ['TP53', 'MDM2', 'ATM', 'CHEK2', 'BRCA1', 'RAD51', 'ATR', 'CDKN1A'],
-                    species: '9606',  // Homo sapiens
-                    requiredScore: 400,
-                    networkType: 'physical'
-                },
-                isRealTimeSearch: true
-            },
-            oncogene: {
-                name: 'Oncogene Network Analysis',
-                description: 'Key oncogenes and tumor suppressors - Real-time STRING data',
-                searchConfig: {
-                    proteins: ['TP53', 'BRCA1', 'BRCA2', 'MYC', 'RAS', 'APC'],
-                    species: '9606',
-                    requiredScore: 500,
-                    networkType: 'physical'
-                },
-                isRealTimeSearch: true
-            }
-        };
-    }
-
-    /**
-     * Get KEGG Pathway Viewer demo data
-     * Uses real-time data from KEGG database API
-     */
-    getKeggPathwayDemoData() {
-        return {
-            basic: {
-                name: 'Glycolysis Pathway',
-                description: 'Glycolysis / Gluconeogenesis pathway - Real-time KEGG data',
-                searchConfig: {
-                    pathwayId: 'hsa00010',  // Human glycolysis pathway
-                    organism: 'hsa',
-                    pathwayName: 'Glycolysis / Gluconeogenesis'
-                },
-                isRealTimeSearch: true
-            },
-            complex: {
-                name: 'TCA Cycle Pathway',
-                description: 'Citrate cycle (TCA cycle) - Real-time KEGG data',
-                searchConfig: {
-                    pathwayId: 'hsa00020',  // Human TCA cycle
-                    organism: 'hsa',
-                    pathwayName: 'Citrate cycle (TCA cycle)'
-                },
-                isRealTimeSearch: true
-            },
-            metabolic: {
-                name: 'Purine Metabolism',
-                description: 'Purine metabolism pathway - Real-time KEGG data',
-                searchConfig: {
-                    pathwayId: 'hsa00230',  // Human purine metabolism
-                    organism: 'hsa',
-                    pathwayName: 'Purine metabolism'
-                },
-                isRealTimeSearch: true
-            }
-        };
-    }
-
-    /**
-     * Get EcoCyc Pathway Analyzer demo data
-     * Uses real-time data from EcoCyc/BioCyc database API
-     */
-    getEcocycPathwayDemoData() {
-        return {
-            basic: {
-                name: 'L-Arabinose Degradation',
-                description: 'E. coli arabinose catabolism pathway - Real-time BioCyc data',
-                searchConfig: {
-                    pathwayId: 'ARABCAT-PWY',  // L-arabinose degradation I
-                    organism: 'ECOLI',  // E. coli K-12 substr. MG1655
-                    pathwayName: 'L-arabinose degradation I'
-                },
-                isRealTimeSearch: true
-            },
-            complex: {
-                name: 'TCA Cycle in E. coli',
-                description: 'Complete tricarboxylic acid cycle - Real-time BioCyc data',
-                searchConfig: {
-                    pathwayId: 'TCA',  // TCA cycle I (aerobic)
-                    organism: 'ECOLI',
-                    pathwayName: 'TCA cycle I (aerobic)'
-                },
-                isRealTimeSearch: true
-            },
-            glycolysis: {
-                name: 'Glycolysis in E. coli',
-                description: 'Glycolysis pathway in E. coli - Real-time BioCyc data',
-                searchConfig: {
-                    pathwayId: 'GLYCOLYSIS',  // Glycolysis I
-                    organism: 'ECOLI',
-                    pathwayName: 'Glycolysis I (from glucose 6-phosphate)'
-                },
-                isRealTimeSearch: true
-            }
-        };
+        console.log(`📦 Using modular demo data for ${pluginId}`);
+        return demoModule.demoData;
     }
 
     /**
@@ -912,10 +718,19 @@ class PluginRealTestDemonstrator {
             if (demo.generator && typeof demo.generator === 'function') {
                 // Execute generator and store result as static data
                 console.log(`📊 Pre-generating data for demo: ${demo.name}`);
+                // Preserve all demo properties except generator, replace with generated data
                 processedDemoData[key] = {
-                    name: demo.name,
-                    description: demo.description,
-                    data: demo.generator() // Execute the generator
+                    ...demo,  // Spread all existing properties (name, description, complexity, etc.)
+                    data: demo.generator(), // Execute the generator and store result
+                    generator: undefined // Remove non-serializable generator function
+                };
+                // Clean up undefined to reduce JSON size
+                delete processedDemoData[key].generator;
+            } else if (demo.networkData) {
+                // Demo has direct networkData property, use it as data
+                processedDemoData[key] = {
+                    ...demo,
+                    data: demo.networkData // Map networkData to data for consistency
                 };
             } else {
                 // Keep static data as-is
@@ -1012,20 +827,22 @@ class PluginRealTestDemonstrator {
                 try {
                     let data;
                     
-                    // Check if this is a real-time STRING search
+                    // Check plugin type and handle real-time search appropriately
                     if (demo.isRealTimeSearch && demo.searchConfig) {
-                        log('🔍 Fetching real-time data from STRING database...', 'info');
-                        log('  Proteins: ' + demo.searchConfig.proteins.join(', '), 'info');
-                        log('  Species: ' + demo.searchConfig.species + ' (Homo sapiens)', 'info');
-                        log('  Required Score: ' + demo.searchConfig.requiredScore, 'info');
-                        
-                        // Get plugin manager
+                        // Get plugin manager first (common for all real-time searches)
                         const pluginManager = window.opener?.pluginManager || window.pluginManager || window.opener?.pluginManagerV2 || window.pluginManagerV2;
                         if (!pluginManager) {
                             throw new Error('Plugin manager not available. Please ensure the parent window is open.');
                         }
-                        
                         log('✅ Plugin manager found', 'success');
+                        
+                        // Route to appropriate handler based on plugin ID
+                        if ('${pluginId}' === 'string-network-explorer') {
+                            // STRING Database Search
+                            log('🔍 Fetching real-time data from STRING database...', 'info');
+                            log('  Proteins: ' + demo.searchConfig.proteins.join(', '), 'info');
+                            log('  Species: ' + demo.searchConfig.species + ' (Homo sapiens)', 'info');
+                            log('  Required Score: ' + demo.searchConfig.requiredScore, 'info');
                         
                         // Get STRING plugin from visualization registry
                         const stringPlugin = pluginManager.pluginRegistry.visualization.get('string-network-explorer');
@@ -1089,20 +906,13 @@ class PluginRealTestDemonstrator {
                         log('  Nodes: ' + data.nodes.length, 'info');
                         log('  Edges: ' + data.edges.length, 'info');
                         log('  Avg Confidence: ' + (data.edges.reduce((sum, e) => sum + (e.confidence || 0), 0) / data.edges.length).toFixed(2), 'info');
-                    }
-                    // Check if this is a real-time KEGG pathway search
-                    else if (demo.isRealTimeSearch && demo.searchConfig && '${pluginId}' === 'kegg-pathway-viewer') {
-                        log('🔍 Fetching real-time data from KEGG database...', 'info');
-                        log('  Pathway ID: ' + demo.searchConfig.pathwayId, 'info');
-                        log('  Organism: ' + demo.searchConfig.organism, 'info');
-                        log('  Pathway Name: ' + demo.searchConfig.pathwayName, 'info');
                         
-                        const pluginManager = window.opener?.pluginManager || window.pluginManager || window.opener?.pluginManagerV2 || window.pluginManagerV2;
-                        if (!pluginManager) {
-                            throw new Error('Plugin manager not available');
-                        }
-                        
-                        log('✅ Plugin manager found', 'success');
+                        } else if ('${pluginId}' === 'kegg-pathway-viewer') {
+                            // KEGG Database Search
+                            log('🔍 Fetching real-time data from KEGG database...', 'info');
+                            log('  Pathway ID: ' + demo.searchConfig.pathwayId, 'info');
+                            log('  Organism: ' + demo.searchConfig.organism, 'info');
+                            log('  Pathway Name: ' + demo.searchConfig.pathwayName, 'info');
                         
                         const keggPlugin = pluginManager.pluginRegistry.visualization.get('kegg-pathway-viewer');
                         if (!keggPlugin) {
@@ -1139,20 +949,13 @@ class PluginRealTestDemonstrator {
                         log('✅ Real-time data retrieved from KEGG database', 'success');
                         log('  Nodes: ' + (data.nodes ? data.nodes.length : 'N/A'), 'info');
                         log('  Edges: ' + (data.edges ? data.edges.length : 'N/A'), 'info');
-                    }
-                    // Check if this is a real-time EcoCyc pathway search
-                    else if (demo.isRealTimeSearch && demo.searchConfig && '${pluginId}' === 'ecocyc-pathway-analyzer') {
-                        log('🔍 Fetching real-time data from BioCyc database...', 'info');
-                        log('  Pathway ID: ' + demo.searchConfig.pathwayId, 'info');
-                        log('  Organism: ' + demo.searchConfig.organism, 'info');
-                        log('  Pathway Name: ' + demo.searchConfig.pathwayName, 'info');
                         
-                        const pluginManager = window.opener?.pluginManager || window.pluginManager || window.opener?.pluginManagerV2 || window.pluginManagerV2;
-                        if (!pluginManager) {
-                            throw new Error('Plugin manager not available');
-                        }
-                        
-                        log('✅ Plugin manager found', 'success');
+                        } else if ('${pluginId}' === 'ecocyc-pathway-analyzer') {
+                            // EcoCyc/BioCyc Database Search
+                            log('🔍 Fetching real-time data from BioCyc database...', 'info');
+                            log('  Pathway ID: ' + demo.searchConfig.pathwayId, 'info');
+                            log('  Organism: ' + demo.searchConfig.organism, 'info');
+                            log('  Pathway Name: ' + demo.searchConfig.pathwayName, 'info');
                         
                         const ecocycPlugin = pluginManager.pluginRegistry.visualization.get('ecocyc-pathway-analyzer');
                         if (!ecocycPlugin) {
@@ -1189,9 +992,26 @@ class PluginRealTestDemonstrator {
                         log('✅ Real-time data retrieved from BioCyc database', 'success');
                         log('  Nodes: ' + (data.nodes ? data.nodes.length : 'N/A'), 'info');
                         log('  Edges: ' + (data.edges ? data.edges.length : 'N/A'), 'info');
+                        
+                        } else {
+                            // Unknown plugin type with real-time search
+                            throw new Error(
+                                'Unknown plugin type for real-time search: ${pluginId}. ' +
+                                'Supported plugins: string-network-explorer, kegg-pathway-viewer, ecocyc-pathway-analyzer'
+                            );
+                        }
                     } else {
                         // Get static demo data
-                        data = demo.generator ? demo.generator() : demo.data;
+                        data = demo.data;
+                        
+                        if (!data) {
+                            throw new Error(
+                                'Demo data is missing. Demo object keys: ' + 
+                                JSON.stringify(Object.keys(demo)) + 
+                                '. Expected "data" property to contain network data.'
+                            );
+                        }
+                        
                         log('Dataset loaded:', 'success');
                         log('  Nodes: ' + (data.nodes ? data.nodes.length : 'N/A'), 'info');
                         log('  Edges: ' + (data.edges ? data.edges.length : 'N/A'), 'info');

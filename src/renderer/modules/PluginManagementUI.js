@@ -606,13 +606,8 @@ class PluginManagementUI {
             });
         }
 
-        // Browse plugin directory
-        const browsePluginDir = document.getElementById('browsePluginDir');
-        if (browsePluginDir) {
-            browsePluginDir.addEventListener('click', () => {
-                this.browsePluginDirectory();
-            });
-        }
+        // Note: Browse plugin directory button removed
+        // Plugin directories are now managed automatically by PluginPathResolver
     }
 
     /**
@@ -804,23 +799,22 @@ class PluginManagementUI {
         card.dataset.pluginType = type;
 
         // Calculate function/tool count
-        let toolsCount = 0;
         let toolsLabel = '';
         
         if (type === 'function') {
-            toolsCount = Object.keys(plugin.functions || {}).length;
-            toolsLabel = `${toolsCount} function${toolsCount !== 1 ? 's' : ''}`;
+            const functionCount = Object.keys(plugin.functions || {}).length;
+            toolsLabel = `${functionCount} function${functionCount !== 1 ? 's' : ''}`;
         } else {
             // For visualization plugins, count commands + data types
             const commandsCount = plugin.contributes?.commands?.length || 0;
             const dataTypesCount = plugin.supportedDataTypes?.length || 0;
-            toolsCount = commandsCount + dataTypesCount;
             toolsLabel = `${commandsCount} command${commandsCount !== 1 ? 's' : ''}, ${dataTypesCount} data type${dataTypesCount !== 1 ? 's' : ''}`;
         }
 
         const statusClass = plugin.enabled !== false ? 'enabled' : 'disabled';
         const statusText = plugin.enabled !== false ? 'Enabled' : 'Disabled';
 
+        // Create plugin card HTML with only two metadata fields
         card.innerHTML = `
             <div class="plugin-header">
                 <div class="plugin-info">
@@ -859,15 +853,11 @@ class PluginManagementUI {
             <div class="plugin-meta">
                 <span class="plugin-author">
                     <i class="fas fa-user"></i>
-                    ${plugin.author || 'Unknown'}
+                    ${plugin.author || '无作者'}
                 </span>
                 <span class="plugin-functions" title="${toolsLabel}">
                     <i class="fas ${type === 'function' ? 'fa-cogs' : 'fa-toolbox'}"></i>
                     ${toolsLabel}
-                </span>
-                <span class="plugin-registered">
-                    <i class="fas fa-clock"></i>
-                    ${plugin.registeredAt ? new Date(plugin.registeredAt).toLocaleDateString() : 'Unknown'}
                 </span>
             </div>
         `;
@@ -2180,22 +2170,38 @@ class PluginManagementUI {
      */
     loadPluginSettings() {
         // Load current settings from local storage first, then fall back to configManager
-        const pluginDirectory = document.getElementById('pluginDirectory');
+        const builtinPluginDirectory = document.getElementById('builtinPluginDirectory');
+        const userPluginDirectory = document.getElementById('userPluginDirectory');
         const enableSandbox = document.getElementById('enablePluginSandbox');
         const enableDebug = document.getElementById('enablePluginDebug');
 
-        if (pluginDirectory) {
-            // Use path resolver if available for production-ready paths
-            if (this.pluginManager.pathResolver) {
+        // Use path resolver if available for production-ready paths
+        if (this.pluginManager.pathResolver && this.pluginManager.pathResolver._isInitialized) {
+            if (builtinPluginDirectory) {
                 const builtinPath = this.pluginManager.pathResolver.getBuiltinPluginsPath();
+                builtinPluginDirectory.value = builtinPath;
+                builtinPluginDirectory.title = `Built-in plugins (read-only): ${builtinPath}`;
+            }
+            
+            if (userPluginDirectory) {
                 const userPath = this.pluginManager.pathResolver.getUserPluginsPath();
-                pluginDirectory.value = `Built-in: ${builtinPath}\nUser: ${userPath}`;
-                pluginDirectory.title = `Built-in plugins (read-only): ${builtinPath}\nUser plugins (writable): ${userPath}`;
-            } else {
-                // Fallback to legacy behavior
-                pluginDirectory.value = this.settings.pluginDirectory || 
-                                      this.configManager?.get('pluginDirectory') || 
-                                      'src/renderer/modules/Plugins';
+                userPluginDirectory.value = userPath;
+                userPluginDirectory.title = `User-installed plugins (writable): ${userPath}`;
+            }
+        } else {
+            // Fallback to legacy behavior if path resolver not available
+            const legacyPath = this.settings.pluginDirectory || 
+                             this.configManager?.get('pluginDirectory') || 
+                             'src/renderer/modules/Plugins';
+            
+            if (builtinPluginDirectory) {
+                builtinPluginDirectory.value = legacyPath;
+                builtinPluginDirectory.title = 'Path resolver not initialized';
+            }
+            
+            if (userPluginDirectory) {
+                userPluginDirectory.value = legacyPath + '/UserInstalled';
+                userPluginDirectory.title = 'Path resolver not initialized';
             }
         }
 
@@ -2222,12 +2228,13 @@ class PluginManagementUI {
      */
     savePluginSettings() {
         try {
-            const pluginDirectory = document.getElementById('pluginDirectory').value;
             const enableSandbox = document.getElementById('enablePluginSandbox').checked;
             const enableDebug = document.getElementById('enablePluginDebug').checked;
 
+            // Note: Plugin directories are now managed by PluginPathResolver
+            // They are read-only and don't need to be saved by users
+            
             // Update local settings object
-            this.settings.pluginDirectory = pluginDirectory;
             this.settings.enablePluginSandbox = enableSandbox;
             this.settings.enablePluginDebug = enableDebug;
 
@@ -2236,7 +2243,6 @@ class PluginManagementUI {
 
             // Also save to configManager for compatibility
             if (this.configManager) {
-                this.configManager.set('pluginDirectory', pluginDirectory);
                 this.configManager.set('enablePluginSandbox', enableSandbox);
                 this.configManager.set('enablePluginDebug', enableDebug);
             }
@@ -2489,6 +2495,8 @@ class PluginManagementUI {
 
     /**
      * Browse plugin directory
+     * @deprecated No longer used - plugin directories are managed by PluginPathResolver
+     * Kept for potential future use (e.g., quick access to plugin folders)
      */
     async browsePluginDirectory() {
         try {
@@ -2584,7 +2592,7 @@ class PluginManagementUI {
 
         // Use real test demonstrator for supported plugins
         if (typeof PluginRealTestDemonstrator !== 'undefined' && this.isRealTestSupported(pluginId)) {
-            this.showRealTestDemonstration(pluginId, plugin, type);
+            await this.showRealTestDemonstration(pluginId, plugin, type);
         } else if (this.testFramework) {
             // Use test framework if available
             this.testFramework.openPluginTestInterface(pluginId, plugin, type);
@@ -2614,23 +2622,46 @@ class PluginManagementUI {
     /**
      * Show real test demonstration window
      */
-    showRealTestDemonstration(pluginId, plugin, type) {
-        // Make plugin manager globally accessible for the demo window
-        if (!window.pluginManager) {
-            window.pluginManager = this.pluginManager;
-            console.log('🔗 Plugin manager attached to window for demo access');
-        }
-        
-        // Create test window
-        const testWindow = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
-        
-        if (!testWindow) {
-            this.showMessage('Failed to open demo window. Please allow popups.', 'error');
-            return;
-        }
-        
-        // Initialize demonstrator
-        const demonstrator = new PluginRealTestDemonstrator(this.pluginManager);
+    async showRealTestDemonstration(pluginId, plugin, type) {
+        try {
+            // Log initialization status for debugging
+            console.log('🔍 Checking PluginManager initialization status...');
+            
+            // Wait for PluginManager if not yet initialized (optional but recommended)
+            if (!this.pluginManager.isInitialized) {
+                console.log('⏳ PluginManager not yet initialized, waiting...');
+                await this.pluginManager.waitForInitialization();
+                console.log('✅ PluginManager initialization complete');
+            }
+            
+            // Log status (PathResolver is now optional for demo path resolution)
+            const hasPathResolver = this.pluginManager.pathResolver && 
+                                   this.pluginManager.pathResolver._isInitialized;
+            console.log('✅ Prerequisites checked for plugin test');
+            console.log('  PluginManager initialized:', this.pluginManager.isInitialized);
+            console.log('  PathResolver available:', hasPathResolver);
+            
+            // Make plugin manager globally accessible for the demo window
+            if (!window.pluginManager) {
+                window.pluginManager = this.pluginManager;
+                console.log('🔗 Plugin manager attached to window for demo access');
+            }
+            
+            // Create test window
+            const testWindow = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+            
+            if (!testWindow) {
+                this.showMessage('Failed to open demo window. Please allow popups.', 'error');
+                return;
+            }
+            
+            // Initialize demonstrator
+            const demonstrator = new PluginRealTestDemonstrator(this.pluginManager);
+            
+            // Generate UI and script content (await async methods)
+            const testStyles = demonstrator.generateTestStyles();
+            const testUI = await demonstrator.generateInteractiveTestUI(pluginId, plugin, type);
+            const testScript = await demonstrator.generateTestScript(pluginId, plugin, type);
         
         testWindow.document.write(`
             <!DOCTYPE html>
@@ -2640,10 +2671,10 @@ class PluginManagementUI {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Plugin Interactive Demo - ${plugin.name}</title>
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-                ${demonstrator.generateTestStyles()}
+                ${testStyles}
             </head>
             <body>
-                ${demonstrator.generateInteractiveTestUI(pluginId, plugin, type)}
+                ${testUI}
                 <script>
                     // Make plugin manager available from opener window
                     console.log('🔍 Checking for plugin manager in opener window...');
@@ -2656,7 +2687,7 @@ class PluginManagementUI {
                         console.log('Available in opener:', window.opener ? Object.keys(window.opener).filter(k => k.includes('plugin') || k.includes('Plugin')) : 'No opener');
                     }
                     
-                    ${demonstrator.generateTestScript(pluginId, plugin, type)}
+                    ${testScript}
                     
                     // Initialize copy/paste menu manager after page loads
                     window.addEventListener('load', () => {
@@ -2678,6 +2709,14 @@ class PluginManagementUI {
 
         testWindow.document.close();
         testWindow.focus();
+        
+        } catch (error) {
+            console.error('❌ Failed to show real test demonstration:', error);
+            this.showMessage(
+                `Failed to start plugin test: ${error.message}`,
+                'error'
+            );
+        }
     }
 
     /**
