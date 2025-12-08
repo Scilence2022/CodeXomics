@@ -683,9 +683,545 @@ class PluginMarketplaceUI {
         }
     }
 
-    viewPluginDetails(pluginId) {
-        // TODO: Implement plugin details view
-        alert(`Plugin details for ${pluginId} - Coming soon!`);
+    async viewPluginDetails(pluginId) {
+        try {
+            console.log(`📋 Fetching details for plugin: ${pluginId}`);
+            
+            // Fetch plugin data from marketplace or installed registry
+            let pluginData = null;
+            
+            // First check if plugin is installed (has full manifest)
+            if (this.marketplace.installedPlugins.has(pluginId)) {
+                const installed = this.marketplace.installedPlugins.get(pluginId);
+                pluginData = installed.manifest || installed;
+                console.log('✅ Found plugin in installed registry:', pluginData);
+            }
+            
+            // If not found in installed, search marketplace
+            if (!pluginData) {
+                const searchResults = await this.marketplace.searchPlugins(pluginId);
+                pluginData = searchResults.find(p => p.id === pluginId);
+                console.log('✅ Found plugin in marketplace:', pluginData);
+            }
+            
+            // Also get runtime plugin instance if registered
+            const runtimePlugin = this.marketplace.pluginManager?.getPlugin(pluginId);
+            if (runtimePlugin) {
+                console.log('✅ Found runtime plugin instance');
+                // Merge runtime data with stored data
+                pluginData = { ...pluginData, ...runtimePlugin };
+            }
+            
+            if (!pluginData) {
+                alert(`❌ Plugin ${pluginId} not found`);
+                return;
+            }
+            
+            // Show details modal
+            this.showPluginDetailsModal(pluginData);
+            
+        } catch (error) {
+            console.error('❌ Failed to fetch plugin details:', error);
+            alert(`Failed to load plugin details: ${error.message}`);
+        }
+    }
+    
+    showPluginDetailsModal(plugin) {
+        // Create modal backdrop
+        const detailsModal = document.createElement('div');
+        detailsModal.id = 'plugin-details-modal';
+        detailsModal.className = 'details-modal-backdrop';
+        
+        // Extract command information
+        const commands = this.extractCommandsInfo(plugin);
+        const dataTypes = plugin.supportedDataTypes || [];
+        const keywords = plugin.keywords || [];
+        const tags = plugin.tags || [];
+        
+        // Build modal content
+        detailsModal.innerHTML = `
+            <div class="details-modal-content">
+                <div class="details-header">
+                    <h2>📦 ${plugin.name || plugin.id}</h2>
+                    <button onclick="document.getElementById('plugin-details-modal').remove()" 
+                            class="details-close-btn">×</button>
+                </div>
+                
+                <div class="details-body">
+                    <!-- Version & Author Section -->
+                    <div class="details-section">
+                        <h3>📌 Basic Information</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Version:</span>
+                                <span class="info-value">${plugin.version || 'N/A'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Author:</span>
+                                <span class="info-value">${plugin.author || 'Unknown'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Category:</span>
+                                <span class="info-value badge category-badge">${plugin.category || 'general'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Type:</span>
+                                <span class="info-value badge type-badge">${plugin.type || 'unknown'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Description Section -->
+                    <div class="details-section">
+                        <h3>📝 Description</h3>
+                        <p class="description-text">${plugin.description || 'No description available'}</p>
+                    </div>
+                    
+                    <!-- Commands Section -->
+                    ${commands.length > 0 ? `
+                    <div class="details-section">
+                        <h3>⚡ Available Commands (${commands.length})</h3>
+                        <div class="commands-list">
+                            ${commands.map(cmd => `
+                                <div class="command-item">
+                                    <div class="command-header">
+                                        <code class="command-id">${cmd.command}</code>
+                                        ${cmd.title ? `<span class="command-title">${cmd.title}</span>` : ''}
+                                    </div>
+                                    ${cmd.description ? `<p class="command-description">${cmd.description}</p>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Supported Data Types Section -->
+                    ${dataTypes.length > 0 ? `
+                    <div class="details-section">
+                        <h3>🗂️ Supported Data Types (${dataTypes.length})</h3>
+                        <div class="tags-container">
+                            ${dataTypes.map(type => `
+                                <span class="tag datatype-tag">${type}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Keywords Section -->
+                    ${keywords.length > 0 ? `
+                    <div class="details-section">
+                        <h3>🔍 Keywords (${keywords.length})</h3>
+                        <div class="tags-container">
+                            ${keywords.map(kw => `
+                                <span class="tag keyword-tag">${kw}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Tags Section -->
+                    ${tags.length > 0 ? `
+                    <div class="details-section">
+                        <h3>🏷️ Tags (${tags.length})</h3>
+                        <div class="tags-container">
+                            ${tags.map(tag => `
+                                <span class="tag general-tag">${tag}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Dependencies Section -->
+                    ${plugin.dependencies && plugin.dependencies.length > 0 ? `
+                    <div class="details-section">
+                        <h3>📦 Dependencies (${plugin.dependencies.length})</h3>
+                        <ul class="dependencies-list">
+                            ${plugin.dependencies.map(dep => `
+                                <li><code>${typeof dep === 'string' ? dep : dep.id}</code></li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Additional Metadata -->
+                    <div class="details-section metadata-section">
+                        <h3>ℹ️ Additional Information</h3>
+                        <div class="info-grid">
+                            ${plugin.homepage ? `
+                            <div class="info-item">
+                                <span class="info-label">Homepage:</span>
+                                <a href="${plugin.homepage}" target="_blank" class="info-link">${plugin.homepage}</a>
+                            </div>
+                            ` : ''}
+                            ${plugin.repository ? `
+                            <div class="info-item">
+                                <span class="info-label">Repository:</span>
+                                <a href="${plugin.repository}" target="_blank" class="info-link">${plugin.repository}</a>
+                            </div>
+                            ` : ''}
+                            ${plugin.license ? `
+                            <div class="info-item">
+                                <span class="info-label">License:</span>
+                                <span class="info-value">${plugin.license}</span>
+                            </div>
+                            ` : ''}
+                            ${plugin.installedAt ? `
+                            <div class="info-item">
+                                <span class="info-label">Installed:</span>
+                                <span class="info-value">${new Date(plugin.installedAt).toLocaleString()}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="details-footer">
+                    <button onclick="document.getElementById('plugin-details-modal').remove()" 
+                            class="btn-secondary details-btn">Close</button>
+                </div>
+            </div>
+        `;
+        
+        // Add styles for details modal
+        this.addDetailsModalStyles();
+        
+        // Append to body
+        document.body.appendChild(detailsModal);
+        
+        // Click outside to close
+        detailsModal.addEventListener('click', (e) => {
+            if (e.target === detailsModal) {
+                detailsModal.remove();
+            }
+        });
+        
+        console.log('✅ Plugin details modal displayed');
+    }
+    
+    extractCommandsInfo(plugin) {
+        const commands = [];
+        
+        // Extract from contributes.commands
+        if (plugin.contributes && plugin.contributes.commands) {
+            commands.push(...plugin.contributes.commands);
+        }
+        
+        // Extract from _commandHandlers if available (runtime data)
+        if (plugin._commandHandlers && plugin._commandHandlers.size > 0) {
+            for (const [commandId] of plugin._commandHandlers) {
+                // Check if already in commands array
+                if (!commands.find(cmd => cmd.command === commandId)) {
+                    commands.push({
+                        command: commandId,
+                        title: commandId.split('.').pop(),
+                        description: 'Runtime registered command'
+                    });
+                }
+            }
+        }
+        
+        return commands;
+    }
+    
+    addDetailsModalStyles() {
+        if (document.getElementById('plugin-details-modal-styles')) return;
+        
+        const styles = document.createElement('style');
+        styles.id = 'plugin-details-modal-styles';
+        styles.textContent = `
+            .details-modal-backdrop {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.6);
+                z-index: 10001;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                animation: fadeIn 0.2s ease;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            .details-modal-content {
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                width: 800px;
+                max-width: 90vw;
+                max-height: 90vh;
+                display: flex;
+                flex-direction: column;
+                animation: slideUp 0.3s ease;
+            }
+            
+            @keyframes slideUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            
+            .details-header {
+                background: linear-gradient(135deg, #2196F3, #1976D2);
+                color: white;
+                padding: 20px 25px;
+                border-radius: 12px 12px 0 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .details-header h2 {
+                margin: 0;
+                font-size: 22px;
+                font-weight: 600;
+            }
+            
+            .details-close-btn {
+                background: rgba(255, 255, 255, 0.2);
+                border: none;
+                color: white;
+                font-size: 28px;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+                line-height: 1;
+            }
+            
+            .details-close-btn:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: scale(1.1);
+            }
+            
+            .details-body {
+                padding: 25px;
+                overflow-y: auto;
+                flex: 1;
+                min-height: 0;
+            }
+            
+            .details-section {
+                margin-bottom: 25px;
+                padding-bottom: 20px;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            
+            .details-section:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+            }
+            
+            .details-section h3 {
+                margin: 0 0 15px 0;
+                font-size: 16px;
+                font-weight: 600;
+                color: #333;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+            
+            .info-item {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+            }
+            
+            .info-label {
+                font-weight: 600;
+                color: #666;
+                min-width: 80px;
+            }
+            
+            .info-value {
+                color: #333;
+            }
+            
+            .info-link {
+                color: #2196F3;
+                text-decoration: none;
+                word-break: break-all;
+            }
+            
+            .info-link:hover {
+                text-decoration: underline;
+            }
+            
+            .badge {
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            
+            .category-badge {
+                background: #e3f2fd;
+                color: #1976d2;
+            }
+            
+            .type-badge {
+                background: #f3e5f5;
+                color: #7b1fa2;
+            }
+            
+            .description-text {
+                margin: 0;
+                color: #555;
+                line-height: 1.6;
+            }
+            
+            .commands-list {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .command-item {
+                background: #f8f9fa;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+                padding: 12px;
+            }
+            
+            .command-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 6px;
+            }
+            
+            .command-id {
+                background: #263238;
+                color: #4CAF50;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 13px;
+                font-family: 'Monaco', 'Menlo', monospace;
+            }
+            
+            .command-title {
+                color: #666;
+                font-size: 14px;
+                font-weight: 500;
+            }
+            
+            .command-description {
+                margin: 0;
+                color: #777;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            
+            .tags-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .tag {
+                display: inline-block;
+                padding: 6px 12px;
+                border-radius: 14px;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            
+            .datatype-tag {
+                background: #e8f5e9;
+                color: #2e7d32;
+            }
+            
+            .keyword-tag {
+                background: #fff3e0;
+                color: #ef6c00;
+            }
+            
+            .general-tag {
+                background: #e3f2fd;
+                color: #1976d2;
+            }
+            
+            .dependencies-list {
+                margin: 0;
+                padding-left: 20px;
+            }
+            
+            .dependencies-list li {
+                margin-bottom: 8px;
+                color: #555;
+            }
+            
+            .dependencies-list code {
+                background: #f5f5f5;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 13px;
+            }
+            
+            .details-footer {
+                background: #f8f9fa;
+                padding: 15px 25px;
+                border-top: 1px solid #e0e0e0;
+                border-radius: 0 0 12px 12px;
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+            
+            .details-btn {
+                padding: 10px 24px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            
+            .btn-secondary {
+                background: #6c757d;
+                color: white;
+            }
+            
+            .btn-secondary:hover {
+                background: #5a6268;
+                transform: translateY(-1px);
+            }
+            
+            /* Scrollbar styling */
+            .details-body::-webkit-scrollbar {
+                width: 8px;
+            }
+            
+            .details-body::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 4px;
+            }
+            
+            .details-body::-webkit-scrollbar-thumb {
+                background: #c1c1c1;
+                border-radius: 4px;
+            }
+            
+            .details-body::-webkit-scrollbar-thumb:hover {
+                background: #a8a8a8;
+            }
+        `;
+        
+        document.head.appendChild(styles);
     }
 
     showConfiguration() {
