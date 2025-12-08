@@ -5,7 +5,7 @@
 
 /* Message text container enhancements */
 .message-text {
-    line-height: 1.6;
+    line-height: 1.45;
     color: #374151;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -15,32 +15,32 @@
 .message-text h1 {
     font-size: 1.75em;
     font-weight: 700;
-    margin: 0.8em 0 0.5em 0;
+    margin: 0.5em 0 0.3em 0;
     color: #1f2937;
     border-bottom: 2px solid #e5e7eb;
-    padding-bottom: 0.3em;
+    padding-bottom: 0.2em;
 }
 
 .message-text h2 {
     font-size: 1.5em;
     font-weight: 600;
-    margin: 0.7em 0 0.4em 0;
+    margin: 0.45em 0 0.25em 0;
     color: #1f2937;
     border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 0.25em;
+    padding-bottom: 0.15em;
 }
 
 .message-text h3 {
     font-size: 1.25em;
     font-weight: 600;
-    margin: 0.6em 0 0.3em 0;
+    margin: 0.4em 0 0.2em 0;
     color: #374151;
 }
 
 .message-text h4 {
     font-size: 1.1em;
     font-weight: 600;
-    margin: 0.5em 0 0.25em 0;
+    margin: 0.35em 0 0.15em 0;
     color: #374151;
 }
 
@@ -48,13 +48,13 @@
 .message-text h6 {
     font-size: 1em;
     font-weight: 600;
-    margin: 0.4em 0 0.2em 0;
+    margin: 0.3em 0 0.1em 0;
     color: #4b5563;
 }
 
 /* Paragraphs */
 .message-text p {
-    margin: 0.5em 0;
+    margin: 0.3em 0;
     color: #374151;
 }
 
@@ -72,12 +72,12 @@
     border: 1px solid #e5e7eb;
     border-left: 4px solid #667eea;
     border-radius: 6px;
-    padding: 12px 16px;
-    margin: 12px 0;
+    padding: 10px 2px;
+    margin: 2px 0;
     overflow-x: auto;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 0.9em;
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
 .message-text pre code {
@@ -134,8 +134,8 @@
 /* Lists */
 .message-text ul,
 .message-text ol {
-    margin: 0.75em 0;
-    padding-left: 1.8em;
+    margin: 0.4em 0;
+    padding-left: 1.6em;
 }
 
 .message-text ul {
@@ -144,7 +144,7 @@
 
 .message-text ul ul {
     list-style-type: circle;
-    margin: 0.3em 0;
+    margin: 0.15em 0;
 }
 
 .message-text ul ul ul {
@@ -157,7 +157,7 @@
 
 .message-text ol ol {
     list-style-type: lower-alpha;
-    margin: 0.3em 0;
+    margin: 0.15em 0;
 }
 
 .message-text ol ol ol {
@@ -165,12 +165,12 @@
 }
 
 .message-text li {
-    margin: 0.4em 0;
-    line-height: 1.6;
+    margin: 0.2em 0;
+    line-height: 1.45;
 }
 
 .message-text li > p {
-    margin: 0.25em 0;
+    margin: 0.15em 0;
 }
 
 .message-text li:first-child {
@@ -183,8 +183,8 @@
 
 /* Blockquotes */
 .message-text blockquote {
-    margin: 1em 0;
-    padding: 0.5em 1em;
+    margin: 0.6em 0;
+    padding: 0.4em 0.8em;
     border-left: 4px solid #667eea;
     background: #f9fafb;
     color: #4b5563;
@@ -192,7 +192,7 @@
 }
 
 .message-text blockquote p {
-    margin: 0.5em 0;
+    margin: 0.3em 0;
 }
 
 .message-text blockquote p:first-child {
@@ -207,21 +207,21 @@
 .message-text hr {
     border: none;
     border-top: 2px solid #e5e7eb;
-    margin: 1.5em 0;
+    margin: 1em 0;
 }
 
 /* Tables */
 .message-text table {
     border-collapse: collapse;
     width: 100%;
-    margin: 1em 0;
+    margin: 0.6em 0;
     font-size: 0.95em;
 }
 
 .message-text table th,
 .message-text table td {
     border: 1px solid #e5e7eb;
-    padding: 8px 12px;
+    padding: 6px 10px;
     text-align: left;
 }
 
@@ -244,7 +244,7 @@
     max-width: 100%;
     height: auto;
     border-radius: 6px;
-    margin: 0.75em 0;
+    margin: 0.5em 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -283,8 +283,8 @@
 .message-text ul ol,
 .message-text ol ul,
 .message-text ol ol {
-    margin-top: 0.25em;
-    margin-bottom: 0.25em;
+    margin-top: 0.1em;
+    margin-bottom: 0.1em;
 }
 
 /* Code language indicator (if present) */
@@ -320,8 +320,8 @@
     border: 1px solid #86efac;
     border-left: 4px solid #22c55e;
     border-radius: 6px;
-    padding: 12px 16px;
-    margin: 12px 0;
+    padding: 10px 14px;
+    margin: 8px 0;
 }
 
 .message-text .tool-error {
@@ -329,8 +329,8 @@
     border: 1px solid #fca5a5;
     border-left: 4px solid #ef4444;
     border-radius: 6px;
-    padding: 12px 16px;
-    margin: 12px 0;
+    padding: 10px 14px;
+    margin: 8px 0;
 }
 
 /* Scrollbar styling for code blocks */
