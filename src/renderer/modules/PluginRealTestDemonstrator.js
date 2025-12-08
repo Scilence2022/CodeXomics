@@ -915,32 +915,64 @@ class PluginRealTestDemonstrator {
                         log('  Required Score: ' + demo.searchConfig.requiredScore, 'info');
                         
                         // Get plugin manager
-                        const pluginManager = window.opener?.pluginManager || window.pluginManager;
+                        const pluginManager = window.opener?.pluginManager || window.pluginManager || window.opener?.pluginManagerV2 || window.pluginManagerV2;
                         if (!pluginManager) {
                             throw new Error('Plugin manager not available. Please ensure the parent window is open.');
                         }
                         
+                        log('✅ Plugin manager found', 'success');
+                        
                         // Get STRING plugin from visualization registry
                         const stringPlugin = pluginManager.pluginRegistry.visualization.get('string-network-explorer');
                         if (!stringPlugin) {
-                            throw new Error('STRING Network Explorer plugin not found');
+                            throw new Error('STRING Network Explorer plugin not found in visualization registry');
                         }
                         
-                        log('✅ STRING plugin found', 'success');
-                        log('📡 Calling STRING API...', 'info');
+                        log('✅ STRING plugin found in registry', 'success');
+                        
+                        // Debug: Log plugin structure
+                        log('🔧 Plugin structure:', 'info');
+                        log('  - Has _instance: ' + (!!stringPlugin._instance), 'info');
+                        log('  - Has _commandHandlers: ' + (!!stringPlugin._commandHandlers), 'info');
+                        log('  - Has executor: ' + (!!stringPlugin.executor), 'info');
+                        
+                        if (stringPlugin._commandHandlers) {
+                            log('  - Command handlers count: ' + stringPlugin._commandHandlers.size, 'info');
+                            log('  - Commands: ' + Array.from(stringPlugin._commandHandlers.keys()).join(', '), 'info');
+                        }
+                        
+                        if (stringPlugin._instance) {
+                            log('  - Instance methods: ' + Object.getOwnPropertyNames(Object.getPrototypeOf(stringPlugin._instance)).filter(m => m !== 'constructor').join(', '), 'info');
+                        }
+                        
+                        log('📡 Calling STRING search method...', 'info');
                         
                         // Try to execute command via stored handler
                         let searchResult = null;
                         
                         if (stringPlugin._commandHandlers && stringPlugin._commandHandlers.has('string-explorer.search')) {
                             // Use stored command handler
+                            log('  Using stored command handler', 'info');
                             const commandHandler = stringPlugin._commandHandlers.get('string-explorer.search');
                             searchResult = await commandHandler(demo.searchConfig);
                         } else if (stringPlugin._instance && typeof stringPlugin._instance.searchProteinInteractions === 'function') {
                             // Fallback: Use plugin instance method directly
+                            log('  Using plugin instance method directly', 'info');
                             searchResult = await stringPlugin._instance.searchProteinInteractions(demo.searchConfig);
                         } else {
-                            throw new Error('STRING search method not accessible. Plugin may not be properly installed.');
+                            // Final fallback: Try to find the plugin instance and call method
+                            const pluginInstance = stringPlugin._instance || stringPlugin.instance || stringPlugin;
+                            if (pluginInstance && typeof pluginInstance.searchProteinInteractions === 'function') {
+                                log('  Using fallback plugin instance', 'info');
+                                searchResult = await pluginInstance.searchProteinInteractions(demo.searchConfig);
+                            } else {
+                                throw new Error('STRING search method not accessible. Plugin structure: ' + JSON.stringify({
+                                    hasInstance: !!stringPlugin._instance,
+                                    hasCommandHandlers: !!stringPlugin._commandHandlers,
+                                    commandHandlerKeys: stringPlugin._commandHandlers ? Array.from(stringPlugin._commandHandlers.keys()) : [],
+                                    availableKeys: Object.keys(stringPlugin)
+                                }));
+                            }
                         }
                         
                         if (!searchResult || !searchResult.success) {
