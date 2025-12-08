@@ -6,7 +6,7 @@ class LiteratureAPIService {
         this.baseUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
         this.cache = new Map();
         this.cacheExpiry = 24 * 60 * 60 * 1000; // 24 hours
-        this.requestDelay = 100; // 100ms delay between requests to respect rate limits
+        this.requestDelay = 500; // 500ms delay between requests to respect rate limits
         this.maxRetries = 3;
     }
 
@@ -307,33 +307,30 @@ class LiteratureAPIService {
         console.log(`Fetching literature info for ${pmids.length} PMIDs`);
         
         const results = [];
-        const batchSize = 10; // Process in batches to avoid overwhelming the API
         
-        for (let i = 0; i < pmids.length; i += batchSize) {
-            const batch = pmids.slice(i, i + batchSize);
-            const batchPromises = batch.map(pmid => this.fetchLiteratureInfo(pmid));
+        // Process sequentially to respect rate limits
+        for (let i = 0; i < pmids.length; i++) {
+            const pmid = pmids[i];
             
             try {
-                const batchResults = await Promise.all(batchPromises);
-                results.push(...batchResults);
+                const result = await this.fetchLiteratureInfo(pmid);
+                results.push(result);
             } catch (error) {
-                console.error(`Error processing batch ${Math.floor(i / batchSize) + 1}:`, error);
-                // Add error entries for failed batch
-                batch.forEach(pmid => {
-                    results.push({
-                        pmid,
-                        title: 'Error fetching data',
-                        abstract: 'Unable to fetch abstract',
-                        authors: [],
-                        journal: { title: 'Unknown Journal', year: 'Unknown', citation: 'Unknown Journal' },
-                        publicationDate: 'Unknown',
-                        doi: '',
-                        keywords: [],
-                        meshTerms: [],
-                        url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
-                        summary: `PMID:${pmid} - Error fetching data`,
-                        error: error.message
-                    });
+                console.error(`Error fetching PMID ${pmid}:`, error);
+                // Add error entry
+                results.push({
+                    pmid,
+                    title: 'Error fetching data',
+                    abstract: 'Unable to fetch abstract',
+                    authors: [],
+                    journal: { title: 'Unknown Journal', year: 'Unknown', citation: 'Unknown Journal' },
+                    publicationDate: 'Unknown',
+                    doi: '',
+                    keywords: [],
+                    meshTerms: [],
+                    url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+                    summary: `PMID:${pmid} - Error fetching data`,
+                    error: error.message
                 });
             }
         }
