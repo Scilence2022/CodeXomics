@@ -460,14 +460,18 @@ class SequenceUtils {
             container.removeEventListener('mouseleave', existingLeaveHandler);
         }
         
-        // Create and attach mouseleave handler to hide cursor when mouse exits
-        const leaveHandler = () => this.clearCursor();
+        // Create mouseleave handler - keep event framework but don't clear cursor
+        const leaveHandler = () => {
+            console.log('🖱️ [SequenceUtils] Mouse left sequence area - cursor persistence maintained');
+            // Note: Cursor is NOT cleared on mouseleave to maintain persistence
+            // this.clearCursor(); // Commented out to preserve cursor
+        };
         container.addEventListener('mouseleave', leaveHandler);
         
         // Store reference for cleanup
         container._cursorLeaveHandler = leaveHandler;
         
-        console.log('✅ [SequenceUtils] Cursor mouseleave handler attached to sequence container');
+        console.log('✅ [SequenceUtils] Cursor mouseleave handler attached (persistence mode)');
     }
 
     // Sequence display methods
