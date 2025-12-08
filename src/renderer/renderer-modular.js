@@ -7732,6 +7732,7 @@ class GenomeBrowser {
         
         const mousedownHandler = (e) => {
             if (e.target.matches('.sequence-bases span')) {
+                console.log('🖱️ [Selection] mousedown on base span');
                 isSelecting = true;
                 selectionStart = this.getSequencePosition(e.target);
                 mouseDownPosition = selectionStart; // Store initial position
@@ -7749,6 +7750,7 @@ class GenomeBrowser {
                 // Check if mouse has actually moved to a different base
                 if (currentPosition && mouseDownPosition && 
                     currentPosition.position !== mouseDownPosition.position) {
+                    console.log(`👁️ [Selection] Mouse moved from ${mouseDownPosition.position} to ${currentPosition.position}`);
                     hasMoved = true;
                     selectionEnd = currentPosition;
                     this.updateSequenceSelection(selectionStart, selectionEnd);
@@ -7756,12 +7758,23 @@ class GenomeBrowser {
             }
         };
         
-        const mouseupHandler = () => {
+        const mouseupHandler = (e) => {
+            console.log(`⬆️ [Selection] mouseup - isSelecting: ${isSelecting}, hasMoved: ${hasMoved}`);
+            
             // Only finalize selection if there was actual movement (drag)
-            // Single click should not create a selection
             if (isSelecting && hasMoved && selectionStart && selectionEnd) {
+                console.log(`✅ [Selection] Finalizing selection from ${selectionStart.position} to ${selectionEnd.position}`);
                 this.finalizeSequenceSelection(selectionStart, selectionEnd);
+            } else if (isSelecting && !hasMoved && e.target.matches('.sequence-bases span')) {
+                // Single click detected - place cursor instead of creating selection
+                console.log('📌 [Selection] Single click detected - placing cursor');
+                
+                // Call SequenceUtils to place cursor at clicked position
+                if (this.sequenceUtils && this.sequenceUtils.handleSequenceClick) {
+                    this.sequenceUtils.handleSequenceClick(e, e.target);
+                }
             }
+            
             // Reset all selection state
             isSelecting = false;
             hasMoved = false;
