@@ -2,15 +2,135 @@
  * Plugin Real Test Demonstrator
  * Showcases actual plugin functionality with interactive demonstrations
  * 
- * @version 2.0.0
+ * This class serves as a UNIFIED ENTRY POINT that:
+ * 1. Dynamically discovers plugin-specific demo scripts (plugin/demo.js)
+ * 2. Delegates demo execution to plugin-owned demo modules
+ * 3. Provides UI framework and common utilities
+ * 4. Falls back to legacy centralized demos for backward compatibility
+ * 
+ * @version 3.0.0 - Modular Architecture
  * @author GenomeAIStudio Team
  */
 
 class PluginRealTestDemonstrator {
     constructor(pluginManager) {
         this.pluginManager = pluginManager;
-        this.demoData = this.initializeDemoData();
+        this.demoModules = new Map(); // Plugin-specific demo modules
+        this.demoData = this.initializeDemoData(); // Legacy fallback data
         this.testResults = new Map();
+        this.pluginBasePath = this.resolvePluginBasePath();
+    }
+
+    /**
+     * Resolve base path for plugin marketplace data
+     */
+    resolvePluginBasePath() {
+        // For Electron renderer process
+        const path = require('path');
+        return path.join(__dirname, '../../../packages/marketplace-server/marketplace-data/plugins');
+    }
+
+    /**
+     * Dynamically load plugin demo module
+     * @param {string} pluginId - Plugin identifier
+     * @returns {Promise<Object|null>} Demo module instance or null
+     */
+    async loadPluginDemo(pluginId) {
+        // Check if already loaded
+        if (this.demoModules.has(pluginId)) {
+            return this.demoModules.get(pluginId);
+        }
+
+        try {
+            // Get plugin from registry to access version
+            let plugin = null;
+            if (this.pluginManager.pluginRegistry) {
+                plugin = this.pluginManager.pluginRegistry.visualization.get(pluginId) ||
+                         this.pluginManager.pluginRegistry.function.get(pluginId);
+            }
+
+            if (!plugin) {
+                console.warn(`⚠️ Plugin ${pluginId} not found in registry, cannot load demo module`);
+                return null;
+            }
+
+            // Construct path to plugin demo script
+            const version = plugin.version || '1.0.0';
+            const demoPath = `${this.pluginBasePath}/${pluginId}/${version}/demo.js`;
+            
+            console.log(`🔍 Attempting to load demo module: ${demoPath}`);
+
+            // Dynamic import (for ES modules)
+            let DemoClass;
+            try {
+                // Try browser-style script loading for renderer process
+                const response = await fetch(`file://${demoPath}`);
+                if (!response.ok) throw new Error('Demo file not found');
+                
+                const scriptContent = await response.text();
+                eval(scriptContent); // Execute script to define class
+                
+                // Get class from global scope based on plugin ID
+                const className = this.getDemoClassName(pluginId);
+                DemoClass = window[className];
+                
+                if (!DemoClass) {
+                    throw new Error(`Demo class ${className} not found after loading`);
+                }
+            } catch (fetchError) {
+                // Fallback: Try require for CommonJS
+                console.log(`  Trying require() fallback...`);
+                DemoClass = require(demoPath);
+            }
+
+            // Get plugin instance (from _instance property stored during installation)
+            const pluginInstance = plugin._instance || plugin.instance || plugin;
+
+            // Instantiate demo module
+            const demoInstance = new DemoClass(pluginInstance);
+            this.demoModules.set(pluginId, demoInstance);
+            
+            console.log(`✅ Successfully loaded demo module for ${pluginId}`);
+            console.log(`  Demo scenarios: ${Object.keys(demoInstance.demoData).join(', ')}`);
+            
+            return demoInstance;
+
+        } catch (error) {
+            console.warn(`⚠️ Failed to load demo module for ${pluginId}:`, error.message);
+            console.log(`  Falling back to legacy centralized demo data`);
+            return null;
+        }
+    }
+
+    /**
+     * Get demo class name from plugin ID
+     */
+    getDemoClassName(pluginId) {
+        const classMap = {
+            'string-network-explorer': 'STRINGNetworkDemo',
+            'kegg-pathway-viewer': 'KEGGPathwayDemo',
+            'ecocyc-pathway-analyzer': 'EcoCycPathwayDemo'
+        };
+        return classMap[pluginId] || null;
+    }
+
+    /**
+     * Get demo data for plugin (tries modular demo first, falls back to legacy)
+     * @param {string} pluginId - Plugin identifier
+     * @returns {Promise<Object>} Demo scenarios
+     */
+    async getDemoData(pluginId) {
+        // Try to load plugin-specific demo module
+        const demoModule = await this.loadPluginDemo(pluginId);
+        
+        if (demoModule && demoModule.demoData) {
+            console.log(`📦 Using modular demo data for ${pluginId}`);
+            return demoModule.demoData;
+        }
+        
+        // Fallback to legacy centralized data
+        console.log(`📦 Using legacy demo data for ${pluginId}`);
+        return this.demoData[pluginId] || {};
     }
 
     /**
@@ -290,146 +410,88 @@ class PluginRealTestDemonstrator {
 
     /**
      * Get KEGG Pathway Viewer demo data
-     * Real biological example: Glycolysis pathway
+     * Uses real-time data from KEGG database API
      */
     getKeggPathwayDemoData() {
         return {
             basic: {
-                name: 'Glycolysis Initial Steps',
-                description: 'First three reactions of glycolysis pathway',
-                data: {
-                    nodes: [
-                        { id: 'C00031', name: 'D-Glucose', type: 'compound', properties: { formula: 'C6H12O6' } },
-                        { id: 'R00299', name: 'Hexokinase', type: 'reaction', properties: { ec: '2.7.1.1' } },
-                        { id: 'C00668', name: 'D-Glucose 6-phosphate', type: 'compound', properties: { formula: 'C6H13O9P' } },
-                        { id: 'R00771', name: 'Phosphoglucose isomerase', type: 'reaction', properties: { ec: '5.3.1.9' } },
-                        { id: 'C00085', name: 'D-Fructose 6-phosphate', type: 'compound', properties: { formula: 'C6H13O9P' } }
-                    ],
-                    edges: [
-                        { source: 'C00031', target: 'R00299', type: 'substrate' },
-                        { source: 'R00299', target: 'C00668', type: 'product' },
-                        { source: 'C00668', target: 'R00771', type: 'substrate' },
-                        { source: 'R00771', target: 'C00085', type: 'product' }
-                    ],
-                    metadata: {
-                        database: 'KEGG',
-                        pathway: 'Glycolysis / Gluconeogenesis',
-                        pathwayId: 'map00010',
-                        organism: 'Generic'
-                    }
-                }
+                name: 'Glycolysis Pathway',
+                description: 'Glycolysis / Gluconeogenesis pathway - Real-time KEGG data',
+                searchConfig: {
+                    pathwayId: 'hsa00010',  // Human glycolysis pathway
+                    organism: 'hsa',
+                    pathwayName: 'Glycolysis / Gluconeogenesis'
+                },
+                isRealTimeSearch: true
             },
             complex: {
-                name: 'Complete Glycolysis Pathway',
-                description: 'Full glycolysis pathway from glucose to pyruvate',
-                data: {
-                    nodes: [
-                        { id: 'C00031', name: 'D-Glucose', type: 'compound' },
-                        { id: 'R00299', name: 'Hexokinase', type: 'reaction' },
-                        { id: 'C00668', name: 'Glucose-6P', type: 'compound' },
-                        { id: 'R00771', name: 'PGI', type: 'reaction' },
-                        { id: 'C00085', name: 'Fructose-6P', type: 'compound' },
-                        { id: 'R00756', name: 'PFK', type: 'reaction' },
-                        { id: 'C00354', name: 'Fructose-1,6P2', type: 'compound' },
-                        { id: 'R01068', name: 'Aldolase', type: 'reaction' },
-                        { id: 'C00118', name: 'G3P', type: 'compound' },
-                        { id: 'C00022', name: 'Pyruvate', type: 'compound' }
-                    ],
-                    edges: [
-                        { source: 'C00031', target: 'R00299', type: 'substrate' },
-                        { source: 'R00299', target: 'C00668', type: 'product' },
-                        { source: 'C00668', target: 'R00771', type: 'substrate' },
-                        { source: 'R00771', target: 'C00085', type: 'product' },
-                        { source: 'C00085', target: 'R00756', type: 'substrate' },
-                        { source: 'R00756', target: 'C00354', type: 'product' },
-                        { source: 'C00354', target: 'R01068', type: 'substrate' },
-                        { source: 'R01068', target: 'C00118', type: 'product' }
-                    ],
-                    metadata: {
-                        database: 'KEGG',
-                        pathway: 'Glycolysis',
-                        pathwayId: 'map00010',
-                        reactionCount: 8
-                    }
-                }
+                name: 'TCA Cycle Pathway',
+                description: 'Citrate cycle (TCA cycle) - Real-time KEGG data',
+                searchConfig: {
+                    pathwayId: 'hsa00020',  // Human TCA cycle
+                    organism: 'hsa',
+                    pathwayName: 'Citrate cycle (TCA cycle)'
+                },
+                isRealTimeSearch: true
+            },
+            metabolic: {
+                name: 'Purine Metabolism',
+                description: 'Purine metabolism pathway - Real-time KEGG data',
+                searchConfig: {
+                    pathwayId: 'hsa00230',  // Human purine metabolism
+                    organism: 'hsa',
+                    pathwayName: 'Purine metabolism'
+                },
+                isRealTimeSearch: true
             }
         };
     }
 
     /**
      * Get EcoCyc Pathway Analyzer demo data
-     * Real biological example: E. coli metabolic pathways
+     * Uses real-time data from EcoCyc/BioCyc database API
      */
     getEcocycPathwayDemoData() {
         return {
             basic: {
                 name: 'L-Arabinose Degradation',
-                description: 'E. coli arabinose catabolism pathway',
-                data: {
-                    nodes: [
-                        { id: 'L-ARABINOSE', name: 'L-Arabinose', type: 'compound' },
-                        { id: 'ARAA-RXN', name: 'L-arabinose isomerase', type: 'reaction' },
-                        { id: 'L-RIBULOSE', name: 'L-Ribulose', type: 'compound' },
-                        { id: 'ARAB-RXN', name: 'L-ribulokinase', type: 'reaction' },
-                        { id: 'L-RIBULOSE-5P', name: 'L-Ribulose 5-phosphate', type: 'compound' }
-                    ],
-                    edges: [
-                        { source: 'L-ARABINOSE', target: 'ARAA-RXN', type: 'substrate' },
-                        { source: 'ARAA-RXN', target: 'L-RIBULOSE', type: 'product' },
-                        { source: 'L-RIBULOSE', target: 'ARAB-RXN', type: 'substrate' },
-                        { source: 'ARAB-RXN', target: 'L-RIBULOSE-5P', type: 'product' }
-                    ],
-                    metadata: {
-                        database: 'EcoCyc',
-                        organism: 'Escherichia coli K-12',
-                        pathway: 'L-arabinose degradation I'
-                    }
-                }
+                description: 'E. coli arabinose catabolism pathway - Real-time BioCyc data',
+                searchConfig: {
+                    pathwayId: 'ARABCAT-PWY',  // L-arabinose degradation I
+                    organism: 'ECOLI',  // E. coli K-12 substr. MG1655
+                    pathwayName: 'L-arabinose degradation I'
+                },
+                isRealTimeSearch: true
             },
             complex: {
                 name: 'TCA Cycle in E. coli',
-                description: 'Complete tricarboxylic acid cycle',
-                data: {
-                    nodes: [
-                        { id: 'ACETYL-COA', name: 'Acetyl-CoA', type: 'compound' },
-                        { id: 'CIT', name: 'Citrate', type: 'compound' },
-                        { id: 'ACON-C', name: 'cis-Aconitate', type: 'compound' },
-                        { id: 'THREO-DS-ISO-CITRATE', name: 'Isocitrate', type: 'compound' },
-                        { id: '2-OXOGLUTARATE', name: '2-Oxoglutarate', type: 'compound' },
-                        { id: 'SUC-COA', name: 'Succinyl-CoA', type: 'compound' },
-                        { id: 'SUC', name: 'Succinate', type: 'compound' },
-                        { id: 'FUM', name: 'Fumarate', type: 'compound' },
-                        { id: 'MAL', name: 'Malate', type: 'compound' },
-                        { id: 'OXALACETIC_ACID', name: 'Oxaloacetate', type: 'compound' }
-                    ],
-                    edges: [
-                        { source: 'ACETYL-COA', target: 'CIT', type: 'substrate' },
-                        { source: 'CIT', target: 'ACON-C', type: 'transformation' },
-                        { source: 'ACON-C', target: 'THREO-DS-ISO-CITRATE', type: 'transformation' },
-                        { source: 'THREO-DS-ISO-CITRATE', target: '2-OXOGLUTARATE', type: 'transformation' },
-                        { source: '2-OXOGLUTARATE', target: 'SUC-COA', type: 'transformation' },
-                        { source: 'SUC-COA', target: 'SUC', type: 'transformation' },
-                        { source: 'SUC', target: 'FUM', type: 'transformation' },
-                        { source: 'FUM', target: 'MAL', type: 'transformation' },
-                        { source: 'MAL', target: 'OXALACETIC_ACID', type: 'transformation' },
-                        { source: 'OXALACETIC_ACID', target: 'CIT', type: 'condensation' }
-                    ],
-                    metadata: {
-                        database: 'EcoCyc',
-                        organism: 'Escherichia coli K-12',
-                        pathway: 'TCA cycle I (aerobic)',
-                        cyclical: true
-                    }
-                }
+                description: 'Complete tricarboxylic acid cycle - Real-time BioCyc data',
+                searchConfig: {
+                    pathwayId: 'TCA',  // TCA cycle I (aerobic)
+                    organism: 'ECOLI',
+                    pathwayName: 'TCA cycle I (aerobic)'
+                },
+                isRealTimeSearch: true
+            },
+            glycolysis: {
+                name: 'Glycolysis in E. coli',
+                description: 'Glycolysis pathway in E. coli - Real-time BioCyc data',
+                searchConfig: {
+                    pathwayId: 'GLYCOLYSIS',  // Glycolysis I
+                    organism: 'ECOLI',
+                    pathwayName: 'Glycolysis I (from glucose 6-phosphate)'
+                },
+                isRealTimeSearch: true
             }
         };
     }
 
     /**
      * Generate interactive test interface for plugin
+     * Now async to support dynamic demo loading
      */
-    generateInteractiveTestUI(pluginId, plugin, type) {
-        const demoSets = this.demoData[pluginId] || {};
+    async generateInteractiveTestUI(pluginId, plugin, type) {
+        const demoSets = await this.getDemoData(pluginId);
         
         return `
             <div class="real-test-container">
@@ -440,6 +502,7 @@ class PluginRealTestDemonstrator {
                     <div class="banner-content">
                         <h2>Interactive Plugin Demonstration</h2>
                         <p>Experience real ${plugin.name} functionality with biological data</p>
+                        <span class="demo-architecture-badge">🔌 Modular Demo System v3.0</span>
                     </div>
                 </div>
 
@@ -452,6 +515,8 @@ class PluginRealTestDemonstrator {
                                 <label for="demo-${key}">
                                     <strong>${demo.name}</strong>
                                     <span class="demo-desc">${demo.description}</span>
+                                    ${demo.complexity ? `<span class="complexity-badge complexity-${demo.complexity}">${demo.complexity}</span>` : ''}
+                                    ${demo.isRealTimeSearch ? '<span class="realtime-badge">⚡ Real-time</span>' : ''}
                                 </label>
                             </div>
                         `).join('')}
@@ -551,6 +616,40 @@ class PluginRealTestDemonstrator {
                     margin: 0;
                     opacity: 0.9;
                     font-size: 16px;
+                }
+
+                .demo-architecture-badge {
+                    display: inline-block;
+                    background: rgba(255, 255, 255, 0.2);
+                    padding: 4px 12px;
+                    border-radius: 12px;
+                    font-size: 12px;
+                    margin-top: 8px;
+                }
+
+                .complexity-badge {
+                    display: inline-block;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 11px;
+                    margin-left: 8px;
+                    font-weight: 600;
+                }
+
+                .complexity-basic { background: #48bb78; color: white; }
+                .complexity-complex { background: #4299e1; color: white; }
+                .complexity-advanced { background: #ed8936; color: white; }
+                .complexity-performance { background: #e53e3e; color: white; }
+
+                .realtime-badge {
+                    display: inline-block;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 11px;
+                    margin-left: 4px;
+                    background: #9f7aea;
+                    color: white;
+                    font-weight: 600;
                 }
 
                 .demo-selector {
@@ -801,11 +900,12 @@ class PluginRealTestDemonstrator {
 
     /**
      * Generate interactive test script
+     * Updated to support modular demo execution
      */
-    generateTestScript(pluginId, plugin, type) {
+    async generateTestScript(pluginId, plugin, type) {
         // Pre-process demo data: generators cannot be serialized to JSON,
         // so we must execute them and store the result as static data
-        const rawDemoData = this.demoData[pluginId] || {};
+        const rawDemoData = await this.getDemoData(pluginId);
         const processedDemoData = {};
         
         for (const [key, demo] of Object.entries(rawDemoData)) {
@@ -823,10 +923,15 @@ class PluginRealTestDemonstrator {
             }
         }
         
+        // Check if modular demo is available
+        const hasModularDemo = this.demoModules.has(pluginId);
+        
         const demoDataJSON = JSON.stringify(processedDemoData);
         
         return `
             const demoData = ${demoDataJSON};
+            const pluginId = '${pluginId}';
+            const hasModularDemo = ${hasModularDemo};
             let currentVisualization = null;
             let lastExecution = null;
 
@@ -984,6 +1089,106 @@ class PluginRealTestDemonstrator {
                         log('  Nodes: ' + data.nodes.length, 'info');
                         log('  Edges: ' + data.edges.length, 'info');
                         log('  Avg Confidence: ' + (data.edges.reduce((sum, e) => sum + (e.confidence || 0), 0) / data.edges.length).toFixed(2), 'info');
+                    }
+                    // Check if this is a real-time KEGG pathway search
+                    else if (demo.isRealTimeSearch && demo.searchConfig && '${pluginId}' === 'kegg-pathway-viewer') {
+                        log('🔍 Fetching real-time data from KEGG database...', 'info');
+                        log('  Pathway ID: ' + demo.searchConfig.pathwayId, 'info');
+                        log('  Organism: ' + demo.searchConfig.organism, 'info');
+                        log('  Pathway Name: ' + demo.searchConfig.pathwayName, 'info');
+                        
+                        const pluginManager = window.opener?.pluginManager || window.pluginManager || window.opener?.pluginManagerV2 || window.pluginManagerV2;
+                        if (!pluginManager) {
+                            throw new Error('Plugin manager not available');
+                        }
+                        
+                        log('✅ Plugin manager found', 'success');
+                        
+                        const keggPlugin = pluginManager.pluginRegistry.visualization.get('kegg-pathway-viewer');
+                        if (!keggPlugin) {
+                            throw new Error('KEGG Pathway Viewer plugin not found');
+                        }
+                        
+                        log('✅ KEGG plugin found in registry', 'success');
+                        log('📡 Calling KEGG API...', 'info');
+                        
+                        let pathwayResult = null;
+                        
+                        if (keggPlugin._commandHandlers && keggPlugin._commandHandlers.has('kegg-viewer.getPathwayDetails')) {
+                            log('  Using stored command handler', 'info');
+                            const commandHandler = keggPlugin._commandHandlers.get('kegg-viewer.getPathwayDetails');
+                            pathwayResult = await commandHandler(demo.searchConfig);
+                        } else if (keggPlugin._instance && typeof keggPlugin._instance.getPathwayDetails === 'function') {
+                            log('  Using plugin instance method directly', 'info');
+                            pathwayResult = await keggPlugin._instance.getPathwayDetails(demo.searchConfig);
+                        } else {
+                            const pluginInstance = keggPlugin._instance || keggPlugin.instance || keggPlugin;
+                            if (pluginInstance && typeof pluginInstance.getPathwayDetails === 'function') {
+                                log('  Using fallback plugin instance', 'info');
+                                pathwayResult = await pluginInstance.getPathwayDetails(demo.searchConfig);
+                            } else {
+                                throw new Error('KEGG getPathwayDetails method not accessible');
+                            }
+                        }
+                        
+                        if (!pathwayResult || !pathwayResult.success) {
+                            throw new Error('KEGG API search failed');
+                        }
+                        
+                        data = pathwayResult.data;
+                        log('✅ Real-time data retrieved from KEGG database', 'success');
+                        log('  Nodes: ' + (data.nodes ? data.nodes.length : 'N/A'), 'info');
+                        log('  Edges: ' + (data.edges ? data.edges.length : 'N/A'), 'info');
+                    }
+                    // Check if this is a real-time EcoCyc pathway search
+                    else if (demo.isRealTimeSearch && demo.searchConfig && '${pluginId}' === 'ecocyc-pathway-analyzer') {
+                        log('🔍 Fetching real-time data from BioCyc database...', 'info');
+                        log('  Pathway ID: ' + demo.searchConfig.pathwayId, 'info');
+                        log('  Organism: ' + demo.searchConfig.organism, 'info');
+                        log('  Pathway Name: ' + demo.searchConfig.pathwayName, 'info');
+                        
+                        const pluginManager = window.opener?.pluginManager || window.pluginManager || window.opener?.pluginManagerV2 || window.pluginManagerV2;
+                        if (!pluginManager) {
+                            throw new Error('Plugin manager not available');
+                        }
+                        
+                        log('✅ Plugin manager found', 'success');
+                        
+                        const ecocycPlugin = pluginManager.pluginRegistry.visualization.get('ecocyc-pathway-analyzer');
+                        if (!ecocycPlugin) {
+                            throw new Error('EcoCyc Pathway Analyzer plugin not found');
+                        }
+                        
+                        log('✅ EcoCyc plugin found in registry', 'success');
+                        log('📡 Calling BioCyc API...', 'info');
+                        
+                        let pathwayResult = null;
+                        
+                        if (ecocycPlugin._commandHandlers && ecocycPlugin._commandHandlers.has('ecocyc-analyzer.getPathwayDetails')) {
+                            log('  Using stored command handler', 'info');
+                            const commandHandler = ecocycPlugin._commandHandlers.get('ecocyc-analyzer.getPathwayDetails');
+                            pathwayResult = await commandHandler(demo.searchConfig);
+                        } else if (ecocycPlugin._instance && typeof ecocycPlugin._instance.getPathwayDetails === 'function') {
+                            log('  Using plugin instance method directly', 'info');
+                            pathwayResult = await ecocycPlugin._instance.getPathwayDetails(demo.searchConfig);
+                        } else {
+                            const pluginInstance = ecocycPlugin._instance || ecocycPlugin.instance || ecocycPlugin;
+                            if (pluginInstance && typeof pluginInstance.getPathwayDetails === 'function') {
+                                log('  Using fallback plugin instance', 'info');
+                                pathwayResult = await pluginInstance.getPathwayDetails(demo.searchConfig);
+                            } else {
+                                throw new Error('EcoCyc getPathwayDetails method not accessible');
+                            }
+                        }
+                        
+                        if (!pathwayResult || !pathwayResult.success) {
+                            throw new Error('BioCyc API search failed');
+                        }
+                        
+                        data = pathwayResult.data;
+                        log('✅ Real-time data retrieved from BioCyc database', 'success');
+                        log('  Nodes: ' + (data.nodes ? data.nodes.length : 'N/A'), 'info');
+                        log('  Edges: ' + (data.edges ? data.edges.length : 'N/A'), 'info');
                     } else {
                         // Get static demo data
                         data = demo.generator ? demo.generator() : demo.data;

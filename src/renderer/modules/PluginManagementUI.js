@@ -881,9 +881,11 @@ class PluginManagementUI {
     /**
      * Show enhanced plugin details with comprehensive information
      */
-    showPluginDetails(pluginId, type) {
+    async showPluginDetails(pluginId, type) {
         let plugin;
+        let isInstalled = false;
         
+        // Try to get from installed plugins first
         if (this.pluginManager.pluginRegistry) {
             // PluginManagerV2
             if (type === 'function') {
@@ -891,19 +893,45 @@ class PluginManagementUI {
             } else {
                 plugin = this.pluginManager.pluginRegistry.visualization.get(pluginId);
             }
+            isInstalled = !!plugin;
         } else {
             // Legacy PluginManager
             plugin = type === 'function' ? 
                 this.pluginManager.functionPlugins.get(pluginId) :
                 this.pluginManager.visualizationPlugins.get(pluginId);
+            isInstalled = !!plugin;
         }
 
-        if (!plugin) return;
+        // If not installed, fetch from marketplace
+        if (!plugin && this.pluginManager.marketplace) {
+            try {
+                console.log(`📥 Fetching plugin details from marketplace: ${pluginId}`);
+                const marketplacePlugin = await this.pluginManager.marketplace.findPlugin(pluginId);
+                if (marketplacePlugin) {
+                    plugin = marketplacePlugin;
+                    isInstalled = false;
+                    console.log(`✅ Got plugin details from marketplace`);
+                } else {
+                    console.error(`❌ Plugin ${pluginId} not found in marketplace`);
+                    this.showMessage(`Plugin "${pluginId}" not found`, 'error');
+                    return;
+                }
+            } catch (error) {
+                console.error(`❌ Failed to fetch plugin from marketplace:`, error);
+                this.showMessage(`Failed to load plugin details: ${error.message}`, 'error');
+                return;
+            }
+        }
 
-        // Get plugin metadata and stats
-        const metadata = this.pluginManager.pluginMetadata?.get(pluginId) || {};
-        const usageStats = this.pluginManager.metrics?.pluginUsageStats?.get(pluginId) || {};
-        const installPath = this.pluginManager.pathResolver?.getInstallPath(pluginId) || 'Unknown';
+        if (!plugin) {
+            this.showMessage(`Plugin "${pluginId}" not found`, 'error');
+            return;
+        }
+
+        // Get plugin metadata and stats (only for installed plugins)
+        const metadata = isInstalled ? (this.pluginManager.pluginMetadata?.get(pluginId) || {}) : {};
+        const usageStats = isInstalled ? (this.pluginManager.metrics?.pluginUsageStats?.get(pluginId) || {}) : {};
+        const installPath = isInstalled ? (this.pluginManager.pathResolver?.getInstallPath(pluginId) || 'Not installed') : 'Not installed';
         
         // Build comprehensive details HTML
         const detailsWindow = window.open('', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
@@ -921,10 +949,10 @@ class PluginManagementUI {
             </head>
             <body>
                 <div class="details-container">
-                    ${this.generatePluginDetailsContent(plugin, type, metadata, usageStats, installPath)}
+                    ${this.generatePluginDetailsContent(plugin, type, metadata, usageStats, installPath, isInstalled)}
                 </div>
                 <script>
-                    ${this.generatePluginDetailsScript(pluginId, plugin, type)}
+                    ${this.generatePluginDetailsScript(pluginId, plugin, type, isInstalled)}
                 </script>
             </body>
             </html>

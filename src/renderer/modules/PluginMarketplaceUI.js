@@ -349,6 +349,18 @@ class PluginMarketplaceUI {
                 color: #333;
             }
 
+            /* Pulse animation for update badge */
+            @keyframes pulse {
+                0%, 100% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+                50% {
+                    opacity: 0.8;
+                    transform: scale(1.05);
+                }
+            }
+
             .connection-info {
                 display: flex;
                 gap: 15px;
@@ -508,15 +520,44 @@ class PluginMarketplaceUI {
                 return;
             }
 
-            const pluginCards = plugins.map(plugin => `
-                <div style="border: 1px solid #ddd; border-radius: 6px; padding: 15px; 
-                           margin-bottom: 15px; background: #f9f9f9;">
+            const pluginCards = plugins.map(plugin => {
+                // Check if plugin is installed and get version info
+                const installInfo = this.getPluginInstallInfo(plugin.id, plugin.version);
+                const isInstalled = installInfo.isInstalled;
+                const installedVersion = installInfo.version;
+                const needsUpdate = installInfo.needsUpdate;
+                const updateAvailable = needsUpdate && plugin.version;
+                
+                return `
+                <div style="border: 1px solid ${isInstalled ? '#4CAF50' : '#ddd'}; border-radius: 6px; padding: 15px; 
+                           margin-bottom: 15px; background: ${isInstalled ? '#f1f8f4' : '#f9f9f9'}; position: relative;">
+                    ${isInstalled ? `
+                        <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; align-items: center;">
+                            <span style="background: #4CAF50; color: white; padding: 3px 10px; 
+                                       border-radius: 12px; font-size: 11px; font-weight: 600;">
+                                ✓ INSTALLED
+                            </span>
+                            ${needsUpdate ? `
+                                <span style="background: #FF9800; color: white; padding: 3px 10px; 
+                                           border-radius: 12px; font-size: 11px; font-weight: 600; animation: pulse 2s infinite;">
+                                    ⚡ UPDATE AVAILABLE
+                                </span>
+                            ` : ''}
+                        </div>
+                    ` : ''}
                     <div style="display: flex; justify-content: space-between; align-items: start;">
-                        <div style="flex: 1;">
-                            <h4 style="margin: 0 0 5px 0;">${plugin.name} v${plugin.version}</h4>
+                        <div style="flex: 1; ${isInstalled ? 'padding-right: 140px;' : ''}">
+                            <h4 style="margin: 0 0 5px 0;">
+                                ${plugin.name} v${plugin.version}
+                                ${isInstalled && installedVersion ? `
+                                    <span style="color: #666; font-weight: normal; font-size: 12px;">
+                                        (installed: v${installedVersion})
+                                    </span>
+                                ` : ''}
+                            </h4>
                             <p style="margin: 0 0 5px 0; color: #666; font-size: 13px;">by ${plugin.author}</p>
                             <p style="margin: 0 0 10px 0; color: #333;">${plugin.description}</p>
-                            <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                            <div style="display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap;">
                                 <span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; 
                                            border-radius: 12px; font-size: 11px;">${plugin.category}</span>
                                 <span style="background: #f3e5f5; color: #7b1fa2; padding: 2px 8px; 
@@ -532,21 +573,60 @@ class PluginMarketplaceUI {
                                 ${plugin.size ? ` | Size: ${this.formatFileSize(plugin.size)}` : ''}
                             </div>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 5px; margin-left: 15px;">
-                            <button onclick="pluginMarketplaceUI.installPlugin('${plugin.id}')"
-                                    style="background: #4CAF50; color: white; border: none; 
-                                           padding: 8px 16px; border-radius: 4px; cursor: pointer; white-space: nowrap;">
-                                Install
-                            </button>
+                        <div style="display: flex; flex-direction: column; gap: 5px; margin-left: 15px; min-width: 120px;">
+                            ${isInstalled && needsUpdate ? `
+                                <button onclick="pluginMarketplaceUI.updatePlugin('${plugin.id}')"
+                                        style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); 
+                                               color: white; border: none; 
+                                               padding: 10px 16px; border-radius: 6px; cursor: pointer; 
+                                               white-space: nowrap; font-weight: 600; font-size: 13px;
+                                               box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+                                               transition: all 0.2s ease;"
+                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(255, 152, 0, 0.4)';"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(255, 152, 0, 0.3)';">
+                                    ⚡ Update to v${plugin.version}
+                                </button>
+                            ` : isInstalled ? `
+                                <button style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); 
+                                               color: white; border: none; 
+                                               padding: 10px 16px; border-radius: 6px; cursor: default; 
+                                               white-space: nowrap; font-weight: 600; font-size: 13px;
+                                               box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+                                               display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="white"/>
+                                    </svg>
+                                    Installed
+                                </button>
+                            ` : `
+                                <button onclick="pluginMarketplaceUI.installPlugin('${plugin.id}')"
+                                        style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); 
+                                               color: white; border: none; 
+                                               padding: 10px 16px; border-radius: 6px; cursor: pointer; 
+                                               white-space: nowrap; font-weight: 600; font-size: 13px;
+                                               box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+                                               transition: all 0.2s ease;"
+                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(76, 175, 80, 0.4)';"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(76, 175, 80, 0.3)';">
+                                    📥 Install
+                                </button>
+                            `}
                             <button onclick="pluginMarketplaceUI.viewPluginDetails('${plugin.id}')"
-                                    style="background: #2196F3; color: white; border: none; 
-                                           padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                    style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); 
+                                           color: white; border: none; 
+                                           padding: 8px 12px; border-radius: 6px; cursor: pointer; 
+                                           font-size: 12px; font-weight: 500;
+                                           box-shadow: 0 2px 6px rgba(33, 150, 243, 0.25);
+                                           transition: all 0.2s ease;"
+                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 10px rgba(33, 150, 243, 0.35)';"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 6px rgba(33, 150, 243, 0.25)';">
                                 Details
                             </button>
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
             pluginList.innerHTML = pluginCards;
             document.getElementById('marketplace-status').textContent = `${plugins.length} plugins loaded`;
@@ -588,6 +668,103 @@ class PluginMarketplaceUI {
         } catch (error) {
             statusElement.textContent = '🔴 Error';
             statusElement.style.color = '#f44336';
+        }
+    }
+
+    /**
+     * Get plugin installation information
+     * @param {string} pluginId - Plugin identifier  
+     * @param {string} marketVersion - Marketplace version for comparison (optional)
+     * @returns {Object} Installation info {isInstalled, version, needsUpdate}
+     */
+    getPluginInstallInfo(pluginId, marketVersion = null) {
+        const result = {
+            isInstalled: false,
+            version: null,
+            needsUpdate: false
+        };
+
+        if (!this.marketplace || !this.marketplace.pluginManager) {
+            return result;
+        }
+
+        const pluginManager = this.marketplace.pluginManager;
+        
+        // Check in visualization registry
+        let installedPlugin = pluginManager.pluginRegistry?.visualization?.get(pluginId);
+        
+        // Check in function registry if not found
+        if (!installedPlugin) {
+            installedPlugin = pluginManager.pluginRegistry?.function?.get(pluginId);
+        }
+
+        if (installedPlugin) {
+            result.isInstalled = true;
+            result.version = installedPlugin.version || '1.0.0';
+            
+            // Check if update is available
+            if (marketVersion) {
+                result.needsUpdate = this.compareVersions(result.version, marketVersion);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Compare versions to check if update is needed
+     * @param {string} installedVersion - Currently installed version
+     * @param {string} marketVersion - Available marketplace version
+     * @returns {boolean} True if marketplace version is newer
+     */
+    compareVersions(installedVersion, marketVersion) {
+        if (!installedVersion || !marketVersion) return false;
+
+        const installed = installedVersion.split('.').map(Number);
+        const market = marketVersion.split('.').map(Number);
+
+        for (let i = 0; i < Math.max(installed.length, market.length); i++) {
+            const installedPart = installed[i] || 0;
+            const marketPart = market[i] || 0;
+
+            if (marketPart > installedPart) return true;
+            if (marketPart < installedPart) return false;
+        }
+
+        return false; // Versions are equal
+    }
+
+    /**
+     * Update an installed plugin to the latest version
+     */
+    async updatePlugin(pluginId) {
+        try {
+            console.log(`🔄 Updating plugin: ${pluginId}`);
+            document.getElementById('marketplace-status').textContent = `Updating ${pluginId}...`;
+            
+            // Uninstall current version first
+            const uninstallResult = await this.marketplace.uninstallPlugin(pluginId);
+            if (!uninstallResult.success) {
+                throw new Error(uninstallResult.error || 'Failed to uninstall old version');
+            }
+            
+            console.log(`✅ Old version uninstalled`);
+            
+            // Install new version
+            const installResult = await this.marketplace.installPlugin(pluginId);
+            
+            if (installResult.success) {
+                alert(`✅ Plugin ${pluginId} updated successfully to v${installResult.plugin?.version || 'latest'}!`);
+                await this.loadPluginList(); // Refresh to show updated status
+                console.log(`✅ Plugin ${pluginId} updated successfully`);
+            } else {
+                throw new Error(installResult.error || 'Installation failed');
+            }
+        } catch (error) {
+            console.error(`❌ Failed to update plugin ${pluginId}:`, error);
+            alert(`❌ Failed to update ${pluginId}: ${error.message}`);
+        } finally {
+            document.getElementById('marketplace-status').textContent = 'Ready';
         }
     }
 
@@ -687,42 +864,112 @@ class PluginMarketplaceUI {
         try {
             console.log(`📋 Fetching details for plugin: ${pluginId}`);
             
-            // Fetch plugin data from marketplace or installed registry
             let pluginData = null;
+            let source = 'unknown';
             
-            // First check if plugin is installed (has full manifest)
-            if (this.marketplace.installedPlugins.has(pluginId)) {
-                const installed = this.marketplace.installedPlugins.get(pluginId);
-                pluginData = installed.manifest || installed;
-                console.log('✅ Found plugin in installed registry:', pluginData);
+            // PRIORITY 1: Check plugin manager registry FIRST (for installed plugins)
+            // This is the most reliable source for installed plugins
+            if (this.marketplace && this.marketplace.pluginManager) {
+                const registry = this.marketplace.pluginManager.pluginRegistry;
+                console.log('🔍 Checking plugin manager registry...', {
+                    hasRegistry: !!registry,
+                    hasVisualization: !!registry?.visualization,
+                    hasFunction: !!registry?.function,
+                    vizSize: registry?.visualization?.size || 0,
+                    funcSize: registry?.function?.size || 0
+                });
+                
+                if (registry) {
+                    const vizPlugin = registry.visualization?.get(pluginId);
+                    const funcPlugin = registry.function?.get(pluginId);
+                    pluginData = vizPlugin || funcPlugin;
+                    
+                    if (pluginData) {
+                        source = 'plugin-manager-registry';
+                        console.log(`✅ Found plugin in ${vizPlugin ? 'visualization' : 'function'} registry:`, {
+                            id: pluginData.id,
+                            name: pluginData.name,
+                            version: pluginData.version,
+                            hasExecutor: !!pluginData.executor,
+                            hasCommands: !!pluginData.contributes?.commands
+                        });
+                    }
+                }
             }
             
-            // If not found in installed, search marketplace
+            // PRIORITY 2: Check installed plugins map (marketplace's installed registry)
+            if (!pluginData && this.marketplace && this.marketplace.installedPlugins) {
+                console.log('🔍 Checking marketplace installed plugins...', {
+                    hasInstalledPlugins: !!this.marketplace.installedPlugins,
+                    installedCount: this.marketplace.installedPlugins?.size || 0,
+                    installedIds: this.marketplace.installedPlugins ? Array.from(this.marketplace.installedPlugins.keys()) : []
+                });
+                
+                if (this.marketplace.installedPlugins.has(pluginId)) {
+                    const installed = this.marketplace.installedPlugins.get(pluginId);
+                    pluginData = installed.manifest || installed;
+                    source = 'marketplace-installed';
+                    console.log('✅ Found plugin in marketplace installed registry:', pluginData);
+                }
+            }
+            
+            // PRIORITY 3: Search marketplace API (for available but not installed plugins)
+            if (!pluginData && this.marketplace) {
+                console.log('🔍 Searching marketplace API...');
+                try {
+                    const searchResults = await this.marketplace.searchPlugins(pluginId);
+                    console.log('📡 Marketplace search results:', {
+                        resultCount: searchResults?.length || 0,
+                        results: searchResults
+                    });
+                    
+                    if (searchResults && searchResults.length > 0) {
+                        pluginData = searchResults.find(p => p.id === pluginId);
+                        if (pluginData) {
+                            source = 'marketplace-api';
+                            console.log('✅ Found plugin via marketplace API:', pluginData);
+                        }
+                    }
+                } catch (searchError) {
+                    console.warn('⚠️ Marketplace API search failed:', searchError);
+                }
+            }
+            
+            // Final check: If still not found, log comprehensive debug info
             if (!pluginData) {
-                const searchResults = await this.marketplace.searchPlugins(pluginId);
-                pluginData = searchResults.find(p => p.id === pluginId);
-                console.log('✅ Found plugin in marketplace:', pluginData);
-            }
-            
-            // Also get runtime plugin instance if registered
-            const runtimePlugin = this.marketplace.pluginManager?.getPlugin(pluginId);
-            if (runtimePlugin) {
-                console.log('✅ Found runtime plugin instance');
-                // Merge runtime data with stored data
-                pluginData = { ...pluginData, ...runtimePlugin };
-            }
-            
-            if (!pluginData) {
-                alert(`❌ Plugin ${pluginId} not found`);
+                console.error(`❌ Plugin ${pluginId} not found in any source`);
+                console.error('🔍 Debug info:', {
+                    hasMarketplace: !!this.marketplace,
+                    hasPluginManager: !!this.marketplace?.pluginManager,
+                    hasRegistry: !!this.marketplace?.pluginManager?.pluginRegistry,
+                    vizPlugins: this.marketplace?.pluginManager?.pluginRegistry?.visualization ? 
+                        Array.from(this.marketplace.pluginManager.pluginRegistry.visualization.keys()) : [],
+                    funcPlugins: this.marketplace?.pluginManager?.pluginRegistry?.function ? 
+                        Array.from(this.marketplace.pluginManager.pluginRegistry.function.keys()) : [],
+                    installedPlugins: this.marketplace?.installedPlugins ? 
+                        Array.from(this.marketplace.installedPlugins.keys()) : []
+                });
+                
+                alert(`❌ Plugin "${pluginId}" not found
+
+The plugin may not be properly registered. Debug info has been logged to console.
+
+Try:
+1. Refresh the plugin list
+2. Restart the application
+3. Check if the marketplace server is running`);
                 return;
             }
+            
+            console.log(`✅ Plugin data loaded from: ${source}`);
             
             // Show details modal
             this.showPluginDetailsModal(pluginData);
             
         } catch (error) {
             console.error('❌ Failed to fetch plugin details:', error);
-            alert(`Failed to load plugin details: ${error.message}`);
+            console.error('❌ Error stack:', error.stack);
+            alert(`Failed to load plugin details: ${error.message}\n\nPlease check the console for detailed error information.`);
         }
     }
     
