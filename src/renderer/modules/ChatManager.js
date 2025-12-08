@@ -395,7 +395,6 @@ class ChatManager {
             
             // Load memory system modules
             await this.loadScript('modules/MemorySystem.js');
-            await this.loadScript('modules/MemoryLayers/ShortTermMemory.js');
             
             // Initialize Multi-Agent System
             if (typeof MultiAgentSystem !== 'undefined') {
