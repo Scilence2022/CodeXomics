@@ -921,24 +921,45 @@ class PluginRealTestDemonstrator {
                         
                         log('✅ KEGG plugin found in registry', 'success');
                         log('📡 Calling KEGG API...', 'info');
+                        log('  API Endpoint: https://rest.kegg.jp', 'info');
+                        log('  Pathway ID: ' + demo.searchConfig.pathwayId, 'info');
                         
                         let pathwayResult = null;
                         
-                        if (keggPlugin._commandHandlers && keggPlugin._commandHandlers.has('kegg-viewer.getPathwayDetails')) {
-                            log('  Using stored command handler', 'info');
-                            const commandHandler = keggPlugin._commandHandlers.get('kegg-viewer.getPathwayDetails');
-                            pathwayResult = await commandHandler(demo.searchConfig);
-                        } else if (keggPlugin._instance && typeof keggPlugin._instance.getPathwayDetails === 'function') {
-                            log('  Using plugin instance method directly', 'info');
-                            pathwayResult = await keggPlugin._instance.getPathwayDetails(demo.searchConfig);
-                        } else {
-                            const pluginInstance = keggPlugin._instance || keggPlugin.instance || keggPlugin;
-                            if (pluginInstance && typeof pluginInstance.getPathwayDetails === 'function') {
-                                log('  Using fallback plugin instance', 'info');
-                                pathwayResult = await pluginInstance.getPathwayDetails(demo.searchConfig);
+                        try {
+                            if (keggPlugin._commandHandlers && keggPlugin._commandHandlers.has('kegg-viewer.getPathwayDetails')) {
+                                log('  Using stored command handler', 'info');
+                                const commandHandler = keggPlugin._commandHandlers.get('kegg-viewer.getPathwayDetails');
+                                pathwayResult = await commandHandler(demo.searchConfig);
+                            } else if (keggPlugin._instance && typeof keggPlugin._instance.getPathwayDetails === 'function') {
+                                log('  Using plugin instance method directly', 'info');
+                                pathwayResult = await keggPlugin._instance.getPathwayDetails(demo.searchConfig);
                             } else {
-                                throw new Error('KEGG getPathwayDetails method not accessible');
+                                const pluginInstance = keggPlugin._instance || keggPlugin.instance || keggPlugin;
+                                if (pluginInstance && typeof pluginInstance.getPathwayDetails === 'function') {
+                                    log('  Using fallback plugin instance', 'info');
+                                    pathwayResult = await pluginInstance.getPathwayDetails(demo.searchConfig);
+                                } else {
+                                    throw new Error('KEGG getPathwayDetails method not accessible');
+                                }
                             }
+                        } catch (apiError) {
+                            // Provide detailed error information
+                            log('❌ KEGG API call failed', 'error');
+                            log('  Error type: ' + apiError.name, 'error');
+                            log('  Error message: ' + apiError.message, 'error');
+                            
+                            if (apiError.message.includes('Failed to fetch')) {
+                                throw new Error(
+                                    'Failed to fetch data from KEGG REST API. ' +
+                                    'This may be due to: ' +
+                                    '(1) CORS policy blocking the request, ' +
+                                    '(2) Network connectivity issues, or ' +
+                                    '(3) KEGG API temporarily unavailable. ' +
+                                    'URL: https://rest.kegg.jp/get/' + demo.searchConfig.pathwayId
+                                );
+                            }
+                            throw apiError;
                         }
                         
                         if (!pathwayResult || !pathwayResult.success) {
@@ -964,24 +985,45 @@ class PluginRealTestDemonstrator {
                         
                         log('✅ EcoCyc plugin found in registry', 'success');
                         log('📡 Calling BioCyc API...', 'info');
+                        log('  API Endpoint: https://websvc.biocyc.org', 'info');
+                        log('  Pathway ID: ' + demo.searchConfig.pathwayId, 'info');
                         
                         let pathwayResult = null;
                         
-                        if (ecocycPlugin._commandHandlers && ecocycPlugin._commandHandlers.has('ecocyc-analyzer.getPathwayDetails')) {
-                            log('  Using stored command handler', 'info');
-                            const commandHandler = ecocycPlugin._commandHandlers.get('ecocyc-analyzer.getPathwayDetails');
-                            pathwayResult = await commandHandler(demo.searchConfig);
-                        } else if (ecocycPlugin._instance && typeof ecocycPlugin._instance.getPathwayDetails === 'function') {
-                            log('  Using plugin instance method directly', 'info');
-                            pathwayResult = await ecocycPlugin._instance.getPathwayDetails(demo.searchConfig);
-                        } else {
-                            const pluginInstance = ecocycPlugin._instance || ecocycPlugin.instance || ecocycPlugin;
-                            if (pluginInstance && typeof pluginInstance.getPathwayDetails === 'function') {
-                                log('  Using fallback plugin instance', 'info');
-                                pathwayResult = await pluginInstance.getPathwayDetails(demo.searchConfig);
+                        try {
+                            if (ecocycPlugin._commandHandlers && ecocycPlugin._commandHandlers.has('ecocyc-analyzer.getPathwayDetails')) {
+                                log('  Using stored command handler', 'info');
+                                const commandHandler = ecocycPlugin._commandHandlers.get('ecocyc-analyzer.getPathwayDetails');
+                                pathwayResult = await commandHandler(demo.searchConfig);
+                            } else if (ecocycPlugin._instance && typeof ecocycPlugin._instance.getPathwayDetails === 'function') {
+                                log('  Using plugin instance method directly', 'info');
+                                pathwayResult = await ecocycPlugin._instance.getPathwayDetails(demo.searchConfig);
                             } else {
-                                throw new Error('EcoCyc getPathwayDetails method not accessible');
+                                const pluginInstance = ecocycPlugin._instance || ecocycPlugin.instance || ecocycPlugin;
+                                if (pluginInstance && typeof pluginInstance.getPathwayDetails === 'function') {
+                                    log('  Using fallback plugin instance', 'info');
+                                    pathwayResult = await pluginInstance.getPathwayDetails(demo.searchConfig);
+                                } else {
+                                    throw new Error('EcoCyc getPathwayDetails method not accessible');
+                                }
                             }
+                        } catch (apiError) {
+                            // Provide detailed error information
+                            log('❌ BioCyc API call failed', 'error');
+                            log('  Error type: ' + apiError.name, 'error');
+                            log('  Error message: ' + apiError.message, 'error');
+                            
+                            if (apiError.message.includes('Failed to fetch')) {
+                                throw new Error(
+                                    'Failed to fetch data from BioCyc API. ' +
+                                    'This may be due to: ' +
+                                    '(1) CORS policy blocking the request, ' +
+                                    '(2) Network connectivity issues, or ' +
+                                    '(3) BioCyc API temporarily unavailable. ' +
+                                    'Pathway: ' + demo.searchConfig.pathwayId
+                                );
+                            }
+                            throw apiError;
                         }
                         
                         if (!pathwayResult || !pathwayResult.success) {
