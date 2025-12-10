@@ -1,0 +1,83 @@
+name: blast_create_quick_db_for_current_genome
+version: 1.0.0
+description: Quickly create BLAST databases (both nucleotide and protein) for the currently loaded genome. Automatically associates databases with the genome for smart database selection.
+category: database
+keywords:
+  - blast
+  - database
+  - quick
+  - genome
+  - nucleotide
+  - protein
+  - create
+priority: 1
+execution:
+  type: built-in
+  timeout: 300000
+  retries: 1
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    createNucleotide:
+      type: boolean
+      description: Whether to create nucleotide database
+      default: true
+    createProtein:
+      type: boolean
+      description: Whether to create protein database (includes 6-frame translation)
+      default: true
+    genomeName:
+      type: string
+      description: Custom name for genome identification (optional, auto-detected if not provided)
+  required: []
+sample_usages:
+  - user_query: "Create BLAST databases for current genome"
+    tool_call: "blast_create_quick_db_for_current_genome()"
+    thought: "User wants to quickly create both nucleotide and protein databases for the currently loaded genome"
+    expected_result: "Successfully created nucleotide and protein databases associated with current genome"
+  - user_query: "Create only nucleotide database for current genome"
+    tool_call: "blast_create_quick_db_for_current_genome(createNucleotide=true, createProtein=false)"
+    thought: "User wants only nucleotide database for current genome"
+    expected_result: "Created nucleotide database for current genome"
+  - user_query: "Setup BLAST for this genome"
+    tool_call: "blast_create_quick_db_for_current_genome()"
+    thought: "User wants to prepare BLAST databases for the loaded genome"
+    expected_result: "Both nucleotide and protein databases created and associated"
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances:
+    - blast_search_local
+    - blast_list_databases
+  prerequisites:
+    - Genome must be loaded
+  follow_up:
+    - blast_search_local
+    - blast_list_databases
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - blast
+    - database
+    - quick-setup
+    - genome
+  complexity: simple
+  usage_pattern: frequent
+error_handling:
+  no_genome_loaded: "Returns error if no genome is currently loaded"
+  creation_failed: "Returns partial success if one database type fails"
+  insufficient_space: "Returns error if disk space is insufficient"
+returns:
+  success: boolean - Whether operation completed successfully
+  genomeId: string - Identifier of the genome
+  databases: object - Created databases information
+  databases.nucleotide: object - Nucleotide database details (if created)
+  databases.protein: object - Protein database details (if created)
+  messages: array - Status messages for each operation
+  timestamp: string - Operation completion timestamp
