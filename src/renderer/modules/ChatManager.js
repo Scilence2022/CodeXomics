@@ -1158,6 +1158,75 @@ class ChatManager {
     }
 
     /**
+     * Get list of loaded files - Built-in function tool
+     * Returns information about all currently loaded files in the genome browser
+     * @param {Object} parameters - Tool parameters (optional)
+     * @param {boolean} parameters.includeMetadata - Include detailed file metadata (default: true)
+     * @returns {Object} Loaded files list result
+     */
+    async getLoadedFilesList(parameters = {}) {
+        try {
+            const { includeMetadata = true } = parameters;
+            
+            // [ChatManager] Getting loaded files list
+            
+            if (!this.app) {
+                throw new Error('Application not available');
+            }
+            
+            // Get loaded files from genome browser
+            const loadedFiles = this.app.loadedFiles || [];
+            
+            // Format the file list
+            const filesList = loadedFiles.map(file => {
+                const baseInfo = {
+                    name: file.name,
+                    path: file.path,
+                    type: file.type
+                };
+                
+                if (includeMetadata) {
+                    return {
+                        ...baseInfo,
+                        size: file.size,
+                        sizeFormatted: file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
+                        loadedAt: file.loadedAt
+                    };
+                }
+                
+                return baseInfo;
+            });
+            
+            const result = {
+                success: true,
+                message: `Found ${filesList.length} loaded file(s)`,
+                filesCount: filesList.length,
+                files: filesList,
+                tool: 'get_loaded_files_list',
+                timestamp: new Date().toISOString()
+            };
+            
+            // [ChatManager] TOOL EXECUTED: get_loaded_files_list - Retrieved file list
+            
+            return result;
+            
+        } catch (error) {
+            // [ChatManager] Error getting loaded files list
+            
+            const errorResult = {
+                success: false,
+                error: error.message,
+                filesCount: 0,
+                files: [],
+                tool: 'get_loaded_files_list',
+                timestamp: new Date().toISOString()
+            };
+            
+            return errorResult;
+        }
+    }
+
+    /**
      * Set working directory - Built-in function tool
      * @param {Object} parameters - Tool parameters
      * @param {string} parameters.directory_path - Absolute or relative path to set as working directory

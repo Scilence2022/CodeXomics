@@ -61,6 +61,13 @@ class BuiltInToolsIntegration {
             priority: 1
         });
 
+        this.builtInToolsMap.set('get_loaded_files_list', {
+            method: 'getLoadedFilesList',
+            category: 'file_loading',
+            type: 'built-in',
+            priority: 1
+        });
+
         // Additional built-in tools can be added here
         this.builtInToolsMap.set('navigate_to_position', {
             method: 'navigateToPosition',
