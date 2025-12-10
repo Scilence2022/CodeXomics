@@ -17904,8 +17904,8 @@ ${this.getPluginSystemInfo()}`;
             }
             
             // 检查是否是内置本地函数 - 使用 FunctionCallsOrganizer 获取完整列表
-            if (this.functionCallsOrganizer) {
-                const category = this.functionCallsOrganizer.getFunctionCategory(toolName);
+            if (this.smartExecutor && this.smartExecutor.organizer) {
+                const category = this.smartExecutor.organizer.getFunctionCategory(toolName);
                 if (category) {
                     // Tool found in FunctionCallsOrganizer - it's a local/internal tool
                     return {
