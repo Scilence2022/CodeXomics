@@ -64,7 +64,8 @@ class FunctionCallsOrganizer {
                     'load_variant_file',
                     'load_reads_file',
                     'load_wig_tracks',
-                    'load_operon_file'
+                    'load_operon_file',
+                    'get_loaded_files_list'
                 ]
             },
             
