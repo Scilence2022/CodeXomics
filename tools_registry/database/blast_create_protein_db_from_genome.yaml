@@ -1,0 +1,53 @@
+name: blast_create_protein_db_from_genome
+version: 1.0.0
+description: Create BLAST protein database from loaded genome using 6-frame translation
+category: database
+keywords:
+  - blast
+  - database
+  - protein
+  - translation
+  - genome
+priority: 2
+execution:
+  type: built-in
+  timeout: 120000
+  retries: 1
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Chromosome name to translate
+    dbName:
+      type: string
+      description: Name for protein database (auto-generated if not provided)
+  required:
+    - chromosome
+sample_usages:
+  - user_query: "Create protein database from genome using all reading frames"
+    tool_call: "blast_create_protein_db_from_genome(chromosome='chr1')"
+    thought: "User wants 6-frame translation protein database"
+    expected_result: "Protein database created with all reading frames"
+relationships:
+  depends_on:
+    - get_genome_info
+    - translate_dna
+  enhances:
+    - blast_search_local
+  follow_up:
+    - blast_search_local
+metadata:
+  tags:
+    - blast
+    - protein
+    - translation
+  complexity: moderate
+error_handling:
+  no_genome: "Returns error if no genome loaded"
+returns:
+  success: boolean
+  database: object

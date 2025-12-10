@@ -1,0 +1,75 @@
+name: blast_create_database
+version: 1.0.0
+description: Create a new BLAST database from FASTA file for local searches
+category: database
+keywords:
+  - blast
+  - database
+  - create
+  - makeblastdb
+  - fasta
+priority: 2
+execution:
+  type: built-in
+  timeout: 120000
+  retries: 1
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    inputFile:
+      type: string
+      description: Path to FASTA file to create database from
+    dbName:
+      type: string
+      description: Name for the new database
+    dbType:
+      type: string
+      description: Database type
+      enum:
+        - nucl
+        - prot
+    title:
+      type: string
+      description: Human-readable database title
+    parseSeqids:
+      type: boolean
+      description: Parse sequence identifiers from FASTA headers
+      default: true
+    outputDir:
+      type: string
+      description: Directory to create database in (optional)
+  required:
+    - inputFile
+    - dbName
+    - dbType
+sample_usages:
+  - user_query: "Create a BLAST database from this FASTA file"
+    tool_call: "blast_create_database(inputFile='/path/to/sequences.fasta', dbName='my_db', dbType='nucl')"
+    thought: "User wants to build searchable database from sequence file"
+    expected_result: "New BLAST database created and ready for searches"
+  - user_query: "Make a protein database from my protein sequences"
+    tool_call: "blast_create_database(inputFile='/path/to/proteins.fa', dbName='protein_db', dbType='prot', title='My Proteins')"
+    thought: "User needs protein database for BLAST searches"
+    expected_result: "Protein database created successfully"
+relationships:
+  enhances:
+    - blast_search_local
+  follow_up:
+    - blast_list_databases
+    - blast_search_local
+metadata:
+  tags:
+    - blast
+    - database
+    - setup
+  complexity: simple
+error_handling:
+  file_not_found: "Returns error if input FASTA file doesn't exist"
+  invalid_format: "Returns error if file is not valid FASTA format"
+returns:
+  success: boolean
+  database: object - Database information
+  message: string

@@ -1,0 +1,63 @@
+name: blast_filter_results
+version: 1.0.0
+description: Filter BLAST search results by identity, E-value, coverage, or hit count
+category: data_management
+keywords:
+  - blast
+  - filter
+  - results
+  - quality
+priority: 2
+execution:
+  type: built-in
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    results:
+      type: object
+      description: BLAST results object to filter
+    minIdentity:
+      type: number
+      description: Minimum percent identity (0-100)
+    maxEvalue:
+      type: number
+      description: Maximum E-value threshold
+    minCoverage:
+      type: number
+      description: Minimum query coverage (0-100)
+    maxHits:
+      type: integer
+      description: Maximum number of hits to keep
+  required:
+    - results
+sample_usages:
+  - user_query: "Show only BLAST hits with >95% identity"
+    tool_call: "blast_filter_results(results=<blast_results>, minIdentity=95)"
+    thought: "User wants highly similar matches only"
+    expected_result: "Filtered results with identity ≥95%"
+  - user_query: "Filter BLAST results to top 10 hits with E-value < 1e-50"
+    tool_call: "blast_filter_results(results=<blast_results>, maxEvalue=1e-50, maxHits=10)"
+    thought: "User wants significant hits only"
+    expected_result: "Top 10 most significant hits"
+relationships:
+  depends_on:
+    - blast_search_local
+    - blast_search_online
+  follow_up:
+    - blast_export_results
+metadata:
+  tags:
+    - blast
+    - filter
+    - analysis
+  complexity: simple
+returns:
+  success: boolean
+  originalHits: integer
+  filteredHits: integer
+  results: object

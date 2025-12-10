@@ -1,0 +1,85 @@
+name: blast_search_local
+version: 1.0.0
+description: Perform BLAST search using local BLAST+ installation and local databases
+category: external_apis
+keywords:
+  - blast
+  - local
+  - search
+  - database
+  - offline
+priority: 1
+execution:
+  type: built-in
+  timeout: 60000
+  retries: 1
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    sequence:
+      type: string
+      description: Query sequence to search
+    blastType:
+      type: string
+      description: Type of BLAST search
+      enum:
+        - blastn
+        - blastp
+        - blastx
+        - tblastn
+        - tblastx
+    database:
+      type: string
+      description: Local database name to search against
+    evalue:
+      type: string
+      description: E-value threshold
+      default: "0.01"
+    maxTargets:
+      type: integer
+      description: Maximum number of hits to return
+      default: 50
+    wordSize:
+      type: string
+      description: Word size for blastn searches
+      default: "11"
+    matrix:
+      type: string
+      description: Scoring matrix for blastp searches
+      default: "BLOSUM62"
+  required:
+    - sequence
+    - blastType
+    - database
+sample_usages:
+  - user_query: "Search this sequence in my local genome database"
+    tool_call: "blast_search_local(sequence='ATGC...', blastType='blastn', database='my_genome_db')"
+    thought: "User wants to search against locally created database"
+    expected_result: "BLAST results from local database search"
+relationships:
+  depends_on:
+    - blast_validate_database
+  enhances:
+    - blast_create_database
+  alternatives:
+    - blast_search_online
+  follow_up:
+    - blast_filter_results
+metadata:
+  tags:
+    - blast
+    - local
+    - offline
+  complexity: moderate
+error_handling:
+  database_not_found: "Returns error if local database doesn't exist"
+  blast_not_installed: "Returns error if BLAST+ is not installed"
+returns:
+  success: boolean
+  source: string - "Local BLAST+"
+  isRealResults: boolean
+  results: object
+  databasePath: string

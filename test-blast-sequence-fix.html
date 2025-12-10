@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLAST Sequence Tool Fix Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px 10px 0;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔬 BLAST Sequence Tool Fix Verification</h1>
+        
+        <div class="test-section">
+            <h2>📋 Test Scenario</h2>
+            <p><strong>Issue:</strong> blast_sequence tool fails with "Unknown tool" error when no MCP server is connected</p>
+            <p><strong>Expected Behavior:</strong> Clear error message indicating MCP server is required</p>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Test Execution</h2>
+            <button onclick="runTest()">Run Fix Verification Test</button>
+            <button onclick="clearResults()">Clear Results</button>
+            <div id="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Expected Fix Details</h2>
+            <ul>
+                <li>Tool definition exists in YAML registry: <code>/tools_registry/external_apis/blast_sequence.yaml</code></li>
+                <li>Execution type: <code>server</code> (requires MCP connection)</li>
+                <li>Category: <code>external_apis</code></li>
+                <li>Network required: <code>true</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '';
+        }
+
+        async function runTest() {
+            clearResults();
+            addResult('🔄 Starting test execution...', 'info');
+
+            try {
+                // Test 1: Check if Dynamic Tools Registry is available
+                addResult('<strong>Test 1:</strong> Checking Dynamic Tools Registry availability...', 'info');
+                
+                if (!window.chatManager) {
+                    addResult('❌ ChatManager not available. Please ensure the application is fully loaded.', 'error');
+                    return;
+                }
+
+                if (!window.chatManager.dynamicToolsEnabled) {
+                    addResult('⚠️ Dynamic Tools Registry is not enabled.', 'error');
+                    return;
+                }
+
+                if (!window.chatManager.dynamicTools) {
+                    addResult('❌ Dynamic Tools instance not initialized.', 'error');
+                    return;
+                }
+
+                addResult('✅ Dynamic Tools Registry is available', 'success');
+
+                // Test 2: Check if blast_sequence is in registry
+                addResult('<strong>Test 2:</strong> Checking blast_sequence tool definition...', 'info');
+                
+                try {
+                    const toolDef = await window.chatManager.dynamicTools.registryManager.getToolDefinition('blast_sequence');
+                    
+                    if (!toolDef) {
+                        addResult('❌ blast_sequence tool not found in registry', 'error');
+                        return;
+                    }
+
+                    addResult('✅ blast_sequence found in registry', 'success');
+                    addResult(`<pre>${JSON.stringify({
+                        name: toolDef.name,
+                        category: toolDef.category,
+                        execution_type: toolDef.execution?.type,
+                        requires_network: toolDef.execution?.requires_network,
+                        description: toolDef.description
+                    }, null, 2)}</pre>`, 'info');
+
+                } catch (registryError) {
+                    addResult(`❌ Error retrieving tool definition: ${registryError.message}`, 'error');
+                    return;
+                }
+
+                // Test 3: Check MCP server status
+                addResult('<strong>Test 3:</strong> Checking MCP server availability...', 'info');
+                
+                const mcpTools = window.chatManager.mcpServerManager.getAllAvailableTools();
+                addResult(`📊 MCP tools available: ${mcpTools.length}`, 'info');
+                
+                const blastToolInMCP = mcpTools.find(t => t.name === 'blast_sequence');
+                if (blastToolInMCP) {
+                    addResult('✅ blast_sequence is available via MCP server', 'success');
+                } else {
+                    addResult('⚠️ blast_sequence is NOT available via MCP (expected if no server connected)', 'info');
+                }
+
+                // Test 4: Simulate tool execution (will trigger the fix)
+                addResult('<strong>Test 4:</strong> Testing error handling...', 'info');
+                
+                try {
+                    const result = await window.chatManager.executeToolByName('blast_sequence', {
+                        clientId: 'test',
+                        sequence: 'ATGC',
+                        blastType: 'blastn',
+                        database: 'nt'
+                    });
+                    
+                    addResult('✅ Tool executed successfully (MCP server is connected)', 'success');
+                    addResult(`<pre>${JSON.stringify(result, null, 2)}</pre>`, 'info');
+                    
+                } catch (error) {
+                    // This is the expected behavior when no MCP server is connected
+                    if (error.message.includes('requires an MCP server connection')) {
+                        addResult('✅ <strong>FIX VERIFIED!</strong> Tool now provides clear MCP requirement message:', 'success');
+                        addResult(`<pre>${error.message}</pre>`, 'success');
+                    } else if (error.message.includes('Unknown tool')) {
+                        addResult('❌ <strong>FIX NOT APPLIED:</strong> Still showing "Unknown tool" error', 'error');
+                        addResult(`<pre>${error.message}</pre>`, 'error');
+                    } else {
+                        addResult(`⚠️ Different error encountered: ${error.message}`, 'info');
+                    }
+                }
+
+                addResult('<strong>✅ Test Complete</strong>', 'success');
+
+            } catch (error) {
+                addResult(`❌ Test failed with error: ${error.message}`, 'error');
+                console.error('Test error:', error);
+            }
+        }
+
+        // Auto-run test when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                addResult('ℹ️ Click "Run Fix Verification Test" to start testing', 'info');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

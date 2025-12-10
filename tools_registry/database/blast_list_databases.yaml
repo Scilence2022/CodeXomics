@@ -1,0 +1,61 @@
+name: blast_list_databases
+version: 1.0.0
+description: List all available BLAST databases (online, local, and custom)
+category: database
+keywords:
+  - blast
+  - database
+  - list
+  - inventory
+priority: 2
+execution:
+  type: built-in
+  timeout: 5000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    includeOnline:
+      type: boolean
+      description: Include NCBI online databases
+      default: true
+    includeLocal:
+      type: boolean
+      description: Include local BLAST+ databases
+      default: true
+    includeCustom:
+      type: boolean
+      description: Include custom created databases
+      default: true
+sample_usages:
+  - user_query: "What BLAST databases are available?"
+    tool_call: "blast_list_databases()"
+    thought: "User wants to see all available databases"
+    expected_result: "Complete list of online, local, and custom databases"
+  - user_query: "Show me only local BLAST databases"
+    tool_call: "blast_list_databases(includeOnline=false, includeLocal=true, includeCustom=false)"
+    thought: "User wants to see only locally installed databases"
+    expected_result: "List of local databases only"
+relationships:
+  enhances:
+    - blast_search_local
+    - blast_search_online
+  follow_up:
+    - blast_database_info
+    - blast_search_local
+metadata:
+  tags:
+    - blast
+    - database
+    - info
+  complexity: simple
+returns:
+  success: boolean
+  databases: object - Categorized database lists
+  totalOnline: integer
+  totalLocal: integer
+  totalCustom: integer
+  total: integer

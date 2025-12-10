@@ -1,0 +1,64 @@
+name: blast_create_db_from_genome
+version: 1.0.0
+description: Create BLAST nucleotide database from currently loaded genome chromosome
+category: database
+keywords:
+  - blast
+  - database
+  - genome
+  - chromosome
+  - create
+priority: 2
+execution:
+  type: built-in
+  timeout: 60000
+  retries: 1
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Chromosome name from loaded genome
+    dbName:
+      type: string
+      description: Name for new database (auto-generated if not provided)
+    dbType:
+      type: string
+      description: Database type
+      enum:
+        - nucl
+      default: nucl
+  required:
+    - chromosome
+sample_usages:
+  - user_query: "Create a BLAST database from the loaded chromosome"
+    tool_call: "blast_create_db_from_genome(chromosome='chr1')"
+    thought: "User wants to create database from currently loaded genome data"
+    expected_result: "BLAST database created from genome chromosome"
+  - user_query: "Make a searchable database for E. coli K-12 genome"
+    tool_call: "blast_create_db_from_genome(chromosome='NC_000913', dbName='ecoli_k12_db')"
+    thought: "User wants custom database from loaded E. coli genome"
+    expected_result: "E. coli K-12 database created and ready"
+relationships:
+  depends_on:
+    - get_genome_info
+  enhances:
+    - blast_search_local
+  follow_up:
+    - blast_search_local
+metadata:
+  tags:
+    - blast
+    - database
+    - genome
+  complexity: simple
+error_handling:
+  chromosome_not_found: "Returns error if chromosome doesn't exist in loaded genome"
+  no_genome_loaded: "Returns error if no genome is currently loaded"
+returns:
+  success: boolean
+  database: object
+  message: string

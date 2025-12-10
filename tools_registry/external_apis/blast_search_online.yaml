@@ -1,0 +1,101 @@
+name: blast_search_online
+version: 1.0.0
+description: Perform BLAST sequence similarity search using NCBI online databases
+category: external_apis
+keywords:
+  - blast
+  - ncbi
+  - online
+  - search
+  - similarity
+  - sequence
+priority: 1
+execution:
+  type: built-in
+  timeout: 300000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: true
+parameters:
+  type: object
+  properties:
+    sequence:
+      type: string
+      description: Query DNA or protein sequence to search
+    blastType:
+      type: string
+      description: Type of BLAST search
+      enum:
+        - blastn
+        - blastp
+        - blastx
+        - tblastn
+        - tblastx
+    database:
+      type: string
+      description: Target NCBI database
+      enum:
+        - nt
+        - nr
+        - refseq_rna
+        - refseq_genomic
+        - refseq_protein
+        - swissprot
+        - pdb
+        - est
+    evalue:
+      type: string
+      description: E-value threshold for reporting matches
+      default: "0.01"
+    maxTargets:
+      type: integer
+      description: Maximum number of target sequences to return
+      default: 50
+  required:
+    - sequence
+    - blastType
+    - database
+sample_usages:
+  - user_query: "Search this DNA sequence against NCBI nucleotide database"
+    tool_call: "blast_search_online(sequence='ATGCGATCGATCG...', blastType='blastn', database='nt')"
+    thought: "User wants to perform NCBI BLAST search for nucleotide sequence"
+    expected_result: "BLAST search results with similar sequences from NCBI database"
+  - user_query: "BLAST this protein sequence against SwissProt"
+    tool_call: "blast_search_online(sequence='MKLAVLG...', blastType='blastp', database='swissprot')"
+    thought: "User wants to search protein sequence in curated SwissProt database"
+    expected_result: "Protein BLAST results with annotations from SwissProt"
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances:
+    - blast_search_local
+    - blast_filter_results
+  alternatives:
+    - blast_search_local
+  prerequisites: []
+  follow_up:
+    - blast_filter_results
+    - blast_export_results
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - blast
+    - search
+    - ncbi
+    - online
+  complexity: moderate
+  usage_pattern: frequent
+error_handling:
+  network_error: "Returns error if NCBI service is unavailable"
+  timeout_error: "Returns error if search exceeds 5 minute timeout"
+  invalid_sequence: "Returns error if sequence format is invalid"
+returns:
+  success: boolean - Whether search completed successfully
+  searchId: string - Unique search identifier
+  results: object - BLAST search results with hits and alignments
+  parameters: object - Search parameters used
+  timestamp: string - Search completion timestamp
