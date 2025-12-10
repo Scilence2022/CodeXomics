@@ -9841,6 +9841,10 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.loadOperonFile(parameters);
                     break;
                     
+                case 'get_loaded_files_list':
+                    result = await this.getLoadedFilesList(parameters);
+                    break;
+                    
                 // MicrobeGenomicsFunctions Integration
                 case 'navigate_to':
                     result = this.executeMicrobeFunction('navigateTo', parameters);

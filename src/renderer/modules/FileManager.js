@@ -755,6 +755,9 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         if (firstChr) {
             this.genomeBrowser.selectChromosome(firstChr);
         }
+        
+        // Update loaded files list
+        this.updateLoadedFilesList();
     }
 
     async parseGenBank() {
@@ -1050,6 +1053,9 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             console.log(`Selecting first chromosome: ${firstChr}`);
             this.genomeBrowser.selectChromosome(firstChr);
         }
+        
+        // Update loaded files list
+        this.updateLoadedFilesList();
     }
 
     /**
@@ -1222,6 +1228,9 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             }
             
+            // Update loaded files list
+            this.updateLoadedFilesList();
+            
         } catch (error) {
             console.error('❌ VCF parsing failed:', error);
             this.genomeBrowser.updateStatus(`Failed to load VCF file: ${error.message}`, 'error');
@@ -1250,6 +1259,9 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
         }
+        
+        // Update loaded files list
+        this.updateLoadedFilesList();
     }
 
     async parseBAM() {
@@ -1360,6 +1372,9 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 console.warn('💡 Recommendation: Create an index for faster queries:');
                 console.warn('   samtools index your_file.bam');
             }
+            
+            // Update loaded files list
+            this.updateLoadedFilesList();
             
         } catch (error) {
             console.error('❌ Error parsing BAM file:', error);
@@ -1828,6 +1843,9 @@ Original error: ${error.message}`;
                 this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             }
         }
+        
+        // Update loaded files list
+        this.updateLoadedFilesList();
     }
     
     parseWIGTrackLine(line) {
