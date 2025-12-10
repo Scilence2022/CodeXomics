@@ -12,6 +12,10 @@ class BlastFunctionTools {
         this.executionHistory = [];
         this.performanceMetrics = new Map();
         
+        // Genome-database association tracking
+        this.genomeDbAssociations = new Map(); // Maps genomeId -> { nucleotide: dbName, protein: dbName }
+        this.loadGenomeDbAssociations(); // Load saved associations
+        
         this.initializeTools();
     }
 
@@ -37,6 +41,9 @@ class BlastFunctionTools {
             // Database from loaded genomes
             'blast_create_db_from_genome': this.createDatabaseFromGenome.bind(this),
             'blast_create_protein_db_from_genome': this.createProteinDatabaseFromGenome.bind(this),
+            
+            // Quick database creation for current genome
+            'blast_create_quick_db_for_current_genome': this.createQuickDbForCurrentGenome.bind(this),
             
             // Search result analysis
             'blast_parse_results': this.parseBlastResults.bind(this),
@@ -136,7 +143,7 @@ class BlastFunctionTools {
      * Execute local BLAST search
      */
     async executeLocalBlastSearch(params) {
-        const { sequence, blastType, database, evalue = '0.01', maxTargets = 50, wordSize, matrix } = params;
+        let { sequence, blastType, database, evalue = '0.01', maxTargets = 50, wordSize, matrix } = params;
         
         if (!sequence) {
             throw new Error('Sequence parameter is required');
@@ -146,8 +153,35 @@ class BlastFunctionTools {
             throw new Error('blastType parameter is required');
         }
         
+        // Smart database selection: if database not specified, use current genome's associated database
         if (!database) {
-            throw new Error('database parameter is required');
+            const genomeId = this.getCurrentGenomeId();
+            if (genomeId) {
+                // Detect sequence type
+                const sequenceType = this.detectSequenceType({ sequence });
+                const seqType = sequenceType.sequenceType;
+                
+                // Get associated database based on BLAST type
+                let dbType = 'nucleotide';
+                if (blastType === 'blastp' || blastType === 'tblastn') {
+                    dbType = 'protein';
+                } else if (blastType === 'blastx') {
+                    dbType = 'protein'; // Query is nucleotide but database is protein
+                } else if (blastType === 'tblastx') {
+                    dbType = 'nucleotide'; // Both query and database are nucleotide (translated)
+                }
+                
+                const associatedDb = this.getAssociatedDatabase(genomeId, dbType);
+                if (associatedDb) {
+                    database = associatedDb;
+                    console.log(`🎯 [BlastFunctionTools] Auto-selected ${dbType} database: ${database} for genome: ${genomeId}`);
+                } else {
+                    console.warn(`⚠️ [BlastFunctionTools] No ${dbType} database associated with genome: ${genomeId}`);
+                    throw new Error(`No ${dbType} database found for current genome. Please create a database first using blast_create_quick_db_for_current_genome.`);
+                }
+            } else {
+                throw new Error('database parameter is required when no genome is loaded');
+            }
         }
         
         try {
@@ -169,6 +203,7 @@ class BlastFunctionTools {
                 results: results,
                 parameters: { sequence, blastType, database, evalue, maxTargets },
                 databasePath: this.blastManager.resolveDatabasePath(database),
+                autoSelectedDatabase: !params.database, // Indicate if database was auto-selected
                 timestamp: new Date().toISOString()
             };
             
@@ -861,6 +896,192 @@ class BlastFunctionTools {
      */
     getAvailableTools() {
         return Object.keys(this.toolMappings);
+    }
+
+    /**
+     * Load genome-database associations from storage
+     */
+    loadGenomeDbAssociations() {
+        try {
+            const stored = localStorage.getItem('blast_genome_db_associations');
+            if (stored) {
+                const data = JSON.parse(stored);
+                this.genomeDbAssociations = new Map(data);
+                console.log(`🔗 [BlastFunctionTools] Loaded ${this.genomeDbAssociations.size} genome-database associations`);
+            }
+        } catch (error) {
+            console.warn('⚠️ [BlastFunctionTools] Failed to load genome-database associations:', error);
+            this.genomeDbAssociations = new Map();
+        }
+    }
+
+    /**
+     * Save genome-database associations to storage
+     */
+    saveGenomeDbAssociations() {
+        try {
+            const data = Array.from(this.genomeDbAssociations.entries());
+            localStorage.setItem('blast_genome_db_associations', JSON.stringify(data));
+            console.log(`💾 [BlastFunctionTools] Saved ${this.genomeDbAssociations.size} genome-database associations`);
+        } catch (error) {
+            console.error('❌ [BlastFunctionTools] Failed to save genome-database associations:', error);
+        }
+    }
+
+    /**
+     * Associate a database with a genome
+     */
+    associateDatabaseWithGenome(genomeId, dbName, dbType) {
+        if (!this.genomeDbAssociations.has(genomeId)) {
+            this.genomeDbAssociations.set(genomeId, {});
+        }
+        
+        const associations = this.genomeDbAssociations.get(genomeId);
+        if (dbType === 'nucl' || dbType === 'nucleotide') {
+            associations.nucleotide = dbName;
+        } else if (dbType === 'prot' || dbType === 'protein') {
+            associations.protein = dbName;
+        }
+        
+        this.saveGenomeDbAssociations();
+        console.log(`🔗 [BlastFunctionTools] Associated ${dbType} database "${dbName}" with genome "${genomeId}"`);
+    }
+
+    /**
+     * Get associated database for a genome
+     */
+    getAssociatedDatabase(genomeId, sequenceType = 'nucleotide') {
+        const associations = this.genomeDbAssociations.get(genomeId);
+        if (!associations) {
+            return null;
+        }
+        
+        if (sequenceType === 'nucleotide' || sequenceType === 'nucl') {
+            return associations.nucleotide || null;
+        } else if (sequenceType === 'protein' || sequenceType === 'prot') {
+            return associations.protein || null;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get current genome ID
+     */
+    getCurrentGenomeId() {
+        // Try multiple approaches to get current genome identifier
+        const currentFile = this.blastManager.app?.fileManager?.currentFile;
+        
+        if (currentFile) {
+            // Use file name without extension as genome ID
+            if (currentFile.name) {
+                return currentFile.name.replace(/\.[^/.]+$/, ''); // Remove extension
+            }
+            if (currentFile.path) {
+                const path = require('path');
+                const fileName = path.basename(currentFile.path);
+                return fileName.replace(/\.[^/.]+$/, '');
+            }
+        }
+        
+        // Fallback to current chromosome
+        if (this.blastManager.app?.currentChromosome) {
+            return this.blastManager.app.currentChromosome;
+        }
+        
+        // Fallback to first sequence key
+        const sequences = this.blastManager.app?.currentSequence;
+        if (sequences && Object.keys(sequences).length > 0) {
+            return Object.keys(sequences)[0];
+        }
+        
+        return null;
+    }
+
+    /**
+     * Create quick BLAST database for current genome (both nucleotide and protein)
+     */
+    async createQuickDbForCurrentGenome(params = {}) {
+        const { createNucleotide = true, createProtein = true, genomeName } = params;
+        
+        try {
+            // Check if there's a currently loaded genome
+            if (!this.blastManager.app?.currentSequence || Object.keys(this.blastManager.app.currentSequence).length === 0) {
+                throw new Error('No genome data loaded. Please load a genome first.');
+            }
+
+            const genomeId = genomeName || this.getCurrentGenomeId() || 'current_genome';
+            const results = {
+                success: true,
+                genomeId: genomeId,
+                databases: {},
+                messages: []
+            };
+
+            // Create nucleotide database
+            if (createNucleotide) {
+                try {
+                    const nuclResult = await this.blastManager.createQuickDatabase('nucl');
+                    if (nuclResult !== false) {
+                        // Get the database name from customDatabases
+                        const nuclDb = Array.from(this.blastManager.customDatabases.values())
+                            .filter(db => db.source === 'quick' && db.type === 'nucl')
+                            .sort((a, b) => new Date(b.created) - new Date(a.created))[0];
+                        
+                        if (nuclDb) {
+                            results.databases.nucleotide = {
+                                name: nuclDb.id,
+                                displayName: nuclDb.name,
+                                type: 'nucl',
+                                status: 'ready'
+                            };
+                            // Associate with genome
+                            this.associateDatabaseWithGenome(genomeId, nuclDb.id, 'nucl');
+                            results.messages.push(`Created nucleotide database: ${nuclDb.name}`);
+                        }
+                    }
+                } catch (error) {
+                    results.messages.push(`Failed to create nucleotide database: ${error.message}`);
+                }
+            }
+
+            // Create protein database
+            if (createProtein) {
+                try {
+                    const protResult = await this.blastManager.createQuickDatabase('prot');
+                    if (protResult !== false) {
+                        // Get the database name from customDatabases
+                        const protDb = Array.from(this.blastManager.customDatabases.values())
+                            .filter(db => db.source === 'quick' && db.type === 'prot')
+                            .sort((a, b) => new Date(b.created) - new Date(a.created))[0];
+                        
+                        if (protDb) {
+                            results.databases.protein = {
+                                name: protDb.id,
+                                displayName: protDb.name,
+                                type: 'prot',
+                                status: 'ready'
+                            };
+                            // Associate with genome
+                            this.associateDatabaseWithGenome(genomeId, protDb.id, 'prot');
+                            results.messages.push(`Created protein database: ${protDb.name}`);
+                        }
+                    }
+                } catch (error) {
+                    results.messages.push(`Failed to create protein database: ${error.message}`);
+                }
+            }
+
+            results.timestamp = new Date().toISOString();
+            return results;
+            
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
     }
 }
 

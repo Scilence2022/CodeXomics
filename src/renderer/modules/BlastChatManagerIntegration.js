@@ -184,6 +184,16 @@
         return await this.blastFunctionTools.executeTool('blast_get_installation_status', parameters);
     }
 
+    /**
+     * Create Quick BLAST Database for Current Genome - Wrapper method
+     */
+    async function blastCreateQuickDbForCurrentGenome(parameters = {}) {
+        if (!this.blastFunctionTools) {
+            throw new Error('BLAST Function Tools not initialized');
+        }
+        return await this.blastFunctionTools.executeTool('blast_create_quick_db_for_current_genome', parameters);
+    }
+
     // Extend ChatManager prototype with BLAST methods
     if (typeof ChatManager !== 'undefined') {
         ChatManager.prototype.initializeBlastFunctionTools = initializeBlastFunctionTools;
@@ -201,6 +211,7 @@
         ChatManager.prototype.blastDetectSequenceType = blastDetectSequenceType;
         ChatManager.prototype.blastValidateDatabase = blastValidateDatabase;
         ChatManager.prototype.blastGetInstallationStatus = blastGetInstallationStatus;
+        ChatManager.prototype.blastCreateQuickDbForCurrentGenome = blastCreateQuickDbForCurrentGenome;
 
         console.log('✅ [BLAST Integration] ChatManager extended with BLAST function tools');
     } else {

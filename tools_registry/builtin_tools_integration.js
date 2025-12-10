@@ -277,6 +277,13 @@ class BuiltInToolsIntegration {
             priority: 2
         });
 
+        this.builtInToolsMap.set('blast_create_quick_db_for_current_genome', {
+            method: 'blastCreateQuickDbForCurrentGenome',
+            category: 'database',
+            type: 'built-in',
+            priority: 1
+        });
+
         console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
     }
 
