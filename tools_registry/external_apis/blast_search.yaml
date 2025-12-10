@@ -8,7 +8,7 @@ priority: 1
 
 # Tool execution metadata
 execution:
-  type: "server"
+  type: "built-in"
   timeout: 120000
   retries: 2
   requires_auth: false

@@ -170,6 +170,113 @@ class BuiltInToolsIntegration {
             priority: 2
         });
 
+        // BLAST Tools Integration
+        // Legacy blast_search tool (maps to blastSearch)
+        this.builtInToolsMap.set('blast_search', {
+            method: 'blastSearch',
+            category: 'external_apis',
+            type: 'built-in',
+            priority: 1
+        });
+
+        this.builtInToolsMap.set('blast_search_online', {
+            method: 'blastSearchOnline',
+            category: 'external_apis',
+            type: 'built-in',
+            priority: 1
+        });
+
+        this.builtInToolsMap.set('blast_search_local', {
+            method: 'blastSearchLocal',
+            category: 'external_apis',
+            type: 'built-in',
+            priority: 1
+        });
+
+        this.builtInToolsMap.set('blast_search_batch', {
+            method: 'blastSearchBatch',
+            category: 'external_apis',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_create_database', {
+            method: 'blastCreateDatabase',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_list_databases', {
+            method: 'blastListDatabases',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_database_info', {
+            method: 'blastDatabaseInfo',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_delete_database', {
+            method: 'blastDeleteDatabase',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_create_db_from_genome', {
+            method: 'blastCreateDbFromGenome',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_create_protein_db_from_genome', {
+            method: 'blastCreateProteinDbFromGenome',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_filter_results', {
+            method: 'blastFilterResults',
+            category: 'data_management',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_export_results', {
+            method: 'blastExportResults',
+            category: 'data_management',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_detect_sequence_type', {
+            method: 'blastDetectSequenceType',
+            category: 'data_management',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_validate_database', {
+            method: 'blastValidateDatabase',
+            category: 'database',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('blast_get_installation_status', {
+            method: 'blastGetInstallationStatus',
+            category: 'system',
+            type: 'built-in',
+            priority: 2
+        });
+
         console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
     }
 

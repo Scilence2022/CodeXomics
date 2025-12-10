@@ -52,6 +52,10 @@ class ChatManager {
         // Initialize MicrobeGenomicsFunctions
         this.initializeMicrobeGenomicsFunctions();
         
+        // Initialize BLAST Function Tools
+        this.blastFunctionTools = null;
+        this.initializeBlastFunctionTools();
+        
         // Initialize Plugin Manager (async - stores promise for awaiting)
         this._pluginManagerReady = this.initializePluginManager();
         
@@ -9500,7 +9504,30 @@ ${this.getPluginSystemInfo()}`;
                     
                     return result;
                 } catch (error) {
+                    console.warn(`MCP tool execution failed for ${toolName}, attempting fallback:`, error.message);
                     // Fall through to local execution
+                }
+            }
+            
+            // Check if this is a tool from the YAML registry that requires MCP
+            // This handles external_apis category tools that aren't available locally
+            if (this.dynamicToolsEnabled && this.dynamicTools) {
+                try {
+                    const registryTool = await this.dynamicTools.registryManager.getToolDefinition(toolName);
+                    if (registryTool && registryTool.execution && registryTool.execution.type === 'server') {
+                        // This is an external API tool that requires MCP server
+                        throw new Error(
+                            `Tool "${toolName}" requires an MCP server connection. ` +
+                            `Please ensure the appropriate MCP server is connected. ` +
+                            `Category: ${registryTool.category}, ` +
+                            `Requires network: ${registryTool.execution.requires_network || false}`
+                        );
+                    }
+                } catch (registryError) {
+                    // Tool not found in registry or other error - will fall through to built-in check
+                    if (registryError.message.includes('requires an MCP server')) {
+                        throw registryError; // Re-throw the MCP requirement error
+                    }
                 }
             }
             
