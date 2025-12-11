@@ -1610,6 +1610,42 @@ Original error: ${error.message}`;
     }
     
     /**
+     * Update the loaded files list in the genome browser
+     * This method adds the current file to the loaded files array if not already present
+     */
+    updateLoadedFilesList() {
+        // Ensure loadedFiles array exists
+        if (!this.genomeBrowser.loadedFiles) {
+            this.genomeBrowser.loadedFiles = [];
+        }
+        
+        // Ensure current file exists
+        if (!this.currentFile || !this.currentFile.info) {
+            console.warn('⚠️ Cannot update loaded files list: no current file');
+            return;
+        }
+        
+        // Add file to loaded files if not already present
+        const fileName = this.currentFile.info.name;
+        const fileExtension = this.currentFile.info.extension.toLowerCase();
+        const fileType = this.getFileTypeFromExtension(fileExtension);
+        
+        const existingFile = this.genomeBrowser.loadedFiles.find(file => file.name === fileName);
+        if (!existingFile) {
+            this.genomeBrowser.loadedFiles.push({
+                name: fileName,
+                type: fileType,
+                size: this.currentFile.info.size,
+                path: this.currentFile.info.path,
+                loadedAt: new Date().toISOString()
+            });
+            console.log(`📋 Added ${fileName} (${fileType}) to loaded files list`);
+        } else {
+            console.log(`📋 File ${fileName} already in loaded files list`);
+        }
+    }
+    
+    /**
      * Get file type from extension
      * @param {string} extension - File extension
      * @returns {string} File type
