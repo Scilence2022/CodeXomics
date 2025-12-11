@@ -5,12 +5,12 @@ category: protein
 keywords: ["fetch", "download", "alphafold", "structure", "uniprot", "pdb", "cache"]
 priority: 1
 execution:
-  type: server
+  type: built-in
   timeout: 30000
   retries: 2
   requires_auth: false
   requires_data: false
-  requires_network: true
+  requires_network: false
 parameters:
   type: object
   properties:

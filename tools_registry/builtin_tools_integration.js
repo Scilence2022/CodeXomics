@@ -148,6 +148,43 @@ class BuiltInToolsIntegration {
             priority: 1
         });
 
+        // Database tools - AlphaFold
+        this.builtInToolsMap.set('search_alphafold_by_gene', {
+            method: 'searchAlphaFoldByGene',
+            category: 'protein',
+            type: 'built-in',
+            priority: 1
+        });
+
+        this.builtInToolsMap.set('fetch_alphafold_structure', {
+            method: 'fetchAlphaFoldStructure',
+            category: 'protein',
+            type: 'built-in',
+            priority: 1
+        });
+
+        this.builtInToolsMap.set('open_alphafold_viewer', {
+            method: 'openAlphaFoldViewer',
+            category: 'protein',
+            type: 'built-in',
+            priority: 1
+        });
+
+        // Database tools - PDB
+        this.builtInToolsMap.set('search_pdb_structures', {
+            method: 'searchPDBStructures',
+            category: 'protein',
+            type: 'built-in',
+            priority: 1
+        });
+
+        this.builtInToolsMap.set('search_protein_by_gene', {
+            method: 'searchProteinByGene',
+            category: 'protein',
+            type: 'built-in',
+            priority: 1
+        });
+
         this.builtInToolsMap.set('search_interpro_entry', {
             method: 'searchInterProEntry',
             category: 'database',
