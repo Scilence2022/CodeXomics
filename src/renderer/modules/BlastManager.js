@@ -2417,6 +2417,27 @@ class BlastManager {
             btn.addEventListener('click', () => this.hideBlastModal());
         });
         console.log(`✓ Search modal close buttons: ${searchModalCloseButtons.length}`);
+        
+        // Modal collapse button
+        const collapseButton = document.querySelector('#blastSearchModal .modal-collapse');
+        if (collapseButton) {
+            collapseButton.addEventListener('click', () => {
+                const modal = document.getElementById('blastSearchModal');
+                modal.classList.toggle('collapsed');
+                // Change the icon
+                const icon = collapseButton.querySelector('i');
+                if (modal.classList.contains('collapsed')) {
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                } else {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                }
+            });
+            console.log('✓ Modal collapse button listener added');
+        } else {
+            console.warn('✗ Modal collapse button not found');
+        }
 
         const resultsModalCloseButtons = document.querySelectorAll('#blastResultsModal .modal-close');
         resultsModalCloseButtons.forEach(btn => {
@@ -3355,7 +3376,7 @@ class BlastManager {
     showBlastModal() {
         const modal = document.getElementById('blastSearchModal');
         if (modal) {
-            modal.classList.add('show');
+            modal.classList.add('show', 'blast-modal-no-overlay');
             this.updateCurrentRegionDisplay();
             // Populate loaded genome list when modal is opened
             this.updateLoadedGenomeList();

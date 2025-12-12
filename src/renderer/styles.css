@@ -100,6 +100,16 @@
   justify-content: center;
 }
 
+/* Special style for BLAST modal to not block main interface */
+.modal.blast-modal-no-overlay {
+  background: transparent;
+  pointer-events: none;
+}
+
+.modal.blast-modal-no-overlay .modal-content {
+  pointer-events: auto;
+}
+
 .modal.show {
   display: flex;
 }
@@ -167,6 +177,41 @@
   align-items: center;
   padding: 20px;
   border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.modal-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.modal-collapse {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 14px;
+  opacity: 0.7;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.modal-collapse:hover {
+  opacity: 1;
+  background-color: var(--bg-hover);
+}
+
+.modal.collapsed .modal-content {
+  max-height: 80px;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.modal.collapsed .modal-content .modal-body,
+.modal.collapsed .modal-content .modal-tabs {
+  display: none;
 }
 
 .modal-header h3 {
