@@ -3785,6 +3785,11 @@ class BlastManager {
             this.searchResults = results;
             this.displayResults(results);
             this.showResultsModal();
+            
+            // Refresh Blast track to show new results
+            if (this.app && this.app.genomeBrowser && this.app.genomeBrowser.trackRenderer) {
+                this.app.genomeBrowser.trackRenderer.refreshTrack('blast');
+            }
 
         } catch (error) {
             console.error('BLAST search error:', error);
@@ -3893,6 +3898,14 @@ class BlastManager {
             // Mark as real results
             results.isRealResults = true;
             results.rawOutput = results.rawXML || 'Raw XML output available';
+            
+            // Store results for track rendering
+            this.searchResults = results;
+            
+            // Refresh Blast track to show new results
+            if (this.app && this.app.genomeBrowser && this.app.genomeBrowser.trackRenderer) {
+                this.app.genomeBrowser.trackRenderer.refreshTrack('blast');
+            }
             
             return results;
         } catch (error) {
@@ -4510,6 +4523,14 @@ class BlastManager {
             results.rawOutput = blastOutput;
             results.rawText = blastOutput;
             results.blastCommand = blastCommand;
+            
+            // Store results for track rendering
+            this.searchResults = results;
+            
+            // Refresh Blast track to show new results
+            if (this.app && this.app.genomeBrowser && this.app.genomeBrowser.trackRenderer) {
+                this.app.genomeBrowser.trackRenderer.refreshTrack('blast');
+            }
             
             // Clean up temporary file
             await this.cleanupTempFile(queryFile);
