@@ -201,8 +201,7 @@ class ModalDragManager {
             '#actionListModal',
             '#tabSettingsModal',
             '#multiAgentSettingsModal',
-            '#chatboxSettingsModal',
-            '#trackSettingsModal'
+            '#chatboxSettingsModal'
         ];
 
         managementModals.forEach(selector => {

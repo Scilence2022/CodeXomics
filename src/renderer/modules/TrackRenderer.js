@@ -609,7 +609,7 @@ class TrackRenderer {
     renderBlastElements(trackContent, visibleResults, viewport, settings) {
         // Create SVG container
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        const svgWidth = trackContent.offsetWidth - 120; // Subtract width for sequence rulers/indicators
+        const svgWidth = Math.max(0, trackContent.offsetWidth - 120); // Ensure positive width
         const svgHeight = 80; // Fixed height for now
         
         svg.setAttribute('width', svgWidth);
