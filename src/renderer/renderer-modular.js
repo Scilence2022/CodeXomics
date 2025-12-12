@@ -849,6 +849,7 @@ class GenomeBrowser {
         document.getElementById('trackSequence').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackSequenceLine').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackActions').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackBlast').addEventListener('change', () => this.updateVisibleTracks());
 
         // Sidebar track controls
         document.getElementById('sidebarTrackGenes').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
@@ -860,6 +861,7 @@ class GenomeBrowser {
         document.getElementById('sidebarTrackSequence').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackSequenceLine').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackActions').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackBlast').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
 
         // Panel close buttons
         document.querySelectorAll('.close-panel-btn').forEach(btn => {
@@ -3860,6 +3862,7 @@ class GenomeBrowser {
         const trackSequence = document.getElementById('trackSequence');
         const trackSequenceLine = document.getElementById('trackSequenceLine');
         const trackActions = document.getElementById('trackActions');
+        const trackBlast = document.getElementById('trackBlast');
         
         if (trackGenes && trackGenes.checked) tracks.add('genes');
         if (trackGC && trackGC.checked) tracks.add('gc');
@@ -3870,6 +3873,7 @@ class GenomeBrowser {
         if (trackSequence && trackSequence.checked) tracks.add('sequence');
         if (trackSequenceLine && trackSequenceLine.checked) tracks.add('sequenceLine');
         if (trackActions && trackActions.checked) tracks.add('actions');
+        if (trackBlast && trackBlast.checked) tracks.add('blast');
         
         this.visibleTracks = tracks;
         
@@ -3883,6 +3887,7 @@ class GenomeBrowser {
         const sidebarTrackSequence = document.getElementById('sidebarTrackSequence');
         const sidebarTrackSequenceLine = document.getElementById('sidebarTrackSequenceLine');
         const sidebarTrackActions = document.getElementById('sidebarTrackActions');
+        const sidebarTrackBlast = document.getElementById('sidebarTrackBlast');
         
         if (sidebarTrackGenes) sidebarTrackGenes.checked = tracks.has('genes');
         if (sidebarTrackGC) sidebarTrackGC.checked = tracks.has('gc');
@@ -3893,6 +3898,7 @@ class GenomeBrowser {
         if (sidebarTrackSequence) sidebarTrackSequence.checked = tracks.has('sequence');
         if (sidebarTrackSequenceLine) sidebarTrackSequenceLine.checked = tracks.has('sequenceLine');
         if (sidebarTrackActions) sidebarTrackActions.checked = tracks.has('actions');
+        if (sidebarTrackBlast) sidebarTrackBlast.checked = tracks.has('blast');
         
         // Update trackVisibility object to match visibleTracks
         this.trackVisibility.genes = tracks.has('genes');
@@ -3903,6 +3909,7 @@ class GenomeBrowser {
         this.trackVisibility.sequence = tracks.has('sequence');
         this.trackVisibility.sequenceLine = tracks.has('sequenceLine');
         this.trackVisibility.actions = tracks.has('actions');
+        this.trackVisibility.blast = tracks.has('blast');
         
         // Notify TabManager of track visibility change
         if (this.tabManager) {
@@ -3939,6 +3946,7 @@ class GenomeBrowser {
         const sidebarTrackSequence = document.getElementById('sidebarTrackSequence');
         const sidebarTrackSequenceLine = document.getElementById('sidebarTrackSequenceLine');
         const sidebarTrackActions = document.getElementById('sidebarTrackActions');
+        const sidebarTrackBlast = document.getElementById('sidebarTrackBlast');
         
         if (sidebarTrackGenes && sidebarTrackGenes.checked) tracks.add('genes');
         if (sidebarTrackGC && sidebarTrackGC.checked) tracks.add('gc');
@@ -3949,6 +3957,7 @@ class GenomeBrowser {
         if (sidebarTrackSequence && sidebarTrackSequence.checked) tracks.add('sequence');
         if (sidebarTrackSequenceLine && sidebarTrackSequenceLine.checked) tracks.add('sequenceLine');
         if (sidebarTrackActions && sidebarTrackActions.checked) tracks.add('actions');
+        if (sidebarTrackBlast && sidebarTrackBlast.checked) tracks.add('blast');
         
         this.visibleTracks = tracks;
         
@@ -3962,6 +3971,7 @@ class GenomeBrowser {
         const trackSequence = document.getElementById('trackSequence');
         const trackSequenceLine = document.getElementById('trackSequenceLine');
         const trackActions = document.getElementById('trackActions');
+        const trackBlast = document.getElementById('trackBlast');
         
         if (trackGenes) trackGenes.checked = tracks.has('genes');
         if (trackGC) trackGC.checked = tracks.has('gc');
@@ -3972,6 +3982,7 @@ class GenomeBrowser {
         if (trackSequence) trackSequence.checked = tracks.has('sequence');
         if (trackSequenceLine) trackSequenceLine.checked = tracks.has('sequenceLine');
         if (trackActions) trackActions.checked = tracks.has('actions');
+        if (trackBlast) trackBlast.checked = tracks.has('blast');
         
         // Update trackVisibility object to match visibleTracks
         this.trackVisibility.genes = tracks.has('genes');

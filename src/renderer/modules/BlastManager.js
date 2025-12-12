@@ -2444,6 +2444,27 @@ class BlastManager {
             btn.addEventListener('click', () => this.hideResultsModal());
         });
         console.log(`✓ Results modal close buttons: ${resultsModalCloseButtons.length}`);
+        
+        // Results modal collapse button
+        const resultsCollapseButton = document.querySelector('#blastResultsModal .modal-collapse');
+        if (resultsCollapseButton) {
+            resultsCollapseButton.addEventListener('click', () => {
+                const modal = document.getElementById('blastResultsModal');
+                modal.classList.toggle('collapsed');
+                // Change the icon
+                const icon = resultsCollapseButton.querySelector('i');
+                if (modal.classList.contains('collapsed')) {
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                } else {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                }
+            });
+            console.log('✓ Results modal collapse button listener added');
+        } else {
+            console.warn('✗ Results modal collapse button not found');
+        }
 
         // BLAST type tabs
         const typeTabButtons = document.querySelectorAll('.blast-type-tabs .tab-button');
@@ -3393,7 +3414,7 @@ class BlastManager {
     showResultsModal() {
         const modal = document.getElementById('blastResultsModal');
         if (modal) {
-            modal.classList.add('show');
+            modal.classList.add('show', 'blast-modal-no-overlay');
             // Initialize resizable functionality
             this.initializeResizableModal();
         }
@@ -6506,5 +6527,71 @@ class BlastManager {
         } else {
             sortOrder.innerHTML = '<i class="fas fa-sort-amount-down"></i> Desc';
         }
+    }
+    
+    /**
+     * Get BLAST results in specified chromosome and viewport range
+     * @param {string} chromosome - Chromosome name
+     * @param {object} viewport - Viewport object with start and end properties
+     * @returns {array} - Filtered BLAST results
+     */
+    getBlastResultsInRange(chromosome, viewport) {
+        if (!this.searchResults || !this.searchResults.hits) {
+            return [];
+        }
+        
+        // Filter hits that match the current chromosome and are within the viewport
+        const filteredHits = this.searchResults.hits.filter(hit => {
+            // Extract chromosome name from hit.accession or hit.description
+            // This might need adjustment based on your specific data format
+            const hitChromosome = hit.accession.split('.')[0];
+            
+            // Check if hit is on the current chromosome
+            if (hitChromosome !== chromosome) {
+                return false;
+            }
+            
+            // Check if hit range overlaps with viewport
+            const hitStart = hit.hitRange.from;
+            const hitEnd = hit.hitRange.to;
+            
+            return hitStart <= viewport.end && hitEnd >= viewport.start;
+        });
+        
+        return filteredHits;
+    }
+    
+    /**
+     * Show detailed information for a specific BLAST result
+     * @param {object} result - BLAST hit result object
+     */
+    showResultDetails(result) {
+        // You can implement this to show a modal with detailed information about the hit
+        console.log('BLAST Result Details:', result);
+        
+        // Example: Scroll to the hit position in the genome browser
+        if (this.app && this.app.genomeBrowser) {
+            const chromosome = result.accession.split('.')[0];
+            const position = (result.hitRange.from + result.hitRange.to) / 2;
+            this.app.genomeBrowser.scrollToPosition(chromosome, position, 1000);
+        }
+        
+        // Example: Show detailed information in a modal
+        const modalContent = `
+            <div class="blast-result-details">
+                <h4>${result.accession} - ${result.description}</h4>
+                <div class="blast-details-section">
+                    <strong>Score:</strong> ${result.score}<br>
+                    <strong>E-value:</strong> ${result.evalue}<br>
+                    <strong>Identity:</strong> ${result.identity}%<br>
+                    <strong>Coverage:</strong> ${result.coverage}%<br>
+                    <strong>Length:</strong> ${result.length} bp<br>
+                    <strong>Position:</strong> ${result.hitRange.from} - ${result.hitRange.to}
+                </div>
+                ${result.alignment ? `<div class="blast-alignment"><h5>Alignment:</h5><pre>${result.alignment}</pre></div>` : ''}
+            </div>
+        `;
+        
+        this.app.utils.showModal('BLAST Result Details', modalContent, 'modal-lg');
     }
 }

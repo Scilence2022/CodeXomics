@@ -74,6 +74,13 @@ class TrackRenderer {
                 requiresData: false,
                 dataSource: 'actionManager',
                 actionHeight: 10 // Default action element height in pixels
+            },
+            blast: {
+                defaultHeight: '100px',
+                header: 'BLAST Results',
+                className: 'blast-track',
+                requiresData: false,
+                dataSource: 'blastResults'
             }
         };
         
@@ -545,6 +552,145 @@ class TrackRenderer {
         this.restoreHeaderState(track, 'genes');
         
         return track;
+    }
+    
+    /**
+     * Create BLAST Results track with SVG rendering
+     */
+    createBlastTrack(chromosome) {
+        const { track, trackContent } = this.createTrackBase('blast', chromosome);
+        const viewport = this.getCurrentViewport();
+        
+        // Get track settings
+        const settings = this.getTrackSettings('blast');
+        
+        // Add detailed ruler for current viewing region
+        const detailedRuler = this.createDetailedRuler(chromosome);
+        trackContent.appendChild(detailedRuler);
+        
+        // Get and validate data
+        const blastResults = this.genomeBrowser.blastManager.getBlastResultsInRange(chromosome, viewport);
+        const visibleResults = this.filterBlastResultsByViewport(blastResults, viewport);
+        console.log(`Displaying ${visibleResults.length} BLAST results in region ${viewport.start}-${viewport.end}`);
+        
+        if (visibleResults.length === 0) {
+            const noResultsMsg = this.createNoDataMessage(
+                'No BLAST results in this region',
+                'no-blast-results-message'
+            );
+            trackContent.appendChild(noResultsMsg);
+            trackContent.style.height = '80px';
+            return track;
+        }
+        
+        // Process and render blast results with settings
+        this.renderBlastElements(trackContent, visibleResults, viewport, settings);
+        
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'blast');
+        
+        return track;
+    }
+    
+    /**
+     * Filter BLAST results by viewport
+     */
+    filterBlastResultsByViewport(results, viewport) {
+        return results.filter(result => {
+            const resultStart = result.hitRange.from;
+            const resultEnd = result.hitRange.to;
+            return resultStart <= viewport.end && resultEnd >= viewport.start;
+        });
+    }
+    
+    /**
+     * Render BLAST elements with improved organization
+     */
+    renderBlastElements(trackContent, visibleResults, viewport, settings) {
+        // Create SVG container
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const svgWidth = trackContent.offsetWidth - 120; // Subtract width for sequence rulers/indicators
+        const svgHeight = 80; // Fixed height for now
+        
+        svg.setAttribute('width', svgWidth);
+        svg.setAttribute('height', svgHeight);
+        svg.setAttribute('class', 'blast-results-svg');
+        
+        // Create defs for gradients and filters
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        svg.appendChild(defs);
+        
+        // Create blast gradient
+        const blastGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        blastGradient.setAttribute('id', 'blast-gradient');
+        blastGradient.setAttribute('x1', '0%');
+        blastGradient.setAttribute('y1', '0%');
+        blastGradient.setAttribute('x2', '100%');
+        blastGradient.setAttribute('y2', '100%');
+        
+        const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop1.setAttribute('offset', '0%');
+        stop1.setAttribute('stop-color', '#3b82f6');
+        
+        const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop2.setAttribute('offset', '100%');
+        stop2.setAttribute('stop-color', '#1e40af');
+        
+        blastGradient.appendChild(stop1);
+        blastGradient.appendChild(stop2);
+        defs.appendChild(blastGradient);
+        
+        // Calculate scale factor and position
+        const viewportWidth = viewport.end - viewport.start;
+        const scaleFactor = svgWidth / viewportWidth;
+        
+        // Render each blast result
+        visibleResults.forEach((result, index) => {
+            const resultStart = result.hitRange.from;
+            const resultEnd = result.hitRange.to;
+            const resultWidth = resultEnd - resultStart;
+            
+            // Calculate x position and width
+            const x = (resultStart - viewport.start) * scaleFactor;
+            const width = resultWidth * scaleFactor;
+            
+            // Use a different row for each result to avoid overlapping
+            const y = 10 + (index % 5) * 14;
+            const height = 12;
+            
+            // Create blast result rectangle
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', x);
+            rect.setAttribute('y', y);
+            rect.setAttribute('width', Math.max(width, 2)); // Minimum width of 2px
+            rect.setAttribute('height', height);
+            rect.setAttribute('fill', 'url(#blast-gradient)');
+            rect.setAttribute('stroke', '#1e3a8a');
+            rect.setAttribute('stroke-width', '1');
+            rect.setAttribute('rx', '2');
+            
+            // Add tooltip with result information
+            const tooltip = `${result.accession} - ${result.description}\nScore: ${result.score}, E-value: ${result.evalue}\nIdentity: ${result.identity}%, Coverage: ${result.coverage}%`;
+            rect.setAttribute('title', tooltip);
+            
+            // Add click event to show detailed information
+            rect.addEventListener('click', () => {
+                this.genomeBrowser.blastManager.showResultDetails(result);
+            });
+            
+            svg.appendChild(rect);
+        });
+        
+        // Add SVG to track content
+        trackContent.appendChild(svg);
+        
+        // Add statistics
+        const statsText = `${visibleResults.length} BLAST results displayed`;
+        const statsElement = this.createStatsElement(statsText, 'blast-track-stats');
+        trackContent.appendChild(statsElement);
+        
+        // Set track height
+        trackContent.style.height = '100px';
     }
     
     /**
