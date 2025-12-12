@@ -417,6 +417,10 @@ class TabManager {
                 searchResultsSection: { visible: false, content: null }
             },
             
+            // Search results data (independent per tab)
+            searchResults: [],
+
+            
             // Created timestamp
             createdAt: new Date(),
             lastAccessedAt: new Date()
@@ -996,6 +1000,31 @@ class TabManager {
         });
         
         console.log(`Updated all tabs with new ${fileType} data from: ${filename}`);
+    }
+    
+    /**
+     * Update the search results for the current tab
+     */
+    updateCurrentTabSearchResults(results) {
+        if (!this.activeTabId) return;
+        
+        const tabState = this.tabStates.get(this.activeTabId);
+        if (!tabState) return;
+        
+        tabState.searchResults = [...results];
+        tabState.lastAccessedAt = new Date();
+    }
+    
+    /**
+     * Get the search results for the current tab
+     */
+    getCurrentTabSearchResults() {
+        if (!this.activeTabId) return [];
+        
+        const tabState = this.tabStates.get(this.activeTabId);
+        if (!tabState) return [];
+        
+        return tabState.searchResults;
     }
     
     /**
@@ -2525,6 +2554,11 @@ class TabManager {
             if (tabState.sidebarPanels.searchResultsSection.visible && tabState.sidebarPanels.searchResultsSection.content) {
                 searchPanel.innerHTML = tabState.sidebarPanels.searchResultsSection.content;
                 searchPanel.style.display = 'block';
+                
+                // Update NavigationManager with the saved search results for this tab
+                if (this.genomeBrowser && this.genomeBrowser.navigationManager && tabState.searchResults) {
+                    this.genomeBrowser.navigationManager.searchResults = tabState.searchResults;
+                }
                 
                 // Re-attach event handlers for search result items
                 if (this.genomeBrowser && this.genomeBrowser.navigationManager) {

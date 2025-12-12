@@ -796,6 +796,11 @@ class NavigationManager {
         // Populate search results panel
         this.populateSearchResults(results, searchQuery);
         
+        // Update tab manager with search results data
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabSearchResults(results);
+        }
+        
         if (results.length > 0) {
             // Navigate to first result automatically
             this.navigateToSearchResult(0);
@@ -848,6 +853,8 @@ class NavigationManager {
         // Update tab manager about search results panel state change
         if (this.genomeBrowser.tabManager) {
             this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel('searchResultsSection', true, searchResultsSection.innerHTML);
+            // Also update search results data
+            this.genomeBrowser.tabManager.updateCurrentTabSearchResults(results);
         }
         
         // Create header
@@ -890,6 +897,8 @@ class NavigationManager {
         // Update tab manager with final search results content
         if (this.genomeBrowser.tabManager) {
             this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel('searchResultsSection', true, searchResultsSection.innerHTML);
+            // Also update search results data
+            this.genomeBrowser.tabManager.updateCurrentTabSearchResults(results);
         }
     }
 
