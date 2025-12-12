@@ -3082,6 +3082,11 @@ class GenomeBrowser {
                 // Single-line sequence track
                 trackElement = this.trackRenderer.createSequenceLineTrack(chromosome, sequence);
                 break;
+            
+            case 'blast':
+                // Blast results track
+                trackElement = this.trackRenderer.createBlastTrack(chromosome);
+                break;
                 
             default:
                 console.warn(`Unknown track type: ${trackType}`);
@@ -3121,7 +3126,8 @@ class GenomeBrowser {
                 'reads': 'reads',
                 'proteins': 'proteins',
                 'wig': 'wigTracks',  // Add WIG tracks to preservation mapping
-                'actions': 'actions'  // Add actions track to preservation mapping
+                'actions': 'actions',  // Add actions track to preservation mapping
+                'blast': 'blast'  // Add blast track to preservation mapping
                 // Remove 'sequence' since it's now handled as bottom panel, not a regular track
             };
 
@@ -3193,7 +3199,7 @@ class GenomeBrowser {
             }
             
             // Also create any visible tracks that aren't in the saved order (for backward compatibility)
-            const defaultOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'sequenceLine', 'actions'];
+            const defaultOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'sequenceLine', 'actions', 'blast'];
             for (const trackType of defaultOrder) {
                 if (!currentTabOrder.includes(trackType)) {
                     await this.createTrackByType(trackType, chromosome, sequence, tracksToShow);
