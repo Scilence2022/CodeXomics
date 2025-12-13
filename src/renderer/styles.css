@@ -8652,6 +8652,12 @@ to {
   flex-direction: column;
 }
 
+/* Fix for collapsed Blast modal height */
+.modal.collapsed .blast-modal-content {
+  min-height: auto !important;
+  max-height: 80px !important;
+}
+
 .blast-modal-body {
   padding: 0;
   overflow-y: auto;
@@ -9721,6 +9727,14 @@ to {
   min-height: 400px;
   max-width: 95vw;
   max-height: 95vh;
+}
+
+/* Fix for collapsed Blast Results modal height */
+#blastResultsModal.modal.collapsed .modal-content {
+  min-height: auto !important;
+  max-height: 80px !important;
+  resize: none;
+  overflow: hidden;
 }
 
 /* Resize handle for modal */

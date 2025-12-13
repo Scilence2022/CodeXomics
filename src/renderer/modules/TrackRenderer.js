@@ -579,7 +579,7 @@ class TrackRenderer {
                 'no-blast-results-message'
             );
             trackContent.appendChild(noResultsMsg);
-            trackContent.style.height = '80px';
+            trackContent.style.height = `${settings.height}px`;
             return track;
         }
         
@@ -610,7 +610,7 @@ class TrackRenderer {
         // Create SVG container
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         const svgWidth = Math.max(0, trackContent.offsetWidth - 120); // Ensure positive width
-        const svgHeight = 80; // Fixed height for now
+        const svgHeight = settings.height || 120; // Use track height from settings
         
         svg.setAttribute('width', svgWidth);
         svg.setAttribute('height', svgHeight);
@@ -691,7 +691,7 @@ class TrackRenderer {
         trackContent.appendChild(statsElement);
         
         // Set track height
-        trackContent.style.height = '100px';
+        trackContent.style.height = `${settings.height}px`;
     }
     
     /**
@@ -8263,6 +8263,51 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             this.refreshCurrentView();
         }
     }
+
+    /**
+     * Toggle the visibility of the BLAST Results track
+     * @param {boolean} visible - Whether to show or hide the track
+     */
+    toggleBlastTrack(visible) {
+        // Check if blast results exist
+        if (!this.genomeBrowser.blastManager || !this.genomeBrowser.blastManager.searchResults) {
+            this.genomeBrowser.updateStatus('No BLAST results to display', 'warning');
+            return;
+        }
+
+        // Find the blast track element
+        const blastTrack = document.querySelector('.blast-track');
+        
+        if (visible) {
+            if (!blastTrack) {
+                // If track doesn't exist, it will be created during the view refresh
+                this.genomeBrowser.updateStatus('Showing BLAST Results track');
+            } else {
+                // If track exists but is hidden, show it
+                blastTrack.style.display = 'block';
+                this.genomeBrowser.updateStatus('Showing BLAST Results track');
+            }
+            
+            // Add blast to visible tracks if not already present
+            if (this.genomeBrowser.visibleTracks && !this.genomeBrowser.visibleTracks.has('blast')) {
+                this.genomeBrowser.visibleTracks.add('blast');
+            }
+        } else {
+            if (blastTrack) {
+                // If track exists, hide it
+                blastTrack.style.display = 'none';
+                this.genomeBrowser.updateStatus('Hiding BLAST Results track');
+            }
+            
+            // Remove blast from visible tracks
+            if (this.genomeBrowser.visibleTracks && this.genomeBrowser.visibleTracks.has('blast')) {
+                this.genomeBrowser.visibleTracks.delete('blast');
+            }
+        }
+        
+        // Refresh the current view to reflect changes
+        this.refreshCurrentView();
+    }
     
     removeWIGTrack(trackName) {
         const wigTracks = this.genomeBrowser.currentWIGTracks;
@@ -9873,6 +9918,14 @@ This action cannot be undone.`;
                 autoHighlightSequence: false, // Auto-highlight sequence region when gene is selected
                 showSequence: false, // Show reference sequence
                 sequenceHeight: 25 // Height of reference sequence display
+            },
+            sequence: {
+                visible: true,
+                height: 60,
+                displayMode: 'letters',
+                showCoordinates: true,
+                fontSize: 12,
+                renderingMode: 'canvas' // Default rendering mode for sequence track
             },
             sequenceLine: {
                 fontSize: 14,
