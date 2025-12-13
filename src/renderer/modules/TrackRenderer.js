@@ -655,8 +655,9 @@ class TrackRenderer {
             const width = resultWidth * scaleFactor;
             
             // Use a different row for each result to avoid overlapping
-            const y = 10 + (index % 5) * 14;
-            const height = 12;
+            // Start rendering results below the 35px ruler using settings.startYPosition
+            const y = settings.startYPosition + (index % 5) * settings.resultSpacing;
+            const height = settings.resultHeight;
             
             // Create blast result rectangle
             const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -9940,6 +9941,16 @@ This action cannot be undone.`;
                 showMismatches: true,
                 mismatchColor: '#ff6b6b',
                 sequenceFontFamily: 'monospace'
+            },
+            blast: {
+                // Rendering method
+                renderingMode: 'svg',
+                // Track settings
+                height: 120,
+                // Blast result settings
+                resultHeight: 12,
+                resultSpacing: 14,
+                startYPosition: 40 // Start rendering results below the 35px ruler
             },
             actions: {
                 actionHeight: 10, // Height of each action element in pixels
