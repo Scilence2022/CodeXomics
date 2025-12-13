@@ -5544,10 +5544,157 @@ class BlastManager {
 
         try {
             const exportData = this.formatResultsForExport();
-            this.downloadFile('blast_results.txt', exportData);
+            this.downloadFile('blast_results.txt', exportData, 'text/plain');
             this.showNotification('Results exported successfully', 'success');
         } catch (error) {
             this.showNotification('Error exporting results: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Save BLAST results to JSON file
+     */
+    saveBlastResults() {
+        if (!this.searchResults) {
+            this.showNotification('No results to save', 'warning');
+            return;
+        }
+
+        try {
+            // Create a clean copy of results for saving
+            const resultsToSave = {
+                version: '1.0',
+                timestamp: new Date().toISOString(),
+                query: this.searchResults.query,
+                database: this.searchResults.database,
+                parameters: this.searchResults.parameters,
+                hits: this.searchResults.hits || []
+            };
+            
+            const jsonContent = JSON.stringify(resultsToSave, null, 2);
+            const fileName = `blast_results_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+            this.downloadFile(fileName, jsonContent, 'application/json');
+            this.showNotification('BLAST results saved successfully', 'success');
+        } catch (error) {
+            this.showNotification('Error saving BLAST results: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Download file helper method
+     */
+    downloadFile(filename, content, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Update the Blast results display after loading new results
+     */
+    updateBlastResultsDisplay() {
+        console.log('🔬 BlastManager.updateBlastResultsDisplay() called');
+        
+        // Ensure we have results to display
+        if (!this.searchResults) {
+            console.warn('BlastManager: No search results to display');
+            return;
+        }
+        
+        // Get the results container
+        const resultsContainer = document.getElementById('blastResultsContainer');
+        if (!resultsContainer) {
+            console.warn('BlastManager: Results container not found');
+            return;
+        }
+        
+        // Store current results reference
+        this.currentResults = this.searchResults;
+        
+        // Reset filtered hits to all hits initially
+        this.filteredHits = [...this.searchResults.hits];
+        
+        // Render the complete results interface
+        resultsContainer.innerHTML = `
+            ${this.renderResultsHeader(this.searchResults)}
+            ${this.renderResultsControls(this.searchResults)}
+            ${this.renderResultsSummary(this.searchResults)}
+            ${this.renderHitsList(this.searchResults)}
+            ${this.renderResultsFooter(this.searchResults)}
+        `;
+        
+        // Update hits display with filtered results
+        this.updateHitsDisplay();
+        
+        // Set up event listeners for controls
+        this.setupResultsControls();
+        
+        // Show the results modal
+        this.showResultsModal();
+    }
+    
+    /**
+     * Load Blast results from a JSON file
+     * @param {Object} blastResults - The Blast results data from JSON file
+     */
+    loadBlastResults(blastResults) {
+        console.log('🔬 BlastManager.loadBlastResults() called with results:', blastResults);
+        
+        // Validate results structure
+        try {
+            if (!blastResults) {
+                throw new Error('Empty Blast results data');
+            }
+            
+            // Validate required fields
+            const requiredFields = ['query', 'hits'];
+            for (const field of requiredFields) {
+                if (blastResults[field] === undefined) {
+                    throw new Error(`Missing required field: ${field}`);
+                }
+            }
+            
+            // Ensure hits is an array
+            if (!Array.isArray(blastResults.hits)) {
+                throw new Error('Hits must be an array');
+            }
+            
+            // Set search results
+            this.searchResults = blastResults;
+            
+            // Update UI to show loaded results
+            this.updateBlastResultsDisplay();
+            
+            // Add results to Blast Track automatically
+            if (this.genomeBrowser && this.genomeBrowser.trackRenderer) {
+                // Ensure Blast Track is visible
+                const blastTrack = document.querySelector('.blast-track');
+                if (!blastTrack) {
+                    // If Blast Track doesn't exist, try to create it
+                    this.genomeBrowser.trackRenderer.toggleBlastTrack(true);
+                } else {
+                    // If Blast Track exists but is hidden, show it
+                    blastTrack.style.display = 'block';
+                }
+                
+                // Refresh all tracks to display Blast results
+                this.genomeBrowser.trackRenderer.refreshAllTracks();
+            }
+            
+            // Show success message
+            const hitCount = blastResults.hits.length;
+            this.genomeBrowser.updateStatus(`Blast results loaded successfully: ${hitCount} ${hitCount === 1 ? 'hit' : 'hits'} found`);
+            
+        } catch (error) {
+            console.error('❌ Error validating or loading Blast results:', error);
+            this.genomeBrowser.updateStatus(`Error loading Blast results: ${error.message}`, 'error');
+            throw error; // Re-throw to allow caller to handle
         }
     }
 
@@ -5654,10 +5801,62 @@ class BlastManager {
         document.addEventListener('keydown', escapeHandler);
     }
 
+    /**
+     * Format Blast results for export to text file
+     */
     formatResultsForExport() {
         const results = this.searchResults;
+        if (!results) return '';
+        
         let output = '';
-        // ... existing code ...
+        
+        // Add header with query information
+        output += 'BLAST SEARCH RESULTS\n';
+        output += '='.repeat(40) + '\n\n';
+        
+        output += 'QUERY INFORMATION:\n';
+        output += '-----------------\n';
+        output += `Query: ${results.query}\n`;
+        output += `Database: ${results.database || results.parameters.database || 'Unknown'}\n`;
+        output += `BLAST Type: ${results.parameters.blastType.toUpperCase() || 'Unknown'}\n`;
+        output += `E-value Threshold: ${results.parameters.evalue || '1e-5'}\n`;
+        output += `Hits Found: ${results.hits.length}\n\n`;
+        
+        // Add results statistics
+        if (results.statistics) {
+            output += 'STATISTICS:\n';
+            output += '-----------\n';
+            output += `Total Sequences in Database: ${results.statistics.totalSequences}\n`;
+            output += `Total Letters in Database: ${this.formatLargeNumber(results.statistics.totalLetters)}\n`;
+            output += `Search Time: ${results.statistics.searchTime || 'Unknown'}\n\n`;
+        }
+        
+        // Add hits details
+        output += 'HITS DETAILS:\n';
+        output += '-------------\n\n';
+        
+        results.hits.forEach((hit, index) => {
+            output += `HIT ${index + 1}:\n`;
+            output += `- Accession: ${hit.accession}\n`;
+            output += `- Description: ${hit.description}\n`;
+            output += `- Organism: ${hit.organism || 'Unknown'}\n`;
+            output += `- Score: ${hit.score} bits\n`;
+            output += `- E-value: ${hit.evalue}\n`;
+            output += `- Identity: ${hit.identity}\n`;
+            output += `- Coverage: ${hit.coverage}\n`;
+            output += `- Alignment Length: ${hit.alignmentLength}\n`;
+            output += `- Query Range: ${hit.queryRange.from}-${hit.queryRange.to}\n`;
+            output += `- Subject Range: ${hit.hitRange.from}-${hit.hitRange.to}\n\n`;
+            
+            // Add alignment if available
+            if (hit.alignment) {
+                output += 'Alignment:\n';
+                output += this.formatAlignment(hit.alignment, hit.queryRange, hit.hitRange) + '\n';
+            }
+            
+            output += '='.repeat(60) + '\n\n';
+        });
+        
         return output;
     }
 

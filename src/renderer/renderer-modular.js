@@ -692,6 +692,7 @@ class GenomeBrowser {
         document.getElementById('openReadsBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('reads'));
         document.getElementById('openWIGBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('tracks'));
         document.getElementById('openOperonBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('operon'));
+        document.getElementById('openBlastBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('blast'));
         document.getElementById('openAnyBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('any'));
 
         // Export operations - dropdown menu

@@ -47,6 +47,9 @@ class FileManager {
             case 'operon':
                 input.accept = '.json,.csv,.tsv,.txt,.operon';
                 break;
+            case 'blast':
+                input.accept = '.json';
+                break;
             case 'any':
             default:
                 input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig,.json,.csv,.tsv,.txt,.operon';
@@ -61,6 +64,9 @@ class FileManager {
                 } else if (fileType === 'operon') {
                     // Handle operon file
                     this.loadOperonFile(e.target.files[0].path);
+                } else if (fileType === 'blast') {
+                    // Handle blast results file
+                    this.loadBlastResultsFile(e.target.files[0].path);
                 } else {
                     // Handle single file
                     this.loadFile(e.target.files[0].path);
@@ -68,6 +74,48 @@ class FileManager {
             }
         };
         input.click();
+    }
+
+    /**
+     * Load Blast Results JSON file
+     */
+    async loadBlastResultsFile(filePath) {
+        console.log('🔬 FileManager.loadBlastResultsFile() called with path:', filePath);
+        this.genomeBrowser.showLoading(true);
+        this.genomeBrowser.updateStatus('Loading Blast results...');
+
+        try {
+            // Read file content
+            const fileContent = await ipcRenderer.invoke('read-file', filePath);
+            if (!fileContent.success) {
+                throw new Error(fileContent.error);
+            }
+
+            console.log('📄 Blast results file content loaded successfully');
+            
+            // Parse JSON data
+            let blastResults;
+            try {
+                blastResults = JSON.parse(fileContent.data);
+            } catch (parseError) {
+                throw new Error('Failed to parse JSON: ' + parseError.message);
+            }
+
+            // Check if we have BlastManager available
+            if (!this.genomeBrowser.blastManager) {
+                throw new Error('BlastManager not available');
+            }
+
+            // Load the results into BlastManager
+            this.genomeBrowser.blastManager.loadBlastResults(blastResults);
+            this.genomeBrowser.updateStatus(`✅ Blast results loaded successfully: ${blastResults.hits.length} hits found`);
+
+        } catch (error) {
+            console.error('❌ Error loading Blast results file:', error);
+            this.genomeBrowser.updateStatus('❌ Failed to load Blast results: ' + error.message, 'error');
+        } finally {
+            this.genomeBrowser.showLoading(false);
+        }
     }
 
     async loadOperonFile(filePath) {
