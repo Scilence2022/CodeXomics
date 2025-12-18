@@ -607,14 +607,36 @@ class TrackRenderer {
      * Render BLAST elements with improved organization
      */
     renderBlastElements(trackContent, visibleResults, viewport, settings) {
+        console.log(`🔍 [BLAST Render] Rendering ${visibleResults.length} BLAST results`);
+        console.log(`🔍 [BLAST Render] Viewport: ${viewport.start}-${viewport.end} (range: ${viewport.end - viewport.start})`);
+        
         // Create SVG container
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        const svgWidth = Math.max(0, trackContent.offsetWidth - 120); // Ensure positive width
+        // Ensure SVG takes full width of track content, with proper positioning
+        // Calculate SVG width properly - ensure it's always positive
+        const containerWidth = trackContent.offsetWidth || 800; // Fallback to 800px if offsetWidth is 0
+        const svgWidth = Math.max(0, containerWidth - 10); // Ensure positive width
         const svgHeight = settings.height || 120; // Use track height from settings
         
-        svg.setAttribute('width', svgWidth);
+        console.log(`🔍 [BLAST Render] SVG dimensions: ${svgWidth}x${svgHeight}`);
+        
+        // Set SVG attributes - only set viewBox if width is positive
+        svg.setAttribute('width', '100%');
         svg.setAttribute('height', svgHeight);
+        if (svgWidth > 0) {
+            svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+        }
+        svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'blast-results-svg');
+        
+        // Position SVG correctly
+        svg.style.cssText = `
+            position: absolute;
+            top: 35px;
+            left: 0;
+            width: 100%;
+            height: ${svgHeight}px;
+        `;
         
         // Create defs for gradients and filters
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -642,7 +664,10 @@ class TrackRenderer {
         
         // Calculate scale factor and position
         const viewportWidth = viewport.end - viewport.start;
-        const scaleFactor = svgWidth / viewportWidth;
+        // Ensure scale factor is always positive and reasonable
+        const scaleFactor = viewportWidth > 0 ? svgWidth / viewportWidth : 0.08; // Default to 0.08 if viewportWidth is 0
+        
+        console.log(`🔍 [BLAST Render] Scale factor: ${scaleFactor}`);
         
         // Render each blast result
         visibleResults.forEach((result, index) => {
@@ -650,20 +675,32 @@ class TrackRenderer {
             const resultEnd = result.hitRange.to;
             const resultWidth = resultEnd - resultStart;
             
+            console.log(`🔍 [BLAST Render] Result ${index}: ${resultStart}-${resultEnd} (width: ${resultWidth})`);
+            
             // Calculate x position and width
-            const x = (resultStart - viewport.start) * scaleFactor;
-            const width = resultWidth * scaleFactor;
+            // Ensure result is within viewport bounds
+            const visibleStart = Math.max(resultStart, viewport.start);
+            const visibleEnd = Math.min(resultEnd, viewport.end);
+            const visibleWidth = visibleEnd - visibleStart;
+            
+            // Calculate x position and width - ensure they are positive
+            const x = Math.max(0, (visibleStart - viewport.start) * scaleFactor);
+            const width = Math.max(5, visibleWidth * scaleFactor); // Minimum width of 5px
+            
+            console.log(`🔍 [BLAST Render] Result ${index} rendered as: x=${x}, width=${width}`);
             
             // Use a different row for each result to avoid overlapping
-            // Start rendering results below the 35px ruler using settings.startYPosition
-            const y = settings.startYPosition + (index % 5) * settings.resultSpacing;
-            const height = settings.resultHeight;
+            // SVG is already positioned below the 35px ruler, so start from top of SVG container
+            const y = (index % 5) * settings.resultSpacing;
+            // Increase result height for better visibility
+            const height = Math.max(settings.resultHeight || 12, 15);
             
             // Create blast result rectangle
             const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             rect.setAttribute('x', x);
             rect.setAttribute('y', y);
-            rect.setAttribute('width', Math.max(width, 2)); // Minimum width of 2px
+            // Ensure minimum width for visibility
+            rect.setAttribute('width', Math.max(width, 5)); // Minimum width of 5px for better visibility
             rect.setAttribute('height', height);
             rect.setAttribute('fill', 'url(#blast-gradient)');
             rect.setAttribute('stroke', '#1e3a8a');

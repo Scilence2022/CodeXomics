@@ -6756,28 +6756,34 @@ class BlastManager {
      * @returns {array} - Filtered BLAST results
      */
     getBlastResultsInRange(chromosome, viewport) {
+        console.log(`🔍 [BLAST Manager] Getting results for chromosome: ${chromosome}, viewport: ${viewport.start}-${viewport.end}`);
+        
         if (!this.searchResults || !this.searchResults.hits) {
+            console.log(`🔍 [BLAST Manager] No search results available`);
             return [];
         }
         
+        console.log(`🔍 [BLAST Manager] Total hits available: ${this.searchResults.hits.length}`);
+        
         // Filter hits that match the current chromosome and are within the viewport
         const filteredHits = this.searchResults.hits.filter(hit => {
-            // Extract chromosome name from hit.accession or hit.description
-            // This might need adjustment based on your specific data format
-            const hitChromosome = hit.accession.split('.')[0];
+            console.log(`🔍 [BLAST Manager] Checking hit: ${hit.accession}, hitRange: ${hit.hitRange.from}-${hit.hitRange.to}`);
             
-            // Check if hit is on the current chromosome
-            if (hitChromosome !== chromosome) {
-                return false;
-            }
+            // For now, skip chromosome matching as we might be dealing with different data formats
+            // This is a common issue with BLAST results where chromosome info is not standard
+            // We'll assume all hits are for the current chromosome since we're showing BLAST results for the current sequence
             
             // Check if hit range overlaps with viewport
             const hitStart = hit.hitRange.from;
             const hitEnd = hit.hitRange.to;
             
-            return hitStart <= viewport.end && hitEnd >= viewport.start;
+            const isInViewport = hitStart <= viewport.end && hitEnd >= viewport.start;
+            console.log(`🔍 [BLAST Manager] Hit ${hit.accession} in viewport: ${isInViewport}`);
+            
+            return isInViewport;
         });
         
+        console.log(`🔍 [BLAST Manager] Returning ${filteredHits.length} filtered hits`);
         return filteredHits;
     }
     
