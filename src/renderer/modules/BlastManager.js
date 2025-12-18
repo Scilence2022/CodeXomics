@@ -2946,12 +2946,14 @@ class BlastManager {
             }
 
             .hits-counter {
-                text-align: center;
-                padding: 12px;
-                background: #f3f4f6;
-                border-radius: 6px;
+                text-align: right;
+                padding: 12px 24px;
+                background: transparent;
                 font-weight: 500;
-                color: #374151;
+                color: #6b7280;
+                font-size: 0.9rem;
+                border-top: 1px solid #e2e8f0;
+                margin-top: 10px;
             }
 
             /* Hits Container */
@@ -3324,16 +3326,23 @@ class BlastManager {
 
             /* Footer */
             .blast-results-footer {
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-                padding: 16px 24px;
-                text-align: center;
+                background: transparent;
+                border-radius: 0;
+                box-shadow: none;
+                padding: 12px 24px;
+                text-align: right;
+                border-top: 1px solid #e2e8f0;
+                margin-top: 10px;
             }
 
             .footer-info {
-                color: #6b7280;
-                font-size: 0.85rem;
+                color: #9ca3af;
+                font-size: 0.8rem;
+                line-height: 1.4;
+            }
+
+            .footer-info small {
+                display: block;
             }
 
             /* Responsive Design */
