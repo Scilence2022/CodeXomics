@@ -3688,9 +3688,19 @@ to {
 .message {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   max-width: 85%;
   animation: messageSlideIn 0.3s ease-out;
+  margin: 2px 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure all message types have consistent spacing */
+.message.assistant-message,
+.message.user-message,
+.message.thinking-process {
+  margin: 2px 0 !important;
+  padding: 0 !important;
 }
 
 @keyframes messageSlideIn {
@@ -3739,10 +3749,10 @@ to {
 
 .message-text {
   background: white;
-  padding: 2px 2px;
-  border-radius: 2px;
+  padding: 6px 10px;
+  border-radius: 10px;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.4;
   border: 1px solid #e9ecef;
   flex: 1;
   user-select: text;
@@ -3761,43 +3771,58 @@ to {
   text-indent: 0;
   /* Smooth shadow for depth */
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin: 0;
 }
 
 .user-message .message-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
-  border-color: transparent;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #000000 !important;
+  border-color: #a5b4fc;
+  box-shadow: 0 1px 3px rgba(102, 126, 234, 0.15);
   /* Better text rendering on colored background */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  text-shadow: none;
+  font-weight: 500;
 }
 
 .assistant-message .message-text {
-  background: white;
+  background: #f9fafb;
   color: #374151;
+  border-color: #e5e7eb;
 }
 
 .message-text p {
-  margin: 0 0 5px 0;
+  margin: 0 !important;
   user-select: text;
   text-indent: 0;
+  line-height: 1.4 !important;
 }
 
-.message-text p:last-child {
-  margin-bottom: 0;
+/* Ensure no extra whitespace from paragraph tags */
+.message-text > p {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.message-text > p:first-child {
+  margin-top: 0 !important;
+}
+
+.message-text > p:last-child {
+  margin-bottom: 0 !important;
 }
 
 .message-text ul {
-  margin: 5px 0;
-  padding-left: 18px;
+  margin: 8px 0;
+  padding-left: 20px;
   user-select: text;
 }
 
 .message-text li {
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   user-select: text;
+  line-height: 1.4;
 }
 
 /* Compact spacing for welcome message */
@@ -3998,13 +4023,20 @@ to {
 .thinking-process {
   border-left: 4px solid #667eea !important;
   background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%) !important;
-  margin: 8px 0;
+  margin: 4px 0 !important;
+  padding: 6px 10px !important;
+  border-radius: 0 10px 10px 0 !important;
+  max-width: 90% !important;
 }
 
 .thinking-process.thinking-completed {
   border-left: 4px solid #10b981 !important;
   background: linear-gradient(135deg, #f0fdf4 0%, #e6fffa 100%) !important;
-  opacity: 0.85;
+  opacity: 0.9;
+  margin: 4px 0 !important;
+  padding: 6px 10px !important;
+  border-radius: 0 10px 10px 0 !important;
+  max-width: 90% !important;
 }
 
 .thinking-completed .thinking-header {
@@ -4024,11 +4056,14 @@ to {
   background: transparent !important;
   border: none !important;
   color: #1e40af !important;
+  padding: 0 !important;
+  margin: 0 !important;
   /* Override parent word-wrap for thinking display */
   white-space: pre !important;
   overflow-x: auto !important;
   word-wrap: normal !important;
   overflow-wrap: normal !important;
+  box-shadow: none !important;
 }
 
 .thinking-header {
@@ -4036,17 +4071,20 @@ to {
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin: 0 0 4px 0 !important;
+  padding: 0 !important;
   color: #667eea;
+  font-size: 13px;
 }
 
 .thinking-header i {
   color: #667eea;
+  font-size: 12px;
 }
 
 .thinking-content {
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.4;
   color: #374151;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   /* Use pre-line to preserve line breaks and wrap long lines */
@@ -4054,6 +4092,32 @@ to {
   overflow-x: auto;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Fix message container for thinking process */
+.thinking-process.message {
+  margin: 4px 0 !important;
+  max-width: 90% !important;
+}
+
+.thinking-process.message .message-content {
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 6px !important;
+}
+
+.thinking-process.message .message-icon {
+  margin-top: 2px !important;
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 10px !important;
+}
+
+.thinking-process.message .message-text {
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .thinking-process .message-icon {
@@ -4133,6 +4197,12 @@ to {
 
 .chat-messages {
   background: #111827;
+}
+
+.user-message .message-text {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+  color: #ffffff;
+  border-color: #4338ca;
 }
 
 .assistant-message .message-text {
@@ -12729,11 +12799,7 @@ to {
 
 .message {
   max-width: 90%;
-}
-
-.message-text {
-  font-size: 13px;
-  padding: 10px 12px;
+  margin: 4px 0;
 }
 
 .chat-input-container {

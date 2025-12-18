@@ -5,42 +5,43 @@
 
 /* Message text container enhancements */
 .message-text {
-    line-height: 1.45;
+    line-height: 1.5;
     color: #374151;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    margin: 0;
 }
 
 /* Headers */
 .message-text h1 {
-    font-size: 1.75em;
+    font-size: 1.5em;
     font-weight: 700;
-    margin: 0.5em 0 0.3em 0;
+    margin: 0.4em 0 0.2em 0;
     color: #1f2937;
     border-bottom: 2px solid #e5e7eb;
     padding-bottom: 0.2em;
 }
 
 .message-text h2 {
-    font-size: 1.5em;
+    font-size: 1.3em;
     font-weight: 600;
-    margin: 0.45em 0 0.25em 0;
+    margin: 0.35em 0 0.15em 0;
     color: #1f2937;
     border-bottom: 1px solid #e5e7eb;
     padding-bottom: 0.15em;
 }
 
 .message-text h3 {
-    font-size: 1.25em;
+    font-size: 1.15em;
     font-weight: 600;
-    margin: 0.4em 0 0.2em 0;
+    margin: 0.3em 0 0.1em 0;
     color: #374151;
 }
 
 .message-text h4 {
-    font-size: 1.1em;
+    font-size: 1.05em;
     font-weight: 600;
-    margin: 0.35em 0 0.15em 0;
+    margin: 0.25em 0 0.1em 0;
     color: #374151;
 }
 
@@ -48,22 +49,20 @@
 .message-text h6 {
     font-size: 1em;
     font-weight: 600;
-    margin: 0.3em 0 0.1em 0;
+    margin: 0.2em 0 0.05em 0;
     color: #4b5563;
 }
 
 /* Paragraphs */
 .message-text p {
-    margin: 0.3em 0;
+    margin: 0 !important;
     color: #374151;
+    line-height: 1.4 !important;
+    padding: 0 !important;
 }
 
-.message-text p:first-child {
-    margin-top: 0;
-}
-
-.message-text p:last-child {
-    margin-bottom: 0;
+.message-text p + p {
+    margin-top: 6px !important;
 }
 
 /* Code blocks */
@@ -354,7 +353,7 @@
 
 /* User message markdown styling - Enhanced for better readability */
 .user-message .message-text {
-    color: #ffffff;
+    color: #000000;
 }
 
 .user-message .message-text h1,
@@ -363,86 +362,91 @@
 .user-message .message-text h4,
 .user-message .message-text h5,
 .user-message .message-text h6 {
-    color: #ffffff;
-    border-bottom-color: rgba(255, 255, 255, 0.4);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    color: #000000;
+    border-bottom-color: rgba(0, 0, 0, 0.2);
+    text-shadow: none;
 }
 
 .user-message .message-text p {
-    color: #ffffff;
+    color: #000000;
 }
 
 .user-message .message-text a {
-    color: #e0e7ff;
-    border-bottom-color: rgba(224, 231, 255, 0.5);
+    color: #1e40af;
+    border-bottom-color: rgba(30, 64, 175, 0.5);
+    font-weight: 600;
 }
 
 .user-message .message-text a:hover {
     color: #ffffff;
-    border-bottom-color: #ffffff;
+    background: #1e40af;
+    padding: 2px 4px;
+    border-radius: 3px;
+    text-decoration: none;
+    border-bottom: none;
 }
 
 .user-message .message-text code {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.35);
-    color: #fef3c7;
+    background: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #000000;
     text-shadow: none;
 }
 
 .user-message .message-text pre {
-    background: rgba(0, 0, 0, 0.25);
-    border-color: rgba(255, 255, 255, 0.3);
-    border-left-color: rgba(255, 255, 255, 0.6);
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    border-left-color: #667eea;
 }
 
 .user-message .message-text pre code {
-    color: #ffffff;
+    color: #000000;
     background: transparent;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    text-shadow: none;
 }
 
 .user-message .message-text blockquote {
-    background: rgba(255, 255, 255, 0.15);
-    border-left-color: rgba(255, 255, 255, 0.6);
-    color: #f3f4f6;
+    background: rgba(0, 0, 0, 0.05);
+    border-left-color: #667eea;
+    color: #000000;
 }
 
 .user-message .message-text strong,
 .user-message .message-text b {
-    color: #ffffff;
+    color: #000000;
     font-weight: 700;
 }
 
 .user-message .message-text em,
 .user-message .message-text i {
-    color: #f3f4f6;
+    color: #000000;
 }
 
 .user-message .message-text hr {
-    border-top-color: rgba(255, 255, 255, 0.3);
+    border-top-color: rgba(0, 0, 0, 0.2);
 }
 
 .user-message .message-text table {
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(0, 0, 0, 0.2);
 }
 
 .user-message .message-text table th,
 .user-message .message-text table td {
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #000000;
 }
 
 .user-message .message-text table th {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.05);
     font-weight: 600;
 }
 
 .user-message .message-text table tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.03);
 }
 
 .user-message .message-text table tr:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.08);
 }
 
 .user-message .message-text ul,
