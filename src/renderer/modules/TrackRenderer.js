@@ -564,9 +564,11 @@ class TrackRenderer {
         // Get track settings
         const settings = this.getTrackSettings('blast');
         
-        // Add detailed ruler for current viewing region
-        const detailedRuler = this.createDetailedRuler(chromosome);
-        trackContent.appendChild(detailedRuler);
+        // Add detailed ruler for current viewing region if enabled in settings
+        if (settings.showRuler) {
+            const detailedRuler = this.createDetailedRuler(chromosome);
+            trackContent.appendChild(detailedRuler);
+        }
         
         // Get and validate data
         const blastResults = this.genomeBrowser.blastManager.getBlastResultsInRange(chromosome, viewport);
@@ -629,10 +631,12 @@ class TrackRenderer {
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'blast-results-svg');
         
-        // Position SVG correctly
+        // Position SVG correctly based on ruler visibility
+        const svgTop = settings.showRuler ? '35px' : '0px';
+        
         svg.style.cssText = `
             position: absolute;
-            top: 35px;
+            top: ${svgTop};
             left: 0;
             width: 100%;
             height: ${svgHeight}px;
@@ -667,7 +671,10 @@ class TrackRenderer {
         // Ensure scale factor is always positive and reasonable
         const scaleFactor = viewportWidth > 0 ? svgWidth / viewportWidth : 0.08; // Default to 0.08 if viewportWidth is 0
         
-        console.log(`🔍 [BLAST Render] Scale factor: ${scaleFactor}`);
+        // Determine if we're zoomed in enough to show detailed alignment
+        const isZoomedIn = viewportWidth < 500; // Show detailed info when viewport is less than 500 bp
+        
+        console.log(`🔍 [BLAST Render] Scale factor: ${scaleFactor}, Zoom level: ${viewportWidth} bp, Show detailed alignment: ${isZoomedIn}`);
         
         // Render each blast result
         visibleResults.forEach((result, index) => {
@@ -690,33 +697,121 @@ class TrackRenderer {
             console.log(`🔍 [BLAST Render] Result ${index} rendered as: x=${x}, width=${width}`);
             
             // Use a different row for each result to avoid overlapping
-            // SVG is already positioned below the 35px ruler, so start from top of SVG container
+            // Adjust Y position based on ruler visibility
             const y = (index % 5) * settings.resultSpacing;
             // Increase result height for better visibility
             const height = Math.max(settings.resultHeight || 12, 15);
             
-            // Create blast result rectangle
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', x);
-            rect.setAttribute('y', y);
-            // Ensure minimum width for visibility
-            rect.setAttribute('width', Math.max(width, 5)); // Minimum width of 5px for better visibility
-            rect.setAttribute('height', height);
-            rect.setAttribute('fill', 'url(#blast-gradient)');
-            rect.setAttribute('stroke', '#1e3a8a');
-            rect.setAttribute('stroke-width', '1');
-            rect.setAttribute('rx', '2');
+            // Determine hit direction - check if result has strand information or infer from alignment
+            // For simplicity, we'll check if hit has a strand property, otherwise infer from alignment
+            const isForward = result.strand !== '-';
+            
+            // Create blast result with direction indicator
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            
+            if (width > 10) {
+                // For longer hits, create an arrow shape
+                const arrowSize = Math.min(height * 0.8, 15);
+                
+                // Create arrow path
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                let pathData;
+                
+                if (isForward) {
+                    // Forward arrow (pointing right)
+                    pathData = `M ${x} ${y} 
+                               L ${x + width - arrowSize} ${y} 
+                               L ${x + width} ${y + height / 2} 
+                               L ${x + width - arrowSize} ${y + height} 
+                               L ${x} ${y + height} 
+                               Z`;
+                } else {
+                    // Reverse arrow (pointing left)
+                    pathData = `M ${x + arrowSize} ${y} 
+                               L ${x + width} ${y} 
+                               L ${x + width} ${y + height} 
+                               L ${x + arrowSize} ${y + height} 
+                               L ${x} ${y + height / 2} 
+                               Z`;
+                }
+                
+                path.setAttribute('d', pathData);
+                path.setAttribute('fill', 'url(#blast-gradient)');
+                path.setAttribute('stroke', '#1e3a8a');
+                path.setAttribute('stroke-width', '1');
+                group.appendChild(path);
+            } else {
+                // For very short hits, use a triangle
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                let pathData;
+                
+                if (isForward) {
+                    // Forward triangle (pointing right)
+                    pathData = `M ${x} ${y} 
+                               L ${x + width} ${y + height / 2} 
+                               L ${x} ${y + height} 
+                               Z`;
+                } else {
+                    // Reverse triangle (pointing left)
+                    pathData = `M ${x + width} ${y} 
+                               L ${x} ${y + height / 2} 
+                               L ${x + width} ${y + height} 
+                               Z`;
+                }
+                
+                path.setAttribute('d', pathData);
+                path.setAttribute('fill', 'url(#blast-gradient)');
+                path.setAttribute('stroke', '#1e3a8a');
+                path.setAttribute('stroke-width', '1');
+                group.appendChild(path);
+            }
             
             // Add tooltip with result information
-            const tooltip = `${result.accession} - ${result.description}\nScore: ${result.score}, E-value: ${result.evalue}\nIdentity: ${result.identity}%, Coverage: ${result.coverage}%`;
-            rect.setAttribute('title', tooltip);
+            const tooltip = `${result.accession} - ${result.description}\nScore: ${result.score}, E-value: ${result.evalue}\nIdentity: ${result.identity}%, Coverage: ${result.coverage}%\nDirection: ${isForward ? 'Forward' : 'Reverse'}`;
+            
+            // Add title element for tooltip
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+            title.textContent = tooltip;
+            group.appendChild(title);
             
             // Add click event to show detailed information
-            rect.addEventListener('click', () => {
+            group.addEventListener('click', () => {
                 this.genomeBrowser.blastManager.showResultDetails(result);
             });
             
-            svg.appendChild(rect);
+            // Add detailed alignment information if zoomed in enough
+            if (isZoomedIn && width > 20) {
+                // Create text element for alignment information
+                const alignmentText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                // Use smaller font for alignment info
+                const fontSize = Math.max(8, Math.min(width / 10, 12));
+                
+                // Calculate position below the blast result
+                const textX = x + 5;
+                const textY = y + height + fontSize + 5;
+                
+                // Use identity as alignment detail for now - can be extended to show actual alignment
+                const alignmentDetail = result.identity ? `${result.identity}% identity` : 'Alignment';
+                
+                alignmentText.setAttribute('x', textX);
+                alignmentText.setAttribute('y', textY);
+                alignmentText.setAttribute('fill', '#374151');
+                alignmentText.setAttribute('font-size', fontSize);
+                alignmentText.setAttribute('font-family', 'Arial, sans-serif');
+                alignmentText.setAttribute('font-weight', 'bold');
+                alignmentText.textContent = alignmentDetail;
+                
+                // Add title for more detailed info
+                const alignmentTooltip = `${result.accession}\n${result.description}\nScore: ${result.score}\nE-value: ${result.evalue}\nIdentity: ${result.identity}%\nCoverage: ${result.coverage}%\n${result.alignments?.[0]?.alignment || 'Detailed alignment available'}`;
+                
+                const alignmentTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                alignmentTitle.textContent = alignmentTooltip;
+                alignmentText.appendChild(alignmentTitle);
+                
+                group.appendChild(alignmentText);
+            }
+            
+            svg.appendChild(group);
         });
         
         // Add SVG to track content
@@ -9912,6 +10007,34 @@ This action cannot be undone.`;
      * Create default settings content for other tracks
      */
     createDefaultSettingsContent(trackType, settings) {
+        // Blast-specific settings
+        if (trackType === 'blast') {
+            return `
+                <div class="settings-section">
+                    <h4>BLAST Track Settings</h4>
+                    <div class="form-group">
+                        <label for="blastTrackHeight">Track Height (px):</label>
+                        <input type="number" id="blastTrackHeight" min="50" max="300" value="${settings.height || 120}">
+                    </div>
+                    <div class="form-group">
+                        <label for="blastShowRuler">
+                            <input type="checkbox" id="blastShowRuler" ${settings.showRuler ? 'checked' : ''}>
+                            Show Track Ruler
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="blastResultHeight">Result Height (px):</label>
+                        <input type="number" id="blastResultHeight" min="8" max="30" value="${settings.resultHeight || 12}">
+                    </div>
+                    <div class="form-group">
+                        <label for="blastResultSpacing">Result Spacing (px):</label>
+                        <input type="number" id="blastResultSpacing" min="5" max="30" value="${settings.resultSpacing || 14}">
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Default settings for other track types
         return `
             <div class="settings-section">
                 <h4>Basic Settings</h4>
@@ -10037,6 +10160,8 @@ This action cannot be undone.`;
                 renderingMode: 'svg',
                 // Track settings
                 height: 120,
+                // Ruler settings - default to false to hide ruler
+                showRuler: false,
                 // Blast result settings
                 resultHeight: 12,
                 resultSpacing: 14,
