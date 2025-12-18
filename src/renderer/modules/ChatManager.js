@@ -2950,7 +2950,9 @@ class ChatManager {
             'wigTracks': 'trackWIG',
             'sequence': 'trackSequence',
             'actions': 'trackActions',
-            'action': 'trackActions'
+            'action': 'trackActions',
+            'blast': 'trackBlast',
+            'blast_results': 'trackBlast'
         };
         
         const checkboxId = trackMapping[trackName];
@@ -3943,7 +3945,9 @@ class ChatManager {
             { name: 'proteins', id: 'trackProteins' },
             { name: 'wigTracks', id: 'trackWIG' },
             { name: 'sequence', id: 'trackSequence' },
-            { name: 'actions', id: 'trackActions' }
+            { name: 'actions', id: 'trackActions' },
+            { name: 'blast', id: 'trackBlast' },
+            { name: 'blast_results', id: 'trackBlast' }
         ];
         
         // Check each track checkbox
@@ -6367,7 +6371,9 @@ class ChatManager {
                         'wigTracks': 'trackWIG',
                         'sequence': 'trackSequence',
                         'actions': 'trackActions',
-                        'action': 'trackActions'  // 添加对'action'的支持
+                        'action': 'trackActions',
+                        'blast': 'trackBlast',
+                        'blast_results': 'trackBlast'
                     };
                     
                     const checkboxId = trackMapping[currentTrack];
