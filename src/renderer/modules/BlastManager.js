@@ -5456,6 +5456,9 @@ class BlastManager {
         let queryPos = queryRange.from;
         let hitPos = hitRange.from;
         
+        // Detect if alignment is in reverse orientation (subject range is reversed)
+        const isReverseAlignment = hitRange.from > hitRange.to;
+        
         for (let i = 0; i < maxLength; i += lineLength) {
             const queryLine = paddedQuery.substring(i, i + lineLength);
             const matchLine = paddedMatch.substring(i, i + lineLength);
@@ -5466,7 +5469,15 @@ class BlastManager {
             const subjectBasesInLine = subjectLine.replace(/-/g, '').length;
             
             const queryEndPos = queryPos + queryBasesInLine - 1;
-            const hitEndPos = hitPos + subjectBasesInLine - 1;
+            
+            let hitEndPos;
+            if (isReverseAlignment) {
+                // For reverse alignments, decrement the position
+                hitEndPos = hitPos - subjectBasesInLine + 1;
+            } else {
+                // For forward alignments, increment as before
+                hitEndPos = hitPos + subjectBasesInLine - 1;
+            }
             
             // Format with proper spacing and alignment
             formatted += `Query  ${queryPos.toString().padStart(6)} ${queryLine} ${queryEndPos.toString().padStart(6)}\n`;
@@ -5475,7 +5486,11 @@ class BlastManager {
             
             // Update positions for next line
             queryPos = queryEndPos + 1;
-            hitPos = hitEndPos + 1;
+            if (isReverseAlignment) {
+                hitPos = hitEndPos - 1;
+            } else {
+                hitPos = hitEndPos + 1;
+            }
         }
         
         return formatted;

@@ -678,16 +678,33 @@ class TrackRenderer {
         
         // Render each blast result
         visibleResults.forEach((result, index) => {
-            const resultStart = result.hitRange.from;
-            const resultEnd = result.hitRange.to;
-            const resultWidth = resultEnd - resultStart;
+            // Get raw start and end positions
+            let resultStart = result.hitRange.from;
+            let resultEnd = result.hitRange.to;
             
-            console.log(`🔍 [BLAST Render] Result ${index}: ${resultStart}-${resultEnd} (width: ${resultWidth})`);
+            // Determine hit direction for BLAST results
+            // For reverse alignments (start > end), arrow should point left
+            // For BLAST results, we rely solely on hitRange comparison since strand property is not available
+            const isForward = resultStart < resultEnd;
+            
+            // For reverse alignments, we need to swap start and end for proper width calculation
+            // while maintaining the direction indicator
+            let actualStart = resultStart;
+            let actualEnd = resultEnd;
+            if (resultStart > resultEnd) {
+                // Reverse alignment - swap start and end for position calculation
+                actualStart = resultEnd;
+                actualEnd = resultStart;
+            }
+            
+            const resultWidth = actualEnd - actualStart;
+            
+            console.log(`🔍 [BLAST Render] Result ${index}: ${resultStart}-${resultEnd} (actual: ${actualStart}-${actualEnd}, width: ${resultWidth}, direction: ${isForward ? 'Forward' : 'Reverse'})`);
             
             // Calculate x position and width
             // Ensure result is within viewport bounds
-            const visibleStart = Math.max(resultStart, viewport.start);
-            const visibleEnd = Math.min(resultEnd, viewport.end);
+            const visibleStart = Math.max(actualStart, viewport.start);
+            const visibleEnd = Math.min(actualEnd, viewport.end);
             const visibleWidth = visibleEnd - visibleStart;
             
             // Calculate x position and width - ensure they are positive
@@ -701,10 +718,6 @@ class TrackRenderer {
             const y = (index % 5) * settings.resultSpacing;
             // Increase result height for better visibility
             const height = Math.max(settings.resultHeight || 12, 15);
-            
-            // Determine hit direction - check if result has strand information or infer from alignment
-            // For simplicity, we'll check if hit has a strand property, otherwise infer from alignment
-            const isForward = result.strand !== '-';
             
             // Create blast result with direction indicator
             const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -10475,8 +10488,18 @@ This action cannot be undone.`;
                 settings.adaptiveHeight = modal.querySelector('#sequenceLineAdaptiveHeight').checked;
                 break;
                 
+            case 'blast':
+                // BLAST-specific settings collection
+                settings.height = parseInt(modal.querySelector('#blastTrackHeight').value) || 120;
+                settings.showRuler = modal.querySelector('#blastShowRuler').checked;
+                settings.resultHeight = parseInt(modal.querySelector('#blastResultHeight').value) || 12;
+                settings.resultSpacing = parseInt(modal.querySelector('#blastResultSpacing').value) || 14;
+                break;
+            
             default:
-                settings.height = parseInt(modal.querySelector('#defaultTrackHeight').value) || 80;
+                // For other track types that use the default track height input
+                const defaultHeightInput = modal.querySelector('#defaultTrackHeight');
+                settings.height = defaultHeightInput ? parseInt(defaultHeightInput.value) : 80;
                 break;
         }
         
