@@ -570,14 +570,12 @@ class TrackRenderer {
             trackContent.appendChild(detailedRuler);
         }
         
-        // Get and validate data
-        const blastResults = this.genomeBrowser.blastManager.getBlastResultsInRange(chromosome, viewport);
-        const visibleResults = this.filterBlastResultsByViewport(blastResults, viewport);
-        console.log(`Displaying ${visibleResults.length} BLAST results in region ${viewport.start}-${viewport.end}`);
+        // Get all BLAST results for the chromosome, not just in the current range
+        const allBlastResults = this.genomeBrowser.blastManager.getAllBlastResults(chromosome);
         
-        if (visibleResults.length === 0) {
+        if (!allBlastResults || allBlastResults.length === 0) {
             const noResultsMsg = this.createNoDataMessage(
-                'No BLAST results in this region',
+                'No BLAST results available for this chromosome',
                 'no-blast-results-message'
             );
             trackContent.appendChild(noResultsMsg);
@@ -585,13 +583,231 @@ class TrackRenderer {
             return track;
         }
         
-        // Process and render blast results with settings
-        this.renderBlastElements(trackContent, visibleResults, viewport, settings);
+        // Filter results by viewport
+        const visibleResults = this.filterBlastResultsByViewport(allBlastResults, viewport);
+        const outOfViewResults = allBlastResults.filter(result => {
+            const resultStart = result.hitRange.from;
+            const resultEnd = result.hitRange.to;
+            return !(resultStart <= viewport.end && resultEnd >= viewport.start);
+        });
+        
+        console.log(`Displaying ${visibleResults.length} BLAST results in region ${viewport.start}-${viewport.end}, ${outOfViewResults.length} results outside view`);
+        
+        // Create main container for all blast results content
+        const mainContainer = document.createElement('div');
+        mainContainer.className = 'blast-results-container';
+        mainContainer.style.cssText = `
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        `;
+        
+        // Create container for visible blast results
+        const visibleContainer = document.createElement('div');
+        visibleContainer.className = 'visible-blast-results';
+        visibleContainer.style.position = 'relative';
+        
+        // Display out-of-view results information if there are any
+        if (outOfViewResults.length > 0) {
+            const outOfViewInfo = document.createElement('div');
+            outOfViewInfo.className = 'blast-out-of-view-info';
+            outOfViewInfo.style.cssText = `
+                position: absolute;
+                top: 2px;
+                left: 10px;
+                background: rgba(255, 255, 255, 0.9);
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 10px;
+                color: #666;
+                border: 1px solid #ddd;
+                z-index: 15;
+            `;
+            outOfViewInfo.textContent = `${outOfViewResults.length} result(s) outside current view`;
+            visibleContainer.appendChild(outOfViewInfo);
+        }
+        
+        if (visibleResults.length === 0) {
+            const noResultsMsg = this.createNoDataMessage(
+                'No BLAST results in this region',
+                'no-blast-results-message'
+            );
+            visibleContainer.appendChild(noResultsMsg);
+        } else {
+            // Process and render blast results with settings
+            this.renderBlastElements(visibleContainer, visibleResults, viewport, settings);
+        }
+        
+        mainContainer.appendChild(visibleContainer);
+        
+        // Handle out-of-view results section
+        if (outOfViewResults.length > 0) {
+            const outOfViewSection = this.createOutOfViewBlastSection(outOfViewResults, viewport, chromosome);
+            mainContainer.appendChild(outOfViewSection);
+        }
+        
+        trackContent.appendChild(mainContainer);
+        
+        // Set track height based on content
+        const totalHeight = Math.max(mainContainer.scrollHeight, settings.height);
+        trackContent.style.height = `${totalHeight}px`;
+        
+        // Add statistics
+        let statsText;
+        if (outOfViewResults.length > 0) {
+            statsText = `${visibleResults.length} in view, ${outOfViewResults.length} out of view`;
+        } else {
+            statsText = `${visibleResults.length} BLAST results visible`;
+        }
+        const statsElement = this.createStatsElement(statsText, 'blast-track-stats');
+        trackContent.appendChild(statsElement);
         
         // Restore header state if it was previously hidden
         this.restoreHeaderState(track, 'blast');
         
         return track;
+    }
+    
+    /**
+     * Create section for out-of-view BLAST results with navigation options
+     */
+    createOutOfViewBlastSection(outOfViewResults, viewport, chromosome) {
+        const container = document.createElement('div');
+        container.className = 'out-of-view-blast-section';
+        container.style.cssText = `
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-top: 4px;
+        `;
+        
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            font-weight: 600;
+            font-size: 12px;
+            color: #495057;
+            margin-bottom: 6px;
+        `;
+        header.textContent = `${outOfViewResults.length} BLAST result(s) outside current view:`;
+        container.appendChild(header);
+        
+        // Results list
+        outOfViewResults.forEach((result, index) => {
+            const resultElement = this.createOutOfViewBlastItem(result, viewport, chromosome);
+            container.appendChild(resultElement);
+        });
+        
+        return container;
+    }
+    
+    /**
+     * Create individual BLAST result item for out-of-view results
+     */
+    createOutOfViewBlastItem(result, viewport, chromosome) {
+        const resultStart = result.hitRange.from;
+        const resultEnd = result.hitRange.to;
+        const resultLength = Math.abs(resultEnd - resultStart) + 1;
+        
+        const item = document.createElement('div');
+        item.className = 'out-of-view-blast-item';
+        item.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            margin-bottom: 2px;
+            background: white;
+            border-radius: 3px;
+            font-size: 11px;
+            border-left: 3px solid #3b82f6;
+        `;
+        
+        // Result info
+        const info = document.createElement('div');
+        info.style.cssText = `
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        `;
+        
+        const resultName = document.createElement('div');
+        resultName.style.cssText = `
+            font-weight: 500;
+            color: #2d3748;
+        `;
+        resultName.textContent = result.accession || 'Unknown accession';
+        
+        const resultDetails = document.createElement('div');
+        resultDetails.style.cssText = `
+            font-size: 10px;
+            color: #6b7280;
+        `;
+        resultDetails.textContent = `${result.description || 'No description'}`;
+        
+        const resultPosition = document.createElement('div');
+        resultPosition.style.cssText = `
+            font-size: 10px;
+            color: #6b7280;
+        `;
+        resultPosition.textContent = `${chromosome}:${resultStart}-${resultEnd} (${resultLength} bp)`;
+        
+        info.appendChild(resultName);
+        info.appendChild(resultDetails);
+        info.appendChild(resultPosition);
+        
+        // Navigation button
+        const navButton = document.createElement('button');
+        navButton.className = 'blast-nav-btn';
+        navButton.innerHTML = '<i class="fas fa-eye"></i> View';
+        navButton.style.cssText = `
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        `;
+        navButton.title = `Jump to ${chromosome}:${resultStart}-${resultEnd}`;
+        
+        // Add click event to jump to this result
+        navButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Calculate appropriate viewport to show the result
+            const viewportSize = viewport.end - viewport.start;
+            const newStart = Math.max(0, Math.min(resultStart - viewportSize / 3, resultEnd - viewportSize));
+            const newEnd = newStart + viewportSize;
+            
+            // Navigate to the new position
+            this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+            if (this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[chromosome]) {
+                this.genomeBrowser.displayGenomeView(chromosome, this.genomeBrowser.currentSequence[chromosome]);
+                if (this.genomeBrowser.genomeNavigationBar) {
+                    this.genomeBrowser.genomeNavigationBar.update();
+                }
+                if (this.genomeBrowser.tabManager) {
+                    this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd);
+                }
+            }
+        });
+        
+        // Add click event to show result details
+        item.addEventListener('click', (e) => {
+            if (e.target !== navButton && !navButton.contains(e.target)) {
+                this.genomeBrowser.blastManager.showResultDetails(result);
+            }
+        });
+        
+        item.appendChild(info);
+        item.appendChild(navButton);
+        
+        return item;
     }
     
     /**
@@ -829,14 +1045,6 @@ class TrackRenderer {
         
         // Add SVG to track content
         trackContent.appendChild(svg);
-        
-        // Add statistics
-        const statsText = `${visibleResults.length} BLAST results displayed`;
-        const statsElement = this.createStatsElement(statsText, 'blast-track-stats');
-        trackContent.appendChild(statsElement);
-        
-        // Set track height
-        trackContent.style.height = `${settings.height}px`;
     }
     
     /**

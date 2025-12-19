@@ -6774,6 +6774,23 @@ class BlastManager {
     }
     
     /**
+     * Get all BLAST results for the current search
+     * @param {string} chromosome - Chromosome name (currently not used, but kept for consistency)
+     * @returns {array} - All BLAST results
+     */
+    getAllBlastResults(chromosome) {
+        console.log(`🔍 [BLAST Manager] Getting all results for chromosome: ${chromosome}`);
+        
+        if (!this.searchResults || !this.searchResults.hits) {
+            console.log(`🔍 [BLAST Manager] No search results available`);
+            return [];
+        }
+        
+        console.log(`🔍 [BLAST Manager] Returning ${this.searchResults.hits.length} total hits`);
+        return this.searchResults.hits;
+    }
+    
+    /**
      * Get BLAST results in specified chromosome and viewport range
      * @param {string} chromosome - Chromosome name
      * @param {object} viewport - Viewport object with start and end properties
@@ -6822,8 +6839,26 @@ class BlastManager {
         // Example: Scroll to the hit position in the genome browser
         if (this.app && this.app.genomeBrowser) {
             const chromosome = result.accession.split('.')[0];
-            const position = (result.hitRange.from + result.hitRange.to) / 2;
-            this.app.genomeBrowser.scrollToPosition(chromosome, position, 1000);
+            const resultStart = result.hitRange.from;
+            const resultEnd = result.hitRange.to;
+            
+            // Calculate appropriate viewport to show the result
+            const currentViewport = this.app.genomeBrowser.currentPosition;
+            const viewportSize = currentViewport.end - currentViewport.start;
+            const newStart = Math.max(0, Math.min(resultStart - viewportSize / 3, resultEnd - viewportSize));
+            const newEnd = newStart + viewportSize;
+            
+            // Navigate to the new position
+            this.app.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+            if (this.app.genomeBrowser.currentSequence && this.app.genomeBrowser.currentSequence[chromosome]) {
+                this.app.genomeBrowser.displayGenomeView(chromosome, this.app.genomeBrowser.currentSequence[chromosome]);
+                if (this.app.genomeBrowser.genomeNavigationBar) {
+                    this.app.genomeBrowser.genomeNavigationBar.update();
+                }
+                if (this.app.genomeBrowser.tabManager) {
+                    this.app.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd);
+                }
+            }
         }
         
         // Example: Show detailed information in a modal
