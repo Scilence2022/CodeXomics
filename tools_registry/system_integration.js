@@ -328,8 +328,29 @@ class SystemIntegration {
                 }
             }
             // Merge built-in tools with registry tools (built-in tools first for priority)
-            // Then add plugin tools at the end
-            const combinedTools = [...relevantBuiltInTools, ...registryPromptData.tools, ...pluginTools];
+            // Then add plugin tools and MCP server tools
+            // Check if MCP server manager is available from chatManagerInstance
+            let mcpServerTools = [];
+            if (typeof window !== 'undefined' && window.genomeBrowser && window.genomeBrowser.chatManager && window.genomeBrowser.chatManager.mcpServerManager) {
+                try {
+                    const mcpManager = window.genomeBrowser.chatManager.mcpServerManager;
+                    const allMcpTools = mcpManager.getAllAvailableTools();
+                    mcpServerTools = allMcpTools.map(tool => ({
+                        name: tool.name,
+                        description: tool.description || `${tool.name} tool from MCP server`,
+                        category: tool.category || 'external',
+                        execution_type: 'external',
+                        source: 'mcp',
+                        serverId: tool.serverId,
+                        serverName: tool.serverName,
+                        parameters: tool.inputSchema || { type: 'object', properties: {} }
+                    }));
+                    console.log('🌐 [System Integration] MCP server tools found:', mcpServerTools.length);
+                } catch (error) {
+                    console.warn('⚠️ [System Integration] Failed to get MCP server tools:', error.message);
+                }
+            }
+            const combinedTools = [...relevantBuiltInTools, ...registryPromptData.tools, ...mcpServerTools, ...pluginTools];
             
             // Generate plugin tools prompt section
             const pluginToolsPromptSection = this.pluginBridge.generatePluginToolsPromptSection(userQuery);

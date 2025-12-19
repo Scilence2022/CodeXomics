@@ -36,23 +36,23 @@ class MCPServerManager {
     // Load server configurations from storage
     loadServerConfigurations() {
         const defaultServers = new Map([
-            ['genome-studio', {
-                id: 'genome-studio',
-                name: 'CodeXomics',
-                description: 'Built-in genome analysis tools',
-                url: 'ws://localhost:3003',
-                enabled: true,
-                autoConnect: false, // Changed: Disable auto-connection by default
-                reconnectDelay: 5,
-                category: 'genomics',
-                capabilities: ['genome-navigation', 'sequence-analysis', 'annotation'],
-                isBuiltin: true,
-                protocol: 'websocket' // Legacy WebSocket protocol
-            }],
-            ['deep-research', {
-                id: 'deep-research',
-                name: 'Deep Research',
-                description: 'Advanced research and analysis tools',
+            // ['genome-studio', {
+            //     id: 'genome-studio',
+            //     name: 'CodeXomics',
+            //     description: 'Built-in genome analysis tools',
+            //     url: 'ws://localhost:3003',
+            //     enabled: true,
+            //     autoConnect: false, // Changed: Disable auto-connection by default
+            //     reconnectDelay: 5,
+            //     category: 'genomics',
+            //     capabilities: ['genome-navigation', 'sequence-analysis', 'annotation'],
+            //     isBuiltin: true,
+            //     protocol: 'websocket' // Legacy WebSocket protocol
+            // }],
+            ['deep-gene-research', {
+                id: 'deep-gene-research',
+                name: 'Deep Gene Research',
+                description: 'Advanced research and analysis tools of specific gene',
                 url: 'http://localhost:3000/api/mcp',
                 enabled: true,
                 autoConnect: false,
@@ -389,13 +389,13 @@ class MCPServerManager {
                 // Server is responding (even if endpoint doesn't exist)
                 console.log(`HTTP MCP server is reachable: ${server.name} (${response.status})`);
                 
+                // Try to discover tools from the HTTP server first
+                await this.requestHttpServerTools(serverId, server);
+                
                 // Store the server as "connected" for HTTP-based servers
                 this.connections.set(serverId, { type: 'http', url: server.url, headers: server.headers });
                 this.activeServers.add(serverId);
                 this.emit('serverConnected', { serverId, server });
-                
-                // Try to discover tools from the HTTP server
-                await this.requestHttpServerTools(serverId, server);
                 
             } else {
                 throw new Error(`HTTP server returned ${response.status} ${response.statusText}`);
@@ -1391,12 +1391,25 @@ class MCPServerManager {
                 return;
             }
             
-            // Determine transport type
-            const transportType = serverConfig.transportType || 'websocket';
+            // Determine transport type - match the logic from connectToServer
+            const transportType = serverConfig.protocol || serverConfig.transportType || 'websocket';
             
+            // Validate URL scheme based on transport type
             if (transportType === 'websocket') {
+                // WebSocket URLs must start with ws:// or wss://
+                const wsUrlRegex = /^ws(s)?:\/\//i;
+                if (!wsUrlRegex.test(serverConfig.url)) {
+                    reject(new Error(`WebSocket connection failed: Failed to construct 'WebSocket': The URL's scheme must be either 'ws' or 'wss'. '${serverConfig.url.split('://')[0]}' is not allowed.`));
+                    return;
+                }
                 this.testWebSocketConnection(serverConfig, resolve, reject);
             } else if (transportType === 'streamable-http' || transportType === 'http' || transportType === 'https') {
+                // HTTP URLs must start with http:// or https://
+                const httpUrlRegex = /^http(s)?:\/\//i;
+                if (!httpUrlRegex.test(serverConfig.url)) {
+                    reject(new Error(`HTTP connection failed: The URL's scheme must be either 'http' or 'https'. '${serverConfig.url.split('://')[0]}' is not allowed.`));
+                    return;
+                }
                 this.testHttpConnection(serverConfig, resolve, reject);
             } else {
                 reject(new Error(`Unsupported transport type: ${transportType}`));

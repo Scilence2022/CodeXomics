@@ -2396,8 +2396,7 @@ class GenomeBrowser {
         const serverConfig = {
             name: document.getElementById('serverName').value.trim(),
             url: document.getElementById('serverUrl').value.trim(),
-            apiKey: document.getElementById('serverApiKey').value.trim(),
-            transportType: document.getElementById('serverTransportType')?.value || 'websocket'
+            apiKey: document.getElementById('serverApiKey').value.trim()
         };
 
         if (!serverConfig.url) {
@@ -2405,8 +2404,18 @@ class GenomeBrowser {
             return;
         }
 
+        // Auto-detect transport type from URL scheme
+        let transportType = 'websocket';
+        if (serverConfig.url.startsWith('http://') || serverConfig.url.startsWith('https://')) {
+            transportType = 'http';
+        } else if (serverConfig.url.startsWith('ws://') || serverConfig.url.startsWith('wss://')) {
+            transportType = 'websocket';
+        }
+        
+        serverConfig.transportType = transportType;
+
         if (testStatus) {
-            testStatus.textContent = `Testing ${serverConfig.transportType.toUpperCase()} connection...`;
+            testStatus.textContent = `Testing ${transportType.toUpperCase()} connection...`;
             testStatus.className = 'test-status testing';
         }
 
@@ -2422,17 +2431,17 @@ class GenomeBrowser {
         mcpManager.testServerConnection(serverConfig)
             .then(result => {
                 if (testStatus) {
-                    testStatus.textContent = `${serverConfig.transportType.toUpperCase()} connection successful!`;
+                    testStatus.textContent = `${transportType.toUpperCase()} connection successful!`;
                     testStatus.className = 'test-status success';
                 }
-                this.updateStatus(`${serverConfig.transportType.toUpperCase()} connection test successful`);
+                this.updateStatus(`${transportType.toUpperCase()} connection test successful`);
             })
             .catch(error => {
                 if (testStatus) {
-                    testStatus.textContent = `${serverConfig.transportType.toUpperCase()} connection failed: ${error.message}`;
+                    testStatus.textContent = `${transportType.toUpperCase()} connection failed: ${error.message}`;
                     testStatus.className = 'test-status error';
                 }
-                this.updateStatus(`${serverConfig.transportType.toUpperCase()} connection test failed: ${error.message}`);
+                this.updateStatus(`${transportType.toUpperCase()} connection test failed: ${error.message}`);
             });
     }
 
