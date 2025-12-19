@@ -701,8 +701,8 @@ class GenomeBrowser {
         document.getElementById('exportGenbankBtn').addEventListener('click', () => this.exportManager.exportAsGenBank());
         document.getElementById('exportCDSFastaBtn').addEventListener('click', () => this.exportManager.exportCDSAsFasta());
         
-        // MCP Server control
-        document.getElementById('mcpServerBtn').addEventListener('click', () => this.toggleMCPServer());
+        // MCP Server control - temporarily commented out
+        // document.getElementById('mcpServerBtn').addEventListener('click', () => this.toggleMCPServer());
         document.getElementById('exportProteinFastaBtn').addEventListener('click', () => this.exportManager.exportProteinAsFasta());
         document.getElementById('exportGFFBtn').addEventListener('click', () => this.exportManager.exportAsGFF());
         document.getElementById('exportBEDBtn').addEventListener('click', () => this.exportManager.exportAsBED());
