@@ -385,10 +385,6 @@
 
 
 
-.horizontal-splitter {
-  display: none !important;
-}
-
 .genome-browser-container {
   background: white;
   border: 1px solid #ddd;
@@ -400,22 +396,7 @@
   padding: 0;
 }
 
-.settings-section {
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #e9ecef;
-}
 
-.settings-section:last-child {
-  border-bottom: none;
-}
-
-.settings-section h4 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #495057;
-}
 
 .form-group:has(#mcpAutoConnect) {
   margin-left: 20px;
@@ -434,9 +415,7 @@
   font-weight: bold;
 }
 
-.form-group {
-  margin-bottom: 12px;
-}
+
 
 .form-group label {
   display: block;
@@ -473,24 +452,7 @@
   font-size: 13px;
 }
 
-.track-controls {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
 
-.track-controls label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
-  color: #495057;
-  cursor: pointer;
-}
-
-.track-controls input[type="checkbox"] {
-  margin: 0;
-}
 
 .toolbar {
   background: linear-gradient(to bottom, #ffffff, #f8f9fa);
@@ -514,12 +476,7 @@
   font-size: 14px;
 }
 
-.welcome-icon {
-  font-size: 4rem;
-  color: var(--primary-color);
-  margin-bottom: 20px;
-  opacity: 0.9;
-}
+
 
 .welcome-content h2 {
   font-size: 2.5rem;
@@ -1034,31 +991,7 @@
   opacity: 1;
 }
 
-.sequence-display-section {
-  background-color: rgba(248, 250, 252, 0.95);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 2px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  flex: 0 0 auto; /* Don't grow, don't shrink from set height */
-  height: 250px;
-  min-height: 50px;
-  max-height: 80vh;
-  position: relative;
-  z-index: 10;
-  order: 3; /* Position after genome-viewer-section (order: 1) and splitter (order: 2) */
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-}
 
-.sequence-display-section.collapsed {
-  height: 50px !important;
-  min-height: 50px;
-  max-height: 50px;
-  overflow: hidden;
-  flex: 0 0 auto;
-}
 
 .sequence-header h4 {
   font-size: 16px;
@@ -4375,9 +4308,7 @@ to {
   overflow-x: hidden;
 }
 
-.provider-config .form-group {
-  margin-bottom: 16px;
-}
+.provider-config 
 
 .provider-config .form-group label {
   display: block;
