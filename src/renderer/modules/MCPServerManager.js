@@ -1007,28 +1007,64 @@ class MCPServerManager {
         try {
             console.log(`🔧 Executing tool ${toolName} on HTTP server ${serverId}`);
             
-            // Try different common MCP tool execution endpoints
-            const toolEndpoints = [
-                '/tools/call',
-                '/api/tools/call',
-                '/mcp/tools/call',
-                '/api/mcp/tools/call',
-                '/tools/execute',
-                '/api/tools/execute'
-            ];
+            // Create a custom timeout function for fetch requests
+            const fetchWithTimeout = async (url, options, timeout = 300000) => { // 5 minutes timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        throw new Error(`HTTP tool execution timed out after ${timeout}ms`);
+                    }
+                    throw error;
+                }
+            };
             
             let response = null;
             let foundEndpoint = false;
             
-            for (const endpoint of toolEndpoints) {
+            // First, try the exact server URL with JSON-RPC format (most reliable for MCP servers)
+            try {
+                console.log(`🔧 Trying direct JSON-RPC on server URL: ${server.url}`);
+                response = await fetchWithTimeout(server.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...(server.headers || {})
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'tools/call',
+                        params: {
+                            name: toolName,
+                            arguments: parameters
+                        },
+                        id: this.generateRequestId()
+                    }),
+                    mode: 'cors'
+                }, 300000); // 5 minutes timeout
+                
+                if (response.ok) {
+                    foundEndpoint = true;
+                }
+            } catch (directError) {
+                console.log(`⚠️ Direct JSON-RPC failed:`, directError.message);
+            }
+            
+            // If direct JSON-RPC failed, try sending a simpler request format directly to the server URL
+            if (!foundEndpoint) {
                 try {
-                    const toolUrl = server.url.endsWith('/') ? 
-                        `${server.url}${endpoint.substring(1)}` : 
-                        `${server.url}${endpoint}`;
-                    
-                    console.log(`🔧 Trying tool execution endpoint: ${toolUrl}`);
-                    
-                    response = await fetch(toolUrl, {
+                    console.log(`🔧 Trying simple tool call format on server URL: ${server.url}`);
+                    response = await fetchWithTimeout(server.url, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1040,54 +1076,84 @@ class MCPServerManager {
                             parameters: parameters
                         }),
                         mode: 'cors'
-                    });
+                    }, 300000); // 5 minutes timeout
                     
                     if (response.ok) {
                         foundEndpoint = true;
-                        break;
                     }
-                } catch (endpointError) {
-                    console.log(`⚠️ Tool endpoint ${endpoint} failed:`, endpointError.message);
-                    continue;
+                } catch (simpleError) {
+                    console.log(`⚠️ Simple tool call format failed:`, simpleError.message);
+                }
+            }
+            
+            // Only try additional endpoints if the above two approaches failed
+            if (!foundEndpoint) {
+                // Try different common MCP tool execution endpoints as a fallback
+                const toolEndpoints = [
+                    '/tools/call',
+                    '/api/tools/call',
+                    '/mcp/tools/call',
+                    '/api/mcp/tools/call',
+                    '/tools/execute',
+                    '/api/tools/execute'
+                ];
+                
+                for (const endpoint of toolEndpoints) {
+                    try {
+                        const toolUrl = server.url.endsWith('/') ? 
+                            `${server.url}${endpoint.substring(1)}` : 
+                            `${server.url}${endpoint}`;
+                        
+                        console.log(`🔧 Trying fallback tool endpoint: ${toolUrl}`);
+                        
+                        response = await fetchWithTimeout(toolUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                ...(server.headers || {})
+                            },
+                            body: JSON.stringify({
+                                tool: toolName,
+                                parameters: parameters
+                            }),
+                            mode: 'cors'
+                        }, 300000); // 5 minutes timeout
+                        
+                        if (response.ok) {
+                            foundEndpoint = true;
+                            break;
+                        }
+                    } catch (endpointError) {
+                        console.log(`⚠️ Fallback endpoint ${endpoint} failed:`, endpointError.message);
+                        continue;
+                    }
                 }
             }
             
             if (!foundEndpoint) {
-                // If no specific tool endpoint found, try MCP JSON-RPC format
-                try {
-                    response = await fetch(server.url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            ...(server.headers || {})
-                        },
-                        body: JSON.stringify({
-                            jsonrpc: '2.0',
-                            method: 'tools/call',
-                            params: {
-                                name: toolName,
-                                arguments: parameters
-                            },
-                            id: this.generateRequestId()
-                        }),
-                        mode: 'cors'
-                    });
-                    
-                    if (response.ok) {
-                        foundEndpoint = true;
-                    }
-                } catch (mcpError) {
-                    console.log(`⚠️ MCP JSON-RPC tool execution failed:`, mcpError.message);
-                }
-            }
-            
-            if (!foundEndpoint || !response.ok) {
                 throw new Error(`No working tool execution endpoint found for HTTP server ${serverId}`);
             }
             
-            const result = await response.json();
-            console.log(`✅ Tool execution result from HTTP server ${serverId}:`, result);
+            // Check if response is ok now that we have a found endpoint
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP server ${serverId} returned ${response.status} ${response.statusText}: ${errorText}`);
+            }
+            
+            // Handle potential streaming responses or large content
+            const responseText = await response.text();
+            console.log(`📋 Raw response from server ${serverId}:`, responseText.substring(0, 200) + '...');
+            
+            // Try to parse as JSON
+            let result;
+            try {
+                result = JSON.parse(responseText);
+                console.log(`✅ Parsed tool execution result from HTTP server ${serverId}:`, result);
+            } catch (jsonError) {
+                console.log(`⚠️ Response is not JSON, returning as text:`, jsonError.message);
+                return { result: responseText, type: 'text' };
+            }
             
             // Handle different response formats
             if (result.result) {
