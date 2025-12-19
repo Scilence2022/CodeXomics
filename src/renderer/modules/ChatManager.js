@@ -4199,10 +4199,6 @@ class ChatManager {
                             <i class="fas fa-download"></i>
                             Export
                         </button>
-                        <button id="configBtn" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-cog"></i>
-                            Settings
-                        </button>
                         <button id="suggestionsBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-lightbulb"></i>
                             Examples
@@ -4390,15 +4386,6 @@ class ChatManager {
 
         document.getElementById('exportChatBtn')?.addEventListener('click', () => {
             this.exportChatHistory();
-        });
-
-        document.getElementById('configBtn')?.addEventListener('click', () => {
-            // Open ChatBox Settings modal, consistent with main menu Options -> ChatBox Settings
-            if (this.chatBoxSettingsManager) {
-                this.chatBoxSettingsManager.showSettingsModal();
-            } else {
-                console.warn('ChatBoxSettingsManager not initialized');
-            }
         });
 
         document.getElementById('suggestionsBtn')?.addEventListener('click', () => {
