@@ -1723,96 +1723,148 @@ class ChatManager {
      * Toggle MCP connection
      */
     async toggleMCPConnection() {
-        const toggleBtn = document.getElementById('mcpToggleBtn');
-        if (!toggleBtn) return;
+        // Instead of toggling all servers, show a server list popup
+        this.showMCPServerListPopup();
+    }
 
-        const isConnected = toggleBtn.dataset.connected === 'true';
+    /**
+     * Show MCP Server list popup
+     */
+    showMCPServerListPopup() {
+        // Remove any existing popup
+        const existingPopup = document.getElementById('mcpServerListPopup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
+
+        // Create popup
+        const popup = document.createElement('div');
+        popup.id = 'mcpServerListPopup';
+        popup.className = 'mcp-server-list-popup';
+        popup.innerHTML = `
+            <div class="mcp-server-list-container">
+                <div class="mcp-server-list-header">
+                    <h3>MCP Servers</h3>
+                    <button class="close-btn" onclick="document.getElementById('mcpServerListPopup').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mcp-server-list-content">
+                    <div id="mcpServerListItems"></div>
+                </div>
+                <div class="mcp-server-list-footer">
+                    <button class="btn btn-sm btn-secondary" onclick="document.getElementById('mcpServerListPopup').remove()">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add popup to document
+        document.body.appendChild(popup);
+
+        // Populate server list
+        this.populateMCPServerListPopup();
+    }
+
+    /**
+     * Populate MCP Server list popup
+     */
+    populateMCPServerListPopup() {
+        const serverList = document.getElementById('mcpServerListItems');
+        if (!serverList) return;
+
+        if (!this.mcpServerManager) {
+            serverList.innerHTML = '<div class="empty-state">MCPServerManager not available</div>';
+            return;
+        }
+
+        const servers = this.mcpServerManager.getServerStatus();
         
-        try {
-            if (isConnected) {
-                // Disconnect from MCP servers
-                if (this.mcpServerManager) {
-                    // Disconnect from all active servers
-                    const activeServers = Array.from(this.mcpServerManager.activeServers);
-                    for (const serverId of activeServers) {
-                        await this.mcpServerManager.disconnectFromServer(serverId);
-                    }
-                }
-                
-                // Also disconnect from legacy MCP if connected
-                if (this.isConnected) {
-                    this.disconnectMCP();
-                }
-                
-                this.showNotification('Disconnected from MCP servers', 'info');
-            } else {
-                // Connect to MCP servers (manual connection - bypass auto-activation check)
-                console.log('Manual MCP connection requested');
+        if (servers.length === 0) {
+            serverList.innerHTML = '<div class="empty-state">No MCP servers configured</div>';
+            return;
+        }
 
-                if (this.mcpServerManager) {
-                    // Try to connect to enabled servers first
-                    const servers = this.mcpServerManager.getServerStatus();
-                    const enabledServers = servers.filter(server => server.enabled);
-                    
-                    if (enabledServers.length === 0) {
-                        // Try to connect to the built-in genome-studio server
-                        try {
-                            await this.mcpServerManager.connectToServer('genome-studio');
-                            this.showNotification('Connected to built-in MCP server', 'success');
-                        } catch (error) {
-                            console.warn('Failed to connect to built-in server, trying legacy connection:', error);
-                            // Fallback to legacy connection
-                            try {
-                                await this.setupMCPConnection(true); // Mark as manual connection
-                                this.showNotification('Connected to MCP server (legacy mode)', 'success');
-                            } catch (legacyError) {
-                                console.error('Failed to connect via legacy mode:', legacyError);
-                                this.showNotification('Failed to connect to MCP server. Please check server status.', 'error');
-                            }
-                        }
-                    } else {
-                        // Connect to enabled servers
-                        let connectedCount = 0;
-                        for (const server of enabledServers) {
-                            try {
-                                await this.mcpServerManager.connectToServer(server.id);
-                                connectedCount++;
-                            } catch (error) {
-                                console.warn(`Failed to connect to server ${server.name}:`, error);
-                            }
-                        }
-                        
-                        if (connectedCount > 0) {
-                            this.showNotification(`Connected to ${connectedCount} MCP server(s)`, 'success');
-                        } else {
-                            // If all enabled servers failed, try built-in server as fallback
-                            try {
-                                await this.mcpServerManager.connectToServer('genome-studio');
-                                this.showNotification('Connected to built-in MCP server (fallback)', 'success');
-                            } catch (error) {
-                                // Final fallback to legacy connection
-                                try {
-                                    await this.setupMCPConnection(true); // Mark as manual connection
-                                    this.showNotification('Connected to MCP server (legacy fallback)', 'success');
-                                } catch (legacyError) {
-                                    this.showNotification('Failed to connect to any MCP servers', 'error');
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    // Fallback to legacy connection if no modern manager
-                    try {
-                        await this.setupMCPConnection(true); // Mark as manual connection
-                        this.showNotification('Connected to MCP server (legacy mode)', 'success');
-                    } catch (error) {
-                        console.error('Failed to connect via legacy mode:', error);
-                        this.showNotification('Failed to connect to MCP server. Please check server status.', 'error');
-                    }
-                }
+        serverList.innerHTML = '';
+
+        servers.forEach(server => {
+            const serverItem = document.createElement('div');
+            serverItem.className = 'mcp-server-list-item';
+            serverItem.innerHTML = `
+                <div class="mcp-server-info">
+                    <div class="mcp-server-name">${this.escapeHtml(server.name)}</div>
+                    <div class="mcp-server-details">
+                        <span class="mcp-server-url">${this.escapeHtml(server.url)}</span>
+                        <span class="mcp-server-status ${server.connected ? 'connected' : 'disconnected'}">
+                            ${server.connected ? '● Connected' : '○ Disconnected'}
+                        </span>
+                    </div>
+                </div>
+                <div class="mcp-server-controls">
+                    <label class="toggle-label">
+                        <input type="checkbox" 
+                               class="mcp-server-toggle" 
+                               data-server-id="${server.id}" 
+                               ${server.enabled ? 'checked' : ''}>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-text">${server.enabled ? 'Enabled' : 'Disabled'}</span>
+                    </label>
+                    <button class="btn btn-sm ${server.connected ? 'btn-secondary' : 'btn-primary'}" 
+                            onclick="genomeBrowser.chatManager.toggleMCPServerConnection('${server.id}')">
+                        ${server.connected ? 'Disconnect' : 'Connect'}
+                    </button>
+                </div>
+            `;
+            serverList.appendChild(serverItem);
+        });
+
+        // Add event listeners for enable/disable toggles
+        const toggles = serverList.querySelectorAll('.mcp-server-toggle');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('change', (e) => {
+                const serverId = e.target.dataset.serverId;
+                const enabled = e.target.checked;
+                this.toggleMCPServerEnabled(serverId, enabled);
+                e.target.nextElementSibling.nextElementSibling.textContent = enabled ? 'Enabled' : 'Disabled';
+            });
+        });
+    }
+
+    /**
+     * Toggle MCP Server enabled state
+     * @param {string} serverId - Server ID
+     * @param {boolean} enabled - Enabled state
+     */
+    toggleMCPServerEnabled(serverId, enabled) {
+        if (this.mcpServerManager) {
+            this.mcpServerManager.updateServer(serverId, { enabled });
+            this.showNotification(`${enabled ? 'Enabled' : 'Disabled'} server ${serverId}`, 'info');
+        }
+    }
+
+    /**
+     * Toggle connection to a specific MCP Server
+     * @param {string} serverId - Server ID
+     */
+    async toggleMCPServerConnection(serverId) {
+        if (!this.mcpServerManager) return;
+
+        const server = this.mcpServerManager.getServer(serverId);
+        if (!server) return;
+
+        try {
+            if (server.connected) {
+                await this.mcpServerManager.disconnectFromServer(serverId);
+                this.showNotification(`Disconnected from ${server.name}`, 'info');
+            } else {
+                await this.mcpServerManager.connectToServer(serverId);
+                this.showNotification(`Connected to ${server.name}`, 'success');
             }
+            // Refresh the server list
+            this.populateMCPServerListPopup();
         } catch (error) {
-            console.error('Error toggling MCP connection:', error);
+            console.error(`Error toggling connection to server ${serverId}:`, error);
             this.showNotification(`Error: ${error.message}`, 'error');
         }
     }
@@ -4131,21 +4183,9 @@ class ChatManager {
                             <i class="fas fa-plus"></i>
                             New Chat
                         </button>
-                        <button id="copySelectedBtn" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-copy"></i>
-                            Copy Selected
-                        </button>
-                        <button id="pasteBtn" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-paste"></i>
-                            Paste
-                        </button>
                         <button id="chatHistoryBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-history"></i>
                             History
-                        </button>
-                        <button id="clearChatBtn" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-trash"></i>
-                            Clear
                         </button>
                         <button id="clearThinkingBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-brain"></i>
@@ -4340,10 +4380,6 @@ class ChatManager {
             this.toggleChatVisibility();
         });
 
-        document.getElementById('clearChatBtn')?.addEventListener('click', () => {
-            this.clearChat();
-        });
-
         document.getElementById('clearThinkingBtn')?.addEventListener('click', () => {
             this.clearThinkingHistory();
         });
@@ -4378,14 +4414,6 @@ class ChatManager {
         // New button event listeners
         document.getElementById('newChatBtn')?.addEventListener('click', () => {
             this.startNewChat();
-        });
-
-        document.getElementById('copySelectedBtn')?.addEventListener('click', () => {
-            this.copySelectedText();
-        });
-
-        document.getElementById('pasteBtn')?.addEventListener('click', () => {
-            this.pasteFromClipboard();
         });
 
         document.getElementById('chatHistoryBtn')?.addEventListener('click', () => {
@@ -13667,112 +13695,7 @@ ${this.getPluginSystemInfo()}`;
     /**
      * Copy selected text from the page
      */
-    copySelectedText() {
-        try {
-            // Check if this window is focused - avoid executing if tool window is active
-            if (!document.hasFocus()) {
-                console.log('Chat window not focused, skipping copy operation');
-                return;
-            }
 
-            const selection = window.getSelection();
-            const selectedText = selection.toString().trim();
-            
-            if (!selectedText) {
-                // If no text is selected, try to get text from the currently focused element
-                const activeElement = document.activeElement;
-                if (activeElement && (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
-                    const start = activeElement.selectionStart;
-                    const end = activeElement.selectionEnd;
-                    if (start !== end) {
-                        const selectedText = activeElement.value.substring(start, end);
-                        if (selectedText) {
-                            navigator.clipboard.writeText(selectedText).then(() => {
-                                this.showNotification('✅ Selected text copied to clipboard', 'success');
-                            });
-                            return;
-                        }
-                    }
-                }
-                
-                this.showNotification('⚠️ No text selected to copy', 'warning');
-                return;
-            }
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(selectedText).then(() => {
-                this.showNotification(`✅ Copied ${selectedText.length} characters to clipboard`, 'success');
-                
-                // Clear the selection for better UX
-                selection.removeAllRanges();
-            }).catch(err => {
-                console.error('Failed to copy text:', err);
-                this.showNotification('❌ Failed to copy text to clipboard', 'error');
-            });
-            
-        } catch (error) {
-            console.error('Error copying selected text:', error);
-            this.showNotification('❌ Error copying selected text', 'error');
-        }
-    }
-
-    /**
-     * Paste text from clipboard into the chat input
-     */
-    async pasteFromClipboard() {
-        try {
-            // Check if this window is focused - avoid executing if tool window is active
-            if (!document.hasFocus()) {
-                console.log('Chat window not focused, skipping paste operation');
-                return;
-            }
-
-            const chatInput = document.getElementById('chatInput');
-            if (!chatInput) {
-                this.showNotification('❌ Chat input not found', 'error');
-                return;
-            }
-
-            // Read from clipboard
-            const clipboardText = await navigator.clipboard.readText();
-            
-            if (!clipboardText.trim()) {
-                this.showNotification('⚠️ Clipboard is empty', 'warning');
-                return;
-            }
-
-            // Get current cursor position
-            const start = chatInput.selectionStart;
-            const end = chatInput.selectionEnd;
-            const currentValue = chatInput.value;
-
-            // Insert the clipboard text at cursor position
-            const newValue = currentValue.substring(0, start) + clipboardText + currentValue.substring(end);
-            chatInput.value = newValue;
-
-            // Set cursor position after the pasted text
-            const newCursorPosition = start + clipboardText.length;
-            chatInput.setSelectionRange(newCursorPosition, newCursorPosition);
-
-            // Focus the input and trigger input event for auto-resize
-            chatInput.focus();
-            chatInput.dispatchEvent(new Event('input'));
-
-            this.showNotification(`✅ Pasted ${clipboardText.length} characters`, 'success');
-
-        } catch (error) {
-            console.error('Error pasting from clipboard:', error);
-            
-            // Check if the document is focused before attempting clipboard access
-            if (!document.hasFocus()) {
-                console.log('Document not focused, cannot access clipboard');
-                return;
-            }
-            
-            // Show error notification without using prompt() which is not supported in Electron
-            this.showNotification('❌ Unable to access clipboard. Please use Ctrl+V to paste manually.', 'error');
-        }
-    }
 
     /**
      * Show a temporary notification to the user
@@ -13820,14 +13743,10 @@ ${this.getPluginSystemInfo()}`;
         // Test 1: Check if UI elements exist
         const chatInput = document.getElementById('chatInput');
         const newChatBtn = document.getElementById('newChatBtn');
-        const copySelectedBtn = document.getElementById('copySelectedBtn');
-        const pasteBtn = document.getElementById('pasteBtn');
         
         console.log('UI Elements Check:');
         console.log('- Chat Input:', chatInput ? '✅' : '❌');
         console.log('- New Chat Button:', newChatBtn ? '✅' : '❌');
-        console.log('- Copy Selected Button:', copySelectedBtn ? '✅' : '❌');
-        console.log('- Paste Button:', pasteBtn ? '✅' : '❌');
         
         // Test 2: Check chat history loading
         const history = this.configManager.getChatHistory();
@@ -13839,9 +13758,7 @@ ${this.getPluginSystemInfo()}`;
         return {
             uiElements: {
                 chatInput: !!chatInput,
-                newChatBtn: !!newChatBtn,
-                copySelectedBtn: !!copySelectedBtn,
-                pasteBtn: !!pasteBtn
+                newChatBtn: !!newChatBtn
             },
             historyCount: history.length,
             testCompleted: true

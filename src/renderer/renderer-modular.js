@@ -2253,6 +2253,7 @@ class GenomeBrowser {
         document.getElementById('serverAutoConnect').checked = server.autoConnect;
         document.getElementById('serverApiKey').value = server.apiKey || '';
         document.getElementById('serverReconnectDelay').value = server.reconnectDelay || 5;
+        document.getElementById('serverTimeout').value = server.timeout || 300;
         document.getElementById('serverCapabilities').value = server.capabilities ? server.capabilities.join(', ') : '';
         document.getElementById('editingServerId').value = serverId;
 
@@ -2272,6 +2273,7 @@ class GenomeBrowser {
             autoConnect: document.getElementById('serverAutoConnect').checked,
             apiKey: document.getElementById('serverApiKey').value.trim() || null,
             reconnectDelay: parseInt(document.getElementById('serverReconnectDelay').value) || 5,
+            timeout: parseInt(document.getElementById('serverTimeout').value) || 300,
             capabilities: document.getElementById('serverCapabilities').value.trim().split(',').map(c => c.trim()).filter(c => c)
         };
 

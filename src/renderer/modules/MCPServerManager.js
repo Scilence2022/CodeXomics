@@ -1007,8 +1007,11 @@ class MCPServerManager {
         try {
             console.log(`🔧 Executing tool ${toolName} on HTTP server ${serverId}`);
             
+            // Use server-specific timeout if available, default to 5 minutes
+            const serverTimeout = (server.timeout || 300) * 1000; // Convert seconds to milliseconds
+            
             // Create a custom timeout function for fetch requests
-            const fetchWithTimeout = async (url, options, timeout = 300000) => { // 5 minutes timeout
+            const fetchWithTimeout = async (url, options, timeout = serverTimeout) => {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeout);
                 
@@ -1022,7 +1025,7 @@ class MCPServerManager {
                 } catch (error) {
                     clearTimeout(timeoutId);
                     if (error.name === 'AbortError') {
-                        throw new Error(`HTTP tool execution timed out after ${timeout}ms`);
+                        throw new Error(`HTTP tool execution timed out after ${timeout / 1000} seconds`);
                     }
                     throw error;
                 }

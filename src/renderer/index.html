@@ -2013,6 +2013,12 @@
                     </div>
                     
                     <div class="form-group">
+                        <label for="serverTimeout">Execution Timeout (seconds):</label>
+                        <input type="number" id="serverTimeout" value="300" min="10" max="3600" class="input-full">
+                        <small class="help-text">Maximum time to wait for tool execution to complete.</small>
+                    </div>
+                    
+                    <div class="form-group">
                         <label>
                             <input type="checkbox" id="serverEnabled" checked> 
                             Enable this server
