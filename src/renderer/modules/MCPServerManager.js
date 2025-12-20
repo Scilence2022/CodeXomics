@@ -1038,23 +1038,23 @@ class MCPServerManager {
             try {
                 console.log(`🔧 Trying direct JSON-RPC on server URL: ${server.url}`);
                 response = await fetchWithTimeout(server.url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        ...(server.headers || {})
-                    },
-                    body: JSON.stringify({
-                        jsonrpc: '2.0',
-                        method: 'tools/call',
-                        params: {
-                            name: toolName,
-                            arguments: parameters
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(server.headers || {})
                         },
-                        id: this.generateRequestId()
-                    }),
-                    mode: 'cors'
-                }, 300000); // 5 minutes timeout
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'tools/call',
+                            params: {
+                                name: toolName,
+                                arguments: parameters
+                            },
+                            id: this.generateRequestId()
+                        }),
+                        mode: 'cors'
+                    }, serverTimeout); // Use server-specific timeout
                 
                 if (response.ok) {
                     foundEndpoint = true;
@@ -1079,7 +1079,7 @@ class MCPServerManager {
                             parameters: parameters
                         }),
                         mode: 'cors'
-                    }, 300000); // 5 minutes timeout
+                    }, serverTimeout); // Use server-specific timeout
                     
                     if (response.ok) {
                         foundEndpoint = true;
@@ -1121,7 +1121,7 @@ class MCPServerManager {
                                 parameters: parameters
                             }),
                             mode: 'cors'
-                        }, 300000); // 5 minutes timeout
+                        }, serverTimeout); // Use server-specific timeout
                         
                         if (response.ok) {
                             foundEndpoint = true;
