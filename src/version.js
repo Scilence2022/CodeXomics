@@ -10,7 +10,7 @@
 
 // Core application version
 const VERSION_MAJOR = 0;
-const VERSION_MINOR = 523;
+const VERSION_MINOR = 525;
 const VERSION_PATCH = 0;
 const VERSION_PRERELEASE = 'beta';
 
