@@ -7784,6 +7784,7 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
                 } else {
                     return `Task completed successfully using ${tool.tool_name}. Results have been processed.`;
                 }
+        }
     }
 
     /**
