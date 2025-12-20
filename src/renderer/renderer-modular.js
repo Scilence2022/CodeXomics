@@ -6476,7 +6476,7 @@ class GenomeBrowser {
         }
     }
 
-    // Open Deep Gene Research for the selected gene
+    // Send Deep Gene Research prompt to ChatBox for the selected gene
     openDeepGeneResearch(geneName) {
         if (!geneName) {
             console.warn('No gene name provided for Deep Gene Research');
@@ -6486,21 +6486,39 @@ class GenomeBrowser {
         // Get current organism/species information
         const organism = this.getCurrentOrganismInfo();
         
-        // Prepare parameters for Deep Gene Research
-        const params = {
-            gene: geneName,
-            organism: organism
-        };
+        // Create a detailed prompt for Deep Gene Research
+        const prompt = `Please perform a Deep Gene Research of ${geneName} gene in ${organism}. Include information about:
+1. Gene function and biological role
+2. Sequence analysis and structure
+3. Regulatory mechanisms
+4. Related pathways and interactions
+5. Research publications and references
+
+Provide comprehensive and detailed information based on the latest research.`;
         
-        // Open Deep Gene Research window with parameters via IPC
-        ipcRenderer.send('open-deep-gene-research-window', params);
-        
-        // Update status
-        if (this.uiManager) {
-            this.uiManager.updateStatus(`Opening Deep Gene Research for ${geneName} from ${organism}...`);
+        // Check if ChatManager is available and use it to send the prompt
+        if (this.chatManager) {
+            try {
+                this.chatManager.sendMessageProgrammatically(prompt);
+                
+                // Update status
+                if (this.uiManager) {
+                    this.uiManager.updateStatus(`Sent Deep Gene Research request for ${geneName} to ChatBox`);
+                }
+                
+                console.log(`Sent Deep Gene Research prompt for ${geneName} to ChatBox`);
+            } catch (error) {
+                console.error('Error sending Deep Gene Research prompt to ChatBox:', error);
+                if (this.uiManager) {
+                    this.uiManager.updateStatus(`Error sending Deep Gene Research request`);
+                }
+            }
+        } else {
+            console.warn('ChatManager not available for Deep Gene Research');
+            if (this.uiManager) {
+                this.uiManager.updateStatus(`ChatBox not available`);
+            }
         }
-        
-        console.log(`Opening Deep Gene Research with params:`, params);
     }
 
     // Open Gene Annotation Refine tool
