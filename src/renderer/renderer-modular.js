@@ -6487,14 +6487,7 @@ class GenomeBrowser {
         const organism = this.getCurrentOrganismInfo();
         
         // Create a detailed prompt for Deep Gene Research
-        const prompt = `Please perform a Deep Gene Research of ${geneName} gene in ${organism}. Include information about:
-1. Gene function and biological role
-2. Sequence analysis and structure
-3. Regulatory mechanisms
-4. Related pathways and interactions
-5. Research publications and references
-
-Provide comprehensive and detailed information based on the latest research.`;
+        const prompt = `Please perform a Deep Gene Research of ${geneName} gene in ${organism}.`;
         
         // Check if ChatManager is available and use it to send the prompt
         if (this.chatManager) {
