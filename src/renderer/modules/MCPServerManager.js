@@ -1174,6 +1174,312 @@ class MCPServerManager {
             throw new Error(`HTTP tool execution failed: ${error.message}`);
         }
     }
+    
+    // Check task status on HTTP-based MCP server
+    async checkTaskStatus(serverId, taskId) {
+        const connection = this.connections.get(serverId);
+        if (!connection || connection.type !== 'http') {
+            throw new Error(`HTTP server ${serverId} not connected`);
+        }
+
+        const server = this.servers.get(serverId);
+        
+        try {
+            console.log(`🔍 Checking status for task ${taskId} on server ${serverId}`);
+            
+            // Use server-specific timeout if available, default to 1 minute
+            const serverTimeout = (server.timeout || 60) * 1000; // Convert seconds to milliseconds
+            
+            // Create a custom timeout function for fetch requests
+            const fetchWithTimeout = async (url, options, timeout = serverTimeout) => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        throw new Error(`HTTP request timed out after ${timeout / 1000} seconds`);
+                    }
+                    throw error;
+                }
+            };
+            
+            let response = null;
+            let foundEndpoint = false;
+            
+            // Try different endpoint formats for task status
+            const statusEndpoints = [
+                `/api/research/status/${taskId}`,
+                `/research/status/${taskId}`,
+                `/status/${taskId}`,
+                `/api/status/${taskId}`
+            ];
+            
+            for (const endpoint of statusEndpoints) {
+                try {
+                    const statusUrl = server.url.endsWith('/') ? 
+                        `${server.url}${endpoint.substring(1)}` : 
+                        `${server.url}${endpoint}`;
+                    
+                    console.log(`🔍 Trying status endpoint: ${statusUrl}`);
+                    
+                    response = await fetchWithTimeout(statusUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(server.headers || {})
+                        },
+                        mode: 'cors'
+                    }, serverTimeout);
+                    
+                    if (response.ok) {
+                        foundEndpoint = true;
+                        break;
+                    }
+                } catch (endpointError) {
+                    console.log(`⚠️ Status endpoint ${endpoint} failed:`, endpointError.message);
+                    continue;
+                }
+            }
+            
+            if (!foundEndpoint) {
+                throw new Error(`No working status endpoint found for server ${serverId}`);
+            }
+            
+            const responseText = await response.text();
+            console.log(`📋 Raw status response from server ${serverId}:`, responseText.substring(0, 200) + '...');
+            
+            // Try to parse as JSON
+            let result;
+            try {
+                result = JSON.parse(responseText);
+                console.log(`✅ Parsed task status from server ${serverId}:`, result);
+            } catch (jsonError) {
+                console.log(`⚠️ Status response is not JSON, returning as text:`, jsonError.message);
+                return { result: responseText, type: 'text' };
+            }
+            
+            return result;
+            
+        } catch (error) {
+            console.error(`❌ Failed to check status for task ${taskId} on server ${serverId}:`, error);
+            throw new Error(`Task status check failed: ${error.message}`);
+        }
+    }
+    
+    // Get task results from HTTP-based MCP server
+    async getTaskResult(serverId, taskId) {
+        const connection = this.connections.get(serverId);
+        if (!connection || connection.type !== 'http') {
+            throw new Error(`HTTP server ${serverId} not connected`);
+        }
+
+        const server = this.servers.get(serverId);
+        
+        try {
+            console.log(`📥 Getting results for task ${taskId} on server ${serverId}`);
+            
+            // Use server-specific timeout if available, default to 5 minutes
+            const serverTimeout = (server.timeout || 300) * 1000; // Convert seconds to milliseconds
+            
+            // Create a custom timeout function for fetch requests
+            const fetchWithTimeout = async (url, options, timeout = serverTimeout) => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        throw new Error(`HTTP request timed out after ${timeout / 1000} seconds`);
+                    }
+                    throw error;
+                }
+            };
+            
+            let response = null;
+            let foundEndpoint = false;
+            
+            // Try different endpoint formats for task results
+            const resultEndpoints = [
+                `/api/research/result/${taskId}`,
+                `/research/result/${taskId}`,
+                `/result/${taskId}`,
+                `/api/result/${taskId}`
+            ];
+            
+            for (const endpoint of resultEndpoints) {
+                try {
+                    const resultUrl = server.url.endsWith('/') ? 
+                        `${server.url}${endpoint.substring(1)}` : 
+                        `${server.url}${endpoint}`;
+                    
+                    console.log(`📥 Trying result endpoint: ${resultUrl}`);
+                    
+                    response = await fetchWithTimeout(resultUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(server.headers || {})
+                        },
+                        mode: 'cors'
+                    }, serverTimeout);
+                    
+                    if (response.ok) {
+                        foundEndpoint = true;
+                        break;
+                    }
+                } catch (endpointError) {
+                    console.log(`⚠️ Result endpoint ${endpoint} failed:`, endpointError.message);
+                    continue;
+                }
+            }
+            
+            if (!foundEndpoint) {
+                throw new Error(`No working result endpoint found for server ${serverId}`);
+            }
+            
+            const responseText = await response.text();
+            console.log(`📋 Raw result response from server ${serverId}:`, responseText.substring(0, 200) + '...');
+            
+            // Try to parse as JSON
+            let result;
+            try {
+                result = JSON.parse(responseText);
+                console.log(`✅ Parsed task result from server ${serverId}:`, result);
+            } catch (jsonError) {
+                console.log(`⚠️ Result response is not JSON, returning as text:`, jsonError.message);
+                return { result: responseText, type: 'text' };
+            }
+            
+            return result;
+            
+        } catch (error) {
+            console.error(`❌ Failed to get results for task ${taskId} on server ${serverId}:`, error);
+            throw new Error(`Task result retrieval failed: ${error.message}`);
+        }
+    }
+    
+    // Download report for task from HTTP-based MCP server
+    async downloadTaskReport(serverId, taskId, format = 'markdown') {
+        const connection = this.connections.get(serverId);
+        if (!connection || connection.type !== 'http') {
+            throw new Error(`HTTP server ${serverId} not connected`);
+        }
+
+        const server = this.servers.get(serverId);
+        
+        try {
+            console.log(`📥 Downloading ${format} report for task ${taskId} on server ${serverId}`);
+            
+            // Use server-specific timeout if available, default to 10 minutes
+            const serverTimeout = (server.timeout || 600) * 1000; // Convert seconds to milliseconds
+            
+            // Create a custom timeout function for fetch requests
+            const fetchWithTimeout = async (url, options, timeout = serverTimeout) => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        throw new Error(`HTTP request timed out after ${timeout / 1000} seconds`);
+                    }
+                    throw error;
+                }
+            };
+            
+            let response = null;
+            let foundEndpoint = false;
+            
+            // Try different endpoint formats for report download
+            const downloadEndpoints = [
+                `/api/research/export/${taskId}/${format}`,
+                `/research/export/${taskId}/${format}`,
+                `/export/${taskId}/${format}`,
+                `/api/export/${taskId}/${format}`
+            ];
+            
+            for (const endpoint of downloadEndpoints) {
+                try {
+                    const downloadUrl = server.url.endsWith('/') ? 
+                        `${server.url}${endpoint.substring(1)}` : 
+                        `${server.url}${endpoint}`;
+                    
+                    console.log(`📥 Trying download endpoint: ${downloadUrl}`);
+                    
+                    response = await fetchWithTimeout(downloadUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': '*/*',
+                            ...(server.headers || {})
+                        },
+                        mode: 'cors'
+                    }, serverTimeout);
+                    
+                    if (response.ok) {
+                        foundEndpoint = true;
+                        break;
+                    }
+                } catch (endpointError) {
+                    console.log(`⚠️ Download endpoint ${endpoint} failed:`, endpointError.message);
+                    continue;
+                }
+            }
+            
+            if (!foundEndpoint) {
+                throw new Error(`No working download endpoint found for server ${serverId}`);
+            }
+            
+            // Get content type and filename from response headers
+            const contentType = response.headers.get('content-type') || 'application/octet-stream';
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = `research-report-${taskId}.${format}`;
+            
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?([^\"]+)"?/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1];
+                }
+            }
+            
+            // Get blob data
+            const blob = await response.blob();
+            console.log(`✅ Downloaded report for task ${taskId}: ${blob.size} bytes`);
+            
+            return {
+                blob: blob,
+                contentType: contentType,
+                filename: filename
+            };
+            
+        } catch (error) {
+            console.error(`❌ Failed to download report for task ${taskId} on server ${serverId}:`, error);
+            throw new Error(`Report download failed: ${error.message}`);
+        }
+    }
 
     // Execute tool on Claude MCP server
     async executeClaudeMCPTool(serverId, toolName, parameters) {

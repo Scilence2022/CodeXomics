@@ -7764,8 +7764,37 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
                 if (result.result) {
                     // Check if result.result is an object with useful data
                     if (typeof result.result === 'object' && result.result !== null) {
+                        // Check if this is a task ID response (from Deep Gene Research)
+                        if (result.result.taskId && result.result.status) {
+                            // This is a task ID response - we'll start polling for status updates
+                            const taskId = result.result.taskId;
+                            const initialStatus = result.result.status;
+                            const createdAt = result.result.createdAt || new Date().toISOString();
+                            
+                            // Store task info for polling
+                            const taskInfo = {
+                                taskId: taskId,
+                                serverId: tool.serverId,
+                                serverName: tool.serverName,
+                                toolName: tool.tool_name,
+                                status: initialStatus,
+                                createdAt: createdAt,
+                                lastUpdated: new Date().toISOString(),
+                                messageElement: null // Will store the message element for updates
+                            };
+                            
+                            // Start polling for task status
+                            this.startTaskPolling(taskInfo);
+                            
+                            // Return initial task status message
+                            return `✅ **Deep Gene Research Task Started**\n\n` +
+                                   `📋 **Task ID**: ${taskId}\n` +
+                                   `📊 **Status**: ${initialStatus}\n` +
+                                   `⏱️ **Created**: ${new Date(createdAt).toLocaleString()}\n\n` +
+                                   `🔄 The system will automatically update this message as the research progresses...`;
+                        }
                         // If result has a summary or message, use it
-                        if (result.result.summary || result.result.message) {
+                        else if (result.result.summary || result.result.message) {
                             return `✅ **Tool Execution Results for ${tool.tool_name}**\n\n${result.result.summary || result.result.message}`;
                         } else {
                             // Otherwise, try to format the entire result
@@ -7842,6 +7871,291 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
             console.log('Expected:', expectedResult);
             console.log('Got:', parsedToolCall);
             return false;
+        }
+    }
+    
+    /**
+     * Store for active tasks being polled
+     */
+    activeTasks = new Map();
+    
+    /**
+     * Start polling for task status updates
+     */
+    startTaskPolling(taskInfo) {
+        // Add task to active tasks map
+        this.activeTasks.set(taskInfo.taskId, taskInfo);
+        
+        // Start the polling interval
+        const pollInterval = setInterval(async () => {
+            await this.checkTaskStatus(taskInfo);
+        }, 5000); // Check every 5 seconds
+        
+        // Store the interval ID for cleanup
+        taskInfo.pollInterval = pollInterval;
+        
+        console.log(`🔄 Started polling for task ${taskInfo.taskId} with 5-second interval`);
+    }
+    
+    /**
+     * Check task status and update the message
+     */
+    async checkTaskStatus(taskInfo) {
+        try {
+            // Get the latest status from the server
+            const statusResult = await this.mcpServerManager.checkTaskStatus(
+                taskInfo.serverId, 
+                taskInfo.taskId
+            );
+            
+            console.log(`📊 Task ${taskInfo.taskId} status:`, statusResult);
+            
+            // Update task info
+            const oldStatus = taskInfo.status;
+            taskInfo.status = statusResult.status || taskInfo.status;
+            taskInfo.lastUpdated = new Date().toISOString();
+            taskInfo.progress = statusResult.progress || taskInfo.progress;
+            taskInfo.currentStep = statusResult.currentStep || taskInfo.currentStep;
+            taskInfo.totalSteps = statusResult.totalSteps || taskInfo.totalSteps;
+            taskInfo.error = statusResult.error || null;
+            
+            // If status has changed or we have new progress info, update the message
+            if (oldStatus !== taskInfo.status || 
+                statusResult.progress || 
+                statusResult.currentStep || 
+                statusResult.error) {
+                
+                // Update the chat message
+                this.updateTaskMessage(taskInfo, statusResult);
+                
+                // If task is completed or failed, stop polling
+                if (taskInfo.status === 'completed' || taskInfo.status === 'failed') {
+                    this.stopTaskPolling(taskInfo.taskId);
+                    
+                    // If completed, get the final results
+                    if (taskInfo.status === 'completed') {
+                        await this.getFinalTaskResults(taskInfo);
+                    }
+                }
+            }
+            
+        } catch (error) {
+            console.error(`❌ Error checking status for task ${taskInfo.taskId}:`, error);
+            
+            // Update message with error
+            taskInfo.status = 'error';
+            taskInfo.error = error.message;
+            this.updateTaskMessage(taskInfo, {
+                status: 'error',
+                error: error.message
+            });
+            
+            // Stop polling on error
+            this.stopTaskPolling(taskInfo.taskId);
+        }
+    }
+    
+    /**
+     * Update the chat message with current task status
+     */
+    updateTaskMessage(taskInfo, statusResult) {
+        // Find the message element containing the task ID
+        if (!taskInfo.messageElement) {
+            // First time, find the message element
+            const chatMessages = document.querySelectorAll('.chat-message');
+            for (const message of chatMessages) {
+                if (message.textContent.includes(taskInfo.taskId)) {
+                    taskInfo.messageElement = message;
+                    break;
+                }
+            }
+        }
+        
+        if (!taskInfo.messageElement) {
+            console.warn(`⚠️ Could not find message element for task ${taskInfo.taskId}`);
+            return;
+        }
+        
+        // Create updated message content
+        let updatedContent = `✅ **Deep Gene Research Task - ${taskInfo.status.toUpperCase()}**\n\n`;
+        updatedContent += `📋 **Task ID**: ${taskInfo.taskId}\n`;
+        updatedContent += `📊 **Status**: ${taskInfo.status}\n`;
+        updatedContent += `⏱️ **Created**: ${new Date(taskInfo.createdAt).toLocaleString()}\n`;
+        updatedContent += `🔄 **Last Updated**: ${new Date(taskInfo.lastUpdated).toLocaleString()}\n\n`;
+        
+        // Add progress information if available
+        if (taskInfo.progress || taskInfo.currentStep) {
+            updatedContent += `📈 **Progress**: ${taskInfo.progress || 'N/A'}%\n`;
+            if (taskInfo.currentStep && taskInfo.totalSteps) {
+                updatedContent += `🔢 **Step**: ${taskInfo.currentStep}/${taskInfo.totalSteps}\n`;
+            } else if (taskInfo.currentStep) {
+                updatedContent += `🔢 **Current Step**: ${taskInfo.currentStep}\n`;
+            }
+            updatedContent += `\n`;
+        }
+        
+        // Add current step details if available
+        if (statusResult.currentStepInfo) {
+            updatedContent += `📝 **Current Activity**: ${statusResult.currentStepInfo}\n\n`;
+        }
+        
+        // Add error message if any
+        if (taskInfo.error) {
+            updatedContent += `❌ **Error**: ${taskInfo.error}\n\n`;
+        }
+        
+        // Add final status messages
+        if (taskInfo.status === 'completed') {
+            updatedContent += `🎉 Research completed successfully! Final results will be available shortly...\n\n`;
+        } else if (taskInfo.status === 'failed') {
+            updatedContent += `❌ Research failed. Please check the error message above.\n\n`;
+        } else {
+            updatedContent += `🔄 The system will continue to update this message as the research progresses...\n\n`;
+        }
+        
+        // Update the message content
+        const messageContent = taskInfo.messageElement.querySelector('.message-content');
+        if (messageContent) {
+            // Use markdown to render the updated content
+            messageContent.innerHTML = this.renderMarkdown(updatedContent);
+        }
+        
+        console.log(`📝 Updated message for task ${taskInfo.taskId} with status: ${taskInfo.status}`);
+    }
+    
+    /**
+     * Get final task results and update the message
+     */
+    async getFinalTaskResults(taskInfo) {
+        try {
+            console.log(`📥 Getting final results for task ${taskInfo.taskId}`);
+            
+            // Get the final results from the server
+            const result = await this.mcpServerManager.getTaskResult(
+                taskInfo.serverId, 
+                taskInfo.taskId
+            );
+            
+            console.log(`✅ Got final results for task ${taskInfo.taskId}:`, result);
+            
+            // Find the message element
+            if (!taskInfo.messageElement) {
+                console.warn(`⚠️ Could not find message element for task ${taskInfo.taskId}`);
+                return;
+            }
+            
+            // Create final message content
+            let finalContent = `✅ **Deep Gene Research Task - COMPLETED**\n\n`;
+            finalContent += `📋 **Task ID**: ${taskInfo.taskId}\n`;
+            finalContent += `📊 **Status**: ${taskInfo.status}\n`;
+            finalContent += `⏱️ **Created**: ${new Date(taskInfo.createdAt).toLocaleString()}\n`;
+            finalContent += `🔄 **Last Updated**: ${new Date(taskInfo.lastUpdated).toLocaleString()}\n\n`;
+            
+            // Add results information
+            finalContent += `📚 **Research Results**\n\n`;
+            
+            if (result.summary || result.message) {
+                finalContent += `${result.summary || result.message}\n\n`;
+            } else if (result.result && typeof result.result === 'object') {
+                // Try to format the results
+                try {
+                    const resultString = JSON.stringify(result.result, null, 2);
+                    finalContent += `**Full Results**:\n\`\`\`json\n${resultString}\n\`\`\`\n\n`;
+                } catch (e) {
+                    finalContent += `Results obtained but could not be formatted.\n\n`;
+                }
+            }
+            
+            // Add download links if available
+            if (result.downloadLinks) {
+                finalContent += `📥 **Download Reports**\n\n`;
+                for (const [format, link] of Object.entries(result.downloadLinks)) {
+                    finalContent += `- [${format.toUpperCase()} Report](${link})\n`;
+                }
+                finalContent += `\n`;
+            } else {
+                // Add manual download options
+                finalContent += `📥 **Download Reports**\n\n`;
+                finalContent += `- [Markdown Report](javascript:chatManager.downloadTaskReport('${taskInfo.taskId}', 'markdown'))\n`;
+                finalContent += `- [PDF Report](javascript:chatManager.downloadTaskReport('${taskInfo.taskId}', 'pdf'))\n`;
+                finalContent += `- [DOCX Report](javascript:chatManager.downloadTaskReport('${taskInfo.taskId}', 'docx'))\n\n`;
+            }
+            
+            // Update the message content
+            const messageContent = taskInfo.messageElement.querySelector('.message-content');
+            if (messageContent) {
+                messageContent.innerHTML = this.renderMarkdown(finalContent);
+            }
+            
+        } catch (error) {
+            console.error(`❌ Error getting final results for task ${taskInfo.taskId}:`, error);
+            
+            // Update message with error
+            if (taskInfo.messageElement) {
+                const messageContent = taskInfo.messageElement.querySelector('.message-content');
+                if (messageContent) {
+                    const currentHtml = messageContent.innerHTML;
+                    messageContent.innerHTML = currentHtml + `\n\n❌ **Error retrieving final results**: ${error.message}`;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Download a task report in the specified format
+     */
+    async downloadTaskReport(taskId, format = 'markdown') {
+        try {
+            // Get the task info
+            const taskInfo = this.activeTasks.get(taskId);
+            if (!taskInfo) {
+                throw new Error(`Task ${taskId} not found`);
+            }
+            
+            console.log(`📥 Downloading ${format} report for task ${taskId}`);
+            
+            // Download the report from the server
+            const downloadResult = await this.mcpServerManager.downloadTaskReport(
+                taskInfo.serverId, 
+                taskId, 
+                format
+            );
+            
+            // Create a download link and trigger it
+            const blobUrl = URL.createObjectURL(downloadResult.blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = downloadResult.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Revoke the blob URL after download
+            setTimeout(() => {
+                URL.revokeObjectURL(blobUrl);
+            }, 1000);
+            
+            console.log(`✅ Report downloaded successfully: ${downloadResult.filename}`);
+            
+        } catch (error) {
+            console.error(`❌ Error downloading report for task ${taskId}:`, error);
+            alert(`Failed to download report: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Stop polling for a task
+     */
+    stopTaskPolling(taskId) {
+        const taskInfo = this.activeTasks.get(taskId);
+        if (taskInfo) {
+            // Clear the polling interval
+            clearInterval(taskInfo.pollInterval);
+            
+            // Remove from active tasks map
+            this.activeTasks.delete(taskId);
+            
+            console.log(`⏹️ Stopped polling for task ${taskId}`);
         }
     }
 
