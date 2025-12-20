@@ -14910,21 +14910,20 @@ ${this.getPluginSystemInfo()}`;
                 console.log('🔬 [openProteinViewer] No PDB data provided, fetching structure for PDB ID:', pdbId);
                 
                 try {
-                    // Use the fetch_protein_structure tool to get the data
-                    console.log('🔬 [openProteinViewer] Calling fetch_protein_structure with pdbId:', pdbId);
-                    const fetchResult = await this.executeToolByName('fetch_protein_structure', { pdbId });
-                    console.log('🔬 [openProteinViewer] fetch_protein_structure result:', fetchResult);
+                    // Directly download PDB file from RCSB database
+                    console.log('🔬 [openProteinViewer] Directly downloading PDB structure for ID:', pdbId);
+                    const pdbDataFromDownload = await this.downloadPDBFile(pdbId);
                     
-                    if (fetchResult && fetchResult.success) {
-                        pdbData = fetchResult.pdbData;
-                        proteinName = fetchResult.geneName || pdbId;
-                        console.log('🔬 [openProteinViewer] Successfully fetched protein structure data, pdbData length:', pdbData?.length);
+                    if (pdbDataFromDownload) {
+                        pdbData = pdbDataFromDownload;
+                        proteinName = proteinName || pdbId;
+                        console.log('🔬 [openProteinViewer] Successfully downloaded protein structure data, pdbData length:', pdbData.length);
                     } else {
-                        console.error('🔬 [openProteinViewer] fetch_protein_structure returned failure or no result:', fetchResult);
-                        throw new Error(`Failed to fetch protein structure data: ${fetchResult?.error || 'Unknown error'}`);
+                        console.error('🔬 [openProteinViewer] Failed to download PDB data');
+                        throw new Error(`Failed to download protein structure data for ${pdbId}`);
                     }
                 } catch (fetchError) {
-                    console.error('🔬 [openProteinViewer] Error during fetch_protein_structure:', fetchError);
+                    console.error('🔬 [openProteinViewer] Error during PDB download:', fetchError);
                     console.error('🔬 [openProteinViewer] fetchError.message:', fetchError.message);
                     console.error('🔬 [openProteinViewer] fetchError.stack:', fetchError.stack);
                     throw new Error(`Failed to fetch protein structure for ${pdbId}: ${fetchError.message}`);
