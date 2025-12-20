@@ -170,7 +170,7 @@ clearThinkingHistory() {
         }, 300);
     });
     
-    this.showNotification('✅ Thinking process history cleared', 'success');
+    this.showNotification('Thinking process history cleared', 'success');
 }
 ```
 

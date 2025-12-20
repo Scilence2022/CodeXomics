@@ -8740,7 +8740,7 @@ class GenomeBrowser {
             const selection = window.getSelection();
             if (selection && selection.toString().trim()) {
                 navigator.clipboard.writeText(selection.toString()).then(() => {
-                    this.showNotification('✅ Text copied to clipboard', 'success');
+                    this.showNotification('Text copied to clipboard', 'success');
                 }).catch(err => {
                     console.error('Failed to copy selection:', err);
                     this.showNotification('❌ Failed to copy text', 'error');
@@ -8755,7 +8755,7 @@ class GenomeBrowser {
                 if (start !== end) {
                     const selectedText = activeElement.value.substring(start, end);
                     navigator.clipboard.writeText(selectedText).then(() => {
-                        this.showNotification('✅ Text copied to clipboard', 'success');
+                        this.showNotification('Text copied to clipboard', 'success');
                     }).catch(err => {
                         console.error('Failed to copy input text:', err);
                         this.showNotification('❌ Failed to copy text', 'error');
@@ -8857,7 +8857,7 @@ class GenomeBrowser {
             // If focused on an input field or textarea
             if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
                 activeElement.select();
-                this.showNotification('✅ All text selected', 'success');
+                this.showNotification('All text selected', 'success');
                 return;
             }
 
@@ -8870,7 +8870,7 @@ class GenomeBrowser {
                 const selection = window.getSelection();
                 selection.removeAllRanges();
                 selection.addRange(range);
-                this.showNotification('✅ Genome content selected', 'success');
+                this.showNotification('Genome content selected', 'success');
                 return;
             }
 
@@ -8882,13 +8882,13 @@ class GenomeBrowser {
                 const selection = window.getSelection();
                 selection.removeAllRanges();
                 selection.addRange(range);
-                this.showNotification('✅ Chat content selected', 'success');
+                this.showNotification('Chat content selected', 'success');
                 return;
             }
 
             // Select all content on the page as fallback
             document.execCommand('selectAll');
-            this.showNotification('✅ All page content selected', 'success');
+            this.showNotification('All page content selected', 'success');
             
         } catch (error) {
             console.error('Error in handleMenuSelectAll:', error);

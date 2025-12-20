@@ -14388,7 +14388,7 @@ ${this.getPluginSystemInfo()}`;
         });
 
         navigator.clipboard.writeText(conversationText).then(() => {
-            this.showNotification('✅ Conversation copied to clipboard', 'success');
+            this.showNotification('Conversation copied to clipboard', 'success');
         }).catch(err => {
             console.error('Failed to copy conversation:', err);
             this.showNotification('❌ Failed to copy conversation', 'error');
@@ -14425,7 +14425,7 @@ ${this.getPluginSystemInfo()}`;
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        this.showNotification('✅ Conversation exported successfully', 'success');
+        this.showNotification('Conversation exported successfully', 'success');
     }
 
     /**
@@ -14452,7 +14452,7 @@ ${this.getPluginSystemInfo()}`;
             this.configManager.setChatHistory(history);
             this.configManager.save();
 
-            this.showNotification('✅ Conversation deleted successfully', 'success');
+            this.showNotification('Conversation deleted successfully', 'success');
             
             // Refresh the modal
             this.closeChatHistoryModal();
@@ -14543,7 +14543,7 @@ ${this.getPluginSystemInfo()}`;
         }
 
         navigator.clipboard.writeText(message.message).then(() => {
-            this.showNotification('✅ Message copied to clipboard', 'success');
+            this.showNotification('Message copied to clipboard', 'success');
         }).catch(err => {
             console.error('Failed to copy message:', err);
             this.showNotification('❌ Failed to copy message', 'error');
@@ -14573,7 +14573,7 @@ ${this.getPluginSystemInfo()}`;
             this.configManager.setChatHistory(history);
             this.configManager.save();
 
-            this.showNotification('✅ Message deleted from history', 'success');
+            this.showNotification('Message deleted from history', 'success');
             
             // Refresh the modal
             this.closeChatHistoryModal();
@@ -14599,7 +14599,7 @@ ${this.getPluginSystemInfo()}`;
             this.configManager.clearChatHistory();
             this.configManager.save();
             
-            this.showNotification('✅ All chat history cleared', 'success');
+            this.showNotification('All chat history cleared', 'success');
             this.closeChatHistoryModal();
             
             // Also clear the current chat display
@@ -18338,7 +18338,7 @@ ${this.getPluginSystemInfo()}`;
             }, 300);
         });
         
-        this.showNotification('✅ Thinking process history cleared', 'success');
+        this.showNotification('Thinking process history cleared', 'success');
     }
 
     /**
@@ -18664,7 +18664,7 @@ ${this.getPluginSystemInfo()}`;
             this.configManager.addChatMessage('--- CONVERSATION_SEPARATOR ---', 'system');
         }
         
-        this.showNotification('✅ New conversation started', 'success');
+        this.showNotification('New conversation started', 'success');
     }
 
     /**
