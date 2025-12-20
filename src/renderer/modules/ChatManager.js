@@ -1895,17 +1895,11 @@ class ChatManager {
         // Update button state
         toggleBtn.dataset.connected = isConnected.toString();
         
-        const icon = toggleBtn.querySelector('i');
+        // Update button title
         if (isConnected) {
-            toggleBtn.classList.add('connected');
-            toggleBtn.classList.remove('disconnected');
-            icon.className = 'fas fa-unlink';
-            toggleBtn.title = `Disconnect from MCP (${connectedCount} connection${connectedCount !== 1 ? 's' : ''})`;
+            toggleBtn.title = `MCP Tools Enabled (${connectedCount} connection${connectedCount !== 1 ? 's' : ''})`;
         } else {
-            toggleBtn.classList.add('disconnected');
-            toggleBtn.classList.remove('connected');
-            icon.className = 'fas fa-plug';
-            toggleBtn.title = 'Connect to MCP Server';
+            toggleBtn.title = 'MCP Tools Disabled';
         }
     }
     
@@ -4092,9 +4086,6 @@ class ChatManager {
                         <button id="chatBoxSettingsBtn" class="btn btn-sm chat-btn" title="ChatBox Settings">
                             <i class="fas fa-cog"></i>
                         </button>
-                        <button id="mcpToggleBtn" class="btn btn-sm chat-btn mcp-toggle-btn" title="Toggle MCP Connection" data-connected="false">
-                            <i class="fas fa-plug"></i>
-                        </button>
                         <button id="resetChatPositionBtn" class="btn btn-sm chat-btn" title="Reset position and size">
                             <i class="fas fa-home"></i>
                         </button>
@@ -4183,6 +4174,12 @@ class ChatManager {
                             <i class="fas fa-plus"></i>
                             New Chat
                         </button>
+                        <button id="mcpToggleBtn" class="btn btn-sm btn-secondary mcp-tools-btn" title="Toggle MCP Tools" data-connected="false">
+                            <i class="fas fa-microchip"></i>
+                            MCP Tools
+                        </button>
+                    </div>
+                    <div class="chat-actions secondary-actions">
                         <button id="chatHistoryBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-history"></i>
                             History
@@ -4190,10 +4187,6 @@ class ChatManager {
                         <button id="clearThinkingBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-brain"></i>
                             Clear Thinking
-                        </button>
-                        <button id="toggleThinkingBtn" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-eye-slash"></i>
-                            Hide History
                         </button>
                         <button id="exportChatBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-download"></i>

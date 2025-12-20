@@ -14325,7 +14325,47 @@ to {
     border-right: none;
 }
 
-}/* MCP Server List Popup */
+}/* ChatBox Actions Styles */
+.chat-actions {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 5px;
+    flex-wrap: wrap;
+}
+
+.chat-actions.secondary-actions {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+/* MCP Tools Button Styles */
+.mcp-tools-btn {
+    transition: all 0.2s ease;
+}
+
+.mcp-tools-btn[data-connected="false"] {
+    opacity: 0.7;
+    filter: grayscale(70%);
+}
+
+.mcp-tools-btn[data-connected="true"] {
+    opacity: 1;
+    filter: grayscale(0%);
+    background-color: #27ae60;
+    border-color: #27ae60;
+    color: white;
+}
+
+.mcp-tools-btn[data-connected="true"]:hover {
+    background-color: #229954;
+    border-color: #229954;
+}
+
+.mcp-tools-btn i {
+    margin-right: 4px;
+}
+
+/* MCP Server List Popup */
 .mcp-server-list-popup {
     position: fixed;
     top: 0;
