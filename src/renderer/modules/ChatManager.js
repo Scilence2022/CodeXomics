@@ -7760,8 +7760,30 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
                 }
                 
             default:
-                return `Task completed successfully using ${tool.tool_name}. Results have been processed.`;
-        }
+                // For unknown tools (including MCP tools), show full results if available
+                if (result.result) {
+                    // Check if result.result is an object with useful data
+                    if (typeof result.result === 'object' && result.result !== null) {
+                        // If result has a summary or message, use it
+                        if (result.result.summary || result.result.message) {
+                            return `✅ **Tool Execution Results for ${tool.tool_name}**\n\n${result.result.summary || result.result.message}`;
+                        } else {
+                            // Otherwise, try to format the entire result
+                            try {
+                                // Convert to string for display
+                                const resultString = JSON.stringify(result.result, null, 2);
+                                return `✅ **Tool Execution Results for ${tool.tool_name}**\n\n**Full Results:**\n\`\`\`json\n${resultString}\n\`\`\``;
+                            } catch (e) {
+                                return `✅ **Tool Execution Results for ${tool.tool_name}**\n\nResults obtained but could not be formatted: ${String(result.result)}`;
+                            }
+                        }
+                    } else {
+                        // If result.result is a simple value, display it directly
+                        return `✅ **Tool Execution Results for ${tool.tool_name}**\n\n${result.result}`;
+                    }
+                } else {
+                    return `Task completed successfully using ${tool.tool_name}. Results have been processed.`;
+                }
     }
 
     /**
@@ -18080,20 +18102,24 @@ ${this.getPluginSystemInfo()}`;
                 resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
                 
                 // 显示详细数据（如果启用）
-                if (this.showDetailedToolData && result.data) {
-                    resultDisplay += `<br><details style="margin-top: 8px;">`;
-                    resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
-                    resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto;">`;
-                    
-                    try {
-                        // 格式化数据显示
-                        const formattedData = this.formatToolResultData(result.data);
-                        resultDisplay += formattedData;
-                    } catch (error) {
-                        resultDisplay += `<pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+                if (this.showDetailedToolData) {
+                    // Check for result.result first (standard tool execution result), then fallback to result.data (legacy)
+                    const resultData = result.result || result.data;
+                    if (resultData) {
+                        resultDisplay += `<br><details style="margin-top: 8px;">`;
+                        resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
+                        resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
+                        
+                        try {
+                            // 格式化数据显示
+                            const formattedData = this.formatToolResultData(resultData);
+                            resultDisplay += formattedData;
+                        } catch (error) {
+                            resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+                        }
+                        
+                        resultDisplay += `</div></details>`;
                     }
-                    
-                    resultDisplay += `</div></details>`;
                 }
             } else {
                 resultDisplay += `<span style="color: #F44336;">Status: Failed</span>`;
