@@ -1144,29 +1144,103 @@ class MCPServerManager {
                 throw new Error(`HTTP server ${serverId} returned ${response.status} ${response.statusText}: ${errorText}`);
             }
             
-            // Handle potential streaming responses or large content
-            const responseText = await response.text();
-            console.log(`📋 Raw response from server ${serverId}:`, responseText.substring(0, 200) + '...');
-            
-            // Try to parse as JSON
+            // Handle both regular and streamable HTTP responses
+            let responseText;
             let result;
-            try {
-                result = JSON.parse(responseText);
-                console.log(`✅ Parsed tool execution result from HTTP server ${serverId}:`, result);
-            } catch (jsonError) {
-                console.log(`⚠️ Response is not JSON, returning as text:`, jsonError.message);
-                return { result: responseText, type: 'text' };
-            }
             
-            // Handle different response formats
-            if (result.result) {
-                return result.result;
-            } else if (result.data) {
-                return result.data;
-            } else if (result.response) {
-                return result.response;
-            } else {
-                return result;
+            try {
+                // For streamable-http servers, we need to read response carefully
+                if (server.transportType === 'streamable-http') {
+                    // Get response headers first
+                    const contentType = response.headers.get('content-type');
+                    console.log(`📡 Streamable HTTP response - Content-Type: ${contentType}`);
+                    
+                    // Try to read response as a stream with timeout
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    let chunks = [];
+                    let done = false;
+                    let timeoutId;
+                    
+                    // Create a timeout promise to prevent hanging indefinitely
+                    const timeoutPromise = new Promise((_, reject) => {
+                        timeoutId = setTimeout(() => {
+                            reject(new Error('Stream reading timed out'));
+                        }, 10000); // 10 second timeout for stream reading
+                    });
+                    
+                    try {
+                        // Read the stream until we get a complete JSON object or timeout
+                        while (!done) {
+                            const readResult = await Promise.race([reader.read(), timeoutPromise]);
+                            
+                            if (readResult.done) {
+                                done = true;
+                                break;
+                            }
+                            
+                            chunks.push(decoder.decode(readResult.value, { stream: true }));
+                            const partialText = chunks.join('');
+                            
+                            // Check if we have a complete JSON object
+                            try {
+                                result = JSON.parse(partialText);
+                                console.log(`✅ Parsed complete JSON from stream:`, result);
+                                done = true;
+                            } catch (parseError) {
+                                // Not a complete JSON yet, continue reading
+                                console.log(`⏳ Partial stream data (${partialText.length} chars):`, partialText.substring(0, 100) + '...');
+                            }
+                        }
+                    } finally {
+                        clearTimeout(timeoutId);
+                        reader.releaseLock();
+                    }
+                    
+                    if (!result) {
+                        // If we didn't get a complete JSON object, try to parse what we have
+                        const partialText = chunks.join('');
+                        console.log(`⚠️ Could not parse complete JSON from stream, using partial data:`, partialText.substring(0, 200) + '...');
+                        try {
+                            result = JSON.parse(partialText);
+                        } catch (finalError) {
+                            console.log(`⚠️ Response is not valid JSON, returning as text:`, finalError.message);
+                            return { result: partialText, type: 'text' };
+                        }
+                    }
+                } else {
+                    // Regular HTTP response - read entire body
+                    responseText = await response.text();
+                    console.log(`📋 Raw response from server ${serverId}:`, responseText.substring(0, 200) + '...');
+                    
+                    // Try to parse as JSON
+                    result = JSON.parse(responseText);
+                    console.log(`✅ Parsed tool execution result from HTTP server ${serverId}:`, result);
+                }
+                
+                // Handle different response formats
+                if (result.result) {
+                    return result.result;
+                } else if (result.data) {
+                    return result.data;
+                } else if (result.response) {
+                    return result.response;
+                } else {
+                    return result;
+                }
+                
+            } catch (jsonError) {
+                console.log(`⚠️ Response parsing failed:`, jsonError.message);
+                // Try to get whatever response text we can
+                if (!responseText) {
+                    try {
+                        responseText = await response.text();
+                    } catch (textError) {
+                        console.log(`⚠️ Could not read response text:`, textError.message);
+                        return { result: 'Error reading response', type: 'error' };
+                    }
+                }
+                return { result: responseText, type: 'text' };
             }
             
         } catch (error) {
