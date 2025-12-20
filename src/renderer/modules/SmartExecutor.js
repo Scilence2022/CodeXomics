@@ -115,6 +115,37 @@ class SmartExecutor {
         const results = [];
         const executionPlan = strategy.executionPlan;
         
+        // Check if any tools were skipped because they weren't in category mapping
+        const requestedToolNames = toolRequests.map(t => t.tool_name);
+        const planToolNames = new Set();
+        
+        // Collect all tool names from the execution plan
+        for (const phase of executionPlan) {
+            for (const tool of phase.tools) {
+                planToolNames.add(typeof tool === 'string' ? tool : tool.tool || tool.tool_name || tool);
+            }
+        }
+        
+        // Identify tools that weren't added to the execution plan
+        const unmatchedTools = toolRequests.filter(req => !planToolNames.has(req.tool_name));
+        
+        // If there are unmatched tools, create a default phase for them
+        if (unmatchedTools.length > 0) {
+            console.log(`⚠️  Found ${unmatchedTools.length} unmatched tools, creating default execution phase`);
+            
+            // Add unmatched tools to a default phase
+            const defaultPhase = {
+                priority: 3, // Medium priority
+                phase: 'Default Execution',
+                tools: unmatchedTools.map(t => ({ tool: t.tool_name })),
+                parallelizable: true,
+                estimatedTime: unmatchedTools.length * 500
+            };
+            
+            // Add default phase to execution plan
+            executionPlan.push(defaultPhase);
+        }
+        
         for (const phase of executionPlan) {
             console.log(`🚀 Executing ${phase.phase} (Priority: ${phase.priority})`);
             
