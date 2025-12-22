@@ -14522,7 +14522,7 @@ to {
 }
 
 .mcp-server-controls .toggle-slider::before {
-    content: ;
+    content: "";
     position: absolute;
     width: 16px;
     height: 16px;
