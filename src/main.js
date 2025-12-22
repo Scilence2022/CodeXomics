@@ -1906,55 +1906,6 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Analysis Tools',
-          submenu: [
-            {
-              label: 'STRING Protein Networks',
-              accelerator: 'CmdOrCtrl+Shift+S',
-              click: () => {
-                createSTRINGWindow();
-              }
-            },
-            {
-              label: 'DAVID Functional Analysis',
-              accelerator: 'CmdOrCtrl+Shift+D',
-              click: () => {
-                createDAVIDWindow();
-              }
-            },
-            {
-              label: 'Reactome Pathway Browser',
-              accelerator: 'CmdOrCtrl+Shift+R',
-              click: () => {
-                createReactomeWindow();
-              }
-            },
-            {
-              label: 'PDB Structure Viewer',
-              accelerator: 'CmdOrCtrl+Shift+T',
-              click: () => {
-                createPDBWindow();
-              }
-            },
-            { type: 'separator' },
-            {
-              label: 'Gene Annotation Refine',
-              accelerator: 'CmdOrCtrl+Shift+G',
-              click: () => {
-                createGeneAnnotationRefineWindow();
-              }
-            },
-            {
-              label: 'Evo2 Design',
-              accelerator: 'CmdOrCtrl+Shift+E',
-              click: () => {
-                createEvo2Window();
-              }
-            }
-          ]
-        },
-        { type: 'separator' },
-        {
           label: 'Deep Gene Research',
           accelerator: 'CmdOrCtrl+Shift+W',
           click: async () => {
