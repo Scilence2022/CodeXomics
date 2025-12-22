@@ -1881,50 +1881,7 @@ function createMenu() {
             createCircosWindow();
           }
         },
-        { type: 'separator' },
-        {
-          label: 'Visualization Tools',
-          submenu: [
-            {
-              label: 'KGML Pathway Viewer',
-              accelerator: 'CmdOrCtrl+Shift+K',
-              click: () => {
-                createKGMLViewerWindow();
-              }
-            },
-            { type: 'separator' },
-            {
-              label: 'Network Graph Viewer',
-              click: () => {
-                sendToCurrentMainWindow('open-visualization-tool', 'network-graph');
-              }
-            },
-            {
-              label: 'Protein Interaction Network',
-              click: () => {
-                sendToCurrentMainWindow('open-visualization-tool', 'protein-interaction-network');
-              }
-            },
-            {
-              label: 'Gene Regulatory Network',
-              click: () => {
-                sendToCurrentMainWindow('open-visualization-tool', 'gene-regulatory-network');
-              }
-            },
-            {
-              label: 'Phylogenetic Tree Viewer',
-              click: () => {
-                sendToCurrentMainWindow('open-visualization-tool', 'phylogenetic-tree');
-              }
-            },
-            {
-              label: 'Sequence Alignment Viewer',
-              click: () => {
-                sendToCurrentMainWindow('open-visualization-tool', 'sequence-alignment');
-              }
-            }
-          ]
-        },
+
         { type: 'separator' },
         {
           label: 'KEGG Pathway Enrichment Analysis',
@@ -4331,43 +4288,7 @@ function createPDBWindow() {
   }
 }
 
-// Create KGML Pathway Viewer Window
-function createKGMLViewerWindow() {
-  try {
-    const kgmlWindow = new BrowserWindow({
-      width: 1800,
-      height: 1000,
-      minWidth: 1400,
-      minHeight: 800,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: true,
-        webSecurity: false
-      },
-      title: 'KGML Pathway Viewer - CodeXomics',
-      icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
-    });
 
-    kgmlWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/kgml-viewer.html'));
-
-    kgmlWindow.once('ready-to-show', () => {
-      kgmlWindow.show();
-      // 为KGML工具窗口设置独立菜单
-      createToolWindowMenu(kgmlWindow, 'KGML Pathway Viewer');
-    });
-
-    kgmlWindow.webContents.openDevTools();
-
-    kgmlWindow.on('closed', () => {
-      console.log('KGML Pathway Viewer window closed');
-    });
-
-  } catch (error) {
-    console.error('Failed to open KGML Pathway Viewer:', error);
-  }
-}
 
 // Create Evo2 Design Window
 function createEvo2Window() {

@@ -426,13 +426,7 @@ class GenomeBrowser {
             console.error('❌ Error initializing ExternalToolsManager:', error);
         }
         
-        // Step 5.8: Initialize Visualization Tools Manager
-        try {
-            this.initializeVisualizationToolsManager();
-            console.log('✅ VisualizationToolsManager initialized successfully');
-        } catch (error) {
-            console.error('❌ Error initializing VisualizationToolsManager:', error);
-        }
+
         
         // Step 5.8: Removed Conversation Evolution System (cleanup completed)
         
@@ -2616,25 +2610,7 @@ class GenomeBrowser {
             this.openResourceManager();
         });
 
-        // Handle visualization tools from Tools menu
-        ipcRenderer.on('open-visualization-tool', (event, pluginId) => {
-            console.log(`🎨 Opening visualization tool: ${pluginId}`);
-            
-            try {
-                // 使用新的可视化工具管理器
-                if (this.visualizationToolsManager) {
-                    this.visualizationToolsManager.openVisualizationTool(pluginId);
-                } else if (window.visualizationToolsManager) {
-                    window.visualizationToolsManager.openVisualizationTool(pluginId);
-                } else {
-                    console.warn('VisualizationToolsManager not available, initializing...');
-                    this.initializeVisualizationToolsManager(pluginId);
-                }
-            } catch (error) {
-                console.error(`Failed to open visualization tool ${pluginId}:`, error);
-                this.showNotification(`Unable to open ${pluginId} visualization tool`, 'error');
-            }
-        });
+
 
         // Handle options menu actions from main menu
         ipcRenderer.on('configure-llms', () => {
@@ -8575,155 +8551,11 @@ class GenomeBrowser {
         return tryInitialize();
     }
 
-    /**
-     * Initialize Visualization Tools Manager
-     */
-    async initializeVisualizationToolsManager(pluginId = null) {
-        try {
-            // 加载VisualizationToolsManager脚本
-            if (typeof VisualizationToolsManager === 'undefined') {
-                const script = document.createElement('script');
-                script.src = 'modules/VisualizationToolsManager.js';
-                script.onload = () => {
-                    this.createVisualizationToolsManager(pluginId);
-                };
-                script.onerror = () => {
-                    console.error('Failed to load VisualizationToolsManager');
-                    if (pluginId) {
-                        this.openBasicVisualizationTool(pluginId);
-                    }
-                };
-                document.head.appendChild(script);
-            } else {
-                this.createVisualizationToolsManager(pluginId);
-            }
-        } catch (error) {
-            console.error('Error initializing VisualizationToolsManager:', error);
-            if (pluginId) {
-                this.openBasicVisualizationTool(pluginId);
-            }
-        }
-    }
 
-    /**
-     * Create Visualization Tools Manager instance
-     */
-    createVisualizationToolsManager(pluginId = null) {
-        try {
-            this.visualizationToolsManager = new VisualizationToolsManager(this, this.configManager);
-            window.visualizationToolsManager = this.visualizationToolsManager;
-            
-            if (pluginId) {
-                // 打开请求的工具
-                setTimeout(() => {
-                    this.visualizationToolsManager.openVisualizationTool(pluginId);
-                }, 100);
-            }
-        } catch (error) {
-            console.error('Error creating VisualizationToolsManager:', error);
-            if (pluginId) {
-                this.openBasicVisualizationTool(pluginId);
-            }
-        }
-    }
 
-    /**
-     * Basic visualization tool opener (fallback)
-     */
-    openBasicVisualizationTool(pluginId) {
-        const toolNames = {
-            'network-graph': 'Network Graph Viewer',
-            'protein-interaction-network': 'Protein Interaction Network',
-            'gene-regulatory-network': 'Gene Regulatory Network',
-            'phylogenetic-tree': 'Phylogenetic Tree Viewer',
-            'sequence-alignment': 'Sequence Alignment Viewer'
-        };
 
-        const toolName = toolNames[pluginId] || pluginId;
-        
-        const toolWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-        
-        toolWindow.document.write(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>${toolName} - CodeXomics</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-                <style>
-                    body {
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        margin: 0;
-                        padding: 2rem;
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: #333;
-                        min-height: 100vh;
-                    }
-                    .container {
-                        max-width: 1200px;
-                        margin: 0 auto;
-                        background: white;
-                        border-radius: 1rem;
-                        padding: 2rem;
-                        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                    }
-                    .header {
-                        text-align: center;
-                        margin-bottom: 3rem;
-                        padding-bottom: 1rem;
-                        border-bottom: 2px solid #e2e8f0;
-                    }
-                    .header h1 {
-                        font-size: 2.5rem;
-                        margin-bottom: 0.5rem;
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        -webkit-background-clip: text;
-                        -webkit-text-fill-color: transparent;
-                    }
-                    .status {
-                        padding: 1rem;
-                        background: #f7fafc;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 0.5rem;
-                        margin: 2rem 0;
-                        text-align: center;
-                        color: #4a5568;
-                    }
-                    .info {
-                        background: #ebf8ff;
-                        border-color: #90cdf4;
-                        color: #2b6cb0;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1><i class="fas fa-chart-bar"></i> ${toolName}</h1>
-                        <p>Advanced visualization tool for genomic data analysis</p>
-                    </div>
-                    
-                    <div class="status info">
-                        <i class="fas fa-info-circle"></i>
-                        This visualization tool is being prepared. The full plugin framework is initializing...
-                    </div>
-                    
-                    <div class="status">
-                        Plugin ID: <strong>${pluginId}</strong><br>
-                        Tool Name: <strong>${toolName}</strong><br>
-                        Status: <strong>Available</strong>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `);
-        
-        toolWindow.document.close();
-        toolWindow.focus();
-        
-        this.showNotification(`${toolName} opened in new window`, 'info');
-    }
+
+
 
     /**
      * Handle Copy action from Edit menu
