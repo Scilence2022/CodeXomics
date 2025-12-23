@@ -52,6 +52,12 @@ class PluginMarketplaceUI {
             console.log('🛒 Opening Plugin Marketplace...');
             this.createMarketplaceWindow();
             this.isOpen = true;
+            
+            // Check for plugin updates when marketplace is opened
+            if (this.marketplace && this.marketplace.updateManager) {
+                console.log('🔍 Checking for plugin updates...');
+                await this.marketplace.updateManager.checkForUpdates();
+            }
         } catch (error) {
             console.error('❌ Failed to open Plugin Marketplace:', error);
             alert('Failed to open Plugin Marketplace: ' + error.message);

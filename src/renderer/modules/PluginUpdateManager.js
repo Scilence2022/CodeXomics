@@ -44,9 +44,8 @@ class PluginUpdateManager {
             // Load rollback points
             await this.loadRollbackPoints();
             
-            // Setup automatic update checking
-            this.setupAutomaticUpdateChecking();
-            
+            // Automatic update checking disabled on startup
+            // Will only check for updates when marketplace is opened
             console.log('✅ PluginUpdateManager initialization complete');
             
         } catch (error) {
