@@ -1343,7 +1343,7 @@ class ActionManager {
         }
         
         if (!endInput || endInput === '') {
-            er an end position', 'error')this.genomeBrowser.showNotification('Please ent;
+            this.genomeBrowser.showNotification('Please enter an end position', 'error');
             return;
         }
         
