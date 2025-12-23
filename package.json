@@ -1,6 +1,6 @@
 {
   "name": "codexomics",
-  "version": "0.526.0-beta",
+  "version": "0.527.0-beta",
   "description": "An AI-powered bioinformatics analysis platform built with Electron",
   "main": "src/main.js",
   "homepage": "https://github.com/Scilence2022/CodeXomics",
@@ -25,7 +25,7 @@
     "prebuild": "npm run version-sync && npm run generate-dmg-bg",
     "build": "electron-builder",
     "build:mac": "npm run generate-dmg-bg && electron-builder --mac",
-    "build:win": "electron-builder --win",
+    "build:win": "electron-builder --win --x64",
     "build:linux": "electron-builder --linux",
     "build:all": "npm run generate-dmg-bg && electron-builder --mac --win --linux",
     "dist": "electron-builder --publish=never",
@@ -173,15 +173,13 @@
         {
           "target": "nsis",
           "arch": [
-            "x64",
-            "ia32"
+            "x64"
           ]
         },
         {
           "target": "portable",
           "arch": [
-            "x64",
-            "ia32"
+            "x64"
           ]
         }
       ],
