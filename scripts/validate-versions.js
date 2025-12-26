@@ -43,7 +43,7 @@ function loadVersionInfo() {
             patch,
             prerelease,
             fullVersion: prerelease ? `${major}.${minor}.${patch}-${prerelease}` : `${major}.${minor}.${patch}`,
-            displayVersion: `v${major}.${minor} ${prerelease || ''}`.trim()
+            displayVersion: prerelease ? `v${major}.${minor}${prerelease}` : `v${major}.${minor}`
         };
     } catch (error) {
         console.error('❌ Error loading version info:', error.message);

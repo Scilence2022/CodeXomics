@@ -4,15 +4,15 @@
 
 ### AI-Powered Bioinformatics Analysis Platform
 
-[![Version](https://img.shields.io/badge/version-0.523beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![Version](https://img.shields.io/badge/version-0.527beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
-[![First Release](https://img.shields.io/badge/🧪%20Latest%20Beta-v0.523beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.523beta)
+[![First Release](https://img.shields.io/badge/🧪%20Latest%20Beta-v0.527beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.527beta)
 
 A modern, cross-platform bioinformatics analysis platform built with Electron, featuring **multi-agent AI collaboration**, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
 
-🧪 **[Latest Beta Release - v0.523beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.523beta)** 🧪
+🧪 **[Latest Beta Release - v0.527beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.527beta)** 🧪
 
 [Features](#-key-features) •
 [Installation](#-installation) •
@@ -685,7 +685,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**CodeXomics v0.522beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
+**CodeXomics v0.527beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
 
 Made with ❤️ by the CodeXomics Team
 

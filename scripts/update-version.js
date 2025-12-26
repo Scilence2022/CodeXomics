@@ -35,7 +35,7 @@ try {
     const patch = patchMatch[1];
     const prerelease = prereleaseMatch ? prereleaseMatch[1] : null;
     
-    // Build version string
+    // Build valid semantic version for package.json: X.YYY.Z-prerelease
     const versionString = prerelease ? `${major}.${minor}.${patch}-${prerelease}` : `${major}.${minor}.${patch}`;
     
     console.log(`📋 Unified version: ${versionString}`);
