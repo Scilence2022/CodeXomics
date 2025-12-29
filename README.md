@@ -105,22 +105,22 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 
 ### **Download Pre-built Releases**
 
-Download the latest version (v0.523beta) for your platform:
+Download the latest version (v0.527beta) for your platform:
 
 #### macOS
-- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.523beta/CodeXomics-0.523.0-beta-x64.dmg)**: `CodeXomics-0.523.0-beta-x64.dmg`
-- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.523beta/CodeXomics-0.523.0-beta-arm64.dmg)**: `CodeXomics-0.523.0-beta-arm64.dmg`
+- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.527beta/CodeXomics-0.527.0-beta-x64.dmg)**: `CodeXomics-0.527.0-beta-x64.dmg`
+- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.527beta/CodeXomics-0.527.0-beta-arm64.dmg)**: `CodeXomics-0.527.0-beta-arm64.dmg`
 
 #### Windows  
-- **[Installer](https://github.com/Scilence2022/CodeXomics/releases/download/v0.523beta/CodeXomics%20Setup%200.523.0-beta.exe)**: `CodeXomics Setup 0.523.0-beta.exe`
-- **[Portable](https://github.com/Scilence2022/CodeXomics/releases/download/v0.523beta/CodeXomics%200.523.0-beta.exe)**: `CodeXomics 0.523.0-beta.exe`
+- **[Installer](https://github.com/Scilence2022/CodeXomics/releases/download/v0.527beta/CodeXomics%20Setup%200.527.0-beta.exe)**: `CodeXomics Setup 0.527.0-beta.exe`
+- **[Portable](https://github.com/Scilence2022/CodeXomics/releases/download/v0.527beta/CodeXomics%200.527.0-beta.exe)**: `CodeXomics 0.527.0-beta.exe`
 
 #### Linux
-- **[AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.523beta/CodeXomics-0.523.0-beta.AppImage)**: `CodeXomics-0.523.0-beta.AppImage`
-- **[Debian](https://github.com/Scilence2022/CodeXomics/releases/download/v0.523beta/codexomics_0.523.0-beta_amd64.deb)**: `codexomics_0.523.0-beta_amd64.deb`
-- **[Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.523beta/codexomics_0.523.0-beta_amd64.snap)**: `codexomics_0.523.0-beta_amd64.snap`
+- **[AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.527beta/CodeXomics-0.527.0-beta.AppImage)**: `CodeXomics-0.527.0-beta.AppImage`
+- **[Debian](https://github.com/Scilence2022/CodeXomics/releases/download/v0.527beta/codexomics_0.527.0-beta_amd64.deb)**: `codexomics_0.527.0-beta_amd64.deb`
+- **[Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.527beta/codexomics_0.527.0-beta_amd64.snap)**: `codexomics_0.527.0-beta_amd64.snap`
 
-**📋 All Downloads**: [GitHub Releases Page](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.523beta)
+**📋 All Downloads**: [GitHub Releases Page](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.527beta)
 
 ### **Build from Source**
 ```bash
@@ -322,10 +322,10 @@ Use View menu or toolbar buttons for Grid/List/Details
 ### **Advanced Tools**
 ```bash
 # Open KGML Pathway Viewer
-Tools → Visualization Tools → KGML Pathway Viewer (Ctrl+Shift+K)
+Tools → KGML Pathway Viewer (Ctrl+Shift+K)
 
 # Launch STRING Networks
-Tools → Bioinformatics Tools → STRING Protein Networks
+Tools → STRING Protein Networks
 
 # Access Gene Details
 Click any gene to see enhanced database cross-references
@@ -596,40 +596,46 @@ We welcome contributions from the genomics and bioinformatics community!
 - Update relevant markdown documentation
 - Test plugin compatibility
 
-## 🧪 What's New in v0.522beta - First Beta Release
+## 🧪 What's New in v0.527beta
 
-### **🧪 First Beta Release**
-- ✅ **Core genome visualization** with multi-track support
-- ✅ **Basic AI integration** with multiple LLM providers
-- ✅ **AI testing framework** for evaluation and validation
-- ✅ **Cross-platform support** (macOS, Windows, Linux)
-- ✅ **File format support** (FASTA, GenBank, GFF, VCF, BAM)
-- 🚧 **Experimental features** under development (multi-agent, external tools)
-- 🔬 **Community feedback** welcome for improvements
+### **✨ Latest Features and Improvements**
+- ✅ **Enhanced Plugin System** - Improved plugin update check (now only checks when marketplace is opened)
+- ✅ **Chatbox Improvements** - Added thinking history for transparent AI reasoning
+- ✅ **PDB Viewer Fix** - Fixed Protein Data Bank viewer functionality
+- ✅ **BLAST Service Updates** - Swapped BLAST service positions for better accessibility
+- ✅ **Menu Structure Optimization** - Removed redundant Analysis Tools and Visualization Tools submenus
+- ✅ **GPU Fixes for Windows** - Enhanced performance on Windows systems with GPU optimizations
+- ✅ **Plugin Download Counts** - Updated plugin download statistics tracking
+- ✅ **CSS Enhancements** - Fixed CSS syntax errors and improved styling consistency
+- ✅ **Version Format Fix** - Updated versioning system for better build compatibility
+- ✅ **Improved Error Messages** - Fixed typos and enhanced error reporting
 
-### **✨ Stable Features**
+### **🧹 Menu Structure Changes**
+- **Removed**: Analysis Tools submenu from main menu
+- **Removed**: Visualization Tools submenu from main menu
+- **Streamlined**: Tool access with direct menu items
+
+### **🔧 Technical Improvements**
+- ✅ **Build System Updates** - Enhanced version compatibility for all platform builds
+- ✅ **GPU Acceleration Fixes** - Better Windows GPU support
+- ✅ **Plugin Update Optimization** - Reduced network calls by checking updates only when marketplace is opened
+- ✅ **Chatbox Thinking History** - Visual representation of AI reasoning process
+- ✅ **CSS Consistency** - Fixed syntax errors and improved styling
+- ✅ **Updated .gitignore** - Added new entries for better repository management
+
+### **📊 What's Stable**
 - ✅ **Genome Visualization** - SVG-based multi-track genome browser
 - ✅ **AI Chat Interface** - Natural language queries with LLM integration
+- ✅ **Multi-Provider Support** - OpenAI, Anthropic, Google Gemini, and local LLMs
 - ✅ **File Format Support** - FASTA, GenBank, GFF, VCF, BAM file handling
 - ✅ **Cross-Platform** - Works on macOS, Windows, and Linux
 - ✅ **Project Management** - Save and load analysis projects
 - ✅ **Testing Framework** - AI benchmark and evaluation tools
+- ✅ **Plugin Marketplace** - Enhanced plugin discovery and management
 
-### **🚧 Under Development**
-- ⚠️ **Multi-Agent AI** - Early implementation, needs stability improvements
-- ⚠️ **External Tools** - KGML Pathway Viewer, STRING Networks (prototype stage)
-- ⚠️ **Plugin System** - Basic framework, incomplete marketplace
-- ⚠️ **MCP Integration** - Experimental Model Context Protocol support
-- ⚠️ **Advanced AI Features** - Tool coordination, agent specialization
-
-### **⚡ Performance Improvements**
-- ✅ **Version Management** - Centralized version system with synchronization
-- ✅ **Code Organization** - Improved structure and maintainability
-- ✅ **Test Suite** - Enhanced manual test organization
-- ✅ **Documentation** - Comprehensive guides and references
-
-📋 **Full Changelog**: [CHANGELOG.md](CHANGELOG.md)  
-📦 **Release Notes**: [docs/release-notes/RELEASE_NOTES_v0.522beta.md](docs/release-notes/RELEASE_NOTES_v0.522beta.md)
+### **🚀 Latest Beta Release**
+📦 **Release Notes**: [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.527beta)
+📋 **Full Changelog**: [CHANGELOG.md](CHANGELOG.md)
 
 ## 📚 Documentation
 

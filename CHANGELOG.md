@@ -5,6 +5,101 @@ All notable changes to CodeXomics will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.527.0-beta] - 2025-12-26 - ENHANCED BETA RELEASE
+
+**✨ Milestone: Enhanced Beta with Improved Plugin System and UI Streamlining**
+
+This release focuses on improving the plugin system, streamlining the user interface, and fixing critical bugs for better stability.
+
+### ✅ New Features and Enhancements
+
+#### **Plugin System Improvements**
+- Improved plugin update check: Only checks updates when marketplace is opened
+- Updated plugin download counts tracking
+- Enhanced plugin system architecture
+
+#### **UI/UX Enhancements**
+- Menu structure optimization: Removed redundant Analysis Tools and Visualization Tools submenus
+- Streamlined tool access with direct menu items
+- Fixed CSS syntax errors and improved styling consistency
+
+#### **AI and Chatbox Improvements**
+- Added chatbox thinking history for transparent AI reasoning
+- Enhanced AI response formatting
+
+#### **Tool and Feature Updates**
+- Fixed PDB viewer functionality
+- Swapped BLAST service positions for better accessibility
+- Updated version format for better build compatibility
+
+#### **Performance and Stability**
+- GPU fixes for Windows systems
+- Fixed typos in error messages
+- Enhanced error reporting
+
+### 🔧 Technical Improvements
+
+#### **Build System Updates**
+- Enhanced version compatibility for all platform builds
+- Updated build scripts for better consistency
+
+#### **Menu Structure Changes**
+- Removed: Analysis Tools submenu from main menu
+- Removed: Visualization Tools submenu from main menu
+
+#### **Plugin Update Optimization**
+- Reduced network calls by checking updates only when marketplace is opened
+
+#### **CSS and Styling**
+- Fixed CSS syntax errors in styles.css
+- Improved styling consistency across the application
+
+### 🐛 Bug Fixes
+
+#### **Core Functionality Fixes**
+- PDB viewer fix for protein structure visualization
+- CSS syntax error fixes
+
+#### **Platform-Specific Fixes**
+- GPU acceleration fixes for Windows systems
+
+#### **Plugin System Fixes**
+- Improved plugin update checking mechanism
+
+#### **Error Handling Fixes**
+- Fixed typos in error messages
+- Enhanced error reporting for better debugging
+
+## [0.526.0-beta] - 2025-12-XX - BETA UPDATE
+
+**🔧 Milestone: Version Update and Bug Fixes**
+
+### ✅ Changes
+- Updated version to v0.526beta
+
+## [0.525.0-beta] - 2025-12-XX - BETA UPDATE
+
+**🔧 Milestone: Version Update and Build Improvements**
+
+### ✅ Changes
+- Updated to v0.525beta
+- Build packages for all platforms
+- Swapped BLAST service positions
+
+## [0.524.0-beta] - 2025-12-XX - BETA UPDATE
+
+**🔧 Milestone: Bug Fixes and Minor Improvements**
+
+### ✅ Changes
+- Multiple improvements including chatbox thinking history and PDB viewer
+
+## [0.523.0-beta] - 2025-12-XX - BETA UPDATE
+
+**🔧 Milestone: Version Update**
+
+### ✅ Changes
+- Updated version to v0.523beta
+
 ## [0.522.0-beta] - 2025-10-12 - 🧪 FIRST BETA RELEASE
 
 **🔬 Milestone: First Beta Release of CodeXomics**
