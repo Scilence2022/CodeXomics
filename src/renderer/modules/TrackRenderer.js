@@ -558,32 +558,24 @@ class TrackRenderer {
      * Create a separate annotation track for a specific annotation set
      */
     createAnnotationTrack(chromosome, annotationTrack) {
-        // Create a custom track base with annotation-specific configuration
-        const { track, trackContent } = this.createTrackBase(`annotation_${annotationTrack.id}`, chromosome);
         const viewport = this.getCurrentViewport();
         
-        // Update track header with annotation track name
-        const trackHeader = track.querySelector('.track-header');
-        if (trackHeader) {
-            const titleElement = trackHeader.querySelector('.track-title');
-            if (titleElement) {
-                titleElement.textContent = annotationTrack.name;
-            }
-            
-            // Add track type indicator
-            const trackTypeIndicator = document.createElement('span');
-            trackTypeIndicator.className = 'track-type-indicator';
-            trackTypeIndicator.style.cssText = `
-                margin-left: 8px;
-                font-size: 10px;
-                color: #666;
-                background: #f0f0f0;
-                padding: 2px 6px;
-                border-radius: 10px;
-            `;
-            trackTypeIndicator.textContent = annotationTrack.fileType.toUpperCase();
-            trackHeader.appendChild(trackTypeIndicator);
-        }
+        // Create track base directly (similar to createSingleVariantTrack)
+        const track = document.createElement('div');
+        track.className = 'gene-track'; // Reuse gene track styling
+        track.dataset.trackId = annotationTrack.id;
+        
+        // Create track header
+        const trackHeader = this.createTrackHeader(
+            annotationTrack.name,
+            'genes', // Use genes track type for header functionality
+            annotationTrack.id
+        );
+        track.appendChild(trackHeader);
+        
+        // Create track content
+        const trackContent = this.createTrackContent(this.trackConfig.genes?.defaultHeight || 120, chromosome);
+        track.appendChild(trackContent);
         
         // Add detailed ruler for current viewing region
         const detailedRuler = this.createDetailedRuler(chromosome);
@@ -621,7 +613,7 @@ class TrackRenderer {
         trackContent.style.borderLeft = `4px solid ${annotationTrack.color}`;
         
         // Restore header state if it was previously hidden
-        this.restoreHeaderState(track, `annotation_${annotationTrack.id}`);
+        this.restoreHeaderState(track, 'genes'); // Use genes for header state management
         
         return track;
     }

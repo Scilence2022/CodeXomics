@@ -164,12 +164,14 @@
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
     z-index: 1000;
-    max-height: 200px;
+    max-height: 600px;
     overflow-y: auto;
+    overflow-x: visible;
     display: none;
 }
 
-.dropdown.open .dropdown-menu {
+.dropdown.open .dropdown-menu,
+.dropdown-menu.show {
     display: block;
 }
 
@@ -192,6 +194,8 @@
     background: var(--primary-color);
     color: white;
 }
+
+
 
 /* Tab Components */
 .tabs {

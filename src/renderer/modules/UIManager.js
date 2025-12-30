@@ -22,14 +22,26 @@ class UIManager {
         // Close dropdowns when clicking outside
         document.addEventListener('click', (e) => {
             const fileDropdown = document.getElementById('fileDropdownMenu');
+            const annotationSubmenu = document.getElementById('annotationSubmenu');
             const exportDropdown = document.getElementById('exportDropdownMenu');
             const fileButton = document.getElementById('openFileBtn');
+            const annotationMenuButton = document.getElementById('openAnnotationMenuBtn');
             const exportButton = document.getElementById('exportFileBtn');
 
             // Close file dropdown if click is outside
             if (fileDropdown && fileDropdown.classList.contains('show')) {
-                if (!fileButton.contains(e.target) && !fileDropdown.contains(e.target)) {
+                if (!fileButton.contains(e.target) && !fileDropdown.contains(e.target) && !annotationSubmenu.contains(e.target)) {
                     this.closeFileDropdown();
+                    if (annotationSubmenu && annotationSubmenu.classList.contains('show')) {
+                        annotationSubmenu.classList.remove('show');
+                    }
+                }
+            }
+
+            // Close annotation submenu if click is outside
+            if (annotationSubmenu && annotationSubmenu.classList.contains('show')) {
+                if (!annotationMenuButton.contains(e.target) && !annotationSubmenu.contains(e.target)) {
+                    annotationSubmenu.classList.remove('show');
                 }
             }
 
@@ -387,7 +399,11 @@ class UIManager {
 
     closeFileDropdown() {
         const dropdown = document.getElementById('fileDropdownMenu');
+        const annotationSubmenu = document.getElementById('annotationSubmenu');
         dropdown.classList.remove('show');
+        if (annotationSubmenu && annotationSubmenu.classList.contains('show')) {
+            annotationSubmenu.classList.remove('show');
+        }
     }
 
     // Export dropdown management

@@ -121,9 +121,13 @@
                             <i class="fas fa-dna"></i>
                             Genome File (FASTA, GenBank)
                         </button>
-                        <button class="dropdown-item" id="openAnnotationBtn">
-                            <i class="fas fa-tags"></i>
-                            Annotation File (GFF, BED)
+                        <button class="dropdown-item" id="openAnnotationMergeBtn">
+                            <i class="fas fa-plus"></i>
+                            Annotation File - Merge with Existing Genes & Features
+                        </button>
+                        <button class="dropdown-item" id="openAnnotationNewBtn">
+                            <i class="fas fa-file"></i>
+                            Annotation File - Load as New Track
                         </button>
                         <button class="dropdown-item" id="openVariantBtn">
                             <i class="fas fa-exclamation-triangle"></i>
@@ -746,10 +750,16 @@
                             <i class="fas fa-dna"></i>
                             Genome File
                         </button>
-                        <button id="welcomeOpenAnnotationBtn" class="btn btn-secondary btn-lg">
-                            <i class="fas fa-tags"></i>
-                            Annotation File
-                        </button>
+                        <div class="welcome-buttons-row">
+                    <button id="welcomeOpenAnnotationMergeBtn" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-plus"></i>
+                        Annotation (Merge)
+                    </button>
+                    <button id="welcomeOpenAnnotationNewBtn" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-file"></i>
+                        Annotation (New Track)
+                    </button>
+                </div>
                         <button id="welcomeOpenVariantBtn" class="btn btn-secondary btn-lg">
                             <i class="fas fa-exclamation-triangle"></i>
                             Variant File

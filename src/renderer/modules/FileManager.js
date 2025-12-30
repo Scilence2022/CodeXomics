@@ -19,7 +19,7 @@ class FileManager {
         input.click();
     }
 
-    openSpecificFileType(fileType) {
+    openSpecificFileType(fileType, options = {}) {
         // Close the dropdown menu before opening file dialog
         this.genomeBrowser.uiManager.closeFileDropdown();
         
@@ -68,8 +68,8 @@ class FileManager {
                     // Handle blast results file
                     this.loadBlastResultsFile(e.target.files[0].path);
                 } else {
-                    // Handle single file
-                    this.loadFile(e.target.files[0].path);
+                    // Handle single file with options
+                    this.loadFile(e.target.files[0].path, options);
                 }
             }
         };
@@ -484,7 +484,7 @@ class FileManager {
         }
     }
 
-    async loadFile(filePath) {
+    async loadFile(filePath, options = {}) {
         console.log('🔍 FileManager.loadFile() called with path:', filePath);
         this.genomeBrowser.showLoading(true);
         this.genomeBrowser.updateStatus('Loading file...');
@@ -543,7 +543,7 @@ class FileManager {
                 await this.loadFileStream(filePath);
             } else {
                 console.log(`Using regular loading for ${extension} file: ${fileSizeMB.toFixed(1)} MB`);
-                await this.loadFileRegular(filePath);
+                await this.loadFileRegular(filePath, options);
             }
             
             // Update UI
@@ -595,7 +595,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         }
     }
 
-    async loadFileRegular(filePath) {
+    async loadFileRegular(filePath, options = {}) {
         // Set up progress listener for streaming reads
         const progressHandler = (event, progressData) => {
             const { progress, totalRead, fileSize } = progressData;
@@ -622,7 +622,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             
             // Skip regular text file reading for BigWig files - they're binary
             this.currentFile.data = null; // BigWig files don't use text data
-            await this.parseFile();
+            await this.parseFile(options);
             return;
         } else if (!fileData.success) {
             // Check if this is a BAM file
@@ -632,7 +632,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 
                 // Skip regular file reading for BAM files - they'll be handled by BAM parser
                 this.currentFile.data = null; // BAM files don't use text data
-                await this.parseFile();
+                await this.parseFile(options);
                 return;
             }
             
@@ -652,7 +652,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         this.currentFile.data = fileData.data;
 
         // Parse file based on extension
-        await this.parseFile();
+        await this.parseFile(options);
     }
 
     async loadFileStream(filePath) {
@@ -705,9 +705,9 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         }
     }
 
-    async parseFile() {
+    async parseFile(options = {}) {
         const extension = this.currentFile.info.extension.toLowerCase();
-        console.log('🔍 parseFile() called with extension:', extension);
+        console.log('🔍 parseFile() called with extension:', extension, 'and options:', options);
         
         switch (extension) {
             case '.fasta':
@@ -724,10 +724,10 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 break;
             case '.gff':
             case '.gtf':
-                await this.parseGFF();
+                await this.parseGFF(options);
                 break;
             case '.bed':
-                await this.parseBED();
+                await this.parseBED(options);
                 break;
             case '.vcf':
                 await this.parseVCF();
@@ -1476,7 +1476,7 @@ Original error: ${error.message}`;
         }
     }
 
-    async parseGFF() {
+    async parseGFF(options = {}) {
         // Parse the GFF file first to get feature count
         const lines = this.currentFile.data.split('\n');
         const newAnnotations = {};
@@ -1521,8 +1521,16 @@ Original error: ${error.message}`;
             featureCount++;
         }
         
-        // Ask user whether to merge or create new track
-        const userChoice = this.showAnnotationLoadDialog(featureCount);
+        // Use mergeWithExisting option if provided, otherwise show dialog
+        const mergeWithExisting = options.mergeWithExisting;
+        let userChoice;
+        
+        if (mergeWithExisting !== undefined) {
+            userChoice = mergeWithExisting ? 'merge' : 'new';
+        } else {
+            // Fallback to original behavior if no option provided
+            userChoice = this.showAnnotationLoadDialog(featureCount);
+        }
         
         if (userChoice === 'merge') {
             // Merge with existing annotations instead of replacing
@@ -1542,7 +1550,7 @@ Original error: ${error.message}`;
         }
     }
 
-    async parseBED() {
+    async parseBED(options = {}) {
         const lines = this.currentFile.data.split('\n');
         const newAnnotations = {};
         let featureCount = 0;
@@ -1609,8 +1617,16 @@ Original error: ${error.message}`;
             featureCount++;
         }
         
-        // Ask user whether to merge or create new track
-        const userChoice = this.showAnnotationLoadDialog(featureCount);
+        // Use mergeWithExisting option if provided, otherwise show dialog
+        const mergeWithExisting = options.mergeWithExisting;
+        let userChoice;
+        
+        if (mergeWithExisting !== undefined) {
+            userChoice = mergeWithExisting ? 'merge' : 'new';
+        } else {
+            // Fallback to original behavior if no option provided
+            userChoice = this.showAnnotationLoadDialog(featureCount);
+        }
         
         if (userChoice === 'merge') {
             // Merge with existing annotations instead of replacing

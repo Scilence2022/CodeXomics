@@ -1481,13 +1481,15 @@
   z-index: 10000;
   display: none;
   overflow: visible;
-  max-height: 400px;
+  max-height: 600px;
   overflow-y: auto;
 }
 
 .dropdown-menu.show {
   display: block;
 }
+
+
 
 .dropdown-item {
   display: flex;

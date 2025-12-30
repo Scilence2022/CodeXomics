@@ -681,7 +681,16 @@ class GenomeBrowser {
         // File operations - dropdown menu
         document.getElementById('openFileBtn').addEventListener('click', () => this.uiManager.toggleFileDropdown());
         document.getElementById('openGenomeBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('genome'));
-        document.getElementById('openAnnotationBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('annotation'));
+        // Annotation file submenu is handled by CSS hover, no JS needed
+        
+        // Annotation file action handlers
+        document.getElementById('openAnnotationMergeBtn').addEventListener('click', () => {
+            this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: true });
+        });
+        
+        document.getElementById('openAnnotationNewBtn').addEventListener('click', () => {
+            this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: false });
+        });
         document.getElementById('openVariantBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('variant'));
         document.getElementById('openReadsBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('reads'));
         document.getElementById('openWIGBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('tracks'));
@@ -743,7 +752,8 @@ class GenomeBrowser {
 
         // Welcome screen buttons
         document.getElementById('welcomeOpenGenomeBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('genome'));
-        document.getElementById('welcomeOpenAnnotationBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('annotation'));
+        document.getElementById('welcomeOpenAnnotationMergeBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: true }));
+        document.getElementById('welcomeOpenAnnotationNewBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: false }));
         document.getElementById('welcomeOpenVariantBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('variant'));
         document.getElementById('welcomeOpenReadsBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('reads'));
 
