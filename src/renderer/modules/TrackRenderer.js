@@ -7121,16 +7121,69 @@ class TrackRenderer {
         const trackSpacing = 5;
         
         // Render each WIG track
-        Object.entries(wigTracks).forEach(([trackName, wigTrack], index) => {
+        Object.entries(wigTracks).forEach(async ([trackName, wigTrack], index) => {
             // Skip hidden tracks
             if (wigTrack.hidden) return;
             
-            const trackData = wigTrack.data[chromosome] || [];
+            let trackData = wigTrack.data[chromosome] || [];
+            let visibleData = [];
             
-            // Filter data points in current viewport
-            const visibleData = trackData.filter(point => 
-                point.start <= viewport.end && point.end >= viewport.start
-            );
+            // Check if this is a BigWig track
+            if (wigTrack.bigWigFile) {
+                try {
+                    // Load BigWig data for the current viewport
+                    const { BigWig } = require('@gmod/bbi');
+                    const { LocalFile } = require('generic-filehandle2');
+                    
+                    // Initialize the BigWig file
+                    const file = new BigWig({
+                        filehandle: new LocalFile(wigTrack.bigWigFile),
+                    });
+                    
+                    // Get features for the current viewport
+                    visibleData = await file.getFeatures(chromosome, viewport.start, viewport.end, {
+                        scale: 1 // Optional: zoom level (1 = unzoomed)
+                    });
+                    
+                    // Convert BigWig features to our internal format
+                    visibleData = visibleData.map(feature => ({
+                        start: feature.start,
+                        end: feature.end,
+                        value: feature.score
+                    }));
+                    
+                } catch (error) {
+                    console.error('Error loading BigWig data:', error);
+                    // Create error track placeholder
+                    const errorTrack = document.createElement('div');
+                    errorTrack.className = 'wig-track-error';
+                    errorTrack.style.cssText = `
+                        position: absolute;
+                        top: ${trackOffset}px;
+                        left: 0;
+                        right: 0;
+                        height: ${trackHeight}px;
+                        border: 1px solid #e0e0e0;
+                        border-radius: 3px;
+                        background: #fff5f5;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 11px;
+                        color: #dc3545;
+                    `;
+                    errorTrack.textContent = `${trackName}: Error loading data`;
+                    wigContainer.appendChild(errorTrack);
+                    trackOffset += trackHeight + trackSpacing;
+                    return;
+                }
+            } else {
+                // Regular WIG track - use pre-loaded data
+                // Filter data points in current viewport
+                visibleData = trackData.filter(point => 
+                    point.start <= viewport.end && point.end >= viewport.start
+                );
+            }
             
             if (visibleData.length === 0) {
                 // Create empty track placeholder

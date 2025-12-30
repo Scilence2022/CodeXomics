@@ -41,8 +41,8 @@ class FileManager {
                 input.accept = '.sam,.bam';
                 break;
             case 'tracks':
-                input.accept = '.wig';
-                input.multiple = true; // Allow multiple WIG file selection
+                input.accept = '.wig,.bw,.bigwig';
+                input.multiple = true; // Allow multiple WIG/BigWig file selection
                 break;
             case 'operon':
                 input.accept = '.json,.csv,.tsv,.txt,.operon';
@@ -52,7 +52,7 @@ class FileManager {
                 break;
             case 'any':
             default:
-                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig,.json,.csv,.tsv,.txt,.operon';
+                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig,.bw,.bigwig,.json,.csv,.tsv,.txt,.operon';
                 break;
         }
         
@@ -613,7 +613,18 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         // Remove progress listener
         ipcRenderer.removeListener('file-read-progress', progressHandler);
         
-        if (!fileData.success) {
+        // Check if this is a BigWig file by extension
+        const isBigWigFile = filePath.toLowerCase().endsWith('.bw') || filePath.toLowerCase().endsWith('.bigwig');
+        
+        if (isBigWigFile) {
+            this.genomeBrowser.updateStatus('BigWig file detected, switching to BigWig parsing mode...');
+            console.log(`BigWig file detected: ${filePath}`);
+            
+            // Skip regular text file reading for BigWig files - they're binary
+            this.currentFile.data = null; // BigWig files don't use text data
+            await this.parseFile();
+            return;
+        } else if (!fileData.success) {
             // Check if this is a BAM file
             if (fileData.isBamFile) {
                 this.genomeBrowser.updateStatus('BAM file detected, switching to BAM parsing mode...');
@@ -730,8 +741,12 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             case '.wig':
                 await this.parseWIG();
                 break;
+            case '.bw':
+            case '.bigwig':
+                await this.parseBigWig();
+                break;
             default:
-                throw new Error(`Unsupported file format: ${extension}. Supported formats: FASTA (.fasta, .fa), GenBank (.gb, .gbk, .gbff), GFF (.gff, .gtf), BED (.bed), VCF (.vcf), SAM (.sam), WIG (.wig). Note: BAM files require conversion to SAM format first.`);
+                throw new Error(`Unsupported file format: ${extension}. Supported formats: FASTA (.fasta, .fa), GenBank (.gb, .gbk, .gbff), GFF (.gff, .gtf), BED (.bed), VCF (.vcf), SAM (.sam), WIG (.wig), BigWig (.bw, .bigwig). Note: BAM files require conversion to SAM format first.`);
         }
     }
 
@@ -1708,6 +1723,8 @@ Original error: ${error.message}`;
             '.sam': 'SAM',
             '.bam': 'BAM',
             '.wig': 'WIG',
+            '.bw': 'BigWig',
+            '.bigwig': 'BigWig',
             '.fasta': 'FASTA',
             '.fa': 'FASTA',
             '.gb': 'GenBank',
@@ -1932,6 +1949,110 @@ Original error: ${error.message}`;
         this.updateLoadedFilesList();
     }
     
+    async parseBigWig() {
+        console.log('Starting BigWig parsing...');
+        const filePath = this.currentFile.path;
+        
+        try {
+            // Import the BigWig parser and file handle
+            const { BigWig } = require('@gmod/bbi');
+            const { LocalFile } = require('generic-filehandle2');
+            
+            this.genomeBrowser.updateStatus('Loading BigWig file...');
+            
+            // Initialize the BigWig file
+            const file = new BigWig({
+                filehandle: new LocalFile(filePath),
+            });
+            
+            // Get header info to check available chromosomes
+            const header = await file.getHeader();
+            console.log('BigWig Header:', header);
+            
+            // Create a new track for this BigWig file
+            const fileName = this.currentFile.info.name.replace(/\.(bw|bigwig)$/i, '');
+            const wigTracks = {};
+            
+            // Create track object
+            const trackName = fileName;
+            const currentTrack = {
+                name: trackName,
+                description: `BigWig track from ${fileName}`,
+                type: 'wiggle_0',
+                color: '0,0,0',
+                visibility: 'full',
+                autoScale: true,
+                viewLimits: null,
+                maxHeightPixels: null,
+                data: {},
+                bigWigFile: filePath // Store the file path for on-demand loading
+            };
+            
+            wigTracks[currentTrack.name] = currentTrack;
+            
+            // For BigWig, we don't load all data upfront - we'll load it on demand
+            // So we just initialize the track structure
+            
+            // Store WIG tracks data - merge with existing tracks instead of replacing
+            const existingWIGTracks = this.genomeBrowser.currentWIGTracks || {};
+            
+            // Handle track name conflicts by renaming duplicates
+            Object.keys(wigTracks).forEach(trackName => {
+                let finalTrackName = trackName;
+                let counter = 1;
+                
+                // If track name already exists, add a number suffix
+                while (existingWIGTracks[finalTrackName]) {
+                    finalTrackName = `${trackName}_${counter}`;
+                    counter++;
+                }
+                
+                // If we had to rename, update the track name
+                if (finalTrackName !== trackName) {
+                    wigTracks[finalTrackName] = wigTracks[trackName];
+                    wigTracks[finalTrackName].name = finalTrackName;
+                    delete wigTracks[trackName];
+                    console.log(`Renamed duplicate track "${trackName}" to "${finalTrackName}"`);
+                }
+            });
+            
+            // Merge new tracks with existing tracks
+            this.genomeBrowser.currentWIGTracks = { ...existingWIGTracks, ...wigTracks };
+            
+            const totalTracksAfterMerge = Object.keys(this.genomeBrowser.currentWIGTracks).length;
+            const newTracksCount = Object.keys(wigTracks).length;
+            
+            console.log(`Merged ${newTracksCount} new BigWig tracks. Total tracks: ${totalTracksAfterMerge}`);
+            
+            this.genomeBrowser.updateStatus(`Added ${newTracksCount} BigWig track(s). Total: ${totalTracksAfterMerge} tracks`);
+            
+            // Update all tabs with new BigWig data
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.onAdditionalFileLoaded('wig', this.genomeBrowser.currentWIGTracks, this.currentFile?.path);
+            }
+            
+            // Only auto-enable BigWig tracks if this is not part of a multiple file loading operation
+            if (!this._isLoadingMultipleWIGFiles) {
+                this.autoEnableTracksForFileType('.bw');
+            }
+            
+            // If we already have sequence data, refresh the view (only for single file loading)
+            if (!this._isLoadingMultipleWIGFiles) {
+                const currentChr = document.getElementById('chromosomeSelect').value;
+                if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                    this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+                }
+            }
+            
+            // Update loaded files list
+            this.updateLoadedFilesList();
+            
+        } catch (error) {
+            console.error('Error parsing BigWig file:', error);
+            throw new Error(`Failed to parse BigWig file: ${error.message}`);
+        }
+    }
+    
     parseWIGTrackLine(line) {
         const params = {};
         
@@ -2022,6 +2143,8 @@ Original error: ${error.message}`;
                 statusMessage = 'Aligned Reads track automatically enabled';
                 break;
             case '.wig':
+            case '.bw':
+            case '.bigwig':
                 tracksToEnable = ['wigTracks'];
                 statusMessage = 'WIG track automatically enabled';
                 break;
@@ -2101,22 +2224,27 @@ Original error: ${error.message}`;
                         throw new Error(fileInfo.error);
                     }
 
-                    // Read file content
-                    const fileData = await ipcRenderer.invoke('read-file', filePath);
-                    if (!fileData.success) {
-                        throw new Error(fileData.error);
-                    }
-
                     // Create temporary file object for parsing
                     this.currentFile = {
                         path: filePath,
                         info: fileInfo.info,
-                        data: fileData.data
+                        data: null // BigWig files are binary, don't read as text
                     };
 
-                    // Parse WIG file (will not auto-enable tracks due to flag)
+                    // Parse file based on extension - handle both WIG and BigWig
                     const tracksBefore = Object.keys(this.genomeBrowser.currentWIGTracks || {}).length;
-                    await this.parseWIG();
+                    const extension = fileInfo.info.extension.toLowerCase();
+                    if (extension === '.bw' || extension === '.bigwig') {
+                        await this.parseBigWig();
+                    } else {
+                        // Only read text content for regular WIG files
+                        const fileData = await ipcRenderer.invoke('read-file', filePath);
+                        if (!fileData.success) {
+                            throw new Error(fileData.error);
+                        }
+                        this.currentFile.data = fileData.data;
+                        await this.parseWIG();
+                    }
                     const tracksAfter = Object.keys(this.genomeBrowser.currentWIGTracks || {}).length;
                     const newTracksFromThisFile = tracksAfter - tracksBefore;
                     
@@ -2183,11 +2311,11 @@ Original error: ${error.message}`;
 
         let statusText;
         if (errorCount === 0) {
-            statusText = `Successfully loaded ${successCount} WIG files with ${totalTracks} tracks`;
+            statusText = `Successfully loaded ${successCount} WIG/BigWig files with ${totalTracks} tracks`;
         } else if (successCount === 0) {
-            statusText = `Failed to load all ${errorCount} WIG files`;
+            statusText = `Failed to load all ${errorCount} WIG/BigWig files`;
         } else {
-            statusText = `Loaded ${successCount}/${successCount + errorCount} WIG files (${totalTracks} tracks, ${errorCount} errors)`;
+            statusText = `Loaded ${successCount}/${successCount + errorCount} WIG/BigWig files (${totalTracks} tracks, ${errorCount} errors)`;
         }
 
         return {

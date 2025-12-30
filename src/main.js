@@ -3413,7 +3413,7 @@ ipcMain.handle('select-and-load-file', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile'],
       filters: [
-        { name: 'Genome Files', extensions: ['fasta', 'fa', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bigwig', 'fastq', 'fq'] },
+        { name: 'Genome Files', extensions: ['fasta', 'fa', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'fastq', 'fq'] },
         { name: 'All Files', extensions: ['*'] }
       ]
     });
@@ -6113,7 +6113,7 @@ function createProjectManagerMenu(projectManagerWindow) {
             const result = await dialog.showOpenDialog(projectManagerWindow, {
               properties: ['openFile', 'multiSelections'],
               filters: [
-                { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] },
+                { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] },
                 { name: 'All Files', extensions: ['*'] }
               ],
               title: 'Import Files to Project'
@@ -6909,7 +6909,7 @@ ipcMain.handle('selectMultipleFiles', async () => {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openFile', 'multiSelections'],
       filters: [
-        { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] },
+        { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] },
         { name: 'All Files', extensions: ['*'] }
       ],
       title: 'Select Files to Add'
