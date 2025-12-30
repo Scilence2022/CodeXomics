@@ -1216,7 +1216,14 @@ class TrackRenderer {
         // Get positioning parameters - use accurate container width (no ruler offset in SVG)
         const y = layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing);
         const x = (left / 100) * containerWidth;
-        const elementWidth = Math.max((width / 100) * containerWidth, 8); // Minimum 8px width
+        // Determine minimum width based on gene type
+        // Specialized shapes (promoters, etc.) behave like icons and need a larger minimum width
+        // Regular genes should be allowed to shrink to trigger the simplified triangular mode
+        const geneType = gene.type ? gene.type.toLowerCase() : 'gene';
+        const isSpecialized = this.shouldUseSpecializedShape(geneType);
+        const minWidth = isSpecialized ? 8 : 1;
+        
+        const elementWidth = Math.max((width / 100) * containerWidth, minWidth);
         const elementHeight = layout.geneHeight;
 
         // Check if gene is partially visible (truncated at left or right edges)
