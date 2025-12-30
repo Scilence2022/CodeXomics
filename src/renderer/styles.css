@@ -1531,7 +1531,8 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin: 2rem 0;
-  max-width: 400px;
+  max-width: 500px;
+  width: 100%;
 }
 
 .welcome-buttons .btn {
@@ -1540,14 +1541,47 @@
   align-items: center;
   gap: 0.5rem;
   padding: 1.5rem 1rem;
-  border-radius: 12px;
+  border-radius: 16px;
   transition: all 0.3s ease;
   text-decoration: none;
   border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
 }
 
 .welcome-buttons .btn i {
-  font-size: 1.5rem;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color);
+}
+
+.welcome-buttons .btn-primary i {
+  color: white;
+}
+
+.welcome-buttons .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 1);
+}
+
+.welcome-buttons .btn-primary:hover {
+  background: var(--primary-color-dark);
+  transform: translateY(-2px);
+}
+
+.welcome-buttons .btn span {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.welcome-buttons .btn-primary span {
+  color: white;
+}
+
+.welcome-buttons-row {
+  display: contents;
 }
 
 .welcome-buttons .btn-primary {
