@@ -1328,59 +1328,69 @@ class TrackRenderer {
             return this.createSpecializedGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated);
         }
 
-        // Default triangle/arrow shapes for CDS, gene, and misc_feature
-        if (width < 15) {
-            // Use triangle for very small genes to show direction
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            let pathData;
-            
-            if (isForward) {
-                // Forward triangle (pointing right)
-                if (isLeftTruncated) {
-                    // Add jagged left edge
-                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
-                } else if (isRightTruncated) {
-                    // Add jagged right edge
-                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
-                } else {
-                    // Normal triangle
-                    pathData = `M 0 0 
-                               L ${width} ${height / 2} 
-                               L 0 ${height} 
-                               Z`;
-                }
-            } else {
-                // Reverse triangle (pointing left)
-                if (isLeftTruncated) {
-                    // Add jagged left edge
-                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
-                } else if (isRightTruncated) {
-                    // Add jagged right edge
-                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
-                } else {
-                    // Normal triangle
-                    pathData = `M ${width} 0 
-                               L 0 ${height / 2} 
-                               L ${width} ${height} 
-                               Z`;
-                }
-            }
-            
-            path.setAttribute('d', pathData);
-            path.setAttribute('fill', `url(#${gradientId})`);
-            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            path.setAttribute('stroke-width', '1');
-            path.setAttribute('class', `gene-triangle ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
-            return path;
+        // Default arrow shapes for CDS, gene, and misc_feature
+        // For all gene sizes, calculate appropriate arrow size to avoid oversized arrows
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let pathData;
+        
+        // Calculate appropriate arrow size based on gene width
+        // Ensure arrow size never exceeds gene width and scales properly
+        let arrowSize;
+        if (width < 5) {
+            // For very small genes (< 5px), use minimal arrow size
+            arrowSize = Math.min(width, 2);
+        } else if (width < 15) {
+            // For small genes (5-15px), arrow size scales with gene width but with lower ratio
+            arrowSize = Math.max(2, Math.min(width * 0.4, width - 1));
         } else {
-            // Arrow-shaped path for larger genes (width >= 15% of viewport)
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            let pathData;
-            
-            // Calculate appropriate arrow size as percentage of gene width
-            // Ensure arrow size scales properly with gene width while maintaining readability
-            const arrowSize = Math.max(2, Math.min(width * 0.3, 15)); // Dynamic arrow size (2%-15% of viewport width)
-            
+            // For larger genes, use dynamic arrow size (2%-15% of gene width)
+            arrowSize = Math.max(2, Math.min(width * 0.3, 15));
+        }
+        
+        // Ensure arrow size is at least 1px and doesn't exceed gene width
+        arrowSize = Math.max(1, Math.min(arrowSize, width - 0.5));
+        
+        if (width < 3) {
+            // For extremely small genes (< 3px), use simple line with directional indicator
+            // This prevents arrows from being wider than the gene itself
+            if (isForward) {
+                // Forward direction: short line with tiny right-pointing arrow
+                pathData = `M 0 ${height / 2} 
+                           L ${width} ${height / 2} 
+                           L ${width - arrowSize} ${height / 2 - arrowSize} 
+                           L ${width} ${height / 2} 
+                           L ${width - arrowSize} ${height / 2 + arrowSize} 
+                           Z`;
+            } else {
+                // Reverse direction: short line with tiny left-pointing arrow
+                pathData = `M 0 ${height / 2} 
+                           L ${width} ${height / 2} 
+                           L ${arrowSize} ${height / 2 - arrowSize} 
+                           L 0 ${height / 2} 
+                           L ${arrowSize} ${height / 2 + arrowSize} 
+                           Z`;
+            }
+        } else if (width < 8) {
+            // For small genes (3-8px), use compact arrow shape
+            if (isForward) {
+                // Forward compact arrow
+                pathData = `M 0 ${height * 0.25} 
+                           L ${width - arrowSize} ${height * 0.25} 
+                           L ${width} ${height / 2} 
+                           L ${width - arrowSize} ${height * 0.75} 
+                           L 0 ${height * 0.75} 
+                           Z`;
+            } else {
+                // Reverse compact arrow
+                pathData = `M ${arrowSize} ${height * 0.25} 
+                           L ${width} ${height * 0.25} 
+                           L ${width} ${height * 0.75} 
+                           L ${arrowSize} ${height * 0.75} 
+                           L 0 ${height / 2} 
+                           Z`;
+            }
+        } else {
+            // Standard arrow shape for genes >= 8px
             if (isForward) {
                 // Forward arrow (pointing right)
                 if (isLeftTruncated) {
@@ -1416,14 +1426,14 @@ class TrackRenderer {
                                Z`;
                 }
             }
-            
-            path.setAttribute('d', pathData);
-            path.setAttribute('fill', `url(#${gradientId})`);
-            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            path.setAttribute('stroke-width', '1');
-            path.setAttribute('class', `gene-arrow ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
-            return path;
         }
+        
+        path.setAttribute('d', pathData);
+        path.setAttribute('fill', `url(#${gradientId})`);
+        path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        path.setAttribute('stroke-width', '1');
+        path.setAttribute('class', `gene-arrow ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+        return path;
     }
 
     /**
