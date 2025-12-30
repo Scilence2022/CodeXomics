@@ -1321,7 +1321,6 @@ class TrackRenderer {
      */
     createSVGGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated = false, isRightTruncated = false) {
         const isForward = gene.strand !== -1;
-        const arrowSize = Math.min(height * 0.3, 8); // Responsive arrow size
         const geneType = gene.type.toLowerCase();
 
         // Create specialized shapes for specific gene types
@@ -1374,13 +1373,16 @@ class TrackRenderer {
             path.setAttribute('class', `gene-triangle ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
             return path;
         } else {
-            // Arrow-shaped path for larger genes (width >= 15px)
+            // Arrow-shaped path for larger genes (width >= 15% of viewport)
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             let pathData;
             
+            // Calculate appropriate arrow size as percentage of gene width
+            // Ensure arrow size scales properly with gene width while maintaining readability
+            const arrowSize = Math.max(2, Math.min(width * 0.3, 15)); // Dynamic arrow size (2%-15% of viewport width)
+            
             if (isForward) {
                 // Forward arrow (pointing right)
-                const arrowSize = Math.max(8, Math.min(width * 0.3, height * 0.8)); // Dynamic arrow size
                 if (isLeftTruncated) {
                     // Add jagged left edge
                     pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
@@ -1398,7 +1400,6 @@ class TrackRenderer {
                 }
             } else {
                 // Reverse arrow (pointing left)
-                const arrowSize = Math.max(8, Math.min(width * 0.3, height * 0.8)); // Dynamic arrow size
                 if (isLeftTruncated) {
                     // Add jagged left edge (but keep arrow tip)
                     pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
