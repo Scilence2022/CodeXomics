@@ -8399,8 +8399,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }
 
     createWIGAreaChart(svg, data, viewport, minValue, maxValue, color) {
+        // Get the actual height from the SVG's parent element or use default
+        const parentHeight = svg.parentElement ? svg.parentElement.clientHeight : 30;
         const svgWidth = 800; // Default width, will be scaled by CSS
-        const svgHeight = 30;
+        const svgHeight = parentHeight;
         const padding = 2;
         
         svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
@@ -8434,8 +8436,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }
     
     createWIGBarChart(svg, data, viewport, minValue, maxValue, color) {
+        // Get the actual height from the SVG's parent element or use default
+        const parentHeight = svg.parentElement ? svg.parentElement.clientHeight : 30;
         const svgWidth = 800;
-        const svgHeight = 30;
+        const svgHeight = parentHeight;
         const padding = 2;
         
         svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
