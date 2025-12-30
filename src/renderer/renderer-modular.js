@@ -3194,6 +3194,18 @@ class GenomeBrowser {
                 }
             }
             
+            // Create separate tracks for each annotation track
+            if (this.annotationTracks && this.annotationTracks.length > 0) {
+                for (const annotationTrack of this.annotationTracks) {
+                    if (annotationTrack.visible) {
+                        const trackElement = this.trackRenderer.createAnnotationTrack(chromosome, annotationTrack);
+                        if (trackElement) {
+                            tracksToShow.push({ element: trackElement, type: `annotation_${annotationTrack.id}` });
+                        }
+                    }
+                }
+            }
+            
             // Add tracks without splitters, but make them draggable and resizable
             tracksToShow.forEach((track, index) => {
                 // Add the track

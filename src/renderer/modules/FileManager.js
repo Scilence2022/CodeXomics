@@ -1477,6 +1477,7 @@ Original error: ${error.message}`;
     }
 
     async parseGFF() {
+        // Parse the GFF file first to get feature count
         const lines = this.currentFile.data.split('\n');
         const newAnnotations = {};
         let featureCount = 0;
@@ -1520,10 +1521,19 @@ Original error: ${error.message}`;
             featureCount++;
         }
         
-        // Merge with existing annotations instead of replacing
-        this.mergeAnnotations(newAnnotations);
+        // Ask user whether to merge or create new track
+        const userChoice = this.showAnnotationLoadDialog(featureCount);
         
-        this.genomeBrowser.updateStatus(`Loaded GFF file with ${featureCount} features for ${Object.keys(newAnnotations).length} sequence(s). Merged with existing annotations.`);
+        if (userChoice === 'merge') {
+            // Merge with existing annotations instead of replacing
+            this.mergeAnnotations(newAnnotations);
+            this.genomeBrowser.updateStatus(`Loaded GFF file with ${featureCount} features for ${Object.keys(newAnnotations).length} sequence(s). Merged with existing annotations.`);
+        } else {
+            // Create new annotation track
+            const trackName = this.currentFile.info.name.replace(/\.[^/.]+$/, "");
+            this.createNewAnnotationTrack(newAnnotations, trackName, 'gff');
+            this.genomeBrowser.updateStatus(`Loaded GFF file with ${featureCount} features for ${Object.keys(newAnnotations).length} sequence(s). Created new track: ${trackName}`);
+        }
         
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -1599,10 +1609,19 @@ Original error: ${error.message}`;
             featureCount++;
         }
         
-        // Merge with existing annotations instead of replacing
-        this.mergeAnnotations(newAnnotations);
+        // Ask user whether to merge or create new track
+        const userChoice = this.showAnnotationLoadDialog(featureCount);
         
-        this.genomeBrowser.updateStatus(`Loaded BED file with ${featureCount} features for ${Object.keys(newAnnotations).length} chromosome(s). Merged with existing annotations.`);
+        if (userChoice === 'merge') {
+            // Merge with existing annotations instead of replacing
+            this.mergeAnnotations(newAnnotations);
+            this.genomeBrowser.updateStatus(`Loaded BED file with ${featureCount} features for ${Object.keys(newAnnotations).length} chromosome(s). Merged with existing annotations.`);
+        } else {
+            // Create new annotation track
+            const trackName = trackInfo?.name || this.currentFile.info.name.replace(/\.[^/.]+$/, "");
+            this.createNewAnnotationTrack(newAnnotations, trackName, 'bed');
+            this.genomeBrowser.updateStatus(`Loaded BED file with ${featureCount} features for ${Object.keys(newAnnotations).length} chromosome(s). Created new track: ${trackName}`);
+        }
         
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -1713,6 +1732,58 @@ Original error: ${error.message}`;
      * @param {string} extension - File extension
      * @returns {string} File type
      */
+    /**
+     * Show a dialog asking user whether to merge annotations or create a new track
+     * @param {number} featureCount - Number of features in the annotation file
+     * @returns {string} User's choice: 'merge' or 'new'
+     */
+    showAnnotationLoadDialog(featureCount) {
+        const message = `Annotation file contains ${featureCount} features. How would you like to load them?`;
+        const userChoice = confirm(`${message}\n\nClick OK to merge with existing Genes & Features track\nClick Cancel to create a new independent track`);
+        return userChoice ? 'merge' : 'new';
+    }
+    
+    /**
+     * Create a new annotation track with the given annotations
+     * @param {Object} annotations - Annotations organized by chromosome
+     * @param {string} trackName - Name for the new track
+     * @param {string} fileType - Type of file (gff, bed, etc.)
+     */
+    createNewAnnotationTrack(annotations, trackName, fileType) {
+        // Initialize annotation tracks if not already present
+        if (!this.genomeBrowser.annotationTracks) {
+            this.genomeBrowser.annotationTracks = [];
+        }
+        
+        // Create a new track object
+        const newTrack = {
+            id: `annotation_track_${Date.now()}`,
+            name: trackName,
+            fileType: fileType,
+            annotations: annotations,
+            color: this.generateRandomColor(),
+            visible: true
+        };
+        
+        // Add the new track to the annotation tracks list
+        this.genomeBrowser.annotationTracks.push(newTrack);
+        
+        // Add file to loaded files list
+        this.updateLoadedFilesList();
+    }
+    
+    /**
+     * Generate a random color for a new annotation track
+     * @returns {string} Random hex color
+     */
+    generateRandomColor() {
+        const colors = [
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#ec4899', '#06b6d4', '#6366f1', '#14b8a6', '#f97316'
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+    
     getFileTypeFromExtension(extension) {
         const typeMap = {
             '.bed': 'BED',

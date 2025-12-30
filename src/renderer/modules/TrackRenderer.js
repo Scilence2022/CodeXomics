@@ -555,6 +555,78 @@ class TrackRenderer {
     }
     
     /**
+     * Create a separate annotation track for a specific annotation set
+     */
+    createAnnotationTrack(chromosome, annotationTrack) {
+        // Create a custom track base with annotation-specific configuration
+        const { track, trackContent } = this.createTrackBase(`annotation_${annotationTrack.id}`, chromosome);
+        const viewport = this.getCurrentViewport();
+        
+        // Update track header with annotation track name
+        const trackHeader = track.querySelector('.track-header');
+        if (trackHeader) {
+            const titleElement = trackHeader.querySelector('.track-title');
+            if (titleElement) {
+                titleElement.textContent = annotationTrack.name;
+            }
+            
+            // Add track type indicator
+            const trackTypeIndicator = document.createElement('span');
+            trackTypeIndicator.className = 'track-type-indicator';
+            trackTypeIndicator.style.cssText = `
+                margin-left: 8px;
+                font-size: 10px;
+                color: #666;
+                background: #f0f0f0;
+                padding: 2px 6px;
+                border-radius: 10px;
+            `;
+            trackTypeIndicator.textContent = annotationTrack.fileType.toUpperCase();
+            trackHeader.appendChild(trackTypeIndicator);
+        }
+        
+        // Add detailed ruler for current viewing region
+        const detailedRuler = this.createDetailedRuler(chromosome);
+        trackContent.appendChild(detailedRuler);
+        
+        // Get annotations for this track and chromosome
+        const annotations = annotationTrack.annotations[chromosome] || [];
+        
+        // Filter annotations using the gene annotation filter (reuse existing logic)
+        const visibleAnnotations = this.filterGeneAnnotations(annotations, viewport);
+        console.log(`Displaying ${visibleAnnotations.length} annotations in track ${annotationTrack.name} for region ${viewport.start}-${viewport.end}`);
+        
+        if (visibleAnnotations.length === 0) {
+            const noDataMsg = this.createNoDataMessage(
+                `No annotations in this region for track ${annotationTrack.name}`,
+                'no-annotations-message'
+            );
+            trackContent.appendChild(noDataMsg);
+            trackContent.style.height = '80px';
+            return track;
+        }
+        
+        // Process and render annotations with settings
+        // Use gene track settings as base, but apply custom track color
+        const settings = this.getTrackSettings('genes');
+        const customSettings = {
+            ...settings,
+            trackColor: annotationTrack.color
+        };
+        
+        // Render annotations using existing gene rendering logic
+        this.renderGeneElements(trackContent, visibleAnnotations, viewport, [], customSettings);
+        
+        // Add track-specific styling
+        trackContent.style.borderLeft = `4px solid ${annotationTrack.color}`;
+        
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, `annotation_${annotationTrack.id}`);
+        
+        return track;
+    }
+    
+    /**
      * Create BLAST Results track with SVG rendering
      */
     createBlastTrack(chromosome) {
