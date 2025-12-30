@@ -1328,69 +1328,49 @@ class TrackRenderer {
             return this.createSpecializedGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated);
         }
 
-        // Default arrow shapes for CDS, gene, and misc_feature
-        // For all gene sizes, calculate appropriate arrow size to avoid oversized arrows
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         let pathData;
         
-        // Calculate appropriate arrow size based on gene width
-        // Ensure arrow size never exceeds gene width and scales properly
-        let arrowSize;
-        if (width < 5) {
-            // For very small genes (< 5px), use minimal arrow size
-            arrowSize = Math.min(width, 2);
-        } else if (width < 15) {
-            // For small genes (5-15px), arrow size scales with gene width but with lower ratio
-            arrowSize = Math.max(2, Math.min(width * 0.4, width - 1));
-        } else {
-            // For larger genes, use dynamic arrow size (2%-15% of gene width)
-            arrowSize = Math.max(2, Math.min(width * 0.3, 15));
-        }
-        
-        // Ensure arrow size is at least 1px and doesn't exceed gene width
-        arrowSize = Math.max(1, Math.min(arrowSize, width - 0.5));
-        
-        if (width < 3) {
-            // For extremely small genes (< 3px), use simple line with directional indicator
-            // This prevents arrows from being wider than the gene itself
+        if (width < 8) {
+            // For small genes, use triangle shape as requested by user
+            // Triangle width matches gene width exactly
             if (isForward) {
-                // Forward direction: short line with tiny right-pointing arrow
-                pathData = `M 0 ${height / 2} 
-                           L ${width} ${height / 2} 
-                           L ${width - arrowSize} ${height / 2 - arrowSize} 
-                           L ${width} ${height / 2} 
-                           L ${width - arrowSize} ${height / 2 + arrowSize} 
-                           Z`;
+                // Forward triangle (pointing right)
+                if (isLeftTruncated) {
+                    // Add jagged left edge
+                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
+                } else if (isRightTruncated) {
+                    // Add jagged right edge
+                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
+                } else {
+                    // Normal triangle - exact width match
+                    pathData = `M 0 0 
+                               L ${width} ${height / 2} 
+                               L 0 ${height} 
+                               Z`;
+                }
             } else {
-                // Reverse direction: short line with tiny left-pointing arrow
-                pathData = `M 0 ${height / 2} 
-                           L ${width} ${height / 2} 
-                           L ${arrowSize} ${height / 2 - arrowSize} 
-                           L 0 ${height / 2} 
-                           L ${arrowSize} ${height / 2 + arrowSize} 
-                           Z`;
+                // Reverse triangle (pointing left)
+                if (isLeftTruncated) {
+                    // Add jagged left edge
+                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
+                } else if (isRightTruncated) {
+                    // Add jagged right edge
+                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
+                } else {
+                    // Normal triangle - exact width match
+                    pathData = `M ${width} 0 
+                               L 0 ${height / 2} 
+                               L ${width} ${height} 
+                               Z`;
+                }
             }
-        } else if (width < 8) {
-            // For small genes (3-8px), use compact arrow shape
-            if (isForward) {
-                // Forward compact arrow
-                pathData = `M 0 ${height * 0.25} 
-                           L ${width - arrowSize} ${height * 0.25} 
-                           L ${width} ${height / 2} 
-                           L ${width - arrowSize} ${height * 0.75} 
-                           L 0 ${height * 0.75} 
-                           Z`;
-            } else {
-                // Reverse compact arrow
-                pathData = `M ${arrowSize} ${height * 0.25} 
-                           L ${width} ${height * 0.25} 
-                           L ${width} ${height * 0.75} 
-                           L ${arrowSize} ${height * 0.75} 
-                           L 0 ${height / 2} 
-                           Z`;
-            }
+            path.setAttribute('class', `gene-triangle ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
         } else {
-            // Standard arrow shape for genes >= 8px
+            // For larger genes, use arrow shape with dynamic arrow size
+            // Calculate appropriate arrow size based on gene width
+            const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
+            
             if (isForward) {
                 // Forward arrow (pointing right)
                 if (isLeftTruncated) {
@@ -1426,13 +1406,13 @@ class TrackRenderer {
                                Z`;
                 }
             }
+            path.setAttribute('class', `gene-arrow ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
         }
         
         path.setAttribute('d', pathData);
         path.setAttribute('fill', `url(#${gradientId})`);
         path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
         path.setAttribute('stroke-width', '1');
-        path.setAttribute('class', `gene-arrow ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
         return path;
     }
 
