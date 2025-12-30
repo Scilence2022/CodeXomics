@@ -7117,13 +7117,18 @@ class TrackRenderer {
         `;
         
         let trackOffset = 0;
-        const trackHeight = 30;
-        const trackSpacing = 5;
+        // Get track settings
+        const settings = this.getTrackSettings('wigTracks');
+        // Use track spacing from settings or default
+        const trackSpacing = settings.trackSpacing || 5;
         
         // Render each WIG track
         Object.entries(wigTracks).forEach(async ([trackName, wigTrack], index) => {
             // Skip hidden tracks
             if (wigTrack.hidden) return;
+            
+            // Get track height from settings or use default
+            const trackHeight = settings.trackHeights?.[trackName] || 30;
             
             let trackData = wigTrack.data[chromosome] || [];
             let visibleData = [];
@@ -9800,6 +9805,11 @@ This action cannot be undone.`;
                 }, 100);
                 break;
                 
+            case 'wigTracks':
+                titleElement.textContent = 'WIG Tracks Settings';
+                bodyElement.innerHTML = this.createWIGTracksSettingsContent(currentSettings);
+                break;
+                
             default:
                 titleElement.textContent = `${trackType} Track Settings`;
                 bodyElement.innerHTML = this.createDefaultSettingsContent(trackType, currentSettings);
@@ -9951,6 +9961,78 @@ This action cannot be undone.`;
                 </div>
             </div>
         `;
+    }
+    
+    /**
+     * Create WIG tracks settings content
+     */
+    createWIGTracksSettingsContent(settings) {
+        // Get current WIG tracks data
+        const wigTracks = this.genomeBrowser.currentWIGTracks || {};
+        const trackCount = Object.keys(wigTracks).length;
+        
+        // Start building the settings HTML
+        let html = `
+            <div class="settings-section">
+                <h4>Track Heights</h4>
+                <p>Set individual heights for each WIG track. Changes will be applied immediately.</p>
+                <div class="wig-track-heights-container">
+        `;
+        
+        // Add height controls for each WIG track
+        Object.entries(wigTracks).forEach(([trackName, wigTrack], index) => {
+            // Get current height from settings or use default
+            const currentHeight = settings.trackHeights?.[trackName] || 30;
+            
+            html += `
+                <div class="form-group">
+                    <label for="wigTrackHeight-${index}">${trackName} Height (px):</label>
+                    <input type="number" 
+                           id="wigTrackHeight-${index}" 
+                           class="wig-track-height-input"
+                           data-track-name="${trackName}"
+                           min="15" 
+                           max="100" 
+                           value="${currentHeight}">
+                    <div class="help-text">Height of the "${trackName}" track visualization.</div>
+                </div>
+            `;
+        });
+        
+        // Add global track height option if no tracks are present
+        if (trackCount === 0) {
+            html += `
+                <div class="form-group">
+                    <label for="wigDefaultTrackHeight">Default Track Height (px):</label>
+                    <input type="number" 
+                           id="wigDefaultTrackHeight" 
+                           min="15" 
+                           max="100" 
+                           value="${settings.defaultTrackHeight || 30}">
+                    <div class="help-text">Default height for new WIG tracks.</div>
+                </div>
+            `;
+        }
+        
+        // Add track spacing option
+        html += `
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4>General Settings</h4>
+                <div class="form-group">
+                    <label for="wigTrackSpacing">Track Spacing (px):</label>
+                    <input type="number" 
+                           id="wigTrackSpacing" 
+                           min="0" 
+                           max="20" 
+                           value="${settings.trackSpacing || 5}">
+                    <div class="help-text">Space between WIG tracks.</div>
+                </div>
+            </div>
+        `;
+        
+        return html;
     }
     
     /**
@@ -10682,6 +10764,31 @@ This action cannot be undone.`;
                 // Cursor Settings
                 const cursorColorEl = modal.querySelector('#sequenceCursorColor');
                 if (cursorColorEl) settings.cursorColor = cursorColorEl.value;
+                break;
+                
+            case 'wigTracks':
+                // Collect track spacing
+                const trackSpacingEl = modal.querySelector('#wigTrackSpacing');
+                if (trackSpacingEl) {
+                    settings.trackSpacing = parseInt(trackSpacingEl.value) || 5;
+                }
+                
+                // Collect individual track heights
+                const heightInputs = modal.querySelectorAll('.wig-track-height-input');
+                if (heightInputs.length > 0) {
+                    settings.trackHeights = {};
+                    heightInputs.forEach(input => {
+                        const trackName = input.dataset.trackName;
+                        const height = parseInt(input.value) || 30;
+                        settings.trackHeights[trackName] = height;
+                    });
+                }
+                
+                // Collect default track height if no tracks are present
+                const defaultHeightEl = modal.querySelector('#wigDefaultTrackHeight');
+                if (defaultHeightEl) {
+                    settings.defaultTrackHeight = parseInt(defaultHeightEl.value) || 30;
+                }
                 
                 // Position & Size Corrections
                 const horizontalOffsetEl = modal.querySelector('#sequenceHorizontalOffset');
