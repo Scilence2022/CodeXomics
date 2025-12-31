@@ -1432,8 +1432,25 @@ class TrackRenderer {
         
         path.setAttribute('d', pathData);
         path.setAttribute('fill', `url(#${gradientId})`);
-        path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        path.setAttribute('stroke-width', '1');
+        
+        // Dynamic border width based on element size
+        let strokeWidth = 1;
+        if (width < 8) {
+            // Very small elements: reduce border width or make it transparent
+            strokeWidth = 0; // No border for very small elements
+        } else if (width < 20) {
+            // Small elements: thin border
+            strokeWidth = 0.5;
+        }
+        
+        if (strokeWidth > 0) {
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', strokeWidth.toString());
+        } else {
+            // Remove border completely for very small elements
+            path.setAttribute('stroke', 'transparent');
+            path.setAttribute('stroke-width', '0');
+        }
         return path;
     }
 
@@ -1497,64 +1514,96 @@ class TrackRenderer {
             
             path.setAttribute('d', pathData);
             path.setAttribute('fill', `url(#${gradientId})`);
-            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            path.setAttribute('stroke-width', '1');
+            
+            // Dynamic border width based on element size
+            let strokeWidth = 1;
+            if (width < 8) {
+                strokeWidth = 0; // No border for very small elements
+            } else if (width < 20) {
+                strokeWidth = 0.5; // Thin border for small elements
+            }
+            
+            if (strokeWidth > 0) {
+                path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+                path.setAttribute('stroke-width', strokeWidth.toString());
+            } else {
+                path.setAttribute('stroke', 'transparent');
+                path.setAttribute('stroke-width', '0');
+            }
             group.appendChild(path);
             return group;
         }
 
         // Normal promoter: vertical line + horizontal arrow
-        const strokeWidth = Math.max(1, Math.min(2, height / 12));
+        // Dynamic stroke width based on element size
+        let strokeWidth = Math.max(1, Math.min(2, height / 12));
+        if (width < 10) {
+            strokeWidth = Math.max(0.5, strokeWidth * 0.5); // Reduce stroke width for small elements
+        } else if (width < 5) {
+            strokeWidth = 0; // No stroke for very small elements
+        }
+        
         const arrowLength = Math.min(width * 0.8, height * 2); // 增加箭头长度
         const arrowHeight = Math.max(4, height * 0.2);
         
-        // Vertical line (always full height)
-        const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        const verticalLineX = width * 0.3;
-        verticalLine.setAttribute('x1', verticalLineX);
-        verticalLine.setAttribute('y1', 0);
-        verticalLine.setAttribute('x2', verticalLineX);
-        verticalLine.setAttribute('y2', height);
-        verticalLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        verticalLine.setAttribute('stroke-width', strokeWidth);
-        
-        // Horizontal arrow - position at line endpoints
-        const horizontalY = isForward ? 0 : height; // +链在顶端，-链在底端
-        const arrowStartX = verticalLineX;
-        
-        // Calculate arrow end position with proper bounds checking
-        let arrowEndX;
-        if (isForward) {
-            arrowEndX = Math.min(width - arrowHeight, arrowStartX + arrowLength);
+        if (strokeWidth > 0) {
+            // Vertical line (always full height)
+            const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            const verticalLineX = width * 0.3;
+            verticalLine.setAttribute('x1', verticalLineX);
+            verticalLine.setAttribute('y1', 0);
+            verticalLine.setAttribute('x2', verticalLineX);
+            verticalLine.setAttribute('y2', height);
+            verticalLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            verticalLine.setAttribute('stroke-width', strokeWidth);
+            
+            // Horizontal arrow - position at line endpoints
+            const horizontalY = isForward ? 0 : height; // +链在顶端，-链在底端
+            const arrowStartX = verticalLineX;
+            
+            // Calculate arrow end position with proper bounds checking
+            let arrowEndX;
+            if (isForward) {
+                arrowEndX = Math.min(width - arrowHeight, arrowStartX + arrowLength);
+            } else {
+                arrowEndX = Math.max(arrowHeight, arrowStartX - arrowLength);
+            }
+            
+            // Horizontal line
+            const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            horizontalLine.setAttribute('x1', arrowStartX);
+            horizontalLine.setAttribute('y1', horizontalY);
+            horizontalLine.setAttribute('x2', arrowEndX);
+            horizontalLine.setAttribute('y2', horizontalY);
+            horizontalLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            horizontalLine.setAttribute('stroke-width', strokeWidth);
+            
+            // Arrow head
+            const arrowHead = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const arrowDirection = isForward ? 1 : -1;
+            
+            const arrowPath = `M ${arrowEndX} ${horizontalY} 
+                              L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY - arrowHeight/2} 
+                              L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY + arrowHeight/2} Z`;
+            
+            arrowHead.setAttribute('d', arrowPath);
+            arrowHead.setAttribute('fill', this.darkenColor(operonInfo.color, 20));
+            arrowHead.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            arrowHead.setAttribute('stroke-width', strokeWidth);
+            
+            group.appendChild(verticalLine);
+            group.appendChild(horizontalLine);
+            group.appendChild(arrowHead);
         } else {
-            arrowEndX = Math.max(arrowHeight, arrowStartX - arrowLength);
+            // For very small promoters, use a simple dot
+            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            dot.setAttribute('cx', width / 2);
+            dot.setAttribute('cy', height / 2);
+            dot.setAttribute('r', Math.min(width, height) * 0.3);
+            dot.setAttribute('fill', `url(#${gradientId})`);
+            dot.setAttribute('stroke', 'transparent');
+            group.appendChild(dot);
         }
-        
-        // Horizontal line
-        const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        horizontalLine.setAttribute('x1', arrowStartX);
-        horizontalLine.setAttribute('y1', horizontalY);
-        horizontalLine.setAttribute('x2', arrowEndX);
-        horizontalLine.setAttribute('y2', horizontalY);
-        horizontalLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        horizontalLine.setAttribute('stroke-width', strokeWidth);
-        
-        // Arrow head
-        const arrowHead = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const arrowDirection = isForward ? 1 : -1;
-        
-        const arrowPath = `M ${arrowEndX} ${horizontalY} 
-                          L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY - arrowHeight/2} 
-                          L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY + arrowHeight/2} Z`;
-        
-        arrowHead.setAttribute('d', arrowPath);
-        arrowHead.setAttribute('fill', this.darkenColor(operonInfo.color, 20));
-        arrowHead.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        arrowHead.setAttribute('stroke-width', strokeWidth);
-        
-        group.appendChild(verticalLine);
-        group.appendChild(horizontalLine);
-        group.appendChild(arrowHead);
         
         return group;
     }
@@ -1579,64 +1628,96 @@ class TrackRenderer {
             
             path.setAttribute('d', pathData);
             path.setAttribute('fill', `url(#${gradientId})`);
-            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            path.setAttribute('stroke-width', '1');
+            
+            // Dynamic border width based on element size
+            let strokeWidth = 1;
+            if (width < 8) {
+                strokeWidth = 0; // No border for very small elements
+            } else if (width < 20) {
+                strokeWidth = 0.5; // Thin border for small elements
+            }
+            
+            if (strokeWidth > 0) {
+                path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+                path.setAttribute('stroke-width', strokeWidth.toString());
+            } else {
+                path.setAttribute('stroke', 'transparent');
+                path.setAttribute('stroke-width', '0');
+            }
             group.appendChild(path);
             return group;
         }
 
         // Normal terminator: double vertical lines + open circle
-        const strokeWidth = Math.max(1, Math.min(2, height / 12));
+        // Dynamic stroke width based on element size
+        let strokeWidth = Math.max(1, Math.min(2, height / 12));
+        if (width < 10) {
+            strokeWidth = Math.max(0.5, strokeWidth * 0.5); // Reduce stroke width for small elements
+        } else if (width < 5) {
+            strokeWidth = 0; // No stroke for very small elements
+        }
+        
         const lineSpacing = Math.max(3, width * 0.1);
         const circleRadius = Math.min(height * 0.15, width * 0.15);
         
-        // Long vertical line (at termination position, right side)
-        const longLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        const longLineX = width * 0.7;
-        longLine.setAttribute('x1', longLineX);
-        longLine.setAttribute('y1', 0);
-        longLine.setAttribute('x2', longLineX);
-        longLine.setAttribute('y2', height);
-        longLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        longLine.setAttribute('stroke-width', strokeWidth);
-        
-        // Short vertical line (left of the long line)
-        const shortLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        const shortLineX = longLineX - lineSpacing;
-        const shortLineHeight = height * 0.6;
-        const shortLineY = (height - shortLineHeight) / 2;
-        shortLine.setAttribute('x1', shortLineX);
-        shortLine.setAttribute('y1', shortLineY);
-        shortLine.setAttribute('x2', shortLineX);
-        shortLine.setAttribute('y2', shortLineY + shortLineHeight);
-        shortLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        shortLine.setAttribute('stroke-width', strokeWidth);
-        
-        // Open circle at the top of the lines
-        const circleX = (longLineX + shortLineX) / 2; // Center between the two lines
-        const circleY = circleRadius + 2; // Position at top with small margin
-        
-        // Create the opening in the circle (small gap at the bottom pointing down to lines)
-        const gapAngle = Math.PI * 0.3; // 30 degrees opening
-        const startAngle = Math.PI/2 - gapAngle/2; // Start of arc (bottom left of gap)
-        const endAngle = Math.PI/2 + gapAngle/2; // End of arc (bottom right of gap)
-        
-        // Calculate arc path (circle with gap at bottom)
-        const startX = circleX + circleRadius * Math.cos(startAngle);
-        const startY = circleY + circleRadius * Math.sin(startAngle);
-        const endX = circleX + circleRadius * Math.cos(endAngle);
-        const endY = circleY + circleRadius * Math.sin(endAngle);
-        
-        const arcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const arcPathData = `M ${startX} ${startY} A ${circleRadius} ${circleRadius} 0 1 1 ${endX} ${endY}`;
-        arcPath.setAttribute('d', arcPathData);
-        arcPath.setAttribute('fill', 'none');
-        arcPath.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        arcPath.setAttribute('stroke-width', strokeWidth);
-        
-        group.appendChild(longLine);
-        group.appendChild(shortLine);
-        group.appendChild(arcPath); // Use arc instead of full circle to show opening
+        if (strokeWidth > 0) {
+            // Long vertical line (at termination position, right side)
+            const longLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            const longLineX = width * 0.7;
+            longLine.setAttribute('x1', longLineX);
+            longLine.setAttribute('y1', 0);
+            longLine.setAttribute('x2', longLineX);
+            longLine.setAttribute('y2', height);
+            longLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            longLine.setAttribute('stroke-width', strokeWidth);
+            
+            // Short vertical line (left of the long line)
+            const shortLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            const shortLineX = longLineX - lineSpacing;
+            const shortLineHeight = height * 0.6;
+            const shortLineY = (height - shortLineHeight) / 2;
+            shortLine.setAttribute('x1', shortLineX);
+            shortLine.setAttribute('y1', shortLineY);
+            shortLine.setAttribute('x2', shortLineX);
+            shortLine.setAttribute('y2', shortLineY + shortLineHeight);
+            shortLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            shortLine.setAttribute('stroke-width', strokeWidth);
+            
+            // Open circle at the top of the lines
+            const circleX = (longLineX + shortLineX) / 2; // Center between the two lines
+            const circleY = circleRadius + 2; // Position at top with small margin
+            
+            // Create the opening in the circle (small gap at the bottom pointing down to lines)
+            const gapAngle = Math.PI * 0.3; // 30 degrees opening
+            const startAngle = Math.PI/2 - gapAngle/2; // Start of arc (bottom left of gap)
+            const endAngle = Math.PI/2 + gapAngle/2; // End of arc (bottom right of gap)
+            
+            // Calculate arc path (circle with gap at bottom)
+            const startX = circleX + circleRadius * Math.cos(startAngle);
+            const startY = circleY + circleRadius * Math.sin(startAngle);
+            const endX = circleX + circleRadius * Math.cos(endAngle);
+            const endY = circleY + circleRadius * Math.sin(endAngle);
+            
+            const arcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const arcPathData = `M ${startX} ${startY} A ${circleRadius} ${circleRadius} 0 1 1 ${endX} ${endY}`;
+            arcPath.setAttribute('d', arcPathData);
+            arcPath.setAttribute('fill', 'none');
+            arcPath.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            arcPath.setAttribute('stroke-width', strokeWidth);
+            
+            group.appendChild(longLine);
+            group.appendChild(shortLine);
+            group.appendChild(arcPath); // Use arc instead of full circle to show opening
+        } else {
+            // For very small terminators, use a simple dot
+            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            dot.setAttribute('cx', width / 2);
+            dot.setAttribute('cy', height / 2);
+            dot.setAttribute('r', Math.min(width, height) * 0.3);
+            dot.setAttribute('fill', `url(#${gradientId})`);
+            dot.setAttribute('stroke', 'transparent');
+            group.appendChild(dot);
+        }
         
         return group;
     }
@@ -1662,8 +1743,22 @@ class TrackRenderer {
 
         path.setAttribute('d', pathData);
         path.setAttribute('fill', `url(#${gradientId})`);
-        path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        path.setAttribute('stroke-width', '1');
+        
+        // Dynamic border width based on element size
+        let strokeWidth = 1;
+        if (width < 8) {
+            strokeWidth = 0; // No border for very small elements
+        } else if (width < 20) {
+            strokeWidth = 0.5; // Thin border for small elements
+        }
+        
+        if (strokeWidth > 0) {
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', strokeWidth.toString());
+        } else {
+            path.setAttribute('stroke', 'transparent');
+            path.setAttribute('stroke-width', '0');
+        }
         path.setAttribute('class', `gene-regulatory ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
         return path;
     }
@@ -1702,8 +1797,22 @@ class TrackRenderer {
 
         path.setAttribute('d', pathData);
         path.setAttribute('fill', `url(#${gradientId})`);
-        path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        path.setAttribute('stroke-width', '1');
+        
+        // Dynamic border width based on element size
+        let strokeWidth = 1;
+        if (width < 8) {
+            strokeWidth = 0; // No border for very small elements
+        } else if (width < 20) {
+            strokeWidth = 0.5; // Thin border for small elements
+        }
+        
+        if (strokeWidth > 0) {
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', strokeWidth.toString());
+        } else {
+            path.setAttribute('stroke', 'transparent');
+            path.setAttribute('stroke-width', '0');
+        }
         path.setAttribute('class', `gene-repeat ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
         return path;
     }
@@ -1712,7 +1821,13 @@ class TrackRenderer {
      * Create tRNA shape (cloverleaf simplified as rounded rectangle)
      */
     createTRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        // Dynamic border width based on element size
+        let strokeWidth = 1;
+        if (width < 8) {
+            strokeWidth = 0; // No border for very small elements
+        } else if (width < 20) {
+            strokeWidth = 0.5; // Thin border for small elements
+        }
         
         if (isLeftTruncated || isRightTruncated) {
             // For truncated tRNA, use path with jagged edges
@@ -1727,12 +1842,20 @@ class TrackRenderer {
             
             path.setAttribute('d', pathData);
             path.setAttribute('fill', `url(#${gradientId})`);
-            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            path.setAttribute('stroke-width', '1');
+            
+            if (strokeWidth > 0) {
+                path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+                path.setAttribute('stroke-width', strokeWidth.toString());
+            } else {
+                path.setAttribute('stroke', 'transparent');
+                path.setAttribute('stroke-width', '0');
+            }
+            
             path.setAttribute('class', `gene-trna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
             return path;
         }
 
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('x', '0');
         rect.setAttribute('y', '0');
         rect.setAttribute('width', width);
@@ -1740,8 +1863,15 @@ class TrackRenderer {
         rect.setAttribute('rx', Math.min(height * 0.3, 4)); // Rounded corners
         rect.setAttribute('ry', Math.min(height * 0.3, 4));
         rect.setAttribute('fill', `url(#${gradientId})`);
-        rect.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        rect.setAttribute('stroke-width', '1');
+        
+        if (strokeWidth > 0) {
+            rect.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            rect.setAttribute('stroke-width', strokeWidth.toString());
+        } else {
+            rect.setAttribute('stroke', 'transparent');
+            rect.setAttribute('stroke-width', '0');
+        }
+        
         rect.setAttribute('class', 'gene-trna');
         return rect;
     }
@@ -1750,6 +1880,14 @@ class TrackRenderer {
      * Create rRNA shape (circle/oval)
      */
     createRRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+        // Dynamic border width based on element size
+        let strokeWidth = 1;
+        if (width < 8) {
+            strokeWidth = 0; // No border for very small elements
+        } else if (width < 20) {
+            strokeWidth = 0.5; // Thin border for small elements
+        }
+        
         if (isLeftTruncated || isRightTruncated) {
             // For truncated rRNA, use path with jagged edges
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -1763,8 +1901,15 @@ class TrackRenderer {
             
             path.setAttribute('d', pathData);
             path.setAttribute('fill', `url(#${gradientId})`);
-            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            path.setAttribute('stroke-width', '1');
+            
+            if (strokeWidth > 0) {
+                path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+                path.setAttribute('stroke-width', strokeWidth.toString());
+            } else {
+                path.setAttribute('stroke', 'transparent');
+                path.setAttribute('stroke-width', '0');
+            }
+            
             path.setAttribute('class', `gene-rrna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
             return path;
         }
@@ -1775,8 +1920,15 @@ class TrackRenderer {
         ellipse.setAttribute('rx', width / 2);
         ellipse.setAttribute('ry', height / 2);
         ellipse.setAttribute('fill', `url(#${gradientId})`);
-        ellipse.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        ellipse.setAttribute('stroke-width', '1');
+        
+        if (strokeWidth > 0) {
+            ellipse.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            ellipse.setAttribute('stroke-width', strokeWidth.toString());
+        } else {
+            ellipse.setAttribute('stroke', 'transparent');
+            ellipse.setAttribute('stroke-width', '0');
+        }
+        
         ellipse.setAttribute('class', 'gene-rrna');
         return ellipse;
     }
@@ -1820,8 +1972,22 @@ class TrackRenderer {
 
         path.setAttribute('d', pathData);
         path.setAttribute('fill', `url(#${gradientId})`);
-        path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-        path.setAttribute('stroke-width', '1');
+        
+        // Dynamic border width based on element size
+        let strokeWidth = 1;
+        if (width < 8) {
+            strokeWidth = 0; // No border for very small elements
+        } else if (width < 20) {
+            strokeWidth = 0.5; // Thin border for small elements
+        }
+        
+        if (strokeWidth > 0) {
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', strokeWidth.toString());
+        } else {
+            path.setAttribute('stroke', 'transparent');
+            path.setAttribute('stroke-width', '0');
+        }
         path.setAttribute('class', `gene-mrna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
         return path;
     }
