@@ -1829,6 +1829,10 @@ class TrackRenderer {
             strokeWidth = 0.5; // Thin border for small elements
         }
         
+        // Use simple color fill instead of gradient
+        const fillColor = operonInfo.color;
+        const strokeColor = this.darkenColor(operonInfo.color, 20);
+        
         if (isLeftTruncated || isRightTruncated) {
             // For truncated tRNA, use path with jagged edges
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -1841,10 +1845,10 @@ class TrackRenderer {
             }
             
             path.setAttribute('d', pathData);
-            path.setAttribute('fill', `url(#${gradientId})`);
+            path.setAttribute('fill', fillColor);
             
             if (strokeWidth > 0) {
-                path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+                path.setAttribute('stroke', strokeColor);
                 path.setAttribute('stroke-width', strokeWidth.toString());
             } else {
                 path.setAttribute('stroke', 'transparent');
@@ -1862,10 +1866,10 @@ class TrackRenderer {
         rect.setAttribute('height', height);
         rect.setAttribute('rx', Math.min(height * 0.3, 4)); // Rounded corners
         rect.setAttribute('ry', Math.min(height * 0.3, 4));
-        rect.setAttribute('fill', `url(#${gradientId})`);
+        rect.setAttribute('fill', fillColor);
         
         if (strokeWidth > 0) {
-            rect.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            rect.setAttribute('stroke', strokeColor);
             rect.setAttribute('stroke-width', strokeWidth.toString());
         } else {
             rect.setAttribute('stroke', 'transparent');
@@ -1888,6 +1892,10 @@ class TrackRenderer {
             strokeWidth = 0.5; // Thin border for small elements
         }
         
+        // Use simple color fill instead of gradient
+        const fillColor = operonInfo.color;
+        const strokeColor = this.darkenColor(operonInfo.color, 20);
+        
         if (isLeftTruncated || isRightTruncated) {
             // For truncated rRNA, use path with jagged edges
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -1900,10 +1908,10 @@ class TrackRenderer {
             }
             
             path.setAttribute('d', pathData);
-            path.setAttribute('fill', `url(#${gradientId})`);
+            path.setAttribute('fill', fillColor);
             
             if (strokeWidth > 0) {
-                path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+                path.setAttribute('stroke', strokeColor);
                 path.setAttribute('stroke-width', strokeWidth.toString());
             } else {
                 path.setAttribute('stroke', 'transparent');
@@ -1919,10 +1927,10 @@ class TrackRenderer {
         ellipse.setAttribute('cy', height / 2);
         ellipse.setAttribute('rx', width / 2);
         ellipse.setAttribute('ry', height / 2);
-        ellipse.setAttribute('fill', `url(#${gradientId})`);
+        ellipse.setAttribute('fill', fillColor);
         
         if (strokeWidth > 0) {
-            ellipse.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            ellipse.setAttribute('stroke', strokeColor);
             ellipse.setAttribute('stroke-width', strokeWidth.toString());
         } else {
             ellipse.setAttribute('stroke', 'transparent');
