@@ -18,13 +18,13 @@ class PluginManagementUI {
         if (!pluginManager || pluginManager.constructor.name !== 'PluginManagerV2') {
             throw new Error('PluginManagementUI requires PluginManagerV2. Legacy PluginManager is no longer supported.');
         }
-        
+
         this.pluginManager = pluginManager;
         this.configManager = configManager;
-        
+
         // Local storage key for plugin management settings
         this.storageKey = 'genomeexplorer-plugin-management-settings';
-        
+
         // Default settings structure
         this.defaultSettings = {
             // Plugin system settings
@@ -33,10 +33,10 @@ class PluginManagementUI {
             userPluginsPath: null,    // Set dynamically by path resolver
             enablePluginSandbox: true,
             enablePluginDebug: false,
-            
+
             // Plugin states (enabled/disabled)
             pluginStates: {},
-            
+
             // UI preferences
             uiPreferences: {
                 currentTab: 'installed',
@@ -46,7 +46,7 @@ class PluginManagementUI {
                 gridView: false,
                 showDisabledPlugins: true
             },
-            
+
             // Marketplace settings
             marketplaceSettings: {
                 autoCheckUpdates: true,
@@ -54,7 +54,7 @@ class PluginManagementUI {
                 trustedSources: ['localhost', 'official'],
                 installationPath: 'auto'
             },
-            
+
             // Performance settings
             performanceSettings: {
                 maxConcurrentPlugins: 10,
@@ -62,7 +62,7 @@ class PluginManagementUI {
                 cacheTimeout: 3600000,
                 enableLazyLoading: true
             },
-            
+
             // Security settings
             securitySettings: {
                 validateSignatures: true,
@@ -70,16 +70,16 @@ class PluginManagementUI {
                 enableSandboxMode: true,
                 restrictNetworkAccess: true
             },
-            
+
             // Metadata
             version: '1.0.0',
             lastSaved: null,
             lastLoaded: null
         };
-        
+
         // Current settings (loaded from storage or defaults)
         this.settings = { ...this.defaultSettings };
-        
+
         // Initialize test framework
         if (typeof PluginTestFramework !== 'undefined') {
             this.testFramework = new PluginTestFramework(pluginManager, configManager);
@@ -87,7 +87,7 @@ class PluginManagementUI {
             console.warn('PluginTestFramework not available, using basic test functionality');
             this.testFramework = null;
         }
-        
+
         // Initialize demo generator
         if (typeof PluginDemoGenerator !== 'undefined') {
             this.demoGenerator = new PluginDemoGenerator(pluginManager);
@@ -95,7 +95,7 @@ class PluginManagementUI {
             console.warn('PluginDemoGenerator not available');
             this.demoGenerator = null;
         }
-        
+
         // Initialize test manager
         if (typeof PluginTestManager !== 'undefined') {
             this.testManager = new PluginTestManager(pluginManager);
@@ -103,23 +103,23 @@ class PluginManagementUI {
             console.warn('PluginTestManager not available, tests will use basic functionality');
             this.testManager = null;
         }
-        
+
         // UI state
         this.currentTab = 'installed';
         this.selectedPlugin = null;
-        
+
         // Load settings from local storage
         this.loadSettingsFromStorage();
-        
+
         // Initialize UI
         this.initializeUI();
-        
+
         // Auto-save settings when they change
         this.setupAutoSave();
-        
+
         // Wait for plugin system to be fully initialized before applying states
         this.waitForPluginSystemInitialization();
-        
+
         console.log('PluginManagementUI initialized with PluginManagerV2 and local storage persistence');
     }
 
@@ -131,11 +131,11 @@ class PluginManagementUI {
             const stored = localStorage.getItem(this.storageKey);
             if (stored) {
                 const parsedSettings = JSON.parse(stored);
-                
+
                 // Merge with defaults to ensure all properties exist
                 this.settings = this.mergeSettingsWithDefaults(parsedSettings);
                 this.settings.lastLoaded = new Date().toISOString();
-                
+
                 console.log('✅ Plugin management settings loaded from local storage');
                 this.applyLoadedSettings();
             } else {
@@ -153,7 +153,7 @@ class PluginManagementUI {
      */
     mergeSettingsWithDefaults(loadedSettings) {
         const merged = { ...this.defaultSettings };
-        
+
         // Deep merge for nested objects
         Object.keys(loadedSettings).forEach(key => {
             if (typeof loadedSettings[key] === 'object' && loadedSettings[key] !== null && !Array.isArray(loadedSettings[key])) {
@@ -162,7 +162,7 @@ class PluginManagementUI {
                 merged[key] = loadedSettings[key];
             }
         });
-        
+
         return merged;
     }
 
@@ -173,17 +173,17 @@ class PluginManagementUI {
         try {
             // Skip plugin states during initial load - they will be applied after plugin system initialization
             // this.applyPluginStates(); // Moved to waitForPluginSystemInitialization()
-            
+
             // Apply UI preferences
             this.applyUIPreferences();
-            
+
             // Apply system settings to configManager if available
             if (this.configManager) {
                 this.configManager.set('pluginDirectory', this.settings.pluginDirectory);
                 this.configManager.set('enablePluginSandbox', this.settings.enablePluginSandbox);
                 this.configManager.set('enablePluginDebug', this.settings.enablePluginDebug);
             }
-            
+
             console.log('✅ Loaded plugin management settings applied successfully (plugin states will be applied after system initialization)');
         } catch (error) {
             console.error('❌ Error applying loaded settings:', error);
@@ -198,23 +198,23 @@ class PluginManagementUI {
             console.log('📋 No plugin states found in settings');
             return;
         }
-        
+
         console.log('🔧 Applying plugin states from local storage:', this.settings.pluginStates);
-        
+
         let appliedCount = 0;
         let skippedCount = 0;
-        
+
         Object.keys(this.settings.pluginStates).forEach(pluginId => {
             const state = this.settings.pluginStates[pluginId];
-            
+
             // Find plugin in registries
             const functionPlugin = this.pluginManager.pluginRegistry.function.get(pluginId);
             const visualizationPlugin = this.pluginManager.pluginRegistry.visualization.get(pluginId);
             const utilityPlugin = this.pluginManager.pluginRegistry.utility?.get(pluginId);
-            
+
             let targetPlugin = null;
             let pluginType = 'unknown';
-            
+
             if (functionPlugin) {
                 targetPlugin = functionPlugin;
                 pluginType = 'function';
@@ -225,19 +225,19 @@ class PluginManagementUI {
                 targetPlugin = utilityPlugin;
                 pluginType = 'utility';
             }
-            
+
             if (targetPlugin) {
                 const previousState = targetPlugin.enabled;
                 targetPlugin.enabled = state.enabled;
                 appliedCount++;
-                
+
                 console.log(`✅ Applied state for ${pluginType} plugin "${pluginId}": ${previousState} → ${state.enabled}`);
             } else {
                 skippedCount++;
                 console.warn(`⚠️ Plugin "${pluginId}" not found in registries, skipping state application`);
             }
         });
-        
+
         console.log(`🎯 Plugin state application complete: ${appliedCount} applied, ${skippedCount} skipped`);
     }
 
@@ -257,16 +257,16 @@ class PluginManagementUI {
         try {
             // Update metadata
             this.settings.lastSaved = new Date().toISOString();
-            
+
             // Save current plugin states
             this.updatePluginStates();
-            
+
             // Save current UI preferences
             this.updateUIPreferences();
-            
+
             // Store in localStorage
             localStorage.setItem(this.storageKey, JSON.stringify(this.settings));
-            
+
             console.log('✅ Plugin management settings saved to local storage');
             return true;
         } catch (error) {
@@ -280,7 +280,7 @@ class PluginManagementUI {
      */
     updatePluginStates() {
         this.settings.pluginStates = {};
-        
+
         // Save function plugins states with explicit boolean handling
         this.pluginManager.pluginRegistry.function.forEach((plugin, pluginId) => {
             this.settings.pluginStates[pluginId] = {
@@ -290,7 +290,7 @@ class PluginManagementUI {
                 usageCount: plugin.usageCount || 0
             };
         });
-        
+
         // Save visualization plugins states with explicit boolean handling
         this.pluginManager.pluginRegistry.visualization.forEach((plugin, pluginId) => {
             this.settings.pluginStates[pluginId] = {
@@ -300,7 +300,7 @@ class PluginManagementUI {
                 usageCount: plugin.usageCount || 0
             };
         });
-        
+
         // Save utility plugins states if available with explicit boolean handling
         if (this.pluginManager.pluginRegistry.utility) {
             this.pluginManager.pluginRegistry.utility.forEach((plugin, pluginId) => {
@@ -333,12 +333,12 @@ class PluginManagementUI {
         setInterval(() => {
             this.saveSettingsToStorage();
         }, 30000);
-        
+
         // Save when page is about to unload
         window.addEventListener('beforeunload', () => {
             this.saveSettingsToStorage();
         });
-        
+
         // Save when visibility changes (tab switch, minimize, etc.)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
@@ -359,19 +359,19 @@ class PluginManagementUI {
                 application: 'GenomeExplorer',
                 type: 'plugin-management-settings'
             };
-            
+
             const blob = new Blob([JSON.stringify(exportData, null, 2)], {
                 type: 'application/json'
             });
-            
+
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `genomeexplorer-plugin-settings-${new Date().toISOString().split('T')[0]}.json`;
             a.click();
-            
+
             URL.revokeObjectURL(url);
-            
+
             this.showMessage('Plugin settings exported successfully!', 'success');
         } catch (error) {
             this.showMessage(`Error exporting settings: ${error.message}`, 'error');
@@ -385,45 +385,45 @@ class PluginManagementUI {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
-        
+
         input.onchange = (event) => {
             const file = event.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
                     const importedData = JSON.parse(e.target.result);
-                    
+
                     // Validate imported data
                     if (importedData.type !== 'plugin-management-settings') {
                         throw new Error('Invalid settings file format');
                     }
-                    
+
                     // Merge imported settings with defaults
                     this.settings = this.mergeSettingsWithDefaults(importedData);
                     this.settings.lastLoaded = new Date().toISOString();
-                    
+
                     // Apply imported settings
                     this.applyLoadedSettings();
-                    
+
                     // Save to storage
                     this.saveSettingsToStorage();
-                    
+
                     // Refresh UI
                     this.refreshPluginLists();
                     this.loadPluginSettings();
-                    
+
                     this.showMessage('Plugin settings imported successfully!', 'success');
-                    
+
                 } catch (error) {
                     this.showMessage(`Error importing settings: ${error.message}`, 'error');
                 }
             };
-            
+
             reader.readAsText(file);
         };
-        
+
         input.click();
     }
 
@@ -435,19 +435,19 @@ class PluginManagementUI {
             try {
                 // Clear localStorage
                 localStorage.removeItem(this.storageKey);
-                
+
                 // Reset to defaults
                 this.settings = { ...this.defaultSettings };
-                
+
                 // Apply defaults
                 this.applyLoadedSettings();
-                
+
                 // Refresh UI
                 this.refreshPluginLists();
                 this.loadPluginSettings();
-                
+
                 this.showMessage('Plugin settings reset to defaults successfully!', 'success');
-                
+
             } catch (error) {
                 this.showMessage(`Error resetting settings: ${error.message}`, 'error');
             }
@@ -461,7 +461,7 @@ class PluginManagementUI {
         try {
             const stored = localStorage.getItem(this.storageKey);
             const size = stored ? new Blob([stored]).size : 0;
-            
+
             return {
                 exists: !!stored,
                 size: size,
@@ -495,7 +495,7 @@ class PluginManagementUI {
     initializeUI() {
         // Create marketplace button if it doesn't exist
         this.createMarketplaceButton();
-        
+
         // Setup event handlers
         this.setupModalHandlers();
         this.setupTabHandlers();
@@ -503,28 +503,52 @@ class PluginManagementUI {
     }
 
     /**
-     * Create plugin marketplace button in options menu
+     * Create plugin management and marketplace buttons in options menu
      */
     createMarketplaceButton() {
-        const optionsButton = document.querySelector('.options-button');
-        if (!optionsButton) return;
-
-        // Check if marketplace button already exists
-        const existingButton = document.querySelector('[data-action="open-marketplace"]');
-        if (existingButton) return;
-
-        // Create marketplace button
-        const marketplaceButton = document.createElement('button');
-        marketplaceButton.textContent = '🛍️ Plugin Marketplace';
-        marketplaceButton.setAttribute('data-action', 'open-marketplace');
-        marketplaceButton.className = 'dropdown-item';
-        marketplaceButton.addEventListener('click', () => this.openPluginMarketplace());
-
-        // Add to options dropdown if it exists
-        const dropdownMenu = document.querySelector('.dropdown-menu');
-        if (dropdownMenu) {
-            dropdownMenu.appendChild(marketplaceButton);
+        const dropdownMenu = document.getElementById('optionsDropdownMenu');
+        if (!dropdownMenu) {
+            console.warn('⚠️ [PluginManagementUI] optionsDropdownMenu not found, retrying in 1s...');
+            setTimeout(() => this.createMarketplaceButton(), 1000);
+            return;
         }
+
+        // Check if buttons already exist
+        if (document.querySelector('[data-action="open-plugins"]') ||
+            document.querySelector('[data-action="open-marketplace"]')) {
+            return;
+        }
+
+        // Create divider
+        const divider = document.createElement('div');
+        divider.className = 'dropdown-divider';
+        dropdownMenu.appendChild(divider);
+
+        // Create Installed Plugins button
+        const pluginsButton = document.createElement('button');
+        pluginsButton.className = 'dropdown-item';
+        pluginsButton.setAttribute('data-action', 'open-plugins');
+        pluginsButton.innerHTML = '<i class="fas fa-plug"></i> Installed Plugins';
+        pluginsButton.addEventListener('click', () => {
+            this.showPluginModal();
+            // Close dropdown
+            dropdownMenu.classList.remove('show');
+        });
+        dropdownMenu.appendChild(pluginsButton);
+
+        // Create Plugin Marketplace button
+        const marketplaceButton = document.createElement('button');
+        marketplaceButton.className = 'dropdown-item';
+        marketplaceButton.setAttribute('data-action', 'open-marketplace');
+        marketplaceButton.innerHTML = '<i class="fas fa-store"></i> Plugin Marketplace';
+        marketplaceButton.addEventListener('click', () => {
+            this.openPluginMarketplace();
+            // Close dropdown
+            dropdownMenu.classList.remove('show');
+        });
+        dropdownMenu.appendChild(marketplaceButton);
+
+        console.log('✅ Plugin menu items added to Options dropdown');
     }
 
     /**
@@ -534,7 +558,7 @@ class PluginManagementUI {
         const pluginManagerBtn = document.getElementById('pluginManagerBtn');
         const pluginMarketplaceBtn = document.getElementById('pluginMarketplaceBtn');
         const pluginModal = document.getElementById('pluginManagementModal');
-        
+
         if (pluginManagerBtn) {
             pluginManagerBtn.addEventListener('click', () => {
                 this.showPluginModal();
@@ -569,7 +593,7 @@ class PluginManagementUI {
      */
     setupTabHandlers() {
         const tabButtons = document.querySelectorAll('.plugin-management-tabs .tab-btn');
-        
+
         tabButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabName = btn.dataset.tab;
@@ -617,14 +641,14 @@ class PluginManagementUI {
         const modal = document.getElementById('pluginManagementModal');
         if (modal) {
             modal.style.display = 'block';
-            
+
             // Before refreshing, ensure marketplace has restored installed plugins
             await this.ensureMarketplacePluginsRestored();
-            
+
             this.refreshPluginLists();
         }
     }
-    
+
     /**
      * Ensure marketplace has restored installed plugins to PluginManagerV2
      * This syncs marketplace.installed with the plugin registry
@@ -633,36 +657,36 @@ class PluginManagementUI {
         try {
             // Check if there's a marketplace instance available
             const marketplace = window.pluginMarketplace || this.pluginManager?.marketplace;
-            
+
             if (!marketplace) {
                 console.log('📋 No marketplace instance found, skipping restore check');
                 return;
             }
-            
+
             // Wait for marketplace initialization if needed
             if (!marketplace.isInitialized && marketplace.waitForInitialization) {
                 console.log('⏳ Waiting for marketplace initialization...');
                 await marketplace.waitForInitialization();
             }
-            
+
             // Check if there are installed plugins in marketplace that aren't in registry
             const marketplaceInstalled = marketplace.installedPlugins || new Map();
             const registryFunctions = this.pluginManager.pluginRegistry.function;
             const registryVisualizations = this.pluginManager.pluginRegistry.visualization;
-            
+
             console.log('🔍 Checking plugin sync status:', {
                 marketplaceCount: marketplaceInstalled.size,
                 registryFunctionCount: registryFunctions.size,
                 registryVisualizationCount: registryVisualizations.size
             });
-            
+
             // If marketplace has plugins but registry is empty or missing some, restore them
             if (marketplaceInstalled.size > 0) {
                 const totalRegistryCount = registryFunctions.size + registryVisualizations.size;
-                
+
                 if (totalRegistryCount < marketplaceInstalled.size) {
                     console.log('🔄 Marketplace has more plugins than registry, restoring...');
-                    
+
                     // Trigger marketplace restore
                     if (marketplace.restoreInstalledPlugins) {
                         await marketplace.restoreInstalledPlugins();
@@ -674,7 +698,7 @@ class PluginManagementUI {
             } else {
                 console.log('📋 No installed plugins found in marketplace');
             }
-            
+
         } catch (error) {
             console.error('❌ Error ensuring marketplace plugins restored:', error);
             // Continue anyway - don't block UI from showing
@@ -735,10 +759,10 @@ class PluginManagementUI {
         // Reapply plugin states from local storage before refreshing UI
         // This ensures the UI shows the correct state even if there are timing issues
         this.applyPluginStates();
-        
+
         this.refreshFunctionPlugins();
         this.refreshVisualizationPlugins();
-        
+
         // Debug logging to verify states are applied
         if (this.settings.pluginStates) {
             console.log('🔄 Plugin states reapplied during refresh:', this.settings.pluginStates);
@@ -755,7 +779,7 @@ class PluginManagementUI {
         container.innerHTML = '';
 
         const functionPlugins = this.pluginManager.pluginRegistry.function;
-        
+
         if (!functionPlugins || functionPlugins.size === 0) {
             container.innerHTML = '<div class="no-plugins">No function plugins installed</div>';
             return;
@@ -777,7 +801,7 @@ class PluginManagementUI {
         container.innerHTML = '';
 
         const visualizationPlugins = this.pluginManager.pluginRegistry.visualization;
-        
+
         if (!visualizationPlugins || visualizationPlugins.size === 0) {
             container.innerHTML = '<div class="no-plugins">No visualization plugins installed</div>';
             return;
@@ -800,7 +824,7 @@ class PluginManagementUI {
 
         // Calculate function/tool count
         let toolsLabel = '';
-        
+
         if (type === 'function') {
             const functionCount = Object.keys(plugin.functions || {}).length;
             toolsLabel = `${functionCount} function${functionCount !== 1 ? 's' : ''}`;
@@ -874,7 +898,7 @@ class PluginManagementUI {
     async showPluginDetails(pluginId, type) {
         let plugin;
         let isInstalled = false;
-        
+
         // Try to get from installed plugins first
         if (this.pluginManager.pluginRegistry) {
             // PluginManagerV2
@@ -886,7 +910,7 @@ class PluginManagementUI {
             isInstalled = !!plugin;
         } else {
             // Legacy PluginManager
-            plugin = type === 'function' ? 
+            plugin = type === 'function' ?
                 this.pluginManager.functionPlugins.get(pluginId) :
                 this.pluginManager.visualizationPlugins.get(pluginId);
             isInstalled = !!plugin;
@@ -922,7 +946,7 @@ class PluginManagementUI {
         const metadata = isInstalled ? (this.pluginManager.pluginMetadata?.get(pluginId) || {}) : {};
         const usageStats = isInstalled ? (this.pluginManager.metrics?.pluginUsageStats?.get(pluginId) || {}) : {};
         const installPath = isInstalled ? (this.pluginManager.pathResolver?.getInstallPath(pluginId) || 'Not installed') : 'Not installed';
-        
+
         // Build comprehensive details HTML
         const detailsWindow = window.open('', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
         detailsWindow.document.write(`
@@ -1279,9 +1303,9 @@ class PluginManagementUI {
             </div>
             
             <div class="tab-content" id="features-tab">
-                ${type === 'function' ? 
-                    this.generateFunctionsTabContent(plugin) : 
-                    this.generateVisualizationsTabContent(plugin)}
+                ${type === 'function' ?
+                this.generateFunctionsTabContent(plugin) :
+                this.generateVisualizationsTabContent(plugin)}
             </div>
             
             <div class="tab-content" id="usage-tab">
@@ -1370,7 +1394,7 @@ class PluginManagementUI {
         if (!plugin.functions || Object.keys(plugin.functions).length === 0) {
             return '<p class="no-dependencies">No functions defined</p>';
         }
-        
+
         return `
             <div class="section">
                 <h2><i class="fas fa-code"></i> Available Functions (${Object.keys(plugin.functions).length})</h2>
@@ -1396,7 +1420,7 @@ class PluginManagementUI {
         const dataTypes = plugin.supportedDataTypes || [];
         const commands = plugin.contributes?.commands || [];
         const visualizations = plugin.contributes?.visualizations || {};
-        
+
         return `
             <!-- Commands Section -->
             ${commands.length > 0 ? `
@@ -1492,7 +1516,7 @@ class PluginManagementUI {
         const lastUsed = usageStats.lastUsed || plugin.lastUsed;
         const avgExecutionTime = usageStats.avgExecutionTime || 0;
         const errorCount = usageStats.errorCount || 0;
-        
+
         return `
             <div class="stats-grid">
                 <div class="stat-box">
@@ -1599,7 +1623,7 @@ class PluginManagementUI {
      */
     togglePlugin(pluginId, type) {
         let plugin;
-        
+
         if (type === 'function') {
             plugin = this.pluginManager.pluginRegistry.function.get(pluginId);
         } else if (type === 'visualization') {
@@ -1617,7 +1641,7 @@ class PluginManagementUI {
         if (!this.settings.pluginStates) {
             this.settings.pluginStates = {};
         }
-        
+
         this.settings.pluginStates[pluginId] = {
             type: type,
             enabled: plugin.enabled,
@@ -1645,7 +1669,7 @@ class PluginManagementUI {
             saved: saveSuccess,
             timestamp: Date.now()
         });
-        
+
         // Debug logging
         console.log(`🔧 Plugin ${pluginId} toggled: ${action}, saved: ${saveSuccess}`);
     }
@@ -1655,50 +1679,50 @@ class PluginManagementUI {
      */
     async uninstallPlugin(pluginId, type) {
         // Confirm uninstallation
-        const plugin = type === 'function' 
+        const plugin = type === 'function'
             ? this.pluginManager.pluginRegistry.function.get(pluginId)
             : type === 'visualization'
-            ? this.pluginManager.pluginRegistry.visualization.get(pluginId)
-            : this.pluginManager.pluginRegistry.utility?.get(pluginId);
-        
+                ? this.pluginManager.pluginRegistry.visualization.get(pluginId)
+                : this.pluginManager.pluginRegistry.utility?.get(pluginId);
+
         if (!plugin) {
             this.showMessage(`Plugin "${pluginId}" not found`, 'error');
             return;
         }
-        
+
         const confirmed = confirm(
             `Are you sure you want to uninstall "${plugin.name}"?\n\n` +
             `This will remove the plugin from the system. This action cannot be undone.`
         );
-        
+
         if (!confirmed) {
             return;
         }
-        
+
         try {
             console.log(`🗑️ Uninstalling plugin: ${pluginId}`);
-            
+
             // Call PluginManagerV2 uninstall method
             // This will also trigger plugin-uninstalled event which marketplace handles
             await this.pluginManager.uninstallPlugin(pluginId);
-            
+
             // Remove from local storage plugin states
             if (this.settings.pluginStates && this.settings.pluginStates[pluginId]) {
                 delete this.settings.pluginStates[pluginId];
                 this.saveSettingsToStorage();
             }
-            
+
             // Note: Marketplace registry is updated via event handler in PluginMarketplace
             // so we don't need to manually remove it here
-            
+
             // Refresh UI
             this.refreshPluginLists();
-            
+
             // Show success message
             this.showMessage(`Plugin "${plugin.name}" has been uninstalled successfully`, 'success');
-            
+
             console.log(`✅ Plugin ${pluginId} uninstalled successfully`);
-            
+
         } catch (error) {
             console.error(`❌ Failed to uninstall plugin ${pluginId}:`, error);
             this.showMessage(`Failed to uninstall plugin: ${error.message}`, 'error');
@@ -1717,16 +1741,16 @@ class PluginManagementUI {
         try {
             // Scan plugin directories for available plugins
             const scanResult = await ipcRenderer.invoke('scan-plugin-directory');
-            
+
             if (!scanResult.success) {
                 throw new Error(scanResult.error || 'Failed to scan plugin directory');
             }
-            
+
             const availablePlugins = scanResult.plugins || [];
-            
+
             console.log(`📂 Found ${availablePlugins.length} plugins in directory`);
             console.log('Plugin paths:', scanResult.paths);
-            
+
             // Filter out already installed/registered plugins
             const installedPluginIds = new Set();
             if (this.pluginManager && this.pluginManager.getAllPlugins) {
@@ -1735,14 +1759,14 @@ class PluginManagementUI {
                     if (plugin.id) installedPluginIds.add(plugin.id);
                 });
             }
-            
+
             // Show only plugins that aren't already loaded
-            const unloadedPlugins = availablePlugins.filter(plugin => 
+            const unloadedPlugins = availablePlugins.filter(plugin =>
                 !installedPluginIds.has(plugin.id)
             );
 
             container.innerHTML = '';
-            
+
             if (availablePlugins.length === 0) {
                 container.innerHTML = `
                     <div class="no-plugins">
@@ -1762,7 +1786,7 @@ class PluginManagementUI {
                 `;
                 return;
             }
-            
+
             if (unloadedPlugins.length === 0 && availablePlugins.length > 0) {
                 container.innerHTML = `
                     <div class="info-message">
@@ -1821,7 +1845,7 @@ class PluginManagementUI {
                 return `<li><code>${funcName}</code></li>`;
             }).join('');
             const moreCount = plugin.functions.length > 5 ? plugin.functions.length - 5 : 0;
-            
+
             functionsHtml = `
                 <div class="plugin-functions" style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
                     <strong style="font-size: 13px; color: #555;"><i class="fas fa-code"></i> Functions (${plugin.functions.length}):</strong>
@@ -1832,12 +1856,12 @@ class PluginManagementUI {
                 </div>
             `;
         }
-        
+
         // Prepare plugin type badge
-        const typeBadge = plugin.type === 'builtin' 
+        const typeBadge = plugin.type === 'builtin'
             ? '<span class="badge" style="background: #2196F3; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Built-in Path</span>'
             : '<span class="badge" style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">User Plugin</span>';
-        
+
         // Prepare manifest status
         const manifestBadge = plugin.hasManifest
             ? '<span style="color: #4CAF50; font-size: 12px;"><i class="fas fa-check-circle"></i> Has manifest</span>'
@@ -1887,7 +1911,7 @@ class PluginManagementUI {
     async installPlugin(pluginId) {
         try {
             this.showMessage(`Installing plugin: ${pluginId}...`, 'info');
-            
+
             // This would typically load and register the plugin
             // For now, just show a success message
             setTimeout(() => {
@@ -1911,58 +1935,58 @@ class PluginManagementUI {
             if (typeof ipcRenderer !== 'undefined') {
                 // Request file selection from main process
                 const result = await ipcRenderer.invoke('select-plugin-file');
-                
+
                 if (!result || result.canceled) {
                     return; // User cancelled
                 }
-                
+
                 const filePath = result.filePaths[0];
                 if (!filePath) {
                     return;
                 }
-                
+
                 this.showMessage('Loading plugin from file...', 'info');
-                
+
                 // Parse plugin file and extract metadata
                 const pluginData = await this._parsePluginFile(filePath);
-                
+
                 if (!pluginData) {
                     throw new Error('Failed to parse plugin file');
                 }
-                
+
                 // Validate plugin structure
                 const validation = this._validatePluginStructure(pluginData);
                 if (!validation.valid) {
                     throw new Error(`Invalid plugin structure: ${validation.errors.join(', ')}`);
                 }
-                
+
                 // Determine installation path
-                const installPath = this.pluginManager.pathResolver 
+                const installPath = this.pluginManager.pathResolver
                     ? this.pluginManager.pathResolver.getInstallPath(pluginData.id)
                     : `src/renderer/modules/Plugins/UserInstalled/${pluginData.id}`;
-                
+
                 // Copy plugin files to installation directory
                 await this._installPluginFiles(filePath, installPath, pluginData);
-                
+
                 // Register plugin with PluginManagerV2
                 await this.pluginManager.registerPlugin(pluginData.id, pluginData.manifest);
-                
+
                 this.showMessage(`Plugin "${pluginData.name}" installed successfully!`, 'success');
-                
+
                 // Refresh plugin list UI
                 await this.refreshPluginListUI();
-                
+
             } else {
                 // Fallback for non-Electron environment
                 this.showMessage('File selection not available in this environment. Please use the Plugin Marketplace instead.', 'warning');
             }
-            
+
         } catch (error) {
             console.error('Error loading plugin from file:', error);
             this.showMessage(`Error loading plugin: ${error.message}`, 'error');
         }
     }
-    
+
     /**
      * Parse plugin file and extract metadata
      * @private
@@ -1973,7 +1997,7 @@ class PluginManagementUI {
         try {
             // Check if it's a directory or file
             const fileInfo = await ipcRenderer.invoke('get-plugin-file-info', filePath);
-            
+
             if (fileInfo.isDirectory) {
                 // Load plugin.json from directory
                 return await this._loadPluginFromDirectory(filePath);
@@ -1991,7 +2015,7 @@ class PluginManagementUI {
             return null;
         }
     }
-    
+
     /**
      * Load plugin from directory
      * @private
@@ -1999,14 +2023,14 @@ class PluginManagementUI {
     async _loadPluginFromDirectory(dirPath) {
         const manifestPath = `${dirPath}/plugin.json`;
         const manifestExists = await ipcRenderer.invoke('check-file-exists', manifestPath);
-        
+
         if (!manifestExists) {
             throw new Error('plugin.json not found in directory');
         }
-        
+
         const manifestContent = await ipcRenderer.invoke('read-plugin-file', manifestPath);
         const manifest = JSON.parse(manifestContent);
-        
+
         return {
             id: manifest.name || manifest.id,
             name: manifest.displayName || manifest.name,
@@ -2015,7 +2039,7 @@ class PluginManagementUI {
             type: 'directory'
         };
     }
-    
+
     /**
      * Load plugin from zip file
      * @private
@@ -2023,15 +2047,15 @@ class PluginManagementUI {
     async _loadPluginFromZip(zipPath) {
         // Request main process to extract zip
         const extractResult = await ipcRenderer.invoke('extract-plugin-zip', zipPath);
-        
+
         if (!extractResult.success) {
             throw new Error('Failed to extract plugin zip file');
         }
-        
+
         // Load from extracted directory
         return await this._loadPluginFromDirectory(extractResult.extractPath);
     }
-    
+
     /**
      * Load plugin from JavaScript file
      * @private
@@ -2039,10 +2063,10 @@ class PluginManagementUI {
     async _loadPluginFromJavaScript(jsPath) {
         // Read JavaScript file
         const jsContent = await ipcRenderer.invoke('read-plugin-file', jsPath);
-        
+
         // Try to extract plugin metadata from comments or code
         const metadata = this._extractMetadataFromJS(jsContent, jsPath);
-        
+
         return {
             id: metadata.id,
             name: metadata.name,
@@ -2051,7 +2075,7 @@ class PluginManagementUI {
             type: 'javascript'
         };
     }
-    
+
     /**
      * Extract metadata from JavaScript file
      * @private
@@ -2065,7 +2089,7 @@ class PluginManagementUI {
             const name = (pluginBlock.match(/@name\s+(.+)/) || [])[1];
             const version = (pluginBlock.match(/@version\s+(\S+)/) || [])[1] || '1.0.0';
             const description = (pluginBlock.match(/@description\s+(.+)/) || [])[1] || '';
-            
+
             if (id && name) {
                 return {
                     id,
@@ -2081,7 +2105,7 @@ class PluginManagementUI {
                 };
             }
         }
-        
+
         // Fallback: use filename as ID
         const filename = filePath.split('/').pop().replace('.js', '');
         return {
@@ -2097,22 +2121,22 @@ class PluginManagementUI {
             }
         };
     }
-    
+
     /**
      * Validate plugin structure
      * @private
      */
     _validatePluginStructure(pluginData) {
         const errors = [];
-        
+
         if (!pluginData.id) {
             errors.push('Plugin ID is required');
         }
-        
+
         if (!pluginData.name) {
             errors.push('Plugin name is required');
         }
-        
+
         if (!pluginData.manifest) {
             errors.push('Plugin manifest is required');
         } else {
@@ -2123,13 +2147,13 @@ class PluginManagementUI {
                 errors.push('Plugin type is required');
             }
         }
-        
+
         return {
             valid: errors.length === 0,
             errors
         };
     }
-    
+
     /**
      * Install plugin files to destination
      * @private
@@ -2137,7 +2161,7 @@ class PluginManagementUI {
     async _installPluginFiles(sourcePath, installPath, pluginData) {
         // Ensure installation directory exists
         await ipcRenderer.invoke('ensure-directory', installPath);
-        
+
         // Copy files based on plugin type
         if (pluginData.type === 'directory') {
             // Copy entire directory
@@ -2145,13 +2169,13 @@ class PluginManagementUI {
         } else if (pluginData.type === 'javascript') {
             // Copy JavaScript file and create manifest
             await ipcRenderer.invoke('copy-plugin-file', sourcePath, `${installPath}/${pluginData.manifest.main}`);
-            
+
             // Create plugin.json manifest
             const manifestPath = `${installPath}/plugin.json`;
             await ipcRenderer.invoke('write-plugin-file', manifestPath, JSON.stringify(pluginData.manifest, null, 2));
         }
     }
-    
+
     /**
      * Refresh plugin list UI after installation
      * @private
@@ -2182,7 +2206,7 @@ class PluginManagementUI {
                 builtinPluginDirectory.value = builtinPath;
                 builtinPluginDirectory.title = `Built-in plugins (read-only): ${builtinPath}`;
             }
-            
+
             if (userPluginDirectory) {
                 const userPath = this.pluginManager.pathResolver.getUserPluginsPath();
                 userPluginDirectory.value = userPath;
@@ -2190,15 +2214,15 @@ class PluginManagementUI {
             }
         } else {
             // Fallback to legacy behavior if path resolver not available
-            const legacyPath = this.settings.pluginDirectory || 
-                             this.configManager?.get('pluginDirectory') || 
-                             'src/renderer/modules/Plugins';
-            
+            const legacyPath = this.settings.pluginDirectory ||
+                this.configManager?.get('pluginDirectory') ||
+                'src/renderer/modules/Plugins';
+
             if (builtinPluginDirectory) {
                 builtinPluginDirectory.value = legacyPath;
                 builtinPluginDirectory.title = 'Path resolver not initialized';
             }
-            
+
             if (userPluginDirectory) {
                 userPluginDirectory.value = legacyPath + '/UserInstalled';
                 userPluginDirectory.title = 'Path resolver not initialized';
@@ -2207,16 +2231,16 @@ class PluginManagementUI {
 
         if (enableSandbox) {
             // Use local storage value if available, otherwise use configManager or default
-            enableSandbox.checked = this.settings.enablePluginSandbox !== undefined ? 
-                                   this.settings.enablePluginSandbox : 
-                                   (this.configManager?.get('enablePluginSandbox') !== false);
+            enableSandbox.checked = this.settings.enablePluginSandbox !== undefined ?
+                this.settings.enablePluginSandbox :
+                (this.configManager?.get('enablePluginSandbox') !== false);
         }
 
         if (enableDebug) {
             // Use local storage value if available, otherwise use configManager or default
             enableDebug.checked = this.settings.enablePluginDebug !== undefined ?
-                                 this.settings.enablePluginDebug :
-                                 (this.configManager?.get('enablePluginDebug') === true);
+                this.settings.enablePluginDebug :
+                (this.configManager?.get('enablePluginDebug') === true);
         }
 
         // Show storage info if available
@@ -2233,7 +2257,7 @@ class PluginManagementUI {
 
             // Note: Plugin directories are now managed by PluginPathResolver
             // They are read-only and don't need to be saved by users
-            
+
             // Update local settings object
             this.settings.enablePluginSandbox = enableSandbox;
             this.settings.enablePluginDebug = enableDebug;
@@ -2253,7 +2277,7 @@ class PluginManagementUI {
             // Show success message with storage info
             const storageInfo = this.getStorageInfo();
             this.showMessage(
-                `Plugin settings saved successfully! Storage size: ${storageInfo.sizeFormatted}`, 
+                `Plugin settings saved successfully! Storage size: ${storageInfo.sizeFormatted}`,
                 'success'
             );
 
@@ -2268,7 +2292,7 @@ class PluginManagementUI {
     updateStorageInfo() {
         const storageInfo = this.getStorageInfo();
         const pluginCount = Object.keys(this.settings.pluginStates || {}).length;
-        
+
         // Add storage info to settings tab if not already present
         let storageInfoElement = document.getElementById('plugin-storage-info');
         if (!storageInfoElement) {
@@ -2277,7 +2301,7 @@ class PluginManagementUI {
                 storageInfoElement = document.createElement('div');
                 storageInfoElement.id = 'plugin-storage-info';
                 storageInfoElement.className = 'settings-section';
-                
+
                 storageInfoElement.innerHTML = `
                     <h4><i class="fas fa-database"></i> Storage Information & Auto-Save</h4>
                     <div class="storage-info-content">
@@ -2356,9 +2380,9 @@ class PluginManagementUI {
                         </div>
                     </div>
                 `;
-                
+
                 settingsTab.appendChild(storageInfoElement);
-                
+
                 // Add event listeners for storage actions
                 this.setupStorageActionHandlers();
             }
@@ -2368,7 +2392,7 @@ class PluginManagementUI {
             const sizeElement = storageInfoElement.querySelector('#storage-size');
             const lastSavedElement = storageInfoElement.querySelector('#last-saved');
             const trackedPluginsElement = storageInfoElement.querySelector('#tracked-plugins');
-            
+
             if (statusElement) {
                 statusElement.innerHTML = `
                     <i class="fas fa-check-circle" style="color: #48bb78;"></i>
@@ -2379,7 +2403,7 @@ class PluginManagementUI {
                 sizeElement.textContent = storageInfo.sizeFormatted || '0 Bytes';
             }
             if (lastSavedElement) {
-                lastSavedElement.textContent = storageInfo.lastSaved ? 
+                lastSavedElement.textContent = storageInfo.lastSaved ?
                     new Date(storageInfo.lastSaved).toLocaleString() : 'Never';
             }
             if (trackedPluginsElement) {
@@ -2428,7 +2452,7 @@ class PluginManagementUI {
     showStorageDetails() {
         const storageInfo = this.getStorageInfo();
         const pluginCount = Object.keys(this.settings.pluginStates || {}).length;
-        
+
         const details = `
             <div class="storage-details">
                 <h4>📊 Storage Details</h4>
@@ -2454,7 +2478,7 @@ class PluginManagementUI {
                 </ul>
             </div>
         `;
-        
+
         // Create modal for details
         const detailsModal = document.createElement('div');
         detailsModal.className = 'storage-details-modal';
@@ -2474,9 +2498,9 @@ class PluginManagementUI {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(detailsModal);
-        
+
         // Add close handlers
         const closeButtons = detailsModal.querySelectorAll('.modal-close');
         closeButtons.forEach(btn => {
@@ -2484,7 +2508,7 @@ class PluginManagementUI {
                 detailsModal.remove();
             });
         });
-        
+
         // Click outside to close
         detailsModal.addEventListener('click', (e) => {
             if (e.target === detailsModal.querySelector('.modal-overlay')) {
@@ -2502,29 +2526,29 @@ class PluginManagementUI {
         try {
             // Get current plugin paths
             const result = await ipcRenderer.invoke('scan-plugin-directory');
-            
+
             if (!result.success) {
                 this.showMessage('Failed to access plugin directories', 'error');
                 return;
             }
-            
+
             const paths = result.paths;
-            
+
             // Open directory selection dialog
             const selectedDir = await ipcRenderer.invoke('show-directory-dialog', {
                 title: 'Browse Plugin Directory',
                 defaultPath: paths.userPluginsPath || paths.builtinPluginsPath,
                 buttonLabel: 'Open Plugin Directory'
             });
-            
+
             if (selectedDir && !selectedDir.canceled && selectedDir.filePaths.length > 0) {
                 const dirPath = selectedDir.filePaths[0];
-                
+
                 // Open the directory in the system file explorer
                 await ipcRenderer.invoke('openFolderInExplorer', dirPath);
-                
+
                 this.showMessage(`Opened plugin directory: ${dirPath}`, 'success');
-                
+
                 // Refresh the plugin list after browsing
                 setTimeout(() => {
                     this.loadAvailablePlugins();
@@ -2544,9 +2568,9 @@ class PluginManagementUI {
         const messageEl = document.createElement('div');
         messageEl.className = `plugin-message plugin-message-${type}`;
         messageEl.innerHTML = `
-            <i class="fas ${type === 'success' ? 'fa-check-circle' : 
-                           type === 'error' ? 'fa-exclamation-circle' : 
-                           'fa-info-circle'}"></i>
+            <i class="fas ${type === 'success' ? 'fa-check-circle' :
+                type === 'error' ? 'fa-exclamation-circle' :
+                    'fa-info-circle'}"></i>
             ${message}
         `;
 
@@ -2568,7 +2592,7 @@ class PluginManagementUI {
      */
     async runPluginTest(pluginId, type) {
         let plugin;
-        
+
         if (type === 'function') {
             plugin = this.pluginManager.pluginRegistry.function.get(pluginId);
         } else if (type === 'visualization') {
@@ -2626,44 +2650,44 @@ class PluginManagementUI {
         try {
             // Log initialization status for debugging
             console.log('🔍 Checking PluginManager initialization status...');
-            
+
             // Wait for PluginManager if not yet initialized (optional but recommended)
             if (!this.pluginManager.isInitialized) {
                 console.log('⏳ PluginManager not yet initialized, waiting...');
                 await this.pluginManager.waitForInitialization();
                 console.log('✅ PluginManager initialization complete');
             }
-            
+
             // Log status (PathResolver is now optional for demo path resolution)
-            const hasPathResolver = this.pluginManager.pathResolver && 
-                                   this.pluginManager.pathResolver._isInitialized;
+            const hasPathResolver = this.pluginManager.pathResolver &&
+                this.pluginManager.pathResolver._isInitialized;
             console.log('✅ Prerequisites checked for plugin test');
             console.log('  PluginManager initialized:', this.pluginManager.isInitialized);
             console.log('  PathResolver available:', hasPathResolver);
-            
+
             // Make plugin manager globally accessible for the demo window
             if (!window.pluginManager) {
                 window.pluginManager = this.pluginManager;
                 console.log('🔗 Plugin manager attached to window for demo access');
             }
-            
+
             // Create test window
             const testWindow = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
-            
+
             if (!testWindow) {
                 this.showMessage('Failed to open demo window. Please allow popups.', 'error');
                 return;
             }
-            
+
             // Initialize demonstrator
             const demonstrator = new PluginRealTestDemonstrator(this.pluginManager);
-            
+
             // Generate UI and script content (await async methods)
             const testStyles = demonstrator.generateTestStyles();
             const testUI = await demonstrator.generateInteractiveTestUI(pluginId, plugin, type);
             const testScript = await demonstrator.generateTestScript(pluginId, plugin, type);
-        
-        testWindow.document.write(`
+
+            testWindow.document.write(`
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -2707,9 +2731,9 @@ class PluginManagementUI {
             </html>
         `);
 
-        testWindow.document.close();
-        testWindow.focus();
-        
+            testWindow.document.close();
+            testWindow.focus();
+
         } catch (error) {
             console.error('❌ Failed to show real test demonstration:', error);
             this.showMessage(
@@ -2724,7 +2748,7 @@ class PluginManagementUI {
      */
     async runPluginTestOld(pluginId, type) {
         let plugin;
-        
+
         if (type === 'function') {
             plugin = this.pluginManager.pluginRegistry.function.get(pluginId);
         } else if (type === 'visualization') {
@@ -2761,7 +2785,7 @@ class PluginManagementUI {
     showEnhancedPluginTestWindow(pluginId, plugin, type) {
         // Create test window
         const testWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-        
+
         testWindow.document.write(`
             <!DOCTYPE html>
             <html lang="en">
@@ -2791,13 +2815,13 @@ class PluginManagementUI {
                                         <i class="fas fa-tag"></i>
                                         ${type === 'function' ? 'Function Plugin' : 'Visualization Plugin'}
                                     </span>
-                                    ${type === 'function' && plugin.functions ? 
-                                        `<span class="meta-item">
+                                    ${type === 'function' && plugin.functions ?
+                `<span class="meta-item">
                                             <i class="fas fa-code"></i>
                                             ${Object.keys(plugin.functions).length} Functions
                                         </span>` : ''}
-                                    ${type === 'visualization' && plugin.supportedDataTypes ? 
-                                        `<span class="meta-item">
+                                    ${type === 'visualization' && plugin.supportedDataTypes ?
+                `<span class="meta-item">
                                             <i class="fas fa-chart-bar"></i>
                                             ${plugin.supportedDataTypes.length} Data Types
                                         </span>` : ''}
@@ -2899,41 +2923,41 @@ class PluginManagementUI {
                         </div>
 
                         <div class="tab-content active" id="overview-tab">
-                            ${typeof PluginTestHelpers !== 'undefined' ? 
-                                PluginTestHelpers.generateOverviewTab(plugin, type) : 
-                                this.generateOverviewTab(plugin, type)}
+                            ${typeof PluginTestHelpers !== 'undefined' ?
+                PluginTestHelpers.generateOverviewTab(plugin, type) :
+                this.generateOverviewTab(plugin, type)}
                         </div>
 
                         <div class="tab-content" id="results-tab">
-                            ${typeof PluginTestHelpers !== 'undefined' ? 
-                                PluginTestHelpers.generateResultsTab() : 
-                                this.generateResultsTab()}
+                            ${typeof PluginTestHelpers !== 'undefined' ?
+                PluginTestHelpers.generateResultsTab() :
+                this.generateResultsTab()}
                         </div>
 
                         <div class="tab-content" id="functions-tab">
-                            ${typeof PluginTestHelpers !== 'undefined' ? 
-                                PluginTestHelpers.generateFunctionsTab(plugin, type) : 
-                                this.generateFunctionsTab(plugin, type)}
+                            ${typeof PluginTestHelpers !== 'undefined' ?
+                PluginTestHelpers.generateFunctionsTab(plugin, type) :
+                this.generateFunctionsTab(plugin, type)}
                         </div>
 
                         <div class="tab-content" id="performance-tab">
-                            ${typeof PluginTestHelpers !== 'undefined' ? 
-                                PluginTestHelpers.generatePerformanceTab() : 
-                                this.generatePerformanceTab()}
+                            ${typeof PluginTestHelpers !== 'undefined' ?
+                PluginTestHelpers.generatePerformanceTab() :
+                this.generatePerformanceTab()}
                         </div>
 
                         <div class="tab-content" id="logs-tab">
-                            ${typeof PluginTestHelpers !== 'undefined' ? 
-                                PluginTestHelpers.generateLogsTab() : 
-                                this.generateLogsTab()}
+                            ${typeof PluginTestHelpers !== 'undefined' ?
+                PluginTestHelpers.generateLogsTab() :
+                this.generateLogsTab()}
                         </div>
                     </div>
                 </div>
 
                 <script>
-                    ${typeof PluginTestHelpers !== 'undefined' ? 
-                        PluginTestHelpers.generateEnhancedTestScript(pluginId, plugin, type) : 
-                        this.generateEnhancedTestScript(pluginId, plugin, type)}
+                    ${typeof PluginTestHelpers !== 'undefined' ?
+                PluginTestHelpers.generateEnhancedTestScript(pluginId, plugin, type) :
+                this.generateEnhancedTestScript(pluginId, plugin, type)}
                     
                     // Initialize copy/paste menu manager
                     window.addEventListener('load', () => {
@@ -2962,7 +2986,7 @@ class PluginManagementUI {
     showPluginTestWindow(pluginId, plugin, type) {
         // Create test window
         const testWindow = window.open('', '_blank', 'width=1000,height=700,scrollbars=yes,resizable=yes');
-        
+
         testWindow.document.write(`
             <!DOCTYPE html>
             <html lang="en">
@@ -3264,7 +3288,7 @@ class PluginManagementUI {
      */
     generateVisualizationTestsHTML(plugin) {
         const supportedTypes = plugin.supportedDataTypes || [];
-        
+
         const testsHTML = supportedTypes.map(dataType => `
             <div class="function-test">
                 <div class="function-name">Visualization Test: ${dataType}</div>
@@ -4510,12 +4534,12 @@ class PluginManagementUI {
         const functionPlugins = this.pluginManager.pluginRegistry.function.size;
         const visualizationPlugins = this.pluginManager.pluginRegistry.visualization.size;
         const utilityPlugins = this.pluginManager.pluginRegistry.utility?.size || 0;
-        
+
         const totalFunctions = Array.from(this.pluginManager.pluginRegistry.function.values())
             .reduce((total, plugin) => total + Object.keys(plugin.functions || {}).length, 0) +
             Array.from(this.pluginManager.pluginRegistry.utility?.values() || [])
-            .reduce((total, plugin) => total + Object.keys(plugin.functions || {}).length, 0);
-        
+                .reduce((total, plugin) => total + Object.keys(plugin.functions || {}).length, 0);
+
         return {
             functionPlugins,
             visualizationPlugins,
@@ -4533,23 +4557,23 @@ class PluginManagementUI {
     async openPluginMarketplace() {
         try {
             console.log('🛒 Opening Plugin Marketplace...');
-            
+
             // Verify PluginManagerV2 is properly initialized
             if (!this.pluginManager || this.pluginManager.constructor.name !== 'PluginManagerV2') {
                 throw new Error('PluginManagerV2 is required for the marketplace. Please restart the application.');
             }
-            
+
             console.log('✅ PluginManagerV2 verified');
-            
+
             // Check if marketplace is available
             if (!this.pluginManager.marketplace) {
                 console.log('🔄 Initializing marketplace...');
-                
+
                 // Try to initialize marketplace if method exists
                 if (typeof this.pluginManager.initializeMarketplace === 'function') {
                     await this.pluginManager.initializeMarketplace();
                 }
-                
+
                 // If still not available, try reinitialization
                 if (!this.pluginManager.marketplace) {
                     const userChoice = confirm(
@@ -4559,7 +4583,7 @@ class PluginManagementUI {
                         '• Click OK to try reinitializing the marketplace\n' +
                         '• Click Cancel to use basic plugin management instead'
                     );
-                    
+
                     if (userChoice) {
                         await this.reinitializeMarketplace();
                         // Retry opening marketplace after reinitialization
@@ -4572,34 +4596,34 @@ class PluginManagementUI {
                     }
                 }
             }
-            
+
             console.log('✅ Marketplace available');
-            
+
             // Load PluginMarketplaceUI if not already loaded
             if (!window.PluginMarketplaceUI) {
                 await this.loadPluginMarketplaceUI();
             }
-            
+
             // Create marketplace UI instance
             window.pluginMarketplaceUI = new PluginMarketplaceUI(this.pluginManager.marketplace);
             console.log('✅ Plugin Marketplace UI initialized');
-            
+
             // Open the marketplace
             await window.pluginMarketplaceUI.openMarketplace();
             console.log('✅ Plugin Marketplace opened successfully');
-            
+
         } catch (error) {
             console.error('❌ Failed to open Plugin Marketplace:', error);
-            
+
             let errorMessage = 'Failed to open Plugin Marketplace: ' + error.message;
             let suggestions = '';
-            
+
             if (error.message.includes('not initialized') || error.message.includes('required')) {
                 suggestions = '\n\nSuggestions:\n• Restart GenomeExplorer\n• Check console for module loading errors';
             } else if (error.message.includes('marketplace')) {
                 suggestions = '\n\nSuggestions:\n• Check network connection\n• Ensure all plugin files are present\n• Try refreshing the page';
             }
-            
+
             this.showMessage(errorMessage + suggestions, 'error');
         }
     }
@@ -4610,41 +4634,41 @@ class PluginManagementUI {
     async reinitializeMarketplace() {
         try {
             console.log('🔄 Attempting to reinitialize marketplace...');
-            
+
             // Load PluginManagerV2 modules if needed
-            if (!window.PluginMarketplace || !window.PluginDependencyResolver || 
+            if (!window.PluginMarketplace || !window.PluginDependencyResolver ||
                 !window.PluginSecurityValidator || !window.PluginUpdateManager) {
                 console.log('📦 Loading marketplace modules...');
                 await this.loadPluginManagerV2Modules();
             }
-            
+
             // Verify PluginManagerV2 is available
             if (!window.PluginManagerV2) {
                 throw new Error('PluginManagerV2 still not available after loading modules');
             }
-            
+
             // Get current app and config references
             const app = this.pluginManager.app || window.genomeBrowser || { name: 'GenomeExplorer', version: '1.0.0' };
             const configManager = this.pluginManager.configManager || window.configManager || null;
-            
+
             // Create new PluginManagerV2 instance
             console.log('🔄 Creating new PluginManagerV2 instance...');
             const newPluginManager = new PluginManagerV2(app, configManager);
-            
+
             // Wait for initialization
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
             // Update references
             this.pluginManager = newPluginManager;
-            
+
             // Update ChatManager reference if available
             if (window.chatManager && window.chatManager.pluginManager) {
                 window.chatManager.pluginManager = newPluginManager;
             }
-            
+
             console.log('✅ Marketplace reinitialized successfully');
             this.showMessage('Marketplace reinitialized successfully!', 'success');
-            
+
         } catch (error) {
             console.error('❌ Failed to reinitialize marketplace:', error);
             throw new Error(`Marketplace reinitialization failed: ${error.message}`);
@@ -4657,12 +4681,12 @@ class PluginManagementUI {
     async loadPluginManagerV2Modules() {
         try {
             console.log('📦 Loading PluginManagerV2 modules...');
-            
+
             // Detect current script directory to build proper paths
-            const currentScript = document.currentScript || 
+            const currentScript = document.currentScript ||
                 document.querySelector('script[src*="PluginManagementUI"]') ||
                 document.querySelector('script[src*="renderer-modular"]');
-            
+
             let basePath = './';
             if (currentScript && currentScript.src) {
                 const scriptPath = currentScript.src;
@@ -4675,35 +4699,35 @@ class PluginManagementUI {
                     basePath = './';
                 }
             }
-            
+
             console.log(`🔍 Using base path: ${basePath}`);
-            
+
             const modules = [
                 'PluginMarketplace.js',
-                'PluginDependencyResolver.js', 
+                'PluginDependencyResolver.js',
                 'PluginSecurityValidator.js',
                 'PluginUpdateManager.js',
                 'PluginManagerV2.js'
             ];
-            
+
             // Check which modules are already available before loading
             const initialAvailability = this.checkModuleAvailability();
             console.log('📋 Initial module availability check:', initialAvailability);
-            
+
             for (const module of modules) {
                 const moduleKey = module.replace('.js', '');
-                
+
                 if (initialAvailability[moduleKey]) {
                     console.log(`✅ ${module} already available, skipping load`);
                     continue;
                 }
-                
+
                 try {
                     await this.loadScript(`${basePath}${module}`);
                     console.log(`✅ Loaded ${module}`);
                 } catch (error) {
                     console.warn(`⚠️ Failed to load ${module} from ${basePath}, trying alternative path...`);
-                    
+
                     // Try alternative path
                     try {
                         await this.loadScript(`./${module}`);
@@ -4713,26 +4737,26 @@ class PluginManagementUI {
                         throw new Error(`Could not load ${module}: ${error.message}`);
                     }
                 }
-                
+
                 // After loading, wait a bit for the script to execute and check availability
                 await this.waitForModuleAvailability(moduleKey, 5000); // 5 second timeout
             }
-            
+
             // Final comprehensive check
             const finalCheck = this.checkModuleAvailability();
             console.log('🔍 Final module availability:', finalCheck);
-            
+
             const missing = Object.keys(finalCheck).filter(key => !finalCheck[key]);
             if (missing.length > 0) {
                 console.warn('⚠️ Some modules still missing, attempting forced reload...');
-                
+
                 // Try to force reload missing modules
                 for (const missingModule of missing) {
                     try {
                         // Remove existing script tags for this module
                         const existingScripts = document.querySelectorAll(`script[src*="${missingModule}"]`);
                         existingScripts.forEach(script => script.remove());
-                        
+
                         // Force reload
                         await this.loadScript(`./${missingModule}.js`, true); // Add force=true parameter
                         await this.waitForModuleAvailability(missingModule, 3000);
@@ -4741,18 +4765,18 @@ class PluginManagementUI {
                         console.error(`❌ Failed to force reload ${missingModule}:`, error);
                     }
                 }
-                
+
                 // Final final check
                 const ultimateCheck = this.checkModuleAvailability();
                 const stillMissing = Object.keys(ultimateCheck).filter(key => !ultimateCheck[key]);
-                
+
                 if (stillMissing.length > 0) {
                     throw new Error(`Required modules still missing after all attempts: ${stillMissing.join(', ')}`);
                 }
             }
-            
+
             console.log('✅ All PluginManagerV2 modules loaded successfully');
-            
+
         } catch (error) {
             console.error('❌ Failed to load PluginManagerV2 modules:', error);
             throw error;
@@ -4778,24 +4802,24 @@ class PluginManagementUI {
     async waitForModuleAvailability(moduleKey, timeout = 5000) {
         return new Promise((resolve, reject) => {
             const startTime = Date.now();
-            
+
             const checkAvailability = () => {
                 if (window[moduleKey]) {
                     console.log(`✅ Module ${moduleKey} is now available`);
                     resolve();
                     return;
                 }
-                
+
                 if (Date.now() - startTime > timeout) {
                     console.warn(`⚠️ Timeout waiting for ${moduleKey} to become available`);
                     resolve(); // Don't reject, continue anyway
                     return;
                 }
-                
+
                 // Check again in 100ms
                 setTimeout(checkAvailability, 100);
             };
-            
+
             checkAvailability();
         });
     }
@@ -4814,14 +4838,14 @@ class PluginManagementUI {
                     return;
                 }
             }
-            
+
             // If forcing reload, remove existing script first
             if (force) {
                 const existingScripts = document.querySelectorAll(`script[src="${src}"]`);
                 existingScripts.forEach(script => script.remove());
                 console.log(`🔄 Force reloading script: ${src}`);
             }
-            
+
             const script = document.createElement('script');
             script.src = src;
             script.onload = () => {
@@ -4832,7 +4856,7 @@ class PluginManagementUI {
                 console.error(`❌ Failed to load script: ${src}`, error);
                 reject(new Error(`Failed to load ${src}`));
             };
-            
+
             document.head.appendChild(script);
         });
     }
@@ -4849,13 +4873,13 @@ class PluginManagementUI {
             }
 
             console.log('📦 Loading PluginMarketplaceUI module...');
-            
+
             // Use smart path detection
             let basePath = './';
-            const currentScript = document.currentScript || 
+            const currentScript = document.currentScript ||
                 document.querySelector('script[src*="PluginManagementUI"]') ||
                 document.querySelector('script[src*="renderer-modular"]');
-            
+
             if (currentScript && currentScript.src) {
                 const scriptPath = currentScript.src;
                 const pathParts = scriptPath.split('/');
@@ -4865,7 +4889,7 @@ class PluginManagementUI {
                     basePath = './';
                 }
             }
-            
+
             console.log(`🔍 Using base path for PluginMarketplaceUI: ${basePath}`);
 
             // Try to load the PluginMarketplaceUI module with fallback
@@ -4875,13 +4899,13 @@ class PluginManagementUI {
                 console.warn('⚠️ Failed with base path, trying alternative...');
                 await this.loadScript('./PluginMarketplaceUI.js');
             }
-            
+
             if (!window.PluginMarketplaceUI) {
                 throw new Error('PluginMarketplaceUI module not available after loading');
             }
-            
+
             console.log('✅ PluginMarketplaceUI module loaded successfully');
-            
+
         } catch (error) {
             console.error('❌ Failed to load PluginMarketplaceUI:', error);
             throw new Error(`Failed to load PluginMarketplaceUI: ${error.message}`);
@@ -4896,34 +4920,34 @@ class PluginManagementUI {
             console.log('📋 No plugin states to validate');
             return { fixed: 0, validated: 0 };
         }
-        
+
         let fixedCount = 0;
         let validatedCount = 0;
-        
+
         console.log('🔍 Validating plugin state consistency...');
-        
+
         // Check all registered plugins against saved states
         const allPlugins = new Map();
-        
+
         // Collect all plugins from registries
         this.pluginManager.pluginRegistry.function.forEach((plugin, id) => {
             allPlugins.set(id, { plugin, type: 'function' });
         });
-        
+
         this.pluginManager.pluginRegistry.visualization.forEach((plugin, id) => {
             allPlugins.set(id, { plugin, type: 'visualization' });
         });
-        
+
         if (this.pluginManager.pluginRegistry.utility) {
             this.pluginManager.pluginRegistry.utility.forEach((plugin, id) => {
                 allPlugins.set(id, { plugin, type: 'utility' });
             });
         }
-        
+
         allPlugins.forEach(({ plugin, type }, pluginId) => {
             const savedState = this.settings.pluginStates[pluginId];
             validatedCount++;
-            
+
             if (savedState) {
                 // Check if current state matches saved state
                 if (plugin.enabled !== savedState.enabled) {
@@ -4944,13 +4968,13 @@ class PluginManagementUI {
                 fixedCount++;
             }
         });
-        
+
         // Save fixes if any were made
         if (fixedCount > 0) {
             this.saveSettingsToStorage();
             console.log(`💾 Saved ${fixedCount} plugin state fixes to local storage`);
         }
-        
+
         console.log(`✅ Plugin state validation complete: ${validatedCount} checked, ${fixedCount} fixed`);
         return { fixed: fixedCount, validated: validatedCount };
     }
@@ -4965,21 +4989,21 @@ class PluginManagementUI {
             this.delayedApplyPluginStates();
             return;
         }
-        
+
         // Listen for system initialization event
         this.pluginManager.on('system-initialized', () => {
             console.log('🎯 Plugin system initialization complete, applying saved states...');
             this.delayedApplyPluginStates();
         });
-        
+
         // Fallback: Check periodically in case event was missed
         const maxWaitTime = 10000; // 10 seconds
         const checkInterval = 500; // 500ms
         let waitTime = 0;
-        
+
         const intervalId = setInterval(() => {
             waitTime += checkInterval;
-            
+
             if (this.pluginManager.isInitialized) {
                 clearInterval(intervalId);
                 console.log('🔧 Plugin system initialized (fallback check), applying saved states...');
@@ -5000,15 +5024,15 @@ class PluginManagementUI {
             console.log('📋 No plugin states to apply');
             return;
         }
-        
+
         console.log('🔧 Applying saved plugin states after system initialization...');
-        
+
         // Force apply plugin states
         this.applyPluginStates();
-        
+
         // Refresh UI to show correct states
         this.refreshPluginLists();
-        
+
         console.log('✅ Plugin states applied successfully after system initialization');
     }
 }

@@ -34,7 +34,7 @@
         "https://example.com/screenshots/protein-network-1.png"
       ],
       "rating": 4.9,
-      "downloads": 8986,
+      "downloads": 8987,
       "lastUpdated": "2024-12-03T14:22:00Z",
       "status": "published",
       "submittedBy": "admin",
@@ -95,7 +95,7 @@
       "dependencies": [],
       "screenshots": [],
       "rating": 0,
-      "downloads": 29,
+      "downloads": 30,
       "lastUpdated": "2024-12-05T22:50:00Z",
       "status": "published",
       "submittedBy": "CodeXomics Team",
@@ -247,7 +247,7 @@
   "pendingSubmissions": {},
   "stats": {
     "totalPlugins": 4,
-    "totalDownloads": 9051,
+    "totalDownloads": 9053,
     "totalSubmissions": 3,
     "categories": {
       "network-analysis": 1,
