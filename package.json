@@ -10,8 +10,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "mcp-server": "node start-mcp-server.js",
-    "claude-mcp-server": "node start-claude-mcp-server.js",
+    "mcp-server": "node scripts/start-mcp-server.js",
+    "claude-mcp-server": "node scripts/start-claude-mcp-server.js",
     "start-with-mcp": "concurrently \"npm run mcp-server\" \"npm start\"",
     "start-with-claude-mcp": "concurrently \"npm run claude-mcp-server\" \"npm start\"",
     "marketplace:start": "npm run start --workspace=packages/marketplace-server",
@@ -33,7 +33,9 @@
     "pack:mac": "npm run generate-dmg-bg && electron-builder --mac --dir",
     "pack:win": "electron-builder --win --dir",
     "pack:linux": "electron-builder --linux --dir",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "lint": "eslint .",
+    "format": "prettier --write ."
   },
   "keywords": [
     "bioinformatics",
@@ -60,6 +62,9 @@
     "concurrently": "^8.2.2",
     "electron": "^27.3.11",
     "electron-builder": "^24.6.4",
+    "eslint": "^8.57.1",
+    "eslint-config-google": "^0.14.0",
+    "prettier": "^3.7.4",
     "sharp": "^0.34.4"
   },
   "dependencies": {

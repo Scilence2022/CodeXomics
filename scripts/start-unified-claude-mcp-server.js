@@ -23,7 +23,7 @@
  */
 
 const path = require('path');
-const UnifiedClaudeMCPServer = require('./src/mcp-server-claude-unified.js');
+const UnifiedClaudeMCPServer = require('../src/mcp-server-claude-unified.js');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -48,7 +48,7 @@ async function main() {
     try {
         // Create and start the unified server with authentication
         const server = new UnifiedClaudeMCPServer(HTTP_PORT, WS_PORT, null, authConfig);
-        
+
         // Output startup information to stderr (won't interfere with MCP protocol on stdout)
         process.stderr.write(`🚀 Starting Unified Claude MCP Server...\n`);
         process.stderr.write(`📍 Working directory: ${process.cwd()}\n`);
@@ -56,7 +56,7 @@ async function main() {
         process.stderr.write(`🔌 WebSocket Port: ${WS_PORT}\n`);
         process.stderr.write(`📡 MCP Protocol: STDIO\n`);
         process.stderr.write(`\n`);
-        
+
         // Authentication info
         if (authConfig.requireAuth) {
             process.stderr.write(`🔐 Authentication: ENABLED\n`);
@@ -70,11 +70,11 @@ async function main() {
             process.stderr.write(`🔓 Authentication: DISABLED (localhost bypass enabled)\n`);
         }
         process.stderr.write(`\n`);
-        
+
         await server.start();
-        
+
         // Server is now running and connected via STDIO to Claude Desktop
-        
+
     } catch (error) {
         process.stderr.write(`💥 Failed to start Unified Claude MCP Server: ${error.message}\n`);
         process.stderr.write(`📊 Stack trace: ${error.stack}\n`);

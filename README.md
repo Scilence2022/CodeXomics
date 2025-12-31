@@ -144,7 +144,7 @@ npm run start-full
 npm run build
 ```
 
-> **Note**: CodeXomics uses npm workspaces for better code organization. See [WORKSPACE_QUICKSTART.md](WORKSPACE_QUICKSTART.md) for detailed workspace commands.
+> **Note**: CodeXomics uses npm workspaces for better code organization. See [WORKSPACE_QUICKSTART.md](docs/WORKSPACE_QUICKSTART.md) for detailed workspace commands.
 
 ## 📖 Quick Start
 
@@ -656,7 +656,7 @@ We welcome contributions from the genomics and bioinformatics community!
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-See [PROJECT_RULES.md](PROJECT_RULES.md) for development guidelines.
+See [PROJECT_RULES.md](docs/project-guides/PROJECT_RULES.md) for development guidelines.
 
 ## 🐛 Issues and Support
 

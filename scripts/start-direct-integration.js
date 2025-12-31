@@ -11,7 +11,7 @@
  * - Direct MCP Server: HTTP 3002, WebSocket 3003
  */
 
-const ClaudeDirectMCPServer = require('./src/mcp-server-claude-direct.js');
+const ClaudeDirectMCPServer = require('../src/mcp-server-claude-direct.js');
 
 // Create server with custom ports to avoid conflicts
 const server = new ClaudeDirectMCPServer(3002, 3003);

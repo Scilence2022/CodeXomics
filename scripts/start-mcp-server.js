@@ -7,7 +7,7 @@
  * that enables LLM integration with the CodeXomics.
  */
 
-const MCPGenomeBrowserServer = require('./src/temp/mcp-server.js');
+const MCPGenomeBrowserServer = require('../src/temp/mcp-server.js');
 
 console.log('🧬 Starting CodeXomics MCP Server...');
 console.log('');

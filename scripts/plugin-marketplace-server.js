@@ -14,9 +14,9 @@ const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const PLUGINS_DIR = path.join(__dirname, 'marketplace-data', 'plugins');
-const METADATA_FILE = path.join(__dirname, 'marketplace-data', 'metadata.json');
-const UPLOADS_DIR = path.join(__dirname, 'marketplace-data', 'uploads');
+const PLUGINS_DIR = path.join(__dirname, '..', 'marketplace-data', 'plugins');
+const METADATA_FILE = path.join(__dirname, '..', 'marketplace-data', 'metadata.json');
+const UPLOADS_DIR = path.join(__dirname, '..', 'marketplace-data', 'uploads');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -29,7 +29,7 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ 
+const upload = multer({
     storage: storage,
     limits: {
         fileSize: 50 * 1024 * 1024, // 50MB limit
@@ -74,7 +74,7 @@ async function initializeServer() {
         await fs.mkdir(path.dirname(PLUGINS_DIR), { recursive: true });
         await fs.mkdir(PLUGINS_DIR, { recursive: true });
         await fs.mkdir(UPLOADS_DIR, { recursive: true });
-        
+
         // Load existing metadata
         try {
             const data = await fs.readFile(METADATA_FILE, 'utf8');
@@ -84,7 +84,7 @@ async function initializeServer() {
             console.log('📝 Creating new plugin metadata');
             await initializeSamplePlugins();
         }
-        
+
         console.log('🚀 Plugin Marketplace Server initialized');
     } catch (error) {
         console.error('❌ Server initialization failed:', error);
@@ -289,7 +289,7 @@ async function initializeSamplePlugins() {
     pluginMetadata.stats.totalPlugins = Object.keys(samplePlugins).length;
     pluginMetadata.stats.totalDownloads = Object.values(samplePlugins)
         .reduce((sum, plugin) => sum + plugin.downloads, 0);
-    
+
     // Calculate category stats
     Object.values(samplePlugins).forEach(plugin => {
         if (!pluginMetadata.stats.categories[plugin.category]) {
@@ -329,33 +329,33 @@ function generatePluginId(name) {
 function validatePluginMetadata(metadata) {
     const required = ['name', 'description', 'version', 'author', 'category', 'type'];
     const missing = required.filter(field => !metadata[field]);
-    
+
     if (missing.length > 0) {
         throw new Error(`Missing required fields: ${missing.join(', ')}`);
     }
-    
+
     // Validate version format
     if (!/^\d+\.\d+\.\d+/.test(metadata.version)) {
         throw new Error('Version must follow semantic versioning (e.g., 1.0.0)');
     }
-    
+
     // Validate category
     const validCategories = [
         'variant-analysis', 'network-analysis', 'rna-analysis', 'phylogenetics',
         'sequence-analysis', 'protein-analysis', 'visualization', 'data-import',
         'statistical-analysis', 'machine-learning'
     ];
-    
+
     if (!validCategories.includes(metadata.category)) {
         throw new Error(`Invalid category. Must be one of: ${validCategories.join(', ')}`);
     }
-    
+
     // Validate type
     const validTypes = ['function', 'visualization', 'data-source', 'utility'];
     if (!validTypes.includes(metadata.type)) {
         throw new Error(`Invalid type. Must be one of: ${validTypes.join(', ')}`);
     }
-    
+
     return true;
 }
 
@@ -368,14 +368,14 @@ function validatePluginMetadata(metadata) {
 app.get('/api/v1/plugins', (req, res) => {
     try {
         const { query = '', category, type, author, tags, limit = 50, offset = 0, status = 'published' } = req.query;
-        
+
         let plugins = Object.values(pluginMetadata.plugins);
-        
+
         // Filter by status
         if (status) {
             plugins = plugins.filter(plugin => plugin.status === status);
         }
-        
+
         // Apply search query
         if (query) {
             const queryLower = query.toLowerCase();
@@ -386,22 +386,22 @@ app.get('/api/v1/plugins', (req, res) => {
                 plugin.keywords.some(keyword => keyword.toLowerCase().includes(queryLower))
             );
         }
-        
+
         // Apply filters (treat 'all' as no filter)
         if (category && category !== 'all') {
             plugins = plugins.filter(plugin => plugin.category === category);
         }
-        
+
         if (type && type !== 'all') {
             plugins = plugins.filter(plugin => plugin.type === type);
         }
-        
+
         if (author) {
-            plugins = plugins.filter(plugin => 
+            plugins = plugins.filter(plugin =>
                 plugin.author.toLowerCase().includes(author.toLowerCase())
             );
         }
-        
+
         if (tags) {
             const requiredTags = Array.isArray(tags) ? tags : [tags];
             plugins = plugins.filter(plugin =>
@@ -412,35 +412,35 @@ app.get('/api/v1/plugins', (req, res) => {
                 )
             );
         }
-        
+
         // Sort by relevance and popularity
         plugins.sort((a, b) => {
             // Calculate relevance score if query exists
             if (query) {
                 const queryLower = query.toLowerCase();
                 let scoreA = 0, scoreB = 0;
-                
+
                 if (a.name.toLowerCase().includes(queryLower)) scoreA += 10;
                 if (b.name.toLowerCase().includes(queryLower)) scoreB += 10;
-                
+
                 if (a.description.toLowerCase().includes(queryLower)) scoreA += 5;
                 if (b.description.toLowerCase().includes(queryLower)) scoreB += 5;
-                
+
                 if (scoreA !== scoreB) return scoreB - scoreA;
             }
-            
+
             // Sort by popularity (rating and downloads)
             const popularityA = (a.rating || 0) * 0.3 + Math.log(a.downloads || 1) * 0.1;
             const popularityB = (b.rating || 0) * 0.3 + Math.log(b.downloads || 1) * 0.1;
             return popularityB - popularityA;
         });
-        
+
         // Apply pagination
         const total = plugins.length;
         const startIndex = parseInt(offset);
         const endIndex = startIndex + parseInt(limit);
         plugins = plugins.slice(startIndex, endIndex);
-        
+
         res.json({
             success: true,
             data: {
@@ -454,7 +454,7 @@ app.get('/api/v1/plugins', (req, res) => {
             },
             timestamp: new Date().toISOString()
         });
-        
+
     } catch (error) {
         console.error('❌ Search plugins error:', error);
         res.status(500).json({
@@ -473,7 +473,7 @@ app.get('/api/v1/plugins/:id', (req, res) => {
     try {
         const { id } = req.params;
         const plugin = pluginMetadata.plugins[id];
-        
+
         if (!plugin) {
             return res.status(404).json({
                 success: false,
@@ -481,13 +481,13 @@ app.get('/api/v1/plugins/:id', (req, res) => {
                 message: `Plugin with ID '${id}' not found`
             });
         }
-        
+
         res.json({
             success: true,
             data: plugin,
             timestamp: new Date().toISOString()
         });
-        
+
     } catch (error) {
         console.error('❌ Get plugin details error:', error);
         res.status(500).json({
@@ -506,21 +506,21 @@ app.post('/api/v1/plugins/:id/download', async (req, res) => {
     try {
         const { id } = req.params;
         const plugin = pluginMetadata.plugins[id];
-        
+
         if (!plugin) {
             return res.status(404).json({
                 success: false,
                 error: 'Plugin not found'
             });
         }
-        
+
         // Increment download count
         plugin.downloads = (plugin.downloads || 0) + 1;
         pluginMetadata.stats.totalDownloads++;
-        
+
         // Save updated metadata
         await saveMetadata();
-        
+
         // Return download information
         res.json({
             success: true,
@@ -532,7 +532,7 @@ app.post('/api/v1/plugins/:id/download', async (req, res) => {
             },
             timestamp: new Date().toISOString()
         });
-        
+
     } catch (error) {
         console.error('❌ Track download error:', error);
         res.status(500).json({
@@ -550,7 +550,7 @@ app.post('/api/v1/plugins/:id/download', async (req, res) => {
 app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) => {
     try {
         console.log('📤 Plugin submission received');
-        
+
         // Parse metadata from form data
         let metadata;
         try {
@@ -562,13 +562,13 @@ app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) =>
                 message: 'Metadata must be valid JSON'
             });
         }
-        
+
         // Validate metadata
         validatePluginMetadata(metadata);
-        
+
         // Generate plugin ID
         const pluginId = generatePluginId(metadata.name);
-        
+
         // Check if plugin already exists
         if (pluginMetadata.plugins[pluginId]) {
             return res.status(409).json({
@@ -577,7 +577,7 @@ app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) =>
                 message: `Plugin with ID '${pluginId}' already exists`
             });
         }
-        
+
         // Process uploaded files
         const uploadedFiles = req.files || [];
         const fileInfos = uploadedFiles.map(file => ({
@@ -587,7 +587,7 @@ app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) =>
             mimetype: file.mimetype,
             path: file.path
         }));
-        
+
         // Create plugin metadata with submission info
         const submissionId = crypto.randomUUID();
         const submission = {
@@ -615,16 +615,16 @@ app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) =>
                 }
             }
         };
-        
+
         // Add to pending submissions
         pluginMetadata.pendingSubmissions[submissionId] = submission;
         pluginMetadata.stats.totalSubmissions++;
-        
+
         // Save metadata
         await saveMetadata();
-        
+
         console.log(`✅ Plugin submission received: ${pluginId} (${submissionId})`);
-        
+
         res.status(201).json({
             success: true,
             data: {
@@ -635,10 +635,10 @@ app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) =>
             },
             timestamp: new Date().toISOString()
         });
-        
+
     } catch (error) {
         console.error('❌ Plugin submission error:', error);
-        
+
         // Clean up uploaded files on error
         if (req.files) {
             for (const file of req.files) {
@@ -649,7 +649,7 @@ app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) =>
                 }
             }
         }
-        
+
         res.status(400).json({
             success: false,
             error: 'Plugin submission failed',
@@ -665,13 +665,13 @@ app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) =>
 app.get('/api/v1/submissions', (req, res) => {
     try {
         const { status } = req.query;
-        
+
         let submissions = Object.values(pluginMetadata.pendingSubmissions);
-        
+
         if (status) {
             submissions = submissions.filter(sub => sub.status === status);
         }
-        
+
         res.json({
             success: true,
             data: {
@@ -680,7 +680,7 @@ app.get('/api/v1/submissions', (req, res) => {
             },
             timestamp: new Date().toISOString()
         });
-        
+
     } catch (error) {
         console.error('❌ Get submissions error:', error);
         res.status(500).json({
@@ -699,38 +699,38 @@ app.post('/api/v1/submissions/:id/approve', async (req, res) => {
     try {
         const { id } = req.params;
         const submission = pluginMetadata.pendingSubmissions[id];
-        
+
         if (!submission) {
             return res.status(404).json({
                 success: false,
                 error: 'Submission not found'
             });
         }
-        
+
         // Move from pending to published
         const plugin = { ...submission };
         plugin.status = 'published';
         plugin.approvedAt = new Date().toISOString();
         plugin.approvedBy = req.body.approverEmail || 'admin';
-        
+
         // Add to main plugins
         pluginMetadata.plugins[plugin.id] = plugin;
-        
+
         // Remove from pending
         delete pluginMetadata.pendingSubmissions[id];
-        
+
         // Update stats
         pluginMetadata.stats.totalPlugins++;
         if (!pluginMetadata.stats.categories[plugin.category]) {
             pluginMetadata.stats.categories[plugin.category] = 0;
         }
         pluginMetadata.stats.categories[plugin.category]++;
-        
+
         // Save metadata
         await saveMetadata();
-        
+
         console.log(`✅ Plugin approved: ${plugin.id}`);
-        
+
         res.json({
             success: true,
             data: {
@@ -740,7 +740,7 @@ app.post('/api/v1/submissions/:id/approve', async (req, res) => {
             },
             timestamp: new Date().toISOString()
         });
-        
+
     } catch (error) {
         console.error('❌ Approve submission error:', error);
         res.status(500).json({
@@ -760,13 +760,13 @@ app.get('/api/v1/categories', (req, res) => {
         const categories = Object.entries(pluginMetadata.stats.categories)
             .map(([name, count]) => ({ name, count }))
             .sort((a, b) => b.count - a.count);
-            
+
         res.json({
             success: true,
             data: categories,
             timestamp: new Date().toISOString()
         });
-        
+
     } catch (error) {
         console.error('❌ Get categories error:', error);
         res.status(500).json({
@@ -793,7 +793,7 @@ app.get('/api/v1/stats', (req, res) => {
             },
             timestamp: new Date().toISOString()
         });
-        
+
     } catch (error) {
         console.error('❌ Get stats error:', error);
         res.status(500).json({
@@ -833,7 +833,7 @@ app.get('/api/v1/config', (req, res) => {
             },
             timestamp: new Date().toISOString()
         });
-        
+
     } catch (error) {
         console.error('❌ Get config error:', error);
         res.status(500).json({
@@ -863,7 +863,7 @@ app.get('/api/v1/health', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('❌ Unhandled error:', err);
-    
+
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
@@ -879,7 +879,7 @@ app.use((err, req, res, next) => {
             });
         }
     }
-    
+
     res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -899,7 +899,7 @@ app.use((req, res) => {
 // Start server
 async function startServer() {
     await initializeServer();
-    
+
     app.listen(PORT, () => {
         console.log(`
 🚀 GenomeExplorer Plugin Marketplace Server v1.1.0

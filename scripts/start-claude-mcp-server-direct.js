@@ -13,7 +13,7 @@
  * - Modular tool organization for better maintainability
  */
 
-const ClaudeDirectMCPServer = require('./src/temp/mcp-server-claude-direct.js');
+const ClaudeDirectMCPServer = require('../src/mcp-server-claude-direct.js');
 const net = require('net');
 
 // Function to find available port
@@ -39,7 +39,7 @@ async function initializeServer() {
     try {
         const httpPort = await findAvailablePort(3002); // Start from 3002 to avoid conflict
         const wsPort = await findAvailablePort(httpPort + 1);
-        
+
         // Create server with different ports
         const server = new ClaudeDirectMCPServer(httpPort, wsPort);
         return server;

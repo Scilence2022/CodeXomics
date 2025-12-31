@@ -46,8 +46,8 @@ if [ ! -f "plugin-marketplace-server.js" ]; then
 fi
 
 # Create marketplace data directory if it doesn't exist
-mkdir -p marketplace-data/plugins
-mkdir -p marketplace-data/uploads
+mkdir -p ../marketplace-data/plugins
+mkdir -p ../marketplace-data/uploads
 
 echo "📁 Marketplace data directories created"
 
@@ -100,7 +100,7 @@ echo ""
 echo "🎯 Server Configuration:"
 echo "   📡 Marketplace Server Port: $MARKETPLACE_PORT"
 echo "   🔧 MCP Server Port: $MCP_PORT"
-echo "   📁 Data Directory: $(pwd)/marketplace-data"
+echo "   📁 Data Directory: $(pwd)/../marketplace-data"
 echo "   🌐 Environment: $NODE_ENV"
 echo ""
 
