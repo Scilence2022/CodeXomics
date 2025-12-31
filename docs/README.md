@@ -1,246 +1,70 @@
 # CodeXomics Documentation
 
-Welcome to the CodeXomics documentation hub! This directory contains comprehensive documentation for users, developers, and contributors.
+Welcome to the CodeXomics documentation hub. This directory contains organized documentation for users, developers, and contributors.
 
 ## 📚 Documentation Structure
 
 ### For Users
 
-**[User Guides](user-guides/)**
-- **[USER_GUIDE.md](user-guides/USER_GUIDE.md)** - Complete user manual covering all features
-- Installation instructions
-- Feature walkthroughs
-- Troubleshooting guide
-- FAQ
+| Document | Description |
+|----------|-------------|
+| [User Guide](user-guides/USER_GUIDE.md) | Complete user manual |
+| [Getting Started](user-guides/GETTING_STARTED.md) | Quick start guide |
+| [FAQ](user-guides/FAQ.md) | Frequently asked questions |
+| [Troubleshooting](user-guides/TROUBLESHOOTING_GUIDE.md) | Problem resolution |
 
 ### For Developers
 
-**[Developer Guides](developer-guides/)**
-- **[DEVELOPER_GUIDE.md](developer-guides/DEVELOPER_GUIDE.md)** - Comprehensive development guide
-- Development setup
-- Architecture overview
-- Plugin development
-- Contributing guidelines
-- Testing procedures
+| Document | Description |
+|----------|-------------|
+| [Developer Guide](developer-guides/DEVELOPER_GUIDE.md) | Comprehensive development guide |
+| [Plugin Development](developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md) | Build custom plugins |
+| [Testing Guide](developer-guides/TESTING_GUIDE.md) | Testing procedures |
+| [Build Instructions](developer-guides/build-instructions.md) | Build from source |
 
-**[API Documentation](api-docs/)**
-- API reference (coming soon)
-- Module documentation
-- Function signatures
-- Usage examples
+### Architecture
 
-### Project Information
+| Document | Description |
+|----------|-------------|
+| [Multi-Agent System](architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md) | AI system architecture |
+| [Plugin System](architecture/PLUGIN_SYSTEM_DEEP_ANALYSIS.md) | Plugin architecture |
+| [Track System](architecture/TRACK_SYSTEM_ANALYSIS.md) | Visualization architecture |
+| [Workspace Architecture](architecture/WORKSPACE_ARCHITECTURE.md) | Project structure |
 
-**[Implementation Summaries](implementation-summaries/)**
-- Detailed implementation notes (172 files)
-- Feature development summaries
-- Technical decision documentation
-- System design documents
+### Reference Guides
 
-**[Project Guides](project-guides/)**
-- Project-specific guides (25 files)
-- Workflow documentation
-- Best practices
-- Setup procedures
-
-**[Fix Summaries](fix-summaries/)**
-- Bug fix documentation
-- Issue resolutions
-- Performance improvements
-- System enhancements
-
-**[Release Notes](release-notes/)**
-- Version release notes
-- Changelog details
-- Upgrade guides
-- Breaking changes
+| Document | Description |
+|----------|-------------|
+| [BLAST Guide](reference/BLAST_GUIDE.md) | BLAST integration |
+| [Smart Execution](reference/SMART_EXECUTION_GUIDE.md) | AI tool execution |
+| [Benchmark Methods](reference/BENCHMARK_METHODS.md) | Testing benchmarks |
+| [Workspace Quickstart](reference/WORKSPACE_QUICKSTART.md) | Workspace setup |
 
 ### Additional Resources
 
-**[BLAST Guide](BLAST_GUIDE.md)**
-- BLAST tool integration
-- Usage instructions
-- Configuration options
-
-**[Smart Execution Guide](SMART_EXECUTION_GUIDE.md)**
-- AI execution system
-- Tool selection logic
-- Optimization strategies
-
-**[Documentation Index](DOCUMENTATION_INDEX.md)**
-- Complete documentation index
-- Cross-references
-- Quick navigation
+| Directory | Description |
+|-----------|-------------|
+| [Release Notes](release-notes/) | Version history |
+| [Troubleshooting](troubleshooting/) | Plugin-specific fixes |
+| [Proposals](proposals/) | Future feature proposals |
+| [Archive](_archive/) | Historical documentation |
 
 ---
 
-## 🚀 Quick Navigation
+## 🚀 Quick Start
 
-### Getting Started
-1. **New Users** → Start with [User Guide](user-guides/USER_GUIDE.md)
-2. **New Developers** → Read [Developer Guide](developer-guides/DEVELOPER_GUIDE.md)
-3. **Contributors** → Check [Contributing Guidelines](developer-guides/DEVELOPER_GUIDE.md#contributing)
-
-### Common Tasks
-
-**Installation**
-- [User Guide - Installation](user-guides/USER_GUIDE.md#installation)
-
-**Configuration**
-- [User Guide - AI Configuration](user-guides/USER_GUIDE.md#ai-assistant)
-- [Developer Guide - Setup](developer-guides/DEVELOPER_GUIDE.md#development-setup)
-
-**Development**
-- [Developer Guide - Architecture](developer-guides/DEVELOPER_GUIDE.md#project-architecture)
-- [Developer Guide - Plugin Development](developer-guides/DEVELOPER_GUIDE.md#plugin-development)
-
-**Troubleshooting**
-- [User Guide - Troubleshooting](user-guides/USER_GUIDE.md#troubleshooting)
-- [Fix Summaries](fix-summaries/)
-
----
-
-## 📖 Documentation Standards
-
-### Writing Guidelines
-
-**Clarity**
-- Use clear, concise language
-- Define technical terms
-- Provide examples
-- Include screenshots where helpful
-
-**Structure**
-- Logical organization
-- Consistent headings
-- Table of contents for long documents
-- Cross-references between related docs
-
-**Code Examples**
-```javascript
-// Well-commented code
-// Clear variable names
-// Runnable examples
-```
-
-**Maintenance**
-- Keep docs updated with code changes
-- Version-specific documentation
-- Mark deprecated features
-- Update links and references
-
-### File Organization
-
-**Naming Conventions:**
-- `UPPERCASE.md` for main documents
-- `lowercase-with-dashes.md` for supporting docs
-- Descriptive, clear names
-- No spaces in filenames
-
-**Directory Structure:**
-```
-docs/
-├── README.md                      # This file
-├── user-guides/                   # User documentation
-├── developer-guides/              # Developer documentation
-├── api-docs/                      # API reference
-├── implementation-summaries/      # Technical summaries
-├── project-guides/                # Project guides
-├── fix-summaries/                 # Bug fixes
-└── release-notes/                 # Version releases
-```
-
----
-
-## 🔄 Recent Updates
-
-### v0.522beta Documentation
-- ✅ Reorganized documentation structure
-- ✅ Created comprehensive User Guide
-- ✅ Created comprehensive Developer Guide
-- ✅ Moved implementation summaries to fix-summaries/
-- ✅ Created release-notes directory
-- ✅ Updated main README with current information
-
-### Documentation Improvements
-- ✅ Added navigation aids
-- ✅ Improved organization
-- ✅ Enhanced cross-referencing
-- ✅ Added quick start sections
-- ✅ Standardized formatting
-
----
-
-## 🤝 Contributing to Documentation
-
-### How to Help
-
-1. **Fix Errors**
-   - Typos, grammar, broken links
-   - Outdated information
-   - Missing details
-
-2. **Add Examples**
-   - Code snippets
-   - Use cases
-   - Tutorials
-
-3. **Improve Clarity**
-   - Better explanations
-   - Diagrams and visuals
-   - Simplified language
-
-4. **Expand Coverage**
-   - Document undocumented features
-   - Add troubleshooting tips
-   - Create tutorials
-
-### Contribution Process
-
-1. Fork repository
-2. Create documentation branch
-3. Make improvements
-4. Submit pull request
-5. Address review feedback
-
-See [Developer Guide - Contributing](developer-guides/DEVELOPER_GUIDE.md#contributing) for details.
+1. **New Users** → [Getting Started Guide](user-guides/GETTING_STARTED.md)
+2. **New Developers** → [Developer Guide](developer-guides/DEVELOPER_GUIDE.md)
+3. **Plugin Authors** → [Plugin Development Guide](developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md)
 
 ---
 
 ## 📝 Feedback
 
-We welcome feedback on our documentation!
-
-- **Issues**: Report documentation issues on [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
-- **Suggestions**: Share ideas in [GitHub Discussions](https://github.com/Scilence2022/CodeXomics/discussions)
-- **Email**: Contact us at songlf@tib.cas.cn
+- **Issues**: [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Scilence2022/CodeXomics/discussions)
+- **Email**: songlf@tib.cas.cn
 
 ---
 
-## 🔗 External Resources
-
-### Related Projects
-- [Electron Documentation](https://www.electronjs.org/docs)
-- [D3.js Documentation](https://d3js.org/)
-- [KEGG Database](https://www.genome.jp/kegg/)
-- [STRING Database](https://string-db.org/)
-
-### AI/LLM Resources
-- [OpenAI API](https://platform.openai.com/docs)
-- [Anthropic Claude](https://docs.anthropic.com/)
-- [Google Gemini](https://ai.google.dev/)
-- [SiliconFlow](https://siliconflow.cn/)
-
-### Bioinformatics Resources
-- [NCBI](https://www.ncbi.nlm.nih.gov/)
-- [UniProt](https://www.uniprot.org/)
-- [AlphaFold Database](https://alphafold.ebi.ac.uk/)
-- [ProGenFixer](https://progenfixer.biodesign.ac.cn/)
-
----
-
-**CodeXomics Documentation** - v0.522beta
-
-Last Updated: October 2025
-
-Made with ❤️ by the CodeXomics Team
+**CodeXomics Documentation** - v0.527beta | Last Updated: December 2025
