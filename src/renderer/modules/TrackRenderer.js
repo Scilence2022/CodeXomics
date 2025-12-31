@@ -333,6 +333,20 @@ class TrackRenderer {
         buttonsContainer.appendChild(toggleBtn);
         buttonsContainer.appendChild(hideHeaderBtn);
         buttonsContainer.appendChild(closeBtn);
+        
+        // Add gallery button for Genes & Features track (top-right corner - last button)
+        if (trackType === 'genes') {
+            const galleryBtn = document.createElement('button');
+            galleryBtn.className = 'track-btn track-gallery-btn';
+            galleryBtn.innerHTML = '<i class="fas fa-images"></i>';
+            galleryBtn.title = 'View visualization examples gallery';
+            galleryBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openFeatureGallery();
+            });
+            buttonsContainer.appendChild(galleryBtn);
+        }
+        
         trackHeader.appendChild(buttonsContainer);
         
         return trackHeader;
@@ -10649,6 +10663,470 @@ This action cannot be undone.`;
         
         // Close modal
         modal.classList.remove('show');
+    }
+    
+    /**
+     * Open feature visualization gallery
+     */
+    openFeatureGallery() {
+        console.log('Opening feature visualization gallery');
+        
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('featureGalleryModal');
+        if (!modal) {
+            modal = this.createFeatureGalleryModal();
+            document.body.appendChild(modal);
+        }
+        
+        // Show modal
+        modal.classList.add('show');
+    }
+    
+    /**
+     * Create feature visualization gallery modal
+     */
+    createFeatureGalleryModal() {
+        const modal = document.createElement('div');
+        modal.id = 'featureGalleryModal';
+        modal.className = 'modal';
+        
+        const examples = [
+            {
+                name: 'Gene (CDS)',
+                type: 'CDS',
+                description: 'Protein-coding genes shown as arrows indicating direction. Forward strand (→) and reverse strand (←).',
+                svg: this.createExampleSVG('CDS', 1, '#3b82f6', 150)
+            },
+            {
+                name: 'Reverse Strand Gene',
+                type: 'CDS',
+                description: 'Genes on the reverse strand (←) are displayed with left-pointing arrows.',
+                svg: this.createExampleSVG('CDS', -1, '#ef4444', 150)
+            },
+            {
+                name: 'Gene',
+                type: 'gene',
+                description: 'General gene features with directional arrows.',
+                svg: this.createExampleSVG('gene', 1, '#6366f1', 140)
+            },
+            {
+                name: 'mRNA',
+                type: 'mRNA',
+                description: 'Messenger RNA transcripts with specialized sine wave shape.',
+                svg: this.createExampleSVG('mRNA', 1, '#10b981', 140)
+            },
+            {
+                name: 'tRNA',
+                type: 'tRNA',
+                description: 'Transfer RNA genes with rounded rectangle shape.',
+                svg: this.createExampleSVG('tRNA', 1, '#10b981', 80)
+            },
+            {
+                name: 'rRNA',
+                type: 'rRNA',
+                description: 'Ribosomal RNA genes with elliptical shape.',
+                svg: this.createExampleSVG('rRNA', 1, '#10b981', 90)
+            },
+            {
+                name: 'Promoter',
+                type: 'promoter',
+                description: 'Promoter regions with vertical line and directional horizontal arrow.',
+                svg: this.createExampleSVG('promoter', 1, '#3b82f6', 120)
+            },
+            {
+                name: 'Terminator',
+                type: 'terminator',
+                description: 'Terminator regions with double vertical lines and open circle.',
+                svg: this.createExampleSVG('terminator', 1, '#8b5cf6', 120)
+            },
+            {
+                name: 'Regulatory',
+                type: 'regulatory',
+                description: 'Regulatory elements with diamond shape.',
+                svg: this.createExampleSVG('regulatory', 1, '#ec4899', 100)
+            },
+            {
+                name: 'Repeat Region',
+                type: 'repeat_region',
+                description: 'Repeat regions with wavy top and bottom edges.',
+                svg: this.createExampleSVG('repeat_region', 1, '#f59e0b', 140)
+            },
+            {
+                name: 'Comment',
+                type: 'comment',
+                description: 'Comment features with rounded rectangle and diagonal line.',
+                svg: this.createExampleSVG('comment', 1, '#6b7280', 120)
+            },
+            {
+                name: 'Misc Feature',
+                type: 'misc_feature',
+                description: 'Miscellaneous features with rounded rectangle and diagonal line.',
+                svg: this.createExampleSVG('misc_feature', 1, '#6b7280', 120)
+            },
+            {
+                name: 'Operon',
+                type: 'operon',
+                description: 'Multiple genes in an operon can be displayed on the same row.',
+                svg: this.createOperonExampleSVG()
+            }
+        ];
+        
+        modal.innerHTML = `
+            <div class="modal-content resizable" style="max-width: 900px; max-height: 85vh;">
+                <div class="modal-header">
+                    <h3 id="featureGalleryTitle">
+                        <i class="fas fa-images"></i> Feature Visualization Examples
+                    </h3>
+                    <div class="modal-controls">
+                        <button class="modal-close" id="closeFeatureGalleryModal">&times;</button>
+                    </div>
+                </div>
+                <div class="modal-body" id="featureGalleryBody" style="max-height: calc(85vh - 140px); overflow-y: auto;">
+                    <div style="margin-bottom: 20px; color: var(--text-secondary); font-size: 14px;">
+                        <p>This gallery showcases how different gene features are visualized in the Genes & Features track. Each feature type has a distinct visual representation.</p>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+                        ${examples.map((example, index) => `
+                            <div class="gallery-item" style="
+                                background: var(--bg-secondary);
+                                border: 1px solid var(--border-color);
+                                border-radius: var(--radius-md);
+                                padding: 15px;
+                                display: flex;
+                                flex-direction: column;
+                                gap: 12px;
+                                transition: transform 0.2s ease, box-shadow 0.2s ease;
+                            ">
+                                <div style="
+                                    background: white;
+                                    border: 1px solid #e9ecef;
+                                    border-radius: 4px;
+                                    padding: 15px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    min-height: 80px;
+                                    overflow: hidden;
+                                ">
+                                    ${example.svg}
+                                </div>
+                                <div>
+                                    <h4 style="
+                                        margin: 0 0 6px 0;
+                                        font-size: 15px;
+                                        font-weight: 600;
+                                        color: var(--text-primary);
+                                    ">${example.name}</h4>
+                                    <p style="
+                                        margin: 0;
+                                        font-size: 13px;
+                                        color: var(--text-secondary);
+                                        line-height: 1.5;
+                                    ">${example.description}</p>
+                                    <div style="
+                                        margin-top: 8px;
+                                        font-size: 11px;
+                                        color: #6c757d;
+                                        font-family: monospace;
+                                        padding: 4px 8px;
+                                        background: #f8f9fa;
+                                        border-radius: 3px;
+                                        display: inline-block;
+                                    ">Type: ${example.type}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary modal-close">Close</button>
+                </div>
+            </div>
+        `;
+        
+        // Add event listeners
+        modal.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-close')) {
+                modal.classList.remove('show');
+            }
+        });
+        
+        // Add hover effects to gallery items
+        modal.addEventListener('mouseover', (e) => {
+            const item = e.target.closest('.gallery-item');
+            if (item) {
+                item.style.transform = 'translateY(-2px)';
+                item.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+            }
+        });
+        
+        modal.addEventListener('mouseout', (e) => {
+            const item = e.target.closest('.gallery-item');
+            if (item) {
+                item.style.transform = '';
+                item.style.boxShadow = '';
+            }
+        });
+        
+        // Enable drag and resize
+        if (window.modalDragManager) {
+            window.modalDragManager.makeDraggable('#featureGalleryModal');
+        }
+        if (window.resizableModalManager) {
+            window.resizableModalManager.makeResizable('#featureGalleryModal');
+        }
+        
+        return modal;
+    }
+    
+    /**
+     * Create example SVG for a feature type
+     */
+    createExampleSVG(featureType, strand, color, width) {
+        const height = 40;
+        const darkColor = this.darkenColor(color, 20);
+        const isForward = strand !== -1;
+        
+        // Create SVG based on actual rendering logic
+        let svgContent = '';
+        
+        // Add gradient definition
+        svgContent += `<svg width="${width}" height="${height}" style="display: block;">
+            <defs>
+                <linearGradient id="example-gradient-${featureType}-${strand}" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:${color};stop-opacity:0.9" />
+                    <stop offset="100%" style="stop-color:${color};stop-opacity:0.7" />
+                </linearGradient>
+            </defs>`;
+        
+        switch (featureType.toLowerCase()) {
+            case 'promoter': {
+                // Promoter: vertical line + horizontal arrow
+                const strokeWidth = Math.max(1, Math.min(2, height / 12));
+                const arrowLength = Math.min(width * 0.8, height * 2);
+                const arrowHeight = Math.max(4, height * 0.2);
+                const verticalLineX = width * 0.3;
+                const horizontalY = isForward ? 0 : height;
+                const arrowStartX = verticalLineX;
+                const arrowEndX = isForward ? Math.min(width - arrowHeight, arrowStartX + arrowLength) : Math.max(arrowHeight, arrowStartX - arrowLength);
+                
+                svgContent += `<line x1="${verticalLineX}" y1="0" x2="${verticalLineX}" y2="${height}" 
+                            stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
+                svgContent += `<line x1="${arrowStartX}" y1="${horizontalY}" x2="${arrowEndX}" y2="${horizontalY}" 
+                            stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
+                const arrowDirection = isForward ? 1 : -1;
+                svgContent += `<path d="M ${arrowEndX} ${horizontalY} 
+                            L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY - arrowHeight/2} 
+                            L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY + arrowHeight/2} Z" 
+                            fill="${darkColor}" stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
+                break;
+            }
+            
+            case 'terminator': {
+                // Terminator: double vertical lines + open circle
+                const strokeWidth = Math.max(1, Math.min(2, height / 12));
+                const lineSpacing = Math.max(3, width * 0.1);
+                const circleRadius = Math.min(height * 0.15, width * 0.15);
+                const longLineX = width * 0.7;
+                const shortLineX = longLineX - lineSpacing;
+                const shortLineHeight = height * 0.6;
+                const shortLineY = (height - shortLineHeight) / 2;
+                const circleX = (longLineX + shortLineX) / 2;
+                const circleY = circleRadius + 2;
+                const gapAngle = Math.PI * 0.3;
+                const startAngle = Math.PI/2 - gapAngle/2;
+                const endAngle = Math.PI/2 + gapAngle/2;
+                const startX = circleX + circleRadius * Math.cos(startAngle);
+                const startY = circleY + circleRadius * Math.sin(startAngle);
+                const endX = circleX + circleRadius * Math.cos(endAngle);
+                const endY = circleY + circleRadius * Math.sin(endAngle);
+                
+                svgContent += `<line x1="${longLineX}" y1="0" x2="${longLineX}" y2="${height}" 
+                            stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
+                svgContent += `<line x1="${shortLineX}" y1="${shortLineY}" x2="${shortLineX}" y2="${shortLineY + shortLineHeight}" 
+                            stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
+                svgContent += `<path d="M ${startX} ${startY} A ${circleRadius} ${circleRadius} 0 1 1 ${endX} ${endY}" 
+                            fill="none" stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
+                break;
+            }
+            
+            case 'regulatory': {
+                // Regulatory: diamond shape
+                svgContent += `<path d="M ${width/2} 0 
+                            L ${width} ${height/2} 
+                            L ${width/2} ${height} 
+                            L 0 ${height/2} Z" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
+                break;
+            }
+            
+            case 'repeat_region': {
+                // Repeat region: wavy top and bottom edges
+                const waveCount = Math.max(2, Math.floor(width / 8));
+                const waveHeight = height * 0.1;
+                let topWave = `M 0 ${waveHeight}`;
+                let bottomWave = `L 0 ${height - waveHeight}`;
+                
+                for (let i = 0; i <= waveCount; i++) {
+                    const x = (i / waveCount) * width;
+                    const topY = i % 2 === 0 ? waveHeight : 0;
+                    const bottomY = i % 2 === 0 ? height - waveHeight : height;
+                    topWave += ` L ${x} ${topY}`;
+                    bottomWave = `L ${x} ${bottomY} ` + bottomWave;
+                }
+                
+                svgContent += `<path d="${topWave} L ${width} ${height - waveHeight} ${bottomWave} Z" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
+                break;
+            }
+            
+            case 'trna': {
+                // tRNA: rounded rectangle
+                svgContent += `<rect x="0" y="0" width="${width}" height="${height}" 
+                            rx="${Math.min(height * 0.3, 4)}" ry="${Math.min(height * 0.3, 4)}" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
+                break;
+            }
+            
+            case 'rrna': {
+                // rRNA: ellipse
+                svgContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width / 2}" ry="${height / 2}" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
+                break;
+            }
+            
+            case 'mrna': {
+                // mRNA: sine wave shape
+                const waveCount = Math.max(2, Math.floor(width / 10));
+                const waveHeight = height * 0.3;
+                const centerY = height / 2;
+                
+                let pathData = `M 0 ${centerY}`;
+                for (let i = 0; i <= waveCount * 4; i++) {
+                    const x = (i / (waveCount * 4)) * width;
+                    const y = centerY + Math.sin((i / waveCount) * Math.PI) * waveHeight;
+                    pathData += ` L ${x} ${y}`;
+                }
+                pathData += ` L ${width} ${centerY + waveHeight * 0.5}`;
+                for (let i = waveCount * 4; i >= 0; i--) {
+                    const x = (i / (waveCount * 4)) * width;
+                    const y = centerY + Math.sin((i / waveCount) * Math.PI) * waveHeight * 0.5 + waveHeight * 0.25;
+                    pathData += ` L ${x} ${y}`;
+                }
+                pathData += ` Z`;
+                
+                svgContent += `<path d="${pathData}" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
+                break;
+            }
+            
+            case 'comment':
+            case 'note':
+            case 'misc_feature': {
+                // Comment: rounded rectangle with diagonal line
+                svgContent += `<rect x="0" y="0" width="${width}" height="${height}" 
+                            rx="${Math.min(height * 0.2, 3)}" ry="${Math.min(height * 0.2, 3)}" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
+                svgContent += `<line x1="0" y1="0" x2="${width}" y2="${height}" 
+                            stroke="${darkColor}" stroke-width="1" stroke-dasharray="2,2" />`;
+                break;
+            }
+            
+            default: {
+                // Standard genes: triangle or arrow based on size
+                if (width < 8) {
+                    // Triangle for small genes
+                    if (isForward) {
+                        svgContent += `<path d="M 0 0 L ${width} ${height / 2} L 0 ${height} Z" 
+                                    fill="url(#example-gradient-${featureType}-${strand})" 
+                                    stroke="${darkColor}" stroke-width="1" />`;
+                    } else {
+                        svgContent += `<path d="M ${width} 0 L 0 ${height / 2} L ${width} ${height} Z" 
+                                    fill="url(#example-gradient-${featureType}-${strand})" 
+                                    stroke="${darkColor}" stroke-width="1" />`;
+                    }
+                } else {
+                    // Arrow for larger genes
+                    const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
+                    if (isForward) {
+                        svgContent += `<path d="M 0 0 L ${width - arrowSize} 0 L ${width} ${height / 2} L ${width - arrowSize} ${height} L 0 ${height} Z" 
+                                    fill="url(#example-gradient-${featureType}-${strand})" 
+                                    stroke="${darkColor}" stroke-width="1" />`;
+                    } else {
+                        svgContent += `<path d="M ${arrowSize} 0 L ${width} 0 L ${width} ${height} L ${arrowSize} ${height} L 0 ${height / 2} Z" 
+                                    fill="url(#example-gradient-${featureType}-${strand})" 
+                                    stroke="${darkColor}" stroke-width="1" />`;
+                    }
+                }
+                break;
+            }
+        }
+        
+        // Add strand indicator if needed
+        if (featureType.toLowerCase() === 'gene' || featureType.toLowerCase() === 'cds') {
+            svgContent += `${isForward ? `<text x="${width/2}" y="${height/2 + 5}" text-anchor="middle" font-size="10" fill="#666">→</text>` : ''}`;
+            svgContent += `${!isForward ? `<text x="${width/2}" y="${height/2 + 5}" text-anchor="middle" font-size="10" fill="#666">←</text>` : ''}`;
+        }
+        
+        svgContent += `</svg>`;
+        return svgContent;
+    }
+    
+    /**
+     * Create example SVG for operon (multiple genes)
+     */
+    createOperonExampleSVG() {
+        const width = 280;
+        const height = 40;
+        const gene1Width = 80;
+        const gene2Width = 100;
+        const gene3Width = 90;
+        const gap1 = 20;
+        const gap2 = 15;
+        const start1 = 10;
+        const start2 = start1 + gene1Width + gap1;
+        const start3 = start2 + gene2Width + gap2;
+        
+        return `
+            <svg width="${width}" height="${height}" style="display: block;">
+                <defs>
+                    <linearGradient id="operon-gene1" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.9" />
+                        <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0.7" />
+                    </linearGradient>
+                    <linearGradient id="operon-gene2" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.9" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.7" />
+                    </linearGradient>
+                    <linearGradient id="operon-gene3" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.9" />
+                        <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0.7" />
+                    </linearGradient>
+                </defs>
+                <!-- Gene 1 -->
+                <rect x="${start1}" y="${height/2 - 10}" width="${gene1Width}" height="20" 
+                      fill="url(#operon-gene1)" stroke="#3b82f6" stroke-width="1.5" rx="3"/>
+                <path d="M ${start1} ${height/2} L ${start1 + gene1Width - 15} ${height/2} L ${start1 + gene1Width - 25} ${height/2 - 8} L ${start1 + gene1Width - 15} ${height/2} L ${start1 + gene1Width - 25} ${height/2 + 8} Z" 
+                      fill="#3b82f6" stroke="#3b82f6" stroke-width="1"/>
+                <!-- Gene 2 -->
+                <rect x="${start2}" y="${height/2 - 10}" width="${gene2Width}" height="20" 
+                      fill="url(#operon-gene2)" stroke="#6366f1" stroke-width="1.5" rx="3"/>
+                <path d="M ${start2} ${height/2} L ${start2 + gene2Width - 15} ${height/2} L ${start2 + gene2Width - 25} ${height/2 - 8} L ${start2 + gene2Width - 15} ${height/2} L ${start2 + gene2Width - 25} ${height/2 + 8} Z" 
+                      fill="#6366f1" stroke="#6366f1" stroke-width="1"/>
+                <!-- Gene 3 -->
+                <rect x="${start3}" y="${height/2 - 10}" width="${gene3Width}" height="20" 
+                      fill="url(#operon-gene3)" stroke="#8b5cf6" stroke-width="1.5" rx="3"/>
+                <path d="M ${start3} ${height/2} L ${start3 + gene3Width - 15} ${height/2} L ${start3 + gene3Width - 25} ${height/2 - 8} L ${start3 + gene3Width - 15} ${height/2} L ${start3 + gene3Width - 25} ${height/2 + 8} Z" 
+                      fill="#8b5cf6" stroke="#8b5cf6" stroke-width="1"/>
+                <text x="${width/2}" y="${height/2 + 5}" text-anchor="middle" font-size="9" fill="#666" font-style="italic">Operon (same row)</text>
+            </svg>
+        `;
     }
     
     /**

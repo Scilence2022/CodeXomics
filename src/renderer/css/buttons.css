@@ -544,6 +544,11 @@
     border-color: #ef4444;
 }
 
+.track-gallery-btn:hover {
+    color: #9333ea;
+    border-color: #9333ea;
+}
+
 /* Reset Position Button for Modals */
 .reset-position-btn {
     background: none;
