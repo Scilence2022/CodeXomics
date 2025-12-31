@@ -1500,6 +1500,18 @@ class TrackRenderer {
     createPromoterShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-promoter ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+        
+        // Use simple color fill instead of gradient, consistent with tRNA and rRNA
+        const fillColor = operonInfo.color;
+        const strokeColor = this.darkenColor(operonInfo.color, 20);
+        
+        // Dynamic border width based on element size
+        let strokeWidth = 1;
+        if (width < 8) {
+            strokeWidth = 0; // No border for very small elements
+        } else if (width < 20) {
+            strokeWidth = 0.5; // Thin border for small elements
+        }
 
         if (isLeftTruncated || isRightTruncated) {
             // For truncated promoters, use simplified shape
@@ -1513,18 +1525,10 @@ class TrackRenderer {
             }
             
             path.setAttribute('d', pathData);
-            path.setAttribute('fill', `url(#${gradientId})`);
-            
-            // Dynamic border width based on element size
-            let strokeWidth = 1;
-            if (width < 8) {
-                strokeWidth = 0; // No border for very small elements
-            } else if (width < 20) {
-                strokeWidth = 0.5; // Thin border for small elements
-            }
+            path.setAttribute('fill', fillColor);
             
             if (strokeWidth > 0) {
-                path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+                path.setAttribute('stroke', strokeColor);
                 path.setAttribute('stroke-width', strokeWidth.toString());
             } else {
                 path.setAttribute('stroke', 'transparent');
@@ -1534,75 +1538,68 @@ class TrackRenderer {
             return group;
         }
 
-        // Normal promoter: vertical line + horizontal arrow
-        // Dynamic stroke width based on element size
-        let strokeWidth = Math.max(1, Math.min(2, height / 12));
-        if (width < 10) {
-            strokeWidth = Math.max(0.5, strokeWidth * 0.5); // Reduce stroke width for small elements
-        } else if (width < 5) {
-            strokeWidth = 0; // No stroke for very small elements
-        }
-        
-        const arrowLength = Math.min(width * 0.8, height * 2); // 增加箭头长度
-        const arrowHeight = Math.max(4, height * 0.2);
-        
-        if (strokeWidth > 0) {
-            // Vertical line (always full height)
-            const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            const verticalLineX = width * 0.3;
-            verticalLine.setAttribute('x1', verticalLineX);
-            verticalLine.setAttribute('y1', 0);
-            verticalLine.setAttribute('x2', verticalLineX);
-            verticalLine.setAttribute('y2', height);
-            verticalLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            verticalLine.setAttribute('stroke-width', strokeWidth);
+        if (width < 12) {
+            // Small promoter: use a simple, intuitive shape
+            const triangle = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let trianglePath;
             
-            // Horizontal arrow - position at line endpoints
-            const horizontalY = isForward ? 0 : height; // +链在顶端，-链在底端
-            const arrowStartX = verticalLineX;
-            
-            // Calculate arrow end position with proper bounds checking
-            let arrowEndX;
             if (isForward) {
-                arrowEndX = Math.min(width - arrowHeight, arrowStartX + arrowLength);
+                // Forward strand: right-pointing triangle
+                trianglePath = `M 0 ${height/2} L ${width} 0 L ${width} ${height} Z`;
             } else {
-                arrowEndX = Math.max(arrowHeight, arrowStartX - arrowLength);
+                // Reverse strand: left-pointing triangle
+                trianglePath = `M ${width} ${height/2} L 0 0 L 0 ${height} Z`;
             }
             
-            // Horizontal line
-            const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            horizontalLine.setAttribute('x1', arrowStartX);
-            horizontalLine.setAttribute('y1', horizontalY);
-            horizontalLine.setAttribute('x2', arrowEndX);
-            horizontalLine.setAttribute('y2', horizontalY);
-            horizontalLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            horizontalLine.setAttribute('stroke-width', strokeWidth);
+            triangle.setAttribute('d', trianglePath);
+            triangle.setAttribute('fill', fillColor);
             
-            // Arrow head
-            const arrowHead = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const arrowDirection = isForward ? 1 : -1;
+            if (strokeWidth > 0) {
+                triangle.setAttribute('stroke', strokeColor);
+                triangle.setAttribute('stroke-width', strokeWidth.toString());
+            } else {
+                triangle.setAttribute('stroke', 'transparent');
+                triangle.setAttribute('stroke-width', '0');
+            }
             
-            const arrowPath = `M ${arrowEndX} ${horizontalY} 
-                              L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY - arrowHeight/2} 
-                              L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY + arrowHeight/2} Z`;
-            
-            arrowHead.setAttribute('d', arrowPath);
-            arrowHead.setAttribute('fill', this.darkenColor(operonInfo.color, 20));
-            arrowHead.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            arrowHead.setAttribute('stroke-width', strokeWidth);
-            
-            group.appendChild(verticalLine);
-            group.appendChild(horizontalLine);
-            group.appendChild(arrowHead);
+            group.appendChild(triangle);
         } else {
-            // For very small promoters, use a simple dot
-            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            dot.setAttribute('cx', width / 2);
-            dot.setAttribute('cy', height / 2);
-            dot.setAttribute('r', Math.min(width, height) * 0.3);
-            dot.setAttribute('fill', `url(#${gradientId})`);
-            dot.setAttribute('stroke', 'transparent');
-            group.appendChild(dot);
+            // Normal promoter: improved shape with arrow indicator
+            // Create a horizontal arrow shape that's more intuitive
+            const arrowSize = Math.min(15, width * 0.25);
+            const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData;
+            
+            if (isForward) {
+                // Forward strand: right-pointing arrow
+                pathData = `M 0 0 
+                           L ${width - arrowSize} 0 
+                           L ${width} ${height/2} 
+                           L ${width - arrowSize} ${height} 
+                           L 0 ${height} 
+                           Z`;
+            } else {
+                // Reverse strand: left-pointing arrow
+                pathData = `M ${arrowSize} 0 
+                           L ${width} 0 
+                           L ${width} ${height} 
+                           L ${arrowSize} ${height} 
+                           L 0 ${height/2} 
+                           Z`;
+            }
+            
+            arrowPath.setAttribute('d', pathData);
+            arrowPath.setAttribute('fill', fillColor);
+            
+            if (strokeWidth > 0) {
+                arrowPath.setAttribute('stroke', strokeColor);
+                arrowPath.setAttribute('stroke-width', strokeWidth.toString());
+            } else {
+                arrowPath.setAttribute('stroke', 'transparent');
+                arrowPath.setAttribute('stroke-width', '0');
+            }
+            
+            group.appendChild(arrowPath);
         }
         
         return group;
