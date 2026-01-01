@@ -1255,12 +1255,19 @@ class TrackRenderer {
         // Get operon information and color
         const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
 
+        // Calculate zoom-based stroke width (consistent for all elements at same zoom level)
+        // Base range for "normal" zoom (e.g., 10,000 bp = strokeWidth 1.5)
+        const viewportRange = viewport.end - viewport.start;
+        const baseRange = 10000;
+        const zoomFactor = baseRange / viewportRange;
+        const strokeWidth = Math.max(0.3, Math.min(2, 1.5 * zoomFactor));
+
         // Create gradient for gene background
         const gradientId = `gene-gradient-${gene.start}-${gene.end}-${rowIndex}`;
         const gradient = this.createSVGGeneGradient(defs, gradientId, operonInfo.color);
 
         // Create gene shape based on strand direction and truncation state
-        const geneShape = this.createSVGGeneShape(gene, elementWidth, elementHeight, gradientId, operonInfo, isLeftTruncated, isRightTruncated);
+        const geneShape = this.createSVGGeneShape(gene, elementWidth, elementHeight, gradientId, operonInfo, isLeftTruncated, isRightTruncated, strokeWidth);
         geneGroup.appendChild(geneShape);
 
         // Add gene text label if there's enough space
@@ -1342,14 +1349,15 @@ class TrackRenderer {
 
     /**
      * Create SVG shape for gene (with directional indicators based on size and specialized shapes by type)
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createSVGGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated = false, isRightTruncated = false) {
+    createSVGGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated = false, isRightTruncated = false, strokeWidth = 1) {
         const isForward = gene.strand !== -1;
         const geneType = gene.type.toLowerCase();
 
         // Create specialized shapes for specific gene types
         if (this.shouldUseSpecializedShape(geneType)) {
-            return this.createSpecializedGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated);
+            return this.createSpecializedGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, strokeWidth);
         }
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -1436,21 +1444,11 @@ class TrackRenderer {
         path.setAttribute('d', pathData);
         path.setAttribute('fill', `url(#${gradientId})`);
 
-        // Dynamic border width based on element size
-        let strokeWidth = 1;
-        if (width < 8) {
-            // Very small elements: reduce border width or make it transparent
-            strokeWidth = 0; // No border for very small elements
-        } else if (width < 20) {
-            // Small elements: thin border
-            strokeWidth = 0.5;
-        }
-
+        // Use zoom-based stroke width (passed as parameter)
         if (strokeWidth > 0) {
             path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
             path.setAttribute('stroke-width', strokeWidth.toString());
         } else {
-            // Remove border completely for very small elements
             path.setAttribute('stroke', 'transparent');
             path.setAttribute('stroke-width', '0');
         }
@@ -1467,30 +1465,31 @@ class TrackRenderer {
 
     /**
      * Create specialized shapes for specific gene types
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createSpecializedGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated = false, isRightTruncated = false) {
+    createSpecializedGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated = false, isRightTruncated = false, strokeWidth = 1) {
         const geneType = gene.type.toLowerCase();
         const isForward = gene.strand !== -1;
 
         switch (geneType) {
             case 'promoter':
-                return this.createPromoterShape(width, height, 'promoter-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createPromoterShape(width, height, 'promoter-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth);
             case 'terminator':
-                return this.createTerminatorShape(width, height, 'terminator-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createTerminatorShape(width, height, 'terminator-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth);
             case 'regulatory':
-                return this.createRegulatoryShape(width, height, 'regulatory-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createRegulatoryShape(width, height, 'regulatory-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth);
             case 'repeat_region':
-                return this.createRepeatShape(width, height, 'repeat-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createRepeatShape(width, height, 'repeat-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth);
             case 'trna':
-                return this.createTRNAShape(width, height, 'trna-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createTRNAShape(width, height, 'trna-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth);
             case 'rrna':
-                return this.createRRNAShape(width, height, 'rrna-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createRRNAShape(width, height, 'rrna-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth);
             case 'mrna':
-                return this.createMRNAShape(width, height, 'mrna-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createMRNAShape(width, height, 'mrna-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth);
             case 'comment':
             case 'note':
             case 'misc_feature':
-                return this.createCommentShape(width, height, 'comment-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createCommentShape(width, height, 'comment-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth);
             default:
                 // Fallback to regular arrow/triangle
                 return null;
@@ -1500,8 +1499,9 @@ class TrackRenderer {
     /**
      * Create promoter shape - bent elbow arrow indicating transcription start
      * Design: A distinctive bent arrow (⌐ or ⌙ shape) that clearly shows direction
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createPromoterShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+    createPromoterShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-promoter ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
 
@@ -1509,11 +1509,7 @@ class TrackRenderer {
         const fillColor = '#3b82f6'; // Blue fill for promoter
         const strokeColor = '#1e40af'; // Darker blue stroke
 
-        // Dynamic stroke width based on element size
-        let strokeWidth = Math.max(1.5, Math.min(2.5, width / 15));
-        if (width < 12) {
-            strokeWidth = Math.max(1, width / 10);
-        }
+        // Use zoom-based stroke width (passed as parameter)
 
         if (isLeftTruncated || isRightTruncated) {
             // For truncated promoters, use simplified shape
@@ -1599,8 +1595,9 @@ class TrackRenderer {
     /**
      * Create terminator shape - T-shaped stem-loop/hairpin design
      * Design: A T-shaped form with a stem and a loop/ball at top, representing transcription termination
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createTerminatorShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+    createTerminatorShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-terminator ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
 
@@ -1608,11 +1605,7 @@ class TrackRenderer {
         const fillColor = '#dc2626'; // Red fill for terminator
         const strokeColor = '#7f1d1d'; // Darker red stroke
 
-        // Dynamic stroke width based on element size
-        let strokeWidth = Math.max(1.5, Math.min(2.5, width / 15));
-        if (width < 12) {
-            strokeWidth = Math.max(1, width / 10);
-        }
+        // Use zoom-based stroke width (passed as parameter)
 
         if (isLeftTruncated || isRightTruncated) {
             // For truncated terminators, use simplified shape
@@ -1677,8 +1670,9 @@ class TrackRenderer {
 
     /**
      * Create regulatory shape (diamond/rhombus)
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createRegulatoryShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+    createRegulatoryShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         let pathData;
 
@@ -1697,14 +1691,7 @@ class TrackRenderer {
         path.setAttribute('d', pathData);
         path.setAttribute('fill', `url(#${gradientId})`);
 
-        // Dynamic border width based on element size
-        let strokeWidth = 1;
-        if (width < 8) {
-            strokeWidth = 0; // No border for very small elements
-        } else if (width < 20) {
-            strokeWidth = 0.5; // Thin border for small elements
-        }
-
+        // Use zoom-based stroke width (passed as parameter)
         if (strokeWidth > 0) {
             path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
             path.setAttribute('stroke-width', strokeWidth.toString());
@@ -1718,8 +1705,9 @@ class TrackRenderer {
 
     /**
      * Create repeat region shape (wavy rectangle)
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createRepeatShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+    createRepeatShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         let pathData;
 
@@ -1751,14 +1739,7 @@ class TrackRenderer {
         path.setAttribute('d', pathData);
         path.setAttribute('fill', `url(#${gradientId})`);
 
-        // Dynamic border width based on element size
-        let strokeWidth = 1;
-        if (width < 8) {
-            strokeWidth = 0; // No border for very small elements
-        } else if (width < 20) {
-            strokeWidth = 0.5; // Thin border for small elements
-        }
-
+        // Use zoom-based stroke width (passed as parameter)
         if (strokeWidth > 0) {
             path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
             path.setAttribute('stroke-width', strokeWidth.toString());
@@ -1773,8 +1754,9 @@ class TrackRenderer {
     /**
      * Create tRNA shape - cloverleaf-inspired design
      * Design: A distinctive cloverleaf pattern representing the classic tRNA secondary structure
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createTRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+    createTRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-trna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
 
@@ -1782,11 +1764,7 @@ class TrackRenderer {
         const fillColor = '#22c55e'; // Green fill for tRNA
         const strokeColor = '#166534'; // Darker green stroke
 
-        // Dynamic stroke width based on element size
-        let strokeWidth = Math.max(0.5, Math.min(1.5, width / 20));
-        if (width < 5) {
-            strokeWidth = 0.3;
-        }
+        // Use zoom-based stroke width (passed as parameter)
 
         if (isLeftTruncated || isRightTruncated) {
             // For truncated tRNA, use path with jagged edges
@@ -1861,8 +1839,9 @@ class TrackRenderer {
     /**
      * Create rRNA shape - wavy ribbon/helix-inspired design
      * Design: A distinctive wavy ribbon shape representing ribosomal RNA
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createRRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+    createRRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-rrna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
 
@@ -1870,11 +1849,7 @@ class TrackRenderer {
         const fillColor = '#16a34a'; // Darker green for rRNA
         const strokeColor = '#14532d'; // Even darker green stroke
 
-        // Dynamic stroke width based on element size
-        let strokeWidth = Math.max(0.5, Math.min(1.5, width / 20));
-        if (width < 5) {
-            strokeWidth = 0.3;
-        }
+        // Use zoom-based stroke width (passed as parameter)
 
         if (isLeftTruncated || isRightTruncated) {
             // For truncated rRNA, use path with jagged edges
@@ -1970,8 +1945,9 @@ class TrackRenderer {
 
     /**
      * Create mRNA shape (wavy line/sine wave)
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createMRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+    createMRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         let pathData;
 
@@ -2008,14 +1984,7 @@ class TrackRenderer {
         path.setAttribute('d', pathData);
         path.setAttribute('fill', `url(#${gradientId})`);
 
-        // Dynamic border width based on element size
-        let strokeWidth = 1;
-        if (width < 8) {
-            strokeWidth = 0; // No border for very small elements
-        } else if (width < 20) {
-            strokeWidth = 0.5; // Thin border for small elements
-        }
-
+        // Use zoom-based stroke width (passed as parameter)
         if (strokeWidth > 0) {
             path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
             path.setAttribute('stroke-width', strokeWidth.toString());
@@ -2029,8 +1998,9 @@ class TrackRenderer {
 
     /**
      * Create comment/note shape (speech bubble or annotation marker)
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
-    createCommentShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+    createCommentShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-comment ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
 
@@ -2048,7 +2018,7 @@ class TrackRenderer {
             path.setAttribute('d', pathData);
             path.setAttribute('fill', `url(#${gradientId})`);
             path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            path.setAttribute('stroke-width', '1');
+            path.setAttribute('stroke-width', strokeWidth.toString());
             group.appendChild(path);
             return group;
         }
@@ -2064,7 +2034,7 @@ class TrackRenderer {
             rect.setAttribute('ry', Math.min(3, height * 0.15));
             rect.setAttribute('fill', `url(#${gradientId})`);
             rect.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            rect.setAttribute('stroke-width', '1');
+            rect.setAttribute('stroke-width', strokeWidth.toString());
 
             // Small indicator dot
             const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
