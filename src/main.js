@@ -94,7 +94,7 @@ function createCircosPlotterMenu(circosWindow) {
                 { name: 'All Files', extensions: ['*'] }
               ]
             });
-            
+
             if (!result.canceled && result.filePaths.length > 0) {
               circosWindow.webContents.send('circos-menu-action', 'open-project', result.filePaths[0]);
             }
@@ -645,7 +645,7 @@ function createToolWindowMenu(toolWindow, toolName) {
                 { name: 'All Files', extensions: ['*'] }
               ]
             });
-            
+
             if (!result.canceled && result.filePaths.length > 0) {
               toolWindow.webContents.send('tool-menu-action', 'open-file', result.filePaths[0]);
             }
@@ -916,7 +916,7 @@ function createToolWindowMenu(toolWindow, toolName) {
 
   // 创建菜单并设置为应用菜单（这会替换当前的应用菜单）
   const menu = Menu.buildFromTemplate(template);
-  
+
   // 设置窗口聚焦时切换菜单
   toolWindow.on('focus', () => {
     currentActiveWindow = toolWindow;
@@ -990,7 +990,7 @@ function createEvo2WindowMenu(evo2Window) {
         }
       ]
     }] : []),
-    
+
     // File Menu
     {
       label: 'File',
@@ -1016,7 +1016,7 @@ function createEvo2WindowMenu(evo2Window) {
                 { name: 'All Files', extensions: ['*'] }
               ]
             });
-            
+
             if (!result.canceled && result.filePaths.length > 0) {
               evo2Window.webContents.send('evo2-menu-action', 'open-sequence-file', result.filePaths[0]);
             }
@@ -1416,7 +1416,7 @@ function createWindow() {
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    
+
     // Initialize RPC interface after window is ready
     genomeStudioRPC.setMainWindow(mainWindow);
     genomeStudioRPC.initialize();
@@ -1446,24 +1446,24 @@ function createWindow() {
 // Helper function to get the current active main window
 function getCurrentMainWindow() {
   // First try to use the tracked current active window
-  if (currentActiveWindow && !currentActiveWindow.isDestroyed() && 
-      currentActiveWindow.getTitle().includes('CodeXomics') && 
-      !currentActiveWindow.getTitle().includes('Project Manager')) {
+  if (currentActiveWindow && !currentActiveWindow.isDestroyed() &&
+    currentActiveWindow.getTitle().includes('CodeXomics') &&
+    !currentActiveWindow.getTitle().includes('Project Manager')) {
     return currentActiveWindow;
   }
-  
+
   // Fall back to the original mainWindow
   if (mainWindow && !mainWindow.isDestroyed()) {
     return mainWindow;
   }
-  
+
   // Last resort: find any main window
-  const mainWindows = BrowserWindow.getAllWindows().filter(win => 
-    !win.isDestroyed() && 
-    win.getTitle().includes('CodeXomics') && 
+  const mainWindows = BrowserWindow.getAllWindows().filter(win =>
+    !win.isDestroyed() &&
+    win.getTitle().includes('CodeXomics') &&
     !win.getTitle().includes('Project Manager')
   );
-  
+
   return mainWindows.length > 0 ? mainWindows[0] : null;
 }
 
@@ -1481,14 +1481,14 @@ function sendToCurrentMainWindow(channel, ...args) {
 function getCustomExternalToolsMenuItems() {
   const customTools = global.customExternalTools || [];
   const menuItems = [];
-  
+
   // Filter custom tools only
   const customOnlyTools = customTools.filter(tool => tool.type === 'custom');
-  
+
   if (customOnlyTools.length > 0) {
     // Add separator before custom tools if there are any
     menuItems.push({ type: 'separator' });
-    
+
     // Add each custom tool as a menu item
     customOnlyTools.forEach(tool => {
       // Create a copy of the tool data to avoid closure issues
@@ -1498,7 +1498,7 @@ function getCustomExternalToolsMenuItems() {
         name: tool.name,
         url: tool.url
       };
-      
+
       menuItems.push({
         label: tool.name,
         click: () => {
@@ -1507,7 +1507,7 @@ function getCustomExternalToolsMenuItems() {
       });
     });
   }
-  
+
   return menuItems;
 }
 
@@ -1593,7 +1593,7 @@ function createMenu() {
                 { name: 'All Files', extensions: ['*'] }
               ]
             });
-            
+
             if (!result.canceled && result.filePaths.length > 0) {
               sendToCurrentMainWindow('file-opened', result.filePaths[0]);
             }
@@ -1614,7 +1614,7 @@ function createMenu() {
           click: async () => {
             // Create or focus Project Manager window first
             createProjectManagerWindow();
-            
+
             // Small delay to ensure window is ready
             setTimeout(async () => {
               const result = await dialog.showOpenDialog(null, {
@@ -1627,7 +1627,7 @@ function createMenu() {
                 ],
                 title: 'Open Project'
               });
-              
+
               if (!result.canceled && result.filePaths.length > 0) {
                 // Send the file path to the Project Manager window
                 const projectManagerWindow = BrowserWindow.getAllWindows().find(
@@ -2099,13 +2099,13 @@ function createMenu() {
       submenu: [
         ...(process.platform !== 'darwin' ? [
           {
-                      label: `About ${APP_NAME}`,
-          click: () => {
-            const currentWindow = getCurrentMainWindow();
-            dialog.showMessageBox(currentWindow || null, {
-              type: 'info',
-              title: `About ${APP_NAME}`,
-              message: VERSION_INFO.appTitle,
+            label: `About ${APP_NAME}`,
+            click: () => {
+              const currentWindow = getCurrentMainWindow();
+              dialog.showMessageBox(currentWindow || null, {
+                type: 'info',
+                title: `About ${APP_NAME}`,
+                message: VERSION_INFO.appTitle,
                 detail: 'A modern AI-powered genome analysis studio built with Electron'
               });
             }
@@ -2188,14 +2188,14 @@ function createMenu() {
 // Function to set up environment variables for system command execution
 function setupEnvironmentVariables() {
   console.log('Setting up environment variables for system command execution...');
-  
+
   const os = require('os');
   const path = require('path');
   const fs = require('fs');
-  
+
   // Get user's home directory
   const homeDir = os.homedir();
-  
+
   // Common BLAST+ installation paths
   const commonBlastPaths = [
     '/usr/local/bin',
@@ -2207,7 +2207,7 @@ function setupEnvironmentVariables() {
     path.join(homeDir, '.local', 'bin'),
     '/opt/blast+/bin'
   ];
-  
+
   // Add common BLAST+ paths to PATH
   const existingPath = process.env.PATH || '';
   const additionalPaths = commonBlastPaths.filter(blastPath => {
@@ -2217,20 +2217,20 @@ function setupEnvironmentVariables() {
       return false;
     }
   });
-  
+
   if (additionalPaths.length > 0) {
     const newPath = additionalPaths.join(path.delimiter) + path.delimiter + existingPath;
     process.env.PATH = newPath;
     console.log('Added BLAST+ paths to environment:', additionalPaths);
   }
-  
+
   // Set BLASTDB environment variable if not already set
   if (!process.env.BLASTDB) {
     const blastDbPath = path.join(homeDir, 'blast', 'db');
     process.env.BLASTDB = blastDbPath;
     console.log('Set BLASTDB environment variable:', blastDbPath);
   }
-  
+
   // Log current environment for debugging
   console.log('Current PATH:', process.env.PATH);
   console.log('Current BLASTDB:', process.env.BLASTDB);
@@ -2240,20 +2240,20 @@ function setupEnvironmentVariables() {
 app.whenReady().then(() => {
   // Set up environment variables for system command execution
   setupEnvironmentVariables();
-  
+
   // Check if app was launched with --open-project argument
   const args = process.argv.slice(1);
   const openProjectIndex = args.indexOf('--open-project');
   let projectToOpen = null;
-  
+
   if (openProjectIndex !== -1 && args[openProjectIndex + 1]) {
     projectToOpen = args[openProjectIndex + 1];
     console.log('📂 App launched with project file:', projectToOpen);
   }
-  
+
   createWindow();
   createMenu();
-  
+
   // If a project file was specified, open Project Manager with that project
   if (projectToOpen) {
     setTimeout(() => {
@@ -2300,12 +2300,12 @@ app.on('before-quit', async () => {
 ipcMain.on('tool-execution', async (event, data) => {
   console.log('🔧 [Main] Received tool execution request:', data);
   const { requestId, toolName, parameters, clientId } = data;
-  
+
   try {
     if (!mainWindow || mainWindow.isDestroyed()) {
       throw new Error('Main window not available for tool execution');
     }
-    
+
     // Forward the tool execution request to the renderer process
     console.log('📡 [Main] Forwarding tool execution to renderer:', toolName);
     mainWindow.webContents.send('execute-tool-request', {
@@ -2314,7 +2314,7 @@ ipcMain.on('tool-execution', async (event, data) => {
       parameters,
       clientId
     });
-    
+
   } catch (error) {
     console.error('❌ [Main] Tool execution forwarding failed:', error);
     // Send error response back to MCP server
@@ -2342,10 +2342,10 @@ ipcMain.on('tool-response', (event, response) => {
  */
 ipcMain.handle('get-plugin-paths', async () => {
   const isDevelopment = !app.isPackaged;
-  
+
   let builtinPluginsPath;
   let userPluginsPath;
-  
+
   if (isDevelopment) {
     // Development: use source directory
     builtinPluginsPath = path.join(__dirname, 'renderer', 'modules', 'Plugins');
@@ -2355,7 +2355,7 @@ ipcMain.handle('get-plugin-paths', async () => {
     builtinPluginsPath = path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins');
     userPluginsPath = path.join(app.getPath('userData'), 'plugins');
   }
-  
+
   return {
     isDevelopment,
     builtinPluginsPath,
@@ -2387,7 +2387,7 @@ ipcMain.handle('list-plugins', async (event, pluginPath) => {
     if (!fs.existsSync(pluginPath)) {
       return { success: true, plugins: [] };
     }
-    
+
     const items = fs.readdirSync(pluginPath, { withFileTypes: true });
     const plugins = items
       .filter(item => item.isDirectory())
@@ -2396,7 +2396,7 @@ ipcMain.handle('list-plugins', async (event, pluginPath) => {
         path: path.join(pluginPath, item.name),
         hasManifest: fs.existsSync(path.join(pluginPath, item.name, 'plugin.json'))
       }));
-    
+
     return { success: true, plugins };
   } catch (error) {
     console.error('Failed to list plugins:', error);
@@ -2480,25 +2480,25 @@ ipcMain.handle('scan-plugin-directory', async () => {
         };
       }
     })();
-    
+
     const plugins = [];
-    
+
     // Scan both plugin directories
     const dirsToScan = [
       { path: paths.builtinPluginsPath, type: 'builtin' },
       { path: paths.userPluginsPath, type: 'user' }
     ];
-    
+
     for (const dirInfo of dirsToScan) {
       if (!fs.existsSync(dirInfo.path)) {
         continue;
       }
-      
+
       const items = fs.readdirSync(dirInfo.path, { withFileTypes: true });
-      
+
       for (const item of items) {
         const itemPath = path.join(dirInfo.path, item.name);
-        
+
         // Check for plugin directories with plugin.json
         if (item.isDirectory()) {
           const manifestPath = path.join(itemPath, 'plugin.json');
@@ -2530,26 +2530,26 @@ ipcMain.handle('scan-plugin-directory', async () => {
             // Read first few lines to check for plugin metadata
             const content = fs.readFileSync(itemPath, 'utf8');
             const lines = content.split('\n').slice(0, 50);
-            
+
             // Look for plugin metadata in comments or class definition
             let pluginName = item.name.replace('.js', '');
             let pluginDescription = 'JavaScript plugin file';
             let pluginVersion = '1.0.0';
             let pluginAuthor = 'Unknown';
-            
+
             // Try to extract metadata from comments
             for (const line of lines) {
               const nameMatch = line.match(/@name\s+(.+)/);
               const descMatch = line.match(/@description\s+(.+)/);
               const versionMatch = line.match(/@version\s+(.+)/);
               const authorMatch = line.match(/@author\s+(.+)/);
-              
+
               if (nameMatch) pluginName = nameMatch[1].trim();
               if (descMatch) pluginDescription = descMatch[1].trim();
               if (versionMatch) pluginVersion = versionMatch[1].trim();
               if (authorMatch) pluginAuthor = authorMatch[1].trim();
             }
-            
+
             plugins.push({
               id: item.name.replace('.js', ''),
               name: pluginName,
@@ -2569,7 +2569,7 @@ ipcMain.handle('scan-plugin-directory', async () => {
         }
       }
     }
-    
+
     return {
       success: true,
       plugins,
@@ -2594,7 +2594,7 @@ ipcMain.handle('scan-plugin-directory', async () => {
 ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
   try {
     const stats = fs.statSync(pluginPath);
-    
+
     if (stats.isDirectory()) {
       // Try to load plugin.json
       const manifestPath = path.join(pluginPath, 'plugin.json');
@@ -2602,7 +2602,7 @@ ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
         const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
         return { success: true, metadata: manifest };
       }
-      
+
       // Try to load from package.json
       const packagePath = path.join(pluginPath, 'package.json');
       if (fs.existsSync(packagePath)) {
@@ -2623,7 +2623,7 @@ ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
       // Parse JavaScript file for metadata
       const content = fs.readFileSync(pluginPath, 'utf8');
       const lines = content.split('\n');
-      
+
       const metadata = {
         id: path.basename(pluginPath, '.js'),
         name: path.basename(pluginPath, '.js'),
@@ -2632,7 +2632,7 @@ ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
         author: 'Unknown',
         functions: []
       };
-      
+
       // Extract metadata from JSDoc comments
       for (let i = 0; i < Math.min(100, lines.length); i++) {
         const line = lines[i];
@@ -2641,7 +2641,7 @@ ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
         if (line.includes('@version')) metadata.version = line.split('@version')[1].trim();
         if (line.includes('@author')) metadata.author = line.split('@author')[1].trim();
       }
-      
+
       // Try to extract function names
       const functionMatches = content.match(/(?:async\s+)?function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?function|(?:async\s+)?(\w+)\s*\(/g);
       if (functionMatches) {
@@ -2650,10 +2650,10 @@ ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
           return { name };
         });
       }
-      
+
       return { success: true, metadata };
     }
-    
+
     return {
       success: false,
       error: 'Not a valid plugin file or directory'
@@ -2675,7 +2675,7 @@ ipcMain.handle('extract-plugin-zip', async (event, zipPath) => {
     // Create temp directory for extraction
     const tempDir = path.join(app.getPath('temp'), `plugin-${Date.now()}`);
     fs.mkdirSync(tempDir, { recursive: true });
-    
+
     // Note: This is a placeholder - you'll need to add a zip extraction library
     // For now, return error indicating zip extraction not implemented
     return {
@@ -2700,13 +2700,13 @@ ipcMain.handle('copy-plugin-directory', async (event, sourcePath, destPath) => {
       if (!fs.existsSync(dest)) {
         fs.mkdirSync(dest, { recursive: true });
       }
-      
+
       const entries = fs.readdirSync(src, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const srcPath = path.join(src, entry.name);
         const destPath = path.join(dest, entry.name);
-        
+
         if (entry.isDirectory()) {
           copyRecursive(srcPath, destPath);
         } else {
@@ -2714,7 +2714,7 @@ ipcMain.handle('copy-plugin-directory', async (event, sourcePath, destPath) => {
         }
       }
     };
-    
+
     copyRecursive(sourcePath, destPath);
     return { success: true };
   } catch (error) {
@@ -2761,21 +2761,21 @@ ipcMain.handle('write-plugin-file', async (event, filePath, content) => {
  */
 ipcMain.handle('write-plugin-files', async (event, options) => {
   const { pluginId, installPath, data, manifest } = options;
-  
+
   console.log(`[Main] Writing plugin files for ${pluginId} to ${installPath}`);
-  
+
   try {
     // Create plugin directory if it doesn't exist
     if (!fs.existsSync(installPath)) {
       fs.mkdirSync(installPath, { recursive: true });
       console.log(`[Main] Created plugin directory: ${installPath}`);
     }
-    
+
     // Write manifest file (plugin.json)
     const manifestPath = path.join(installPath, 'plugin.json');
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
     console.log(`[Main] Wrote manifest to: ${manifestPath}`);
-    
+
     // Handle the plugin data
     if (data) {
       if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'number') {
@@ -2784,7 +2784,7 @@ ipcMain.handle('write-plugin-files', async (event, options) => {
         const buffer = Buffer.from(data);
         fs.writeFileSync(zipPath, buffer);
         console.log(`[Main] Wrote ZIP file (${buffer.length} bytes): ${zipPath}`);
-        
+
         // Try to extract the ZIP file using native zlib if it's a valid zip
         try {
           const AdmZip = require('adm-zip');
@@ -2797,36 +2797,36 @@ ipcMain.handle('write-plugin-files', async (event, options) => {
           // If adm-zip is not available or extraction fails, keep the ZIP for manual extraction
           console.log(`[Main] ZIP extraction not available, keeping ZIP file: ${extractError.message}`);
         }
-        
+
       } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
         // Binary data (ArrayBuffer/TypedArray) - should not normally reach here after IPC
         const zipPath = path.join(installPath, `${pluginId}.zip`);
         const buffer = Buffer.from(data);
         fs.writeFileSync(zipPath, buffer);
         console.log(`[Main] Wrote binary data (${buffer.length} bytes): ${zipPath}`);
-        
+
       } else if (typeof data === 'object' && !Array.isArray(data)) {
         // JSON package (mock package with files object)
         for (const [filename, content] of Object.entries(data)) {
           const filePath = path.join(installPath, filename);
           const fileDir = path.dirname(filePath);
-          
+
           if (!fs.existsSync(fileDir)) {
             fs.mkdirSync(fileDir, { recursive: true });
           }
-          
+
           // Handle different content types
           if (typeof content === 'string') {
             fs.writeFileSync(filePath, content, 'utf8');
           } else if (typeof content === 'object') {
             fs.writeFileSync(filePath, JSON.stringify(content, null, 2), 'utf8');
           }
-          
+
           console.log(`[Main] Wrote file: ${filePath}`);
         }
       }
     }
-    
+
     // Create an index.js entry point if not provided
     const indexPath = path.join(installPath, 'index.js');
     if (!fs.existsSync(indexPath)) {
@@ -2834,20 +2834,20 @@ ipcMain.handle('write-plugin-files', async (event, options) => {
       fs.writeFileSync(indexPath, defaultIndex, 'utf8');
       console.log(`[Main] Created default index.js`);
     }
-    
+
     console.log(`[Main] Plugin ${pluginId} installed successfully to ${installPath}`);
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       installPath,
       files: fs.readdirSync(installPath)
     };
-    
+
   } catch (error) {
     console.error(`[Main] Failed to write plugin files for ${pluginId}:`, error);
-    return { 
-      success: false, 
-      error: error.message 
+    return {
+      success: false,
+      error: error.message
     };
   }
 });
@@ -2857,41 +2857,41 @@ ipcMain.handle('write-plugin-files', async (event, options) => {
  */
 ipcMain.handle('load-plugin-from-disk', async (event, options) => {
   const { pluginId, installPath } = options;
-  
+
   console.log(`[Main] Loading plugin ${pluginId} from ${installPath}`);
-  
+
   try {
     // Check if plugin directory exists
     if (!fs.existsSync(installPath)) {
-      return { 
-        success: false, 
-        error: `Plugin directory not found: ${installPath}` 
+      return {
+        success: false,
+        error: `Plugin directory not found: ${installPath}`
       };
     }
-    
+
     // Read manifest
     const manifestPath = path.join(installPath, 'plugin.json');
     if (!fs.existsSync(manifestPath)) {
-      return { 
-        success: false, 
-        error: `Plugin manifest not found: ${manifestPath}` 
+      return {
+        success: false,
+        error: `Plugin manifest not found: ${manifestPath}`
       };
     }
-    
+
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    
+
     // List all files in plugin directory
     const files = fs.readdirSync(installPath);
-    
+
     // Read index.js if exists
     let indexContent = null;
     const indexPath = path.join(installPath, 'index.js');
     if (fs.existsSync(indexPath)) {
       indexContent = fs.readFileSync(indexPath, 'utf8');
     }
-    
+
     console.log(`[Main] Loaded plugin ${pluginId} with ${files.length} files`);
-    
+
     return {
       success: true,
       pluginId,
@@ -2900,12 +2900,12 @@ ipcMain.handle('load-plugin-from-disk', async (event, options) => {
       indexContent,
       installPath
     };
-    
+
   } catch (error) {
     console.error(`[Main] Failed to load plugin ${pluginId}:`, error);
-    return { 
-      success: false, 
-      error: error.message 
+    return {
+      success: false,
+      error: error.message
     };
   }
 });
@@ -2915,19 +2915,19 @@ ipcMain.handle('load-plugin-from-disk', async (event, options) => {
  */
 ipcMain.handle('delete-plugin-files', async (event, options) => {
   const { pluginId, installPath } = options;
-  
+
   console.log(`[Main] Deleting plugin ${pluginId} from ${installPath}`);
-  
+
   try {
     // Check if plugin directory exists
     if (!fs.existsSync(installPath)) {
       console.log(`[Main] Plugin directory doesn't exist, nothing to delete: ${installPath}`);
-      return { 
-        success: true, 
-        message: 'Plugin directory already deleted' 
+      return {
+        success: true,
+        message: 'Plugin directory already deleted'
       };
     }
-    
+
     // Recursively delete the plugin directory
     const deleteRecursive = (dirPath) => {
       if (fs.existsSync(dirPath)) {
@@ -2942,22 +2942,22 @@ ipcMain.handle('delete-plugin-files', async (event, options) => {
         fs.rmdirSync(dirPath);
       }
     };
-    
+
     deleteRecursive(installPath);
-    
+
     console.log(`[Main] Deleted plugin directory: ${installPath}`);
-    
+
     return {
       success: true,
       pluginId,
       deletedPath: installPath
     };
-    
+
   } catch (error) {
     console.error(`[Main] Failed to delete plugin ${pluginId}:`, error);
-    return { 
-      success: false, 
-      error: error.message 
+    return {
+      success: false,
+      error: error.message
     };
   }
 });
@@ -2970,33 +2970,33 @@ ipcMain.handle('read-file', async (event, filePath) => {
     const stats = fs.statSync(filePath);
     const fileSizeMB = stats.size / (1024 * 1024);
     const extension = path.extname(filePath).toLowerCase();
-    
+
     // For BAM files, don't try to read as text
     if (extension === '.bam') {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: 'BAM files are binary format and should be handled by specialized BAM reader.',
         isBamFile: true,
         fileSize: stats.size
       };
     }
-    
+
     // For files larger than 500MB, refuse to read entirely into memory
     // JavaScript has a string length limit of ~512MB
     if (fileSizeMB > 500) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: `File is too large (${fileSizeMB.toFixed(1)} MB) to read into memory. Use streaming mode instead.`,
         requiresStreaming: true,
         fileSize: stats.size
       };
     }
-    
+
     // For files larger than 100MB, warn but allow
     if (fileSizeMB > 100) {
       console.warn(`Reading large file into memory: ${fileSizeMB.toFixed(1)} MB`);
     }
-    
+
     const data = fs.readFileSync(filePath, 'utf8');
     return { success: true, data };
   } catch (error) {
@@ -3019,16 +3019,16 @@ ipcMain.handle('show-save-dialog', async (event, options) => {
 ipcMain.handle('write-file', async (event, filePath, content) => {
   try {
     const path = require('path');
-    
+
     // Ensure directory exists
     const directory = path.dirname(filePath);
     if (!fs.existsSync(directory)) {
       fs.mkdirSync(directory, { recursive: true });
     }
-    
+
     // Write the file
     fs.writeFileSync(filePath, content, 'utf8');
-    
+
     // Verify file was written
     if (fs.existsSync(filePath)) {
       const stats = fs.statSync(filePath);
@@ -3059,34 +3059,34 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
     let totalRead = 0;
     let buffer = '';
     let lineCount = 0;
-    
+
     console.log(`Starting stream read of ${(fileSize / (1024 * 1024)).toFixed(1)} MB file: ${path.basename(filePath)}`);
-    
+
     return new Promise((resolve, reject) => {
-      const stream = fs.createReadStream(filePath, { 
-        encoding: 'utf8', 
-        highWaterMark: chunkSize 
+      const stream = fs.createReadStream(filePath, {
+        encoding: 'utf8',
+        highWaterMark: chunkSize
       });
-      
+
       stream.on('data', (chunk) => {
         try {
           totalRead += Buffer.byteLength(chunk, 'utf8');
           buffer += chunk;
-          
+
           // Process complete lines
           const lines = buffer.split('\n');
           buffer = lines.pop(); // Keep incomplete line in buffer
-          
+
           // Send lines to renderer for processing
           if (lines.length > 0) {
             lineCount += lines.length;
             event.sender.send('file-lines-chunk', { lines, lineCount });
           }
-          
+
           // Send progress update
           const progress = Math.round((totalRead / fileSize) * 100);
           event.sender.send('file-read-progress', { progress, totalRead, fileSize });
-          
+
           // Log progress for very large files
           if (totalRead % (50 * 1024 * 1024) === 0) { // Every 50MB
             console.log(`Stream progress: ${(totalRead / (1024 * 1024)).toFixed(1)} MB / ${(fileSize / (1024 * 1024)).toFixed(1)} MB`);
@@ -3097,7 +3097,7 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
           reject({ success: false, error: `Error processing data chunk: ${chunkError.message}` });
         }
       });
-      
+
       stream.on('end', () => {
         try {
           // Process any remaining data in buffer
@@ -3105,9 +3105,9 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
             lineCount += 1;
             event.sender.send('file-lines-chunk', { lines: [buffer], lineCount });
           }
-          
+
           console.log(`Stream complete: ${lineCount} lines, ${(totalRead / (1024 * 1024)).toFixed(1)} MB`);
-          
+
           // Signal completion
           event.sender.send('file-stream-complete', { totalLines: lineCount, totalBytes: totalRead });
           resolve({ success: true, totalLines: lineCount, size: totalRead });
@@ -3116,7 +3116,7 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
           reject({ success: false, error: `Error finalizing stream: ${endError.message}` });
         }
       });
-      
+
       stream.on('error', (error) => {
         console.error('Stream error:', error);
         reject({ success: false, error: `File read error: ${error.message}` });
@@ -3154,24 +3154,24 @@ ipcMain.handle('show-directory-dialog', async (event, options = {}) => {
       title: options.title || 'Select Directory',
       defaultPath: options.defaultPath || undefined
     });
-    
+
     if (!result.canceled && result.filePaths.length > 0) {
-      return { 
-        success: true, 
+      return {
+        success: true,
         canceled: false,
-        filePaths: result.filePaths 
+        filePaths: result.filePaths
       };
     }
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       canceled: true,
-      filePaths: [] 
+      filePaths: []
     };
   } catch (error) {
     console.error('Error in show-directory-dialog:', error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: error.message,
       canceled: true,
       filePaths: []
@@ -3184,35 +3184,35 @@ ipcMain.handle('mcp-server-start', async () => {
   try {
     // Check if Unified MCP Server is already running
     if (unifiedServerStatus === 'running') {
-      return { 
-        success: true, 
-        message: 'Unified Claude MCP Server is already running', 
+      return {
+        success: true,
+        message: 'Unified Claude MCP Server is already running',
         status: 'running',
         serverType: 'unified-claude-mcp',
         httpPort: 3002,
         wsPort: 3003
       };
     }
-    
+
     if (unifiedServerStatus === 'starting') {
       return { success: false, message: 'Unified Claude MCP Server is already starting', status: 'starting' };
     }
 
     unifiedServerStatus = 'starting';
-    
+
     try {
       // Create Unified Claude MCP server with ports 3002 and 3003, and main window
       unifiedMCPServer = new UnifiedClaudeMCPServer(3002, 3003, mainWindow);
-      
+
       // Start the server
       await unifiedMCPServer.start();
-      
+
       unifiedServerStatus = 'running';
       console.log('Unified Claude MCP Server started successfully on ports 3002 (HTTP) and 3003 (WebSocket)');
-      
-      return { 
-        success: true, 
-        message: 'Unified Claude MCP Server started successfully', 
+
+      return {
+        success: true,
+        message: 'Unified Claude MCP Server started successfully',
         status: 'running',
         serverType: 'unified-claude-mcp',
         httpPort: 3002,
@@ -3222,11 +3222,11 @@ ipcMain.handle('mcp-server-start', async () => {
       unifiedServerStatus = 'stopped';
       unifiedMCPServer = null; // Clear the server instance on failure
       console.error('Failed to start Unified Claude MCP Server:', error);
-      
-      return { 
-        success: false, 
-        message: `Failed to start Unified Claude MCP Server: ${error.message}`, 
-        status: 'stopped' 
+
+      return {
+        success: false,
+        message: `Failed to start Unified Claude MCP Server: ${error.message}`,
+        status: 'stopped'
       };
     }
   } catch (error) {
@@ -3240,27 +3240,27 @@ ipcMain.handle('mcp-server-stop', async () => {
     // Stop Unified MCP Server if running
     if (unifiedServerStatus === 'running') {
       unifiedServerStatus = 'stopping';
-      
+
       if (unifiedMCPServer) {
         await unifiedMCPServer.stop();
         unifiedMCPServer = null;
       }
-      
+
       unifiedServerStatus = 'stopped';
       console.log('Unified Claude MCP Server stopped successfully');
-      
-      return { 
-        success: true, 
-        message: 'Unified Claude MCP Server stopped successfully', 
+
+      return {
+        success: true,
+        message: 'Unified Claude MCP Server stopped successfully',
         status: 'stopped',
         serverType: 'unified-claude-mcp'
       };
     }
-    
+
     if (unifiedServerStatus === 'stopped') {
       return { success: true, message: 'Unified Claude MCP Server is already stopped', status: 'stopped' };
     }
-    
+
     if (unifiedServerStatus === 'stopping') {
       return { success: false, message: 'Unified Claude MCP Server is already stopping', status: 'stopping' };
     }
@@ -3274,7 +3274,7 @@ ipcMain.handle('mcp-server-stop', async () => {
 
 ipcMain.handle('mcp-server-status', async () => {
   // Return Unified Claude MCP Server status
-  return { 
+  return {
     status: unifiedServerStatus,
     isRunning: unifiedServerStatus === 'running',
     serverType: unifiedServerStatus === 'running' ? 'unified-claude-mcp' : 'none',
@@ -3304,10 +3304,10 @@ ipcMain.on('open-resource-manager', (event) => {
       maximizable: true,
       show: false
     });
-    
+
     // Load the resource manager HTML
     const resourceManagerPath = path.join(__dirname, 'resource-manager.html');
-    
+
     // Check if file exists, if not create a fallback
     if (fs.existsSync(resourceManagerPath)) {
       resourceManagerWindow.loadFile(resourceManagerPath);
@@ -3316,17 +3316,17 @@ ipcMain.on('open-resource-manager', (event) => {
       // We'll create the file below
       resourceManagerWindow.loadFile(resourceManagerPath);
     }
-    
+
     // Show window when ready
     resourceManagerWindow.once('ready-to-show', () => {
       resourceManagerWindow.show();
     });
-    
+
     // Handle window closed
     resourceManagerWindow.on('closed', () => {
       console.log('Resource Manager window closed');
     });
-    
+
   } catch (error) {
     console.error('Failed to open Resource Manager:', error);
   }
@@ -3355,7 +3355,7 @@ ipcMain.handle('get-loaded-resources', async () => {
         }
       }
     ];
-    
+
     return { success: true, resources: mockResources };
   } catch (error) {
     return { success: false, error: error.message };
@@ -3417,14 +3417,14 @@ ipcMain.handle('select-and-load-file', async () => {
         { name: 'All Files', extensions: ['*'] }
       ]
     });
-    
+
     if (!result.canceled && result.filePaths.length > 0) {
       const filePath = result.filePaths[0];
       // Send to main window for loading
       mainWindow.webContents.send('load-file', filePath);
       return { success: true, filePath };
     }
-    
+
     return { success: false, canceled: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -3446,7 +3446,7 @@ ipcMain.handle('send-to-main-window', async (event, channel, data) => {
 ipcMain.handle('openDebugTool', async (event, fileName) => {
   try {
     console.log('🔧 Opening debug tool:', fileName);
-    
+
     // Create new window for debug tool
     const debugWindow = new BrowserWindow({
       width: 1200,
@@ -3466,12 +3466,12 @@ ipcMain.handle('openDebugTool', async (event, fileName) => {
 
     // Construct path to debug tool file
     const debugToolPath = path.join(__dirname, '..', fileName);
-    
+
     // Check if file exists
     if (!fs.existsSync(debugToolPath)) {
       throw new Error(`Debug tool file not found: ${debugToolPath}`);
     }
-    
+
     // Load the debug tool HTML
     debugWindow.loadFile(debugToolPath);
 
@@ -3519,7 +3519,7 @@ function createCircosWindow() {
     });
 
     const circosPath = path.join(__dirname, 'circos-plotter.html');
-    
+
     // Load the Circos plotter HTML
     circosWindow.loadFile(circosPath);
 
@@ -3568,7 +3568,7 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
   try {
     // Get the sender window (Circos window)
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
-    
+
     // Get main window data
     const mainWindow = getCurrentMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -3604,8 +3604,10 @@ ipcMain.handle('get-circos-genome-data', async (event) => {
               // Add chromosome data
               chromosomes.push({
                 id: chrName,
+                name: chrName,  // Add explicit name for lookup consistency
                 label: chrName,
                 size: length,
+                length: length,  // Also add length for compatibility
                 start: 0,
                 end: length
               });
@@ -3816,7 +3818,7 @@ ipcMain.handle('navigate-to-gene', async (event, geneData) => {
 ipcMain.handle('get-gene-sequence', async (event, geneName) => {
   try {
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
-    
+
     if (senderWindow && senderWindow.mainWindow) {
       const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
         (async function() {
@@ -3868,7 +3870,7 @@ ipcMain.handle('get-gene-sequence', async (event, geneName) => {
 ipcMain.handle('get-region-sequence', async (event, chromosome, start, end) => {
   try {
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
-    
+
     if (senderWindow && senderWindow.mainWindow) {
       const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
         (function() {
@@ -4356,7 +4358,7 @@ function createBlastDownloaderWindow() {
     blastDownloaderWindow.on('closed', () => {
       // 清理菜单模板
       toolMenuTemplates.delete(blastDownloaderWindow.id);
-      
+
       // 如果关闭的是当前活动窗口，恢复主窗口菜单
       if (currentActiveWindow === blastDownloaderWindow) {
         currentActiveWindow = null;
@@ -4405,7 +4407,7 @@ function createBlastConfigWindow() {
     blastConfigWindow.on('closed', () => {
       // Clean up menu template
       toolMenuTemplates.delete(blastConfigWindow.id);
-      
+
       // If this was the active window, restore main window menu
       if (currentActiveWindow === blastConfigWindow) {
         currentActiveWindow = null;
@@ -4700,7 +4702,7 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
 
   // Create menu and set as application menu
   const menu = Menu.buildFromTemplate(template);
-  
+
   // Set window focus to switch menu
   deepGeneResearchWindow.on('focus', () => {
     currentActiveWindow = deepGeneResearchWindow;
@@ -4723,7 +4725,7 @@ async function createProGenFixerWindow() {
   try {
     console.log('🚀 Starting ProGenFixer window creation...');
     let progenFixerUrl = 'https://progenfixer.biodesign.ac.cn'; // Default fallback
-    
+
     try {
       // Get the URL from General Settings
       const mainWindow = getCurrentMainWindow();
@@ -4736,30 +4738,30 @@ async function createProGenFixerWindow() {
             Promise.resolve({});
           }
         `);
-        
+
         console.log('📋 Settings retrieved:', settings);
-        
+
         if (settings && settings.progenFixerUrl) {
           progenFixerUrl = settings.progenFixerUrl;
           console.log('✅ Using ProGenFixer URL from settings:', progenFixerUrl);
         } else {
           console.log('⚠️ No ProGenFixer URL found in settings, using default:', progenFixerUrl);
-          showSettingsWarning('ProGenFixer URL not configured', 
+          showSettingsWarning('ProGenFixer URL not configured',
             'Using default URL (https://progenfixer.biodesign.ac.cn). You can configure the URL in General Settings → Features → External Tools.');
         }
       } else {
         console.log('⚠️ Main window not available, using default URL:', progenFixerUrl);
-        showSettingsWarning('Main window not available', 
+        showSettingsWarning('Main window not available',
           'Using default URL (https://progenfixer.biodesign.ac.cn). Please ensure the main window is open.');
       }
     } catch (error) {
       console.warn('❌ Failed to get ProGenFixer URL from settings, using default:', error.message);
-      showSettingsError('Failed to load ProGenFixer settings', 
+      showSettingsError('Failed to load ProGenFixer settings',
         `Using default URL (https://progenfixer.biodesign.ac.cn) due to error: ${error.message}. Please check your settings configuration.`);
     }
-    
+
     console.log('🔧 Creating ProGenFixer window with URL:', progenFixerUrl);
-    
+
     const progenFixerWindow = new BrowserWindow({
       width: 1400,
       height: 900,
@@ -4790,7 +4792,7 @@ async function createProGenFixerWindow() {
     console.log('🌐 Loading ProGenFixer URL...');
     await progenFixerWindow.loadURL(progenFixerUrl);
     console.log('✅ ProGenFixer URL loaded successfully');
-    
+
     // Show the window when ready
     progenFixerWindow.once('ready-to-show', () => {
       console.log('🎉 ProGenFixer window ready to show');
@@ -4823,7 +4825,7 @@ async function createProGenFixerWindow() {
       console.error('❌ ProGenFixer window failed to load:', errorDescription);
       console.error('❌ Error code:', errorCode);
       console.error('❌ Validated URL:', validatedURL);
-      
+
       // Show user-friendly error page
       progenFixerWindow.loadURL(`data:text/html,
         <html>
@@ -4877,7 +4879,7 @@ async function createProGenFixerWindow() {
   } catch (error) {
     console.error('❌ Error creating ProGenFixer window:', error);
     console.error('❌ Error stack:', error.stack);
-    
+
     // Show error dialog
     dialog.showErrorBox(
       'Error Opening ProGenFixer',
@@ -4890,7 +4892,7 @@ async function createDeepGeneResearchWindow(params = {}) {
     console.log('🚀 Starting Deep Gene Research window creation...');
     // Get the URL from General Settings
     let deepGeneResearchUrl = 'http://43.196.74.134:3000'; // Default fallback
-    
+
     try {
       // Get the main window to access GeneralSettingsManager directly
       const mainWindow = getCurrentMainWindow();
@@ -4903,30 +4905,30 @@ async function createDeepGeneResearchWindow(params = {}) {
             Promise.resolve({});
           }
         `);
-        
+
         console.log('📋 Settings retrieved:', settings);
-        
+
         if (settings && settings.deepGeneResearchUrl) {
           deepGeneResearchUrl = settings.deepGeneResearchUrl;
           console.log('✅ Using Deep Gene Research URL from settings:', deepGeneResearchUrl);
         } else {
           console.log('⚠️ No Deep Gene Research URL found in settings, using default:', deepGeneResearchUrl);
           // Show notification to user about using default URL
-          showSettingsWarning('Deep Gene Research URL not configured', 
+          showSettingsWarning('Deep Gene Research URL not configured',
             'Using default URL (http://43.196.74.134:3000). You can configure the URL in General Settings → Features → External Tools.');
         }
       } else {
         console.log('⚠️ Main window not available, using default URL:', deepGeneResearchUrl);
-        showSettingsWarning('Main window not available', 
+        showSettingsWarning('Main window not available',
           'Using default URL (http://43.196.74.134:3000). Please ensure the main window is open.');
       }
     } catch (error) {
       console.warn('❌ Failed to get Deep Gene Research URL from settings, using default:', error.message);
       // Show error notification to user
-      showSettingsError('Failed to load Deep Gene Research settings', 
+      showSettingsError('Failed to load Deep Gene Research settings',
         `Using default URL (http://43.196.74.134:3000) due to error: ${error.message}. Please check your settings configuration.`);
     }
-    
+
     // Add parameters to URL if provided
     if (params.gene || params.organism) {
       const urlParams = new URLSearchParams();
@@ -4938,9 +4940,9 @@ async function createDeepGeneResearchWindow(params = {}) {
       }
       deepGeneResearchUrl += '?' + urlParams.toString();
     }
-    
+
     console.log('🔧 Creating Deep Gene Research window with URL:', deepGeneResearchUrl);
-    
+
     const deepGeneResearchWindow = new BrowserWindow({
       width: 1600,
       height: 1000,
@@ -4971,7 +4973,7 @@ async function createDeepGeneResearchWindow(params = {}) {
     console.log('🌐 Loading Deep Gene Research URL...');
     await deepGeneResearchWindow.loadURL(deepGeneResearchUrl);
     console.log('✅ Deep Gene Research URL loaded successfully');
-    
+
     // Show the window when ready
     deepGeneResearchWindow.once('ready-to-show', () => {
       console.log('🎉 Deep Gene Research window ready to show');
@@ -4980,7 +4982,7 @@ async function createDeepGeneResearchWindow(params = {}) {
       // Set specialized menu for Deep Gene Research window
       createDeepGeneResearchMenu(deepGeneResearchWindow);
       console.log('✅ Deep Gene Research window opened successfully');
-      
+
       // Enable keyboard shortcuts for copy/paste
       deepGeneResearchWindow.webContents.executeJavaScript(`
         // Enable clipboard access
@@ -5036,7 +5038,7 @@ async function createDeepGeneResearchWindow(params = {}) {
     deepGeneResearchWindow.on('closed', () => {
       // Clean up menu template
       toolMenuTemplates.delete(deepGeneResearchWindow.id);
-      
+
       // If this was the current active window, restore main window menu
       if (currentActiveWindow === deepGeneResearchWindow) {
         currentActiveWindow = null;
@@ -5050,7 +5052,7 @@ async function createDeepGeneResearchWindow(params = {}) {
       console.error('❌ Deep Gene Research window failed to load:', errorDescription);
       console.error('❌ Error code:', errorCode);
       console.error('❌ Validated URL:', validatedURL);
-      
+
       // Show error page
       deepGeneResearchWindow.loadURL(`data:text/html,
         <html>
@@ -5120,7 +5122,7 @@ async function createDeepGeneResearchWindow(params = {}) {
 
   } catch (error) {
     console.error('Error creating Deep Gene Research window:', error);
-    
+
     // Show error dialog
     dialog.showErrorBox(
       'Error Opening Deep Gene Research',
@@ -5134,7 +5136,7 @@ async function createChopchopWindow() {
   try {
     console.log('🚀 Starting CHOPCHOP window creation...');
     let chopchopUrl = 'https://chopchop.cbu.uib.no/'; // Default fallback
-    
+
     try {
       // Get the main window to access GeneralSettingsManager directly
       const mainWindow = getCurrentMainWindow();
@@ -5147,30 +5149,30 @@ async function createChopchopWindow() {
             Promise.resolve({});
           }
         `);
-        
+
         console.log('📋 Settings retrieved:', settings);
-        
+
         if (settings && settings.chopchopUrl) {
           chopchopUrl = settings.chopchopUrl;
           console.log('✅ Using CHOPCHOP URL from settings:', chopchopUrl);
         } else {
           console.log('⚠️ No CHOPCHOP URL found in settings, using default:', chopchopUrl);
-          showSettingsWarning('CHOPCHOP URL not configured', 
+          showSettingsWarning('CHOPCHOP URL not configured',
             'Using default URL (https://chopchop.cbu.uib.no/). You can configure the URL in General Settings → Features → External Tools.');
         }
       } else {
         console.log('⚠️ Main window not available, using default URL:', chopchopUrl);
-        showSettingsWarning('Main window not available', 
+        showSettingsWarning('Main window not available',
           'Using default URL (https://chopchop.cbu.uib.no/). Please ensure the main window is open.');
       }
     } catch (error) {
       console.warn('❌ Failed to get CHOPCHOP URL from settings, using default:', error.message);
-      showSettingsError('Failed to load CHOPCHOP settings', 
+      showSettingsError('Failed to load CHOPCHOP settings',
         `Using default URL (https://chopchop.cbu.uib.no/) due to error: ${error.message}. Please check your settings configuration.`);
     }
-    
+
     console.log('🔧 Creating CHOPCHOP window with URL:', chopchopUrl);
-    
+
     const chopchopWindow = new BrowserWindow({
       width: 1400,
       height: 900,
@@ -5201,7 +5203,7 @@ async function createChopchopWindow() {
     console.log('🌐 Loading CHOPCHOP URL...');
     await chopchopWindow.loadURL(chopchopUrl);
     console.log('✅ CHOPCHOP URL loaded successfully');
-    
+
     // Show the window when ready
     chopchopWindow.once('ready-to-show', () => {
       console.log('🎉 CHOPCHOP window ready to show');
@@ -5234,7 +5236,7 @@ async function createChopchopWindow() {
       console.error('❌ CHOPCHOP window failed to load:', errorDescription);
       console.error('❌ Error code:', errorCode);
       console.error('❌ Validated URL:', validatedURL);
-      showSettingsError('Failed to load CHOPCHOP CRISPR Toolbox', 
+      showSettingsError('Failed to load CHOPCHOP CRISPR Toolbox',
         `Could not load ${validatedURL}. Please check the URL in General Settings → Features → External Tools.`);
     });
 
@@ -5283,7 +5285,7 @@ async function createChopchopWindow() {
   } catch (error) {
     console.error('❌ Error creating CHOPCHOP window:', error);
     console.error('❌ Error stack:', error.stack);
-    showSettingsError('Error opening CHOPCHOP CRISPR Toolbox', 
+    showSettingsError('Error opening CHOPCHOP CRISPR Toolbox',
       `Failed to open CHOPCHOP window: ${error.message}`);
   }
 }
@@ -5292,14 +5294,14 @@ async function createChopchopWindow() {
 async function createCustomExternalToolWindow(toolData) {
   try {
     console.log('🔧 [CustomTool] Creating custom external tool window:', toolData.name);
-    
+
     // Validate tool data
     if (!toolData || !toolData.name || !toolData.url) {
       console.error('❌ [CustomTool] Invalid tool data:', toolData);
       showSettingsError('Invalid Tool Configuration', 'Tool data is missing required properties (name or url)');
       return;
     }
-    
+
     const customToolWindow = new BrowserWindow({
       width: 1400,
       height: 900,
@@ -5325,7 +5327,7 @@ async function createCustomExternalToolWindow(toolData) {
 
     // Load the tool URL
     await customToolWindow.loadURL(toolData.url);
-    
+
     // Show the window when ready
     customToolWindow.once('ready-to-show', () => {
       customToolWindow.show();
@@ -5341,15 +5343,15 @@ async function createCustomExternalToolWindow(toolData) {
     // Handle navigation errors
     customToolWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
       console.error(`❌ Custom external tool failed to load: ${errorDescription}`);
-      showSettingsError(`Failed to load ${toolData.name}`, 
+      showSettingsError(`Failed to load ${toolData.name}`,
         `Could not load ${validatedURL}. Please check the URL configuration.`);
     });
 
     console.log(`✅ Custom external tool window created: ${toolData.name}`);
-    
+
   } catch (error) {
     console.error(`❌ Error creating custom external tool window for ${toolData.name}:`, error);
-    showSettingsError(`Error opening ${toolData.name}`, 
+    showSettingsError(`Error opening ${toolData.name}`,
       `Failed to open ${toolData.name}: ${error.message}`);
   }
 }
@@ -5436,7 +5438,7 @@ const analyzerPendingData = new Map();
 // Handle analyzer window ready notification
 ipcMain.on('window-ready', (event, toolName) => {
   console.log(`[ChatBox Integration] ${toolName} window ready`);
-  
+
   // Check if there's pending data for this tool
   if (analyzerPendingData.has(toolName)) {
     const data = analyzerPendingData.get(toolName);
@@ -5449,7 +5451,7 @@ ipcMain.on('window-ready', (event, toolName) => {
 // Handle request for pending data
 ipcMain.on('request-pending-data', (event, toolName) => {
   console.log(`[ChatBox Integration] ${toolName} requesting pending data`);
-  
+
   if (analyzerPendingData.has(toolName)) {
     const data = analyzerPendingData.get(toolName);
     event.sender.send('load-analysis-data', data);
@@ -5460,7 +5462,7 @@ ipcMain.on('request-pending-data', (event, toolName) => {
 // Handle analysis request from analyzer tools to ChatBox
 ipcMain.on('analyze-in-chatbox', (event, request) => {
   console.log('[ChatBox Integration] Received analysis request:', request);
-  
+
   const mainWindow = getCurrentMainWindow();
   if (mainWindow && mainWindow.webContents) {
     // Send the query to ChatBox with metadata
@@ -5470,7 +5472,7 @@ ipcMain.on('analyze-in-chatbox', (event, request) => {
       data: request.data,
       timestamp: request.timestamp
     });
-    
+
     console.log(`[ChatBox Integration] Forwarded request to ChatBox from ${request.toolName}`);
   } else {
     console.error('[ChatBox Integration] Main window not available');
@@ -5480,7 +5482,7 @@ ipcMain.on('analyze-in-chatbox', (event, request) => {
 // Handle request for LLM interpretation
 ipcMain.on('request-llm-interpretation', (event, request) => {
   console.log('[ChatBox Integration] LLM interpretation requested:', request);
-  
+
   const mainWindow = getCurrentMainWindow();
   if (mainWindow && mainWindow.webContents) {
     // Format the interpretation request
@@ -5488,7 +5490,7 @@ ipcMain.on('request-llm-interpretation', (event, request) => {
       `Analysis Type: ${request.context.analysisType}\n` +
       `Number of Results: ${request.context.resultCount}\n\n` +
       `Please explain the biological significance and functional implications of these findings.`;
-    
+
     mainWindow.webContents.send('chatbox-interpret-request', {
       query: interpretQuery,
       data: request.data,
@@ -5496,7 +5498,7 @@ ipcMain.on('request-llm-interpretation', (event, request) => {
       toolName: request.toolName,
       responseTarget: event.sender
     });
-    
+
     console.log(`[ChatBox Integration] Sent interpretation request to ChatBox`);
   }
 });
@@ -5504,7 +5506,7 @@ ipcMain.on('request-llm-interpretation', (event, request) => {
 // Handle LLM interpretation response back to analyzer tool
 ipcMain.on('llm-interpretation-response', (event, response) => {
   console.log('[ChatBox Integration] LLM interpretation response received');
-  
+
   if (response.targetWindow && response.targetWindow.send) {
     response.targetWindow.send('llm-interpretation-result', {
       interpretation: response.interpretation,
@@ -5516,7 +5518,7 @@ ipcMain.on('llm-interpretation-response', (event, response) => {
 // Handle request to send analysis data from ChatBox to analyzer tool
 ipcMain.on('send-to-analyzer', (event, request) => {
   console.log('[ChatBox Integration] Sending data to analyzer:', request.toolName);
-  
+
   // Store the data for when the window opens
   analyzerPendingData.set(request.toolName, {
     results: request.data,
@@ -5524,7 +5526,7 @@ ipcMain.on('send-to-analyzer', (event, request) => {
     originalQuery: request.originalQuery,
     timestamp: new Date().toISOString()
   });
-  
+
   // Open the appropriate analyzer window
   switch (request.toolName.toLowerCase()) {
     case 'kegg pathway analysis':
@@ -5547,9 +5549,9 @@ ipcMain.on('send-to-analyzer', (event, request) => {
 // IPC handler for Deep Gene Research window menu actions
 ipcMain.on('deep-gene-research-menu-action', (event, action) => {
   console.log('Deep Gene Research menu action:', action);
-  
+
   const webContents = event.sender;
-  
+
   switch (action) {
     case 'copy':
       webContents.copy();
@@ -5768,30 +5770,30 @@ ipcMain.on('check-blast-installation', (event) => {
   const path = require('path');
   const fs = require('fs');
   const os = require('os');
-  
+
   // Function to check BLAST+ at specific path
   function checkBlastAtPath(blastPath) {
     return new Promise((resolve) => {
       const command = `"${blastPath}" -version`;
       console.log('Checking BLAST at:', command);
-      
+
       exec(command, (error, stdout, stderr) => {
         if (error) {
           resolve({ found: false, error: error.message });
         } else {
           const versionMatch = stdout.match(/blastn: ([\d.]+)/);
           const version = versionMatch ? versionMatch[1] : 'Unknown version';
-          resolve({ 
-            found: true, 
-            version: version, 
+          resolve({
+            found: true,
+            version: version,
             path: blastPath,
-            output: stdout 
+            output: stdout
           });
         }
       });
     });
   }
-  
+
   // Function to find BLAST+ executable
   async function findBlastExecutable() {
     const homeDir = os.homedir();
@@ -5805,7 +5807,7 @@ ipcMain.on('check-blast-installation', (event) => {
       path.join(homeDir, '.local', 'bin', 'blastn'),
       '/opt/blast+/bin/blastn'
     ];
-    
+
     // First try direct command execution (for PATH-based installations)
     try {
       const result = await checkBlastAtPath('blastn');
@@ -5815,7 +5817,7 @@ ipcMain.on('check-blast-installation', (event) => {
     } catch (error) {
       console.log('Direct blastn command failed, trying specific paths...');
     }
-    
+
     // Try specific paths
     for (const blastPath of commonPaths) {
       try {
@@ -5829,10 +5831,10 @@ ipcMain.on('check-blast-installation', (event) => {
         continue;
       }
     }
-    
+
     return { found: false, error: 'BLAST+ not found in any common locations' };
   }
-  
+
   // Execute the search
   findBlastExecutable().then(result => {
     if (result.found) {
@@ -5864,17 +5866,17 @@ ipcMain.on('system-requirements-check', (event) => {
   console.log('IPC: Checking system requirements...');
   const os = require('os');
   const { exec } = require('child_process');
-  
+
   const systemInfo = {
     platform: os.platform(),
     arch: os.arch(),
     release: os.release(),
     nodeVersion: process.version,
-    totalMemory: (os.totalmem() / (1024**3)).toFixed(2) + ' GB',
-    freeMemory: (os.freemem() / (1024**3)).toFixed(2) + ' GB',
+    totalMemory: (os.totalmem() / (1024 ** 3)).toFixed(2) + ' GB',
+    freeMemory: (os.freemem() / (1024 ** 3)).toFixed(2) + ' GB',
     cpus: os.cpus().length
   };
-  
+
   // Check disk space
   exec('df -h /', (error, stdout, stderr) => {
     if (!error && stdout) {
@@ -5889,7 +5891,7 @@ ipcMain.on('system-requirements-check', (event) => {
         };
       }
     }
-    
+
     event.sender.send('system-requirements-result', {
       systemInfo: systemInfo,
       requirements: {
@@ -5913,23 +5915,23 @@ ipcMain.on('focus-main-window', () => {
     mainWindow.focus();
     mainWindow.show();
   }
-}); 
+});
 
 // ========== PROJECT MANAGER WINDOW ==========
 
 // Create Project Manager Window
 function createProjectManagerWindow() {
   try {  // Check if Project Manager window already exists in this process
-    const existingPMWindow = BrowserWindow.getAllWindows().find(win => 
+    const existingPMWindow = BrowserWindow.getAllWindows().find(win =>
       win.getTitle().includes('Project Manager') && !win.isDestroyed()
     );
-    
+
     if (existingPMWindow) {
       console.log('ℹ️ Project Manager window already exists in this process, focusing existing window...');
       existingPMWindow.focus();
       return existingPMWindow;
     }
-    
+
     const projectManagerWindow = new BrowserWindow({
       width: 1200,
       height: 800,
@@ -5947,28 +5949,28 @@ function createProjectManagerWindow() {
       maximizable: true,
       show: false
     });
-    
+
     // ... existing code ...
-    
+
     // Create Project Manager specific menu
     const projectManagerMenu = createProjectManagerMenu(projectManagerWindow);
-    
+
     // Set the menu immediately for this window
     projectManagerWindow.setMenu(projectManagerMenu);
-    
+
     // Override application menu when this window is focused
     projectManagerWindow.on('focus', () => {
       console.log('Project Manager window focused - setting Project Manager menu');
       Menu.setApplicationMenu(projectManagerMenu);
     });
-    
+
     // Handle window focus lost - revert to main menu if main window exists
     projectManagerWindow.on('blur', () => {
       // Find any main window (including newly created ones)
-      const mainWindows = BrowserWindow.getAllWindows().filter(win => 
+      const mainWindows = BrowserWindow.getAllWindows().filter(win =>
         win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
       );
-      
+
       if (mainWindows.length > 0) {
         console.log('Project Manager window lost focus - checking for focused main window');
         // Wait a bit longer to allow window focus to settle
@@ -5982,17 +5984,17 @@ function createProjectManagerWindow() {
         }, 200); // Increased delay for better stability
       }
     });
-    
+
     // Load the project manager HTML
     const projectManagerPath = path.join(__dirname, 'project-manager.html');
-    
+
     if (fs.existsSync(projectManagerPath)) {
       projectManagerWindow.loadFile(projectManagerPath);
     } else {
       console.error('Project manager file not found:', projectManagerPath);
       return;
     }
-    
+
     // Show window when ready and ensure menu is set
     projectManagerWindow.once('ready-to-show', () => {
       projectManagerWindow.show();
@@ -6002,22 +6004,22 @@ function createProjectManagerWindow() {
         Menu.setApplicationMenu(projectManagerMenu);
       }, 500);
     });
-    
+
     // Handle window closed - revert to main menu
     projectManagerWindow.on('closed', () => {
       console.log('Project Manager window closed - reverting to main menu');
-      const mainWindow = BrowserWindow.getAllWindows().find(win => 
+      const mainWindow = BrowserWindow.getAllWindows().find(win =>
         win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
       );
       if (mainWindow && !mainWindow.isDestroyed()) {
         createMenu(); // Restore main window menu
       }
     });
-    
+
     console.log('Project Manager window created successfully with independent menu');
-    
+
     return projectManagerWindow;
-    
+
   } catch (error) {
     console.error('Failed to open Project Manager:', error);
   }
@@ -6051,7 +6053,7 @@ function createProjectManagerMenu(projectManagerWindow) {
               ],
               title: 'Open Project'
             });
-            
+
             if (!result.canceled && result.filePaths.length > 0) {
               projectManagerWindow.webContents.send('menu-open-project', result.filePaths[0]);
             }
@@ -6118,7 +6120,7 @@ function createProjectManagerMenu(projectManagerWindow) {
               ],
               title: 'Import Files to Project'
             });
-            
+
             if (!result.canceled && result.filePaths.length > 0) {
               projectManagerWindow.webContents.send('menu-import-files', result.filePaths);
             }
@@ -6135,7 +6137,7 @@ function createProjectManagerMenu(projectManagerWindow) {
               ],
               title: 'Import Project'
             });
-            
+
             if (!result.canceled && result.filePaths.length > 0) {
               projectManagerWindow.webContents.send('menu-import-project', result.filePaths[0]);
             }
@@ -6158,7 +6160,7 @@ function createProjectManagerMenu(projectManagerWindow) {
         }
       ]
     },
-    
+
     // Search && Edit Menu
     {
       label: 'Search && Edit',
@@ -6231,7 +6233,7 @@ function createProjectManagerMenu(projectManagerWindow) {
         }
       ]
     },
-    
+
     // View Menu
     {
       label: 'View',
@@ -6368,7 +6370,7 @@ function createProjectManagerMenu(projectManagerWindow) {
         }
       ]
     },
-    
+
     // Project Menu
     {
       label: 'Project',
@@ -6445,7 +6447,7 @@ function createProjectManagerMenu(projectManagerWindow) {
         }
       ]
     },
-    
+
     // Tools Menu
     {
       label: 'Tools',
@@ -6563,7 +6565,7 @@ function createProjectManagerMenu(projectManagerWindow) {
         }
       ]
     },
-    
+
     // Download Menu - copied from main window
     {
       label: '📥 Download',
@@ -6608,7 +6610,7 @@ function createProjectManagerMenu(projectManagerWindow) {
         }
       ]
     },
-    
+
     // Window Menu - cloned from main window
     {
       label: 'Window',
@@ -6691,7 +6693,7 @@ function createProjectManagerMenu(projectManagerWindow) {
         ] : [])
       ]
     },
-    
+
     // Help Menu
     {
       label: 'Help',
@@ -6815,12 +6817,12 @@ ipcMain.handle('show-project-open-dialog', async (event, projectName) => {
       title: 'Open Project',
       message: `Open "${projectName}"?`,
       detail: `Choose how to open this project:\n\n` +
-              `• Open in Current Window: Close current project and open new project here\n` +
-              `• Open in New Window: Keep current project and open new project in a new application instance\n` +
-              `• Cancel: Don't open the project`,
+        `• Open in Current Window: Close current project and open new project here\n` +
+        `• Open in New Window: Keep current project and open new project in a new application instance\n` +
+        `• Cancel: Don't open the project`,
       noLink: true
     });
-    
+
     return { success: true, choice: response }; // 0 = current, 1 = new, 2 = cancel
   } catch (error) {
     console.error('Error showing project open dialog:', error);
@@ -6834,20 +6836,20 @@ ipcMain.handle('open-project-in-new-process', async (event, filePath) => {
     const { spawn } = require('child_process');
     const electronPath = process.execPath;
     const appPath = app.getAppPath();
-    
+
     console.log('🚀 Starting new application instance...');
     console.log('   Electron path:', electronPath);
     console.log('   App path:', appPath);
     console.log('   Project file:', filePath);
-    
+
     // Start new process with project file path as argument
     const child = spawn(electronPath, [appPath, '--open-project', filePath], {
       detached: true,
       stdio: 'ignore'
     });
-    
+
     child.unref();
-    
+
     console.log('✅ New application instance started with PID:', child.pid);
     return { success: true, pid: child.pid };
   } catch (error) {
@@ -6866,11 +6868,11 @@ ipcMain.handle('selectProjectDirectory', async () => {
       properties: ['openDirectory', 'createDirectory'],
       title: 'Select Project Location'
     });
-    
+
     if (!result.canceled && result.filePaths.length > 0) {
       return { success: true, filePath: result.filePaths[0] };
     }
-    
+
     return { success: false, canceled: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -6891,11 +6893,11 @@ ipcMain.handle('selectProjectFile', async () => {
       ],
       title: 'Open Project File'
     });
-    
+
     if (!result.canceled && result.filePaths.length > 0) {
       return { success: true, filePath: result.filePaths[0] };
     }
-    
+
     return { success: false, canceled: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -6914,11 +6916,11 @@ ipcMain.handle('selectMultipleFiles', async () => {
       ],
       title: 'Select Files to Add'
     });
-    
+
     if (!result.canceled && result.filePaths.length > 0) {
       return { success: true, filePaths: result.filePaths };
     }
-    
+
     return { success: false, canceled: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -6938,11 +6940,11 @@ ipcMain.handle('selectFastaFile', async () => {
       ],
       title: 'Select FASTA file for BLAST database'
     });
-    
+
     if (!result.canceled && result.filePaths.length > 0) {
       return { success: true, filePath: result.filePaths[0] };
     }
-    
+
     return { success: false, canceled: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -6953,12 +6955,12 @@ ipcMain.handle('selectFastaFile', async () => {
 ipcMain.handle('createProjectDirectory', async (event, location, projectName) => {
   try {
     const projectPath = path.join(location, projectName);
-    
+
     // Create project directory if it doesn't exist
     if (!fs.existsSync(projectPath)) {
       fs.mkdirSync(projectPath, { recursive: true });
     }
-    
+
     // Create project subdirectories
     const subdirs = ['genomes', 'annotations', 'variants', 'reads', 'analysis'];
     subdirs.forEach(subdir => {
@@ -6967,7 +6969,7 @@ ipcMain.handle('createProjectDirectory', async (event, location, projectName) =>
         fs.mkdirSync(subdirPath, { recursive: true });
       }
     });
-    
+
     return { success: true, projectPath: projectPath };
   } catch (error) {
     return { success: false, error: error.message };
@@ -7004,12 +7006,12 @@ ipcMain.handle('openFileInMainWindow', async (event, filePath) => {
 ipcMain.handle('openFolderInExplorer', async (event, folderPath) => {
   try {
     const { shell } = require('electron');
-    
+
     // 检查文件夹是否存在
     if (!fs.existsSync(folderPath)) {
       return { success: false, error: 'Folder does not exist' };
     }
-    
+
     // 在资源管理器中打开文件夹
     await shell.openPath(folderPath);
     return { success: true, message: 'Folder opened in explorer' };
@@ -7029,15 +7031,15 @@ ipcMain.handle('moveFileInProject', async (event, currentPath, projectName, targ
     const documentsPath = app.getPath('documents');
     const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
     const targetDir = path.join(projectsDir, projectName, targetFolderPath);
-    
+
     // 确保目标目录存在
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true });
     }
-    
+
     const fileName = path.basename(currentPath);
     const targetPath = path.join(targetDir, fileName);
-    
+
     // 如果目标文件已存在，生成新的文件名
     let finalTargetPath = targetPath;
     let counter = 1;
@@ -7047,10 +7049,10 @@ ipcMain.handle('moveFileInProject', async (event, currentPath, projectName, targ
       finalTargetPath = path.join(targetDir, `${nameWithoutExt}_${counter}${extension}`);
       counter++;
     }
-    
+
     // 移动文件
     fs.renameSync(currentPath, finalTargetPath);
-    
+
     console.log(`✅ File moved from ${currentPath} to ${finalTargetPath}`);
     return { success: true, newPath: finalTargetPath, message: 'File moved successfully' };
   } catch (error) {
@@ -7069,27 +7071,27 @@ ipcMain.handle('renameFileInProject', async (event, currentPath, newFileName) =>
     // 获取文件目录和构建新的文件路径
     const fileDir = path.dirname(currentPath);
     const newFilePath = path.join(fileDir, newFileName);
-    
+
     // 检查新文件名是否已存在
     if (fs.existsSync(newFilePath)) {
       return { success: false, error: 'A file with this name already exists' };
     }
-    
+
     // 验证新文件名是否合法
     const invalidChars = /[<>:"/\\|?*]/;
     if (invalidChars.test(newFileName)) {
       return { success: false, error: 'File name contains invalid characters' };
     }
-    
+
     // 重命名文件
     fs.renameSync(currentPath, newFilePath);
-    
+
     console.log(`✅ File renamed from ${currentPath} to ${newFilePath}`);
-    return { 
-      success: true, 
-      newPath: newFilePath, 
+    return {
+      success: true,
+      newPath: newFilePath,
       oldPath: currentPath,
-      message: 'File renamed successfully' 
+      message: 'File renamed successfully'
     };
   } catch (error) {
     console.error('Error renaming file:', error);
@@ -7105,45 +7107,45 @@ ipcMain.handle('lockProjectFile', async (event, filePath) => {
   try {
     // 检查文件是否已被锁定
     if (projectFileLocks.has(filePath)) {
-      return { 
-        success: false, 
-        error: 'File is already locked by another instance of CodeXomics' 
+      return {
+        success: false,
+        error: 'File is already locked by another instance of CodeXomics'
       };
     }
-    
+
     // 尝试以独占方式打开文件进行测试
     try {
       const lockId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // 使用fs.open检查文件是否可以独占访问
       const fd = fs.openSync(filePath, 'r+');
       fs.closeSync(fd);
-      
+
       // 创建锁定记录
       projectFileLocks.set(filePath, {
         lockId: lockId,
         lockedAt: new Date().toISOString(),
         processId: process.pid
       });
-      
+
       console.log(`🔒 Project file locked: ${filePath} (ID: ${lockId})`);
       return { success: true, lockId: lockId };
-      
+
     } catch (fileError) {
       if (fileError.code === 'EBUSY' || fileError.code === 'EACCES') {
-        return { 
-          success: false, 
-          error: 'File is currently being used by another application' 
+        return {
+          success: false,
+          error: 'File is currently being used by another application'
         };
       }
       throw fileError;
     }
-    
+
   } catch (error) {
     console.error('Error locking project file:', error);
-    return { 
-      success: false, 
-      error: `Failed to lock file: ${error.message}` 
+    return {
+      success: false,
+      error: `Failed to lock file: ${error.message}`
     };
   }
 });
@@ -7152,31 +7154,31 @@ ipcMain.handle('lockProjectFile', async (event, filePath) => {
 ipcMain.handle('unlockProjectFile', async (event, filePath, lockId) => {
   try {
     const lockInfo = projectFileLocks.get(filePath);
-    
+
     if (!lockInfo) {
       console.warn(`No lock found for file: ${filePath}`);
       return { success: true }; // 文件未锁定，视为成功
     }
-    
+
     if (lockInfo.lockId !== lockId) {
       console.warn(`Lock ID mismatch for file: ${filePath}`);
-      return { 
-        success: false, 
-        error: 'Invalid lock ID' 
+      return {
+        success: false,
+        error: 'Invalid lock ID'
       };
     }
-    
+
     // 移除锁定记录
     projectFileLocks.delete(filePath);
     console.log(`🔓 Project file unlocked: ${filePath} (ID: ${lockId})`);
-    
+
     return { success: true };
-    
+
   } catch (error) {
     console.error('Error unlocking project file:', error);
-    return { 
-      success: false, 
-      error: `Failed to unlock file: ${error.message}` 
+    return {
+      success: false,
+      error: `Failed to unlock file: ${error.message}`
     };
   }
 });
@@ -7205,12 +7207,12 @@ ipcMain.handle('createProjectFolder', async (event, projectName, folderName) => 
     const projectsDir = path.join(documentsPath, dirResult.directoryName);
     const projectDir = path.join(projectsDir, projectName);
     const folderPath = path.join(projectDir, folderName);
-    
+
     // 确保项目目录存在
     if (!fs.existsSync(projectDir)) {
       fs.mkdirSync(projectDir, { recursive: true });
     }
-    
+
     // 创建新文件夹
     if (!fs.existsSync(folderPath)) {
       fs.mkdirSync(folderPath, { recursive: true });
@@ -7219,7 +7221,7 @@ ipcMain.handle('createProjectFolder', async (event, projectName, folderName) => 
     } else {
       return { success: false, error: 'Folder already exists' };
     }
-    
+
   } catch (error) {
     console.error('Error creating project folder:', error);
     return { success: false, error: error.message };
@@ -7231,7 +7233,7 @@ ipcMain.handle('saveProjectsData', async (event, projectsData) => {
   try {
     const userDataPath = app.getPath('userData');
     const projectsFilePath = path.join(userDataPath, 'projects.json');
-    
+
     fs.writeFileSync(projectsFilePath, JSON.stringify(projectsData, null, 2));
     return { success: true };
   } catch (error) {
@@ -7244,7 +7246,7 @@ ipcMain.handle('loadProjectsData', async () => {
   try {
     const userDataPath = app.getPath('userData');
     const projectsFilePath = path.join(userDataPath, 'projects.json');
-    
+
     if (fs.existsSync(projectsFilePath)) {
       const data = fs.readFileSync(projectsFilePath, 'utf8');
       return { success: true, data: data };
@@ -7261,7 +7263,7 @@ ipcMain.handle('saveProjectSettings', async (event, settings) => {
   try {
     const userDataPath = app.getPath('userData');
     const settingsFilePath = path.join(userDataPath, 'project-settings.json');
-    
+
     fs.writeFileSync(settingsFilePath, JSON.stringify(settings, null, 2));
     return { success: true };
   } catch (error) {
@@ -7274,7 +7276,7 @@ ipcMain.handle('loadProjectSettings', async () => {
   try {
     const userDataPath = app.getPath('userData');
     const settingsFilePath = path.join(userDataPath, 'project-settings.json');
-    
+
     if (fs.existsSync(settingsFilePath)) {
       const data = fs.readFileSync(settingsFilePath, 'utf8');
       return { success: true, data: data };
@@ -7343,11 +7345,11 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
     // Clear cache aggressively to ensure fresh file loading (same as original)
     newMainWindow.webContents.session.clearCache();
     newMainWindow.webContents.session.clearStorageData();
-    
+
     // Handle multiple reload cycles to ensure proper initialization
     let reloadCount = 0;
     const maxReloads = 1; // Only one reload cycle
-    
+
     newMainWindow.webContents.on('did-finish-load', () => {
       if (reloadCount < maxReloads) {
         console.log(`New window reload cycle ${reloadCount + 1}/${maxReloads}`);
@@ -7360,7 +7362,7 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
           console.log('Checking if new window is ready for file loading...');
           // Send a test message to verify the window is responsive
           newMainWindow.webContents.send('ping-test');
-          
+
           // Wait a bit more and then send the file
           setTimeout(() => {
             console.log('Sending load-file event to new window with path:', filePath);
@@ -7417,7 +7419,7 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
     const newFolders = [];
     const discoveredFolderPaths = new Set();
     const existingFolderPaths = new Set();
-    
+
     // Convert existing folder structure to a set of paths for quick lookup
     existingFolderStructure.forEach(folder => {
       if (folder.path && Array.isArray(folder.path)) {
@@ -7434,30 +7436,30 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
     // Helper function to scan directory recursively
     function scanDirectory(dirPath, relativePath = '', currentFolderPath = []) {
       const items = fs.readdirSync(dirPath);
-      
+
       items.forEach(item => {
         const itemPath = path.join(dirPath, item);
         const relativeFilePath = relativePath ? path.join(relativePath, item) : item;
-        
+
         // Skip hidden files, temp files, and system files
-        if (item.startsWith('.') || item.startsWith('~') || 
-            item.includes('.tmp') || item.includes('.temp') ||
-            item.endsWith('.prj.GAI') || item.endsWith('.genomeproj')) {
+        if (item.startsWith('.') || item.startsWith('~') ||
+          item.includes('.tmp') || item.includes('.temp') ||
+          item.endsWith('.prj.GAI') || item.endsWith('.genomeproj')) {
           return;
         }
 
         try {
           const stats = fs.statSync(itemPath);
-          
+
           if (stats.isDirectory()) {
             // Process folder
             const newFolderPath = [...currentFolderPath, item.toLowerCase()];
             const folderPathString = newFolderPath.join('/');
-            
+
             // Check if this folder already exists in project
             if (!existingFolderPaths.has(folderPathString) && !discoveredFolderPaths.has(folderPathString)) {
               discoveredFolderPaths.add(folderPathString);
-              
+
               // Create folder object with relative path
               newFolders.push({
                 name: item,
@@ -7472,22 +7474,22 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
                 absolutePath: itemPath // Keep absolute path for system operations
               });
             }
-            
+
             // Recursively scan subdirectories
             scanDirectory(itemPath, relativeFilePath, newFolderPath);
-            
+
           } else if (stats.isFile()) {
             // Process file
             const tempId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const projectRelativePath = getProjectRelativePath(itemPath, projectPath);
-            
+
             // Check if this file path already exists (use relative path for comparison)
-            const isDuplicate = existingFileIds.some(existingPath => 
-              existingPath === projectRelativePath || 
-              existingPath === itemPath || 
+            const isDuplicate = existingFileIds.some(existingPath =>
+              existingPath === projectRelativePath ||
+              existingPath === itemPath ||
               existingPath.endsWith(relativeFilePath)
             );
-            
+
             if (!isDuplicate) {
               newFiles.push({
                 id: tempId,
@@ -7531,8 +7533,8 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
     console.log(`🆕 Found ${newFiles.length} new files (using relative paths)`);
     console.log(`📂 Found ${newFolders.length} new folders`);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       newFiles: newFiles,
       newFolders: newFolders,
       scannedPath: projectPath,
@@ -7587,19 +7589,19 @@ function getFolderIcon(folderName) {
     'configuration': '⚙️',
     'settings': '⚙️'
   };
-  
+
   // Check for exact matches first
   if (iconMap[name]) {
     return iconMap[name];
   }
-  
+
   // Check for partial matches
   for (const [key, icon] of Object.entries(iconMap)) {
     if (name.includes(key)) {
       return icon;
     }
   }
-  
+
   // Default folder icon
   return '📁';
 }
@@ -7644,12 +7646,12 @@ ipcMain.handle('saveFile', async (event, fileName, content) => {
       ],
       title: 'Save Project File'
     });
-    
+
     if (!result.canceled && result.filePath) {
       fs.writeFileSync(result.filePath, content, 'utf8');
       return { success: true, filePath: result.filePath };
     }
-    
+
     return { success: false, canceled: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -7660,7 +7662,7 @@ ipcMain.handle('saveFile', async (event, fileName, content) => {
 ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
   try {
     const { dialog } = require('electron');
-    
+
     // 新结构：默认保存为 Project.GAI
     let defaultFileName = defaultPath;
     if (defaultFileName.endsWith('.prj.GAI') || defaultFileName.endsWith('.xml')) {
@@ -7670,7 +7672,7 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
     } else if (!defaultFileName.endsWith('Project.GAI')) {
       defaultFileName = path.join(defaultFileName, 'Project.GAI');
     }
-    
+
     const result = await dialog.showSaveDialog(null, {
       defaultPath: defaultFileName,
       filters: [
@@ -7681,19 +7683,19 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
       ],
       title: 'Save Project File'
     });
-    
+
     if (!result.canceled && result.filePath) {
       // 确保父目录存在
       const parentDir = path.dirname(result.filePath);
       if (!fs.existsSync(parentDir)) {
         fs.mkdirSync(parentDir, { recursive: true });
       }
-      
+
       fs.writeFileSync(result.filePath, content, 'utf8');
       console.log(`✅ Project saved: ${result.filePath}`);
       return { success: true, filePath: result.filePath };
     }
-    
+
     return { success: false, canceled: true };
   } catch (error) {
     console.error('Error saving project file:', error);
@@ -7708,13 +7710,13 @@ ipcMain.handle('saveProjectFileDirect', async (event, filePath, content) => {
     if (!filePath) {
       throw new Error('File path is required for direct save');
     }
-    
+
     // 确保父目录存在
     const parentDir = path.dirname(filePath);
     if (!fs.existsSync(parentDir)) {
       fs.mkdirSync(parentDir, { recursive: true });
     }
-    
+
     // 直接写入文件，不显示对话框
     fs.writeFileSync(filePath, content, 'utf8');
     console.log(`✅ Project saved directly: ${filePath}`);
@@ -7730,9 +7732,9 @@ ipcMain.handle('createTempFile', async (event, fileName, content) => {
   try {
     const tempDir = app.getPath('temp');
     const tempFilePath = path.join(tempDir, 'codexomics_temp_' + Date.now() + '_' + fileName);
-    
+
     fs.writeFileSync(tempFilePath, content, 'utf8');
-    
+
     // Schedule file deletion after 5 minutes
     setTimeout(() => {
       try {
@@ -7744,7 +7746,7 @@ ipcMain.handle('createTempFile', async (event, fileName, content) => {
         console.error('Error cleaning up temp file:', err);
       }
     }, 5 * 60 * 1000);
-    
+
     return { success: true, filePath: tempFilePath };
   } catch (error) {
     return { success: false, error: error.message };
@@ -7756,7 +7758,7 @@ ipcMain.handle('getFileInfo', async (event, filePath) => {
   try {
     const stats = fs.statSync(filePath);
     const fileName = path.basename(filePath);
-    
+
     return {
       success: true,
       info: {
@@ -7786,12 +7788,12 @@ ipcMain.handle('deletePhysicalFile', async (event, filePath) => {
     if (!filePath) {
       throw new Error('File path is required for deletion');
     }
-    
+
     if (!fs.existsSync(filePath)) {
       console.log(`File does not exist, skipping deletion: ${filePath}`);
       return { success: true, message: 'File does not exist' };
     }
-    
+
     // Delete the file
     fs.unlinkSync(filePath);
     console.log(`✅ File deleted: ${filePath}`);
@@ -7859,14 +7861,14 @@ ipcMain.handle('updateRecentProjects', async (event, recentProjects) => {
 ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folderPath) => {
   try {
     const os = require('os');
-    
+
     // 修正：直接使用项目目录结构，不要额外的data子目录
     const documentsPath = app.getPath('documents');
     const dirResult = await ipcMain.invoke('getProjectDirectoryName');
     const projectsDir = path.join(documentsPath, dirResult.directoryName);
     const projectDir = path.join(projectsDir, projectName);
     const targetFolderDir = path.join(projectDir, folderPath);
-    
+
     // 确保目录存在
     if (!fs.existsSync(projectsDir)) {
       fs.mkdirSync(projectsDir, { recursive: true });
@@ -7877,46 +7879,46 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
     if (!fs.existsSync(targetFolderDir)) {
       fs.mkdirSync(targetFolderDir, { recursive: true });
     }
-    
+
     // 获取源文件名
     const fileName = path.basename(sourcePath);
     const targetPath = path.join(targetFolderDir, fileName);
-    
+
     // 检查源文件是否存在
     if (!fs.existsSync(sourcePath)) {
       throw new Error(`Source file does not exist: ${sourcePath}`);
     }
-    
+
     // 复制文件
     fs.copyFileSync(sourcePath, targetPath);
-    
+
     console.log(`✅ File copied from ${sourcePath} to ${targetPath}`);
-    
+
     return {
       success: true,
       newPath: targetPath,
       projectDir: projectDir,
       targetFolder: targetFolderDir
     };
-    
+
   } catch (error) {
     console.error('Error copying file to project:', error);
-    return { 
-      success: false, 
-      error: error.message 
+    return {
+      success: false,
+      error: error.message
     };
   }
-}); 
+});
 
 // Handle creating new project structure
 ipcMain.handle('createNewProjectStructure', async (event, location, projectName) => {
   try {
     console.log(`🏗️ Creating project structure: "${projectName}" at "${location}"`);
-    
+
     // 新的目录结构：所有文件都在项目目录内
     const projectDir = path.join(location, projectName);
     const projectFilePath = path.join(projectDir, 'Project.GAI'); // 固定文件名
-    
+
     // 检查项目目录是否已存在
     if (fs.existsSync(projectDir)) {
       return {
@@ -7924,37 +7926,37 @@ ipcMain.handle('createNewProjectStructure', async (event, location, projectName)
         error: `Project directory "${projectName}" already exists at this location`
       };
     }
-    
+
     // 创建项目目录
     console.log(`📁 Creating project directory: ${projectDir}`);
     fs.mkdirSync(projectDir, { recursive: true });
-    
+
     // 创建子文件夹结构
     const subFolders = ['genomes', 'annotations', 'variants', 'reads', 'analysis'];
     console.log(`📂 Creating subdirectories: ${subFolders.join(', ')}`);
-    
+
     subFolders.forEach(folderName => {
       const subFolderPath = path.join(projectDir, folderName);
       fs.mkdirSync(subFolderPath, { recursive: true });
       console.log(`  ✅ Created: ${folderName}/`);
     });
-    
+
     console.log(`✅ Project structure created successfully`);
     console.log(`📁 Project directory: ${projectDir}`);
     console.log(`📄 Project file will be: ${projectFilePath}`);
-    
+
     return {
       success: true,
       projectFilePath: projectFilePath,
       dataFolderPath: projectDir, // 项目目录即为数据目录
       projectDir: projectDir
     };
-    
+
   } catch (error) {
     console.error('❌ Error creating project structure:', error);
-    return { 
-      success: false, 
-      error: error.message 
+    return {
+      success: false,
+      error: error.message
     };
   }
 });
@@ -7963,17 +7965,17 @@ ipcMain.handle('createNewProjectStructure', async (event, location, projectName)
 ipcMain.handle('saveProjectToSpecificFile', async (event, filePath, content) => {
   try {
     console.log(`💾 Saving project file to: ${filePath}`);
-    
+
     // 确保目录存在
     const dirPath = path.dirname(filePath);
     if (!fs.existsSync(dirPath)) {
       console.log(`📁 Creating directory: ${dirPath}`);
       fs.mkdirSync(dirPath, { recursive: true });
     }
-    
+
     // 写入文件
     fs.writeFileSync(filePath, content, 'utf8');
-    
+
     // 验证文件是否创建成功
     if (fs.existsSync(filePath)) {
       const stats = fs.statSync(filePath);
@@ -7983,12 +7985,12 @@ ipcMain.handle('saveProjectToSpecificFile', async (event, filePath, content) => 
     } else {
       throw new Error('File was not created successfully');
     }
-    
+
   } catch (error) {
     console.error('❌ Error saving project to specific file:', error);
-    return { 
-      success: false, 
-      error: error.message 
+    return {
+      success: false,
+      error: error.message
     };
   }
 });
@@ -8001,21 +8003,21 @@ ipcMain.handle('saveProjectAs', async (event, defaultProjectName) => {
       properties: ['openDirectory'],
       title: 'Select Directory to Save Project'
     });
-    
+
     if (!result.canceled && result.filePaths.length > 0) {
-      return { 
-        success: true, 
-        selectedDirectory: result.filePaths[0] 
+      return {
+        success: true,
+        selectedDirectory: result.filePaths[0]
       };
     }
-    
+
     return { success: false, canceled: true };
-    
+
   } catch (error) {
     console.error('Error in save project as dialog:', error);
-    return { 
-      success: false, 
-      error: error.message 
+    return {
+      success: false,
+      error: error.message
     };
   }
 });
@@ -8024,15 +8026,15 @@ ipcMain.handle('saveProjectAs', async (event, defaultProjectName) => {
 ipcMain.handle('save-refined-annotation', async (event, data) => {
   try {
     const { gene, originalAnnotation, refinedAnnotation, timestamp } = data;
-    
+
     console.log('Saving refined annotation for gene:', gene);
-    
+
     // Get the main window to access the genome browser
     const mainWindow = getCurrentMainWindow();
     if (!mainWindow || !mainWindow.webContents) {
       throw new Error('Main window not available');
     }
-    
+
     // Send the refined annotation to the main window for saving
     const result = await mainWindow.webContents.executeJavaScript(`
       (async function() {
@@ -8048,19 +8050,19 @@ ipcMain.handle('save-refined-annotation', async (event, data) => {
         }
       })()
     `);
-    
+
     if (result.success) {
       console.log('Refined annotation saved successfully for gene:', gene);
       return { success: true, message: result.message };
     } else {
       throw new Error(result.error || 'Failed to save annotation');
     }
-    
+
   } catch (error) {
     console.error('Error saving refined annotation:', error);
-    return { 
-      success: false, 
-      error: error.message 
+    return {
+      success: false,
+      error: error.message
     };
   }
 });
@@ -8071,14 +8073,14 @@ ipcMain.handle('checkProjectExists', async (event, directory, projectName) => {
     // 新结构：检查项目目录内的 Project.GAI 文件
     const projectDir = path.join(directory, projectName);
     const newProjectFilePath = path.join(projectDir, 'Project.GAI');
-    
+
     // 向后兼容：也检查旧结构
     const oldProjectFilePath = path.join(directory, `${projectName}.prj.GAI`);
-    
+
     const newFileExists = fs.existsSync(newProjectFilePath);
     const oldFileExists = fs.existsSync(oldProjectFilePath);
     const folderExists = fs.existsSync(projectDir);
-    
+
     return {
       exists: newFileExists || oldFileExists || folderExists,
       fileExists: newFileExists || oldFileExists,
@@ -8087,12 +8089,12 @@ ipcMain.handle('checkProjectExists', async (event, directory, projectName) => {
       dataFolderPath: projectDir,
       isNewStructure: newFileExists
     };
-    
+
   } catch (error) {
     console.error('Error checking project exists:', error);
-    return { 
-      exists: false, 
-      error: error.message 
+    return {
+      exists: false,
+      error: error.message
     };
   }
 });
@@ -8103,35 +8105,35 @@ ipcMain.handle('copyProject', async (event, sourceProjectFile, sourceDataFolder,
     // 新结构：目标项目目录和文件
     const targetProjectDir = path.join(targetDirectory, projectName);
     const targetProjectFile = path.join(targetProjectDir, 'Project.GAI');
-    
+
     // 创建目标项目目录
     if (!fs.existsSync(targetProjectDir)) {
       fs.mkdirSync(targetProjectDir, { recursive: true });
     }
-    
+
     // 复制项目文件到新位置
     if (fs.existsSync(sourceProjectFile)) {
       fs.copyFileSync(sourceProjectFile, targetProjectFile);
       console.log(`✅ Copied project file: ${sourceProjectFile} → ${targetProjectFile}`);
     }
-    
+
     // 复制数据文件夹内容（如果源数据文件夹存在且不同于目标目录）
     if (fs.existsSync(sourceDataFolder) && sourceDataFolder !== targetProjectDir) {
       await copyDirectoryRecursive(sourceDataFolder, targetProjectDir);
       console.log(`✅ Copied data folder: ${sourceDataFolder} → ${targetProjectDir}`);
     }
-    
+
     return {
       success: true,
       targetProjectFile: targetProjectFile,
       targetDataFolder: targetProjectDir
     };
-    
+
   } catch (error) {
     console.error('Error copying project:', error);
-    return { 
-      success: false, 
-      error: error.message 
+    return {
+      success: false,
+      error: error.message
     };
   }
 });
@@ -8141,15 +8143,15 @@ async function copyDirectoryRecursive(source, target) {
   if (!fs.existsSync(target)) {
     fs.mkdirSync(target, { recursive: true });
   }
-  
+
   const items = fs.readdirSync(source);
-  
+
   for (const item of items) {
     const sourcePath = path.join(source, item);
     const targetPath = path.join(target, item);
-    
+
     const stat = fs.statSync(sourcePath);
-    
+
     if (stat.isDirectory()) {
       await copyDirectoryRecursive(sourcePath, targetPath);
     } else {
@@ -8162,7 +8164,7 @@ async function copyDirectoryRecursive(source, target) {
 function createGenomicDownloadWindow(downloadType) {
   try {
     console.log(`Creating Genomic Download window for: ${downloadType}`);
-    
+
     const downloadWindow = new BrowserWindow({
       width: 1200,
       height: 800,
@@ -8183,7 +8185,7 @@ function createGenomicDownloadWindow(downloadType) {
 
     // Create the genomic download HTML file path
     const downloadHtmlPath = path.join(__dirname, 'genomic-data-download.html');
-    
+
     // Check if the file exists, if not create it
     if (!fs.existsSync(downloadHtmlPath)) {
       console.log('Creating genomic-data-download.html file...');
@@ -8196,20 +8198,20 @@ function createGenomicDownloadWindow(downloadType) {
       downloadWindow.show();
       // Send download type
       downloadWindow.webContents.send('set-download-type', downloadType);
-      
+
       // Try to get project info from Project Manager window first, then fallback to current active project
-      const projectManagerWindows = BrowserWindow.getAllWindows().filter(window => 
+      const projectManagerWindows = BrowserWindow.getAllWindows().filter(window =>
         window.getTitle().includes('Project Manager')
       );
-      
+
       if (projectManagerWindows.length > 0) {
         console.log('🔍 Found Project Manager window, requesting current project info...');
         // Request current project info from Project Manager
         projectManagerWindows[0].webContents.send('request-current-project-for-download');
-        
+
         // Track if we received a response
         let responseReceived = false;
-        
+
         // Listen for project info response
         const handleProjectInfo = (event, projectInfo) => {
           console.log('📥 Received project info from Project Manager:', projectInfo);
@@ -8222,9 +8224,9 @@ function createGenomicDownloadWindow(downloadType) {
           // Remove the listener after receiving the response
           ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
         };
-        
+
         ipcMain.on('project-manager-current-project-response', handleProjectInfo);
-        
+
         // Fallback timeout - if no response in 1 second, use current active project
         setTimeout(() => {
           if (!responseReceived) {
@@ -8250,7 +8252,7 @@ function createGenomicDownloadWindow(downloadType) {
 
     console.log('Genomic Download window created successfully');
     return downloadWindow;
-    
+
   } catch (error) {
     console.error('Failed to create Genomic Download window:', error);
   }
@@ -8628,7 +8630,7 @@ ipcMain.handle('selectDirectory', async () => {
       properties: ['openDirectory'],
       title: 'Select Output Directory'
     });
-    
+
     return {
       success: true,
       canceled: result.canceled,
@@ -8676,7 +8678,7 @@ function categorizeGenomicFile(filePath, url, database) {
   const fileName = path.basename(filePath);
   const extension = path.extname(fileName).toLowerCase();
   const baseName = path.basename(fileName, extension).toLowerCase();
-  
+
   // Database-specific categorization (highest priority)
   if (database) {
     switch (database) {
@@ -8693,7 +8695,7 @@ function categorizeGenomicFile(filePath, url, database) {
         break;
     }
   }
-  
+
   // Extension-based categorization (medium priority)
   switch (extension) {
     case '.fasta':
@@ -8712,50 +8714,50 @@ function categorizeGenomicFile(filePath, url, database) {
       } else {
         return 'genomes'; // Default for FASTA files
       }
-      
+
     case '.gb':
     case '.gbk':
     case '.genbank':
       return 'genomes';
-      
+
     case '.gff':
     case '.gff3':
     case '.gtf':
       return 'annotations';
-      
+
     case '.vcf':
     case '.bcf':
       return 'variants';
-      
+
     case '.bed':
     case '.wig':
     case '.bigwig':
     case '.bw':
       return 'tracks';
-      
+
     case '.sam':
     case '.bam':
       return 'alignments';
-      
+
     case '.fastq':
     case '.fq':
     case '.sra':
       return 'sequencing_data';
-      
+
     case '.embl':
       return 'genomes';
-      
+
     case '.xml':
       if (baseName.includes('pubmed') || baseName.includes('literature')) {
         return 'literature';
       }
       return 'metadata';
-      
+
     case '.json':
     case '.yaml':
     case '.yml':
       return 'metadata';
-      
+
     default:
       // URL-based categorization as fallback (lowest priority)
       if (url) {
@@ -8772,7 +8774,7 @@ function categorizeGenomicFile(filePath, url, database) {
           return 'variants';
         }
       }
-      
+
       // Default fallback - return null for root directory placement
       return null;
   }
@@ -8785,16 +8787,16 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
       const http = require('http');
       const fs = require('fs');
       const path = require('path');
-      
+
       // If project info is provided, download to project directory with intelligent categorization
       let finalOutputPath = outputPath;
       if (projectInfo && projectInfo.dataFolderPath) {
         // Determine file category based on extension, URL, and database type
         const fileName = path.basename(outputPath);
-        
+
         // Extract database type from enhanced project info or URL/filename patterns
         let databaseType = null;
-        
+
         // Priority 1: Use database info from download context if available
         if (projectInfo.downloadContext && projectInfo.downloadContext.database) {
           databaseType = projectInfo.downloadContext.database;
@@ -8811,9 +8813,9 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
             databaseType = 'pubmed';
           }
         }
-        
+
         const category = categorizeGenomicFile(outputPath, url, databaseType);
-        
+
         let targetDir;
         if (category) {
           // Create categorized subdirectory
@@ -8824,55 +8826,55 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
           targetDir = projectInfo.dataFolderPath;
           console.log(`📁 Root directory placement: ${fileName} (unclassifiable type)`);
         }
-        
+
         if (!fs.existsSync(targetDir)) {
           fs.mkdirSync(targetDir, { recursive: true });
         }
         finalOutputPath = path.join(targetDir, fileName);
       }
-      
+
       // 确保输出目录存在
       const outputDir = path.dirname(finalOutputPath);
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
       }
-      
+
       // 选择适当的协议
       const client = url.startsWith('https:') ? https : http;
-      
+
       const file = fs.createWriteStream(finalOutputPath);
-      
+
       const request = client.get(url, (response) => {
         // 处理重定向
         if (response.statusCode === 301 || response.statusCode === 302) {
           const redirectUrl = response.headers.location;
           console.log(`Redirecting to: ${redirectUrl}`);
-          
+
           // 递归处理重定向
           const redirectClient = redirectUrl.startsWith('https:') ? https : http;
           const redirectRequest = redirectClient.get(redirectUrl, (redirectResponse) => {
             if (redirectResponse.statusCode === 200) {
               redirectResponse.pipe(file);
-              
+
               file.on('finish', () => {
                 file.close();
                 console.log(`✅ Downloaded: ${finalOutputPath}`);
-                
+
                 // Enhanced project integration - notify about new file
                 if (projectInfo && projectInfo.dataFolderPath) {
                   // Send file addition notification to project manager
                   const allWindows = BrowserWindow.getAllWindows();
-                  const projectManagerWindow = allWindows.find(win => 
-                    win.getTitle().includes('Project Manager') || 
+                  const projectManagerWindow = allWindows.find(win =>
+                    win.getTitle().includes('Project Manager') ||
                     win.webContents.getURL().includes('project-manager')
                   );
-                  
+
                   if (projectManagerWindow) {
                     const relativePath = path.relative(projectInfo.dataFolderPath, finalOutputPath);
-                    const category = projectInfo.downloadContext ? 
-                      categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database) : 
+                    const category = projectInfo.downloadContext ?
+                      categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database) :
                       categorizeGenomicFile(finalOutputPath, url, null);
-                    
+
                     projectManagerWindow.webContents.send('file-downloaded', {
                       filePath: finalOutputPath,
                       relativePath: relativePath,
@@ -8880,15 +8882,15 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
                       projectPath: projectInfo.dataFolderPath,
                       downloadContext: projectInfo.downloadContext || {}
                     });
-                    
+
                     console.log(`📢 Notified project manager about new file: ${relativePath} → ${category}/`);
                   }
                 }
-                
+
                 resolve({
                   success: true,
                   filePath: finalOutputPath,
-                  category: projectInfo ? categorizeGenomicFile(finalOutputPath, url, 
+                  category: projectInfo ? categorizeGenomicFile(finalOutputPath, url,
                     projectInfo.downloadContext ? projectInfo.downloadContext.database : null) : null
                 });
               });
@@ -8901,7 +8903,7 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
               });
             }
           });
-          
+
           redirectRequest.on('error', (error) => {
             file.close();
             fs.unlinkSync(finalOutputPath);
@@ -8910,29 +8912,29 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
               error: error.message
             });
           });
-          
+
         } else if (response.statusCode === 200) {
           response.pipe(file);
-          
+
           file.on('finish', () => {
             file.close();
             console.log(`✅ Downloaded: ${finalOutputPath}`);
-            
+
             // Enhanced project integration - notify about new file
             if (projectInfo && projectInfo.dataFolderPath) {
               // Send file addition notification to project manager
               const allWindows = BrowserWindow.getAllWindows();
-              const projectManagerWindow = allWindows.find(win => 
-                win.getTitle().includes('Project Manager') || 
+              const projectManagerWindow = allWindows.find(win =>
+                win.getTitle().includes('Project Manager') ||
                 win.webContents.getURL().includes('project-manager')
               );
-              
+
               if (projectManagerWindow) {
                 const relativePath = path.relative(projectInfo.dataFolderPath, finalOutputPath);
-                const category = projectInfo.downloadContext ? 
-                  categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database) : 
+                const category = projectInfo.downloadContext ?
+                  categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database) :
                   categorizeGenomicFile(finalOutputPath, url, null);
-                
+
                 projectManagerWindow.webContents.send('file-downloaded', {
                   filePath: finalOutputPath,
                   relativePath: relativePath,
@@ -8940,15 +8942,15 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
                   projectPath: projectInfo.dataFolderPath,
                   downloadContext: projectInfo.downloadContext || {}
                 });
-                
+
                 console.log(`📢 Notified project manager about new file: ${relativePath} → ${category}/`);
               }
             }
-            
+
             resolve({
               success: true,
               filePath: finalOutputPath,
-              category: projectInfo ? categorizeGenomicFile(finalOutputPath, url, 
+              category: projectInfo ? categorizeGenomicFile(finalOutputPath, url,
                 projectInfo.downloadContext ? projectInfo.downloadContext.database : null) : null
             });
           });
@@ -8961,7 +8963,7 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
           });
         }
       });
-      
+
       request.on('error', (error) => {
         file.close();
         if (fs.existsSync(finalOutputPath)) {
@@ -8972,7 +8974,7 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
           error: error.message
         });
       });
-      
+
       file.on('error', (error) => {
         file.close();
         if (fs.existsSync(finalOutputPath)) {
@@ -8983,7 +8985,7 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
           error: error.message
         });
       });
-      
+
     } catch (error) {
       console.error('Download error:', error);
       resolve({
@@ -8992,7 +8994,7 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
       });
     }
   });
-}); 
+});
 
 // ========== WINDOW LAYOUT MANAGEMENT FUNCTIONS ==========
 
@@ -9010,18 +9012,18 @@ function getDisplayWorkArea() {
  */
 function getMainWindows() {
   const allWindows = BrowserWindow.getAllWindows();
-  
-  const mainWindow = allWindows.find(win => 
-    win.getTitle().includes('CodeXomics') && 
+
+  const mainWindow = allWindows.find(win =>
+    win.getTitle().includes('CodeXomics') &&
     !win.getTitle().includes('Project Manager') &&
     !win.isDestroyed()
   );
-  
-  const projectManagerWindow = allWindows.find(win => 
-    win.getTitle().includes('Project Manager') && 
+
+  const projectManagerWindow = allWindows.find(win =>
+    win.getTitle().includes('Project Manager') &&
     !win.isDestroyed()
   );
-  
+
   return { mainWindow, projectManagerWindow };
 }
 
@@ -9030,20 +9032,20 @@ function getMainWindows() {
  */
 function arrangeWindowsOptimal() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
-  
+
   if (!mainWindow) {
     console.log('Main window not found');
     return;
   }
-  
+
   const workArea = getDisplayWorkArea();
   const totalWidth = workArea.width;
   const totalHeight = workArea.height;
-  
+
   // 计算窗口尺寸
   const pmWidth = Math.floor(totalWidth * 0.25); // Project Manager 25%
   const mainWidth = totalWidth - pmWidth;        // Main Window 75%
-  
+
   // 设置主窗口位置和大小
   mainWindow.setBounds({
     x: pmWidth,
@@ -9051,7 +9053,7 @@ function arrangeWindowsOptimal() {
     width: mainWidth,
     height: totalHeight
   });
-  
+
   // 如果Project Manager存在，设置其位置和大小
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
@@ -9074,10 +9076,10 @@ function arrangeWindowsOptimal() {
       });
     }
   }
-  
+
   // 聚焦到主窗口
   mainWindow.focus();
-  
+
   console.log('🎯 Optimal layout applied: Main 75% + Project Manager 25%');
 }
 
@@ -9086,12 +9088,12 @@ function arrangeWindowsOptimal() {
  */
 function arrangeWindowsSideBySide() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
-  
+
   if (!mainWindow) return;
-  
+
   const workArea = getDisplayWorkArea();
   const halfWidth = Math.floor(workArea.width * 0.5);
-  
+
   // 主窗口右侧50%
   mainWindow.setBounds({
     x: halfWidth,
@@ -9099,7 +9101,7 @@ function arrangeWindowsSideBySide() {
     width: halfWidth,
     height: workArea.height
   });
-  
+
   // Project Manager左侧50%
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
@@ -9121,7 +9123,7 @@ function arrangeWindowsSideBySide() {
       });
     }
   }
-  
+
   mainWindow.focus();
   console.log('📐 Side by side layout applied: 50% + 50%');
 }
@@ -9131,20 +9133,20 @@ function arrangeWindowsSideBySide() {
  */
 function arrangeMainWindowFocus() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
-  
+
   if (!mainWindow) return;
-  
+
   const workArea = getDisplayWorkArea();
   const pmWidth = Math.floor(workArea.width * 0.15);
   const mainWidth = workArea.width - pmWidth;
-  
+
   mainWindow.setBounds({
     x: pmWidth,
     y: 0,
     width: mainWidth,
     height: workArea.height
   });
-  
+
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
       x: 0,
@@ -9153,7 +9155,7 @@ function arrangeMainWindowFocus() {
       height: workArea.height
     });
   }
-  
+
   mainWindow.focus();
   console.log('🎯 Main window focus layout applied: Main 85% + PM 15%');
 }
@@ -9163,20 +9165,20 @@ function arrangeMainWindowFocus() {
  */
 function arrangeProjectManagerFocus() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
-  
+
   if (!mainWindow) return;
-  
+
   const workArea = getDisplayWorkArea();
   const pmWidth = Math.floor(workArea.width * 0.6);
   const mainWidth = workArea.width - pmWidth;
-  
+
   mainWindow.setBounds({
     x: pmWidth,
     y: 0,
     width: mainWidth,
     height: workArea.height
   });
-  
+
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
       x: 0,
@@ -9199,7 +9201,7 @@ function arrangeProjectManagerFocus() {
       });
     }
   }
-  
+
   console.log('📊 Project Manager focus layout applied: PM 60% + Main 40%');
 }
 
@@ -9208,12 +9210,12 @@ function arrangeProjectManagerFocus() {
  */
 function arrangeWindowsVertical() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
-  
+
   if (!mainWindow) return;
-  
+
   const workArea = getDisplayWorkArea();
   const halfHeight = Math.floor(workArea.height * 0.5);
-  
+
   // 主窗口上半部分
   mainWindow.setBounds({
     x: 0,
@@ -9221,7 +9223,7 @@ function arrangeWindowsVertical() {
     width: workArea.width,
     height: halfHeight
   });
-  
+
   // Project Manager下半部分
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
@@ -9243,7 +9245,7 @@ function arrangeWindowsVertical() {
       });
     }
   }
-  
+
   mainWindow.focus();
   console.log('📚 Vertical stack layout applied');
 }
@@ -9253,14 +9255,14 @@ function arrangeWindowsVertical() {
  */
 function arrangeWindowsCascade() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
-  
+
   if (!mainWindow) return;
-  
+
   const workArea = getDisplayWorkArea();
   const windowWidth = Math.floor(workArea.width * 0.8);
   const windowHeight = Math.floor(workArea.height * 0.8);
   const offset = 50;
-  
+
   // 主窗口
   mainWindow.setBounds({
     x: 0,
@@ -9268,7 +9270,7 @@ function arrangeWindowsCascade() {
     width: windowWidth,
     height: windowHeight
   });
-  
+
   // Project Manager偏移位置
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
@@ -9278,7 +9280,7 @@ function arrangeWindowsCascade() {
       height: windowHeight
     });
   }
-  
+
   mainWindow.focus();
   console.log('🔄 Cascade layout applied');
 }
@@ -9288,7 +9290,7 @@ function arrangeWindowsCascade() {
  */
 function resetWindowPositions() {
   const { mainWindow, projectManagerWindow } = getMainWindows();
-  
+
   if (mainWindow) {
     mainWindow.setBounds({
       x: 100,
@@ -9298,7 +9300,7 @@ function resetWindowPositions() {
     });
     mainWindow.center();
   }
-  
+
   if (projectManagerWindow) {
     projectManagerWindow.setBounds({
       x: 150,
@@ -9308,7 +9310,7 @@ function resetWindowPositions() {
     });
     projectManagerWindow.center();
   }
-  
+
   console.log('🔄 Window positions reset to default');
 }
 
@@ -9328,7 +9330,7 @@ function openTestFile(filename) {
     // Get the project root directory
     const projectRoot = path.resolve(__dirname, '..');
     const testFilePath = path.join(projectRoot, filename);
-    
+
     // Check if file exists
     if (!fs.existsSync(testFilePath)) {
       console.error(`Test file not found: ${testFilePath}`);
@@ -9381,7 +9383,7 @@ function openTestFile(filename) {
 ipcMain.handle('getProjectDirectoryName', async () => {
   try {
     const documentsPath = app.getPath('documents');
-    
+
     // Check which project directory exists
     const possibleNames = [
       'CodeXomics Projects',
@@ -9389,7 +9391,7 @@ ipcMain.handle('getProjectDirectoryName', async () => {
       'GenomeExplorer Projects',
       'Genome Explorer Projects'
     ];
-    
+
     for (const name of possibleNames) {
       const testPath = path.join(documentsPath, name);
       if (fs.existsSync(testPath)) {
@@ -9397,12 +9399,12 @@ ipcMain.handle('getProjectDirectoryName', async () => {
         return { success: true, directoryName: name };
       }
     }
-    
+
     // If none exist, use the default
     const defaultName = PROJECT_DIRECTORY_NAME;
     console.log(`📁 Using default project directory name: ${defaultName}`);
     return { success: true, directoryName: defaultName };
-    
+
   } catch (error) {
     console.error('Error getting project directory name:', error);
     return { success: false, error: error.message };
