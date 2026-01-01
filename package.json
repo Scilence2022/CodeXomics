@@ -170,7 +170,7 @@
           "path": "/Applications"
         }
       ],
-      "background": "build/dmg-background.png",
+      "background": "build/background.tiff",
       "format": "UDZO",
       "writeUpdateInfo": false,
       "artifactName": "${productName}-${version}-${arch}.${ext}"
