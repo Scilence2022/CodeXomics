@@ -1797,16 +1797,28 @@ class LLMConfigManager {
     }
 
     async sendGoogleMessage(provider, message, context, memoryContext = null) {
-        const prompt = this.buildGooglePrompt(message, context, memoryContext);
+        const systemMessage = this.buildSystemMessage(context, message, memoryContext);
+
+        // Use systemInstruction for system prompts (proper Gemini API approach)
         const payload = {
             contents: [{
-                parts: [{ text: prompt }]
+                role: 'user',
+                parts: [{ text: message }]
             }],
             generationConfig: {
                 maxOutputTokens: 2000,
                 temperature: 0.7
             }
         };
+
+        // Add systemInstruction for proper system prompt handling
+        if (systemMessage) {
+            payload.systemInstruction = {
+                parts: [{ text: systemMessage }]
+            };
+            console.log('Google API (simple): Including systemInstruction with', systemMessage.length, 'chars');
+        }
+
         console.log('Sending to Google - Request Payload:', JSON.stringify(payload, null, 2));
 
         const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
@@ -1835,11 +1847,12 @@ class LLMConfigManager {
     }
 
     async sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
-        // Google uses a different conversation format
+        // Google uses systemInstruction for system messages (not in contents array)
+        const systemMessage = conversationHistory.find(msg => msg.role === 'system');
         const contents = [];
 
         for (const message of conversationHistory) {
-            if (message.role === 'system') continue; // Skip system messages for Google
+            if (message.role === 'system') continue; // System message handled separately via systemInstruction
 
             let role = 'user';
             if (message.role === 'assistant') {
@@ -1852,6 +1865,7 @@ class LLMConfigManager {
             });
         }
 
+        // Build the payload with systemInstruction if a system message exists
         const payload = {
             contents: contents,
             generationConfig: {
@@ -1859,6 +1873,16 @@ class LLMConfigManager {
                 temperature: 0.7
             }
         };
+
+        // CRITICAL FIX: Add systemInstruction to ensure system prompt and tools are included
+        if (systemMessage && systemMessage.content) {
+            payload.systemInstruction = {
+                parts: [{ text: systemMessage.content }]
+            };
+            console.log('Google API: Including systemInstruction with', systemMessage.content.length, 'chars');
+        } else {
+            console.warn('Google API: No system message found in conversation history - tools and system prompt will be missing!');
+        }
 
         console.log('Sending to Google - Request Payload:', JSON.stringify(payload, null, 2));
 
