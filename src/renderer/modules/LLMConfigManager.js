@@ -11,33 +11,69 @@ class LLMConfigManager {
                 apiKey: '',
                 model: 'gpt-4o', // Default to GPT-4o since GPT-5 requires BYOK
                 baseUrl: 'https://api.openai.com/v1',
-                enabled: false
+                enabled: false,
+                availableModels: [
+                    // GPT-5 Series (Latest - 2026, requires BYOK)
+                    'gpt-5.2',              // Latest flagship for coding/agentic tasks
+                    'gpt-5.1',              // Previous GPT-5 generation
+                    'gpt-5.2-codex',        // Specialized for long coding tasks
+
+                    // o-Series (Reasoning Models)
+                    'o3',                   // Latest reasoning model
+                    'o3-mini',              // Compact reasoning model
+                    'o4-mini',              // Fast reasoning model
+                    'o1',                   // Original reasoning model
+
+                    // GPT-4o Series (Current stable)
+                    'gpt-4o',               // Multimodal flagship
+                    'gpt-4o-mini',          // Fast and efficient
+
+                    // GPT-4 Series (Legacy)
+                    'gpt-4-turbo',          // GPT-4 Turbo
+                    'gpt-4',                // Original GPT-4
+                    'gpt-3.5-turbo'         // Legacy fast model
+                ]
             },
             anthropic: {
                 name: 'Anthropic',
                 apiKey: '',
-                model: 'claude-3-5-sonnet-20241022',
+                model: 'claude-sonnet-4.5-20250929', // Latest Claude 4.5 Sonnet
                 baseUrl: 'https://api.anthropic.com',
-                enabled: false
+                enabled: false,
+                availableModels: [
+                    // Claude 4.5 Series (Latest - 2025/2026)
+                    'claude-opus-4.5-20251101',        // Most intelligent, complex tasks
+                    'claude-sonnet-4.5-20250929',      // Balanced intelligence and speed
+                    'claude-haiku-4.5-20251001',       // Fast and cost-efficient
+
+                    // Claude 3.5 Series (Previous generation, still supported)
+                    'claude-3-5-sonnet-20241022',      // Previous Sonnet version
+                    'claude-3-5-haiku-20241022'        // Previous Haiku version
+                ]
             },
             // Google - Direct API access to Gemini models
             google: {
                 name: 'Google',
                 apiKey: '',
-                model: 'gemini-2.0-flash', // Latest Gemini 2.0 Flash model
+                model: 'gemini-2.0-flash', // Latest stable Gemini 2.0 Flash model
                 baseUrl: 'https://generativelanguage.googleapis.com',
                 enabled: false,
                 availableModels: [
-                    // Gemini 2.0 Series (Latest)
-                    'gemini-2.0-flash',     // Latest multimodal model
-                    'gemini-2.0-flash-exp', // Experimental version
-                    // Gemini 1.5 Series
+                    // Gemini 3.0 Series (Latest - 2026)
+                    'gemini-3-flash-preview',   // Latest with advanced reasoning, 1M+ tokens
+
+                    // Gemini 2.0 Series (Current stable)
+                    'gemini-2.0-flash',         // Latest multimodal model
+                    'gemini-2.0-flash-exp',     // Experimental version
+
+                    // Gemini 1.5 Series (Legacy)
                     'gemini-1.5-pro-latest',    // Large context, most capable
                     'gemini-1.5-flash-latest',  // Fast, efficient
-                    'gemini-1.5-pro',      // Legacy 1.5 Pro
-                    'gemini-1.5-flash',    // Legacy 1.5 Flash
-                    // Gemini 1.0 Series
-                    'gemini-pro'           // Legacy 1.0 Pro
+                    'gemini-1.5-pro',           // Legacy 1.5 Pro
+                    'gemini-1.5-flash',         // Legacy 1.5 Flash
+
+                    // Gemini 1.0 Series (Deprecated)
+                    'gemini-pro'                // Legacy 1.0 Pro
                 ]
             },
             deepseek: {
@@ -55,89 +91,89 @@ class LLMConfigManager {
                 enabled: false,
                 availableModels: [
                     // 🤖 Qwen Series (Arranged by size: high to low)
-                    
+
                     // Qwen3 Coder Series (Largest - 480B)
                     'Qwen/Qwen3-Coder-480B-A35B-Instruct',      // 480B total, 35B active
-                    
+
                     // Qwen3 235B Series  
                     'Qwen/Qwen3-235B-A22B-Thinking-2507',       // 235B total, 22B active
                     'Qwen/Qwen3-235B-A22B-Instruct-2507',       // 235B total, 22B active
-                    
+
                     // Qwen3 Next 80B Series
                     'Qwen/Qwen3-Next-80B-A3B-Instruct',         // 80B total, 3B active
                     'Qwen/Qwen3-Next-80B-A3B-Thinking',         // 80B total, 3B active
-                    
+
                     // Qwen3 30B Series
                     'Qwen/Qwen3-30B-A3B-Thinking-2507',         // 30B total, 3B active
                     'Qwen/Qwen3-30B-A3B-Instruct-2507',         // 30B total, 3B active
                     'Qwen/Qwen3-Coder-30B-A3B-Instruct',        // 30B total, 3B active (Coder)
-                    
+
                     // Qwen3 Standard Series (32B and below)
                     'Qwen/Qwen3-32B',                           // 32B
                     'Qwen/QwQ-32B',                            // 32B (Reasoning)
                     'Qwen/QwQ-32B-Preview',                    // 32B (Reasoning Preview)
                     'Qwen/Qwen3-14B',                           // 14B
                     'Qwen/Qwen3-8B',                            // 8B
-                    
+
                     // Qwen2.5 Coder Series (Legacy)
                     'Qwen/Qwen2.5-Coder-32B-Instruct',         // 32B (Legacy)
                     'Qwen/Qwen2.5-Coder-7B-Instruct',          // 7B (Legacy)
-                    
+
                     // Qwen Long Context Series
                     'Tongyi-Zhiwen/QwenLong-L1-32B',           // 32B (Long context)
-                    
+
                     // 🧠 DeepSeek Series (Arranged by capability and size)
-                    
+
                     // DeepSeek Pro Series
                     'Pro/deepseek-ai/DeepSeek-R1',             // Latest R1 Pro
                     'Pro/deepseek-ai/DeepSeek-V3',             // V3 Pro
                     'Pro/THUDM/glm-4-9b-chat',                 // GLM Pro variant
                     'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', // R1 Distilled Pro
-                    
+
                     // DeepSeek Standard Series
                     'deepseek-ai/DeepSeek-R1',                 // Latest R1
                     'deepseek-ai/DeepSeek-V3',                 // V3
                     'deepseek-ai/DeepSeek-V3.1-Terminus',      // V3.1 Terminus
                     'deepseek-ai/DeepSeek-V2.5',               // V2.5
-                    
+
                     // DeepSeek R1 Distilled Series (by size)
                     'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B', // 32B Distilled
                     'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B', // 14B Distilled
                     'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B',    // 8B R1
                     'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',  // 7B Distilled
-                    
+
                     // 🌙 Kimi Series (Moonshot AI)
-                    
+
                     'Pro/moonshotai/Kimi-K2-Instruct-0905',    // Kimi K2 Pro (Latest)
                     'moonshotai/Kimi-K2-Instruct',             // Kimi K2 Standard
                     'moonshotai/Kimi-K2-Thinking',             // Kimi K2 Thinking (Reasoning)
-                    
+
                     // 🔮 GLM Series (Zhipu AI - Arranged by version and size)
-                    
+
                     // GLM Latest Series
                     'zai-org/GLM-4.6',                         // GLM-4.6 (Latest)
                     'zai-org/GLM-4.5',                         // GLM-4.5
                     'zai-org/GLM-4.5-Air',                     // GLM-4.5-Air (Lightweight)
-                    
+
                     // GLM THUDM Series (by size)
                     'THUDM/GLM-Z1-32B-0414',                   // 32B Z1
                     'THUDM/GLM-4-32B-0414',                    // 32B GLM-4
                     'THUDM/GLM-Z1-Rumination-32B-0414',       // 32B Z1 Rumination
                     'THUDM/GLM-4-9B-0414',                     // 9B GLM-4
                     'THUDM/glm-4-9b-chat',                     // 9B Chat
-                    
+
                     // 🏢 Enterprise & Commercial Models
-                    
+
                     // Baidu ERNIE Series
                     'baidu/ERNIE-4.5-300B-A47B',              // 300B ERNIE (47B active)
-                    
+
                     // Other Large Enterprise Models
                     'ascend-tribe/pangu-pro-moe',             // PanGu Pro MoE
                     'tencent/Hunyuan-A13B-Instruct',          // Hunyuan 13B
                     'MiniMaxAI/MiniMax-M1-80k',               // MiniMax M1
                     'MiniMaxAI/MiniMax-M2',                   // MiniMax M2 (Latest)
                     'TeleAI/TeleChat2',                       // TeleChat2
-                    
+
                     // InternLM Series (by size)
                     'internlm/internlm2_5-20b-chat',          // 20B InternLM
                     'internlm/internlm2_5-7b-chat'            // 7B InternLM
@@ -155,24 +191,24 @@ class LLMConfigManager {
                     'openai/gpt-5',         // Full model: $1.25/$10 per M tokens, advanced reasoning
                     'openai/gpt-5-mini',    // Compact: $0.25/$2 per M tokens, lighter reasoning
                     'openai/gpt-5-nano',    // Smallest: $0.05/$0.40 per M tokens, ultra-low latency
-                    
+
                     // GLM 4.5/4.6 Series (Latest from Z.AI)
                     'z-ai/glm-4.6',         // GLM-4.6 (Latest flagship)
                     'z-ai/glm-4.5',         // GLM-4.5 (Previous flagship)
                     'z-ai/glm-4.5-air:free', // GLM-4.5-Air (Free, lightweight)
                     'z-ai/glm-4.5v',        // GLM-4.5V (Vision capable)
-                    
+
                     // Google Gemini Series
                     'google/gemini-2.0-flash',    // Latest multimodal, competitive pricing
                     'google/gemini-1.5-pro-latest',   // Large context, most capable
                     'google/gemini-1.5-flash-latest', // Fast, efficient
-                    
+
                     // Anthropic Claude Series
                     'anthropic/claude-3-5-sonnet-20241022',
                     'anthropic/claude-3-5-haiku-20241022',
-                    
+
                     // Fallback models
-                    'openai/gpt-4o',        
+                    'openai/gpt-4o',
                     'openai/gpt-4-turbo'
                 ]
             },
@@ -185,7 +221,7 @@ class LLMConfigManager {
                 enabled: false
             }
         };
-        
+
         // Model type configurations with intelligent defaults
         this.modelTypes = {
             reasoning: {
@@ -194,12 +230,12 @@ class LLMConfigManager {
                 description: 'For complex reasoning and analysis tasks',
                 preferredProviders: ['anthropic', 'openai', 'google', 'deepseek'],
                 preferredModels: {
-                    'anthropic': 'claude-3-5-sonnet-20241022',
-                    'openai': 'gpt-4o',
-                    'google': 'gemini-2.0-flash',
+                    'anthropic': 'claude-sonnet-4.5-20250929',
+                    'openai': 'o3',
+                    'google': 'gemini-3-flash-preview',
                     'deepseek': 'deepseek-chat',
                     'siliconflow': 'Qwen/Qwen3-Next-80B-A3B-Thinking',
-                    'openrouter': 'openai/gpt-5'
+                    'openrouter': 'openai/o3'
                 }
             },
             task: {
@@ -208,12 +244,12 @@ class LLMConfigManager {
                 description: 'For general task execution and completion',
                 preferredProviders: ['openai', 'anthropic', 'siliconflow', 'google'],
                 preferredModels: {
-                    'openai': 'gpt-4o',
-                    'anthropic': 'claude-3-5-sonnet-20241022',
+                    'openai': 'gpt-5.2',
+                    'anthropic': 'claude-sonnet-4.5-20250929',
                     'siliconflow': 'Qwen/Qwen3-Next-80B-A3B-Instruct',
-                    'google': 'gemini-2.0-flash',
+                    'google': 'gemini-3-flash-preview',
                     'deepseek': 'deepseek-chat',
-                    'openrouter': 'openai/gpt-4o'
+                    'openrouter': 'openai/gpt-5.2'
                 }
             },
             code: {
@@ -224,9 +260,9 @@ class LLMConfigManager {
                 preferredModels: {
                     'siliconflow': 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
                     'deepseek': 'deepseek-coder',
-                    'openai': 'gpt-4o',
-                    'anthropic': 'claude-3-5-sonnet-20241022',
-                    'openrouter': 'openai/gpt-4o',
+                    'openai': 'gpt-5.2-codex',
+                    'anthropic': 'claude-sonnet-4.5-20250929',
+                    'openrouter': 'openai/gpt-5.2-codex',
                     'local': 'deepseek-r1:70b'
                 }
             },
@@ -257,8 +293,8 @@ class LLMConfigManager {
                 preferredProviders: ['openai', 'google', 'anthropic'],
                 preferredModels: {
                     'openai': 'gpt-4o',
-                    'google': 'gemini-2.0-flash',
-                    'anthropic': 'claude-3-5-sonnet-20241022'
+                    'google': 'gemini-3-flash-preview',
+                    'anthropic': 'claude-sonnet-4.5-20250929'
                 }
             },
             multimodal: {
@@ -267,13 +303,13 @@ class LLMConfigManager {
                 description: 'For processing text, images, and other media',
                 preferredProviders: ['google', 'openai', 'anthropic'],
                 preferredModels: {
-                    'google': 'gemini-2.0-flash',
+                    'google': 'gemini-3-flash-preview',
                     'openai': 'gpt-4o',
-                    'anthropic': 'claude-3-5-sonnet-20241022'
+                    'anthropic': 'claude-sonnet-4.5-20250929'
                 }
             }
         };
-        
+
         // Initialize asynchronously to wait for ConfigManager
         this.initializeAsync();
     }
@@ -286,11 +322,11 @@ class LLMConfigManager {
                 await this.configManager.waitForInitialization();
                 console.log('LLMConfigManager: ConfigManager initialized, loading configuration...');
             }
-            
+
             // Load configuration after ConfigManager is ready
             this.loadConfiguration();
             console.log('LLMConfigManager: Configuration loaded');
-            
+
             // Initialize UI
             this.initializeUI();
         } catch (error) {
@@ -322,7 +358,7 @@ class LLMConfigManager {
             'saveLLMConfigBtn',
             'testConnectionBtn'
         ];
-        
+
         return requiredElements.some(id => document.getElementById(id) !== null);
     }
 
@@ -330,39 +366,39 @@ class LLMConfigManager {
         // Main model selection
         const mainProviderSelect = document.getElementById('mainProvider');
         const mainModelSelect = document.getElementById('mainModel');
-        
+
         if (mainProviderSelect) {
             mainProviderSelect.addEventListener('change', () => {
                 this.updateModelTypeOptions('main');
             });
         }
-        
+
         if (mainModelSelect) {
             mainModelSelect.addEventListener('change', () => {
                 this.toggleCustomModelInput('main');
             });
         }
-        
+
         // Specialized model types
         const modelTypes = ['voiceTTS', 'voiceSTT', 'image', 'multimodal'];
-        
+
         modelTypes.forEach(type => {
             const providerSelect = document.getElementById(`${type}Provider`);
             const modelSelect = document.getElementById(`${type}Model`);
-            
+
             if (providerSelect) {
                 providerSelect.addEventListener('change', () => {
                     this.updateModelTypeOptions(type);
                 });
             }
-            
+
             if (modelSelect) {
                 modelSelect.addEventListener('change', () => {
                     this.toggleCustomModelInput(type);
                 });
             }
         });
-        
+
         // Reset model selection button
         const resetBtn = document.getElementById('resetModelSelection');
         if (resetBtn) {
@@ -370,7 +406,7 @@ class LLMConfigManager {
                 this.resetModelTypeSelection();
             });
         }
-        
+
         // Test all models button
         const testBtn = document.getElementById('testModelSelection');
         if (testBtn) {
@@ -378,7 +414,7 @@ class LLMConfigManager {
                 this.testAllModelTypes();
             });
         }
-        
+
         // Smart model selection button
         const smartSelectBtn = document.getElementById('smartModelSelection');
         if (smartSelectBtn) {
@@ -391,15 +427,15 @@ class LLMConfigManager {
     updateModelTypeOptions(type) {
         const providerSelect = document.getElementById(`${type}Provider`);
         const modelSelect = document.getElementById(`${type}Model`);
-        
+
         if (!providerSelect || !modelSelect) return;
-        
+
         const selectedProvider = providerSelect.value;
         const provider = this.providers[selectedProvider];
-        
+
         // Clear existing options
         modelSelect.innerHTML = '<option value="auto">Auto (Use provider default)</option>';
-        
+
         // Check if provider is enabled
         if (selectedProvider !== 'auto' && (!provider || !provider.enabled)) {
             const warningOption = document.createElement('option');
@@ -407,12 +443,12 @@ class LLMConfigManager {
             warningOption.textContent = '⚠️ Provider not configured or enabled';
             warningOption.disabled = true;
             modelSelect.appendChild(warningOption);
-            
+
             // Show warning message
             this.showProviderWarning(selectedProvider, type);
             return;
         }
-        
+
         // Populate models based on provider configuration
         if (provider && provider.models) {
             Object.entries(provider.models).forEach(([modelId, modelName]) => {
@@ -429,7 +465,7 @@ class LLMConfigManager {
                 modelSelect.appendChild(option);
             });
         }
-        
+
         // Set intelligent default if model type has preferred models
         const modelTypeConfig = this.modelTypes[type];
         if (modelTypeConfig && modelTypeConfig.preferredModels && modelTypeConfig.preferredModels[selectedProvider]) {
@@ -449,19 +485,19 @@ class LLMConfigManager {
                 this.modelTypes[type].provider = 'auto';
                 this.modelTypes[type].model = 'auto';
             });
-            
+
             this.loadModelTypeSelectionToUI();
             this.showNotification('Model type selections reset to defaults', 'success');
         }
     }
-    
+
     /**
      * Show warning for unconfigured provider
      */
     showProviderWarning(providerName, modelType) {
         const providerDisplayName = this.providers[providerName]?.name || providerName;
         const message = `The ${providerDisplayName} provider is not configured or enabled. Please configure it in the provider tabs before using it for ${modelType} tasks.`;
-        
+
         // Show a non-intrusive warning
         if (this.showNotification) {
             this.showNotification(message, 'warning', 4000);
@@ -469,7 +505,7 @@ class LLMConfigManager {
             console.warn(message);
         }
     }
-    
+
     /**
      * Get intelligent model recommendation for a model type
      */
@@ -478,18 +514,18 @@ class LLMConfigManager {
         if (!modelTypeConfig || !modelTypeConfig.preferredProviders) {
             return this.getFirstEnabledProvider();
         }
-        
+
         // Find first preferred provider that is enabled
         for (const providerKey of modelTypeConfig.preferredProviders) {
             if (this.providers[providerKey] && this.providers[providerKey].enabled) {
                 return providerKey;
             }
         }
-        
+
         // Fallback to any enabled provider
         return this.getFirstEnabledProvider();
     }
-    
+
     /**
      * Get first enabled provider
      */
@@ -501,63 +537,63 @@ class LLMConfigManager {
         }
         return null;
     }
-    
+
     /**
      * Apply smart model selection based on enabled providers
      */
     async applySmartModelSelection() {
         const smartBtn = document.getElementById('smartModelSelection');
         if (!smartBtn) return;
-        
+
         smartBtn.classList.add('loading');
         smartBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
-        
+
         try {
             let selectionsMade = 0;
-            
+
             // Get enabled providers
-            const enabledProviders = Object.keys(this.providers).filter(key => 
+            const enabledProviders = Object.keys(this.providers).filter(key =>
                 this.providers[key].enabled
             );
-            
+
             if (enabledProviders.length === 0) {
                 this.showNotification('No LLM providers are enabled. Please configure and enable at least one provider first.', 'warning');
                 return;
             }
-            
+
             // Apply intelligent selection for each model type
             Object.keys(this.modelTypes).forEach(type => {
                 const recommendedProvider = this.getRecommendedProvider(type);
                 if (recommendedProvider) {
                     const providerSelect = document.getElementById(`${type}Provider`);
                     const modelSelect = document.getElementById(`${type}Model`);
-                    
+
                     if (providerSelect && providerSelect.value === 'auto') {
                         providerSelect.value = recommendedProvider;
                         this.updateModelTypeOptions(type);
-                        
+
                         // Set recommended model if available
                         const modelTypeConfig = this.modelTypes[type];
-                        const preferredModel = modelTypeConfig.preferredModels && 
-                                             modelTypeConfig.preferredModels[recommendedProvider];
+                        const preferredModel = modelTypeConfig.preferredModels &&
+                            modelTypeConfig.preferredModels[recommendedProvider];
                         if (preferredModel && modelSelect) {
                             const modelOption = modelSelect.querySelector(`option[value="${preferredModel}"]`);
                             if (modelOption) {
                                 modelSelect.value = preferredModel;
                             }
                         }
-                        
+
                         selectionsMade++;
                     }
                 }
             });
-            
+
             if (selectionsMade > 0) {
                 this.showNotification(`Smart selection applied! Updated ${selectionsMade} model type configurations based on your enabled providers and task requirements.`, 'success');
             } else {
                 this.showNotification('All model types are already configured. No changes were made.', 'info');
             }
-            
+
         } catch (error) {
             this.showNotification(`Smart selection failed: ${error.message}`, 'error');
         } finally {
@@ -569,23 +605,23 @@ class LLMConfigManager {
     async testAllModelTypes() {
         const testBtn = document.getElementById('testModelSelection');
         if (!testBtn) return;
-        
+
         // Update button state
         testBtn.classList.add('testing');
         testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-        
+
         try {
             const results = {};
             const modelTypes = ['reasoning', 'task', 'code', 'voiceTTS', 'voiceSTT', 'image', 'multimodal'];
-            
+
             for (const type of modelTypes) {
                 const providerSelect = document.getElementById(`${type}Provider`);
                 const modelSelect = document.getElementById(`${type}Model`);
-                
+
                 if (providerSelect && modelSelect) {
                     const provider = providerSelect.value;
                     const model = modelSelect.value;
-                    
+
                     if (provider !== 'auto' && model !== 'auto') {
                         try {
                             const providerConfig = this.providers[provider];
@@ -604,24 +640,24 @@ class LLMConfigManager {
                     }
                 }
             }
-            
+
             // Show results
             const successCount = Object.values(results).filter(r => r.success).length;
             const totalCount = Object.keys(results).length;
-            
+
             testBtn.classList.remove('testing');
             testBtn.classList.add('success');
             testBtn.innerHTML = `<i class="fas fa-check"></i> ${successCount}/${totalCount} Models OK`;
-            
+
             this.showNotification(`Model testing completed: ${successCount}/${totalCount} models working`, 'success');
-            
+
         } catch (error) {
             testBtn.classList.remove('testing');
             testBtn.classList.add('error');
             testBtn.innerHTML = '<i class="fas fa-times"></i> Test Failed';
             this.showNotification(`Model testing failed: ${error.message}`, 'error');
         }
-        
+
         // Reset button after 3 seconds
         setTimeout(() => {
             testBtn.classList.remove('testing', 'success', 'error');
@@ -634,12 +670,12 @@ class LLMConfigManager {
         const mainProviderSelect = document.getElementById('mainProvider');
         const mainModelSelect = document.getElementById('mainModel');
         const mainCustomModelInput = document.getElementById('mainCustomModel');
-        
+
         if (mainProviderSelect && this.modelTypes.main) {
             mainProviderSelect.value = this.modelTypes.main.provider || 'auto';
             this.updateModelTypeOptions('main');
         }
-        
+
         if (mainModelSelect && this.modelTypes.main) {
             if (this.modelTypes.main.model && this.modelTypes.main.model !== 'auto') {
                 // Check if it's a custom model name
@@ -657,20 +693,20 @@ class LLMConfigManager {
                 mainModelSelect.value = 'auto';
             }
         }
-        
+
         // Load specialized model configurations
         const modelTypes = ['voiceTTS', 'voiceSTT', 'image', 'multimodal'];
-        
+
         modelTypes.forEach(type => {
             const providerSelect = document.getElementById(`${type}Provider`);
             const modelSelect = document.getElementById(`${type}Model`);
             const customModelInput = document.getElementById(`${type}CustomModel`);
-            
+
             if (providerSelect && this.modelTypes[type]) {
                 providerSelect.value = this.modelTypes[type].provider || 'auto';
                 this.updateModelTypeOptions(type);
             }
-            
+
             if (modelSelect && this.modelTypes[type]) {
                 if (this.modelTypes[type].model && this.modelTypes[type].model !== 'auto') {
                     // Check if it's a custom model name
@@ -696,12 +732,12 @@ class LLMConfigManager {
         const mainProviderSelect = document.getElementById('mainProvider');
         const mainModelSelect = document.getElementById('mainModel');
         const mainCustomModelInput = document.getElementById('mainCustomModel');
-        
+
         if (mainProviderSelect) {
             this.modelTypes.main = this.modelTypes.main || {};
             this.modelTypes.main.provider = mainProviderSelect.value;
         }
-        
+
         if (mainModelSelect) {
             this.modelTypes.main = this.modelTypes.main || {};
             if (mainModelSelect.value === 'custom' && mainCustomModelInput) {
@@ -710,20 +746,20 @@ class LLMConfigManager {
                 this.modelTypes.main.model = mainModelSelect.value;
             }
         }
-        
+
         // Save specialized model configurations
         const modelTypes = ['voiceTTS', 'voiceSTT', 'image', 'multimodal'];
-        
+
         modelTypes.forEach(type => {
             const providerSelect = document.getElementById(`${type}Provider`);
             const modelSelect = document.getElementById(`${type}Model`);
             const customModelInput = document.getElementById(`${type}CustomModel`);
-            
+
             if (providerSelect) {
                 this.modelTypes[type] = this.modelTypes[type] || {};
                 this.modelTypes[type].provider = providerSelect.value;
             }
-            
+
             if (modelSelect) {
                 this.modelTypes[type] = this.modelTypes[type] || {};
                 if (modelSelect.value === 'custom' && customModelInput) {
@@ -745,15 +781,15 @@ class LLMConfigManager {
             document.addEventListener('DOMContentLoaded', () => this.setupEventListeners());
             return;
         }
-        
+
         // Double-check that UI elements are available before setting up listeners
         if (!this.hasRequiredUIElements()) {
             console.log('LLMConfigManager: Skipping event listener setup - no UI elements found');
             return;
         }
-        
+
         console.log('Setting up LLM Config Manager event listeners...');
-        
+
         // Options menu dropdown
         const optionsBtn = document.getElementById('optionsBtn');
         if (optionsBtn) {
@@ -849,7 +885,7 @@ class LLMConfigManager {
             { btnId: 'pasteOpenrouterApiKeyBtn', inputId: 'openrouterApiKey' },
             { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' }
         ];
-        
+
         // Model Selection tab event listeners
         this.setupModelSelectionEventListeners();
 
@@ -885,19 +921,19 @@ class LLMConfigManager {
                 this.hideConfigModal();
             });
         });
-        
+
 
     }
 
     toggleOptionsDropdown() {
         const dropdown = document.getElementById('optionsDropdownMenu');
         const isVisible = dropdown.classList.contains('show');
-        
+
         // Hide all other dropdowns first
         document.querySelectorAll('.dropdown-menu').forEach(menu => {
             menu.classList.remove('show');
         });
-        
+
         if (!isVisible) {
             dropdown.classList.add('show');
         }
@@ -911,10 +947,10 @@ class LLMConfigManager {
         this.hideOptionsDropdown();
         this.loadConfigurationToUI();
         document.getElementById('llmConfigModal').classList.add('show');
-        
+
         // Ensure no element has initial focus to prevent blue scrollbar
         document.activeElement.blur();
-        
+
     }
 
     hideConfigModal() {
@@ -937,7 +973,7 @@ class LLMConfigManager {
                 panel.focus();
             }
         });
-        
+
         // Special handling for models tab
         if (provider === 'models') {
             this.loadModelTypeSelectionToUI();
@@ -952,21 +988,21 @@ class LLMConfigManager {
                 // Use ConfigManager if available
                 const llmConfig = this.configManager.get('llm');
                 console.log('Retrieved LLM config from ConfigManager:', llmConfig);
-                
+
                 if (llmConfig && llmConfig.providers) {
                     console.log('LLM config has providers, merging...');
                     console.log('Existing providers:', Object.keys(this.providers));
                     console.log('Loaded providers:', Object.keys(llmConfig.providers));
-                    
+
                     this.providers = { ...this.providers, ...llmConfig.providers };
-                    
+
                     // Load model types if available
                     if (llmConfig.modelTypes) {
                         this.modelTypes = { ...this.modelTypes, ...llmConfig.modelTypes };
                         console.log('Model types loaded:', this.modelTypes);
                     }
                     console.log('After merge - providers:', Object.keys(this.providers));
-                    
+
                     // Debug each provider's status
                     Object.entries(this.providers).forEach(([key, provider]) => {
                         console.log(`Provider ${key}:`, {
@@ -986,7 +1022,7 @@ class LLMConfigManager {
                     console.log('Found LLM configuration in localStorage');
                     const config = JSON.parse(savedConfig);
                     this.providers = { ...this.providers, ...config.providers };
-                    
+
                     // Load model types if available
                     if (config.modelTypes) {
                         this.modelTypes = { ...this.modelTypes, ...config.modelTypes };
@@ -1013,7 +1049,7 @@ class LLMConfigManager {
             }
 
             const prefix = providerName;
-            
+
             // Update provider configuration from form fields
             const apiKeyField = document.getElementById(`${prefix}ApiKey`);
             if (apiKeyField) {
@@ -1039,7 +1075,7 @@ class LLMConfigManager {
                     provider.baseUrl = baseUrlField.value;
                 }
             }
-            
+
             // Set as enabled if it has required fields
             provider.enabled = !!(provider.apiKey || providerName === 'local') && provider.model;
 
@@ -1057,7 +1093,7 @@ class LLMConfigManager {
 
             this.showNotification(`${provider.name} configuration saved successfully!`, 'success');
             console.log(`${provider.name} configuration saved:`, provider);
-            
+
         } catch (error) {
             console.error(`Error saving ${providerName} configuration:`, error);
             this.showNotification(`Error saving ${providerName} configuration`, 'error');
@@ -1070,7 +1106,7 @@ class LLMConfigManager {
     toggleCustomModelInput(type) {
         const modelSelect = document.getElementById(`${type}Model`);
         const customGroup = document.getElementById(`${type}CustomModelGroup`);
-        
+
         if (modelSelect && customGroup) {
             if (modelSelect.value === 'custom') {
                 customGroup.style.display = 'block';
@@ -1087,27 +1123,27 @@ class LLMConfigManager {
         if (!modelName || modelName === 'auto' || modelName === 'custom') {
             return true;
         }
-        
+
         const provider = this.providers[providerName];
         if (!provider) {
             return false;
         }
-        
+
         // Check if model is in provider's available models
         if (provider.availableModels && provider.availableModels.includes(modelName)) {
             return true;
         }
-        
+
         // Check if model is in provider's models object
         if (provider.models && Object.values(provider.models).includes(modelName)) {
             return true;
         }
-        
+
         // Check if model matches provider's default model
         if (provider.model === modelName) {
             return true;
         }
-        
+
         return false;
     }
 
@@ -1115,12 +1151,12 @@ class LLMConfigManager {
         try {
             // Collect configuration from UI
             const currentTab = document.querySelector('.tab-button.active').dataset.provider;
-            
+
             // Update provider configurations from form fields
             Object.keys(this.providers).forEach(providerKey => {
                 const provider = this.providers[providerKey];
                 const prefix = providerKey;
-                
+
                 const apiKeyField = document.getElementById(`${prefix}ApiKey`);
                 if (apiKeyField) {
                     provider.apiKey = apiKeyField.value;
@@ -1145,7 +1181,7 @@ class LLMConfigManager {
                         provider.baseUrl = baseUrlField.value;
                     }
                 }
-                
+
                 // Set as enabled if it has required fields
                 provider.enabled = !!(provider.apiKey || providerKey === 'local') && provider.model;
             });
@@ -1177,10 +1213,10 @@ class LLMConfigManager {
                 localStorage.setItem('llmConfiguration', JSON.stringify(config));
                 console.log('Configuration saved to localStorage');
             }
-            
+
             this.updateUI();
             this.hideConfigModal();
-            
+
             // Show success message
             this.showNotification('Configuration saved successfully!', 'success');
         } catch (error) {
@@ -1193,20 +1229,20 @@ class LLMConfigManager {
         Object.keys(this.providers).forEach(providerKey => {
             const provider = this.providers[providerKey];
             const prefix = providerKey;
-            
+
             const apiKeyField = document.getElementById(`${prefix}ApiKey`);
             const modelField = document.getElementById(`${prefix}Model`);
             const baseUrlField = document.getElementById(`${prefix}BaseUrl`);
-            
+
             if (apiKeyField) {
                 apiKeyField.value = provider.apiKey || '';
-                
+
                 // Ensure paste listener is attached
                 if (!apiKeyField.dataset.pasteListenerAttached) {
                     apiKeyField.addEventListener('paste', (event) => {
                         console.log(`Paste event triggered for: ${apiKeyField.id}`);
-                        event.preventDefault(); 
-                        event.stopPropagation(); 
+                        event.preventDefault();
+                        event.stopPropagation();
                         const pasteData = (event.clipboardData || window.clipboardData).getData('text');
                         console.log(`Pasted data for ${apiKeyField.id}: ${pasteData}`);
                         apiKeyField.value = pasteData;
@@ -1259,7 +1295,7 @@ class LLMConfigManager {
                 systemPromptField.value = systemPrompt;
             }
         }
-        
+
         // Load model type selection
         this.loadModelTypeSelectionToUI();
     }
@@ -1269,7 +1305,7 @@ class LLMConfigManager {
         if (!this.hasRequiredUIElements()) {
             return;
         }
-        
+
         // No need to update current provider display since it's removed
         // UI updates can be added here for other purposes if needed
     }
@@ -1277,25 +1313,25 @@ class LLMConfigManager {
     async testConnection() {
         const activeTab = document.querySelector('.tab-button.active').dataset.provider;
         const testBtn = document.getElementById('testConnectionBtn');
-        
+
         // Update button state
         testBtn.classList.add('testing');
         testBtn.innerHTML = '<i class="fas fa-spinner"></i> Testing...';
-        
+
         try {
             // Get current form values
             const provider = { ...this.providers[activeTab] };
             const prefix = activeTab === 'local' ? 'local' : activeTab;
-            
+
             provider.apiKey = document.getElementById(`${prefix}ApiKey`).value;
-            
+
             provider.model = document.getElementById(`${prefix}Model`).value;
-            provider.baseUrl = document.getElementById(`${prefix}BaseUrl`)?.value || 
-                             document.getElementById('localEndpoint')?.value;
-            
+            provider.baseUrl = document.getElementById(`${prefix}BaseUrl`)?.value ||
+                document.getElementById('localEndpoint')?.value;
+
             // Test the connection
             const result = await this.makeTestRequest(activeTab, provider);
-            
+
             if (result.success) {
                 testBtn.classList.remove('testing');
                 testBtn.classList.add('success');
@@ -1310,7 +1346,7 @@ class LLMConfigManager {
             testBtn.innerHTML = '<i class="fas fa-times"></i> Failed';
             this.showNotification(`Connection failed: ${error.message}`, 'error');
         }
-        
+
         // Reset button after 3 seconds
         setTimeout(() => {
             testBtn.classList.remove('testing', 'success', 'error');
@@ -1350,11 +1386,11 @@ class LLMConfigManager {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         return { success: true };
     }
 
@@ -1372,21 +1408,21 @@ class LLMConfigManager {
                 messages: [{ role: 'user', content: 'test' }]
             })
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         return { success: true };
     }
 
     async testGoogle(config) {
         const response = await fetch(`${config.baseUrl}/v1/models?key=${config.apiKey}`);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         return { success: true };
     }
 
@@ -1407,7 +1443,7 @@ class LLMConfigManager {
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         return { success: true };
     }
 
@@ -1428,7 +1464,7 @@ class LLMConfigManager {
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         return { success: true };
     }
 
@@ -1451,7 +1487,7 @@ class LLMConfigManager {
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         return { success: true };
     }
 
@@ -1464,11 +1500,11 @@ class LLMConfigManager {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         return { success: true };
     }
 
@@ -1481,7 +1517,7 @@ class LLMConfigManager {
         }
 
         const provider = this.providers[providerKey];
-        
+
         try {
             switch (providerKey) {
                 case 'openai':
@@ -1515,32 +1551,32 @@ class LLMConfigManager {
         }
 
         let lastError;
-        
+
         // Try primary provider first
         try {
             return await this.sendMessageWithProvider(primaryProvider, conversationHistory, context, memoryContext);
         } catch (error) {
             lastError = error;
             console.warn(`Primary provider ${primaryProvider} failed:`, error.message);
-            
+
             // Only try fallback if it's a service unavailable error and fallback is enabled
             if (this.shouldTryFallback(error)) {
                 const fallbackProvider = this.getFallbackProvider(primaryProvider);
-                
+
                 if (fallbackProvider) {
                     console.log(`Attempting fallback to ${fallbackProvider}...`);
                     if (this.app && this.app.showNotification) {
                         this.app.showNotification(`Primary LLM service unavailable. Trying fallback provider (${this.providers[fallbackProvider].name})...`, 'warning', 3000);
                     }
-                    
+
                     try {
                         const result = await this.sendMessageWithProvider(fallbackProvider, conversationHistory, context, memoryContext);
-                        
+
                         // Notify user of successful fallback
                         if (this.app && this.app.showNotification) {
                             this.app.showNotification(`Successfully switched to fallback provider (${this.providers[fallbackProvider].name})`, 'success', 3000);
                         }
-                        
+
                         return result;
                     } catch (fallbackError) {
                         console.error(`Fallback provider ${fallbackProvider} also failed:`, fallbackError.message);
@@ -1548,7 +1584,7 @@ class LLMConfigManager {
                     }
                 }
             }
-            
+
             throw lastError;
         }
     }
@@ -1558,11 +1594,11 @@ class LLMConfigManager {
      */
     async sendMessageWithProvider(providerKey, conversationHistory, context, memoryContext = null) {
         const provider = this.providers[providerKey];
-        
+
         if (!provider || !provider.enabled) {
             throw new Error(`Provider ${providerKey} is not configured or enabled`);
         }
-        
+
         switch (providerKey) {
             case 'openai':
                 return await this.sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext);
@@ -1588,11 +1624,11 @@ class LLMConfigManager {
      */
     shouldTryFallback(error) {
         // Try fallback for service unavailable errors and rate limits
-        return error.message.includes('HTTP 503') || 
-               error.message.includes('Service Unavailable') ||
-               error.message.includes('HTTP 502') ||
-               error.message.includes('HTTP 504') ||
-               error.message.includes('HTTP 429');
+        return error.message.includes('HTTP 503') ||
+            error.message.includes('Service Unavailable') ||
+            error.message.includes('HTTP 502') ||
+            error.message.includes('HTTP 504') ||
+            error.message.includes('HTTP 429');
     }
 
     /**
@@ -1609,16 +1645,16 @@ class LLMConfigManager {
             'deepseek': ['siliconflow', 'openrouter', 'openai', 'google'],
             'local': ['openrouter', 'openai', 'google', 'siliconflow']
         };
-        
+
         const fallbacks = fallbackChains[primaryProvider] || [];
-        
+
         // Find the first enabled fallback provider
         for (const fallback of fallbacks) {
             if (this.providers[fallback] && this.providers[fallback].enabled) {
                 return fallback;
             }
         }
-        
+
         return null;
     }
 
@@ -1630,7 +1666,7 @@ class LLMConfigManager {
             max_tokens: 2000,
             temperature: 0.7
         }, null, 2));
-        
+
         const response = await fetch(`${provider.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1660,7 +1696,7 @@ class LLMConfigManager {
             max_tokens: 2000,
             temperature: 0.7
         }, null, 2));
-        
+
         return await this.makeRequestWithRetry(
             async () => {
                 const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -1684,7 +1720,7 @@ class LLMConfigManager {
                     error.isRetryable = this.isRetryableError(response.status);
                     throw error;
                 }
-                
+
                 return response;
             },
             'OpenAI',
@@ -1702,7 +1738,7 @@ class LLMConfigManager {
             max_tokens: 2000,
             messages: messages
         }, null, 2));
-        
+
         const response = await fetch(`${provider.baseUrl}/v1/messages`, {
             method: 'POST',
             headers: {
@@ -1729,19 +1765,19 @@ class LLMConfigManager {
         // Anthropic requires separate system message
         const systemMessage = conversationHistory.find(msg => msg.role === 'system');
         const messages = conversationHistory.filter(msg => msg.role !== 'system');
-        
+
         const payload = {
             model: provider.model,
             max_tokens: 2000,
             messages: messages
         };
-        
+
         if (systemMessage) {
             payload.system = systemMessage.content;
         }
-        
+
         console.log('Sending to Anthropic - Request Payload:', JSON.stringify(payload, null, 2));
-        
+
         const response = await fetch(`${provider.baseUrl}/v1/messages`, {
             method: 'POST',
             headers: {
@@ -1772,9 +1808,9 @@ class LLMConfigManager {
             }
         };
         console.log('Sending to Google - Request Payload:', JSON.stringify(payload, null, 2));
-        
+
         const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
-        
+
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -1801,21 +1837,21 @@ class LLMConfigManager {
     async sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
         // Google uses a different conversation format
         const contents = [];
-        
+
         for (const message of conversationHistory) {
             if (message.role === 'system') continue; // Skip system messages for Google
-            
+
             let role = 'user';
             if (message.role === 'assistant') {
                 role = 'model';
             }
-            
+
             contents.push({
                 role: role,
                 parts: [{ text: message.content }]
             });
         }
-        
+
         const payload = {
             contents: contents,
             generationConfig: {
@@ -1823,11 +1859,11 @@ class LLMConfigManager {
                 temperature: 0.7
             }
         };
-        
+
         console.log('Sending to Google - Request Payload:', JSON.stringify(payload, null, 2));
-        
+
         const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
-        
+
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -1859,7 +1895,7 @@ class LLMConfigManager {
             max_tokens: 2000,
             temperature: 0.7
         }, null, 2));
-        
+
         const response = await fetch(`${provider.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1889,7 +1925,7 @@ class LLMConfigManager {
             max_tokens: 2000,
             temperature: 0.7
         }, null, 2));
-        
+
         const response = await fetch(`${provider.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1920,7 +1956,7 @@ class LLMConfigManager {
             max_tokens: 2000,
             temperature: 0.7
         }, null, 2));
-        
+
         const response = await fetch(`${provider.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1977,7 +2013,7 @@ class LLMConfigManager {
      */
     showRetryNotification(providerName, attempt, maxAttempts, delay) {
         if (this.app && this.app.showNotification) {
-            const message = `${providerName} service temporarily unavailable. Retrying in ${Math.ceil(delay/1000)}s (attempt ${attempt}/${maxAttempts})...`;
+            const message = `${providerName} service temporarily unavailable. Retrying in ${Math.ceil(delay / 1000)}s (attempt ${attempt}/${maxAttempts})...`;
             this.app.showNotification(message, 'warning', 3000);
         } else {
             console.warn(`🔄 [${providerName}] Retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`);
@@ -1989,22 +2025,22 @@ class LLMConfigManager {
      */
     async makeRequestWithRetry(requestFunction, providerName, responseProcessor, maxAttempts = 3) {
         let lastError;
-        
+
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 const response = await requestFunction();
                 return await responseProcessor(response);
-                
+
             } catch (error) {
                 lastError = error;
-                
+
                 // Only retry if it's a retryable error and we have attempts left
                 if (error.isRetryable && attempt < maxAttempts) {
                     const delay = this.calculateRetryDelay(attempt);
-                    
+
                     console.warn(`🔄 [${providerName}] HTTP ${error.status} error on attempt ${attempt}. Retrying in ${delay}ms...`);
                     this.showRetryNotification(providerName, attempt + 1, maxAttempts, delay);
-                    
+
                     // Wait before retry
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {
@@ -2019,7 +2055,7 @@ class LLMConfigManager {
                 }
             }
         }
-        
+
         throw lastError;
     }
 
@@ -2030,7 +2066,7 @@ class LLMConfigManager {
             max_tokens: 2000,
             temperature: 0.7
         }, null, 2));
-        
+
         return await this.makeRequestWithRetry(
             async () => {
                 const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -2054,34 +2090,34 @@ class LLMConfigManager {
                     error.isRetryable = this.isRetryableError(response.status);
                     throw error;
                 }
-                
+
                 return response;
             },
             'SiliconFlow',
             async (response) => {
                 const data = await response.json();
                 console.log('SiliconFlow Raw Response Data:', data);
-                
+
                 // Check if choices array exists and has content
                 if (!data.choices || data.choices.length === 0) {
                     console.error('SiliconFlow: No choices in response');
                     throw new Error('No choices in LLM response');
                 }
-                
+
                 const choice = data.choices[0];
                 console.log('SiliconFlow Choice Object:', choice);
-                
+
                 if (!choice.message) {
                     console.error('SiliconFlow: No message in choice');
                     throw new Error('No message in LLM choice');
                 }
-                
+
                 console.log('SiliconFlow Message Object:', choice.message);
                 const content = choice.message.content;
                 console.log('SiliconFlow Content Extracted:', content);
                 console.log('Content type:', typeof content);
                 console.log('Content length:', content ? content.length : 'null/undefined');
-                
+
                 return content || '';
             }
         );
@@ -2095,7 +2131,7 @@ class LLMConfigManager {
             max_tokens: 2000,
             temperature: 0.7
         }, null, 2));
-        
+
         const doRequest = async (modelToUse) => {
             const resp = await fetch(`${provider.baseUrl}/chat/completions`, {
                 method: 'POST',
@@ -2149,7 +2185,7 @@ class LLMConfigManager {
             max_tokens: 2000,
             temperature: 0.7
         }, null, 2));
-        
+
         const doRequest = async (modelToUse) => {
             const resp = await fetch(`${provider.baseUrl}/chat/completions`, {
                 method: 'POST',
@@ -2198,7 +2234,7 @@ class LLMConfigManager {
     getOpenRouterFallbackModel(originalModel) {
         if (!originalModel) return null;
         const model = String(originalModel).toLowerCase();
-        
+
         // OpenAI GPT-5 series fallbacks
         if (model.startsWith('openai/')) {
             if (model.includes('gpt-5-nano')) return 'openai/gpt-5-mini';  // Nano → Mini
@@ -2206,7 +2242,7 @@ class LLMConfigManager {
             if (model.includes('gpt-5') && !model.includes('mini') && !model.includes('nano')) return 'openai/gpt-4o';  // Full GPT-5 → GPT-4o
             if (model.includes('gpt-4o')) return 'openai/gpt-4-turbo';
         }
-        
+
         // Google Gemini series fallbacks
         if (model.startsWith('google/')) {
             if (model.includes('gemini-2.0-flash-exp')) return 'google/gemini-2.0-flash';     // Experimental → Stable
@@ -2215,14 +2251,14 @@ class LLMConfigManager {
             if (model.includes('gemini-1.5-flash-latest')) return 'google/gemini-1.5-pro';   // Flash Latest → Pro Legacy
             if (model.includes('gemini-1.5')) return 'google/gemini-pro';                    // 1.5 → 1.0 Pro
         }
-        
+
         // Anthropic fallbacks
         if (model.startsWith('anthropic/')) {
             if (model.includes('claude-3-5-sonnet')) return 'anthropic/claude-3-5-haiku-20241022';
             if (model.includes('claude-3-5-haiku')) return 'anthropic/claude-3-opus-20240229';
             if (model.includes('claude-3-opus')) return 'anthropic/claude-3-sonnet-20240229';
         }
-        
+
         // GLM fallbacks (different for different providers)
         if (model.startsWith('z-ai/')) {
             // OpenRouter GLM models
@@ -2230,26 +2266,26 @@ class LLMConfigManager {
             if (model.includes('glm-4.5') && !model.includes('air')) return 'z-ai/glm-4.5-air:free';
             if (model.includes('glm-4.5-air')) return 'openai/gpt-4o-mini';
         }
-        
+
         if (model.startsWith('zai-org/')) {
             // SiliconFlow GLM models
             if (model.includes('GLM-4.5') && !model.includes('Air')) return 'zai-org/GLM-4.5-Air';
             if (model.includes('GLM-4.5-Air')) return 'THUDM/GLM-4-9B-0414';
         }
-        
+
         if (model.startsWith('THUDM/')) {
             // SiliconFlow THUDM models
             if (model.includes('GLM-4.6')) return 'zai-org/GLM-4.5';  // GLM-4.6 doesn't exist on SiliconFlow
             if (model.includes('GLM-4.5') && !model.includes('Air')) return 'zai-org/GLM-4.5-Air';
             if (model.includes('GLM-Z1')) return 'THUDM/GLM-4-32B-0414';
         }
-        
+
         return null;
     }
 
     async sendLocalMessage(provider, message, context, memoryContext = null) {
         const messages = this.buildMessages(message, context, 'openai', memoryContext);
-        
+
         const apiUrl = `${provider.baseUrl}/chat/completions`;
         const payload = {
             model: provider.model,
@@ -2310,7 +2346,7 @@ class LLMConfigManager {
             temperature: 0.7,
             stream: false
         };
-        
+
         console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
         console.log('Sending to Local LLM - Request Payload:', JSON.stringify(payload, null, 2));
 
@@ -2353,10 +2389,10 @@ class LLMConfigManager {
 
     buildMessages(userMessage, context, providerType = 'openai', memoryContext = null) {
         const messages = [];
-        
+
         // System message with context
         const systemMessage = this.buildSystemMessage(context, userMessage, memoryContext);
-        
+
         if (providerType === 'anthropic') {
             // Anthropic doesn't use system messages in the same way
             messages.push({
@@ -2373,7 +2409,7 @@ class LLMConfigManager {
                 content: userMessage
             });
         }
-        
+
         return messages;
     }
 
@@ -2431,7 +2467,7 @@ If the user is asking a general question that doesn't require a tool, respond no
             // Debug: Log the actual context structure
             console.log('Context structure for system message:', JSON.stringify(context, null, 2));
             console.log('Current state:', context.genomeBrowser.currentState);
-            
+
             // Only append a summary of the context, not the whole thing if it's still too large.
             // For now, the main change is that the LLM knows annotationsCount is a count.
             // We can be more sophisticated here later if needed.
@@ -2488,11 +2524,11 @@ Current context summary:
 
     processSystemPromptVariables(systemPrompt, context = {}) {
         let processedPrompt = systemPrompt;
-        
+
         // Replace variables with context values
         const variables = {
             '{{CURRENT_CHROMOSOME}}': context.currentChromosome || 'N/A',
-            '{{CURRENT_POSITION}}': context.currentPosition ? 
+            '{{CURRENT_POSITION}}': context.currentPosition ?
                 `${context.currentPosition.start}-${context.currentPosition.end}` : 'N/A',
             '{{ANNOTATIONS_COUNT}}': context.annotationsCount || 0,
             '{{USER_FEATURES_COUNT}}': context.userDefinedFeaturesCount || 0
@@ -2535,7 +2571,7 @@ Current context summary:
 
         // Get the modal element
         const modal = document.getElementById('systemPromptPreviewModal');
-        
+
         // Function to close the modal
         const closeModal = () => {
             if (modal && modal.parentNode) {
@@ -2581,13 +2617,13 @@ Current context summary:
                 <span>${message}</span>
             </div>
         `;
-        
+
         // Add to page
         document.body.appendChild(notification);
-        
+
         // Animate in
         setTimeout(() => notification.classList.add('show'), 100);
-        
+
         // Remove after 3 seconds
         setTimeout(() => {
             notification.classList.remove('show');
@@ -2616,7 +2652,7 @@ Current context summary:
         // For general tasks, reasoning, and code, use the main model configuration
         if (modelType === 'task' || modelType === 'reasoning' || modelType === 'code') {
             const mainConfig = this.modelTypes.main;
-            
+
             // Check if main model is configured and not set to 'auto'
             if (mainConfig && mainConfig.provider !== 'auto') {
                 const providerKey = mainConfig.provider;
@@ -2629,7 +2665,7 @@ Current context summary:
         } else {
             // For specialized model types, check their specific configuration
             const modelTypeConfig = this.modelTypes[modelType];
-            
+
             // Check if model type is configured and not set to 'auto'
             if (modelTypeConfig && modelTypeConfig.provider !== 'auto') {
                 const providerKey = modelTypeConfig.provider;
@@ -2640,20 +2676,20 @@ Current context summary:
                 }
             }
         }
-        
+
         // Use intelligent recommendation based on model type
         const recommendedProvider = this.getRecommendedProvider(modelType);
         if (recommendedProvider) {
             return recommendedProvider;
         }
-        
+
         // Final fallback to first available enabled provider
         for (const [key, provider] of Object.entries(this.providers)) {
             if (provider.enabled) {
                 return key;
             }
         }
-        
+
         return null;
     }
 
@@ -2665,7 +2701,7 @@ Current context summary:
     getModelForModelType(modelType) {
         const providerKey = this.getProviderForModelType(modelType);
         if (!providerKey) return null;
-        
+
         // For general tasks, reasoning, and code, use the main model configuration
         if (modelType === 'task' || modelType === 'reasoning' || modelType === 'code') {
             const mainConfig = this.modelTypes.main;
@@ -2678,7 +2714,7 @@ Current context summary:
                 return this.modelTypes[modelType].model;
             }
         }
-        
+
         // Fallback to provider's default model
         return this.providers[providerKey].model;
     }

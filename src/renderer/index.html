@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: file: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:; style-src 'self' 'unsafe-inline' https: http: data:; img-src 'self' data: blob: https: http: file:; font-src 'self' https: http: data:; connect-src 'self' https: http: ws: wss: data: blob:;">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: file: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:; style-src 'self' 'unsafe-inline' https: http: data:; img-src 'self' data: blob: https: http: file:; font-src 'self' https: http: data:; connect-src 'self' https: http: ws: wss: data: blob:;">
     <title>CodeXomics</title>
     <!-- Modular CSS Architecture -->
     <link rel="stylesheet" href="css/base.css">
@@ -32,6 +34,7 @@
     <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body>
     <div id="app">
         <!-- Header -->
@@ -49,7 +52,8 @@
                     BLAST
                 </button>
                 <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Search gene names or sequences..." class="search-input">
+                    <input type="text" id="searchInput" placeholder="Search gene names or sequences..."
+                        class="search-input">
                     <button id="searchBtn" class="search-btn" title="Search">
                         <i class="fas fa-search"></i>
                     </button>
@@ -71,7 +75,7 @@
                         <span class="status-text">Stopped</span>
                     </div>
                 </div> -->
-                
+
 
                 <div class="file-menu-container">
                     <button id="optionsBtn" class="btn btn-secondary dropdown-toggle">
@@ -109,7 +113,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="file-menu-container">
                     <button id="openFileBtn" class="btn btn-primary dropdown-toggle">
                         <i class="fas fa-folder-open"></i>
@@ -156,7 +160,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="file-menu-container">
                     <button id="exportFileBtn" class="btn btn-secondary dropdown-toggle" disabled>
                         <i class="fas fa-download"></i>
@@ -196,7 +200,8 @@
                             Current View (FASTA)
                         </button>
                         <div class="dropdown-divider"></div>
-                        <button class="dropdown-item" id="exportConfigBtn" onclick="if(window.genomeBrowser && window.genomeBrowser.exportManager) { window.genomeBrowser.exportManager.showExportConfigDialog(); } else { console.error('ExportManager not available'); }">
+                        <button class="dropdown-item" id="exportConfigBtn"
+                            onclick="if(window.genomeBrowser && window.genomeBrowser.exportManager) { window.genomeBrowser.exportManager.showExportConfigDialog(); } else { console.error('ExportManager not available'); }">
                             <i class="fas fa-cog"></i>
                             Configure
                         </button>
@@ -275,9 +280,9 @@
                             Insert
                         </button>
                     </div>
-                    
+
                     <div class="dropdown-divider"></div>
-                    
+
                     <div class="dropdown-section">
                         <div class="dropdown-section-title">
                             <i class="fas fa-list"></i>
@@ -292,9 +297,9 @@
                             Execute All
                         </button>
                     </div>
-                    
+
                     <div class="dropdown-divider"></div>
-                    
+
                     <div class="dropdown-section">
                         <div class="dropdown-section-title">
                             <i class="fas fa-save"></i>
@@ -351,14 +356,14 @@
                     </label>
                 </div>
             </div>
-          
-            
+
+
             <div class="toolbar-section">
                 <button id="toggleFeatureFilters" class="btn btn-sm toggle-btn">
                     <i class="fas fa-filter"></i>
                     <span>Features</span>
                 </button>
-               
+
                 <div class="feature-filter-checkboxes" id="featureFilterCheckboxes" style="display: none;">
                     <label class="feature-checkbox">
                         <input type="checkbox" id="showGenes"> Genes
@@ -392,7 +397,7 @@
                     </label>
                 </div>
             </div>
-            
+
             <div class="toolbar-section">
                 <button id="addFeaturesBtn" class="btn btn-sm toggle-btn" title="Add Features">
                     <i class="fas fa-plus"></i>
@@ -417,9 +422,9 @@
                             mRNA
                         </button>
                     </div>
-                    
+
                     <div class="dropdown-divider"></div>
-                    
+
                     <div class="dropdown-section">
                         <div class="dropdown-section-title">
                             <i class="fas fa-cog"></i>
@@ -434,9 +439,9 @@
                             tRNA (Transfer RNA)
                         </button>
                     </div>
-                    
+
                     <div class="dropdown-divider"></div>
-                    
+
                     <div class="dropdown-section">
                         <div class="dropdown-section-title">
                             <i class="fas fa-sliders-h"></i>
@@ -455,9 +460,9 @@
                             Regulatory Element
                         </button>
                     </div>
-                    
+
                     <div class="dropdown-divider"></div>
-                    
+
                     <div class="dropdown-section">
                         <div class="dropdown-section-title">
                             <i class="fas fa-tags"></i>
@@ -498,7 +503,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="sidebar-section" id="readDetailsSection" style="display: none;">
                     <div class="section-header">
                         <h3>Read Details</h3>
@@ -513,7 +518,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="sidebar-section" id="variantDetailsSection" style="display: none;">
                     <div class="section-header">
                         <h3>Variant Details</h3>
@@ -528,7 +533,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="sidebar-section" id="searchResultsSection" style="display: none;">
                     <div class="section-header">
                         <h3>Search Results</h3>
@@ -596,11 +601,11 @@
                         <label class="track-control-item">
                             <input type="checkbox" id="sidebarTrackActions" value="actions">
                             <span>Actions Track</span>
-                    </label>
-                    <label class="track-control-item">
-                        <input type="checkbox" id="sidebarTrackBlast" value="blast">
-                        <span>Blast Results Track</span>
-                    </label>
+                        </label>
+                        <label class="track-control-item">
+                            <input type="checkbox" id="sidebarTrackBlast" value="blast">
+                            <span>Blast Results Track</span>
+                        </label>
                     </div>
                 </div>
 
@@ -654,7 +659,7 @@
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="sidebar-section" id="fileInfoSection">
                     <div class="section-header">
                         <h3>File Information</h3>
@@ -666,7 +671,7 @@
                         <p class="no-file">No file loaded</p>
                     </div>
                 </div>
-                
+
                 <div class="sidebar-section" id="navigationSection">
                     <div class="section-header">
                         <h3>Navigation</h3>
@@ -735,54 +740,54 @@
 
                 <!-- Main Genome Viewer Section -->
                 <div class="genome-viewer-section" id="genomeViewerSection">
-                    <div id="genomeViewer" class="genome-viewer"> 
-                        
+                    <div id="genomeViewer" class="genome-viewer">
+
                     </div>
                 </div>
-            
-            <div class="welcome-screen">
-                <div class="welcome-content">
-                    <i class="fas fa-dna welcome-icon"></i>
-                    <h2>Welcome to CodeXomics</h2>
-                    <p>Choose a file type to start exploring</p>
-                    <div class="welcome-buttons">
-                    <button id="welcomeOpenGenomeBtn" class="btn btn-primary btn-lg">
-                        <i class="fas fa-dna"></i>
-                        <span>Genome File</span>
-                    </button>
-                    <button id="welcomeOpenAnnotationMergeBtn" class="btn btn-secondary btn-lg">
-                        <i class="fas fa-plus"></i>
-                        <span>Annotation (Merge)</span>
-                    </button>
-                    <button id="welcomeOpenAnnotationNewBtn" class="btn btn-secondary btn-lg">
-                        <i class="fas fa-file"></i>
-                        <span>Annotation (New Track)</span>
-                    </button>
-                    <button id="welcomeOpenVariantBtn" class="btn btn-secondary btn-lg">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>Variant File</span>
-                    </button>
-                    <button id="welcomeOpenReadsBtn" class="btn btn-secondary btn-lg">
-                        <i class="fas fa-align-left"></i>
-                        <span>Reads File</span>
-                    </button>
-                    <button id="welcomeOpenWIGBtn" class="btn btn-secondary btn-lg">
-                        <i class="fas fa-chart-line"></i>
-                        <span>WIG/BigWig Tracks</span>
-                    </button>
+
+                <div class="welcome-screen">
+                    <div class="welcome-content">
+                        <i class="fas fa-dna welcome-icon"></i>
+                        <h2>Welcome to CodeXomics</h2>
+                        <p>Choose a file type to start exploring</p>
+                        <div class="welcome-buttons">
+                            <button id="welcomeOpenGenomeBtn" class="btn btn-primary btn-lg">
+                                <i class="fas fa-dna"></i>
+                                <span>Genome File</span>
+                            </button>
+                            <button id="welcomeOpenAnnotationMergeBtn" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-plus"></i>
+                                <span>Annotation (Merge)</span>
+                            </button>
+                            <button id="welcomeOpenAnnotationNewBtn" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-file"></i>
+                                <span>Annotation (New Track)</span>
+                            </button>
+                            <button id="welcomeOpenVariantBtn" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Variant File</span>
+                            </button>
+                            <button id="welcomeOpenReadsBtn" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-align-left"></i>
+                                <span>Reads File</span>
+                            </button>
+                            <button id="welcomeOpenWIGBtn" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-chart-line"></i>
+                                <span>WIG/BigWig Tracks</span>
+                            </button>
+                        </div>
+                        <p class="welcome-note">
+                            <small>Supported formats: FASTA, GenBank, GFF, BED, VCF, SAM/BAM, WIG, BigWig</small>
+                        </p>
+                    </div>
                 </div>
-                    <p class="welcome-note">
-                        <small>Supported formats: FASTA, GenBank, GFF, BED, VCF, SAM/BAM, WIG, BigWig</small>
-                    </p>
-                </div>
-            </div>
-                
 
 
-                
+
+
                 <!-- Resizable Splitter -->
                 <div class="splitter" id="splitter" style="display: none;"></div>
-                
+
                 <!-- Bottom Sequence Display Section -->
                 <div class="sequence-display-section" id="sequenceDisplaySection" style="display: none;">
                     <div id="sequenceDisplay" class="sequence-display">
@@ -832,7 +837,8 @@
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                <input type="text" id="modalSearchInput" placeholder="Enter gene name or DNA sequence..." class="input-full">
+                <input type="text" id="modalSearchInput" placeholder="Enter gene name or DNA sequence..."
+                    class="input-full">
                 <div class="search-options">
                     <label>
                         <input type="checkbox" id="caseSensitive"> Case sensitive
@@ -872,7 +878,8 @@
                             <label class="setting-item">
                                 <input type="checkbox" id="searchReverseComplement" class="setting-checkbox">
                                 <span class="setting-label">Include Reverse Complement</span>
-                                <span class="setting-description">Search both forward and reverse complement sequences</span>
+                                <span class="setting-description">Search both forward and reverse complement
+                                    sequences</span>
                             </label>
                         </div>
                         <div class="settings-row">
@@ -923,21 +930,24 @@
                         <div class="settings-row">
                             <div class="setting-item">
                                 <label class="setting-label">Minimum Match Length</label>
-                                <input type="number" id="searchMinLength" class="setting-input" value="3" min="1" max="100">
+                                <input type="number" id="searchMinLength" class="setting-input" value="3" min="1"
+                                    max="100">
                                 <span class="setting-description">Minimum length for sequence matches</span>
                             </div>
                         </div>
                         <div class="settings-row">
                             <div class="setting-item">
                                 <label class="setting-label">Maximum Results</label>
-                                <input type="number" id="searchMaxResults" class="setting-input" value="100" min="10" max="1000">
+                                <input type="number" id="searchMaxResults" class="setting-input" value="100" min="10"
+                                    max="1000">
                                 <span class="setting-description">Maximum number of results to display</span>
                             </div>
                         </div>
                         <div class="settings-row">
                             <div class="setting-item">
                                 <label class="setting-label">Search Timeout (seconds)</label>
-                                <input type="number" id="searchTimeout" class="setting-input" value="30" min="5" max="300">
+                                <input type="number" id="searchTimeout" class="setting-input" value="30" min="5"
+                                    max="300">
                                 <span class="setting-description">Maximum time to spend searching</span>
                             </div>
                         </div>
@@ -963,7 +973,8 @@
                         <div class="settings-row">
                             <div class="setting-item">
                                 <label class="setting-label">Context Length</label>
-                                <input type="number" id="searchContextLength" class="setting-input" value="50" min="0" max="500">
+                                <input type="number" id="searchContextLength" class="setting-input" value="50" min="0"
+                                    max="500">
                                 <span class="setting-description">Number of bases to show around matches</span>
                             </div>
                         </div>
@@ -982,7 +993,8 @@
                         <div class="settings-row">
                             <div class="setting-item">
                                 <label class="setting-label">History Limit</label>
-                                <input type="number" id="searchHistoryLimit" class="setting-input" value="50" min="10" max="200">
+                                <input type="number" id="searchHistoryLimit" class="setting-input" value="50" min="10"
+                                    max="200">
                                 <span class="setting-description">Maximum number of searches to remember</span>
                             </div>
                         </div>
@@ -1070,7 +1082,8 @@
                 </div>
                 <div class="form-group">
                     <label for="featureDescription">Description (optional):</label>
-                    <textarea id="featureDescription" placeholder="Enter feature description..." class="input-full" rows="3"></textarea>
+                    <textarea id="featureDescription" placeholder="Enter feature description..." class="input-full"
+                        rows="3"></textarea>
                 </div>
                 <div class="form-group" id="sequenceSelectionInfo" style="display: none;">
                     <div class="selection-info">
@@ -1104,7 +1117,7 @@
                     <button class="tab-button" data-provider="local">Local LLM</button>
                     <button class="tab-button" data-provider="models">Model Selection</button>
                 </div>
-                
+
                 <div class="llm-provider-config">
                     <!-- OpenAI Configuration -->
                     <div id="openai-config" class="provider-config active">
@@ -1112,25 +1125,48 @@
                             <label for="openaiApiKey">API Key:</label>
                             <div class="input-with-button">
                                 <input type="password" id="openaiApiKey" placeholder="sk-..." class="input-full">
-                                <button type="button" class="btn btn-sm btn-paste" id="pasteOpenaiApiKeyBtn" title="Paste API Key">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteOpenaiApiKeyBtn"
+                                    title="Paste API Key">
                                     <i class="fas fa-paste"></i>
                                 </button>
                             </div>
-                            <small class="help-text">Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></small>
+                            <small class="help-text">Get your API key from <a
+                                    href="https://platform.openai.com/api-keys" target="_blank">OpenAI
+                                    Platform</a></small>
                         </div>
                         <div class="form-group">
                             <label for="openaiModel">Default Model:</label>
                             <select id="openaiModel" class="select">
-                                <option value="gpt-5">GPT-5 (Latest - requires BYOK)</option>
-                                <option value="gpt-4o" selected>GPT-4o</option>
-                                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                                <option value="gpt-4">GPT-4</option>
-                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                <!-- GPT-5 Series (Latest - 2026) -->
+                                <optgroup label="GPT-5 Series (Latest - 2026, requires BYOK)">
+                                    <option value="gpt-5.2">GPT-5.2 (Latest - Coding/Agentic)</option>
+                                    <option value="gpt-5.1">GPT-5.1 (Previous Gen)</option>
+                                    <option value="gpt-5.2-codex">GPT-5.2-Codex (Code Specialist)</option>
+                                </optgroup>
+                                <!-- o-Series (Reasoning Models) -->
+                                <optgroup label="o-Series (Reasoning Models)">
+                                    <option value="o3">o3 (Latest Reasoning)</option>
+                                    <option value="o3-mini">o3-mini (Compact Reasoning)</option>
+                                    <option value="o4-mini">o4-mini (Fast Reasoning)</option>
+                                    <option value="o1">o1 (Original Reasoning)</option>
+                                </optgroup>
+                                <!-- GPT-4o Series (Current Stable) -->
+                                <optgroup label="GPT-4o Series (Current Stable)">
+                                    <option value="gpt-4o" selected>GPT-4o (Multimodal Flagship)</option>
+                                    <option value="gpt-4o-mini">GPT-4o Mini (Fast & Efficient)</option>
+                                </optgroup>
+                                <!-- GPT-4 Series (Legacy) -->
+                                <optgroup label="GPT-4 Series (Legacy)">
+                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                    <option value="gpt-4">GPT-4</option>
+                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="openaiBaseUrl">Base URL (optional):</label>
-                            <input type="text" id="openaiBaseUrl" placeholder="https://api.openai.com/v1" class="input-full">
+                            <input type="text" id="openaiBaseUrl" placeholder="https://api.openai.com/v1"
+                                class="input-full">
                         </div>
                         <div class="form-group">
                             <button type="button" id="saveOpenaiProviderBtn" class="btn btn-primary">
@@ -1138,30 +1174,42 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- Anthropic Configuration -->
                     <div id="anthropic-config" class="provider-config">
                         <div class="form-group">
                             <label for="anthropicApiKey">API Key:</label>
                             <div class="input-with-button">
                                 <input type="password" id="anthropicApiKey" placeholder="sk-ant-..." class="input-full">
-                                <button type="button" class="btn btn-sm btn-paste" id="pasteAnthropicApiKeyBtn" title="Paste API Key">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteAnthropicApiKeyBtn"
+                                    title="Paste API Key">
                                     <i class="fas fa-paste"></i>
                                 </button>
                             </div>
-                            <small class="help-text">Get your API key from <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a></small>
+                            <small class="help-text">Get your API key from <a href="https://console.anthropic.com/"
+                                    target="_blank">Anthropic Console</a></small>
                         </div>
                         <div class="form-group">
                             <label for="anthropicModel">Default Model:</label>
                             <select id="anthropicModel" class="select">
-                                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
-                                <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-                                <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                <!-- Claude 4.5 Series (Latest - 2025/2026) -->
+                                <optgroup label="Claude 4.5 Series (Latest)">
+                                    <option value="claude-opus-4.5-20251101">Claude Opus 4.5 (Most Intelligent)</option>
+                                    <option value="claude-sonnet-4.5-20250929" selected>Claude Sonnet 4.5 (Balanced)
+                                    </option>
+                                    <option value="claude-haiku-4.5-20251001">Claude Haiku 4.5 (Fast)</option>
+                                </optgroup>
+                                <!-- Claude 3.5 Series (Previous Generation) -->
+                                <optgroup label="Claude 3.5 Series (Previous)">
+                                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                                    <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="anthropicBaseUrl">Base URL (optional):</label>
-                            <input type="text" id="anthropicBaseUrl" placeholder="https://api.anthropic.com" class="input-full">
+                            <input type="text" id="anthropicBaseUrl" placeholder="https://api.anthropic.com"
+                                class="input-full">
                         </div>
                         <div class="form-group">
                             <button type="button" id="saveAnthropicProviderBtn" class="btn btn-primary">
@@ -1169,34 +1217,54 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- Google Configuration -->
                     <div id="google-config" class="provider-config">
                         <div class="form-group">
                             <label for="googleApiKey">API Key:</label>
                             <div class="input-with-button">
                                 <input type="text" id="googleApiKey" placeholder="AI..." class="input-full">
-                                <button type="button" class="btn btn-sm btn-paste" id="pasteGoogleApiKeyBtn" title="Paste API Key">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteGoogleApiKeyBtn"
+                                    title="Paste API Key">
                                     <i class="fas fa-paste"></i>
                                 </button>
                             </div>
-                            <small class="help-text">Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+                            <small class="help-text">Get your API key from <a
+                                    href="https://aistudio.google.com/app/apikey" target="_blank">Google AI
+                                    Studio</a></small>
                         </div>
                         <div class="form-group">
                             <label for="googleModel">Default Model:</label>
                             <select id="googleModel" class="select">
-                                <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash (Latest - Multimodal)</option>
-                                <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
-                                <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Latest - Large Context)</option>
-                                <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest - Fast)</option>
-                                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
-                                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
-                                <option value="gemini-pro">Gemini 1.0 Pro (Legacy)</option>
+                                <!-- Gemini 3.0 Series (Latest - 2026) -->
+                                <optgroup label="Gemini 3.0 Series (Latest)">
+                                    <option value="gemini-3-flash-preview">Gemini 3.0 Flash Preview (Latest - Advanced
+                                        Reasoning)</option>
+                                </optgroup>
+                                <!-- Gemini 2.0 Series (Current Stable) -->
+                                <optgroup label="Gemini 2.0 Series (Current Stable)">
+                                    <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash (Latest - Multimodal)
+                                    </option>
+                                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
+                                </optgroup>
+                                <!-- Gemini 1.5 Series (Legacy) -->
+                                <optgroup label="Gemini 1.5 Series (Legacy)">
+                                    <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Latest - Large Context)
+                                    </option>
+                                    <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest - Fast)</option>
+                                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
+                                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
+                                </optgroup>
+                                <!-- Gemini 1.0 Series (Deprecated) -->
+                                <optgroup label="Gemini 1.0 Series (Deprecated)">
+                                    <option value="gemini-pro">Gemini 1.0 Pro (Legacy)</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="googleBaseUrl">Base URL (optional):</label>
-                            <input type="text" id="googleBaseUrl" placeholder="https://generativelanguage.googleapis.com" class="input-full">
+                            <input type="text" id="googleBaseUrl"
+                                placeholder="https://generativelanguage.googleapis.com" class="input-full">
                         </div>
                         <div class="form-group">
                             <button type="button" id="saveGoogleProviderBtn" class="btn btn-primary">
@@ -1204,18 +1272,20 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- DeepSeek Configuration -->
                     <div id="deepseek-config" class="provider-config">
                         <div class="form-group">
                             <label for="deepseekApiKey">API Key:</label>
                             <div class="input-with-button">
                                 <input type="password" id="deepseekApiKey" placeholder="sk-..." class="input-full">
-                                <button type="button" class="btn btn-sm btn-paste" id="pasteDeepseekApiKeyBtn" title="Paste API Key">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteDeepseekApiKeyBtn"
+                                    title="Paste API Key">
                                     <i class="fas fa-paste"></i>
                                 </button>
                             </div>
-                            <small class="help-text">Get your API key from <a href="https://platform.deepseek.com/" target="_blank">DeepSeek Platform</a></small>
+                            <small class="help-text">Get your API key from <a href="https://platform.deepseek.com/"
+                                    target="_blank">DeepSeek Platform</a></small>
                         </div>
                         <div class="form-group">
                             <label for="deepseekModel">Default Model:</label>
@@ -1227,7 +1297,8 @@
                         </div>
                         <div class="form-group">
                             <label for="deepseekBaseUrl">Base URL (optional):</label>
-                            <input type="text" id="deepseekBaseUrl" placeholder="https://api.deepseek.com/v1" class="input-full">
+                            <input type="text" id="deepseekBaseUrl" placeholder="https://api.deepseek.com/v1"
+                                class="input-full">
                         </div>
                         <div class="form-group">
                             <button type="button" id="saveDeepseekProviderBtn" class="btn btn-primary">
@@ -1235,44 +1306,54 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- SiliconFlow Configuration -->
                     <div id="siliconflow-config" class="provider-config">
                         <div class="form-group">
                             <label for="siliconflowApiKey">API Key:</label>
                             <div class="input-with-button">
                                 <input type="password" id="siliconflowApiKey" placeholder="sk-..." class="input-full">
-                                <button type="button" class="btn btn-sm btn-paste" id="pasteSiliconflowApiKeyBtn" title="Paste API Key">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteSiliconflowApiKeyBtn"
+                                    title="Paste API Key">
                                     <i class="fas fa-paste"></i>
                                 </button>
                             </div>
-                            <small class="help-text">Get your API key from <a href="https://siliconflow.cn/" target="_blank">SiliconFlow Platform</a></small>
+                            <small class="help-text">Get your API key from <a href="https://siliconflow.cn/"
+                                    target="_blank">SiliconFlow Platform</a></small>
                         </div>
                         <div class="form-group">
                             <label for="siliconflowModel">Default Model:</label>
                             <select id="siliconflowModel" class="select">
-                                
+
                                 <!-- 🤖 Qwen Series -->
                                 <optgroup label="🤖 Qwen3 Coder Series (Largest - 480B)">
-                                    <option value="Qwen/Qwen3-Coder-480B-A35B-Instruct">Qwen3-Coder-480B-A35B-Instruct (480B total, 35B active)</option>
+                                    <option value="Qwen/Qwen3-Coder-480B-A35B-Instruct">Qwen3-Coder-480B-A35B-Instruct
+                                        (480B total, 35B active)</option>
                                 </optgroup>
-                                
+
                                 <optgroup label="🤖 Qwen3 235B Series">
-                                    <option value="Qwen/Qwen3-235B-A22B-Thinking-2507">Qwen3-235B-A22B-Thinking-2507 (235B total, 22B active)</option>
-                                    <option value="Qwen/Qwen3-235B-A22B-Instruct-2507">Qwen3-235B-A22B-Instruct-2507 (235B total, 22B active)</option>
+                                    <option value="Qwen/Qwen3-235B-A22B-Thinking-2507">Qwen3-235B-A22B-Thinking-2507
+                                        (235B total, 22B active)</option>
+                                    <option value="Qwen/Qwen3-235B-A22B-Instruct-2507">Qwen3-235B-A22B-Instruct-2507
+                                        (235B total, 22B active)</option>
                                 </optgroup>
-                                
+
                                 <optgroup label="🤖 Qwen3 Next 80B Series">
-                                    <option value="Qwen/Qwen3-Next-80B-A3B-Instruct">Qwen3-Next-80B-A3B-Instruct (80B total, 3B active)</option>
-                                    <option value="Qwen/Qwen3-Next-80B-A3B-Thinking">Qwen3-Next-80B-A3B-Thinking (80B total, 3B active)</option>
+                                    <option value="Qwen/Qwen3-Next-80B-A3B-Instruct">Qwen3-Next-80B-A3B-Instruct (80B
+                                        total, 3B active)</option>
+                                    <option value="Qwen/Qwen3-Next-80B-A3B-Thinking">Qwen3-Next-80B-A3B-Thinking (80B
+                                        total, 3B active)</option>
                                 </optgroup>
-                                
+
                                 <optgroup label="🤖 Qwen3 30B Series">
-                                    <option value="Qwen/Qwen3-30B-A3B-Thinking-2507">Qwen3-30B-A3B-Thinking-2507 (30B total, 3B active)</option>
-                                    <option value="Qwen/Qwen3-30B-A3B-Instruct-2507">Qwen3-30B-A3B-Instruct-2507 (30B total, 3B active)</option>
-                                    <option value="Qwen/Qwen3-Coder-30B-A3B-Instruct">Qwen3-Coder-30B-A3B-Instruct (30B total, 3B active)</option>
+                                    <option value="Qwen/Qwen3-30B-A3B-Thinking-2507">Qwen3-30B-A3B-Thinking-2507 (30B
+                                        total, 3B active)</option>
+                                    <option value="Qwen/Qwen3-30B-A3B-Instruct-2507">Qwen3-30B-A3B-Instruct-2507 (30B
+                                        total, 3B active)</option>
+                                    <option value="Qwen/Qwen3-Coder-30B-A3B-Instruct">Qwen3-Coder-30B-A3B-Instruct (30B
+                                        total, 3B active)</option>
                                 </optgroup>
-                                
+
                                 <optgroup label="🤖 Qwen3 Standard Series">
                                     <option value="Qwen/Qwen3-32B">Qwen3-32B</option>
                                     <option value="Qwen/QwQ-32B">QwQ-32B (Reasoning)</option>
@@ -1280,49 +1361,55 @@
                                     <option value="Qwen/Qwen3-14B">Qwen3-14B</option>
                                     <option value="Qwen/Qwen3-8B">Qwen3-8B</option>
                                 </optgroup>
-                                
+
                                 <optgroup label="🤖 Qwen Legacy Series">
                                     <option value="Qwen/Qwen2.5-Coder-32B-Instruct">Qwen2.5-Coder-32B-Instruct</option>
                                     <option value="Qwen/Qwen2.5-Coder-7B-Instruct">Qwen2.5-Coder-7B-Instruct</option>
                                     <option value="Tongyi-Zhiwen/QwenLong-L1-32B">QwenLong-L1-32B</option>
                                 </optgroup>
-                                
+
                                 <!-- 🧠 DeepSeek Series -->
                                 <optgroup label="🧠 DeepSeek Pro Series">
                                     <option value="Pro/deepseek-ai/DeepSeek-R1">DeepSeek-R1 (Pro)</option>
                                     <option value="Pro/deepseek-ai/DeepSeek-V3">DeepSeek-V3 (Pro)</option>
                                     <option value="Pro/THUDM/glm-4-9b-chat">GLM-4-9B-Chat (Pro)</option>
-                                    <option value="Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B">DeepSeek-R1-Distill-Qwen-7B (Pro)</option>
+                                    <option value="Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B">
+                                        DeepSeek-R1-Distill-Qwen-7B (Pro)</option>
                                 </optgroup>
-                                
+
                                 <optgroup label="🧠 DeepSeek Standard Series">
                                     <option value="deepseek-ai/DeepSeek-R1">DeepSeek-R1</option>
                                     <option value="deepseek-ai/DeepSeek-V3">DeepSeek-V3</option>
                                     <option value="deepseek-ai/DeepSeek-V3.1-Terminus">DeepSeek-V3.1-Terminus</option>
                                     <option value="deepseek-ai/DeepSeek-V2.5">DeepSeek-V2.5</option>
                                 </optgroup>
-                                
+
                                 <optgroup label="🧠 DeepSeek Distilled Series">
-                                    <option value="deepseek-ai/DeepSeek-R1-Distill-Qwen-32B">DeepSeek-R1-Distill-Qwen-32B</option>
-                                    <option value="deepseek-ai/DeepSeek-R1-Distill-Qwen-14B">DeepSeek-R1-Distill-Qwen-14B</option>
-                                    <option value="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B">DeepSeek-R1-0528-Qwen3-8B</option>
-                                    <option value="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B">DeepSeek-R1-Distill-Qwen-7B</option>
+                                    <option value="deepseek-ai/DeepSeek-R1-Distill-Qwen-32B">
+                                        DeepSeek-R1-Distill-Qwen-32B</option>
+                                    <option value="deepseek-ai/DeepSeek-R1-Distill-Qwen-14B">
+                                        DeepSeek-R1-Distill-Qwen-14B</option>
+                                    <option value="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B">DeepSeek-R1-0528-Qwen3-8B
+                                    </option>
+                                    <option value="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B">DeepSeek-R1-Distill-Qwen-7B
+                                    </option>
                                 </optgroup>
-                                
+
                                 <!-- 🌙 Kimi Series -->
                                 <optgroup label="🌙 Kimi Series (Moonshot AI)">
-                                    <option value="Pro/moonshotai/Kimi-K2-Instruct-0905">Kimi-K2-Instruct-0905 (Pro)</option>
+                                    <option value="Pro/moonshotai/Kimi-K2-Instruct-0905">Kimi-K2-Instruct-0905 (Pro)
+                                    </option>
                                     <option value="moonshotai/Kimi-K2-Instruct">Kimi-K2-Instruct</option>
                                     <option value="moonshotai/Kimi-K2-Thinking">Kimi-K2-Thinking (Reasoning)</option>
                                 </optgroup>
-                                
+
                                 <!-- 🔮 GLM Series -->
                                 <optgroup label="🔮 GLM Latest Series">
                                     <option value="zai-org/GLM-4.6">GLM-4.6 (Latest)</option>
                                     <option value="zai-org/GLM-4.5">GLM-4.5</option>
                                     <option value="zai-org/GLM-4.5-Air">GLM-4.5-Air (Lightweight)</option>
                                 </optgroup>
-                                
+
                                 <optgroup label="🔮 GLM THUDM Series">
                                     <option value="THUDM/GLM-Z1-32B-0414">GLM-Z1-32B-0414</option>
                                     <option value="THUDM/GLM-4-32B-0414">GLM-4-32B-0414</option>
@@ -1330,7 +1417,7 @@
                                     <option value="THUDM/GLM-4-9B-0414">GLM-4-9B-0414</option>
                                     <option value="THUDM/glm-4-9b-chat">GLM-4-9B-Chat</option>
                                 </optgroup>
-                                
+
                                 <!-- 🏢 Enterprise & Commercial Models -->
                                 <optgroup label="🏢 Enterprise & Commercial Models">
                                     <option value="baidu/ERNIE-4.5-300B-A47B">ERNIE-4.5-300B-A47B</option>
@@ -1346,7 +1433,8 @@
                         </div>
                         <div class="form-group">
                             <label for="siliconflowBaseUrl">Base URL:</label>
-                            <input type="text" id="siliconflowBaseUrl" value="https://api.siliconflow.cn/v1" class="input-full" readonly>
+                            <input type="text" id="siliconflowBaseUrl" value="https://api.siliconflow.cn/v1"
+                                class="input-full" readonly>
                             <small class="help-text">SiliconFlow API endpoint (read-only)</small>
                         </div>
                         <div class="form-group">
@@ -1355,45 +1443,58 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- OpenRouter Configuration -->
                     <div id="openrouter-config" class="provider-config">
                         <div class="form-group">
                             <label for="openrouterApiKey">API Key:</label>
                             <div class="input-with-button">
                                 <input type="password" id="openrouterApiKey" placeholder="sk-or-..." class="input-full">
-                                <button type="button" class="btn btn-sm btn-paste" id="pasteOpenrouterApiKeyBtn" title="Paste API Key">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteOpenrouterApiKeyBtn"
+                                    title="Paste API Key">
                                     <i class="fas fa-paste"></i>
                                 </button>
                             </div>
-                            <small class="help-text">Get your API key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter Platform</a></small>
+                            <small class="help-text">Get your API key from <a href="https://openrouter.ai/keys"
+                                    target="_blank">OpenRouter Platform</a></small>
                         </div>
                         <div class="form-group">
                             <label for="openrouterModel">Default Model:</label>
                             <select id="openrouterModel" class="select">
-                                <!-- OpenAI GPT-5 Series (Latest - Aug 2025) -->
-                                <optgroup label="OpenAI GPT-5 Series (Latest - Aug 2025)">
+                                <!-- OpenAI GPT-5 Series (Latest - 2025/2026) -->
+                                <optgroup label="OpenAI GPT-5 Series (Latest - 2025/2026)">
+                                    <option value="openai/gpt-5.2">GPT-5.2 (Latest - Coding/Agentic)</option>
+                                    <option value="openai/gpt-5.1">GPT-5.1 (Previous Gen)</option>
                                     <option value="openai/gpt-5" selected>GPT-5 ($1.25/$10 per M, 400K ctx)</option>
                                     <option value="openai/gpt-5-mini">GPT-5 Mini ($0.25/$2 per M, 400K ctx)</option>
                                     <option value="openai/gpt-5-nano">GPT-5 Nano ($0.05/$0.40 per M, 400K ctx)</option>
                                 </optgroup>
-                                <!-- OpenAI GPT-4 Series -->
-                                <optgroup label="OpenAI GPT-4 Series">
-                                    <option value="openai/gpt-4o">GPT-4o (Previous Gen)</option>
-                                    <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
-                                    <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
-                                    <option value="openai/gpt-4">GPT-4 (Legacy)</option>
+                                <!-- OpenAI o-Series (Reasoning Models) -->
+                                <optgroup label="OpenAI o-Series (Reasoning Models)">
+                                    <option value="openai/o3">o3 (Latest Reasoning)</option>
+                                    <option value="openai/o3-mini">o3-mini (Compact Reasoning)</option>
+                                    <option value="openai/o4-mini">o4-mini (Fast Reasoning)</option>
+                                    <option value="openai/o1">o1 (Original Reasoning)</option>
                                 </optgroup>
-                                
+                                <option value="openai/gpt-4o">GPT-4o (Previous Gen)</option>
+                                <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                                <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="openai/gpt-4">GPT-4 (Legacy)</option>
+                                </optgroup>
+
                                 <!-- Anthropic Models (Latest) -->
                                 <optgroup label="Anthropic Models (Latest)">
-                                    <option value="anthropic/claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest - Most Capable)</option>
-                                    <option value="anthropic/claude-3-5-haiku-20241022">Claude 3.5 Haiku (Latest - Fast)</option>
-                                    <option value="anthropic/claude-3-opus-20240229">Claude 3 Opus (Most Capable)</option>
-                                    <option value="anthropic/claude-3-sonnet-20240229">Claude 3 Sonnet (Balanced)</option>
+                                    <option value="anthropic/claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest -
+                                        Most Capable)</option>
+                                    <option value="anthropic/claude-3-5-haiku-20241022">Claude 3.5 Haiku (Latest - Fast)
+                                    </option>
+                                    <option value="anthropic/claude-3-opus-20240229">Claude 3 Opus (Most Capable)
+                                    </option>
+                                    <option value="anthropic/claude-3-sonnet-20240229">Claude 3 Sonnet (Balanced)
+                                    </option>
                                     <option value="anthropic/claude-3-haiku-20240307">Claude 3 Haiku (Fast)</option>
                                 </optgroup>
-                                
+
                                 <!-- GLM Models (Z.AI) -->
                                 <optgroup label="GLM Models (Z.AI)">
                                     <option value="z-ai/glm-4.6">GLM-4.6 (Latest Flagship)</option>
@@ -1401,44 +1502,54 @@
                                     <option value="z-ai/glm-4.5-air:free">GLM-4.5-Air (Free)</option>
                                     <option value="z-ai/glm-4.5v">GLM-4.5V (Vision)</option>
                                 </optgroup>
-                                
+
                                 <!-- Claude Sonnet 4 Series (Latest) -->
                                 <optgroup label="Claude Sonnet 4 Series (Latest)">
-                                    <option value="anthropic/claude-3-5-sonnet-4">Claude Sonnet 4 (Latest - Most Advanced)</option>
-                                    <option value="anthropic/claude-3-5-sonnet-4-mini">Claude Sonnet 4 Mini (Fast & Efficient)</option>
+                                    <option value="anthropic/claude-3-5-sonnet-4">Claude Sonnet 4 (Latest - Most
+                                        Advanced)</option>
+                                    <option value="anthropic/claude-3-5-sonnet-4-mini">Claude Sonnet 4 Mini (Fast &
+                                        Efficient)</option>
                                 </optgroup>
-                                
+
                                 <!-- Google Gemini Series -->
                                 <optgroup label="Google Gemini 2.0 Series (Latest)">
-                                    <option value="google/gemini-2.0-flash">Gemini 2.0 Flash (Latest Multimodal)</option>
+                                    <option value="google/gemini-2.0-flash">Gemini 2.0 Flash (Latest Multimodal)
+                                    </option>
                                     <option value="google/gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
                                 </optgroup>
                                 <optgroup label="Google Gemini 1.5 Series">
-                                    <option value="google/gemini-1.5-pro-latest">Gemini 1.5 Pro (Latest - Large Context)</option>
-                                    <option value="google/gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest - Fast)</option>
+                                    <option value="google/gemini-1.5-pro-latest">Gemini 1.5 Pro (Latest - Large Context)
+                                    </option>
+                                    <option value="google/gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest - Fast)
+                                    </option>
                                     <option value="google/gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
                                     <option value="google/gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
                                 </optgroup>
                                 <optgroup label="Google Gemini 1.0 Series">
                                     <option value="google/gemini-pro">Gemini 1.0 Pro (Legacy)</option>
                                 </optgroup>
-                                
+
                                 <!-- Meta Models (Latest) -->
                                 <optgroup label="Meta Models (Latest)">
-                                    <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B Instruct (Most Capable)</option>
-                                    <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B Instruct (Balanced)</option>
-                                    <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct (Fast)</option>
-                                    <option value="meta-llama/llama-3.1-1b-instruct">Llama 3.1 1B Instruct (Very Fast)</option>
+                                    <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B Instruct (Most
+                                        Capable)</option>
+                                    <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B Instruct (Balanced)
+                                    </option>
+                                    <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct (Fast)
+                                    </option>
+                                    <option value="meta-llama/llama-3.1-1b-instruct">Llama 3.1 1B Instruct (Very Fast)
+                                    </option>
                                 </optgroup>
-                                
+
                                 <!-- Mistral Models (Latest) -->
                                 <optgroup label="Mistral Models (Latest)">
                                     <option value="mistralai/mistral-large-latest">Mistral Large (Latest)</option>
-                                    <option value="mistralai/mixtral-8x7b-instruct">Mixtral 8x7B Instruct (Balanced)</option>
+                                    <option value="mistralai/mixtral-8x7b-instruct">Mixtral 8x7B Instruct (Balanced)
+                                    </option>
                                     <option value="mistralai/mistral-7b-instruct">Mistral 7B Instruct (Fast)</option>
                                     <option value="mistralai/mistral-small-latest">Mistral Small (Latest)</option>
                                 </optgroup>
-                                
+
                                 <!-- DeepSeek Models (Latest) -->
                                 <optgroup label="DeepSeek Models (Latest)">
                                     <option value="deepseek-ai/deepseek-chat">DeepSeek Chat (Latest)</option>
@@ -1446,40 +1557,49 @@
                                     <option value="deepseek-ai/deepseek-v2.5">DeepSeek V2.5 (Legacy)</option>
                                     <option value="deepseek-ai/deepseek-v2">DeepSeek V2 (Legacy)</option>
                                 </optgroup>
-                                
+
                                 <!-- Qwen Models (Latest) -->
                                 <optgroup label="Qwen Models (Latest)">
-                                    <option value="qwen/qwen2.5-72b-instruct">Qwen 2.5 72B Instruct (Most Capable)</option>
+                                    <option value="qwen/qwen2.5-72b-instruct">Qwen 2.5 72B Instruct (Most Capable)
+                                    </option>
                                     <option value="qwen/qwen2.5-32b-instruct">Qwen 2.5 32B Instruct (Balanced)</option>
                                     <option value="qwen/qwen2.5-14b-instruct">Qwen 2.5 14B Instruct (Fast)</option>
                                     <option value="qwen/qwen2.5-7b-instruct">Qwen 2.5 7B Instruct (Very Fast)</option>
-                                    <option value="qwen/qwen2.5-coder-32b-instruct">Qwen 2.5 Coder 32B (Code Focused)</option>
-                                    <option value="qwen/qwen2.5-coder-7b-instruct">Qwen 2.5 Coder 7B (Code Fast)</option>
+                                    <option value="qwen/qwen2.5-coder-32b-instruct">Qwen 2.5 Coder 32B (Code Focused)
+                                    </option>
+                                    <option value="qwen/qwen2.5-coder-7b-instruct">Qwen 2.5 Coder 7B (Code Fast)
+                                    </option>
                                 </optgroup>
-                                
+
                                 <!-- Microsoft Models -->
                                 <optgroup label="Microsoft Models">
                                     <option value="microsoft/wizardlm-2-8x22b">WizardLM 2 8x22B (Most Capable)</option>
                                     <option value="microsoft/wizardlm-2-7b">WizardLM 2 7B (Fast)</option>
                                     <option value="microsoft/phi-3-medium-4k-instruct">Phi-3 Medium 4K (Fast)</option>
-                                    <option value="microsoft/phi-3-small-8k-instruct">Phi-3 Small 8K (Very Fast)</option>
+                                    <option value="microsoft/phi-3-small-8k-instruct">Phi-3 Small 8K (Very Fast)
+                                    </option>
                                     <option value="microsoft/phi-3-mini-4k-instruct">Phi-3 Mini 4K (Ultra Fast)</option>
                                 </optgroup>
-                                
+
                                 <!-- Perplexity Models -->
                                 <optgroup label="Perplexity Models">
-                                    <option value="perplexity/llama-3.1-70b-instruct">Perplexity Llama 3.1 70B (Most Capable)</option>
-                                    <option value="perplexity/llama-3.1-8b-instruct">Perplexity Llama 3.1 8B (Fast)</option>
-                                    <option value="perplexity/llama-3.1-1b-instruct">Perplexity Llama 3.1 1B (Very Fast)</option>
+                                    <option value="perplexity/llama-3.1-70b-instruct">Perplexity Llama 3.1 70B (Most
+                                        Capable)</option>
+                                    <option value="perplexity/llama-3.1-8b-instruct">Perplexity Llama 3.1 8B (Fast)
+                                    </option>
+                                    <option value="perplexity/llama-3.1-1b-instruct">Perplexity Llama 3.1 1B (Very Fast)
+                                    </option>
                                 </optgroup>
-                                
+
                                 <!-- Nous Research Models -->
                                 <optgroup label="Nous Research Models">
-                                    <option value="nousresearch/nous-hermes-2-mixtral-8x7b-dpo">Nous Hermes 2 Mixtral (Balanced)</option>
-                                    <option value="nousresearch/nous-hermes-2-yi-34b">Nous Hermes 2 Yi 34B (Capable)</option>
+                                    <option value="nousresearch/nous-hermes-2-mixtral-8x7b-dpo">Nous Hermes 2 Mixtral
+                                        (Balanced)</option>
+                                    <option value="nousresearch/nous-hermes-2-yi-34b">Nous Hermes 2 Yi 34B (Capable)
+                                    </option>
                                     <option value="nousresearch/nous-hermes-2-yi-6b">Nous Hermes 2 Yi 6B (Fast)</option>
                                 </optgroup>
-                                
+
                                 <!-- Other Popular Models -->
                                 <optgroup label="Other Popular Models">
                                     <option value="01-ai/yi-34b-chat">Yi 34B Chat (Capable)</option>
@@ -1489,15 +1609,17 @@
                                     <option value="cohere/command-light">Command Light (Fast)</option>
                                     <option value="databricks/dbrx-instruct">DBRX Instruct (Most Capable)</option>
                                     <option value="databricks/dbrx-base">DBRX Base (Balanced)</option>
-                                    <option value="snowflake/arctic-instruct">Snowflake Arctic Instruct (Capable)</option>
+                                    <option value="snowflake/arctic-instruct">Snowflake Arctic Instruct (Capable)
+                                    </option>
                                     <option value="snowflake/arctic-base">Snowflake Arctic Base (Balanced)</option>
                                 </optgroup>
-                                
+
                                 <!-- Multimodal Models -->
                                 <optgroup label="Multimodal Models">
                                     <option value="fireworks/firellava-3-8b">FireLLaVA 3 8B (Multimodal)</option>
                                     <option value="fireworks/firellava-3-1b">FireLLaVA 3 1B (Multimodal Fast)</option>
-                                    <option value="anthropic/claude-3-5-sonnet-20241022-vision">Claude 3.5 Sonnet Vision (Multimodal)</option>
+                                    <option value="anthropic/claude-3-5-sonnet-20241022-vision">Claude 3.5 Sonnet Vision
+                                        (Multimodal)</option>
                                     <option value="openai/gpt-4o-mini-vision">GPT-4o Mini Vision (Multimodal)</option>
                                     <option value="openai/gpt-4o-vision">GPT-4o Vision (Multimodal)</option>
                                 </optgroup>
@@ -1505,7 +1627,8 @@
                         </div>
                         <div class="form-group">
                             <label for="openrouterBaseUrl">Base URL:</label>
-                            <input type="text" id="openrouterBaseUrl" value="https://openrouter.ai/api/v1" class="input-full" readonly>
+                            <input type="text" id="openrouterBaseUrl" value="https://openrouter.ai/api/v1"
+                                class="input-full" readonly>
                             <small class="help-text">OpenRouter API endpoint (read-only)</small>
                         </div>
                         <div class="form-group">
@@ -1514,12 +1637,13 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- Local LLM Configuration -->
                     <div id="local-config" class="provider-config">
                         <div class="form-group">
                             <label for="localEndpoint">API Endpoint:</label>
-                            <input type="text" id="localEndpoint" placeholder="http://localhost:11434/v1" class="input-full">
+                            <input type="text" id="localEndpoint" placeholder="http://localhost:11434/v1"
+                                class="input-full">
                             <small class="help-text">Local LLM endpoint (Ollama, LMStudio, etc.)</small>
                         </div>
                         <div class="form-group">
@@ -1536,7 +1660,7 @@
                                     <option value="qwen3:30b">qwen3:30b-a3b (MoE 19GB)</option>
                                     <option value="qwen3:235b">qwen3:235b-a22b (MoE 142GB)</option>
                                 </optgroup>
-                                
+
                                 <!-- DeepSeek-R1 Series (Latest Generation) -->
                                 <optgroup label="DeepSeek-R1 Series (Latest)">
                                     <option value="deepseek-r1:8b">deepseek-r1:8b (Latest - 5.2GB)</option>
@@ -1547,7 +1671,7 @@
                                     <option value="deepseek-r1:70b">deepseek-r1:70b (43GB)</option>
                                     <option value="deepseek-r1:671b">deepseek-r1:671b (404GB)</option>
                                 </optgroup>
-                                
+
                                 <!-- Legacy Models -->
                                 <optgroup label="Legacy Models">
                                     <option value="qwen2:latest">qwen2:latest</option>
@@ -1557,19 +1681,22 @@
                                     <option value="llama3:latest">llama3:latest</option>
                                     <option value="gemma3:27b">gemma3:27b</option>
                                 </optgroup>
-                                
+
                                 <option value="other">Other (specify below)</option>
                             </select>
                         </div>
                         <div class="form-group" id="localModelOtherGroup" style="display: none;">
                             <label for="localModelOther">Custom Model Name:</label>
-                            <input type="text" id="localModelOther" placeholder="Enter custom model name" class="input-full">
+                            <input type="text" id="localModelOther" placeholder="Enter custom model name"
+                                class="input-full">
                         </div>
                         <div class="form-group">
                             <label for="localApiKey">API Key (if required):</label>
                             <div class="input-with-button">
-                                <input type="password" id="localApiKey" placeholder="Optional API key" class="input-full">
-                                <button type="button" class="btn btn-sm btn-paste" id="pasteLocalApiKeyBtn" title="Paste API Key">
+                                <input type="password" id="localApiKey" placeholder="Optional API key"
+                                    class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteLocalApiKeyBtn"
+                                    title="Paste API Key">
                                     <i class="fas fa-paste"></i>
                                 </button>
                             </div>
@@ -1585,14 +1712,15 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- Model Selection Configuration -->
                     <div id="models-config" class="provider-config">
                         <div class="model-selection-header">
                             <h4><i class="fas fa-brain"></i> Model Selection</h4>
-                            <p class="help-text">Configure the default model for general tasks, reasoning, and code generation.</p>
+                            <p class="help-text">Configure the default model for general tasks, reasoning, and code
+                                generation.</p>
                         </div>
-                        
+
                         <div class="simplified-model-selection">
                             <!-- Main Model Selection -->
                             <div class="model-selection-card">
@@ -1622,15 +1750,17 @@
                                 </div>
                                 <div class="form-group" id="mainCustomModelGroup" style="display: none;">
                                     <label for="mainCustomModel">Custom Model Name:</label>
-                                    <input type="text" id="mainCustomModel" placeholder="Enter custom model name" class="input-full">
+                                    <input type="text" id="mainCustomModel" placeholder="Enter custom model name"
+                                        class="input-full">
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="specialized-models">
                             <h5><i class="fas fa-cog"></i> Specialized Models (Optional)</h5>
-                            <p class="help-text">Configure specialized models for specific tasks. Leave as "Auto" to use the main model.</p>
-                            
+                            <p class="help-text">Configure specialized models for specific tasks. Leave as "Auto" to use
+                                the main model.</p>
+
                             <!-- Voice Model - TTS -->
                             <div class="model-type-card">
                                 <div class="model-type-header">
@@ -1656,10 +1786,11 @@
                                 </div>
                                 <div class="form-group" id="voiceTTSCustomModelGroup" style="display: none;">
                                     <label for="voiceTTSCustomModel">Custom Model Name:</label>
-                                    <input type="text" id="voiceTTSCustomModel" placeholder="Enter custom model name" class="input-full">
+                                    <input type="text" id="voiceTTSCustomModel" placeholder="Enter custom model name"
+                                        class="input-full">
                                 </div>
                             </div>
-                            
+
                             <!-- Voice Model - STT -->
                             <div class="model-type-card">
                                 <div class="model-type-header">
@@ -1685,10 +1816,11 @@
                                 </div>
                                 <div class="form-group" id="voiceSTTCustomModelGroup" style="display: none;">
                                     <label for="voiceSTTCustomModel">Custom Model Name:</label>
-                                    <input type="text" id="voiceSTTCustomModel" placeholder="Enter custom model name" class="input-full">
+                                    <input type="text" id="voiceSTTCustomModel" placeholder="Enter custom model name"
+                                        class="input-full">
                                 </div>
                             </div>
-                            
+
                             <!-- Image Model -->
                             <div class="model-type-card">
                                 <div class="model-type-header">
@@ -1714,10 +1846,11 @@
                                 </div>
                                 <div class="form-group" id="imageCustomModelGroup" style="display: none;">
                                     <label for="imageCustomModel">Custom Model Name:</label>
-                                    <input type="text" id="imageCustomModel" placeholder="Enter custom model name" class="input-full">
+                                    <input type="text" id="imageCustomModel" placeholder="Enter custom model name"
+                                        class="input-full">
                                 </div>
                             </div>
-                            
+
                             <!-- Multimodal Model -->
                             <div class="model-type-card">
                                 <div class="model-type-header">
@@ -1743,11 +1876,12 @@
                                 </div>
                                 <div class="form-group" id="multimodalCustomModelGroup" style="display: none;">
                                     <label for="multimodalCustomModel">Custom Model Name:</label>
-                                    <input type="text" id="multimodalCustomModel" placeholder="Enter custom model name" class="input-full">
+                                    <input type="text" id="multimodalCustomModel" placeholder="Enter custom model name"
+                                        class="input-full">
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="model-selection-actions">
                             <button type="button" id="smartModelSelection" class="btn btn-primary">
                                 <i class="fas fa-magic"></i> Smart Selection
@@ -1760,19 +1894,24 @@
                             </button>
                         </div>
                     </div>
-                    
+
                 </div>
-                
+
                 <!-- System Prompt Configuration -->
                 <div class="system-prompt-settings">
                     <h4><i class="fas fa-robot"></i> System Prompt Configuration</h4>
                     <div class="form-group">
                         <label for="systemPrompt">Custom System Prompt:</label>
-                        <textarea id="systemPrompt" placeholder="Enter your custom system prompt here... Leave empty to use the default system prompt." class="input-full" rows="8"></textarea>
+                        <textarea id="systemPrompt"
+                            placeholder="Enter your custom system prompt here... Leave empty to use the default system prompt."
+                            class="input-full" rows="8"></textarea>
                         <small class="help-text">
-                            <strong>Advanced Feature:</strong> Override the default system prompt with your custom instructions. This will replace the built-in genomics-focused system prompt.
-                            <br><strong>Variables available:</strong> {{CURRENT_CHROMOSOME}}, {{CURRENT_POSITION}}, {{ANNOTATIONS_COUNT}}, {{USER_FEATURES_COUNT}}
-                            <br><strong>Leave empty</strong> to use the default system prompt with genomics tools and context.
+                            <strong>Advanced Feature:</strong> Override the default system prompt with your custom
+                            instructions. This will replace the built-in genomics-focused system prompt.
+                            <br><strong>Variables available:</strong> {{CURRENT_CHROMOSOME}}, {{CURRENT_POSITION}},
+                            {{ANNOTATIONS_COUNT}}, {{USER_FEATURES_COUNT}}
+                            <br><strong>Leave empty</strong> to use the default system prompt with genomics tools and
+                            context.
                         </small>
                     </div>
                     <div class="form-group">
@@ -1787,7 +1926,7 @@
                     </div>
                 </div>
 
-                
+
                 <div class="llm-config-status">
                     <button id="testConnectionBtn" class="btn btn-secondary">
                         <i class="fas fa-plug"></i>
@@ -1845,7 +1984,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="servers-list" id="mcpServersList">
                         <!-- Server items will be populated dynamically -->
                     </div>
@@ -1854,23 +1993,27 @@
                 <!-- Global Settings Section -->
                 <div class="mcp-global-settings">
                     <h4><i class="fas fa-cogs"></i> Global Settings</h4>
-                    
+
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="mcpAllowAutoActivation"> 
+                            <input type="checkbox" id="mcpAllowAutoActivation">
                             Allow automatic MCP server activation
                         </label>
-                        <small class="help-text">When enabled, MCP servers can be automatically started/connected when needed by chat or other features. When disabled, servers must be manually started/connected.</small>
+                        <small class="help-text">When enabled, MCP servers can be automatically started/connected when
+                            needed by chat or other features. When disabled, servers must be manually
+                            started/connected.</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="mcpAutoConnect" checked> 
+                            <input type="checkbox" id="mcpAutoConnect" checked>
                             Auto-connect to enabled servers on startup
                         </label>
-                        <small class="help-text">When enabled, all servers marked as "auto-connect" will connect automatically when the application starts. (Requires automatic activation to be enabled)</small>
+                        <small class="help-text">When enabled, all servers marked as "auto-connect" will connect
+                            automatically when the application starts. (Requires automatic activation to be
+                            enabled)</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="mcpGlobalReconnectDelay">Global Reconnection Delay (seconds):</label>
                         <input type="number" id="mcpGlobalReconnectDelay" value="5" min="1" max="60" class="input-full">
@@ -1908,24 +2051,27 @@
                         <!-- Tools will be populated dynamically -->
                     </div>
                 </div>
-                
+
                 <!-- Legacy Single Server Settings (for backward compatibility) -->
-                <div class="mcp-legacy-settings" style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 20px;">
+                <div class="mcp-legacy-settings"
+                    style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 20px;">
                     <h4><i class="fas fa-history"></i> Legacy Single Server Settings</h4>
-                    <small class="help-text">These settings are for backward compatibility with the old single-server configuration.</small>
-                    
+                    <small class="help-text">These settings are for backward compatibility with the old single-server
+                        configuration.</small>
+
                     <div class="form-group">
                         <label for="mcpServerUrl">Legacy Server URL:</label>
-                        <input type="text" id="mcpServerUrl" value="ws://localhost:3001" class="input-full" placeholder="ws://localhost:3001">
+                        <input type="text" id="mcpServerUrl" value="ws://localhost:3001" class="input-full"
+                            placeholder="ws://localhost:3001">
                         <small class="help-text">WebSocket URL for the legacy MCP server connection.</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="mcpReconnectDelay">Legacy Reconnection Delay (seconds):</label>
                         <input type="number" id="mcpReconnectDelay" value="5" min="1" max="60" class="input-full">
                         <small class="help-text">Delay between reconnection attempts for legacy server.</small>
                     </div>
-                    
+
                     <div class="mcp-connection-controls">
                         <button id="mcpConnectBtn" class="btn btn-primary">
                             <i class="fas fa-plug"></i>
@@ -1937,10 +2083,11 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="mcp-info">
                     <h4><i class="fas fa-info-circle"></i> About MCP Servers</h4>
-                    <p>The Model Context Protocol (MCP) enables advanced AI integration with external tools and data sources. When connected, MCP servers allow LLMs to:</p>
+                    <p>The Model Context Protocol (MCP) enables advanced AI integration with external tools and data
+                        sources. When connected, MCP servers allow LLMs to:</p>
                     <ul>
                         <li>Access real-time genome data and annotations</li>
                         <li>Perform advanced analysis operations</li>
@@ -1977,25 +2124,26 @@
             <div class="modal-body">
                 <form id="mcpServerForm">
                     <input type="hidden" id="editingServerId" value="">
-                    
+
                     <div class="form-group">
                         <label for="serverName">Server Name:</label>
                         <input type="text" id="serverName" class="input-full" placeholder="My MCP Server" required>
                         <small class="help-text">A friendly name to identify this server.</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="serverDescription">Description:</label>
-                        <textarea id="serverDescription" class="input-full" rows="3" placeholder="Description of server capabilities..."></textarea>
+                        <textarea id="serverDescription" class="input-full" rows="3"
+                            placeholder="Description of server capabilities..."></textarea>
                         <small class="help-text">Optional description of what this server provides.</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="serverUrl">WebSocket URL:</label>
                         <input type="text" id="serverUrl" class="input-full" placeholder="ws://localhost:3001" required>
                         <small class="help-text">WebSocket endpoint for the MCP server.</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="serverCategory">Category:</label>
                         <select id="serverCategory" class="select input-full">
@@ -2008,46 +2156,47 @@
                         </select>
                         <small class="help-text">Category helps organize and filter tools.</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="serverApiKey">API Key (if required):</label>
                         <input type="password" id="serverApiKey" class="input-full" placeholder="Optional API key">
                         <small class="help-text">Some servers may require authentication.</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="serverReconnectDelay">Reconnection Delay (seconds):</label>
                         <input type="number" id="serverReconnectDelay" value="5" min="1" max="60" class="input-full">
                         <small class="help-text">Delay between reconnection attempts.</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="serverTimeout">Execution Timeout (seconds):</label>
                         <input type="number" id="serverTimeout" value="300" min="10" max="3600" class="input-full">
                         <small class="help-text">Maximum time to wait for tool execution to complete.</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="serverEnabled" checked> 
+                            <input type="checkbox" id="serverEnabled" checked>
                             Enable this server
                         </label>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="serverAutoConnect" checked> 
+                            <input type="checkbox" id="serverAutoConnect" checked>
                             Auto-connect on startup
                         </label>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="serverCapabilities">Capabilities (comma-separated):</label>
-                        <input type="text" id="serverCapabilities" class="input-full" placeholder="genome-analysis, sequence-search, annotation">
+                        <input type="text" id="serverCapabilities" class="input-full"
+                            placeholder="genome-analysis, sequence-search, annotation">
                         <small class="help-text">List of capabilities this server provides.</small>
                     </div>
                 </form>
-                
+
                 <div class="server-test-section">
                     <button id="testServerConnectionBtn" class="btn btn-secondary">
                         <i class="fas fa-plug"></i>
@@ -2080,7 +2229,7 @@
                             <i class="fas fa-edit"></i> Text Input
                         </button>
                     </div>
-                    
+
                     <!-- File Upload Tab -->
                     <div id="fileImportContent" class="tab-content active">
                         <div class="form-group">
@@ -2093,13 +2242,12 @@
                             <pre id="filePreviewContent"></pre>
                         </div>
                     </div>
-                    
+
                     <!-- Text Input Tab -->
                     <div id="textImportContent" class="tab-content">
                         <div class="form-group">
                             <label for="jsonTextInput">JSON Configuration:</label>
-                            <textarea id="jsonTextInput" class="input-full" rows="15" 
-                                placeholder='Paste your JSON configuration here...
+                            <textarea id="jsonTextInput" class="input-full" rows="15" placeholder='Paste your JSON configuration here...
 
 Supported formats:
 
@@ -2149,25 +2297,25 @@ Supported formats:
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="import-options">
                     <h4>Import Options:</h4>
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="overwriteExisting" checked> 
+                            <input type="checkbox" id="overwriteExisting" checked>
                             Overwrite existing servers with same name
                         </label>
                         <small class="help-text">If unchecked, duplicate server names will be skipped.</small>
                     </div>
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="validateBeforeImport" checked> 
+                            <input type="checkbox" id="validateBeforeImport" checked>
                             Validate configuration before importing
                         </label>
                         <small class="help-text">Check JSON format and required fields before importing.</small>
                     </div>
                 </div>
-                
+
                 <div class="import-status" id="importStatus" style="display: none;">
                     <div class="status-message" id="importStatusMessage"></div>
                     <div class="import-results" id="importResults" style="display: none;">
@@ -2266,15 +2414,16 @@ Supported formats:
                                     <button class="source-tab" data-source="current">Current Region</button>
                                     <button class="source-tab" data-source="file">Upload File</button>
                                 </div>
-                                
+
                                 <div class="query-input-content">
                                     <!-- Manual Input -->
                                     <div class="input-source-panel active" data-source="manual">
                                         <div class="query-input-wrapper">
-                                            <textarea id="blastQuerySequence" 
-                                                      placeholder="Enter your DNA, RNA, or protein sequence here (FASTA format optional)..." 
-                                                      rows="8"></textarea>
-                                            <button id="pasteSequenceInputBtn" class="btn btn-secondary" title="Paste from clipboard">
+                                            <textarea id="blastQuerySequence"
+                                                placeholder="Enter your DNA, RNA, or protein sequence here (FASTA format optional)..."
+                                                rows="8"></textarea>
+                                            <button id="pasteSequenceInputBtn" class="btn btn-secondary"
+                                                title="Paste from clipboard">
                                                 <i class="fas fa-paste"></i>
                                             </button>
                                         </div>
@@ -2283,11 +2432,12 @@ Supported formats:
                                             <span id="sequenceType">Type: Not detected</span>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Current Region -->
                                     <div class="input-source-panel" data-source="current">
                                         <div class="current-region-info">
-                                            <p><i class="fas fa-info-circle"></i> Use sequence from current genome viewer region</p>
+                                            <p><i class="fas fa-info-circle"></i> Use sequence from current genome
+                                                viewer region</p>
                                             <div class="region-details">
                                                 <span>Chromosome: <span id="currentChromDisplay">-</span></span>
                                                 <span>Start: <span id="currentStartDisplay">-</span></span>
@@ -2300,11 +2450,12 @@ Supported formats:
                                             </button>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- File Upload -->
                                     <div class="input-source-panel" data-source="file">
                                         <div class="file-upload-area">
-                                            <input type="file" id="blastFileInput" accept=".fasta,.fa,.fas,.txt" style="display: none;">
+                                            <input type="file" id="blastFileInput" accept=".fasta,.fa,.fas,.txt"
+                                                style="display: none;">
                                             <div class="upload-zone" id="blastUploadZone">
                                                 <i class="fas fa-cloud-upload-alt"></i>
                                                 <p>Click to upload or drag and drop</p>
@@ -2331,7 +2482,7 @@ Supported formats:
                                         <option value="pdb">Protein Data Bank proteins</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="parameter-group">
                                     <label for="blastEvalue">E-value threshold:</label>
                                     <select id="blastEvalue">
@@ -2344,7 +2495,7 @@ Supported formats:
                                         <option value="1e-50">1e-50</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="parameter-group">
                                     <label for="blastMaxTargets">Max target sequences:</label>
                                     <select id="blastMaxTargets">
@@ -2355,7 +2506,7 @@ Supported formats:
                                         <option value="500">500</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="parameter-group">
                                     <label for="blastWordSize">Word size:</label>
                                     <select id="blastWordSize">
@@ -2367,7 +2518,7 @@ Supported formats:
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div class="advanced-parameters">
                                 <details>
                                     <summary><i class="fas fa-chevron-right"></i> Advanced Parameters</summary>
@@ -2382,17 +2533,17 @@ Supported formats:
                                                 <option value="PAM70">PAM70</option>
                                             </select>
                                         </div>
-                                        
+
                                         <div class="parameter-group">
                                             <label for="blastGapOpen">Gap open penalty:</label>
                                             <input type="number" id="blastGapOpen" value="11" min="1" max="50">
                                         </div>
-                                        
+
                                         <div class="parameter-group">
                                             <label for="blastGapExtend">Gap extend penalty:</label>
                                             <input type="number" id="blastGapExtend" value="1" min="1" max="10">
                                         </div>
-                                        
+
                                         <div class="parameter-group">
                                             <label>
                                                 <input type="checkbox" id="blastLowComplexity" checked>
@@ -2411,23 +2562,26 @@ Supported formats:
                     <!-- Custom File Database Creation -->
                     <div class="blast-db-management-section custom-db-section">
                         <h4><i class="fas fa-file-upload"></i> Custom File Database</h4>
-                        <p class="help-text">Create BLAST database from a custom FASTA file (automatically opens in Project directory).</p>
-                        
+                        <p class="help-text">Create BLAST database from a custom FASTA file (automatically opens in
+                            Project directory).</p>
+
                         <div class="form-group">
                             <label for="customFilePath">File Path:</label>
                             <div class="file-input-group">
-                                <input type="text" id="customFilePath" class="form-control" placeholder="Select a FASTA file..." readonly>
+                                <input type="text" id="customFilePath" class="form-control"
+                                    placeholder="Select a FASTA file..." readonly>
                                 <button id="browseCustomFileBtn" class="btn btn-secondary">
                                     <i class="fas fa-folder-open"></i> Browse
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="customDbName">Database Name:</label>
-                            <input type="text" id="customDbName" class="form-control" placeholder="Enter database name...">
+                            <input type="text" id="customDbName" class="form-control"
+                                placeholder="Enter database name...">
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="customDbType">Database Type:</label>
                             <select id="customDbType" class="form-control">
@@ -2435,17 +2589,17 @@ Supported formats:
                                 <option value="prot">Protein</option>
                             </select>
                         </div>
-                        
+
                         <button id="createCustomDbBtn" class="btn btn-primary">
                             <i class="fas fa-database"></i> Create Custom Database
                         </button>
                     </div>
-                    
+
                     <!-- Quick Database Creation for Current Genome -->
                     <div class="blast-db-management-section quick-db-section">
                         <h4><i class="fas fa-bolt"></i> Quick Database Creation</h4>
                         <p class="help-text">Create BLAST databases for the currently loaded genome data.</p>
-                        
+
                         <div class="quick-db-buttons">
                             <button id="createNuclDbBtn" class="btn btn-success">
                                 <i class="fas fa-dna"></i> Create Nucleotide Database
@@ -2454,12 +2608,12 @@ Supported formats:
                                 <i class="fas fa-circle"></i> Create Protein Database
                             </button>
                         </div>
-                        
+
                         <div id="quickDbStatus" class="quick-db-status" style="display: none;">
                             <div id="quickDbStatusContent"></div>
                         </div>
                     </div>
-                    
+
                     <!-- Available Databases Status -->
                     <div class="blast-db-management-section">
                         <h4><i class="fas fa-list"></i> Available Databases</h4>
@@ -2467,7 +2621,7 @@ Supported formats:
                             <!-- Available databases will be populated here -->
                         </div>
                     </div>
-                    
+
                     <!-- Database Operations Log -->
                     <div id="dbOperationLog" class="db-operation-log" style="display: none;">
                         <h5><i class="fas fa-terminal"></i> Operation Log</h5>
@@ -2490,7 +2644,7 @@ Supported formats:
                     </button>
                 </div>
             </div>
-            
+
             <!-- Resize handles -->
             <div class="resize-handle resize-handle-n"></div>
             <div class="resize-handle resize-handle-s"></div>
@@ -2552,7 +2706,7 @@ Supported formats:
                             Plugin Settings
                         </button>
                     </div>
-                    
+
                     <!-- Installed Plugins Tab -->
                     <div id="installed-plugins-tab" class="tab-content active">
                         <div class="plugin-section">
@@ -2561,7 +2715,7 @@ Supported formats:
                                 <!-- Function plugins will be populated here -->
                             </div>
                         </div>
-                        
+
                         <div class="plugin-section">
                             <h4><i class="fas fa-chart-bar"></i> Visualization Plugins</h4>
                             <div id="visualizationPluginsList" class="plugins-list">
@@ -2569,7 +2723,7 @@ Supported formats:
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Available Plugins Tab -->
                     <div id="available-plugins-tab" class="tab-content">
                         <div class="plugin-actions">
@@ -2582,7 +2736,7 @@ Supported formats:
                                 Refresh Plugin Directory
                             </button>
                         </div>
-                        
+
                         <div class="plugin-directory">
                             <h4><i class="fas fa-folder"></i> Plugin Directory</h4>
                             <div id="pluginDirectoryList" class="plugins-list">
@@ -2590,7 +2744,7 @@ Supported formats:
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Plugin Settings Tab -->
                     <div id="settings-plugins-tab" class="tab-content">
                         <div class="settings-section">
@@ -2598,40 +2752,33 @@ Supported formats:
                             <p class="help-text" style="margin-bottom: 15px;">
                                 CodeXomics uses two separate plugin directories:
                             </p>
-                            
+
                             <!-- Built-in Plugins Directory -->
                             <div class="form-group">
                                 <label for="builtinPluginDirectory">
                                     <i class="fas fa-box"></i> Built-in Plugins Directory (Read-only):
                                 </label>
-                                <input type="text" 
-                                       id="builtinPluginDirectory" 
-                                       class="input-full" 
-                                       readonly 
-                                       style="background-color: #f5f5f5; cursor: not-allowed;"
-                                       title="Built-in plugins bundled with the application">
+                                <input type="text" id="builtinPluginDirectory" class="input-full" readonly
+                                    style="background-color: #f5f5f5; cursor: not-allowed;"
+                                    title="Built-in plugins bundled with the application">
                                 <small class="help-text">
                                     Pre-installed plugins that come with the application
                                 </small>
                             </div>
-                            
+
                             <!-- User Plugins Directory -->
                             <div class="form-group">
                                 <label for="userPluginDirectory">
                                     <i class="fas fa-user"></i> User Plugins Directory (Writable):
                                 </label>
-                                <input type="text" 
-                                       id="userPluginDirectory" 
-                                       class="input-full" 
-                                       readonly
-                                       style="background-color: #f0f8ff;"
-                                       title="Plugins installed from the marketplace">
+                                <input type="text" id="userPluginDirectory" class="input-full" readonly
+                                    style="background-color: #f0f8ff;" title="Plugins installed from the marketplace">
                                 <small class="help-text">
                                     Marketplace-installed plugins are stored here
                                 </small>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-shield-alt"></i> Security Settings</h4>
                             <div class="form-group">
@@ -2639,10 +2786,11 @@ Supported formats:
                                     <input type="checkbox" id="enablePluginSandbox" checked>
                                     Enable Plugin Sandbox (Recommended)
                                 </label>
-                                <small class="help-text">Restricts plugin access to system resources for security</small>
+                                <small class="help-text">Restricts plugin access to system resources for
+                                    security</small>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-bug"></i> Debug Settings</h4>
                             <div class="form-group">
@@ -2707,7 +2855,7 @@ Supported formats:
                             About
                         </button>
                     </div>
-                    
+
                     <!-- Appearance Tab -->
                     <div id="appearance-tab" class="tab-content active">
                         <div class="settings-section">
@@ -2730,7 +2878,7 @@ Supported formats:
                                 <small class="help-text">Customize the primary accent color</small>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-text-height"></i> Typography</h4>
                             <div class="form-group">
@@ -2761,7 +2909,7 @@ Supported formats:
                                 </select>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-expand-arrows-alt"></i> Layout</h4>
                             <div class="form-group">
@@ -2779,17 +2927,19 @@ Supported formats:
                                 <small class="help-text">Display welcome screen when no file is loaded</small>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-align-justify"></i> Sequence Display</h4>
                             <div class="form-group">
                                 <label for="minLineSpacing">Minimum Line Spacing (px):</label>
-                                <input type="number" id="minLineSpacing" value="12" min="2" max="20" step="1" class="input-full">
-                                <small class="help-text">Minimum spacing between sequence lines to ensure readability (default: 12px)</small>
+                                <input type="number" id="minLineSpacing" value="12" min="2" max="20" step="1"
+                                    class="input-full">
+                                <small class="help-text">Minimum spacing between sequence lines to ensure readability
+                                    (default: 12px)</small>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Performance Tab -->
                     <div id="performance-tab" class="tab-content">
                         <div class="settings-section">
@@ -2815,12 +2965,13 @@ Supported formats:
                                 <small class="help-text">Balance between visual quality and performance</small>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-chart-line"></i> Visualization</h4>
                             <div class="form-group">
                                 <label for="maxGenesDisplay">Maximum Genes to Display:</label>
-                                <input type="number" id="maxGenesDisplay" value="1000" min="100" max="10000" class="input-full">
+                                <input type="number" id="maxGenesDisplay" value="1000" min="100" max="10000"
+                                    class="input-full">
                                 <small class="help-text">Limit gene display to improve performance</small>
                             </div>
                             <div class="form-group">
@@ -2843,10 +2994,11 @@ Supported formats:
                                     <input type="checkbox" id="enableGlobalDragging" checked>
                                     Enable Global Track Dragging
                                 </label>
-                                <small class="help-text">All tracks update dynamically during drag operations (like Genes & Features track)</small>
+                                <small class="help-text">All tracks update dynamically during drag operations (like
+                                    Genes & Features track)</small>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-database"></i> Caching</h4>
                             <div class="form-group">
@@ -2868,7 +3020,7 @@ Supported formats:
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Features Tab -->
                     <div id="features-tab" class="tab-content">
                         <div class="settings-section">
@@ -2893,7 +3045,7 @@ Supported formats:
                                 <small class="help-text">Automatically predict and group genes into operons</small>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-search"></i> Search & Navigation</h4>
                             <div class="form-group">
@@ -2911,10 +3063,11 @@ Supported formats:
                             </div>
                             <div class="form-group">
                                 <label for="searchHistorySize">Search History Size:</label>
-                                <input type="number" id="searchHistorySize" value="50" min="10" max="200" class="input-full">
+                                <input type="number" id="searchHistorySize" value="50" min="10" max="200"
+                                    class="input-full">
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-mouse"></i> Mouse & Navigation</h4>
                             <div class="form-group">
@@ -2929,26 +3082,32 @@ Supported formats:
                                     <input type="checkbox" id="wheelZoomToCursor" checked>
                                     Zoom to Cursor Position
                                 </label>
-                                <small class="help-text">Zoom centered on cursor position instead of viewport center</small>
+                                <small class="help-text">Zoom centered on cursor position instead of viewport
+                                    center</small>
                             </div>
                             <div class="form-group">
                                 <label for="wheelZoomSensitivity">Zoom Sensitivity:</label>
-                                <input type="range" id="wheelZoomSensitivity" min="0.05" max="0.5" step="0.05" value="0.1" class="input-full">
-                                <small class="help-text">Adjust mouse wheel zoom sensitivity (0.05 = slow, 0.5 = fast)</small>
-                                <div class="range-display">Current: <span id="wheelZoomSensitivityValue">0.1</span></div>
+                                <input type="range" id="wheelZoomSensitivity" min="0.05" max="0.5" step="0.05"
+                                    value="0.1" class="input-full">
+                                <small class="help-text">Adjust mouse wheel zoom sensitivity (0.05 = slow, 0.5 =
+                                    fast)</small>
+                                <div class="range-display">Current: <span id="wheelZoomSensitivityValue">0.1</span>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="wheelZoomMinRange">Minimum Zoom Range (bp):</label>
-                                <input type="number" id="wheelZoomMinRange" value="100" min="10" max="10000" class="input-full">
+                                <input type="number" id="wheelZoomMinRange" value="100" min="10" max="10000"
+                                    class="input-full">
                                 <small class="help-text">Minimum genomic range when fully zoomed in</small>
                             </div>
                             <div class="form-group">
                                 <label for="wheelZoomMaxRange">Maximum Zoom Range (bp):</label>
-                                <input type="number" id="wheelZoomMaxRange" value="1000000" min="1000" max="10000000" class="input-full">
+                                <input type="number" id="wheelZoomMaxRange" value="1000000" min="1000" max="10000000"
+                                    class="input-full">
                                 <small class="help-text">Maximum genomic range when fully zoomed out</small>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-robot"></i> AI Features</h4>
                             <div class="form-group">
@@ -2966,27 +3125,30 @@ Supported formats:
                                 <small class="help-text">Show relevant suggestions based on current context</small>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-external-link-alt"></i> External Tools</h4>
                             <div class="form-group">
                                 <label for="deepGeneResearchUrl">Deep Gene Research URL:</label>
-                                <input type="url" id="deepGeneResearchUrl" value="http://localhost:3000/" class="input-full">
+                                <input type="url" id="deepGeneResearchUrl" value="http://localhost:3000/"
+                                    class="input-full">
                                 <small class="help-text">URL for the Deep Gene Research web interface</small>
                             </div>
                             <div class="form-group">
                                 <label for="chopchopUrl">CHOPCHOP CRISPR Toolbox URL:</label>
-                                <input type="url" id="chopchopUrl" value="https://chopchop.cbu.uib.no/" class="input-full">
+                                <input type="url" id="chopchopUrl" value="https://chopchop.cbu.uib.no/"
+                                    class="input-full">
                                 <small class="help-text">URL for the CHOPCHOP CRISPR Toolbox web interface</small>
                             </div>
                             <div class="form-group">
                                 <label for="progenFixerUrl">ProGenFixer URL:</label>
-                                <input type="url" id="progenFixerUrl" value="https://progenfixer.biodesign.ac.cn" class="input-full">
+                                <input type="url" id="progenFixerUrl" value="https://progenfixer.biodesign.ac.cn"
+                                    class="input-full">
                                 <small class="help-text">URL for the ProGenFixer web interface</small>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Export/Import Tab -->
                     <div id="export-tab" class="tab-content">
                         <div class="settings-section">
@@ -3002,7 +3164,8 @@ Supported formats:
                             </div>
                             <div class="form-group">
                                 <label for="exportResolution">Export Resolution (DPI):</label>
-                                <input type="number" id="exportResolution" value="300" min="72" max="600" class="input-full">
+                                <input type="number" id="exportResolution" value="300" min="72" max="600"
+                                    class="input-full">
                                 <small class="help-text">Higher values produce better quality but larger files</small>
                             </div>
                             <div class="form-group">
@@ -3012,7 +3175,7 @@ Supported formats:
                                 </label>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-file-import"></i> Import Settings</h4>
                             <div class="form-group">
@@ -3029,7 +3192,7 @@ Supported formats:
                                 </label>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-save"></i> Backup & Restore</h4>
                             <div class="form-group">
@@ -3056,7 +3219,7 @@ Supported formats:
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- About Tab -->
                     <div id="about-tab" class="tab-content">
                         <div class="settings-section">
@@ -3068,11 +3231,12 @@ Supported formats:
                                 <h3>CodeXomics</h3>
                                 <p class="version" id="about-version">Version 0.3.0-beta</p>
                                 <p class="description">
-                                    An advanced genome visualization and analysis platform with integrated AI capabilities.
+                                    An advanced genome visualization and analysis platform with integrated AI
+                                    capabilities.
                                 </p>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-users"></i> Credits</h4>
                             <div class="credits-list">
@@ -3087,7 +3251,7 @@ Supported formats:
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-book"></i> Documentation & Support</h4>
                             <div class="support-links">
@@ -3105,7 +3269,7 @@ Supported formats:
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div class="settings-section">
                             <h4><i class="fas fa-chart-bar"></i> System Information</h4>
                             <div class="system-info">
@@ -3175,12 +3339,14 @@ Supported formats:
                     </div>
                     <div class="form-group">
                         <label for="extToolChopchopUrl">CHOPCHOP CRISPR Toolbox URL:</label>
-                        <input type="url" id="extToolChopchopUrl" value="https://chopchop.cbu.uib.no/" class="input-full">
+                        <input type="url" id="extToolChopchopUrl" value="https://chopchop.cbu.uib.no/"
+                            class="input-full">
                         <small class="help-text">URL for the CHOPCHOP CRISPR Toolbox web interface</small>
                     </div>
                     <div class="form-group">
                         <label for="extToolProGenFixerUrl">ProGenFixer URL:</label>
-                        <input type="url" id="extToolProGenFixerUrl" value="https://progenfixer.biodesign.ac.cn" class="input-full">
+                        <input type="url" id="extToolProGenFixerUrl" value="https://progenfixer.biodesign.ac.cn"
+                            class="input-full">
                         <small class="help-text">URL for the ProGenFixer web interface</small>
                     </div>
                 </div>
@@ -3189,11 +3355,11 @@ Supported formats:
                 <div class="settings-section">
                     <h4><i class="fas fa-plus-circle"></i> Custom External Tools</h4>
                     <p class="help-text">Add your own external tools that will appear in the Tools menu</p>
-                    
+
                     <div id="customToolsList">
                         <!-- Custom tools will be dynamically inserted here -->
                     </div>
-                    
+
                     <button id="addCustomToolBtn" class="btn btn-secondary">
                         <i class="fas fa-plus"></i> Add Custom Tool
                     </button>
@@ -3264,7 +3430,7 @@ Supported formats:
                         </span>
                     </div>
                 </div>
-                
+
                 <div class="action-list-container">
                     <div class="action-list-header">
                         <div class="header-col action-order">#</div>
@@ -3282,12 +3448,13 @@ Supported formats:
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="checkpoint-controls">
                     <h4><i class="fas fa-save"></i> Checkpoint Management</h4>
                     <div class="checkpoint-section">
                         <div class="checkpoint-create">
-                            <input type="text" id="checkpointNameInput" placeholder="Checkpoint name..." class="checkpoint-name-input">
+                            <input type="text" id="checkpointNameInput" placeholder="Checkpoint name..."
+                                class="checkpoint-name-input">
                             <button id="createCheckpointBtnModal" class="btn btn-primary">
                                 <i class="fas fa-save"></i>
                                 Create Checkpoint
@@ -3384,11 +3551,13 @@ Supported formats:
                     </div>
                     <div class="form-group">
                         <label for="insertPositionSeq">Insert Position:</label>
-                        <input type="number" id="insertPositionSeq" class="form-control" min="1" placeholder="Position to insert sequence">
+                        <input type="number" id="insertPositionSeq" class="form-control" min="1"
+                            placeholder="Position to insert sequence">
                     </div>
                     <div class="form-group">
                         <label for="insertSequenceText">Sequence to Insert:</label>
-                        <textarea id="insertSequenceText" class="form-control" rows="4" placeholder="Enter DNA sequence (A, T, G, C)..."></textarea>
+                        <textarea id="insertSequenceText" class="form-control" rows="4"
+                            placeholder="Enter DNA sequence (A, T, G, C)..."></textarea>
                         <small class="form-help">Only valid DNA nucleotides (A, T, G, C) are allowed</small>
                     </div>
                     <div class="sequence-validation">
@@ -3460,7 +3629,8 @@ Supported formats:
                     </div>
                     <div class="form-group">
                         <label for="editGeneNote">Note/Description:</label>
-                        <textarea id="editGeneNote" class="input-full" rows="3" placeholder="Enter additional notes or description"></textarea>
+                        <textarea id="editGeneNote" class="input-full" rows="3"
+                            placeholder="Enter additional notes or description"></textarea>
                     </div>
                     <div class="form-group">
                         <label>Additional Qualifiers:</label>
@@ -3500,8 +3670,9 @@ Supported formats:
             <div class="modal-body">
                 <div class="settings-section">
                     <h4><i class="fas fa-memory"></i> Tab Rendering Cache</h4>
-                    <p class="help-text">Cache tab content to improve switching performance. When enabled, tab content is cached in memory to avoid re-rendering when switching between tabs.</p>
-                    
+                    <p class="help-text">Cache tab content to improve switching performance. When enabled, tab content
+                        is cached in memory to avoid re-rendering when switching between tabs.</p>
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="tabCacheEnabled">Enable Tab Caching</label>
@@ -3514,27 +3685,29 @@ Supported formats:
                             </label>
                         </div>
                     </div>
-                    
+
                     <div class="setting-item" id="cacheSettingsGroup">
                         <div class="setting-label">
                             <label for="maxCacheSize">Maximum Cached Tabs</label>
                             <p class="setting-description">Number of tabs to keep in cache</p>
                         </div>
                         <div class="setting-control">
-                            <input type="number" id="maxCacheSize" min="1" max="20" value="10" class="form-control number-input">
+                            <input type="number" id="maxCacheSize" min="1" max="20" value="10"
+                                class="form-control number-input">
                         </div>
                     </div>
-                    
+
                     <div class="setting-item" id="cacheTimeoutGroup">
                         <div class="setting-label">
                             <label for="cacheTimeout">Cache Timeout (minutes)</label>
                             <p class="setting-description">How long to keep cached content</p>
                         </div>
                         <div class="setting-control">
-                            <input type="number" id="cacheTimeout" min="1" max="120" value="30" class="form-control number-input">
+                            <input type="number" id="cacheTimeout" min="1" max="120" value="30"
+                                class="form-control number-input">
                         </div>
                     </div>
-                    
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label>Cache Statistics</label>
@@ -3557,12 +3730,13 @@ Supported formats:
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Position Indicator Settings Section -->
                 <div class="settings-section">
                     <h4><i class="fas fa-map-marker-alt"></i> Position Indicator Appearance</h4>
-                    <p class="help-text">Customize the appearance of position indicators on tab buttons that show current browsing location.</p>
-                    
+                    <p class="help-text">Customize the appearance of position indicators on tab buttons that show
+                        current browsing location.</p>
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="indicatorHeight">Indicator Height (px)</label>
@@ -3573,7 +3747,7 @@ Supported formats:
                             <span class="range-value" id="indicatorHeightValue">3px</span>
                         </div>
                     </div>
-                    
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="indicatorColor">Default Indicator Color</label>
@@ -3584,35 +3758,38 @@ Supported formats:
                             <button id="resetIndicatorColor" class="btn btn-sm btn-secondary">Reset</button>
                         </div>
                     </div>
-                    
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="indicatorOpacity">Indicator Opacity</label>
                             <p class="setting-description">Transparency level of position indicators</p>
                         </div>
                         <div class="setting-control">
-                            <input type="range" id="indicatorOpacity" min="0.3" max="1.0" step="0.1" value="0.8" class="range-slider">
+                            <input type="range" id="indicatorOpacity" min="0.3" max="1.0" step="0.1" value="0.8"
+                                class="range-slider">
                             <span class="range-value" id="indicatorOpacityValue">0.8</span>
                         </div>
                     </div>
-                    
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="indicatorBorderWidth">Border Width (px)</label>
                             <p class="setting-description">Thickness of indicator border</p>
                         </div>
                         <div class="setting-control">
-                            <input type="range" id="indicatorBorderWidth" min="0" max="4" value="2" class="range-slider">
+                            <input type="range" id="indicatorBorderWidth" min="0" max="4" value="2"
+                                class="range-slider">
                             <span class="range-value" id="indicatorBorderWidthValue">2px</span>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Chromosome Track Settings Section -->
                 <div class="settings-section">
                     <h4><i class="fas fa-dna"></i> Chromosome Track Styling</h4>
-                    <p class="help-text">Customize the appearance of chromosome tracks that contain position indicators.</p>
-                    
+                    <p class="help-text">Customize the appearance of chromosome tracks that contain position indicators.
+                    </p>
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="trackBackgroundColor">Track Background Color</label>
@@ -3623,7 +3800,7 @@ Supported formats:
                             <button id="resetTrackBackgroundColor" class="btn btn-sm btn-secondary">Reset</button>
                         </div>
                     </div>
-                    
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="trackBorderColor">Track Border Color</label>
@@ -3634,7 +3811,7 @@ Supported formats:
                             <button id="resetTrackBorderColor" class="btn btn-sm btn-secondary">Reset</button>
                         </div>
                     </div>
-                    
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="trackBorderRadius">Border Radius (px)</label>
@@ -3645,7 +3822,7 @@ Supported formats:
                             <span class="range-value" id="trackBorderRadiusValue">2px</span>
                         </div>
                     </div>
-                    
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="enableChromosomeColors">Enable Chromosome-Specific Colors</label>
@@ -3658,7 +3835,7 @@ Supported formats:
                             </label>
                         </div>
                     </div>
-                    
+
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="enableAnimations">Enable Hover Animations</label>
@@ -3672,12 +3849,12 @@ Supported formats:
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Preview Section -->
                 <div class="settings-section">
                     <h4><i class="fas fa-eye"></i> Live Preview</h4>
                     <p class="help-text">Preview how your position indicator settings will look.</p>
-                    
+
                     <div class="preview-container">
                         <div class="preview-tab">
                             <i class="tab-icon fas fa-dna"></i>
@@ -3703,7 +3880,7 @@ Supported formats:
                 </button>
                 <button class="btn modal-close">Cancel</button>
             </div>
-            
+
             <!-- Resize handles -->
             <div class="resize-handle resize-handle-n"></div>
             <div class="resize-handle resize-handle-s"></div>
@@ -3739,7 +3916,7 @@ Supported formats:
                     <button class="tab-button" data-tab="memory">Memory System</button>
                     <button class="tab-button" data-tab="performance">Performance</button>
                 </div>
-                
+
                 <div class="multi-agent-content">
                     <!-- System Tab -->
                     <div id="system-tab" class="tab-content active">
@@ -3750,17 +3927,19 @@ Supported formats:
                                     <input type="checkbox" id="multiAgentSystemEnabled" class="setting-checkbox">
                                     Enable Multi-Agent System
                                 </label>
-                                <small class="help-text">Enable intelligent agent-based tool execution and coordination</small>
+                                <small class="help-text">Enable intelligent agent-based tool execution and
+                                    coordination</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="multiAgentAutoOptimize" class="setting-checkbox" checked>
                                     Auto-optimize execution paths
                                 </label>
-                                <small class="help-text">Automatically optimize tool execution based on memory and performance data</small>
+                                <small class="help-text">Automatically optimize tool execution based on memory and
+                                    performance data</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="multiAgentShowInfo" class="setting-checkbox" checked>
@@ -3768,46 +3947,52 @@ Supported formats:
                                 </label>
                                 <small class="help-text">Display which agent is handling each tool execution</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="multiAgentMemoryEnabled" class="setting-checkbox" checked>
+                                    <input type="checkbox" id="multiAgentMemoryEnabled" class="setting-checkbox"
+                                        checked>
                                     Enable agent memory integration
                                 </label>
                                 <small class="help-text">Enable memory system integration for agents</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="multiAgentCacheEnabled" class="setting-checkbox" checked>
                                     Enable agent execution caching
                                 </label>
-                                <small class="help-text">Cache successful agent executions for faster future execution</small>
+                                <small class="help-text">Cache successful agent executions for faster future
+                                    execution</small>
                             </div>
                         </div>
-                        
+
                         <div class="form-section">
                             <h4>🎯 Agent Coordination</h4>
                             <div class="form-group">
                                 <label for="multiAgentMaxConcurrent">Maximum Concurrent Agents:</label>
-                                <input type="number" id="multiAgentMaxConcurrent" class="input-full" min="1" max="10" value="3">
-                                <small class="help-text">Maximum number of agents that can execute simultaneously</small>
+                                <input type="number" id="multiAgentMaxConcurrent" class="input-full" min="1" max="10"
+                                    value="3">
+                                <small class="help-text">Maximum number of agents that can execute
+                                    simultaneously</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="multiAgentTimeout">Agent Execution Timeout (seconds):</label>
-                                <input type="number" id="multiAgentTimeout" class="input-full" min="5" max="300" value="30">
+                                <input type="number" id="multiAgentTimeout" class="input-full" min="5" max="300"
+                                    value="30">
                                 <small class="help-text">Timeout for individual agent executions</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="multiAgentRetryAttempts">Retry Attempts:</label>
-                                <input type="number" id="multiAgentRetryAttempts" class="input-full" min="1" max="5" value="3">
+                                <input type="number" id="multiAgentRetryAttempts" class="input-full" min="1" max="5"
+                                    value="3">
                                 <small class="help-text">Number of retry attempts for failed agent executions</small>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- LLM Configuration Tab -->
                     <div id="llm-tab" class="tab-content">
                         <div class="form-section">
@@ -3821,55 +4006,65 @@ Supported formats:
                                     <option value="code">Code Model</option>
                                     <option value="multimodal">Multimodal Model</option>
                                 </select>
-                                <small class="help-text">Choose model type for agent decision making. Configure specific models in Options → Configure LLMs → Model Selection.</small>
+                                <small class="help-text">Choose model type for agent decision making. Configure specific
+                                    models in Options → Configure LLMs → Model Selection.</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="multiAgentLLMTemperature">Temperature:</label>
-                                <input type="range" id="multiAgentLLMTemperature" class="input-full" min="0" max="2" step="0.1" value="0.7">
+                                <input type="range" id="multiAgentLLMTemperature" class="input-full" min="0" max="2"
+                                    step="0.1" value="0.7">
                                 <div class="range-value" id="multiAgentLLMTemperatureValue">0.7</div>
-                                <small class="help-text">Control creativity vs consistency (0 = deterministic, 2 = very creative)</small>
+                                <small class="help-text">Control creativity vs consistency (0 = deterministic, 2 = very
+                                    creative)</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="multiAgentLLMMaxTokens">Max Tokens:</label>
-                                <input type="number" id="multiAgentLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
+                                <input type="number" id="multiAgentLLMMaxTokens" class="input-full" min="1000"
+                                    max="32000" step="1000" value="4000">
                                 <small class="help-text">Maximum tokens for agent LLM responses</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="multiAgentLLMTimeout">Timeout (seconds):</label>
-                                <input type="number" id="multiAgentLLMTimeout" class="input-full" min="5" max="300" step="5" value="30">
+                                <input type="number" id="multiAgentLLMTimeout" class="input-full" min="5" max="300"
+                                    step="5" value="30">
                                 <small class="help-text">Timeout for agent LLM requests</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="multiAgentLLMUseSystemPrompt" class="setting-checkbox" checked>
+                                    <input type="checkbox" id="multiAgentLLMUseSystemPrompt" class="setting-checkbox"
+                                        checked>
                                     Use system prompt for agents
                                 </label>
                                 <small class="help-text">Enable system prompts for better agent behavior</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="multiAgentLLMEnableFunctionCalling" class="setting-checkbox" checked>
+                                    <input type="checkbox" id="multiAgentLLMEnableFunctionCalling"
+                                        class="setting-checkbox" checked>
                                     Enable function calling for agents
                                 </label>
                                 <small class="help-text">Allow agents to use function calling capabilities</small>
                             </div>
                         </div>
-                        
+
                         <div class="form-section">
                             <h4>ℹ️ Configuration Info</h4>
                             <div class="info-box">
-                                <p><strong>Model Configuration:</strong> To configure specific models for each type, go to <strong>Options → Configure LLMs → Model Selection</strong>.</p>
-                                <p><strong>API Keys:</strong> API keys are configured in the main LLM configuration. The agent system will use the same API keys as the main LLM.</p>
-                                <p><strong>Inheritance:</strong> Agent settings inherit from ChatBox Settings. You can override specific parameters here if needed.</p>
+                                <p><strong>Model Configuration:</strong> To configure specific models for each type, go
+                                    to <strong>Options → Configure LLMs → Model Selection</strong>.</p>
+                                <p><strong>API Keys:</strong> API keys are configured in the main LLM configuration. The
+                                    agent system will use the same API keys as the main LLM.</p>
+                                <p><strong>Inheritance:</strong> Agent settings inherit from ChatBox Settings. You can
+                                    override specific parameters here if needed.</p>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Agent Management Tab -->
                     <div id="agents-tab" class="tab-content">
                         <div class="form-section">
@@ -3887,7 +4082,7 @@ Supported formats:
                                         Handles navigation, positioning, and spatial operations
                                     </div>
                                 </div>
-                                
+
                                 <div class="agent-item">
                                     <div class="agent-header">
                                         <h5><i class="fas fa-chart-line"></i> Analysis Agent</h5>
@@ -3900,7 +4095,7 @@ Supported formats:
                                         Performs data analysis, statistics, and pattern recognition
                                     </div>
                                 </div>
-                                
+
                                 <div class="agent-item">
                                     <div class="agent-header">
                                         <h5><i class="fas fa-database"></i> Data Agent</h5>
@@ -3913,7 +4108,7 @@ Supported formats:
                                         Manages data retrieval, storage, and export operations
                                     </div>
                                 </div>
-                                
+
                                 <div class="agent-item">
                                     <div class="agent-header">
                                         <h5><i class="fas fa-dna"></i> Sequence Agent</h5>
@@ -3926,7 +4121,7 @@ Supported formats:
                                         Handles DNA/RNA sequence analysis and manipulation
                                     </div>
                                 </div>
-                                
+
                                 <div class="agent-item">
                                     <div class="agent-header">
                                         <h5><i class="fas fa-atom"></i> Protein Agent</h5>
@@ -3939,7 +4134,7 @@ Supported formats:
                                         Manages protein structure and function analysis
                                     </div>
                                 </div>
-                                
+
                                 <div class="agent-item">
                                     <div class="agent-header">
                                         <h5><i class="fas fa-network-wired"></i> Network Agent</h5>
@@ -3952,7 +4147,7 @@ Supported formats:
                                         Handles network analysis and pathway visualization
                                     </div>
                                 </div>
-                                
+
                                 <div class="agent-item">
                                     <div class="agent-header">
                                         <h5><i class="fas fa-globe"></i> External Agent</h5>
@@ -3965,7 +4160,7 @@ Supported formats:
                                         Manages external API calls and data integration
                                     </div>
                                 </div>
-                                
+
                                 <div class="agent-item">
                                     <div class="agent-header">
                                         <h5><i class="fas fa-puzzle-piece"></i> Plugin Agent</h5>
@@ -3981,100 +4176,113 @@ Supported formats:
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Memory System Tab -->
                     <div id="memory-tab" class="tab-content">
                         <div class="form-section">
                             <h4>🧠 Memory System</h4>
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="multiAgentMemorySystemEnabled" class="setting-checkbox" checked>
+                                    <input type="checkbox" id="multiAgentMemorySystemEnabled" class="setting-checkbox"
+                                        checked>
                                     Enable Memory System
                                 </label>
-                                <small class="help-text">Enable intelligent memory caching and context management</small>
+                                <small class="help-text">Enable intelligent memory caching and context
+                                    management</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="multiAgentMemoryCacheEnabled" class="setting-checkbox" checked>
+                                    <input type="checkbox" id="multiAgentMemoryCacheEnabled" class="setting-checkbox"
+                                        checked>
                                     Enable memory caching
                                 </label>
                                 <small class="help-text">Cache memory operations for improved performance</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="multiAgentMemoryOptimizationEnabled" class="setting-checkbox" checked>
+                                    <input type="checkbox" id="multiAgentMemoryOptimizationEnabled"
+                                        class="setting-checkbox" checked>
                                     Enable memory optimization
                                 </label>
                                 <small class="help-text">Automatically optimize memory usage and cleanup</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="multiAgentMemoryCleanupInterval">Memory cleanup interval (minutes):</label>
-                                <input type="number" id="multiAgentMemoryCleanupInterval" class="input-full" min="1" max="60" step="1" value="5">
+                                <input type="number" id="multiAgentMemoryCleanupInterval" class="input-full" min="1"
+                                    max="60" step="1" value="5">
                                 <small class="help-text">How often to perform memory cleanup operations</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="multiAgentMemoryMaxEntries">Maximum memory entries:</label>
-                                <input type="number" id="multiAgentMemoryMaxEntries" class="input-full" min="100" max="100000" step="100" value="10000">
+                                <input type="number" id="multiAgentMemoryMaxEntries" class="input-full" min="100"
+                                    max="100000" step="100" value="10000">
                                 <small class="help-text">Maximum number of entries to keep in memory</small>
                             </div>
                         </div>
-                        
+
                         <div class="form-section">
                             <h4>📊 Memory Layers</h4>
                             <div class="memory-layer">
                                 <h6>Short-term Memory</h6>
                                 <div class="form-group">
                                     <label for="multiAgentShortTermMaxSize">Max size:</label>
-                                    <input type="number" id="multiAgentShortTermMaxSize" class="input-full" min="100" max="10000" step="100" value="1000">
+                                    <input type="number" id="multiAgentShortTermMaxSize" class="input-full" min="100"
+                                        max="10000" step="100" value="1000">
                                 </div>
                                 <div class="form-group">
                                     <label for="multiAgentShortTermTTL">TTL (minutes):</label>
-                                    <input type="number" id="multiAgentShortTermTTL" class="input-full" min="1" max="60" step="1" value="30">
+                                    <input type="number" id="multiAgentShortTermTTL" class="input-full" min="1" max="60"
+                                        step="1" value="30">
                                 </div>
                             </div>
-                            
+
                             <div class="memory-layer">
                                 <h6>Medium-term Memory</h6>
                                 <div class="form-group">
                                     <label for="multiAgentMediumTermMaxSize">Max size:</label>
-                                    <input type="number" id="multiAgentMediumTermMaxSize" class="input-full" min="500" max="50000" step="500" value="5000">
+                                    <input type="number" id="multiAgentMediumTermMaxSize" class="input-full" min="500"
+                                        max="50000" step="500" value="5000">
                                 </div>
                                 <div class="form-group">
                                     <label for="multiAgentMediumTermTTL">TTL (hours):</label>
-                                    <input type="number" id="multiAgentMediumTermTTL" class="input-full" min="1" max="168" step="1" value="24">
+                                    <input type="number" id="multiAgentMediumTermTTL" class="input-full" min="1"
+                                        max="168" step="1" value="24">
                                 </div>
                             </div>
-                            
+
                             <div class="memory-layer">
                                 <h6>Long-term Memory</h6>
                                 <div class="form-group">
                                     <label for="multiAgentLongTermMaxSize">Max size:</label>
-                                    <input type="number" id="multiAgentLongTermMaxSize" class="input-full" min="1000" max="100000" step="1000" value="10000">
+                                    <input type="number" id="multiAgentLongTermMaxSize" class="input-full" min="1000"
+                                        max="100000" step="1000" value="10000">
                                 </div>
                                 <div class="form-group">
                                     <label for="multiAgentLongTermTTL">TTL (days):</label>
-                                    <input type="number" id="multiAgentLongTermLongTermTTL" class="input-full" min="1" max="365" step="1" value="30">
+                                    <input type="number" id="multiAgentLongTermLongTermTTL" class="input-full" min="1"
+                                        max="365" step="1" value="30">
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Performance Tab -->
                     <div id="performance-tab" class="tab-content">
                         <div class="form-section">
                             <h4>⚡ Performance Optimization</h4>
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="multiAgentPerformanceMonitoring" class="setting-checkbox" checked>
+                                    <input type="checkbox" id="multiAgentPerformanceMonitoring" class="setting-checkbox"
+                                        checked>
                                     Enable performance monitoring
                                 </label>
                                 <small class="help-text">Monitor agent performance and execution metrics</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="multiAgentAutoScaling" class="setting-checkbox" checked>
@@ -4082,20 +4290,22 @@ Supported formats:
                                 </label>
                                 <small class="help-text">Automatically scale agent resources based on workload</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="multiAgentMaxConcurrentTasks">Max concurrent tasks:</label>
-                                <input type="number" id="multiAgentMaxConcurrentTasks" class="input-full" min="1" max="20" value="5">
+                                <input type="number" id="multiAgentMaxConcurrentTasks" class="input-full" min="1"
+                                    max="20" value="5">
                                 <small class="help-text">Maximum number of concurrent tasks across all agents</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="multiAgentTaskQueueSize">Task queue size:</label>
-                                <input type="number" id="multiAgentTaskQueueSize" class="input-full" min="10" max="1000" step="10" value="100">
+                                <input type="number" id="multiAgentTaskQueueSize" class="input-full" min="10" max="1000"
+                                    step="10" value="100">
                                 <small class="help-text">Maximum size of the task queue</small>
                             </div>
                         </div>
-                        
+
                         <div class="form-section">
                             <h4>📈 Performance Metrics</h4>
                             <div class="performance-metrics">
@@ -4116,7 +4326,7 @@ Supported formats:
                                     <span class="metric-value" id="activeAgents">--</span>
                                 </div>
                             </div>
-                            
+
                             <button class="btn btn-secondary" id="refreshMetricsBtn">
                                 <i class="fas fa-sync"></i> Refresh Metrics
                             </button>
@@ -4124,7 +4334,7 @@ Supported formats:
                     </div>
                 </div>
             </div>
-            
+
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="resetMultiAgentSettingsBtn">
                     <i class="fas fa-undo"></i> Reset to Defaults
@@ -4138,7 +4348,7 @@ Supported formats:
                     </button>
                 </div>
             </div>
-            
+
             <!-- Resize handles -->
             <div class="resize-handle resize-handle-n"></div>
             <div class="resize-handle resize-handle-s"></div>
@@ -4156,7 +4366,7 @@ Supported formats:
     <!-- Markdown parser for enhanced ChatBox rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
     <!--script src="https://cdn.jsdelivr.net/npm/igv@2.15.8/dist/igv.min.js"></script -->
-    
+
     <!-- Application modules -->
     <script src="modules/ConfigManager.js"></script>
     <script src="modules/MultiFileManager.js"></script>
@@ -4173,10 +4383,10 @@ Supported formats:
     <script src="modules/ExportManager.js"></script>
     <script src="modules/LLMConfigManager.js"></script>
     <script src="modules/MultiAgentSettingsManager.js"></script>
-<script src="modules/GeneralSettingsManager.js"></script>
+    <script src="modules/GeneralSettingsManager.js"></script>
     <script src="modules/ExternalToolsManager.js"></script>
     <script src="modules/MCPServerManager.js"></script>
-    
+
     <!-- Modern Plugin System V2 - MUST load before ChatManager -->
     <script src="modules/PluginPathResolver.js"></script>
     <script src="modules/PluginAPI.js"></script>
@@ -4193,10 +4403,10 @@ Supported formats:
     <script src="modules/PluginTestWindowMenuManager.js"></script>
     <script src="modules/PluginManagementUI.js"></script>
     <script src="modules/PluginSystemBootstrap.js"></script>
-    
+
     <!-- ChatManager - loads AFTER plugin system -->
     <script src="modules/ChatManager.js"></script>
-    
+
     <!-- LLM Benchmark Framework -->
     <script src="modules/BenchmarkStatistics.js"></script>
     <script src="modules/BenchmarkReportGenerator.js"></script>
@@ -4207,9 +4417,9 @@ Supported formats:
     <script src="modules/LLMBenchmarkFramework.js"></script>
     <script src="modules/BenchmarkUI.js"></script>
     <script src="modules/BenchmarkManager.js"></script>
-    
+
     <!-- CrewAI Multi-Agent System - Removed -->
-    
+
     <!-- Legacy Multi-Agent System (for compatibility) -->
     <script src="modules/Agents/AgentBase.js"></script>
     <script src="modules/Agents/NavigationAgent.js"></script>
@@ -4220,21 +4430,21 @@ Supported formats:
     <script src="modules/Agents/DeepResearchAgent.js"></script>
     <script src="modules/Agents/CoordinatorAgent.js"></script>
     <script src="modules/MultiAgentSystem.js"></script>
-    
+
     <script src="modules/ReadsManager.js"></script>
     <script src="modules/ProteinStructureViewer.js"></script>
     <script src="modules/BlastManager.js"></script>
     <script src="modules/BlastFunctionTools.js"></script>
     <script src="modules/BlastChatManagerIntegration.js"></script>
     <script src="modules/MicrobeGenomicsFunctions.js"></script>
-    
+
     <!-- Plugin Testing and Development -->
     <script src="modules/PluginTestManager.js"></script>
     <script src="modules/PluginTestHelpers.js"></script>
     <script src="modules/CircosPluginTestSuite.js"></script>
     <script src="modules/PluginTestFramework.js"></script>
     <script src="modules/PluginDemoGenerator.js"></script>
-    
+
     <!-- Plugin System Support -->
     <script src="modules/ModalDragManager.js"></script>
     <script src="modules/ResizableModalManager.js"></script>
@@ -4244,25 +4454,26 @@ Supported formats:
     <script src="modules/PluginUtils.js"></script>
     <script src="modules/PluginVisualization.js"></script>
     <script src="modules/PluginImplementations.js"></script>
-    
-    
+
+
     <!-- Action Management System -->
     <script src="modules/GenomeDataProxy.js"></script>
     <script src="modules/export/GenBankExporter.js"></script>
     <script src="modules/ActionManager.js"></script>
     <script src="modules/CheckpointManager.js"></script>
-    
+
     <!-- Tab Management System -->
     <script src="modules/TabManager.js"></script>
-    
+
     <!-- Literature API and Enhanced Citation Display -->
     <script src="modules/LiteratureAPIService.js"></script>
     <script src="modules/EnhancedCitationDisplay.js"></script>
-    
+
     <!-- Version Management -->
     <script src="../version.js"></script>
-    
+
     <!-- Main application -->
     <script src="renderer-modular.js"></script>
 </body>
+
 </html>
