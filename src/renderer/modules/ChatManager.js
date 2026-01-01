@@ -8,19 +8,19 @@ class ChatManager {
         this.llmConfigManager = null;
         this.mcpServerManager = null;
         this.chatHistory = [];
-        
+
         // Event emitter functionality
         this.eventHandlers = new Map();
-        
+
         // Context mode toggle state - false means send full conversation, true means send only current message
         this.contextModeEnabled = true; // Default to Current message only mode
-        
+
         this.mcpSocket = null;
         this.clientId = null;
         this.isConnected = false;
         this.activeRequests = new Map();
         this.pendingMessages = [];
-        
+
         // 对话状态管理
         this.conversationState = {
             isProcessing: false,
@@ -30,38 +30,38 @@ class ChatManager {
             processSteps: [],
             currentStep: 0
         };
-        
+
         // Initialize ChatBox Settings Manager
         this.chatBoxSettingsManager = null;
         this.initializeChatBoxSettings();
-        
+
         // 思考过程和工具调用显示 - 现在从设置管理器获取
         this.showThinkingProcess = true;
         this.showToolCalls = true;
         this.showToolCallSource = true;
         this.showDetailedToolData = true;
         this.detailedLogging = true;
-        
+
         // Initialize LLM configuration manager with config integration
         this.llmConfigManager = new LLMConfigManager(this.configManager);
-        
+
         // Initialize MCP Server Manager
         this.mcpServerManager = new MCPServerManager(this.configManager);
         this.setupMCPServerEventHandlers();
-        
+
         // Initialize MicrobeGenomicsFunctions
         this.initializeMicrobeGenomicsFunctions();
-        
+
         // Initialize BLAST Function Tools
         this.blastFunctionTools = null;
         this.initializeBlastFunctionTools();
-        
+
         // Initialize Plugin Manager (async - stores promise for awaiting)
         this._pluginManagerReady = this.initializePluginManager();
-        
+
         // Initialize Plugin Function Calls Integrator
         this.pluginFunctionCallsIntegrator = null;
-        
+
         // Initialize Multi-Agent System (Legacy)
         this.multiAgentSystem = null;
         this.memorySystem = null;
@@ -74,29 +74,29 @@ class ChatManager {
             cacheEnabled: true
         };
         this.initializePluginFunctionCallsIntegrator();
-        
+
         // Initialize Multi-Agent System
         this.initializeMultiAgentSystem();
-        
+
         // Initialize Smart Execution System
         this.smartExecutor = null;
         this.isSmartExecutionEnabled = true; // 可配置开关
         this.initializeSmartExecutor();
-        
+
         // Removed Conversation Evolution Integration (cleanup completed)
-        
+
         // Initialize Dynamic Tools Registry System
         this.dynamicTools = null;
         this.dynamicToolsEnabled = true;
         this.initializeDynamicTools();
-        
+
         // Initialize Tool Execution Tracker
         this.toolExecutionTracker = null;
         this.initializeToolExecutionTracker();
-        
+
         // Set global reference for copy button functionality
         window.chatManager = this;
-        
+
         // Message history browsing state
         this.messageHistory = {
             userMessages: [], // Filtered user messages for browsing
@@ -104,20 +104,20 @@ class ChatManager {
             originalContent: '', // Original input content before browsing
             isBrowsing: false // Whether currently browsing history
         };
-        
+
         // DON'T load chat history here - wait for UI to be created
-        
+
         // Legacy MCP connection check (kept for backward compatibility)
         this.checkAndSetupMCPConnection();
         this.initializeUI();
-        
+
         // Initialize working directory
         this.initializeWorkingDirectory();
-        
+
         // Load chat history AFTER UI is initialized
         setTimeout(() => {
             this.loadChatHistory();
-            
+
             // Update agent system button state after UI is ready
             this.updateMultiAgentToggleButton();
         }, 100);
@@ -130,30 +130,30 @@ class ChatManager {
         try {
             // Load the settings manager module
             await this.loadScript('modules/ChatBoxSettingsManager.js');
-            
+
             // Initialize the settings manager
             if (typeof ChatBoxSettingsManager !== 'undefined') {
                 this.chatBoxSettingsManager = new ChatBoxSettingsManager(this.configManager);
-                
+
                 // Update display flags from settings
                 this.updateSettingsFromManager();
-                
+
                 // Listen for settings changes
                 window.addEventListener('chatbox-settingsChanged', (event) => {
                     this.updateSettingsFromManager();
-                    
+
                     // Check if Dynamic Tools Registry setting changed
                     const dynamicToolsRegistryEnabled = this.configManager.get('chatboxSettings.enableDynamicToolsRegistry', true);
                 });
-                
+
                 // Set global reference for settings modal
                 window.chatBoxSettingsManager = this.chatBoxSettingsManager;
-                
+
                 // Listen for Multi-Agent Settings changes
                 window.addEventListener('multiAgentSettingsChanged', (event) => {
                     this.updateMultiAgentToggleButton();
                 });
-                
+
             } else {
                 console.warn('ChatBoxSettingsManager not available');
             }
@@ -176,7 +176,7 @@ class ChatManager {
             this.showTimestamps = this.chatBoxSettingsManager.getSetting('showTimestamps', false);
             this.maxHistoryMessages = this.chatBoxSettingsManager.getSetting('maxHistoryMessages', 1000);
             this.responseTimeout = this.chatBoxSettingsManager.getSetting('responseTimeout', 30000);
-            
+
             // Update agent system settings
             const agentSystemEnabled = this.chatBoxSettingsManager.getSetting('agentSystemEnabled', false);
             if (agentSystemEnabled !== this.agentSystemEnabled) {
@@ -184,12 +184,12 @@ class ChatManager {
                 this.agentSystemSettings.enabled = agentSystemEnabled;
                 this.updateMultiAgentToggleButton();
             }
-            
+
             this.agentSystemSettings.autoOptimize = this.chatBoxSettingsManager.getSetting('agentAutoOptimize', true);
             this.agentSystemSettings.showAgentInfo = this.chatBoxSettingsManager.getSetting('agentShowInfo', true);
             this.agentSystemSettings.memoryEnabled = this.chatBoxSettingsManager.getSetting('agentMemoryEnabled', true);
             this.agentSystemSettings.cacheEnabled = this.chatBoxSettingsManager.getSetting('agentCacheEnabled', true);
-            
+
             // Update agent LLM settings
             this.agentSystemSettings.llmProvider = this.chatBoxSettingsManager.getSetting('agentLLMProvider', 'auto');
             this.agentSystemSettings.llmModel = this.chatBoxSettingsManager.getSetting('agentLLMModel', 'auto');
@@ -199,7 +199,7 @@ class ChatManager {
             this.agentSystemSettings.llmRetryAttempts = this.chatBoxSettingsManager.getSetting('agentLLMRetryAttempts', 3);
             this.agentSystemSettings.llmUseSystemPrompt = this.chatBoxSettingsManager.getSetting('agentLLMUseSystemPrompt', true);
             this.agentSystemSettings.llmEnableFunctionCalling = this.chatBoxSettingsManager.getSetting('agentLLMEnableFunctionCalling', true);
-            
+
             // Settings updated from ChatBoxSettingsManager
         }
     }
@@ -228,34 +228,34 @@ class ChatManager {
             if (typeof PluginManagerV2 !== 'undefined') {
                 console.log('📦 [DEBUG] Creating new PluginManagerV2 instance...');
                 this.pluginManager = new PluginManagerV2(this.app, this.configManager);
-                
+
                 // Wait for plugin system to fully initialize (including marketplace and installed plugins)
                 console.log('🔄 Waiting for PluginManagerV2 initialization...');
                 await this.pluginManager.waitForInitialization();
                 console.log('✅ PluginManagerV2 fully initialized');
-                
+
                 // Listen to enhanced plugin events
                 this.pluginManager.on('system-initialized', (data) => {
                     // Plugin system initialized
                 });
-                
+
                 this.pluginManager.on('function-executed', (data) => {
                     // Plugin function executed
                 });
-                
+
                 this.pluginManager.on('function-error', (data) => {
                     // Plugin function error
                 });
-                
+
                 this.pluginManager.on('plugin-registered', (data) => {
                     // Plugin registered
                     // Notify Dynamic Tools about plugin state change
                     this.onPluginStateChanged();
                 });
-                
+
                 // Connect PluginManager to Dynamic Tools after initialization
                 this.connectPluginManagerToDynamicTools();
-                
+
             } else {
                 // PluginManagerV2 not available, loading dynamically...
                 await this.loadPluginManager();
@@ -264,7 +264,7 @@ class ChatManager {
             console.error('❌ Failed to initialize PluginManagerV2:', error);
         }
     }
-    
+
     /**
      * Wait for plugin manager to be fully initialized
      * @returns {Promise<void>}
@@ -291,12 +291,12 @@ class ChatManager {
             await this.loadScript('modules/PluginSecurityValidator.js');
             await this.loadScript('modules/PluginUpdateManager.js');
             await this.loadScript('modules/PluginManagerV2.js');
-            
+
             // Load supporting files
             await this.loadScript('modules/PluginUtils.js');
             await this.loadScript('modules/PluginImplementations.js');
             await this.loadScript('modules/PluginVisualization.js');
-            
+
             // Initialize after loading
             if (typeof PluginManagerV2 !== 'undefined') {
                 this.pluginManager = new PluginManagerV2(this.app, this.configManager);
@@ -322,7 +322,7 @@ class ChatManager {
                 resolve();
                 return;
             }
-            
+
             const script = document.createElement('script');
             script.src = src;
             script.onload = resolve;
@@ -338,7 +338,7 @@ class ChatManager {
         try {
             // Load the integrator module
             await this.loadScript('modules/PluginFunctionCallsIntegrator.js');
-            
+
             // Initialize after PluginManager is ready
             const initIntegrator = () => {
                 if (typeof PluginFunctionCallsIntegrator !== 'undefined' && this.pluginManager) {
@@ -349,15 +349,15 @@ class ChatManager {
                     setTimeout(initIntegrator, 500);
                 }
             };
-            
+
             // Try to initialize, with retry for timing issues
             setTimeout(initIntegrator, 100);
-            
+
         } catch (error) {
             // Failed to initialize PluginFunctionCallsIntegrator
         }
     }
-    
+
     /**
      * Initialize Multi-Agent System (Legacy)
      */
@@ -365,29 +365,29 @@ class ChatManager {
         try {
             // Load settings first
             this.loadAgentSystemSettings();
-            
+
             // Agent System Settings loaded
-            
+
             // Initializing Legacy Multi-Agent System...
             // Initialize Legacy Multi-Agent System
             await this.initializeLegacyMultiAgentSystem();
-            
+
         } catch (error) {
             // Failed to initialize Multi-Agent System
         }
     }
-    
-    
+
+
     /**
      * Initialize Legacy Multi-Agent System
      */
     async initializeLegacyMultiAgentSystem() {
         try {
             // Initializing Legacy Multi-Agent System...
-            
+
             // Load required modules
             await this.loadScript('modules/MultiAgentSystem.js');
-            
+
             // Load all available agent classes
             // AgentBase.js is already loaded via index.html
             await this.loadScript('modules/Agents/NavigationAgent.js');
@@ -396,39 +396,39 @@ class ChatManager {
             await this.loadScript('modules/Agents/ExternalAgent.js');
             await this.loadScript('modules/Agents/PluginAgent.js');
             await this.loadScript('modules/Agents/CoordinatorAgent.js');
-            
+
             // Load memory system modules
             await this.loadScript('modules/MemorySystem.js');
-            
+
             // Initialize Multi-Agent System
             if (typeof MultiAgentSystem !== 'undefined') {
                 this.multiAgentSystem = new MultiAgentSystem(this, this.configManager);
                 await this.multiAgentSystem.initialize();
-                
+
                 // Initialize Memory System
                 if (typeof MemorySystem !== 'undefined') {
                     this.memorySystem = new MemorySystem(this.multiAgentSystem);
                     await this.memorySystem.initialize();
                 }
-                
+
                 // Legacy Multi-Agent System initialized successfully
                 this.agentSystemEnabled = this.agentSystemSettings.enabled;
-                
+
                 // Emit initialization event
                 this.emit('agent-system-initialized', {
                     enabled: this.agentSystemEnabled,
                     agentCount: this.multiAgentSystem.agents.size
                 });
-                
+
             } else {
                 // MultiAgentSystem not available
             }
-            
+
         } catch (error) {
             // Failed to initialize Legacy Multi-Agent System
         }
     }
-    
+
     /**
      * Load agent system settings from config
      */
@@ -439,12 +439,12 @@ class ChatManager {
                 ...this.agentSystemSettings,
                 ...savedSettings
             };
-            
+
         } catch (error) {
             // Failed to load agent system settings
         }
     }
-    
+
     /**
      * Save agent system settings to config
      */
@@ -455,7 +455,7 @@ class ChatManager {
             // Failed to save agent system settings
         }
     }
-    
+
     /**
      * Toggle multi-agent system on/off (new implementation)
      */
@@ -463,43 +463,43 @@ class ChatManager {
         // Use current internal state as the authoritative source
         const currentState = this.agentSystemEnabled;
         const newState = !currentState;
-        
+
         // Update internal state first
         this.agentSystemEnabled = newState;
         this.agentSystemSettings.enabled = newState;
-        
+
         // Update Multi-Agent Settings
         if (this.configManager) {
             this.configManager.set('multiAgentSettings.multiAgentSystemEnabled', newState);
         }
-        
+
         // Sync to ChatBox settings for backward compatibility
         if (this.chatBoxSettingsManager) {
             this.chatBoxSettingsManager.setSetting('agentSystemEnabled', newState);
         }
-        
+
         this.saveAgentSystemSettings();
-        
+
         // Update button appearance immediately
         this.updateMultiAgentToggleButton();
-        
+
         // Show user notification
         this.showNotification(
-            `Multi-Agent System ${newState ? 'enabled' : 'disabled'}`, 
+            `Multi-Agent System ${newState ? 'enabled' : 'disabled'}`,
             newState ? 'success' : 'info'
         );
-        
+
         // Emit state change event
         this.emit('agent-system-state-changed', {
             enabled: this.agentSystemEnabled,
             settings: this.agentSystemSettings
         });
-        
+
         // Multi-Agent system toggled
-        
+
         return this.agentSystemEnabled;
     }
-    
+
     /**
      * Update agent system settings
      */
@@ -509,15 +509,15 @@ class ChatManager {
             ...settings
         };
         this.saveAgentSystemSettings();
-        
+
         // Agent system settings updated
-        
+
         // Emit settings update event
         this.emit('agent-system-settings-updated', {
             settings: this.agentSystemSettings
         });
     }
-    
+
     /**
      * Get agent system status
      */
@@ -530,8 +530,8 @@ class ChatManager {
             memoryStats: this.memorySystem ? this.memorySystem.getMemoryStats() : null,
             systemType: 'legacy'
         };
-        
-        
+
+
         return status;
     }
 
@@ -543,7 +543,7 @@ class ChatManager {
             // Load the required modules
             await this.loadScript('modules/FunctionCallsOrganizer.js');
             await this.loadScript('modules/SmartExecutor.js');
-            
+
             // Initialize the smart executor
             if (typeof SmartExecutor !== 'undefined') {
                 this.smartExecutor = new SmartExecutor(this);
@@ -563,13 +563,13 @@ class ChatManager {
     async initializeDynamicTools() {
         try {
             // Initializing Dynamic Tools Registry System...
-            
+
             // Debug: Check if we can access file system to verify tools_registry directory
             if (window.require) {
                 try {
                     const fs = window.require('fs');
                     const path = window.require('path');
-                    
+
                     // Check different possible locations
                     const possibleDirs = [
                         path.join(__dirname, '../../tools_registry'),
@@ -577,7 +577,7 @@ class ChatManager {
                         path.join(process.cwd(), 'tools_registry'),
                         path.join(process.resourcesPath, 'tools_registry')
                     ];
-                    
+
                     // Checking tools_registry directory locations:
                     for (const dir of possibleDirs) {
                         try {
@@ -595,7 +595,7 @@ class ChatManager {
                     // Could not access filesystem for directory check
                 }
             }
-            
+
             // Try different path resolution strategies for packaged vs development
             let SystemIntegration;
             const possiblePaths = [
@@ -604,7 +604,7 @@ class ChatManager {
                 './tools_registry/system_integration',              // Packaged relative path
                 'tools_registry/system_integration'                 // Direct path
             ];
-            
+
             let loadedPath = null;
             for (const tryPath of possiblePaths) {
                 try {
@@ -617,24 +617,24 @@ class ChatManager {
                     // Failed to load from path
                 }
             }
-            
+
             if (!SystemIntegration) {
                 throw new Error('Could not load SystemIntegration from any path');
             }
-            
+
             // SystemIntegration loaded
-            
+
             if (SystemIntegration) {
                 // Creating SystemIntegration instance...
                 this.dynamicTools = new SystemIntegration();
                 // Calling initialize()...
                 const initialized = await this.dynamicTools.initialize();
                 // Initialize result
-                
+
                 if (initialized) {
                     // Dynamic Tools Registry System initialized
                     // Loaded from path
-                    
+
                     // Connect PluginManager to Dynamic Tools Bridge
                     this.connectPluginManagerToDynamicTools();
                 } else {
@@ -658,7 +658,7 @@ class ChatManager {
     async initializeToolExecutionTracker() {
         try {
             // Initializing Tool Execution Tracker...
-            
+
             // Check if ToolExecutionTracker is available globally
             if (typeof ToolExecutionTracker !== 'undefined') {
                 this.toolExecutionTracker = new ToolExecutionTracker();
@@ -666,7 +666,7 @@ class ChatManager {
             } else {
                 // Try to load the module
                 await this.loadScript('modules/ToolExecutionTracker.js');
-                
+
                 if (typeof ToolExecutionTracker !== 'undefined') {
                     this.toolExecutionTracker = new ToolExecutionTracker();
                     // Tool Execution Tracker loaded and initialized successfully
@@ -687,7 +687,7 @@ class ChatManager {
         if (this.currentMessage) {
             return this.currentMessage;
         }
-        
+
         // Fallback to chat history
         if (this.chatHistory.length === 0) return '';
         const lastMessage = this.chatHistory[this.chatHistory.length - 1];
@@ -704,17 +704,17 @@ class ChatManager {
         if (benchmarkInterface && benchmarkInterface.style.display !== 'none') {
             return true;
         }
-        
+
         // Check if any benchmark is currently running
         if (window.benchmarkUI && window.benchmarkUI.isRunning) {
             return true;
         }
-        
+
         // Check if we have an active benchmark manager
         if (this.app?.benchmarkManager?.isRunning) {
             return true;
         }
-        
+
         return false;
     }
 
@@ -729,25 +729,25 @@ class ChatManager {
     async loadGenomeFile(parameters = {}) {
         // [ChatManager] ==> loadGenomeFile ENTRY POINT <==
         // [ChatManager] Parameters received
-        
+
         try {
             const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
-            
+
             // [ChatManager] Parsed parameters
             // [ChatManager] App structure check
-            
+
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
                 // [ChatManager] Direct file loading mode
-                
+
                 if (!this.app?.fileManager) {
                     const error = 'FileManager not available - app structure missing';
                     // [ChatManager] Error
                     throw new Error(error);
                 }
-                
+
                 // [ChatManager] FileManager available, checking file existence...
-                
+
                 // Validate file exists (basic check)
                 if (typeof require !== 'undefined') {
                     try {
@@ -763,14 +763,14 @@ class ChatManager {
                 } else {
                     // [ChatManager] require() not available - skipping file existence check
                 }
-                
+
                 // [ChatManager] Calling fileManager.loadFile...
-                
+
                 // Load file directly
                 await this.app.fileManager.loadFile(filePath);
-                
+
                 // [ChatManager] fileManager.loadFile completed successfully
-                
+
                 const result = {
                     success: true,
                     message: `Successfully loaded genome file: ${filePath}`,
@@ -779,27 +779,27 @@ class ChatManager {
                     tool: 'load_genome_file',
                     timestamp: new Date().toISOString()
                 };
-                
+
                 // [ChatManager] loadGenomeFile result
                 return result;
-                
+
             } else {
                 // [ChatManager] File dialog mode
-                
+
                 // Note: Remove benchmark mode special handling for consistent behavior
                 // Tool should behave the same way in benchmark mode as in normal mode
                 // This ensures accurate benchmark testing and tool detection recording
-                
+
                 // Show file dialog for genome files
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 this.app.fileManager.openSpecificFileType('genome');
-                
+
                 // Enhanced logging for benchmark tool detection recording
                 // [ChatManager] TOOL EXECUTED: load_genome_file - File dialog opened
-                
+
                 return {
                     success: true,
                     message: 'File dialog opened for genome file selection',
@@ -812,7 +812,7 @@ class ChatManager {
         } catch (error) {
             // [ChatManager] CRITICAL ERROR in loadGenomeFile
             // [ChatManager] Error stack
-            
+
             const errorResult = {
                 success: false,
                 error: error.message,
@@ -821,7 +821,7 @@ class ChatManager {
                 timestamp: new Date().toISOString(),
                 stack: error.stack
             };
-            
+
             // [ChatManager] Error result
             return errorResult;
         }
@@ -838,15 +838,15 @@ class ChatManager {
     async loadAnnotationFile(parameters = {}) {
         try {
             const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
-            
+
             // [ChatManager] Loading annotation file
-            
+
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 // Validate file exists (basic check)
                 if (typeof require !== 'undefined') {
                     const fs = require('fs');
@@ -854,10 +854,10 @@ class ChatManager {
                         throw new Error(`File not found: ${filePath}`);
                     }
                 }
-                
+
                 // Load file directly
                 await this.app.fileManager.loadFile(filePath);
-                
+
                 return {
                     success: true,
                     message: `Successfully loaded annotation file: ${filePath}`,
@@ -867,14 +867,14 @@ class ChatManager {
             } else {
                 // Note: Remove benchmark mode special handling for consistent behavior
                 // Tool should behave the same way in benchmark mode as in normal mode
-                
+
                 // Show file dialog for annotation files
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 this.app.fileManager.openSpecificFileType('annotation');
-                
+
                 return {
                     success: true,
                     message: 'File dialog opened for annotation file selection',
@@ -902,15 +902,15 @@ class ChatManager {
     async loadVariantFile(parameters = {}) {
         try {
             const { filePath, showFileDialog = false } = parameters;
-            
+
             // [ChatManager] Loading variant file
-            
+
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 // Validate file exists (basic check)
                 if (typeof require !== 'undefined') {
                     const fs = require('fs');
@@ -918,10 +918,10 @@ class ChatManager {
                         throw new Error(`File not found: ${filePath}`);
                     }
                 }
-                
+
                 // Load file directly
                 await this.app.fileManager.loadFile(filePath);
-                
+
                 return {
                     success: true,
                     message: `Successfully loaded variant file: ${filePath}`,
@@ -930,14 +930,14 @@ class ChatManager {
                 };
             } else {
                 // Note: Remove benchmark mode special handling for consistent behavior
-                
+
                 // Show file dialog for variant files
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 this.app.fileManager.openSpecificFileType('variant');
-                
+
                 return {
                     success: true,
                     message: 'File dialog opened for variant file selection',
@@ -965,15 +965,15 @@ class ChatManager {
     async loadReadsFile(parameters = {}) {
         try {
             const { filePath, showFileDialog = false } = parameters;
-            
+
             // [ChatManager] Loading reads file
-            
+
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 // Validate file exists (basic check)
                 if (typeof require !== 'undefined') {
                     const fs = require('fs');
@@ -981,10 +981,10 @@ class ChatManager {
                         throw new Error(`File not found: ${filePath}`);
                     }
                 }
-                
+
                 // Load file directly
                 await this.app.fileManager.loadFile(filePath);
-                
+
                 return {
                     success: true,
                     message: `Successfully loaded reads file: ${filePath}`,
@@ -993,14 +993,14 @@ class ChatManager {
                 };
             } else {
                 // Note: Remove benchmark mode special handling for consistent behavior
-                
+
                 // Show file dialog for reads files
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 this.app.fileManager.openSpecificFileType('reads');
-                
+
                 return {
                     success: true,
                     message: 'File dialog opened for reads file selection',
@@ -1029,17 +1029,17 @@ class ChatManager {
     async loadWigTracks(parameters = {}) {
         try {
             const { filePaths, showFileDialog = false, multiple = true } = parameters;
-            
+
             // [ChatManager] Loading WIG tracks
-            
+
             // If direct file path(s) provided and showFileDialog is false, load directly
             if (filePaths && !showFileDialog) {
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 const pathsArray = Array.isArray(filePaths) ? filePaths : [filePaths];
-                
+
                 // Validate files exist (basic check)
                 if (typeof require !== 'undefined') {
                     const fs = require('fs');
@@ -1049,14 +1049,14 @@ class ChatManager {
                         }
                     }
                 }
-                
+
                 // Load multiple WIG files
                 if (pathsArray.length > 1) {
                     await this.app.fileManager.loadMultipleWIGFiles(pathsArray);
                 } else {
                     await this.app.fileManager.loadFile(pathsArray[0]);
                 }
-                
+
                 return {
                     success: true,
                     message: `Successfully loaded ${pathsArray.length} WIG track(s)`,
@@ -1066,14 +1066,14 @@ class ChatManager {
                 };
             } else {
                 // Note: Remove benchmark mode special handling for consistent behavior
-                
+
                 // Show file dialog for WIG tracks
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 this.app.fileManager.openSpecificFileType('tracks');
-                
+
                 return {
                     success: true,
                     message: 'File dialog opened for WIG tracks selection',
@@ -1103,15 +1103,15 @@ class ChatManager {
     async loadOperonFile(parameters = {}) {
         try {
             const { filePath, showFileDialog = false, format = 'auto' } = parameters;
-            
+
             // [ChatManager] Loading operon file
-            
+
             // If direct file path is provided and showFileDialog is false, load directly
             if (filePath && !showFileDialog) {
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 // Validate file exists (basic check)
                 if (typeof require !== 'undefined') {
                     const fs = require('fs');
@@ -1119,10 +1119,10 @@ class ChatManager {
                         throw new Error(`File not found: ${filePath}`);
                     }
                 }
-                
+
                 // Load operon file directly
                 await this.app.fileManager.loadOperonFile(filePath);
-                
+
                 return {
                     success: true,
                     message: `Successfully loaded operon file: ${filePath}`,
@@ -1132,14 +1132,14 @@ class ChatManager {
                 };
             } else {
                 // Note: Remove benchmark mode special handling for consistent behavior
-                
+
                 // Show file dialog for operon files
                 if (!this.app?.fileManager) {
                     throw new Error('FileManager not available');
                 }
-                
+
                 this.app.fileManager.openSpecificFileType('operon');
-                
+
                 return {
                     success: true,
                     message: 'File dialog opened for operon file selection',
@@ -1167,16 +1167,16 @@ class ChatManager {
     async getLoadedFilesList(parameters = {}) {
         try {
             const { includeMetadata = true } = parameters;
-            
+
             // [ChatManager] Getting loaded files list
-            
+
             if (!this.app) {
                 throw new Error('Application not available');
             }
-            
+
             // Get loaded files from genome browser
             const loadedFiles = this.app.loadedFiles || [];
-            
+
             // Format the file list
             const filesList = loadedFiles.map(file => {
                 const baseInfo = {
@@ -1184,7 +1184,7 @@ class ChatManager {
                     path: file.path,
                     type: file.type
                 };
-                
+
                 if (includeMetadata) {
                     return {
                         ...baseInfo,
@@ -1193,10 +1193,10 @@ class ChatManager {
                         loadedAt: file.loadedAt
                     };
                 }
-                
+
                 return baseInfo;
             });
-            
+
             const result = {
                 success: true,
                 message: `Found ${filesList.length} loaded file(s)`,
@@ -1205,14 +1205,14 @@ class ChatManager {
                 tool: 'get_loaded_files_list',
                 timestamp: new Date().toISOString()
             };
-            
+
             // [ChatManager] TOOL EXECUTED: get_loaded_files_list - Retrieved file list
-            
+
             return result;
-            
+
         } catch (error) {
             // [ChatManager] Error getting loaded files list
-            
+
             const errorResult = {
                 success: false,
                 error: error.message,
@@ -1221,7 +1221,7 @@ class ChatManager {
                 tool: 'get_loaded_files_list',
                 timestamp: new Date().toISOString()
             };
-            
+
             return errorResult;
         }
     }
@@ -1239,13 +1239,13 @@ class ChatManager {
         // Support both parameter names for compatibility
         const directory_path = parameters.directory_path || parameters.working_directory;
         const { use_home_directory = false, create_if_missing = false, validate_permissions = true } = parameters;
-        
+
         // [ChatManager] Setting working directory
-        
+
         try {
             let targetPath;
             let previousDirectory = this.getCurrentWorkingDirectory();
-            
+
             // Determine target directory
             if (use_home_directory) {
                 const os = require('os');
@@ -1259,11 +1259,11 @@ class ChatManager {
             } else {
                 throw new Error('Either directory_path or use_home_directory must be provided');
             }
-            
+
             // Validate and setup directory
             const fs = require('fs');
             const path = require('path');
-            
+
             // Check if directory exists
             if (!fs.existsSync(targetPath)) {
                 if (create_if_missing) {
@@ -1273,13 +1273,13 @@ class ChatManager {
                     throw new Error(`Directory '${targetPath}' does not exist`);
                 }
             }
-            
+
             // Validate it's actually a directory
             const stats = fs.statSync(targetPath);
             if (!stats.isDirectory()) {
                 throw new Error(`Path '${targetPath}' is not a directory`);
             }
-            
+
             // Check permissions if requested
             let permissions = { readable: false, writable: false };
             if (validate_permissions) {
@@ -1289,34 +1289,34 @@ class ChatManager {
                 } catch (e) {
                     // [ChatManager] Directory not readable
                 }
-                
+
                 try {
                     fs.accessSync(targetPath, fs.constants.W_OK);
                     permissions.writable = true;
                 } catch (e) {
                     // [ChatManager] Directory not writable
                 }
-                
+
                 if (!permissions.readable) {
                     throw new Error(`Permission denied: Cannot read directory '${targetPath}'`);
                 }
             }
-            
+
             // Set the working directory
             process.chdir(targetPath);
-            
+
             // Store in ChatManager state for persistence
             this.currentWorkingDirectory = targetPath;
-            
+
             // Save to config for persistence across sessions
             if (this.configManager) {
                 this.configManager.set('workingDirectory', targetPath);
             }
-            
+
             const result = {
                 success: true,
-                message: create_if_missing && !fs.existsSync(targetPath) ? 
-                    `Working directory set to ${targetPath} (created)` : 
+                message: create_if_missing && !fs.existsSync(targetPath) ?
+                    `Working directory set to ${targetPath} (created)` :
                     `Working directory set to ${targetPath}`,
                 current_directory: targetPath,
                 previous_directory: previousDirectory,
@@ -1324,15 +1324,15 @@ class ChatManager {
                 tool: 'set_working_directory',
                 timestamp: new Date().toISOString()
             };
-            
+
             // Enhanced logging for benchmark tool detection recording
             // [ChatManager] TOOL EXECUTED: set_working_directory - Directory changed
-            
+
             return result;
-            
+
         } catch (error) {
             // [ChatManager] Error setting working directory
-            
+
             const errorResult = {
                 success: false,
                 error: error.message,
@@ -1340,10 +1340,10 @@ class ChatManager {
                 tool: 'set_working_directory',
                 timestamp: new Date().toISOString()
             };
-            
+
             // Log error for benchmark tool detection recording
             // [ChatManager] TOOL ERROR: set_working_directory - Failed
-            
+
             return errorResult;
         }
     }
@@ -1366,7 +1366,7 @@ class ChatManager {
             if (this.configManager) {
                 savedDirectory = this.configManager.get('workingDirectory', null);
             }
-            
+
             if (savedDirectory && require('fs').existsSync(savedDirectory)) {
                 this.currentWorkingDirectory = savedDirectory;
                 process.chdir(savedDirectory);
@@ -1395,11 +1395,11 @@ class ChatManager {
             try {
                 this.dynamicTools.setPluginManager(this.pluginManager);
                 console.log('✅ [ChatManager] PluginManager connected to Dynamic Tools Bridge');
-                
+
                 // Get initial stats
                 const stats = this.dynamicTools.integrationStatus;
                 console.log(`📊 [ChatManager] Dynamic Tools status: ${stats.pluginToolsLoaded || 0} plugin tools integrated`);
-                
+
                 // Also register plugin tools with FunctionCallsOrganizer
                 if (this.smartExecutor && this.smartExecutor.organizer) {
                     this.smartExecutor.organizer.registerPluginTools(this.pluginManager);
@@ -1426,11 +1426,11 @@ class ChatManager {
         if (this.dynamicTools && this.dynamicTools.pluginBridge) {
             this.dynamicTools.invalidatePluginCache();
             console.log('🔄 [ChatManager] Plugin state changed, Dynamic Tools cache invalidated');
-            
+
             // Re-connect to ensure fresh plugin list
             this.connectPluginManagerToDynamicTools();
         }
-        
+
         // Also update FunctionCallsOrganizer
         if (this.smartExecutor && this.smartExecutor.organizer && this.pluginManager) {
             this.smartExecutor.organizer.registerPluginTools(this.pluginManager);
@@ -1443,7 +1443,7 @@ class ChatManager {
      */
     getCurrentContextForDynamicTools() {
         const context = this.getCurrentContext();
-        
+
         // Check if there's a valid LLM provider configured
         let hasAuth = false;
         if (this.llmConfigManager) {
@@ -1453,18 +1453,18 @@ class ChatManager {
                 hasAuth = !!(provider && provider.apiKey && provider.enabled);
             }
         }
-        
+
         // Enhanced context with detailed genome browser state
         const genomeState = context.genomeBrowser.currentState;
         // For navigation tools, consider data available if there's a current chromosome
         const hasData = genomeState.loadedFiles.length > 0 || genomeState.currentChromosome;
-        
+
         return {
             hasData: hasData,
             hasNetwork: navigator.onLine,
             hasAuth: hasAuth,
             currentCategory: this.getCurrentCategory(),
-            
+
             // Detailed genome browser state
             genomeBrowser: {
                 currentChromosome: genomeState.currentChromosome,
@@ -1475,7 +1475,7 @@ class ChatManager {
                 annotationsCount: genomeState.annotationsCount,
                 userDefinedFeaturesCount: genomeState.userDefinedFeaturesCount
             },
-            
+
             // Legacy fields for backward compatibility
             loadedGenome: genomeState,
             activeTracks: genomeState.visibleTracks || [],
@@ -1590,11 +1590,11 @@ class ChatManager {
             serverUrl: 'ws://localhost:3003',
             reconnectDelay: 5
         };
-        
-        const mcpSettings = this.configManager ? 
-            this.configManager.get('mcpSettings', defaultSettings) : 
+
+        const mcpSettings = this.configManager ?
+            this.configManager.get('mcpSettings', defaultSettings) :
             defaultSettings;
-        
+
         if (mcpSettings.allowAutoActivation && mcpSettings.autoConnect) {
             this.setupMCPConnection();
         }
@@ -1607,23 +1607,23 @@ class ChatManager {
             serverUrl: 'ws://localhost:3003',
             reconnectDelay: 5
         };
-        
-        const mcpSettings = this.configManager ? 
-            this.configManager.get('mcpSettings', defaultSettings) : 
+
+        const mcpSettings = this.configManager ?
+            this.configManager.get('mcpSettings', defaultSettings) :
             defaultSettings;
-        
+
         try {
             // Update status to connecting
             this.updateMCPStatus('connecting');
-            
+
             this.mcpSocket = new WebSocket(mcpSettings.serverUrl);
-            
+
             this.mcpSocket.onopen = () => {
                 // [ChatManager] Connected to legacy MCP server
                 this.isConnected = true;
                 this.updateConnectionStatus(true);
                 this.updateMCPStatus('connected');
-                
+
                 // Send any pending messages
                 this.pendingMessages.forEach(msg => this.sendToMCP(msg));
                 this.pendingMessages = [];
@@ -1643,13 +1643,13 @@ class ChatManager {
                 this.isConnected = false;
                 this.updateConnectionStatus(false);
                 this.updateMCPStatus('disconnected');
-                
+
                 // Only attempt to reconnect if this is not a manual connection and auto-activation is enabled
                 if (!manualConnection) {
-                    const currentSettings = this.configManager ? 
-                        this.configManager.get('mcpSettings', defaultSettings) : 
+                    const currentSettings = this.configManager ?
+                        this.configManager.get('mcpSettings', defaultSettings) :
                         defaultSettings;
-                        
+
                     if (currentSettings.allowAutoActivation && currentSettings.autoConnect) {
                         setTimeout(() => this.setupMCPConnection(), mcpSettings.reconnectDelay * 1000);
                     }
@@ -1686,15 +1686,15 @@ class ChatManager {
         const statusText = document.getElementById('mcpStatusText');
         const connectBtn = document.getElementById('mcpConnectBtn');
         const disconnectBtn = document.getElementById('mcpDisconnectBtn');
-        
+
         if (statusIcon && statusText) {
             statusIcon.className = 'fas fa-circle';
-            
+
             switch (status) {
                 case 'connected':
                     statusIcon.classList.add('connected');
                     const connectedCount = this.mcpServerManager.getConnectedServersCount();
-                    statusText.textContent = connectedCount > 0 ? 
+                    statusText.textContent = connectedCount > 0 ?
                         `Connected (${connectedCount} servers)` : 'Connected';
                     if (connectBtn) connectBtn.disabled = true;
                     if (disconnectBtn) disconnectBtn.disabled = false;
@@ -1714,7 +1714,7 @@ class ChatManager {
                     break;
             }
         }
-        
+
         // Also update the toggle button in chat header
         this.updateMCPToggleButton();
     }
@@ -1780,7 +1780,7 @@ class ChatManager {
         }
 
         const servers = this.mcpServerManager.getServerStatus();
-        
+
         if (servers.length === 0) {
             serverList.innerHTML = '<div class="empty-state">No MCP servers configured</div>';
             return;
@@ -1894,7 +1894,7 @@ class ChatManager {
 
         // Update button state
         toggleBtn.dataset.connected = isConnected.toString();
-        
+
         // Update button title
         if (isConnected) {
             toggleBtn.title = `MCP Tools Enabled (${connectedCount} connection${connectedCount !== 1 ? 's' : ''})`;
@@ -1902,7 +1902,7 @@ class ChatManager {
             toggleBtn.title = 'MCP Tools Disabled';
         }
     }
-    
+
     /**
      * Update multi-agent toggle button appearance
      */
@@ -1911,27 +1911,27 @@ class ChatManager {
         if (button) {
             // Use the internal state as the authoritative source
             const isEnabled = this.agentSystemEnabled;
-            
+
             // Update button attributes
             button.setAttribute('data-enabled', isEnabled.toString());
             button.title = isEnabled ? 'Disable Multi-Agent System' : 'Enable Multi-Agent System';
-            
+
             // Update button visual state
             button.classList.toggle('enabled', isEnabled);
             button.classList.toggle('active', isEnabled);
-            
+
             // Update icon
             const icon = button.querySelector('i');
             if (icon) {
                 icon.className = 'fas fa-users-cog';
             }
-            
+
             // Update text content with shorter labels
             const textSpan = button.querySelector('.toggle-text');
             if (textSpan) {
                 textSpan.textContent = isEnabled ? 'ON' : 'OFF';
             }
-            
+
             // Apply visual styling based on state
             if (isEnabled) {
                 button.style.backgroundColor = '#4CAF50';
@@ -1944,12 +1944,12 @@ class ChatManager {
                 button.style.border = '1px solid #6c757d';
                 button.style.boxShadow = 'none';
             }
-            
+
             console.log(`🤖 Multi-Agent toggle button updated: ${isEnabled ? 'ON' : 'OFF'}`);
         }
     }
-    
-    
+
+
     /**
      * Event emitter functionality
      */
@@ -1959,7 +1959,7 @@ class ChatManager {
         }
         this.eventHandlers.get(eventType).push(handler);
     }
-    
+
     /**
      * Remove event handler
      */
@@ -1972,7 +1972,7 @@ class ChatManager {
             }
         }
     }
-    
+
     /**
      * Emit event
      */
@@ -1987,14 +1987,14 @@ class ChatManager {
                 }
             });
         }
-        
+
         // Emit to window for global event handling
         if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent(`chatmanager-${eventType}`, {
                 detail: data
             }));
         }
-        
+
         console.log(`🔔 ChatManager event: ${eventType}`, data);
     }
 
@@ -2004,11 +2004,11 @@ class ChatManager {
                 this.clientId = data.clientId;
                 console.log('Received client ID:', this.clientId);
                 break;
-                
+
             case 'execute-tool':
                 this.executeToolRequest(data);
                 break;
-                
+
             case 'tool-response':
                 // Handle responses from tool executions
                 if (this.activeRequests.has(data.requestId)) {
@@ -2022,13 +2022,13 @@ class ChatManager {
 
     async executeToolRequest(data) {
         const { requestId, toolName, parameters } = data;
-        
+
         try {
             let result;
-            
+
             // Use new priority-based tool execution system first
             result = await this.executeToolWithPriority(toolName, parameters);
-            
+
             if (result !== undefined) {
                 // Tool found and executed via priority system
                 this.sendMessage({
@@ -2039,12 +2039,12 @@ class ChatManager {
                 });
                 return;
             }
-            
+
             // Fallback to main executeToolByName method (unified tool execution)
             // This eliminates the need for duplicate switch statements
             console.log(`🔄 [MCP] Fallback to executeToolByName for tool: ${toolName}`);
             result = await this.executeToolByName(toolName, parameters);
-            
+
             // Send success response
             this.sendToMCP({
                 type: 'tool-response',
@@ -2071,14 +2071,14 @@ class ChatManager {
         if (!this.MicrobeFns) {
             throw new Error('MicrobeGenomicsFunctions not available');
         }
-        
+
         try {
             console.log(`Executing MicrobeFns.${methodName} with parameters:`, parameters);
-            
+
             if (typeof this.MicrobeFns[methodName] !== 'function') {
                 throw new Error(`Method ${methodName} not found in MicrobeGenomicsFunctions`);
             }
-            
+
             // Handle different parameter patterns
             let result;
             if (!parameters || Object.keys(parameters).length === 0) {
@@ -2104,9 +2104,9 @@ class ChatManager {
                     result = this.MicrobeFns[methodName](...values);
                 }
             }
-            
+
             console.log(`MicrobeFns.${methodName} result:`, result);
-            
+
             // Wrap result in success format if it's not already an object
             if (typeof result !== 'object' || result === null) {
                 return {
@@ -2116,14 +2116,14 @@ class ChatManager {
                     parameters: parameters
                 };
             }
-            
+
             return {
                 success: true,
                 ...result,
                 method: methodName,
                 parameters: parameters
             };
-            
+
         } catch (error) {
             console.error(`Error executing MicrobeFns.${methodName}:`, error);
             throw new Error(`MicrobeGenomics function ${methodName} failed: ${error.message}`);
@@ -2133,13 +2133,13 @@ class ChatManager {
     // Tool implementations
     async navigateToPosition(params) {
         let { chromosome, start, end, position } = params;
-        
+
         console.log('navigateToPosition called with params:', params);
-        
+
         if (!this.app) {
             throw new Error('Genome browser not initialized');
         }
-        
+
         // Auto-detect chromosome if not provided
         if (!chromosome) {
             // Try to get current chromosome from the chromosome selector
@@ -2155,19 +2155,19 @@ class ChatManager {
                     console.log(`Using first available chromosome: ${chromosome}`);
                 }
             }
-            
+
             if (!chromosome) {
                 throw new Error('No chromosome specified and unable to auto-detect current chromosome. Please load genome data first.');
             }
         }
-        
+
         // Check if the target chromosome exists in loaded data
         if (!this.app.currentSequence || !this.app.currentSequence[chromosome]) {
             // List available chromosomes for better error message
             const availableChromosomes = this.app.currentSequence ? Object.keys(this.app.currentSequence) : [];
             throw new Error(`Chromosome ${chromosome} not found in loaded genome data. Available chromosomes: ${availableChromosomes.join(', ')}`);
         }
-        
+
         // Handle position parameter with default 2000bp range
         if (position !== undefined && (start === undefined || end === undefined)) {
             const defaultRange = 2000;
@@ -2175,50 +2175,50 @@ class ChatManager {
             end = position + Math.floor(defaultRange / 2);
             console.log(`Using position ${position} with default ${defaultRange}bp range: ${start}-${end}`);
         }
-        
+
         // Validate required parameters
         if (!chromosome || start === undefined || end === undefined) {
             throw new Error('Missing required parameters: chromosome and either (start, end) or position');
         }
-        
+
         // First, switch to the target chromosome if it's not currently selected
         const currentChr = document.getElementById('chromosomeSelect')?.value;
         if (currentChr !== chromosome) {
             console.log(`Switching from chromosome ${currentChr} to ${chromosome}`);
-            
+
             // Use the selectChromosome method to properly switch
             this.app.selectChromosome(chromosome);
-            
+
             // Wait a bit for the UI to update
             await new Promise(resolve => setTimeout(resolve, 100));
         }
-        
+
         // Now navigate to the specific position within that chromosome
         const sequence = this.app.currentSequence[chromosome];
-        
+
         // Validate and adjust bounds
         const validatedStart = Math.max(0, start - 1); // Convert to 0-based
         const validatedEnd = Math.min(sequence.length, end);
-        
+
         if (validatedStart >= validatedEnd) {
             throw new Error(`Invalid position range: ${start}-${end}`);
         }
-        
+
         // Set the position directly
         this.app.currentPosition = { start: validatedStart, end: validatedEnd };
         this.app.currentChromosome = chromosome;
-        
+
         // Update the genome view
         this.app.updateStatistics(chromosome, sequence);
         this.app.displayGenomeView(chromosome, sequence);
-        
+
         // Update navigation bar if it exists
         if (this.app.genomeNavigationBar) {
             this.app.genomeNavigationBar.update();
         }
-        
+
         console.log(`Successfully navigated to ${chromosome}:${start}-${end}`);
-        
+
         return {
             success: true,
             chromosome: chromosome,
@@ -2231,16 +2231,16 @@ class ChatManager {
 
     async openNewTab(params) {
         const { chromosome, start, end, position, title, geneName } = params;
-        
+
         console.log('🔧 [ChatManager] openNewTab called with params:', params);
-        
+
         try {
             // Use window.genomeBrowser instead of this.app for access
             const genomeBrowser = window.genomeBrowser;
             if (!genomeBrowser) {
                 throw new Error('Genome browser not available via window.genomeBrowser');
             }
-            
+
             // Wait for TabManager to be initialized with retry mechanism
             if (!genomeBrowser.tabManager) {
                 console.log('⏳ TabManager not ready, waiting...');
@@ -2252,16 +2252,16 @@ class ChatManager {
                     retries++;
                     console.log(`⏳ Waiting for TabManager... attempt ${retries}/${maxRetries}`);
                 }
-                
+
                 if (!genomeBrowser.tabManager) {
                     throw new Error('Tab manager not available after waiting - check TabManager initialization');
                 }
             }
-            
+
             let tabId;
             let finalTitle = title;
             let usedDefaultRange = false;
-            
+
             // Handle different ways to create a new tab
             if (geneName) {
                 // Open tab for specific gene
@@ -2278,7 +2278,7 @@ class ChatManager {
                 // Open tab for specific position
                 let finalStart = start;
                 let finalEnd = end;
-                
+
                 // Handle position parameter with default 2000bp range
                 if (position !== undefined && (start === undefined || end === undefined)) {
                     const defaultRange = 2000;
@@ -2287,13 +2287,13 @@ class ChatManager {
                     usedDefaultRange = true;
                     console.log(`Using position ${position} with default ${defaultRange}bp range: ${finalStart}-${finalEnd}`);
                 }
-                
+
                 if (finalStart && finalEnd) {
                     // Check if chromosome exists
                     if (!genomeBrowser.currentSequence || !genomeBrowser.currentSequence[chromosome]) {
                         throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
                     }
-                    
+
                     // Use the UI response function instead of direct manager access
                     tabId = genomeBrowser.tabManager.createTabForPosition(chromosome, finalStart, finalEnd, finalTitle);
                     finalTitle = finalTitle || `${chromosome}:${finalStart.toLocaleString()}-${finalEnd.toLocaleString()}`;
@@ -2317,9 +2317,9 @@ class ChatManager {
                     finalTitle = finalTitle || 'New Tab';
                 }
             }
-            
+
             console.log(`✅ [ChatManager] Successfully created new tab: ${tabId} - ${finalTitle}`);
-            
+
             return {
                 success: true,
                 tabId: tabId,
@@ -2327,7 +2327,7 @@ class ChatManager {
                 message: `Opened new tab: ${finalTitle}`,
                 usedDefaultRange: usedDefaultRange
             };
-            
+
         } catch (error) {
             console.error('❌ [ChatManager] Error opening new tab:', error);
             throw error;
@@ -2345,16 +2345,16 @@ class ChatManager {
      */
     async switchToTab(params) {
         const { tab_id, tab_name, tab_index, clientId } = params;
-        
+
         console.log('🔧 [ChatManager] switchToTab called with params:', params);
-        
+
         try {
             // Use window.genomeBrowser for access
             const genomeBrowser = window.genomeBrowser;
             if (!genomeBrowser) {
                 throw new Error('Genome browser not available via window.genomeBrowser');
             }
-            
+
             // Wait for TabManager to be initialized
             if (!genomeBrowser.tabManager) {
                 console.log('⏳ TabManager not ready, waiting...');
@@ -2365,16 +2365,16 @@ class ChatManager {
                     retries++;
                     console.log(`⏳ Waiting for TabManager... attempt ${retries}/${maxRetries}`);
                 }
-                
+
                 if (!genomeBrowser.tabManager) {
                     throw new Error('Tab manager not available after waiting - check TabManager initialization');
                 }
             }
-            
+
             let targetTabId = null;
             let targetTabTitle = null;
             const tabEntries = Array.from(genomeBrowser.tabManager.tabs.entries());
-            
+
             // Strategy 1: Switch by specific tab ID
             if (tab_id) {
                 if (genomeBrowser.tabManager.tabs.has(tab_id)) {
@@ -2394,7 +2394,7 @@ class ChatManager {
                     }
                     return false;
                 });
-                
+
                 if (foundTab) {
                     targetTabId = foundTab[0];
                     targetTabTitle = foundTab[1].title;
@@ -2418,14 +2418,14 @@ class ChatManager {
             else {
                 throw new Error('At least one parameter (tab_id, tab_name, or tab_index) must be provided');
             }
-            
+
             // Perform the tab switch
             if (targetTabId) {
                 // Use the TabManager's switchTab method
                 genomeBrowser.tabManager.switchTab(targetTabId);
-                
+
                 console.log(`✅ [ChatManager] Successfully switched to tab: ${targetTabId} - ${targetTabTitle}`);
-                
+
                 return {
                     success: true,
                     tab_id: targetTabId,
@@ -2436,7 +2436,7 @@ class ChatManager {
             } else {
                 throw new Error('Failed to identify target tab');
             }
-            
+
         } catch (error) {
             console.error('❌ [ChatManager] Error switching tab:', error);
             return {
@@ -2452,16 +2452,16 @@ class ChatManager {
      */
     async switchToTab(params) {
         const { tab_id, tab_name, tab_index, clientId } = params;
-        
+
         console.log('🔧 [ChatManager] switchToTab called with params:', params);
-        
+
         try {
             // Use window.genomeBrowser instead of this.app for access
             const genomeBrowser = window.genomeBrowser;
             if (!genomeBrowser) {
                 throw new Error('Genome browser not available via window.genomeBrowser');
             }
-            
+
             // Wait for TabManager to be initialized
             if (!genomeBrowser.tabManager) {
                 console.log('⏳ TabManager not ready, waiting...');
@@ -2472,17 +2472,17 @@ class ChatManager {
                     retries++;
                     console.log(`⏳ Waiting for TabManager... attempt ${retries}/${maxRetries}`);
                 }
-                
+
                 if (!genomeBrowser.tabManager) {
                     throw new Error('Tab manager not available after waiting - check TabManager initialization');
                 }
             }
-            
+
             // Get current active tab for reference
             const previousTabId = genomeBrowser.tabManager.activeTabId;
             let targetTabId = null;
             let targetTabTitle = null;
-            
+
             // Strategy 1: Switch by specific tab ID
             if (tab_id) {
                 if (genomeBrowser.tabManager.tabs.has(tab_id)) {
@@ -2496,10 +2496,10 @@ class ChatManager {
             // Strategy 2: Switch by tab name/title
             else if (tab_name) {
                 const tabEntries = Array.from(genomeBrowser.tabManager.tabStates.entries());
-                const foundTab = tabEntries.find(([tabId, tabState]) => 
+                const foundTab = tabEntries.find(([tabId, tabState]) =>
                     tabState.title && tabState.title.toLowerCase().includes(tab_name.toLowerCase())
                 );
-                
+
                 if (foundTab) {
                     targetTabId = foundTab[0];
                     targetTabTitle = foundTab[1].title;
@@ -2521,12 +2521,12 @@ class ChatManager {
             else {
                 throw new Error('Must provide either tab_id, tab_name, or tab_index');
             }
-            
+
             // Perform the tab switch
             genomeBrowser.tabManager.switchToTab(targetTabId);
-            
+
             console.log(`✅ [ChatManager] Successfully switched to tab: ${targetTabId} - ${targetTabTitle}`);
-            
+
             return {
                 success: true,
                 tab_id: targetTabId,
@@ -2534,7 +2534,7 @@ class ChatManager {
                 previous_tab_id: previousTabId,
                 message: `Switched to tab: ${targetTabTitle}`
             };
-            
+
         } catch (error) {
             console.error('❌ [ChatManager] Error switching tab:', error);
             throw error;
@@ -2543,32 +2543,32 @@ class ChatManager {
 
     async searchFeatures(params) {
         const { query, caseSensitive } = params;
-        
+
         // Log tool detection as requested by Song
         console.log('🔍 [Tool Detection] search_features tool called with params:', params);
         console.log('🔍 [Tool Detection] Detected tool: search_features, parameters: query="' + query + '", caseSensitive=' + (caseSensitive || false));
-        
+
         console.log('searchFeatures called with params:', params);
-        
+
         // Use existing search functionality from NavigationManager
         if (this.app && this.app.navigationManager) {
             console.log('Using navigationManager.performSearch');
-            
+
             // Store original settings
             const originalCaseSensitive = document.getElementById('caseSensitive')?.checked;
-            
+
             // Set case sensitivity for this search
             const caseSensitiveCheckbox = document.getElementById('caseSensitive');
             if (caseSensitiveCheckbox) {
                 caseSensitiveCheckbox.checked = caseSensitive || false;
             }
-            
+
             // Perform the search
             this.app.navigationManager.performSearch(query);
-            
+
             // Get the results from NavigationManager
             const searchResults = this.app.navigationManager.searchResults || [];
-            
+
             // Auto-scroll sidebar to search results panel (similar to Gene Details)
             if (searchResults.length > 0 && this.app.scrollSidebarToSection) {
                 const searchResultsSection = document.getElementById('searchResultsSection');
@@ -2577,14 +2577,14 @@ class ChatManager {
                     console.log('🔄 Auto-scrolled sidebar to search results panel');
                 }
             }
-            
+
             // Restore original setting
             if (caseSensitiveCheckbox && originalCaseSensitive !== undefined) {
                 caseSensitiveCheckbox.checked = originalCaseSensitive;
             }
-            
+
             console.log('Search completed, results:', searchResults);
-            
+
             // CRITICAL FIX: Filter results to remove verbose data and prevent token overflow
             const optimizedResults = searchResults.map(result => {
                 if (result.annotation) {
@@ -2607,9 +2607,9 @@ class ChatManager {
                 }
                 return result;
             });
-            
+
             console.log('🔍 [Tool Detection] search_features completed, returning', optimizedResults.length, 'optimized results (note fields excluded)');
-            
+
             return {
                 query: query,
                 caseSensitive: caseSensitive || false,
@@ -2618,26 +2618,26 @@ class ChatManager {
                 optimization_note: 'Results optimized to exclude verbose note fields for token efficiency'
             };
         }
-        
+
         throw new Error('Navigation manager not available');
     }
 
     async searchGeneByName(params) {
         const { name } = params;
-        
+
         console.log('searchGeneByName called with params:', params);
-        
+
         if (!this.app || !this.app.navigationManager) {
             throw new Error('Navigation manager not available');
         }
-        
+
         // Use improved gene search logic with relevance scoring
         const searchResults = this.performIntelligentGeneSearch(name);
-        
+
         // Display results in sidebar using NavigationManager's populateSearchResults
         this.app.navigationManager.searchResults = searchResults;
         this.app.navigationManager.populateSearchResults(searchResults, name);
-        
+
         // Auto-scroll sidebar to search results panel (similar to Gene Details)
         if (searchResults.length > 0 && this.app.scrollSidebarToSection) {
             const searchResultsSection = document.getElementById('searchResultsSection');
@@ -2646,9 +2646,9 @@ class ChatManager {
                 console.log('🔄 Auto-scrolled sidebar to search results panel');
             }
         }
-        
+
         console.log('Intelligent gene search completed, results:', searchResults);
-        
+
         return {
             name: name,
             results: searchResults,
@@ -2664,29 +2664,29 @@ class ChatManager {
         if (!this.app || !this.app.currentAnnotations) {
             return [];
         }
-        
+
         const currentChr = document.getElementById('chromosomeSelect')?.value;
         if (!currentChr || !this.app.currentAnnotations[currentChr]) {
             return [];
         }
-        
+
         const annotations = this.app.currentAnnotations[currentChr];
         const searchTerm = geneName.toLowerCase();
         const results = [];
-        
+
         console.log(`🔍 Intelligent search for gene: "${geneName}"`);
         console.log(`📊 Searching in ${annotations.length} annotations`);
-        
+
         annotations.forEach(annotation => {
             if (!annotation.qualifiers) return;
-            
+
             const geneNameValue = this.app.getQualifierValue(annotation.qualifiers, 'gene') || '';
             const locusTag = this.app.getQualifierValue(annotation.qualifiers, 'locus_tag') || '';
             const product = this.app.getQualifierValue(annotation.qualifiers, 'product') || '';
             const note = this.app.getQualifierValue(annotation.qualifiers, 'note') || '';
-            
+
             // Debug logging for problematic values
-            if (typeof geneNameValue !== 'string' || typeof locusTag !== 'string' || 
+            if (typeof geneNameValue !== 'string' || typeof locusTag !== 'string' ||
                 typeof product !== 'string' || typeof note !== 'string') {
                 console.warn('Non-string qualifier values found:', {
                     gene: { value: geneNameValue, type: typeof geneNameValue },
@@ -2695,14 +2695,14 @@ class ChatManager {
                     note: { value: note, type: typeof note }
                 });
             }
-            
+
             // Calculate relevance score with error handling
             let relevanceScore;
             try {
                 relevanceScore = this.calculateGeneRelevanceScore(
-                    searchTerm, 
-                    geneNameValue, 
-                    locusTag, 
+                    searchTerm,
+                    geneNameValue,
+                    locusTag,
                     product
                     // Note: removed note parameter to reduce token usage
                 );
@@ -2717,7 +2717,7 @@ class ChatManager {
                 // Skip this annotation if there's an error
                 return;
             }
-            
+
             // Only include results with meaningful relevance (score > 0)
             if (relevanceScore && relevanceScore.score > 0) {
                 const result = {
@@ -2744,12 +2744,12 @@ class ChatManager {
                     matchType: relevanceScore.matchType,
                     matchedField: relevanceScore.matchedField
                 };
-                
+
                 results.push(result);
                 console.log(`✅ Found match: ${result.name} (score: ${relevanceScore.score}, type: ${relevanceScore.matchType})`);
             }
         });
-        
+
         // Sort by relevance score (highest first), then by position
         results.sort((a, b) => {
             if (b.relevanceScore !== a.relevanceScore) {
@@ -2757,13 +2757,13 @@ class ChatManager {
             }
             return a.position - b.position;
         });
-        
+
         // Limit results to most relevant ones (max 20 for gene search)
         const limitedResults = results.slice(0, 20);
-        
+
         console.log(`📈 Search completed: ${limitedResults.length} relevant results found`);
         console.log(`🎯 Top results:`, limitedResults.slice(0, 5).map(r => `${r.name} (${r.relevanceScore})`));
-        
+
         return limitedResults;
     }
 
@@ -2774,17 +2774,17 @@ class ChatManager {
         let maxScore = 0;
         let matchType = 'none';
         let matchedField = '';
-        
+
         const fields = [
             { name: 'gene', value: geneName, weight: 100 },
             { name: 'locus_tag', value: locusTag, weight: 80 },
             { name: 'product', value: product, weight: 20 }
             // Note: removed 'note' field to reduce token usage and improve search relevance
         ];
-        
+
         fields.forEach(field => {
             if (!field.value) return;
-            
+
             // Ensure field.value is a string and convert to lowercase
             let fieldValue;
             if (typeof field.value === 'string') {
@@ -2799,10 +2799,10 @@ class ChatManager {
                 // Handle other types (numbers, booleans, etc.)
                 fieldValue = String(field.value).toLowerCase();
             }
-            
+
             let score = 0;
             let type = 'none';
-            
+
             // Exact match (highest priority)
             if (fieldValue === searchTerm) {
                 score = field.weight * 10;
@@ -2836,14 +2836,14 @@ class ChatManager {
                     type = 'fuzzy';
                 }
             }
-            
+
             if (score > maxScore) {
                 maxScore = score;
                 matchType = type;
                 matchedField = field.name;
             }
         });
-        
+
         return {
             score: maxScore,
             matchType: matchType,
@@ -2857,9 +2857,9 @@ class ChatManager {
     calculateFuzzyMatch(str1, str2) {
         if (str1.length === 0) return str2.length === 0 ? 1 : 0;
         if (str2.length === 0) return 0;
-        
+
         const matrix = [];
-        
+
         // Initialize matrix
         for (let i = 0; i <= str2.length; i++) {
             matrix[i] = [i];
@@ -2867,7 +2867,7 @@ class ChatManager {
         for (let j = 0; j <= str1.length; j++) {
             matrix[0][j] = j;
         }
-        
+
         // Fill matrix
         for (let i = 1; i <= str2.length; i++) {
             for (let j = 1; j <= str1.length; j++) {
@@ -2882,7 +2882,7 @@ class ChatManager {
                 }
             }
         }
-        
+
         const maxLength = Math.max(str1.length, str2.length);
         return maxLength === 0 ? 1 : (maxLength - matrix[str2.length][str1.length]) / maxLength;
     }
@@ -2895,7 +2895,7 @@ class ChatManager {
         // Debug logging to understand the app state
         // console.log('ChatManager getCurrentState - this.app:', this.app);
         // console.log('ChatManager getCurrentState - this.app.currentChromosome:', this.app.currentChromosome);
-       // console.log('ChatManager getCurrentState - this.app.currentAnnotations:', this.app.currentAnnotations);
+        // console.log('ChatManager getCurrentState - this.app.currentAnnotations:', this.app.currentAnnotations);
         // console.log('ChatManager getCurrentState - this.app.currentPosition:', this.app.currentPosition);
 
         const state = {
@@ -2906,13 +2906,13 @@ class ChatManager {
             sequenceLength: this.app.sequenceLength || 0,
             annotationsCount: (this.app.currentAnnotations || []).length,
             userDefinedFeaturesCount: Object.keys(this.app.userDefinedFeatures || {}).length,
-            
+
             // Enhanced: Add working directory information
             workingDirectory: {
                 current: this.getCurrentWorkingDirectory(),
                 timestamp: new Date().toISOString()
             },
-            
+
             // Enhanced: Add selected gene information
             selectedGene: this.app.selectedGene ? {
                 geneName: this.app.selectedGene.gene?.qualifiers?.gene || 'Unknown',
@@ -2923,16 +2923,16 @@ class ChatManager {
                 type: this.app.selectedGene.gene?.type || 'Unknown',
                 hasOperonInfo: !!this.app.selectedGene.operonInfo
             } : null,
-            
+
             // Enhanced: Add sequence selection information
             sequenceSelection: this.app.sequenceSelection ? {
                 active: this.app.sequenceSelection.active,
                 start: this.app.sequenceSelection.start,
                 end: this.app.sequenceSelection.end,
-                length: this.app.sequenceSelection.active && this.app.sequenceSelection.start && this.app.sequenceSelection.end ? 
+                length: this.app.sequenceSelection.active && this.app.sequenceSelection.start && this.app.sequenceSelection.end ?
                     this.app.sequenceSelection.end - this.app.sequenceSelection.start + 1 : null
             } : null,
-            
+
             // Enhanced: Add current viewing region details
             viewingRegion: this.app.currentPosition ? {
                 chromosome: this.app.currentChromosome,
@@ -2949,10 +2949,10 @@ class ChatManager {
 
     async getSequence(params) {
         const { chromosome, start, end } = params;
-        
+
         if (this.app && this.app.getSequenceForRegion) {
             const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
-            
+
             return {
                 chromosome: chromosome,
                 start: start,
@@ -2961,7 +2961,7 @@ class ChatManager {
                 length: sequence.length
             };
         }
-        
+
         throw new Error('Sequence retrieval not available');
     }
 
@@ -2970,11 +2970,11 @@ class ChatManager {
         const trackName = params.trackName || params.track_name;
         let visible = params.visible;
         const action = params.action;
-        
+
         if (!trackName) {
             throw new Error('trackName or track_name parameter is required');
         }
-        
+
         // Convert action to visible if visible is not specified
         if (visible === undefined && action) {
             if (action === 'show') {
@@ -2985,12 +2985,12 @@ class ChatManager {
                 throw new Error('Invalid action parameter. Must be "show" or "hide"');
             }
         }
-        
+
         // Map track names to checkbox IDs
         const trackMapping = {
             'genes': 'trackGenes',
             'gc': 'trackGC',
-            'variants': 'trackVariants', 
+            'variants': 'trackVariants',
             'reads': 'trackReads',
             'proteins': 'trackProteins',
             'wigTracks': 'trackWIG',
@@ -3000,25 +3000,25 @@ class ChatManager {
             'blast': 'trackBlast',
             'blast_results': 'trackBlast'
         };
-        
+
         const checkboxId = trackMapping[trackName];
         if (!checkboxId) {
             throw new Error(`Unknown track: ${trackName}. Available tracks: ${Object.keys(trackMapping).join(', ')}`);
         }
-        
+
         const trackCheckbox = document.getElementById(checkboxId);
         if (!trackCheckbox) {
             throw new Error(`Track checkbox not found: ${checkboxId}`);
         }
-        
+
         // If visible not specified, toggle current state
         if (visible === undefined) {
             visible = !trackCheckbox.checked;
         }
-        
+
         // Check current state before making changes
         const currentState = trackCheckbox.checked;
-        
+
         // If the track is already in the desired state, no need to change it
         if (currentState === visible) {
             return {
@@ -3029,10 +3029,10 @@ class ChatManager {
                 noChangeNeeded: true
             };
         }
-        
+
         trackCheckbox.checked = visible;
         trackCheckbox.dispatchEvent(new Event('change'));
-        
+
         // Also sync with sidebar checkbox
         const sidebarCheckboxId = 'sidebar' + checkboxId.charAt(0).toUpperCase() + checkboxId.slice(1);
         const sidebarCheckbox = document.getElementById(sidebarCheckboxId);
@@ -3040,7 +3040,7 @@ class ChatManager {
             sidebarCheckbox.checked = visible;
             sidebarCheckbox.dispatchEvent(new Event('change'));
         }
-        
+
         return {
             success: true,
             track: trackName,
@@ -3056,7 +3056,7 @@ class ChatManager {
 
     async createAnnotation(params) {
         const { type, name, chromosome, start, end, strand, description } = params;
-        
+
         if (this.app && this.app.addUserDefinedFeature) {
             const feature = {
                 type: type,
@@ -3067,9 +3067,9 @@ class ChatManager {
                 strand: strand || 1,
                 description: description || ''
             };
-            
+
             const featureId = await this.app.addUserDefinedFeature(feature);
-            
+
             return {
                 success: true,
                 featureId: featureId,
@@ -3077,13 +3077,13 @@ class ChatManager {
                 message: `Created ${type} annotation: ${name}`
             };
         }
-        
+
         throw new Error('Annotation creation not available');
     }
 
     async analyzeRegion(params) {
         const { chromosome, start, end, includeFeatures, includeGC } = params;
-        
+
         const analysis = {
             chromosome: chromosome,
             start: start,
@@ -3098,7 +3098,7 @@ class ChatManager {
 
         // Get features if requested
         if (includeFeatures && this.app.currentAnnotations) {
-            analysis.features = this.app.currentAnnotations.filter(feature => 
+            analysis.features = this.app.currentAnnotations.filter(feature =>
                 feature.chromosome === chromosome &&
                 feature.start >= start && feature.end <= end
             );
@@ -3115,11 +3115,11 @@ class ChatManager {
 
     async exportData(params) {
         const { format, chromosome, start, end } = params;
-        
+
         if (this.app && this.app.exportManager) {
             try {
                 let exportResult;
-                
+
                 switch (format.toLowerCase()) {
                     case 'fasta':
                         if (chromosome && start && end) {
@@ -3145,7 +3145,7 @@ class ChatManager {
                     default:
                         throw new Error(`Unsupported export format: ${format}`);
                 }
-                
+
                 return {
                     format: format,
                     chromosome: chromosome,
@@ -3158,7 +3158,7 @@ class ChatManager {
                 throw new Error(`Export failed: ${error.message}`);
             }
         }
-        
+
         throw new Error('Export manager not available');
     }
 
@@ -3168,18 +3168,18 @@ class ChatManager {
      */
     async exportFastaSequence(parameters = {}) {
         const { filename, includeDescription = true } = parameters;
-        
+
         console.log('🧬 [ChatManager] Exporting FASTA sequence:', parameters);
-        
+
         if (!this.app || !this.app.exportManager) {
             throw new Error('Export manager not available');
         }
-        
+
         // Check for genome sequence data - use the correct path
         if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
             throw new Error('No genome data loaded to export');
         }
-        
+
         try {
             const chromosomes = Object.keys(this.app.currentSequence);
             let fastaContent = '';
@@ -3187,19 +3187,19 @@ class ChatManager {
             chromosomes.forEach(chr => {
                 const sequence = this.app.currentSequence[chr];
                 fastaContent += `>${chr}\n`;
-                
+
                 // Split sequence into lines of 80 characters
                 for (let i = 0; i < sequence.length; i += 80) {
                     fastaContent += sequence.substring(i, i + 80) + '\n';
                 }
             });
-            
+
             // Check if filename is user-provided (not default value)
-            const isUserProvidedFilename = filename && 
-                filename.trim() && 
-                filename !== 'sequences.fasta' && 
+            const isUserProvidedFilename = filename &&
+                filename.trim() &&
+                filename !== 'sequences.fasta' &&
                 filename !== 'genome.fasta';
-            
+
             if (isUserProvidedFilename) {
                 // Direct file export without dialog
                 await this.writeFileDirectly(fastaContent, filename, 'FASTA sequence');
@@ -3207,11 +3207,11 @@ class ChatManager {
                 // Show file save dialog for user to choose location
                 await this.showExportSaveDialog(fastaContent, 'genome.fasta', 'FASTA sequence', 'text/plain');
             }
-            
+
             const totalLength = chromosomes.reduce((sum, chr) => {
                 return sum + this.app.currentSequence[chr].length;
             }, 0);
-            
+
             return {
                 success: true,
                 tool: 'export_fasta_sequence',
@@ -3237,18 +3237,18 @@ class ChatManager {
      */
     async exportGenBankFormat(parameters = {}) {
         const { filename, includeProteinSequences = false } = parameters;
-        
+
         console.log('📄 [ChatManager] Exporting GenBank format:', parameters);
-        
+
         if (!this.app || !this.app.exportManager) {
             throw new Error('Export manager not available');
         }
-        
+
         // Check for genome sequence data - use the correct path
         if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
             throw new Error('No genome data loaded to export');
         }
-        
+
         try {
             const chromosomes = Object.keys(this.app.currentSequence);
             let genbankContent = '';
@@ -3256,7 +3256,7 @@ class ChatManager {
             chromosomes.forEach(chr => {
                 const sequence = this.app.currentSequence[chr];
                 const features = this.app.currentAnnotations[chr] || [];
-                
+
                 // GenBank header
                 genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10).replace(/-/g, '-')}\n`;
                 genbankContent += `DEFINITION  ${chr}\n`;
@@ -3267,23 +3267,23 @@ class ChatManager {
                 genbankContent += `  ORGANISM  .\n`;
                 genbankContent += `FEATURES             Location/Qualifiers\n`;
                 genbankContent += `     source          1..${sequence.length}\n`;
-                
+
                 // Add features with comprehensive qualifier support
                 features.forEach(feature => {
-                    const location = feature.strand === '-' ? 
-                        `complement(${feature.start}..${feature.end})` : 
+                    const location = feature.strand === '-' ?
+                        `complement(${feature.start}..${feature.end})` :
                         `${feature.start}..${feature.end}`;
-                    
+
                     genbankContent += `     ${feature.type.padEnd(15)} ${location}\n`;
-                    
+
                     // Export qualifiers using ExportManager's method
                     if (this.app.exportManager.exportFeatureQualifiers) {
                         genbankContent += this.app.exportManager.exportFeatureQualifiers(feature);
                     }
                 });
-                
+
                 genbankContent += `ORIGIN\n`;
-                
+
                 // Add sequence in GenBank format (60 chars per line, numbered)
                 for (let i = 0; i < sequence.length; i += 60) {
                     const lineNum = (i + 1).toString().padStart(9);
@@ -3291,15 +3291,15 @@ class ChatManager {
                     const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
                     genbankContent += `${lineNum} ${formattedSeq}\n`;
                 }
-                
+
                 genbankContent += `//\n\n`;
             });
-            
+
             // Check if filename is user-provided (not default value)
-            const isUserProvidedFilename = filename && 
-                filename.trim() && 
+            const isUserProvidedFilename = filename &&
+                filename.trim() &&
                 filename !== 'genome.gbk';
-            
+
             if (isUserProvidedFilename) {
                 // Direct file export without dialog
                 await this.writeFileDirectly(genbankContent, filename, 'GenBank format');
@@ -3307,12 +3307,12 @@ class ChatManager {
                 // Show file save dialog for user to choose location
                 await this.showExportSaveDialog(genbankContent, 'genome.gbk', 'GenBank format', 'text/plain');
             }
-            
+
             const totalFeatures = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations?.[chr] || [];
                 return sum + features.length;
             }, 0);
-            
+
             return {
                 success: true,
                 tool: 'export_genbank_format',
@@ -3339,18 +3339,18 @@ class ChatManager {
      */
     async exportCDSFasta(parameters = {}) {
         const { filename, includeGeneNames = true } = parameters;
-        
+
         console.log('🧬 [ChatManager] Exporting CDS FASTA:', parameters);
-        
+
         if (!this.app || !this.app.exportManager) {
             throw new Error('Export manager not available');
         }
-        
+
         // Check for annotation data - use the correct path
         if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
             throw new Error('No annotation data loaded to export CDS sequences');
         }
-        
+
         try {
             let cdsContent = '';
             const chromosomes = Object.keys(this.app.currentAnnotations);
@@ -3359,21 +3359,21 @@ class ChatManager {
             chromosomes.forEach(chr => {
                 const sequence = this.app.currentSequence[chr];
                 const features = this.app.currentAnnotations[chr] || [];
-                
+
                 features.forEach(feature => {
                     // Only process CDS features to avoid duplicates with gene features
                     if (feature.type === 'CDS') {
                         // Create unique identifier to avoid duplicates
                         const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
-                        
+
                         if (!processedFeatures.has(featureId)) {
                             processedFeatures.add(featureId);
-                            
+
                             const cdsSequence = this.app.exportManager.extractFeatureSequence(sequence, feature);
                             const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
-                            
+
                             cdsContent += `>${header}\n`;
-                            
+
                             // Split sequence into lines of 80 characters
                             for (let i = 0; i < cdsSequence.length; i += 80) {
                                 cdsContent += cdsSequence.substring(i, i + 80) + '\n';
@@ -3386,12 +3386,12 @@ class ChatManager {
             if (!cdsContent) {
                 throw new Error('No CDS features found to export');
             }
-            
+
             // Check if filename is user-provided (not default value)
-            const isUserProvidedFilename = filename && 
-                filename.trim() && 
+            const isUserProvidedFilename = filename &&
+                filename.trim() &&
                 filename !== 'cds_sequences.fasta';
-            
+
             if (isUserProvidedFilename) {
                 // Direct file export without dialog
                 await this.writeFileDirectly(cdsContent, filename, 'CDS FASTA');
@@ -3399,13 +3399,13 @@ class ChatManager {
                 // Show file save dialog for user to choose location
                 await this.showExportSaveDialog(cdsContent, 'cds_sequences.fasta', 'CDS FASTA', 'text/plain');
             }
-            
+
             // Count CDS features using correct data path
             const cdsCount = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.filter(f => f.type === 'CDS' || f.type === 'gene').length;
             }, 0);
-            
+
             return {
                 success: true,
                 tool: 'export_cds_fasta',
@@ -3431,18 +3431,18 @@ class ChatManager {
      */
     async exportProteinFasta(parameters = {}) {
         const { filename, includeGeneNames = true, translationTable = 1 } = parameters;
-        
+
         console.log('🧬 [ChatManager] Exporting Protein FASTA:', parameters);
-        
+
         if (!this.app || !this.app.exportManager) {
             throw new Error('Export manager not available');
         }
-        
+
         // Check for annotation data - use the correct path
         if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
             throw new Error('No annotation data loaded to export protein sequences');
         }
-        
+
         try {
             let proteinContent = '';
             const chromosomes = Object.keys(this.app.currentAnnotations);
@@ -3451,27 +3451,27 @@ class ChatManager {
             chromosomes.forEach(chr => {
                 const sequence = this.app.currentSequence[chr];
                 const features = this.app.currentAnnotations[chr] || [];
-                
+
                 features.forEach(feature => {
                     // Only process CDS features, skip gene features to avoid duplication
                     if (feature.type === 'CDS') {
                         // Create unique identifier to avoid duplicates
                         const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
-                        
+
                         if (!processedFeatures.has(featureId)) {
                             processedFeatures.add(featureId);
-                            
+
                             const cdsSequence = this.app.exportManager.extractFeatureSequence(sequence, feature);
                             // ExtractFeatureSequence already handles reverse complement, so translate directly
                             const proteinSequence = this.app.exportManager.translateDNA(cdsSequence);
-                            
+
                             // Remove trailing asterisks (stop codons) from protein sequence
                             const cleanProteinSequence = proteinSequence.replace(/\*+$/, '');
-                            
+
                             const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
-                            
+
                             proteinContent += `>${header}\n`;
-                            
+
                             // Split sequence into lines of 80 characters
                             for (let i = 0; i < cleanProteinSequence.length; i += 80) {
                                 proteinContent += cleanProteinSequence.substring(i, i + 80) + '\n';
@@ -3484,12 +3484,12 @@ class ChatManager {
             if (!proteinContent) {
                 throw new Error('No protein-coding features found to export');
             }
-            
+
             // Check if filename is user-provided (not default value)
-            const isUserProvidedFilename = filename && 
-                filename.trim() && 
+            const isUserProvidedFilename = filename &&
+                filename.trim() &&
                 filename !== 'protein_sequences.fasta';
-            
+
             if (isUserProvidedFilename) {
                 // Direct file export without dialog
                 await this.writeFileDirectly(proteinContent, filename, 'Protein FASTA');
@@ -3497,16 +3497,16 @@ class ChatManager {
                 // Show file save dialog for user to choose location
                 await this.showExportSaveDialog(proteinContent, 'protein_sequences.fasta', 'Protein FASTA', 'text/plain');
             }
-            
+
             // Count protein-coding features using correct data path
             const proteinCount = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.filter(f => {
-                    return (f.type === 'CDS' || f.type === 'gene') && 
-                           f.start && f.end && f.start < f.end;
+                    return (f.type === 'CDS' || f.type === 'gene') &&
+                        f.start && f.end && f.start < f.end;
                 }).length;
             }, 0);
-            
+
             return {
                 success: true,
                 tool: 'export_protein_fasta',
@@ -3533,25 +3533,25 @@ class ChatManager {
      */
     async exportGFFAnnotations(parameters = {}) {
         const { filename, gffVersion = 3, includeSequences = false } = parameters;
-        
+
         console.log('📋 [ChatManager] Exporting GFF annotations:', parameters);
-        
+
         if (!this.app || !this.app.exportManager) {
             throw new Error('Export manager not available');
         }
-        
+
         // Check for annotation data - use the correct path
         if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
             throw new Error('No annotation data loaded to export as GFF');
         }
-        
+
         try {
             let gffContent = `##gff-version ${gffVersion}\n`;
             const chromosomes = Object.keys(this.app.currentAnnotations);
 
             chromosomes.forEach(chr => {
                 const features = this.app.currentAnnotations[chr] || [];
-                
+
                 features.forEach((feature, index) => {
                     const id = feature.id || feature.name || `feature_${index + 1}`;
                     const name = feature.name || id;
@@ -3559,7 +3559,7 @@ class ChatManager {
                     const strand = feature.strand || '+';
                     const score = feature.score || '.';
                     const phase = feature.phase || '.';
-                    
+
                     let attributes = `ID=${id}`;
                     if (feature.name && feature.name !== id) {
                         attributes += `;Name=${feature.name}`;
@@ -3570,16 +3570,16 @@ class ChatManager {
                     if (feature.note) {
                         attributes += `;Note=${feature.note}`;
                     }
-                    
+
                     gffContent += `${chr}\t.\t${type}\t${feature.start}\t${feature.end}\t${score}\t${strand}\t${phase}\t${attributes}\n`;
                 });
             });
-            
+
             // Check if filename is user-provided (not default value)
-            const isUserProvidedFilename = filename && 
-                filename.trim() && 
+            const isUserProvidedFilename = filename &&
+                filename.trim() &&
                 filename !== 'features.gff3';
-            
+
             if (isUserProvidedFilename) {
                 // Direct file export without dialog
                 await this.writeFileDirectly(gffContent, filename, 'GFF annotations');
@@ -3587,13 +3587,13 @@ class ChatManager {
                 // Show file save dialog for user to choose location
                 await this.showExportSaveDialog(gffContent, 'features.gff3', 'GFF annotations', 'text/plain');
             }
-            
+
             // Count features using correct data path
             const featureCount = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.length;
             }, 0);
-            
+
             const featureTypes = chromosomes.reduce((types, chr) => {
                 const features = this.app.currentAnnotations[chr] || [];
                 features.forEach(f => {
@@ -3603,7 +3603,7 @@ class ChatManager {
                 });
                 return types;
             }, []);
-            
+
             return {
                 success: true,
                 tool: 'export_gff_annotations',
@@ -3631,40 +3631,40 @@ class ChatManager {
      */
     async exportBEDFormat(parameters = {}) {
         const { filename, includeScore = true, includeStrand = true } = parameters;
-        
+
         console.log('📊 [ChatManager] Exporting BED format:', parameters);
-        
+
         if (!this.app || !this.app.exportManager) {
             throw new Error('Export manager not available');
         }
-        
+
         // Check for annotation data - use the correct path
         if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
             throw new Error('No annotation data loaded to export as BED');
         }
-        
+
         try {
             let bedContent = 'track name="Genome Features" description="Exported genome features"\n';
             const chromosomes = Object.keys(this.app.currentAnnotations);
 
             chromosomes.forEach(chr => {
                 const features = this.app.currentAnnotations[chr] || [];
-                
+
                 features.forEach(feature => {
                     const name = feature.name || feature.id || 'feature';
                     const score = feature.score || 1000;
                     const strand = feature.strand || '+';
-                    
+
                     // BED format: chrom, chromStart (0-based), chromEnd, name, score, strand
                     bedContent += `${chr}\t${feature.start - 1}\t${feature.end}\t${name}\t${score}\t${strand}\n`;
                 });
             });
-            
+
             // Check if filename is user-provided (not default value)
-            const isUserProvidedFilename = filename && 
-                filename.trim() && 
+            const isUserProvidedFilename = filename &&
+                filename.trim() &&
                 filename !== 'features.bed';
-            
+
             if (isUserProvidedFilename) {
                 // Direct file export without dialog
                 await this.writeFileDirectly(bedContent, filename, 'BED format');
@@ -3672,13 +3672,13 @@ class ChatManager {
                 // Show file save dialog for user to choose location
                 await this.showExportSaveDialog(bedContent, 'features.bed', 'BED format', 'text/plain');
             }
-            
+
             // Count features using correct data path
             const featureCount = chromosomes.reduce((sum, chr) => {
                 const features = this.app.currentAnnotations[chr] || [];
                 return sum + features.length;
             }, 0);
-            
+
             return {
                 success: true,
                 tool: 'export_bed_format',
@@ -3705,50 +3705,50 @@ class ChatManager {
      */
     async exportCurrentViewFasta(parameters = {}) {
         const { filename, includeCoordinates = true } = parameters;
-        
+
         console.log('👁️ [ChatManager] Exporting current view as FASTA:', parameters);
-        
+
         if (!this.app || !this.app.exportManager) {
             throw new Error('Export manager not available');
         }
-        
+
         // Check for genome sequence data - use the correct path
         if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
             throw new Error('No genome data loaded to export current view');
         }
-        
+
         try {
             // Get current view information
             const currentState = this.getCurrentState();
             const currentChr = currentState.currentChromosome;
             const viewStart = currentState.currentPosition?.start || 1;
             const viewEnd = currentState.currentPosition?.end || currentState.sequenceLength;
-            
+
             if (!currentChr) {
                 throw new Error('No chromosome selected for current view export');
             }
-            
+
             const sequence = this.app.currentSequence[currentChr];
             if (!sequence) {
                 throw new Error(`Sequence not found for chromosome: ${currentChr}`);
             }
-            
+
             const viewSequence = sequence.substring(viewStart - 1, viewEnd);
             const header = `${currentChr}:${viewStart}-${viewEnd}`;
-            
+
             let fastaContent = `>${header}\n`;
-            
+
             // Split sequence into lines of 80 characters
             for (let i = 0; i < viewSequence.length; i += 80) {
                 fastaContent += viewSequence.substring(i, i + 80) + '\n';
             }
-            
+
             // Check if filename is user-provided (not default value) 
             const defaultCurrentViewFilename = `${currentChr}_${viewStart}-${viewEnd}.fasta`;
-            const isUserProvidedFilename = filename && 
-                filename.trim() && 
+            const isUserProvidedFilename = filename &&
+                filename.trim() &&
                 filename !== defaultCurrentViewFilename;
-            
+
             if (isUserProvidedFilename) {
                 // Direct file export without dialog
                 await this.writeFileDirectly(fastaContent, filename, 'Current view FASTA');
@@ -3757,10 +3757,10 @@ class ChatManager {
                 const defaultFilename = `${currentChr}_${viewStart}-${viewEnd}.fasta`;
                 await this.showExportSaveDialog(fastaContent, defaultFilename, 'Current view FASTA', 'text/plain');
             }
-            
+
             const regionLength = viewEnd - viewStart + 1;
             const coordinates = `${currentChr}:${viewStart}-${viewEnd}`;
-            
+
             return {
                 success: true,
                 tool: 'export_current_view_fasta',
@@ -3801,23 +3801,23 @@ class ChatManager {
                     'BED format': [{ name: 'BED Files', extensions: ['bed'] }],
                     'Current view FASTA': [{ name: 'FASTA Files', extensions: ['fasta', 'fa', 'fas'] }]
                 };
-                
+
                 const filters = extensionMap[formatType] || [{ name: 'Text Files', extensions: ['txt'] }];
                 filters.push({ name: 'All Files', extensions: ['*'] });
-                
+
                 const result = await window.electronAPI.showSaveDialog({
                     title: `Save ${formatType}`,
                     defaultPath: defaultFilename,
                     filters: filters
                 });
-                
+
                 if (!result.canceled && result.filePath) {
                     // Write the file using IPC
                     const writeResult = await window.electronAPI.writeFile(result.filePath, content);
-                    
+
                     if (writeResult.success) {
                         console.log(`✅ [ChatManager] File saved via dialog: ${result.filePath}`);
-                        
+
                         // Show success notification
                         if (this.app && this.app.showNotification) {
                             this.app.showNotification(
@@ -3825,7 +3825,7 @@ class ChatManager {
                                 'success'
                             );
                         }
-                        
+
                         return {
                             success: true,
                             filePath: result.filePath,
@@ -3845,12 +3845,12 @@ class ChatManager {
                         method: 'dialog'
                     };
                 }
-                
+
             } else {
                 // Fallback: Use browser download method
                 console.log('🔄 [ChatManager] Falling back to browser download');
                 this.downloadFileAsBrowser(content, defaultFilename, mimeType);
-                
+
                 return {
                     success: true,
                     filename: defaultFilename,
@@ -3858,10 +3858,10 @@ class ChatManager {
                     method: 'browser_download'
                 };
             }
-            
+
         } catch (error) {
             console.error(`❌ [ChatManager] Save dialog failed:`, error);
-            
+
             // Show error notification
             if (this.app && this.app.showNotification) {
                 this.app.showNotification(
@@ -3869,7 +3869,7 @@ class ChatManager {
                     'error'
                 );
             }
-            
+
             throw new Error(`Save dialog failed: ${error.message}`);
         }
     }
@@ -3879,14 +3879,14 @@ class ChatManager {
     downloadFileAsBrowser(content, filename, mimeType = 'text/plain') {
         const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        
+
         URL.revokeObjectURL(url);
         console.log(`💾 [ChatManager] Browser download triggered: ${filename}`);
     }
@@ -3901,9 +3901,9 @@ class ChatManager {
             if (window.electronAPI && window.electronAPI.writeFile) {
                 // Primary method: Use Electron IPC
                 const result = await window.electronAPI.writeFile(filename, content);
-                
+
                 console.log(`✅ [ChatManager] File written via Electron IPC: ${result.filePath}`);
-                
+
                 // Show success notification
                 if (this.app && this.app.showNotification) {
                     this.app.showNotification(
@@ -3911,19 +3911,19 @@ class ChatManager {
                         'success'
                     );
                 }
-                
+
                 return {
                     success: true,
                     filePath: result.filePath,
                     fileSize: content.length,
                     method: 'ipc'
                 };
-                
+
             } else {
                 // Fallback method: Direct Node.js access (if available)
                 const fs = require('fs').promises;
                 const path = require('path');
-                
+
                 // Ensure filename has proper extension if not provided
                 let finalFilename = filename;
                 if (!path.extname(finalFilename)) {
@@ -3939,15 +3939,15 @@ class ChatManager {
                     const ext = extensions[formatType] || '.txt';
                     finalFilename += ext;
                 }
-                
+
                 // Resolve to absolute path if relative path provided
                 const absolutePath = path.resolve(finalFilename);
-                
+
                 // Write file directly
                 await fs.writeFile(absolutePath, content, 'utf8');
-                
+
                 console.log(`✅ [ChatManager] File written directly: ${absolutePath}`);
-                
+
                 // Show success notification
                 if (this.app && this.app.showNotification) {
                     this.app.showNotification(
@@ -3955,7 +3955,7 @@ class ChatManager {
                         'success'
                     );
                 }
-                
+
                 return {
                     success: true,
                     filePath: absolutePath,
@@ -3963,10 +3963,10 @@ class ChatManager {
                     method: 'direct'
                 };
             }
-            
+
         } catch (error) {
             console.error(`❌ [ChatManager] Direct file write failed:`, error);
-            
+
             // Show error notification
             if (this.app && this.app.showNotification) {
                 this.app.showNotification(
@@ -3974,14 +3974,14 @@ class ChatManager {
                     'error'
                 );
             }
-            
+
             throw new Error(`Failed to write file directly: ${error.message}`);
         }
     }
 
     getVisibleTracks() {
         const tracks = [];
-        
+
         // Define track mappings with their checkbox IDs
         const trackMappings = [
             { name: 'genes', id: 'trackGenes' },
@@ -3995,7 +3995,7 @@ class ChatManager {
             { name: 'blast', id: 'trackBlast' },
             { name: 'blast_results', id: 'trackBlast' }
         ];
-        
+
         // Check each track checkbox
         trackMappings.forEach(track => {
             const checkbox = document.getElementById(track.id);
@@ -4003,7 +4003,7 @@ class ChatManager {
                 tracks.push(track.name);
             }
         });
-        
+
         return tracks;
     }
 
@@ -4062,11 +4062,11 @@ class ChatManager {
         // Calculate right-bottom position
         const defaultSize = { width: 400, height: 600 };
         const defaultPosition = this.getDefaultChatPosition();
-        
+
         // Load saved position and size
         const savedPosition = this.configManager.get('chat.position', defaultPosition);
         const savedSize = this.configManager.get('chat.size', defaultSize);
-        
+
         // Create chat panel HTML
         const chatHTML = `
             <div id="llmChatPanel" class="chat-panel resizable-movable" style="left: ${savedPosition.x}px; top: ${savedPosition.y}px; width: ${savedSize.width}px; height: ${savedSize.height}px;">
@@ -4226,10 +4226,10 @@ class ChatManager {
         // Setup dragging and resizing
         this.setupChatDragging();
         this.setupChatResizing();
-        
+
         // Add window resize handler to ensure chat stays in bounds
         this.setupWindowResizeHandler();
-        
+
         // Force recalculation of position after DOM insertion
         setTimeout(() => {
             const chatPanel = document.getElementById('llmChatPanel');
@@ -4237,10 +4237,10 @@ class ChatManager {
                 // If using default position, recalculate to ensure it's at bottom-right
                 const currentPos = this.configManager.get('chat.position');
                 const freshDefaultPos = this.getDefaultChatPosition();
-                
+
                 console.log('Current saved position:', currentPos);
                 console.log('Fresh calculated position:', freshDefaultPos);
-                
+
                 // If there's no saved position or if we want to force bottom positioning
                 if (!currentPos || currentPos.y < (window.innerHeight * 0.3)) {
                     console.log('Applying bottom-right positioning');
@@ -4256,17 +4256,17 @@ class ChatManager {
      */
     getDefaultChatPosition() {
         const defaultSize = { width: 400, height: 600 };
-        
+
         // Get the actual available viewport dimensions - use document.documentElement for better accuracy
         const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
         const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-        
+
         // Calculate bottom-right position
         const x = Math.max(20, viewportWidth - defaultSize.width - 20);
         const y = Math.max(20, viewportHeight - defaultSize.height - 20);
-        
+
         console.log('Chat position calculation:', { viewportWidth, viewportHeight, x, y, defaultSize });
-        
+
         return { x, y };
     }
 
@@ -4280,30 +4280,30 @@ class ChatManager {
                 // Use same viewport calculation as getDefaultChatPosition
                 const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
                 const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-                
+
                 // Ensure chat panel stays within viewport bounds
                 const currentLeft = parseInt(chatPanel.style.left, 10);
                 const currentTop = parseInt(chatPanel.style.top, 10);
                 const panelWidth = parseInt(chatPanel.style.width, 10);
                 const panelHeight = parseInt(chatPanel.style.height, 10);
-                
+
                 const maxLeft = viewportWidth - panelWidth - 10;
                 const maxTop = viewportHeight - panelHeight - 10;
-                
+
                 let needsUpdate = false;
                 let newLeft = currentLeft;
                 let newTop = currentTop;
-                
+
                 if (currentLeft > maxLeft) {
                     newLeft = Math.max(10, maxLeft);
                     needsUpdate = true;
                 }
-                
+
                 if (currentTop > maxTop) {
                     newTop = Math.max(10, maxTop);
                     needsUpdate = true;
                 }
-                
+
                 if (needsUpdate) {
                     chatPanel.style.left = newLeft + 'px';
                     chatPanel.style.top = newTop + 'px';
@@ -4326,7 +4326,7 @@ class ChatManager {
             chatInput.addEventListener('input', () => {
                 chatInput.style.height = 'auto';
                 chatInput.style.height = chatInput.scrollHeight + 'px';
-                
+
                 // If user starts typing while browsing history, exit browse mode
                 if (this.messageHistory.isBrowsing) {
                     this.exitHistoryBrowsing();
@@ -4446,7 +4446,7 @@ class ChatManager {
                     <i class="fas fa-robot"></i>
                 </button>
             `;
-            
+
             toolbar.appendChild(chatSection);
 
             document.getElementById('toggleChatBtn').addEventListener('click', () => {
@@ -4460,7 +4460,7 @@ class ChatManager {
         if (chatPanel) {
             const isVisible = chatPanel.style.display !== 'none';
             chatPanel.style.display = isVisible ? 'none' : 'flex';
-            
+
             // Save visibility state
             this.configManager.set('chat.visible', !isVisible);
             console.log('ChatBox visibility toggled:', isVisible ? 'hidden' : 'visible');
@@ -4495,25 +4495,25 @@ class ChatManager {
         const chatPanel = document.getElementById('llmChatPanel');
         if (chatPanel) {
             const isMinimized = chatPanel.classList.contains('minimized');
-            
+
             if (!isMinimized) {
                 // Minimizing: move to bottom-left corner
                 chatPanel.classList.add('minimized');
-                
+
                 // Calculate proper bottom position dynamically
                 const statusBar = document.querySelector('.status-bar');
                 let statusBarHeight = 40; // Default fallback
-                
+
                 if (statusBar) {
                     // Get actual status bar height
                     const rect = statusBar.getBoundingClientRect();
                     statusBarHeight = rect.height;
                 }
-                
+
                 // Add small margin between ChatBox and status bar
                 const margin = 10;
                 const bottomPosition = statusBarHeight + margin;
-                
+
                 chatPanel.style.bottom = `${bottomPosition}px`;
                 chatPanel.style.left = '20px';
                 chatPanel.style.right = 'auto';
@@ -4524,7 +4524,7 @@ class ChatManager {
                 chatPanel.style.left = 'auto';
                 chatPanel.style.right = '20px';
             }
-            
+
             // When minimizing/expanding, don't save position to avoid conflicts
             // Only save the minimized state preference if needed
         }
@@ -4535,7 +4535,7 @@ class ChatManager {
         if (statusElement) {
             const icon = statusElement.querySelector('i');
             const text = statusElement.querySelector('span');
-            
+
             if (connected) {
                 icon.className = 'fas fa-circle connected';
                 text.textContent = 'Connected';
@@ -4549,14 +4549,14 @@ class ChatManager {
     async sendMessage() {
         const chatInput = document.getElementById('chatInput');
         const message = chatInput.value.trim();
-        
+
         if (!message) return;
-        
+
         // Exit history browsing mode when sending message
         if (this.messageHistory.isBrowsing) {
             this.exitHistoryBrowsing();
         }
-        
+
         // 检查是否正在处理中
         if (this.conversationState.isProcessing) {
             this.showNotification('Conversation in progress, please wait or click abort button', 'warning');
@@ -4565,7 +4565,7 @@ class ChatManager {
 
         // 初始化对话状态
         this.startConversation();
-        
+
         // Add user message to chat
         this.addMessageToChat(message, 'user');
         chatInput.value = '';
@@ -4604,7 +4604,7 @@ class ChatManager {
         }
 
         const trimmedMessage = message.trim();
-        
+
         // 检查是否正在处理中
         if (this.conversationState.isProcessing) {
             this.showNotification('Conversation in progress, please wait or click abort button', 'warning');
@@ -4613,7 +4613,7 @@ class ChatManager {
 
         // 初始化对话状态
         this.startConversation();
-        
+
         // Add user message to chat
         this.addMessageToChat(trimmedMessage, 'user');
 
@@ -4642,7 +4642,7 @@ class ChatManager {
     async sendToLLM(message, options = {}) {
         // Set current message for Dynamic Tools Registry
         this.currentMessage = message;
-        
+
         // Check if LLM is configured
         if (!this.llmConfigManager.isConfigured()) {
             return "I need to be configured first. Please go to Options → Configure LLMs to set up your preferred AI provider (OpenAI, Anthropic, Google, or Local LLM).";
@@ -4663,7 +4663,7 @@ class ChatManager {
 
         console.log('=== ChatManager.sendToLLM DEBUG START ===');
         console.log('User message:', message);
-        
+
         // 设置AbortController
         this.conversationState.abortController = new AbortController();
         console.log('AbortController initialized:', !!this.conversationState.abortController);
@@ -4672,11 +4672,11 @@ class ChatManager {
             // Check if multi-agent system is enabled
             const multiAgentEnabled = this.configManager.get('multiAgentSettings.multiAgentSystemEnabled', false);
             const showAgentInfo = this.configManager.get('multiAgentSettings.multiAgentShowInfo', true);
-            
+
             if (multiAgentEnabled) {
                 // Add multi-agent system activation message
                 this.addMultiAgentActivationMessage();
-                
+
                 if (showAgentInfo) {
                     this.addThinkingMessage(`🤖 **Multi-Agent System Activated**\n\n` +
                         `🔄 **Agent Coordination Mode**: Enabled\n` +
@@ -4693,7 +4693,7 @@ class ChatManager {
             console.log('🔧 Maximum function call rounds from config:', maxRounds);
             console.log('🔧 Early completion enabled:', enableEarlyCompletion);
             console.log('🔧 LLM config raw value:', this.configManager.get('llm.functionCallRounds'));
-            
+
             // 显示详细的思考过程
             this.showThinkingProcess && this.addThinkingMessage(`🔄 <strong>Starting request processing</strong> (max rounds: ${maxRounds})<br>` +
                 `📝 <strong>User Query:</strong> ${message.substring(0, 200)}${message.length > 200 ? '...' : ''}`);
@@ -4701,7 +4701,7 @@ class ChatManager {
             // Get current studio context
             const context = this.getCurrentContext();
             console.log('Context for LLM:', context);
-            
+
             // Display context information
             if (this.showThinkingProcess && context) {
                 const contextInfo = [];
@@ -4714,7 +4714,7 @@ class ChatManager {
                     this.updateThinkingMessage(`<br>📊 <strong>Current Context:</strong><br>&nbsp;&nbsp;${contextInfo.join('<br>&nbsp;&nbsp;')}`);
                 }
             }
-            
+
             // Get memory context for conversation
             let memoryContext = null;
             try {
@@ -4726,48 +4726,48 @@ class ChatManager {
             } catch (error) {
                 console.warn('🧠 Failed to retrieve memory context:', error);
             }
-            
+
             // Build initial conversation history including the new message
             let conversationHistory = await this.buildConversationHistory(message);
             console.log('Initial conversation history length:', conversationHistory.length);
-            
+
             let currentRound = 0;
             let finalResponse = null;
             let taskCompleted = false;
             let executedTools = new Set(); // Track executed tools to prevent re-execution
-            
+
             // Iterative function calling loop
             while (currentRound < maxRounds && !taskCompleted) {
                 // 检查是否被中止
                 if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
                     throw new Error('AbortError');
                 }
-                
+
                 // 防御性检查：如果abortController为null，重新初始化
                 if (!this.conversationState.abortController) {
                     console.warn('AbortController is null during processing, reinitializing...');
                     this.conversationState.abortController = new AbortController();
                 }
-                
+
                 currentRound++;
                 console.log(`=== FUNCTION CALL ROUND ${currentRound}/${maxRounds} ===`);
-                
+
                 // 更新思考过程 - 添加更详细的信息
                 if (this.showThinkingProcess) {
                     this.updateThinkingMessage(`<br><br>🤖 <strong>Round ${currentRound}/${maxRounds}</strong>`);
                     this.updateThinkingMessage(`📤 Sending request to LLM...`);
                     this.updateThinkingMessage(`📚 Conversation history: ${conversationHistory.length} messages`);
                 }
-                
+
                 // Send conversation history to configured LLM
                 console.log('Sending to LLM...');
                 const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context, memoryContext);
-                
+
                 // 检查响应是否被中止
                 if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
                     throw new Error('AbortError');
                 }
-                
+
                 console.log('=== LLM Raw Response ===');
                 console.log('Response type:', typeof response);
                 console.log('Response length:', response ? response.length : 'null');
@@ -4777,23 +4777,23 @@ class ChatManager {
                 console.log('Full response:', response);
                 console.log('JSON.stringify response:', JSON.stringify(response));
                 console.log('========================');
-                
+
                 // 显示LLM的思考过程（如果响应包含思考标签）
                 if (this.showThinkingProcess) {
                     this.updateThinkingMessage(`✅ Response received (${response ? response.length : 0} chars)`);
                     this.displayLLMThinking(response);
                 }
-                
+
                 // CRITICAL FIX: Check for tool calls FIRST, before task completion
                 // This prevents early completion from skipping tool execution
                 const toolCall = this.parseToolCall(response);
-                
+
                 // Also check for multiple tool calls in response
                 const multipleToolCalls = this.parseMultipleToolCalls(response);
-                
+
                 // Determine which tools to execute
                 let toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
-                
+
                 // Display tool detection information
                 if (this.showThinkingProcess) {
                     if (toolsToExecute.length > 0) {
@@ -4802,7 +4802,7 @@ class ChatManager {
                         this.updateThinkingMessage(`💬 No tool calls detected - conversational response`);
                     }
                 }
-                
+
                 // Apply intelligent tool execution policies instead of simple re-executable sets
                 const toolsBeforeFilter = toolsToExecute.length;
                 toolsToExecute = toolsToExecute.filter(tool => {
@@ -4815,11 +4815,11 @@ class ChatManager {
                     console.log(`✅ [Policy] Allowing execution of: ${tool.tool_name}`);
                     return true;
                 });
-                
+
                 if (this.showThinkingProcess && toolsBeforeFilter > toolsToExecute.length) {
                     this.updateThinkingMessage(`⚠️ Filtered ${toolsBeforeFilter - toolsToExecute.length} tool(s) by execution policy`);
                 }
-                
+
                 // CRITICAL FIX: If current response has no tools, check previous assistant messages 
                 // in conversation history for unexecuted tool calls
                 // This covers both empty responses and task completion responses
@@ -4827,7 +4827,7 @@ class ChatManager {
                     console.log('=== CHECKING PREVIOUS ROUNDS FOR UNEXECUTED TOOL CALLS ===');
                     console.log('Current conversation history length:', conversationHistory.length);
                     console.log('Current response has no tools, looking for previous tool calls...');
-                    
+
                     // Log the entire conversation history for debugging
                     conversationHistory.forEach((msg, index) => {
                         console.log(`History[${index}] Role: ${msg.role}, Content length: ${msg.content ? msg.content.length : 'null'}`);
@@ -4835,7 +4835,7 @@ class ChatManager {
                             console.log(`History[${index}] Content preview:`, msg.content);
                         }
                     });
-                    
+
                     // Look for tool results in history to mark as executed
                     conversationHistory.forEach(msg => {
                         if (msg.role === 'system' && msg.content && msg.content.includes('executed successfully')) {
@@ -4846,9 +4846,9 @@ class ChatManager {
                             }
                         }
                     });
-                    
+
                     console.log('Already executed tools:', Array.from(executedTools));
-                    
+
                     for (let i = conversationHistory.length - 1; i >= 0; i--) {
                         const msg = conversationHistory[i];
                         console.log(`Examining message ${i}: role=${msg.role}, has_content=${!!msg.content}`);
@@ -4875,7 +4875,7 @@ class ChatManager {
                     console.log('Final toolsToExecute after history check:', toolsToExecute);
                     console.log('=== END PREVIOUS ROUNDS CHECK ===');
                 }
-                
+
                 // Check for task completion signals if early completion is enabled
                 // BUT ONLY if there are NO tool calls to execute
                 if (enableEarlyCompletion && toolsToExecute.length === 0) {
@@ -4885,7 +4885,7 @@ class ChatManager {
                         console.log('Completion reason:', completionResult.reason);
                         console.log('Completion confidence:', completionResult.confidence);
                         console.log('================================================');
-                        
+
                         taskCompleted = true;
                         finalResponse = completionResult.summary || response;
                         this.showNotification(`Task completed early (Round ${currentRound}/${maxRounds}): ${completionResult.reason}`, 'success');
@@ -4896,48 +4896,48 @@ class ChatManager {
                     console.log('Tool calls take priority over completion detection');
                     console.log('=========================================================');
                 }
-                
+
                 if (toolsToExecute.length > 0) {
                     console.log(`=== ${toolsToExecute.length} TOOL CALL(S) DETECTED ===`);
                     console.log('Tools to execute:', toolsToExecute.map(t => t.tool_name));
                     console.log('==========================');
-                    
+
                     // Show thinking process for tool execution
                     if (this.showThinkingProcess) {
                         this.updateThinkingMessage(`<br><br>⚡ <strong>Preparing tool execution...</strong>`);
                         this.updateThinkingMessage(`🛠️ Tools to execute: ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
                     }
-                    
+
                     // 显示工具调用信息
                     this.showToolCalls && await this.addToolCallMessage(toolsToExecute);
-                    
+
                     try {
                         console.log('Executing tool(s)...');
-                        
+
                         // Show execution start in thinking process
                         if (this.showThinkingProcess) {
                             this.updateThinkingMessage(`🚀 Starting execution...`);
                         }
-                        
+
                         // 检查是否被中止
                         if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
                             throw new Error('AbortError');
                         }
-                        
+
                         let toolResults;
-                        
+
                         // Use Smart Executor if available and enabled
                         if (this.smartExecutor && this.isSmartExecutionEnabled) {
                             console.log('🚀 Using Smart Executor for optimized execution');
                             const smartResult = await this.smartExecutor.smartExecute(message, toolsToExecute);
-                            
+
                             if (smartResult.success) {
                                 toolResults = smartResult.results;
-                                
+
                                 // Provide comprehensive feedback
                                 if (smartResult.report) {
                                     const { summary, categorySummary } = smartResult.report;
-                                    
+
                                     // Show quick feedback for different categories
                                     for (const category of categorySummary) {
                                         if (category.successful > 0) {
@@ -4961,7 +4961,7 @@ class ChatManager {
                                             this.showNotification(`${icon} ${message} (${category.successful}/${category.successful + category.failed})`, 'success');
                                         }
                                     }
-                                    
+
                                     console.log('Smart execution summary:', summary);
                                     console.log('Execution time:', smartResult.executionTime, 'ms');
                                 }
@@ -4972,18 +4972,18 @@ class ChatManager {
                                 for (const tool of toolsToExecute) {
                                     try {
                                         const result = await this.executeToolByName(tool.tool_name, tool.parameters);
-                                        toolResults.push({ 
-                                            tool: tool.tool_name, 
+                                        toolResults.push({
+                                            tool: tool.tool_name,
                                             parameters: tool.parameters,
-                                            success: true, 
+                                            success: true,
                                             result: result,
                                             error: null
                                         });
                                     } catch (error) {
                                         toolResults.push({
                                             tool: tool.tool_name,
-                                            parameters: tool.parameters, 
-                                            success: false, 
+                                            parameters: tool.parameters,
+                                            success: false,
                                             result: null,
                                             error: error.message
                                         });
@@ -4996,10 +4996,10 @@ class ChatManager {
                             for (const tool of toolsToExecute) {
                                 try {
                                     const result = await this.executeToolByName(tool.tool_name, tool.parameters);
-                                    toolResults.push({ 
-                                        tool: tool.tool_name, 
+                                    toolResults.push({
+                                        tool: tool.tool_name,
                                         parameters: tool.parameters,
-                                        success: true, 
+                                        success: true,
                                         result: result,
                                         error: null
                                     });
@@ -5007,22 +5007,22 @@ class ChatManager {
                                     toolResults.push({
                                         tool: tool.tool_name,
                                         parameters: tool.parameters,
-                                        success: false, 
+                                        success: false,
                                         result: null,
                                         error: error.message
                                     });
                                 }
                             }
                         }
-                        
+
                         console.log('Tool execution completed. Results:', toolResults);
-                        
+
                         // Show execution results in thinking process
                         if (this.showThinkingProcess) {
                             const successCount = toolResults.filter(r => r.success).length;
                             const failCount = toolResults.filter(r => !r.success).length;
                             this.updateThinkingMessage(`✅ Execution completed: ${successCount} successful, ${failCount} failed`);
-                            
+
                             // Show details for each tool
                             toolResults.forEach(result => {
                                 if (result.success) {
@@ -5032,7 +5032,7 @@ class ChatManager {
                                 }
                             });
                         }
-                        
+
                         // BENCHMARK INTEGRATION: Track function calls and results for benchmark access
                         if (this.lastExecutionData) {
                             // Track function calls
@@ -5044,28 +5044,28 @@ class ChatManager {
                                     timestamp: new Date().toISOString()
                                 });
                             });
-                            
+
                             // Track tool results
                             this.lastExecutionData.toolResults.push(...toolResults);
                             this.lastExecutionData.rounds = currentRound;
                         }
-                        
+
                         // Track executed tools to prevent infinite loops
                         // Be more selective about which tools to track for re-execution prevention
                         const nonReExecutableTools = new Set([
                             'blast_search', 'fetch_protein_structure', 'get_uniprot_entry',
                             'create_annotation', 'export_data', 'delete_feature'
                         ]);
-                        
+
                         // File loading tools should be tracked when they succeed to prevent re-execution with same parameters
                         const fileLoadingTools = new Set([
                             'load_genome_file', 'load_annotation_file', 'load_variant_file',
                             'load_reads_file', 'load_wig_tracks', 'load_operon_file'
                         ]);
-                        
+
                         toolsToExecute.forEach(tool => {
                             const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
-                            
+
                             // Track non-re-executable tools and successful file loading operations
                             if (nonReExecutableTools.has(tool.tool_name)) {
                                 executedTools.add(toolKey);
@@ -5083,23 +5083,23 @@ class ChatManager {
                                 console.log(`🔄 Not tracking execution for re-executable tool: ${tool.tool_name}`);
                             }
                         });
-                        
+
                         // 显示工具执行结果
                         this.showToolCalls && this.addToolResultMessage(toolResults);
-                        
+
                         // Add the tool calls and results to conversation history for next round
                         conversationHistory.push({
                             role: 'assistant',
-                            content: JSON.stringify(toolsToExecute.length === 1 ? 
+                            content: JSON.stringify(toolsToExecute.length === 1 ?
                                 { tool_name: toolsToExecute[0].tool_name, parameters: toolsToExecute[0].parameters } :
                                 toolsToExecute.map(t => ({ tool_name: t.tool_name, parameters: t.parameters }))
                             )
                         });
-                        
+
                         // Process results
                         const successfulResults = toolResults.filter(r => r.success);
                         const failedResults = toolResults.filter(r => !r.success);
-                        
+
                         if (successfulResults.length > 0) {
                             // Add successful tool results to conversation with SYSTEM role to prevent re-execution
                             // IMPORTANT: Sanitize results before sending to LLM to prevent context overflow
@@ -5111,26 +5111,26 @@ class ChatManager {
                                 role: 'system',
                                 content: `Tool execution completed: ${successMessages.join('; ')}`
                             });
-                            
+
                             // ENHANCED: Check for simple task completion after successful tool execution
                             const shouldTerminateEarly = this.shouldTerminateAfterToolExecution(toolsToExecute, successfulResults, message);
                             if (shouldTerminateEarly) {
                                 console.log('=== EARLY TERMINATION AFTER SUCCESSFUL TOOL EXECUTION ===');
                                 console.log('Simple task completed successfully, terminating early');
                                 console.log('=========================================================');
-                                
+
                                 taskCompleted = true;
                                 // Generate a simple completion response based on the tool results
                                 finalResponse = this.generateCompletionResponseFromToolResults(successfulResults, toolsToExecute);
                                 break;
                             }
-                            
+
                             console.log(`${successfulResults.length} tool(s) executed successfully. Continuing to round ${currentRound + 1} to check for follow-up actions.`);
                         }
-                        
+
                         if (failedResults.length > 0) {
                             // Add failed tool results to conversation with SYSTEM role
-                            const errorMessages = failedResults.map(result => 
+                            const errorMessages = failedResults.map(result =>
                                 `${result.tool} failed: ${result.error || 'Unknown error'}`
                             );
                             conversationHistory.push({
@@ -5138,7 +5138,7 @@ class ChatManager {
                                 content: `Tool execution errors: ${errorMessages.join('; ')}`
                             });
                             console.log(`${failedResults.length} tool(s) failed:`, failedResults);
-                            
+
                             // CRITICAL FIX: If ALL tools failed, terminate to prevent infinite retry
                             if (successfulResults.length === 0) {
                                 console.log('=== ALL TOOLS FAILED - TERMINATING TO PREVENT INFINITE RETRY ===');
@@ -5146,9 +5146,9 @@ class ChatManager {
                                 console.log('Errors:', failedResults.map(r => r.error));
                                 console.log('This prevents infinite retry loops when tools consistently fail');
                                 console.log('================================================================');
-                                
+
                                 taskCompleted = true;
-                                
+
                                 // Generate more informative error response based on the specific tool
                                 if (failedResults.length === 1 && failedResults[0].tool === 'get_genome_info') {
                                     finalResponse = `ℹ️ **Unable to retrieve genome information**\n\n` +
@@ -5171,7 +5171,7 @@ class ChatManager {
                         console.error('Error:', error);
                         console.error('Stack:', error.stack);
                         console.error('================================');
-                        
+
                         // Add error to conversation and continue
                         conversationHistory.push({
                             role: 'system',
@@ -5182,28 +5182,28 @@ class ChatManager {
                     console.log('=== NO TOOL CALL DETECTED ===');
                     console.log('Received conversational response, ending function call loop');
                     console.log('===============================');
-                    
+
                     // No tool call detected - this is our final response
                     finalResponse = response;
                     break;
                 }
             }
-            
+
             // If we've exhausted all rounds and still haven't got a final response
             if (!finalResponse) {
                 console.log('=== MAX ROUNDS REACHED ===');
                 console.log('Requesting final summary from LLM...');
-                
+
                 // Ask LLM for a final summary
                 conversationHistory.push({
                     role: 'user',
                     content: 'Please provide a final summary of the actions taken and results achieved.'
                 });
-                
+
                 finalResponse = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context, memoryContext);
                 console.log('Final summary response:', finalResponse);
             }
-            
+
             // BENCHMARK INTEGRATION: Complete execution data tracking
             if (this.lastExecutionData) {
                 this.lastExecutionData.endTime = Date.now();
@@ -5211,18 +5211,18 @@ class ChatManager {
                 this.lastExecutionData.finalResponse = finalResponse || 'I completed the requested actions. Please let me know if you need anything else.';
                 console.log('📊 Execution data for benchmark:', this.lastExecutionData);
             }
-            
+
             console.log('=== ChatManager.sendToLLM DEBUG END (SUCCESS) ===');
             return finalResponse || 'I completed the requested actions. Please let me know if you need anything else.';
-            
+
         } catch (error) {
             console.error('=== LLM COMMUNICATION ERROR ===');
             console.error('Error:', error);
             console.error('Stack:', error.stack);
             console.error('==============================');
-            
+
             let errorMessage;
-            
+
             // Provide specific error messages based on error type
             if (error.message.includes('HTTP 503') || error.message.includes('Service Unavailable')) {
                 errorMessage = `🚫 **Service Temporarily Unavailable**\n\n` +
@@ -5232,7 +5232,7 @@ class ChatManager {
                     `• Wait a few minutes and try again\n` +
                     `• Switch to a different LLM provider in Options → Configure LLMs\n` +
                     `• Check the service status page for your LLM provider`;
-                    
+
             } else if (error.message.includes('HTTP 429') || error.message.includes('Too Many Requests')) {
                 errorMessage = `⏱️ **Rate Limit Exceeded**\n\n` +
                     `You've exceeded the API rate limit for your LLM provider. ` +
@@ -5241,7 +5241,7 @@ class ChatManager {
                     `• Wait a few minutes before sending another message\n` +
                     `• Consider upgrading your API plan for higher limits\n` +
                     `• Switch to a different LLM provider temporarily`;
-                    
+
             } else if (error.message.includes('HTTP 401') || error.message.includes('Unauthorized')) {
                 errorMessage = `🔐 **Authentication Error**\n\n` +
                     `Your API key appears to be invalid or expired.\n\n` +
@@ -5249,7 +5249,7 @@ class ChatManager {
                     `• Go to Options → Configure LLMs\n` +
                     `• Check and update your API key\n` +
                     `• Test the connection before saving`;
-                    
+
             } else if (error.message.includes('HTTP 404') || error.message.includes('Not Found')) {
                 errorMessage = `🔍 **Model Not Found**\n\n` +
                     `The requested model is not available or doesn't exist.\n\n` +
@@ -5257,7 +5257,7 @@ class ChatManager {
                     `• Go to Options → Configure LLMs\n` +
                     `• Select a different model\n` +
                     `• Check your provider's available models`;
-                    
+
             } else if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('connection')) {
                 errorMessage = `🌐 **Network Connection Error**\n\n` +
                     `Unable to connect to the LLM service. This could be due to:\n\n` +
@@ -5265,7 +5265,7 @@ class ChatManager {
                     `• Firewall blocking the connection\n` +
                     `• Service endpoint temporarily down\n\n` +
                     `**Please check your internet connection and try again.**`;
-                    
+
             } else {
                 errorMessage = `❌ **Unexpected Error**\n\n` +
                     `${error.message}\n\n` +
@@ -5274,7 +5274,7 @@ class ChatManager {
                     `• Try switching to a different LLM provider\n` +
                     `• Check the browser console for more details`;
             }
-            
+
             console.log('=== ChatManager.sendToLLM DEBUG END (LLM ERROR) ===');
             return errorMessage;
         }
@@ -5316,7 +5316,7 @@ class ChatManager {
                 if (sanitized.codonPreferences && typeof sanitized.codonPreferences === 'object') {
                     const aaEntries = Object.entries(sanitized.codonPreferences)
                         .filter(([aa]) => aa !== '*')
-                        .sort(([,a], [,b]) => (b.totalCount || 0) - (a.totalCount || 0))
+                        .sort(([, a], [, b]) => (b.totalCount || 0) - (a.totalCount || 0))
                         .slice(0, 10); // Keep only top 10 amino acids
                     sanitized.codonPreferences = {
                         note: `Showing top 10 amino acids by usage`,
@@ -5385,97 +5385,97 @@ class ChatManager {
 
     formatToolResult(toolName, parameters, result) {
         console.log('formatToolResult called with:', { toolName, parameters, result });
-        
+
         switch (toolName) {
             case 'navigate_to_position':
                 const rangeInfo = result.usedDefaultRange ? ' (2000bp default range)' : '';
                 return `✅ Navigated to ${result.chromosome}:${result.start}-${result.end}${rangeInfo}`;
-                
+
             case 'open_new_tab':
                 const tabRangeInfo = result.usedDefaultRange ? ' (2000bp default range)' : '';
                 return `🗂️ Opened new tab: ${result.title}${tabRangeInfo}`;
-                
+
             case 'switch_to_tab':
                 return `🗂️ Switched to tab: ${result.tab_title || result.message}`;
-                
+
             case 'search_features':
                 if (result.count > 0) {
                     return `🔍 Found ${result.count} features matching "${result.query}"`;
                 } else {
                     return `🔍 No features found matching "${result.query}"`;
                 }
-                
+
             case 'get_current_state':
                 return `📊 Current state: ${result.currentChromosome || 'No chromosome selected'}, position ${result.currentPosition?.start || 0}-${result.currentPosition?.end || 0}, ${result.annotationsCount || 0} annotations loaded`;
-                
+
             case 'get_sequence':
                 return `🧬 Retrieved ${result.length}bp sequence from ${result.chromosome}:${result.start}-${result.end}`;
-                
+
             case 'toggle_track':
             case 'toggle_annotation_track':
                 if (result.noChangeNeeded) {
                     return `👁️ Track "${parameters.trackName || parameters.track_name}" is already ${result.visible ? 'visible' : 'hidden'}`;
                 }
                 return `👁️ Track "${parameters.trackName || parameters.track_name}" is now ${result.visible ? 'visible' : 'hidden'}`;
-                
+
             case 'create_annotation':
                 return `✨ Created ${result.type} annotation "${result.name}" at ${result.chromosome}:${result.start}-${result.end}`;
-                
+
             case 'analyze_region':
                 return `🔬 Analyzed region ${result.chromosome}:${result.start}-${result.end} (${result.length}bp, ${result.gcContent}% GC, ${result.featureCount || 0} features)`;
-                
+
             case 'export_data':
                 return `💾 Exported ${result.format.toUpperCase()} data successfully. File has been downloaded.`;
-                
+
             case 'get_gene_details':
                 if (result.found) {
                     return `🧬 Found ${result.count} gene(s) matching "${result.geneName}": ${result.genes.map(g => `${g.name} (${g.start}-${g.end}, ${g.product})`).slice(0, 3).join(', ')}${result.count > 3 ? '...' : ''}`;
                 } else {
                     return `❌ No genes found matching "${result.geneName}" in ${result.chromosome}`;
                 }
-                
+
             case 'translate_sequence':
                 return `🔬 Translated ${result.length.dna}bp DNA sequence to ${result.length.protein}aa protein from ${result.chromosome}:${result.start}-${result.end} (${result.strand} strand)`;
-                
+
             case 'calculate_gc_content':
                 return `📊 GC content analysis for ${result.chromosome}:${result.region}: Overall ${result.overallGCContent}% GC (${result.length}bp analyzed in ${result.totalWindows} windows)`;
-                
+
 
             case 'get_operons':
                 return `🧬 Found ${result.operonsFound} operons in ${result.chromosome}: ${result.operons.slice(0, 3).map(op => `${op.name} (${op.geneCount} genes)`).join(', ')}${result.operonsFound > 3 ? '...' : ''}`;
-                
+
             case 'zoom_to_gene':
                 return `🔍 Zoomed to gene ${result.gene.name} at ${result.gene.start}-${result.gene.end} with ${result.padding}bp padding`;
-                
+
             case 'get_chromosome_list':
-                return `📋 Available chromosomes (${result.count}): ${result.chromosomes.map(chr => `${chr.name} (${(chr.length/1000000).toFixed(1)}Mbp)${chr.isSelected ? ' *' : ''}`).join(', ')}. Current: ${result.currentChromosome}`;
-                
+                return `📋 Available chromosomes (${result.count}): ${result.chromosomes.map(chr => `${chr.name} (${(chr.length / 1000000).toFixed(1)}Mbp)${chr.isSelected ? ' *' : ''}`).join(', ')}. Current: ${result.currentChromosome}`;
+
             case 'get_track_status':
-                return `Track Status:\n${Object.entries(result).map(([track, status]) => 
+                return `Track Status:\n${Object.entries(result).map(([track, status]) =>
                     `• ${track}: ${status ? 'visible' : 'hidden'}`).join('\n')}`;
-                    
+
             case 'search_motif':
                 return `Motif Search Results for "${result.pattern}":\n` +
                     `• Found ${result.matchesFound} matches in ${result.searchRegion}\n` +
                     `• Allowing up to ${result.allowedMismatches} mismatches\n` +
-                    (result.matches.length > 0 ? 
-                        `• Top matches:\n${result.matches.slice(0, 5).map(m => 
+                    (result.matches.length > 0 ?
+                        `• Top matches:\n${result.matches.slice(0, 5).map(m =>
                             `  - Position ${m.position}: ${m.sequence} (${m.strand} strand, ${m.mismatches} mismatches)`
                         ).join('\n')}` : '• No matches found');
 
             case 'search_pattern':
                 return `Pattern Search Results for "${result.regex}":\n` +
                     `• Found ${result.matchesFound} matches in ${result.searchRegion}\n` +
-                    (result.matches.length > 0 ? 
-                        `• Matches:\n${result.matches.slice(0, 10).map(m => 
+                    (result.matches.length > 0 ?
+                        `• Matches:\n${result.matches.slice(0, 10).map(m =>
                             `  - Position ${m.position}: ${m.sequence} (length: ${m.length})`
                         ).join('\n')}` : '• No matches found');
 
             case 'get_nearby_features':
                 return `Nearby Features (within ${result.searchDistance} bp of position ${result.position}):\n` +
                     `• Found ${result.featuresFound} features\n` +
-                    (result.features.length > 0 ? 
-                        `• Features:\n${result.features.map(f => 
+                    (result.features.length > 0 ?
+                        `• Features:\n${result.features.map(f =>
                             `  - ${f.name} (${f.type}): ${f.start}-${f.end} ${f.strand} strand, ${f.distance} bp ${f.direction}`
                         ).join('\n')}` : '• No features found in range');
 
@@ -5483,16 +5483,16 @@ class ChatManager {
                 return `Intergenic Regions (min ${result.minLength} bp):\n` +
                     `• Found ${result.regionsFound} regions\n` +
                     `• Total intergenic length: ${result.totalIntergenicLength.toLocaleString()} bp\n` +
-                    (result.regions.length > 0 ? 
-                        `• Largest regions:\n${result.regions.slice(0, 5).map(r => 
+                    (result.regions.length > 0 ?
+                        `• Largest regions:\n${result.regions.slice(0, 5).map(r =>
                             `  - ${r.start}-${r.end} (${r.length.toLocaleString()} bp) between ${r.upstreamGene} and ${r.downstreamGene}`
                         ).join('\n')}` : '• No intergenic regions found');
 
             case 'find_restriction_sites':
                 return `Restriction Sites for ${result.enzyme} (${result.recognitionSite}):\n` +
                     `• Found ${result.sitesFound} sites in ${result.searchRegion}\n` +
-                    (result.sites.length > 0 ? 
-                        `• Sites:\n${result.sites.map(s => 
+                    (result.sites.length > 0 ?
+                        `• Sites:\n${result.sites.map(s =>
                             `  - Position ${s.position}: ${s.site} (${s.strand} strand)`
                         ).join('\n')}` : '• No restriction sites found');
 
@@ -5502,8 +5502,8 @@ class ChatManager {
                     `• Fragments generated: ${result.fragments}\n` +
                     `• Average fragment size: ${result.averageFragmentSize.toLocaleString()} bp\n` +
                     `• Size range: ${result.smallestFragment.toLocaleString()} - ${result.largestFragment.toLocaleString()} bp\n` +
-                    (result.fragmentDetails.length > 0 ? 
-                        `• Largest fragments:\n${result.fragmentDetails.slice(0, 5).map(f => 
+                    (result.fragmentDetails.length > 0 ?
+                        `• Largest fragments:\n${result.fragmentDetails.slice(0, 5).map(f =>
                             `  - ${f.start}-${f.end} (${f.length.toLocaleString()} bp) cut by ${f.cutBy}`
                         ).join('\n')}` : '');
 
@@ -5527,7 +5527,7 @@ class ChatManager {
                 return `Codon Usage Analysis for ${result.geneName}:\n` +
                     `• Total codons: ${result.totalCodons}\n` +
                     `• Unique codons used: ${result.uniqueCodons}/64\n` +
-                    `• Most frequent codons:\n${result.mostFrequentCodons.map(c => 
+                    `• Most frequent codons:\n${result.mostFrequentCodons.map(c =>
                         `  - ${c.codon} (${c.aminoAcid}): ${c.count} times (${c.frequency}%)`
                     ).join('\n')}`;
 
@@ -5541,8 +5541,8 @@ class ChatManager {
                 return `Bookmarks ${result.chromosome !== 'all' ? `for ${result.chromosome}` : ''}:\n` +
                     `• Total bookmarks: ${result.totalBookmarks}\n` +
                     `• Showing: ${result.filteredBookmarks}\n` +
-                    (result.bookmarks.length > 0 ? 
-                        `• Bookmarks:\n${result.bookmarks.map(b => 
+                    (result.bookmarks.length > 0 ?
+                        `• Bookmarks:\n${result.bookmarks.map(b =>
                             `  - ${b.name}: ${b.chromosome}:${b.start}-${b.end} (${new Date(b.created).toLocaleDateString()})`
                         ).join('\n')}` : '• No bookmarks found');
 
@@ -5565,8 +5565,8 @@ class ChatManager {
                 return `Similar Sequence Search:\n` +
                     `• Query: ${result.querySequence}\n` +
                     `• Found ${result.resultsFound} similar regions (≥${result.minSimilarity} similarity)\n` +
-                    (result.results.length > 0 ? 
-                        `• Top matches:\n${result.results.slice(0, 5).map(r => 
+                    (result.results.length > 0 ?
+                        `• Top matches:\n${result.results.slice(0, 5).map(r =>
                             `  - ${r.start}-${r.end}: ${r.similarity} similarity\n    ${r.sequence}`
                         ).join('\n')}` : '• No similar sequences found');
 
@@ -5584,32 +5584,32 @@ class ChatManager {
 
             case 'batch_create_annotations':
                 return `✓ Batch created ${result.annotationsCreated} annotations on ${result.chromosome}\n` +
-                    (result.annotations.length > 0 ? 
-                        `• Created annotations:\n${result.annotations.map(a => 
+                    (result.annotations.length > 0 ?
+                        `• Created annotations:\n${result.annotations.map(a =>
                             `  - ${a.type}: ${a.start}-${a.end} (${a.qualifiers?.gene || a.id})`
                         ).join('\n')}` : '');
 
             case 'get_file_info':
                 let fileOutput = `File Information ${result.fileType !== 'all' ? `(${result.fileType})` : ''}:\n`;
-                
+
                 if (result.fileInfo.genome) {
                     const genome = result.fileInfo.genome;
                     fileOutput += `• Genome: ${genome.chromosomes} chromosome(s), ${genome.totalLength.toLocaleString()} bp total\n`;
                     fileOutput += `• Current: ${genome.currentChromosome || 'none'}\n`;
                 }
-                
+
                 if (result.fileInfo.annotations) {
                     const ann = result.fileInfo.annotations;
                     fileOutput += `• Annotations: ${ann.totalFeatures.toLocaleString()} features across ${ann.chromosomes} chromosome(s)\n`;
                     fileOutput += `• Feature types: ${ann.featureTypes.join(', ')}\n`;
                 }
-                
+
                 if (result.fileInfo.tracks) {
                     const tracks = Object.entries(result.fileInfo.tracks);
                     const visible = tracks.filter(([_, status]) => status).length;
                     fileOutput += `• Tracks: ${visible}/${tracks.length} visible\n`;
                 }
-                
+
                 return fileOutput;
 
             case 'export_region_features':
@@ -5627,11 +5627,11 @@ class ChatManager {
 
     async buildConversationHistory(newMessage) {
         const history = [];
-        
+
         // Add system context message
         const systemMessage = await this.buildSystemMessage();
         history.push({ role: 'system', content: systemMessage });
-        
+
         // If context mode is enabled (current message only), skip conversation history
         if (this.contextModeEnabled) {
             console.log('Context mode enabled: sending only current message');
@@ -5639,14 +5639,14 @@ class ChatManager {
             history.push({ role: 'user', content: newMessage });
             return history;
         }
-        
+
         // Get conversation memory setting
         const conversationMemory = this.configManager.get('llm.conversationMemory', 10);
-        
+
         // Get chat history and find the current conversation (after last separator)
         const chatHistory = this.configManager.getChatHistory();
         let currentConversationMessages = [];
-        
+
         // Find messages after the last conversation separator
         for (let i = chatHistory.length - 1; i >= 0; i--) {
             const msg = chatHistory[i];
@@ -5655,12 +5655,12 @@ class ChatManager {
             }
             currentConversationMessages.unshift(msg); // Add to beginning to maintain order
         }
-        
+
         // If no separator found, use the full recent history
         if (currentConversationMessages.length === 0) {
             currentConversationMessages = chatHistory.slice(-conversationMemory * 2);
         }
-        
+
         // Add conversation messages to history (exclude system messages and separators)
         for (const msg of currentConversationMessages.slice(-conversationMemory * 2)) {
             if (msg.sender === 'user') {
@@ -5670,47 +5670,47 @@ class ChatManager {
             }
             // Skip system messages and separators
         }
-        
+
         // Add the new user message
         history.push({ role: 'user', content: newMessage });
-        
+
         return history;
     }
 
     async buildSystemMessage() {
         // Get user-defined system prompt
         const userSystemPrompt = this.configManager.get('llm.systemPrompt', '');
-        
+
         // Get system message format preference (optimized or complete)
         // Check both chatboxSettings and llm settings for backward compatibility
-        const useOptimizedPrompt = this.configManager.get('chatboxSettings.useOptimizedPrompt', 
+        const useOptimizedPrompt = this.configManager.get('chatboxSettings.useOptimizedPrompt',
             this.configManager.get('llm.useOptimizedPrompt', true));
-        
+
         // Get current user query for memory retrieval
         const currentUserQuery = this.getLastUserQuery() || '';
-        
+
         // If user has defined a custom system prompt, use it with variable substitution
         if (userSystemPrompt && userSystemPrompt.trim()) {
             const processedPrompt = this.processSystemPromptVariables(userSystemPrompt);
             // Choose context based on optimization setting
             const toolContext = useOptimizedPrompt ? this.getOptimizedToolContext() : this.getCompleteToolContext();
-            
+
             // Add memory context if memory system is enabled
             const memoryContext = await this.getMemoryContext(currentUserQuery);
             const memorySection = memoryContext ? `\n\n[Memory Context]\n${memoryContext}` : '';
-            
+
             return `${processedPrompt}\n\n${toolContext}${memorySection}`;
         }
-        
+
         // Check if Dynamic Tools Registry is enabled in settings
         const dynamicToolsRegistryEnabled = this.configManager.get('chatboxSettings.enableDynamicToolsRegistry', true);
         console.log('🔧 [buildSystemMessage] Dynamic Tools Registry enabled in settings:', dynamicToolsRegistryEnabled);
-        
+
         // Try to use Dynamic Tools Registry if available and enabled
         console.log('🔧 [buildSystemMessage] Checking Dynamic Tools Registry...');
         console.log('🔧 [buildSystemMessage] dynamicToolsEnabled:', this.dynamicToolsEnabled);
         console.log('🔧 [buildSystemMessage] dynamicTools:', this.dynamicTools);
-        
+
         if (dynamicToolsRegistryEnabled && this.dynamicToolsEnabled && this.dynamicTools) {
             try {
                 console.log('🔧 [buildSystemMessage] Using Dynamic Tools Registry...');
@@ -5718,7 +5718,7 @@ class ChatManager {
                 const lastUserQuery = this.getLastUserQuery();
                 console.log('🔧 [buildSystemMessage] Context:', context);
                 console.log('🔧 [buildSystemMessage] Last user query:', lastUserQuery);
-                
+
                 const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context);
                 console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
                 return promptData.systemPrompt;
@@ -5735,7 +5735,7 @@ class ChatManager {
                 console.log('🔧 [buildSystemMessage] Dynamic Tools Registry not available, using fallback');
             }
         }
-        
+
         // For default system message, use optimized version by default
         if (useOptimizedPrompt) {
             const systemMessage = this.getOptimizedSystemMessage();
@@ -5763,15 +5763,15 @@ class ChatManager {
             if (!this.memorySystem || !this.configManager.get('chatboxSettings.memorySystemEnabled', false)) {
                 return null;
             }
-            
+
             // Check if ChatBox memory system is enabled (separate from Multi-Agent)
             const memorySystemEnabled = this.configManager.get('chatboxSettings.memorySystemEnabled', false);
             if (!memorySystemEnabled) {
                 return null;
             }
-            
+
             console.log('🧠 [getMemoryContext] Retrieving memory context for query:', userQuery);
-            
+
             // Infer task type and prepare context for memory search
             const taskType = this.inferTaskType(userQuery);
             const context = {
@@ -5780,28 +5780,28 @@ class ChatManager {
                 sessionId: this.getSessionId(),
                 taskType: taskType
             };
-            
+
             // Call memory system to search for relevant context
             // For general chat context, we use "chat_context" as function name
             const memoryContext = await this.memorySystem.retrieveMemoryContext("chat_context", context, context);
-            
+
             if (!memoryContext || !memoryContext.results || memoryContext.results.length === 0) {
                 console.log('🧠 [getMemoryContext] No relevant memories found for query');
                 return null;
             }
-            
+
             // Format memory context for LLM
             const formattedContext = this.formatMemoryContextForLLM(memoryContext);
             console.log('🧠 [getMemoryContext] Retrieved memory context:', formattedContext);
-            
+
             return formattedContext;
-            
+
         } catch (error) {
             console.warn('🧠 [getMemoryContext] Failed to retrieve memory context:', error);
             return null; // Don't fail the entire system message building process
         }
     }
-    
+
     /**
      * Format memory context for LLM consumption
      * @param {object} memoryContext - Raw memory context from MemorySystem
@@ -5811,48 +5811,48 @@ class ChatManager {
         if (!memoryContext || !memoryContext.results || memoryContext.results.length === 0) {
             return '';
         }
-        
+
         let formatted = '';
         const results = memoryContext.results.slice(0, 5); // Limit to top 5 most relevant
-        
+
         for (const result of results) {
             // Format each memory entry
             let memoryText = `• ${result.concept || 'Relevant previous action'}`;
-            
+
             // Add relevance score if available
             if (result.score !== undefined) {
                 memoryText += ` (relevance: ${(result.score * 100).toFixed(1)}%)`;
             }
-            
+
             // Add properties if available
             if (result.properties) {
                 if (result.properties.usage_count) {
                     memoryText += ` - used ${result.properties.usage_count} times`;
                 }
-                
+
                 if (result.properties.success_rate !== undefined) {
                     memoryText += ` (${Math.round(result.properties.success_rate * 100)}% success rate)`;
                 }
-                
+
                 if (result.properties.type) {
                     memoryText += ` - type: ${result.properties.type}`;
                 }
-                
+
                 if (result.properties.category) {
                     memoryText += ` - category: ${result.properties.category}`;
                 }
             }
-            
+
             formatted += memoryText + '\n';
         }
-        
+
         if (formatted) {
             return `Based on previous similar queries, here are relevant patterns:\n${formatted.trim()}`;
         }
-        
+
         return '';
     }
-    
+
     /**
      * Infer task type from user query for better memory retrieval
      * @param {string} userQuery - User query to analyze
@@ -5860,37 +5860,37 @@ class ChatManager {
      */
     inferTaskType(userQuery) {
         if (!userQuery) return 'general';
-        
+
         const query = userQuery.toLowerCase();
-        
+
         // Gene analysis patterns
         if (query.includes('gene') || query.includes('sequence') || query.includes('protein')) {
             return 'gene_analysis';
         }
-        
+
         // Search patterns
         if (query.includes('search') || query.includes('find') || query.includes('lookup')) {
             return 'search';
         }
-        
+
         // Analysis patterns
         if (query.includes('analyze') || query.includes('analysis') || query.includes('compare')) {
             return 'analysis';
         }
-        
+
         // Navigation patterns
         if (query.includes('navigate') || query.includes('zoom') || query.includes('goto')) {
             return 'navigation';
         }
-        
+
         // Data retrieval patterns
         if (query.includes('download') || query.includes('get') || query.includes('fetch')) {
             return 'data_retrieval';
         }
-        
+
         return 'general';
     }
-    
+
     /**
      * Get current session ID for memory correlation
      * @returns {string} - Session identifier
@@ -5898,20 +5898,20 @@ class ChatManager {
     getSessionId() {
         return this.sessionId || `session_${Date.now()}`;
     }
-    
+
     /**
      * Process variables in user-defined system prompts
      * Supports variables like {genome_info}, {current_state}, etc.
      */
     processSystemPromptVariables(systemPrompt) {
         const context = this.getCurrentContext();
-        
+
         // Create detailed current state
         const detailedCurrentState = this.getDetailedCurrentState(context);
-        
+
         // Create comprehensive tools list  
         const allToolsDetailed = this.getAllToolsDetailed(context);
-        
+
         // Define available variables
         const variables = {
             genome_info: this.getGenomeInfoSummary(),
@@ -5937,14 +5937,14 @@ class ChatManager {
             date: new Date().toLocaleDateString(),
             time: new Date().toLocaleTimeString()
         };
-        
+
         // Replace variables in the format {variable_name}
         let processedPrompt = systemPrompt;
         for (const [varName, varValue] of Object.entries(variables)) {
             const regex = new RegExp(`\\{${varName}\\}`, 'gi');
             processedPrompt = processedPrompt.replace(regex, varValue);
         }
-        
+
         return processedPrompt;
     }
 
@@ -5955,20 +5955,20 @@ class ChatManager {
     checkTaskCompletion(response) {
         console.log('=== Checking Task Completion ===');
         console.log('Response length:', response ? response.length : 0);
-        
+
         const result = {
             isCompleted: false,
             reason: '',
             confidence: 0,
             summary: null
         };
-        
+
         if (!response || typeof response !== 'string') {
             return result;
         }
-        
+
         const lowercaseResponse = response.toLowerCase();
-        
+
         // Define completion indicators with weights
         const completionIndicators = [
             // Strong completion signals
@@ -5976,38 +5976,38 @@ class ChatManager {
             { patterns: ['analysis complete', 'analysis finished', 'analysis done'], weight: 0.85, reason: 'Analysis completion indicated' },
             { patterns: ['i have completed', 'i have finished', 'i have done'], weight: 0.8, reason: 'Direct completion confirmation' },
             { patterns: ['the task is complete', 'the task is finished', 'the task is done'], weight: 0.85, reason: 'Task status confirmation' },
-            
+
             // Gene search completion signals
             { patterns: ['gene found', 'found the gene', 'located the gene', 'gene located'], weight: 0.85, reason: 'Gene search completed' },
             { patterns: ['gene information', 'gene details', 'gene data', 'gene sequence'], weight: 0.8, reason: 'Gene information provided' },
             { patterns: ['here is the gene', 'here are the details', 'gene details are'], weight: 0.75, reason: 'Gene details presented' },
             { patterns: ['gene name:', 'gene id:', 'gene symbol:', 'location:'], weight: 0.8, reason: 'Gene metadata provided' },
-            
+
             // Search result completion
             { patterns: ['search results', 'search completed', 'found results'], weight: 0.75, reason: 'Search results provided' },
             { patterns: ['no results found', 'no matches found', 'gene not found'], weight: 0.8, reason: 'Search completed with no results' },
-            
+
             // Summary/conclusion signals
             { patterns: ['in summary', 'to summarize', 'in conclusion', 'overall'], weight: 0.7, reason: 'Summary provided' },
             { patterns: ['final result', 'final analysis', 'final summary'], weight: 0.75, reason: 'Final results provided' },
             { patterns: ['that completes', 'this completes', 'this concludes'], weight: 0.8, reason: 'Completion statement' },
-            
+
             // Question/offer for next steps
             { patterns: ['is there anything else', 'anything else you need', 'what else would you like'], weight: 0.65, reason: 'Offering further assistance' },
             { patterns: ['do you need anything else', 'would you like me to', 'let me know if you need'], weight: 0.6, reason: 'Proactive assistance offer' },
             { patterns: ['please let me know if', 'feel free to ask if'], weight: 0.55, reason: 'Open-ended assistance offer' },
-            
+
             // Results presentation
             { patterns: ['here are the results', 'the results show', 'results summary'], weight: 0.65, reason: 'Results presented' },
             { patterns: ['based on the analysis', 'the data shows', 'findings indicate'], weight: 0.6, reason: 'Analysis findings presented' },
-            
+
             // Tool execution completion without follow-up
             { patterns: ['successfully navigated', 'successfully retrieved', 'successfully analyzed'], weight: 0.5, reason: 'Tool execution completed' }
         ];
-        
+
         let maxWeight = 0;
         let bestReason = '';
-        
+
         // Check for completion indicators
         for (const indicator of completionIndicators) {
             for (const pattern of indicator.patterns) {
@@ -6020,70 +6020,70 @@ class ChatManager {
                 }
             }
         }
-        
+
         // Additional context checks
         let contextBonus = 0;
-        
+
         // Check if no tool calls are present (conversational response)
         const hasToolCall = this.parseToolCall(response) !== null || this.parseMultipleToolCalls(response).length > 0;
-        
+
         // CRITICAL: If tool calls are present, heavily reduce completion confidence
         // Tool calls should ALWAYS take priority over completion detection
         if (hasToolCall) {
             maxWeight *= 0.1; // Drastically reduce confidence if tool calls exist
             console.log('Tool calls detected - heavily reducing task completion confidence to prioritize tool execution');
         }
-        
+
         // CRITICAL: For analysis tasks, don't mark as complete if we only have basic data retrieval
         const isAnalysisTask = lowercaseResponse.includes('analyze') || lowercaseResponse.includes('analysis');
-        const hasAnalysisResults = lowercaseResponse.includes('results') || lowercaseResponse.includes('findings') || 
-                                   lowercaseResponse.includes('statistics') || lowercaseResponse.includes('composition') ||
-                                   lowercaseResponse.includes('frequency') || lowercaseResponse.includes('usage');
-        
+        const hasAnalysisResults = lowercaseResponse.includes('results') || lowercaseResponse.includes('findings') ||
+            lowercaseResponse.includes('statistics') || lowercaseResponse.includes('composition') ||
+            lowercaseResponse.includes('frequency') || lowercaseResponse.includes('usage');
+
         // Check if this is a request for summary rather than providing one
         const isSummaryRequest = lowercaseResponse.includes('please provide') || lowercaseResponse.includes('provide a summary') ||
-                                lowercaseResponse.includes('give me a summary') || lowercaseResponse.includes('can you summarize');
-        
+            lowercaseResponse.includes('give me a summary') || lowercaseResponse.includes('can you summarize');
+
         // If it's an analysis task but we don't have analysis results, reduce confidence significantly
         if (isAnalysisTask && !hasAnalysisResults && maxWeight > 0) {
             maxWeight *= 0.3; // Significantly reduce confidence
             console.log('Analysis task detected without results - reducing confidence');
         }
-        
+
         // If this is a summary request (not providing summary), reduce confidence heavily
         if (isSummaryRequest && maxWeight > 0) {
             maxWeight *= 0.2; // Even more reduction for summary requests
             console.log('Summary request detected - reducing confidence heavily');
         }
-        
+
         if (!hasToolCall && maxWeight > 0) {
             contextBonus += 0.15;
             console.log('No tool calls detected - adding context bonus');
         }
-        
+
         // Check response length - longer responses with completion indicators are more likely to be final
         if (response.length > 100 && maxWeight > 0) {
             contextBonus += 0.1;
             console.log('Substantial response length - adding context bonus');
         }
-        
+
         // Check for direct answers without need for more tools
-        if (lowercaseResponse.includes('the answer is') || lowercaseResponse.includes('the result is') || 
+        if (lowercaseResponse.includes('the answer is') || lowercaseResponse.includes('the result is') ||
             lowercaseResponse.includes('found') && !hasToolCall) {
             contextBonus += 0.1;
             console.log('Direct answer detected - adding context bonus');
         }
-        
+
         const finalConfidence = Math.min(maxWeight + contextBonus, 1.0);
-        
+
         // Determine completion status based on confidence threshold
         const completionThreshold = this.configManager.get('llm.completionThreshold', 0.7);
-        
+
         if (finalConfidence >= completionThreshold) {
             result.isCompleted = true;
             result.confidence = finalConfidence;
             result.reason = bestReason;
-            
+
             // Extract summary if available
             const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0);
             if (sentences.length > 0) {
@@ -6091,12 +6091,12 @@ class ChatManager {
                 result.summary = response.trim();
             }
         }
-        
+
         console.log(`Task completion check result: ${result.isCompleted} (confidence: ${finalConfidence}, threshold: ${completionThreshold})`);
         if (result.isCompleted) {
             console.log(`Completion reason: ${result.reason}`);
         }
-        
+
         return result;
     }
 
@@ -6107,7 +6107,7 @@ class ChatManager {
     shouldTerminateAfterToolExecution(toolsToExecute, successfulResults, originalMessage) {
         // Check if this is a simple search task that likely doesn't need follow-up
         const message = originalMessage.toLowerCase();
-        
+
         // Simple task patterns that typically complete with one tool call
         const singleExecutionPatterns = [
             // Search patterns
@@ -6136,25 +6136,25 @@ class ChatManager {
             'get genome info', 'genome information', 'show genome info', 'genome details',
             'get current state', 'current state', 'browser state', 'show state'
         ];
-        
-        const isSingleExecutionTask = singleExecutionPatterns.some(pattern => 
+
+        const isSingleExecutionTask = singleExecutionPatterns.some(pattern =>
             message.toLowerCase().includes(pattern)
         ) || (
-            // Also check for very short messages that are likely simple commands
-            message.toLowerCase().split(' ').length <= 5 && 
-            (message.toLowerCase().includes('toggle') || 
-             message.toLowerCase().includes('show') || 
-             message.toLowerCase().includes('hide') ||
-             message.toLowerCase().includes('turn on') ||
-             message.toLowerCase().includes('turn off'))
-        );
-        
+                // Also check for very short messages that are likely simple commands
+                message.toLowerCase().split(' ').length <= 5 &&
+                (message.toLowerCase().includes('toggle') ||
+                    message.toLowerCase().includes('show') ||
+                    message.toLowerCase().includes('hide') ||
+                    message.toLowerCase().includes('turn on') ||
+                    message.toLowerCase().includes('turn off'))
+            );
+
         // Check if we executed tools that typically complete tasks
         const taskCompletingTools = [
             'search_gene_by_name', 'search_sequence', 'find_feature', 'search_feature',
             'jump_to_gene', 'jump_to_feature', 'focus_on_gene',
             'codon_usage_analysis', 'compute_gc', 'analyze_region', 'analyze_interpro_domains',
-            'load_genome_file', 'load_annotation_file', 'load_variant_file', 
+            'load_genome_file', 'load_annotation_file', 'load_variant_file',
             'load_reads_file', 'load_wig_tracks', 'load_operon_file',
             'open_new_tab', 'create_annotation', 'export_data',
             // Track control operations - complete actions that don't need follow-up
@@ -6164,15 +6164,15 @@ class ChatManager {
             // State information operations - complete actions that don't need follow-up
             'get_genome_info', 'get_current_state', 'get_file_info'
         ];
-        
-        const executedTaskCompletingTool = toolsToExecute.some(tool => 
+
+        const executedTaskCompletingTool = toolsToExecute.some(tool =>
             taskCompletingTools.includes(tool.tool_name)
         );
-        
+
         // Check if the tool execution was successful and returned meaningful data
         const hasValidResults = successfulResults.some(result => {
             if (!result.result) return false;
-            
+
             // For file loading and UI operations, check for success flag
             const fileAndUITools = [
                 'load_genome_file', 'load_annotation_file', 'load_variant_file',
@@ -6185,7 +6185,7 @@ class ChatManager {
                 // State information operations
                 'get_genome_info', 'get_current_state', 'get_file_info'
             ];
-            
+
             if (fileAndUITools.includes(result.tool)) {
                 // For toggle_track operations, both success and noChangeNeeded are valid results
                 if (result.tool === 'toggle_track' || result.tool === 'toggle_annotation_track') {
@@ -6193,21 +6193,21 @@ class ChatManager {
                 }
                 return result.result.success === true;
             }
-            
+
             // Check if result contains actual data (not just empty or error responses)
             const resultStr = JSON.stringify(result.result).toLowerCase();
-            return !resultStr.includes('error') && 
-                   !resultStr.includes('not found') && 
-                   !resultStr.includes('no results') &&
-                   resultStr.length > 20; // Reasonable data length
+            return !resultStr.includes('error') &&
+                !resultStr.includes('not found') &&
+                !resultStr.includes('no results') &&
+                resultStr.length > 20; // Reasonable data length
         });
-        
+
         // For single execution tasks with successful results, terminate early
         if (isSingleExecutionTask && executedTaskCompletingTool && hasValidResults) {
             console.log('Early termination criteria met: Single execution task completed successfully');
             return true;
         }
-        
+
         // For complex tasks or failed searches, continue with normal flow
         return false;
     }
@@ -6219,13 +6219,13 @@ class ChatManager {
     shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults = []) {
         const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
         const toolName = tool.tool_name;
-        
+
         // Define tool execution policies
         const toolPolicies = {
             // File operations - only re-execute with different parameters or after failure
             file_operations: {
-                tools: ['load_genome_file', 'load_annotation_file', 'load_variant_file', 
-                       'load_reads_file', 'load_wig_tracks', 'load_operon_file'],
+                tools: ['load_genome_file', 'load_annotation_file', 'load_variant_file',
+                    'load_reads_file', 'load_wig_tracks', 'load_operon_file'],
                 policy: 'conditional_re_execution',
                 condition: (tool, history, results) => {
                     const wasSuccessful = this.wasToolExecutedSuccessfully(toolKey, history);
@@ -6236,11 +6236,11 @@ class ChatManager {
                     return true;
                 }
             },
-            
+
             // UI operations - allow once per round, prevent rapid repetition
             ui_operations: {
-                tools: ['open_new_tab', 'close_tab', 'switch_tab', 'create_annotation', 
-                       'delete_feature', 'export_data'],
+                tools: ['open_new_tab', 'close_tab', 'switch_tab', 'create_annotation',
+                    'delete_feature', 'export_data'],
                 policy: 'once_per_round',
                 condition: (tool, history, results, round) => {
                     const executedInCurrentRound = results.some(r => r.tool === toolName);
@@ -6251,7 +6251,7 @@ class ChatManager {
                     return true;
                 }
             },
-            
+
             // Navigation operations - prevent re-navigation to same position
             position_navigation: {
                 tools: ['navigate_to_position'],
@@ -6265,14 +6265,14 @@ class ChatManager {
                     return true;
                 }
             },
-            
+
             // Scroll operations - can be repeated (different from precise navigation)
             scroll_operations: {
                 tools: ['scroll_left', 'scroll_right'],
                 policy: 'always_allowed',
                 condition: () => true
             },
-            
+
             // Zoom operations - prevent rapid repetition
             zoom_operations: {
                 tools: ['zoom_in', 'zoom_out'],
@@ -6286,7 +6286,7 @@ class ChatManager {
                     return true;
                 }
             },
-            
+
             // Gene/feature navigation - single execution per gene/feature
             feature_navigation: {
                 tools: ['jump_to_gene', 'jump_to_feature', 'focus_on_gene'],
@@ -6300,7 +6300,7 @@ class ChatManager {
                     return true;
                 }
             },
-            
+
             // Search operations - allow with different parameters or after reasonable delay
             search: {
                 tools: ['search_gene_by_name', 'search_features', 'search_sequence_motif'],
@@ -6315,11 +6315,11 @@ class ChatManager {
                     return true;
                 }
             },
-            
+
             // Analysis operations - single execution per analysis request
             analysis: {
-                tools: ['codon_usage_analysis', 'compute_gc', 'analyze_region', 'translate_dna', 
-                       'reverse_complement', 'get_coding_sequence', 'analyze_interpro_domains'],
+                tools: ['codon_usage_analysis', 'compute_gc', 'analyze_region', 'translate_dna',
+                    'reverse_complement', 'get_coding_sequence', 'analyze_interpro_domains'],
                 policy: 'parameter_based',
                 condition: (tool, history, results) => {
                     const existingExecution = this.findExistingExecution(toolKey, history);
@@ -6330,7 +6330,7 @@ class ChatManager {
                     return true;
                 }
             },
-            
+
             // Display/UI state operations - once per round
             display_operations: {
                 tools: ['show_hide_features', 'set_view_mode', 'refresh_view'],
@@ -6344,7 +6344,7 @@ class ChatManager {
                     return true;
                 }
             },
-            
+
             // Track toggle operations - prevent unnecessary repetition of track toggle
             track_operations: {
                 tools: ['toggle_track', 'toggle_annotation_track'],
@@ -6354,26 +6354,26 @@ class ChatManager {
                     const currentTrack = tool.parameters?.trackName || tool.parameters?.track_name;
                     const currentAction = tool.parameters?.action;
                     const currentVisible = tool.parameters?.visible;
-                    
+
                     // Convert action to visible state for comparison
                     let currentVisibleState = currentVisible;
                     if (currentVisibleState === undefined && currentAction) {
                         currentVisibleState = (currentAction === 'show');
                     }
-                    
+
                     // Normalize track names for comparison (treat "action" and "actions" as the same)
                     const normalizeTrackName = (trackName) => {
                         if (trackName === 'action') return 'actions';
                         return trackName;
                     };
-                    
+
                     const normalizedCurrentTrack = normalizeTrackName(currentTrack);
-                    
+
                     // Check if the track is already in the desired state
                     const trackMapping = {
                         'genes': 'trackGenes',
                         'gc': 'trackGC',
-                        'variants': 'trackVariants', 
+                        'variants': 'trackVariants',
                         'reads': 'trackReads',
                         'proteins': 'trackProteins',
                         'wigTracks': 'trackWIG',
@@ -6383,7 +6383,7 @@ class ChatManager {
                         'blast': 'trackBlast',
                         'blast_results': 'trackBlast'
                     };
-                    
+
                     const checkboxId = trackMapping[currentTrack];
                     if (checkboxId) {
                         const trackCheckbox = document.getElementById(checkboxId);
@@ -6392,36 +6392,36 @@ class ChatManager {
                             return false;
                         }
                     }
-                    
+
                     // Check for recent execution of same track toggle with more precise parameter matching
                     const now = Date.now();
                     const timeWindowMs = 3000; // 3 seconds
-                    
+
                     // Look through conversation history for recent executions
                     for (let i = conversationHistory.length - 1; i >= 0; i--) {
                         const msg = conversationHistory[i];
-                        
+
                         // Check assistant messages for tool calls
                         if (msg.role === 'assistant' && msg.content) {
                             try {
                                 // Try to parse as single tool call
                                 const parsed = JSON.parse(msg.content);
-                                if ((parsed.tool_name === 'toggle_track' || parsed.tool_name === 'toggle_annotation_track') && 
+                                if ((parsed.tool_name === 'toggle_track' || parsed.tool_name === 'toggle_annotation_track') &&
                                     parsed.parameters) {
                                     const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
-                                    
+
                                     if (now - estimatedTimestamp < timeWindowMs) {
                                         // Get recent track name from either trackName or track_name parameter
                                         const recentTrack = parsed.parameters?.trackName || parsed.parameters?.track_name;
                                         const recentAction = parsed.parameters?.action;
                                         const recentVisible = parsed.parameters?.visible;
-                                        
+
                                         // Convert recent action to visible state for comparison
                                         let recentVisibleState = recentVisible;
                                         if (recentVisibleState === undefined && recentAction) {
                                             recentVisibleState = (recentAction === 'show');
                                         }
-                                        
+
                                         // If same track and same action, block it
                                         const normalizedRecentTrack = normalizeTrackName(recentTrack);
                                         if (normalizedCurrentTrack === normalizedRecentTrack && currentVisibleState === recentVisibleState) {
@@ -6434,25 +6434,25 @@ class ChatManager {
                                 // Try to parse as multiple tool calls
                                 try {
                                     const multipleToolCalls = this.parseMultipleToolCalls(msg.content);
-                                    const matchingTool = multipleToolCalls.find(t => 
+                                    const matchingTool = multipleToolCalls.find(t =>
                                         t.tool_name === 'toggle_track' || t.tool_name === 'toggle_annotation_track'
                                     );
-                                    
+
                                     if (matchingTool && matchingTool.parameters) {
                                         const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
-                                        
+
                                         if (now - estimatedTimestamp < timeWindowMs) {
                                             // Get recent track name from either trackName or track_name parameter
                                             const recentTrack = matchingTool.parameters?.trackName || matchingTool.parameters?.track_name;
                                             const recentAction = matchingTool.parameters?.action;
                                             const recentVisible = matchingTool.parameters?.visible;
-                                            
+
                                             // Convert recent action to visible state for comparison
                                             let recentVisibleState = recentVisible;
                                             if (recentVisibleState === undefined && recentAction) {
                                                 recentVisibleState = (recentAction === 'show');
                                             }
-                                            
+
                                             // If same track and same action, block it
                                             const normalizedRecentTrack = normalizeTrackName(recentTrack);
                                             if (normalizedCurrentTrack === normalizedRecentTrack && currentVisibleState === recentVisibleState) {
@@ -6467,15 +6467,15 @@ class ChatManager {
                             }
                         }
                     }
-                    
+
                     return true;
                 }
             },
-            
+
             // State operations - parameter-based to prevent repetition
             state: {
                 tools: ['get_current_state', 'get_genome_info', 'get_file_info', 'get_sequence',
-                       'get_current_region', 'get_visible_tracks'],
+                    'get_current_region', 'get_visible_tracks'],
                 policy: 'parameter_based',
                 condition: (tool, history, results) => {
                     const existingExecution = this.findExistingExecution(toolKey, history);
@@ -6486,11 +6486,11 @@ class ChatManager {
                     return true;
                 }
             },
-            
+
             // External API operations - prevent rapid re-execution
             external_api: {
                 tools: ['blast_search', 'fetch_protein_structure', 'get_uniprot_entry',
-                       'search_uniprot_database', 'fetch_alphafold_structure'],
+                    'search_uniprot_database', 'fetch_alphafold_structure'],
                 policy: 'rate_limited',
                 condition: (tool, history, results) => {
                     const recentExecution = this.findRecentExecution(toolName, history, 30000); // 30 seconds
@@ -6502,7 +6502,7 @@ class ChatManager {
                 }
             }
         };
-        
+
         // Find applicable policy
         let applicablePolicy = null;
         for (const [policyName, policy] of Object.entries(toolPolicies)) {
@@ -6512,14 +6512,14 @@ class ChatManager {
                 break;
             }
         }
-        
+
         // Default policy for unknown tools - allow once
         if (!applicablePolicy) {
             console.log(`⚠️ [Policy] Unknown tool, applying default once-per-round policy: ${toolName}`);
             const alreadyExecuted = this.wasToolExecutedSuccessfully(toolKey, conversationHistory);
             return !alreadyExecuted;
         }
-        
+
         // Apply the policy condition
         return applicablePolicy.condition(tool, conversationHistory, toolResults, currentRound);
     }
@@ -6547,17 +6547,17 @@ class ChatManager {
      */
     findRecentExecution(toolName, conversationHistory, timeWindowMs = 5000) {
         const now = Date.now();
-        
+
         // Look through conversation history for recent executions
         for (let i = conversationHistory.length - 1; i >= 0; i--) {
             const msg = conversationHistory[i];
-            
+
             // Check system messages for successful executions
             if (msg.role === 'system' && msg.content) {
                 if (msg.content.includes(`${toolName} executed successfully`)) {
                     // Estimate message timestamp (conversations are usually recent)
                     const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
-                    
+
                     if (now - estimatedTimestamp < timeWindowMs) {
                         console.log(`🔍 Found recent execution of ${toolName} within ${timeWindowMs}ms window`);
                         return {
@@ -6568,7 +6568,7 @@ class ChatManager {
                     }
                 }
             }
-            
+
             // Check assistant messages for tool calls
             if (msg.role === 'assistant' && msg.content) {
                 try {
@@ -6576,7 +6576,7 @@ class ChatManager {
                     const parsed = JSON.parse(msg.content);
                     if (parsed.tool_name === toolName) {
                         const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
-                        
+
                         if (now - estimatedTimestamp < timeWindowMs) {
                             console.log(`🔍 Found recent tool call of ${toolName} within ${timeWindowMs}ms window`);
                             return {
@@ -6594,7 +6594,7 @@ class ChatManager {
                         const matchingTool = multipleToolCalls.find(t => t.tool_name === toolName);
                         if (matchingTool) {
                             const estimatedTimestamp = now - ((conversationHistory.length - 1 - i) * 1000);
-                            
+
                             if (now - estimatedTimestamp < timeWindowMs) {
                                 return {
                                     toolName,
@@ -6610,7 +6610,7 @@ class ChatManager {
                 }
             }
         }
-        
+
         return null;
     }
 
@@ -6634,8 +6634,8 @@ class ChatManager {
      * Analyze protein domains using InterPro database
      */
     async analyzeInterProDomains(parameters) {
-        const { 
-            sequence, 
+        const {
+            sequence,
             uniprot_id,
             geneName,
             organism = null,  // No default organism - will be set based on input type
@@ -6657,13 +6657,13 @@ class ChatManager {
             if (this.mcpServerManager) {
                 const mcpTools = this.mcpServerManager.getAllAvailableTools();
                 const mcpTool = mcpTools.find(t => t.name === 'analyze_interpro_domains');
-                
+
                 if (mcpTool) {
                     console.log('🌐 [ChatManager] Using MCP server for InterPro analysis');
                     try {
                         return await this.mcpServerManager.executeToolOnServer(
-                            mcpTool.serverId, 
-                            'analyze_interpro_domains', 
+                            mcpTool.serverId,
+                            'analyze_interpro_domains',
                             parameters
                         );
                     } catch (mcpError) {
@@ -6745,7 +6745,7 @@ class ChatManager {
 
             // Call real InterPro API via InterProScan 5
             console.log('🌐 [ChatManager] Calling InterPro REST API (InterProScan 5)...');
-            
+
             try {
                 // Submit job to InterProScan
                 // API Documentation: https://www.ebi.ac.uk/Tools/webservices/services/pfa/iprscan5_rest
@@ -6755,7 +6755,7 @@ class ChatManager {
                 formData.append('email', 'CodeXomics@yeah.net');
                 formData.append('title', 'CodeXomics');
                 formData.append('sequence', cleanSequence);
-                
+
                 // Map application names to correct API parameter values
                 // InterProScan 5 REST API - Verified codes from EBI API (2025-10-14)
                 // Retrieved from: https://www.ebi.ac.uk/Tools/services/rest/iprscan5/parameterdetails/appl
@@ -6788,7 +6788,7 @@ class ChatManager {
                     'AntiFam': 'AntiFam',              // AntiFam
                     'FunFam': 'FunFam'                 // Functional families
                 };
-                
+
                 // Convert application names using the mapping (case-insensitive)
                 const applCodes = applications.map(app => {
                     const mappedCode = applMapping[app];
@@ -6798,84 +6798,84 @@ class ChatManager {
                     return key ? applMapping[key] : app;
                 });
                 formData.append('appl', applCodes.join(','));
-                
+
                 // Add GO terms and pathway annotations if requested
                 if (goterms) formData.append('goterms', 'true');
                 if (pathways) formData.append('pathways', 'true');
-                
+
                 console.log('📤 [ChatManager] Submitting to InterPro with params:', {
                     sequence_length: cleanSequence.length,
                     applications: applCodes,
                     goterms,
                     pathways
                 });
-                
+
                 const submitResponse = await fetch(submitUrl, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'Accept': 'text/plain'
                     },
                     body: formData.toString()
                 });
-                
+
                 if (!submitResponse.ok) {
                     const errorText = await submitResponse.text();
                     console.error('❌ [ChatManager] InterPro API error response:', errorText);
                     throw new Error(`InterPro API submission failed (${submitResponse.status}): ${errorText || submitResponse.statusText}`);
                 }
-                
+
                 const jobId = await submitResponse.text();
                 console.log(`✅ [ChatManager] InterPro job submitted: ${jobId}`);
-                
+
                 // Poll for results (with timeout)
                 let attempts = 0;
                 const maxAttempts = 60; // 5 minutes max (5 second intervals)
                 let status = 'RUNNING';
-                
+
                 while (status === 'RUNNING' && attempts < maxAttempts) {
                     await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-                    
+
                     const statusUrl = `https://www.ebi.ac.uk/Tools/services/rest/iprscan5/status/${jobId}`;
                     const statusResponse = await fetch(statusUrl);
                     status = await statusResponse.text();
-                    
+
                     console.log(`⏳ [ChatManager] InterPro job status: ${status} (attempt ${attempts + 1}/${maxAttempts})`);
                     attempts++;
-                    
+
                     if (status === 'FINISHED') break;
                     if (status === 'FAILED' || status === 'ERROR') {
                         throw new Error('InterPro analysis failed');
                     }
                 }
-                
+
                 if (status !== 'FINISHED') {
                     throw new Error('InterPro analysis timeout - sequence may be too long or service is busy');
                 }
-                
+
                 // Get results
                 const resultUrl = `https://www.ebi.ac.uk/Tools/services/rest/iprscan5/result/${jobId}/json`;
                 const resultResponse = await fetch(resultUrl);
-                
+
                 if (!resultResponse.ok) {
                     throw new Error('Failed to retrieve InterPro results');
                 }
-                
+
                 const interproData = await resultResponse.json();
                 console.log('✅ [ChatManager] InterPro results retrieved successfully');
-                
+
                 // Parse InterPro results
                 const domains = [];
                 const goTerms = [];
                 const pathwayData = [];
-                
+
                 if (interproData.results && interproData.results[0]) {
                     const matches = interproData.results[0].matches || [];
-                    
+
                     matches.forEach(match => {
                         const signature = match.signature || {};
                         const locations = match.locations || [];
-                        
+
                         locations.forEach(loc => {
                             domains.push({
                                 accession: signature.accession,
@@ -6889,7 +6889,7 @@ class ChatManager {
                                 interpro_entry: match.entry?.accession || null
                             });
                         });
-                        
+
                         // Extract GO terms
                         if (match.entry && match.entry.goXRefs) {
                             match.entry.goXRefs.forEach(go => {
@@ -6900,7 +6900,7 @@ class ChatManager {
                                 });
                             });
                         }
-                        
+
                         // Extract pathway data
                         if (match.entry && match.entry.pathwayXRefs) {
                             match.entry.pathwayXRefs.forEach(pathway => {
@@ -6913,7 +6913,7 @@ class ChatManager {
                         }
                     });
                 }
-                
+
                 // Calculate coverage
                 const coveredPositions = new Set();
                 domains.forEach(d => {
@@ -6922,7 +6922,7 @@ class ChatManager {
                     }
                 });
                 const coverage = (coveredPositions.size / cleanSequence.length * 100).toFixed(2);
-                
+
                 const result = {
                     success: true,
                     tool: 'analyze_interpro_domains',
@@ -6954,17 +6954,17 @@ class ChatManager {
                     message: `Found ${domains.length} protein domains using real InterPro API`,
                     api_source: 'InterProScan 5 REST API (EBI)'
                 };
-                
+
                 console.log('✅ [ChatManager] Real InterPro analysis completed:', result.summary);
                 return result;
-                
+
             } catch (apiError) {
                 console.error('❌ [ChatManager] InterPro API call failed:', apiError);
                 console.error('❌ [ChatManager] Error details:', {
                     message: apiError.message,
                     stack: apiError.stack
                 });
-                
+
                 // Return detailed error without simulation fallback
                 // Following: "Robust Error Handling Without Simulation" specification
                 return {
@@ -7002,7 +7002,7 @@ class ChatManager {
      * Search InterPro database for entries
      */
     async searchInterProEntry(parameters) {
-        const { 
+        const {
             search_term,
             search_terms,
             search_type = 'all',
@@ -7024,7 +7024,7 @@ class ChatManager {
             if (this.mcpServerManager) {
                 const mcpTools = this.mcpServerManager.getAllAvailableTools();
                 const mcpTool = mcpTools.find(t => t.name === 'search_interpro_entry');
-                
+
                 if (mcpTool) {
                     try {
                         return await this.mcpServerManager.executeToolOnServer(
@@ -7075,7 +7075,7 @@ class ChatManager {
      * Get detailed information for an InterPro entry
      */
     async getInterProEntryDetails(parameters) {
-        const { 
+        const {
             interpro_id,
             entry_name,
             include_proteins = true,
@@ -7093,7 +7093,7 @@ class ChatManager {
             if (this.mcpServerManager) {
                 const mcpTools = this.mcpServerManager.getAllAvailableTools();
                 const mcpTool = mcpTools.find(t => t.name === 'get_interpro_entry_details');
-                
+
                 if (mcpTool) {
                     try {
                         return await this.mcpServerManager.executeToolOnServer(
@@ -7147,7 +7147,7 @@ class ChatManager {
      * Advanced UniProt search with multiple filters
      */
     async advancedUniProtSearch(parameters) {
-        const { 
+        const {
             query_fields,
             boolean_operator = 'AND',
             filters = {},
@@ -7166,7 +7166,7 @@ class ChatManager {
             if (this.mcpServerManager) {
                 const mcpTools = this.mcpServerManager.getAllAvailableTools();
                 const mcpTool = mcpTools.find(t => t.name === 'advanced_uniprot_search');
-                
+
                 if (mcpTool) {
                     try {
                         return await this.mcpServerManager.executeToolOnServer(
@@ -7217,7 +7217,7 @@ class ChatManager {
      * Get detailed UniProt entry information
      */
     async getUniProtEntry(parameters) {
-        const { 
+        const {
             uniprot_id,
             geneName,
             organism = null,  // No default organism - will be 'Homo sapiens' only for gene searches
@@ -7238,7 +7238,7 @@ class ChatManager {
             if (this.mcpServerManager) {
                 const mcpTools = this.mcpServerManager.getAllAvailableTools();
                 const mcpTool = mcpTools.find(t => t.name === 'get_uniprot_entry');
-                
+
                 if (mcpTool) {
                     try {
                         return await this.mcpServerManager.executeToolOnServer(
@@ -7308,21 +7308,21 @@ class ChatManager {
         if (successfulResults.length === 0) {
             return "Task completed but no results were obtained.";
         }
-        
+
         // Handle multiple tools - combine results
         if (successfulResults.length > 1) {
             console.log(`📋 [generateCompletionResponseFromToolResults] Processing ${successfulResults.length} tools`);
-            
+
             let combinedResponse = '';
             const processedResults = [];
-            
+
             // Process each tool result individually
             for (let i = 0; i < successfulResults.length; i++) {
                 const tool = toolsToExecute[i];
                 const result = successfulResults[i];
-                
+
                 console.log(`🔧 [generateCompletionResponseFromToolResults] Processing tool ${i + 1}: ${tool.tool_name}`);
-                
+
                 const singleToolResponse = this.generateSingleToolResponse(tool, result);
                 if (singleToolResponse) {
                     processedResults.push({
@@ -7331,21 +7331,21 @@ class ChatManager {
                     });
                 }
             }
-            
+
             // Combine all responses
             if (processedResults.length > 0) {
                 combinedResponse = processedResults.map(r => r.response).join('\n\n---\n\n');
                 return combinedResponse;
             }
         }
-        
+
         // Handle single tool (original logic)
-        const tool = toolsToExecute[0]; 
+        const tool = toolsToExecute[0];
         const result = successfulResults[0];
-        
+
         return this.generateSingleToolResponse(tool, result) || "Task completed successfully.";
     }
-    
+
     /**
      * Generate response for a single tool execution
      */
@@ -7367,7 +7367,7 @@ The genome browser is now showing the ${geneName} gene region.`;
                     const geneName = tool.parameters.geneName || tool.parameters.name || 'target gene';
                     return `Gene navigation completed. ${result.result?.message || `Attempted to locate ${geneName}`}.`;
                 }
-                
+
             case 'open_new_tab':
                 if (result.result && result.result.success) {
                     return `🗂️ **New tab opened successfully!**
@@ -7381,17 +7381,17 @@ The new tab is ready for analysis and comparison.`;
                 } else {
                     return "New tab creation completed, but there may have been issues.";
                 }
-                
+
             case 'create_annotation':
-                return result.result?.success ? 
+                return result.result?.success ?
                     `✅ Annotation created successfully: ${result.result.message || 'New annotation added'}` :
                     "Annotation creation completed with potential issues.";
-                    
+
             case 'export_data':
-                return result.result?.success ? 
+                return result.result?.success ?
                     `✅ Data exported successfully: ${result.result.filePath || result.result.message || 'Export completed'}` :
                     "Data export completed with potential issues.";
-            
+
             case 'load_genome_file':
                 if (result.result && result.result.success) {
                     return `✅ **Genome file loaded successfully!**
@@ -7405,32 +7405,32 @@ The genome file has been loaded and is ready for analysis.`;
                 } else {
                     return "Genome file loading completed, but there may have been issues. Please check the file format and try again.";
                 }
-                
+
             case 'load_annotation_file':
-                return result.result?.success ? 
+                return result.result?.success ?
                     `✅ Annotation file loaded successfully from: ${result.result.filePath || 'selected file'}` :
                     "Annotation file loading completed with potential issues.";
-                    
+
             case 'load_variant_file':
-                return result.result?.success ? 
+                return result.result?.success ?
                     `✅ Variant file loaded successfully from: ${result.result.filePath || 'selected file'}` :
                     "Variant file loading completed with potential issues.";
-                    
+
             case 'load_reads_file':
-                return result.result?.success ? 
+                return result.result?.success ?
                     `✅ Reads file loaded successfully from: ${result.result.filePath || 'selected file'}` :
                     "Reads file loading completed with potential issues.";
-                    
+
             case 'load_wig_tracks':
-                return result.result?.success ? 
+                return result.result?.success ?
                     `✅ WIG tracks loaded successfully. ${result.result.count || 1} file(s) processed.` :
                     "WIG tracks loading completed with potential issues.";
-                    
+
             case 'load_operon_file':
-                return result.result?.success ? 
+                return result.result?.success ?
                     `✅ Operon file loaded successfully from: ${result.result.filePath || 'selected file'}` :
                     "Operon file loading completed with potential issues.";
-            
+
             case 'analyze_interpro_domains':
                 if (result.result && result.result.success) {
                     const domains = result.result.domain_architecture || [];
@@ -7449,9 +7449,9 @@ The genome file has been loaded and is ready for analysis.`;
 - **Databases Searched:** ${result.result.analysis_parameters?.applications?.join(', ') || 'Multiple'}
 
 **Top Domains:**
-${domains.slice(0, 3).map(domain => 
-    `- **${domain.name}** (${domain.database}): ${domain.start}-${domain.end} (E-value: ${domain.evalue})`
-).join('\n')}
+${domains.slice(0, 3).map(domain =>
+                        `- **${domain.name}** (${domain.database}): ${domain.start}-${domain.end} (E-value: ${domain.evalue})`
+                    ).join('\n')}
 
 ${domains.length > 3 ? `... and ${domains.length - 3} more domains` : ''}
 
@@ -7459,7 +7459,7 @@ InterPro domain analysis has been completed successfully.`;
                 } else {
                     return `InterPro domain analysis completed. ${result.result?.message || result.result?.error || 'Analysis finished.'}`;
                 }
-            
+
             case 'export_fasta_sequence':
                 if (result.result && result.result.success) {
                     return `🧬 **FASTA Sequence Export Completed!**
@@ -7475,7 +7475,7 @@ ${result.result.details}`;
                 } else {
                     return `FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
                 }
-                
+
             case 'export_genbank_format':
                 if (result.result && result.result.success) {
                     return `📄 **GenBank Format Export Completed!**
@@ -7492,7 +7492,7 @@ ${result.result.details}`;
                 } else {
                     return `GenBank export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
                 }
-                
+
             case 'export_cds_fasta':
                 if (result.result && result.result.success) {
                     return `🧬 **CDS FASTA Export Completed!**
@@ -7508,7 +7508,7 @@ ${result.result.details}`;
                 } else {
                     return `CDS FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
                 }
-                
+
             case 'export_protein_fasta':
                 if (result.result && result.result.success) {
                     return `🧬 **Protein FASTA Export Completed!**
@@ -7524,7 +7524,7 @@ ${result.result.details}`;
                 } else {
                     return `Protein FASTA export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
                 }
-                
+
             case 'export_gff_annotations':
                 if (result.result && result.result.success) {
                     return `📋 **GFF Annotations Export Completed!**
@@ -7540,7 +7540,7 @@ ${result.result.details}`;
                 } else {
                     return `GFF export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
                 }
-                
+
             case 'export_bed_format':
                 if (result.result && result.result.success) {
                     return `📊 **BED Format Export Completed!**
@@ -7556,7 +7556,7 @@ ${result.result.details}`;
                 } else {
                     return `BED export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
                 }
-                
+
             case 'export_current_view_fasta':
                 if (result.result && result.result.success) {
                     return `👁️ **Current View FASTA Export Completed!**
@@ -7572,7 +7572,7 @@ ${result.result.details}`;
                 } else {
                     return `Current view export completed. ${result.result?.message || result.result?.error || 'Export finished.'}`;
                 }
-            
+
             case 'search_gene_by_name':
                 if (result.result && result.result.length > 0) {
                     const gene = result.result[0]; // Get first result
@@ -7589,19 +7589,19 @@ The gene search has been completed successfully.`;
                 } else {
                     return "Gene search completed, but no matching genes were found in the current genome.";
                 }
-                
+
             case 'search_sequence':
                 return `Sequence search completed successfully. Found ${result.result?.length || 0} matching sequence(s).`;
-                
+
             case 'find_feature':
                 return `Feature search completed successfully. Found ${result.result?.length || 0} matching feature(s).`;
-                
+
             case 'codon_usage_analysis':
                 if (result.result) {
                     const data = result.result;
                     const geneInfo = data.geneName ? ` for gene **${data.geneName}**` : '';
                     const locusInfo = data.locusTag ? ` (locus tag: ${data.locusTag})` : '';
-                    
+
                     let response = `## Codon Usage Analysis Results${geneInfo}${locusInfo}
 
 **Analysis Summary:**
@@ -7611,30 +7611,30 @@ The gene search has been completed successfully.`;
 - **Analysis Type**: ${data.analysisType}
 
 **Top 10 Most Frequent Codons:**
-${data.mostFrequentCodons.slice(0, 10).map(codon => 
-    `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences)${codon.rscu ? ` - RSCU: ${codon.rscu}` : ''}`
-).join('\n')}
+${data.mostFrequentCodons.slice(0, 10).map(codon =>
+                        `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences)${codon.rscu ? ` - RSCU: ${codon.rscu}` : ''}`
+                    ).join('\n')}
 
 **Amino Acid Composition:**
 ${Object.entries(data.aminoAcidComposition)
-    .sort(([,a], [,b]) => b - a)
-    .slice(0, 10)
-    .map(([aa, count]) => `- **${aa}**: ${count} codons`)
-    .join('\n')}`;
+                            .sort(([, a], [, b]) => b - a)
+                            .slice(0, 10)
+                            .map(([aa, count]) => `- **${aa}**: ${count} codons`)
+                            .join('\n')}`;
 
                     // Add codon preferences if available
                     if (data.codonPreferences && Object.keys(data.codonPreferences).length > 0) {
                         response += `\n\n**Codon Preferences by Amino Acid:**\n`;
                         const sortedAAs = Object.entries(data.codonPreferences)
                             .filter(([aa]) => aa !== '*') // Exclude stop codons
-                            .sort(([,a], [,b]) => b.totalCount - a.totalCount)
+                            .sort(([, a], [, b]) => b.totalCount - a.totalCount)
                             .slice(0, 10);
-                        
+
                         for (const [aa, pref] of sortedAAs) {
                             response += `\n**${aa}** (${pref.totalCount} total, ${pref.synonymousCodons} synonymous codons):\n`;
                             for (const codonInfo of pref.codons) {
-                                const prefIcon = codonInfo.preference === 'preferred' ? '⭐' : 
-                                               (codonInfo.preference === 'rare' ? '⚠️' : '▪️');
+                                const prefIcon = codonInfo.preference === 'preferred' ? '⭐' :
+                                    (codonInfo.preference === 'rare' ? '⚠️' : '▪️');
                                 response += `  ${prefIcon} ${codonInfo.codon}: ${codonInfo.percentage}% (RSCU: ${codonInfo.rscu}, ${codonInfo.preference})\n`;
                             }
                         }
@@ -7645,7 +7645,7 @@ ${Object.entries(data.aminoAcidComposition)
                 } else {
                     return "Codon usage analysis completed, but no results were obtained.";
                 }
-                
+
             case 'genome_codon_usage_analysis':
                 if (result.result) {
                     const data = result.result;
@@ -7661,9 +7661,9 @@ ${Object.entries(data.aminoAcidComposition)
 - **Minimum Length Filter**: ${data.minLength} bp
 
 **Top 10 Most Frequent Codons (Genome-Wide):**
-${data.mostFrequentCodons.slice(0, 10).map(codon => 
-    `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences) - RSCU: ${codon.rscu}`
-).join('\n')}
+${data.mostFrequentCodons.slice(0, 10).map(codon =>
+                        `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences) - RSCU: ${codon.rscu}`
+                    ).join('\n')}
 
 **GC Content by Codon Position:**
 - **Position 1**: ${data.gcContent?.position1}%
@@ -7679,17 +7679,17 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
 
 `;
                         response += `This analysis shows how the genome uses different codons for each amino acid. Higher RSCU values (>1.0) indicate preferred codons, while lower values (<1.0) indicate less preferred codons.\n`;
-                        
+
                         const sortedAAs = Object.entries(data.codonPreferences)
                             .filter(([aa]) => aa !== '*') // Exclude stop codons
-                            .sort(([,a], [,b]) => b.totalCount - a.totalCount);
-                        
+                            .sort(([, a], [, b]) => b.totalCount - a.totalCount);
+
                         // Group by number of synonymous codons
-                        const multiCodonAAs = sortedAAs.filter(([,pref]) => pref.synonymousCodons > 1);
-                        const singleCodonAAs = sortedAAs.filter(([,pref]) => pref.synonymousCodons === 1);
-                        
+                        const multiCodonAAs = sortedAAs.filter(([, pref]) => pref.synonymousCodons > 1);
+                        const singleCodonAAs = sortedAAs.filter(([, pref]) => pref.synonymousCodons === 1);
+
                         response += `\n### Multi-Codon Amino Acids (${multiCodonAAs.length} amino acids with codon bias)\n`;
-                        
+
                         for (const [aa, pref] of multiCodonAAs) {
                             // Get amino acid full name
                             const aaNames = {
@@ -7699,17 +7699,17 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
                                 'F': 'Phenylalanine', 'P': 'Proline', 'S': 'Serine', 'T': 'Threonine',
                                 'Y': 'Tyrosine', 'V': 'Valine', 'W': 'Tryptophan', 'M': 'Methionine'
                             };
-                            
+
                             const aaFullName = aaNames[aa] || aa;
                             const biasLevel = pref.statistics.biasStrength >= 75 ? 'Very Strong' :
-                                            pref.statistics.biasStrength >= 50 ? 'Strong' :
-                                            pref.statistics.biasStrength >= 25 ? 'Moderate' : 'Weak';
-                            
+                                pref.statistics.biasStrength >= 50 ? 'Strong' :
+                                    pref.statistics.biasStrength >= 25 ? 'Moderate' : 'Weak';
+
                             response += `\n**${aa} - ${aaFullName}** (${pref.totalCount.toLocaleString()} occurrences, ${pref.synonymousCodons} synonymous codons)\n`;
                             response += `  📊 Bias Strength: ${biasLevel} (${pref.statistics.biasStrength}%) | Effective # of Codons: ${pref.statistics.effectiveNumberOfCodons}/${pref.synonymousCodons}\n`;
                             response += `  📈 Usage Distribution: Mean=${pref.statistics.mean}%, StdDev=${pref.statistics.stdDev}%, CV=${pref.statistics.coefficientOfVariation}%\n`;
                             response += `  \n`;
-                            
+
                             // Show all codons with visual indicators
                             for (const codonInfo of pref.codons) {
                                 // Visual preference indicator
@@ -7719,15 +7719,15 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
                                 else if (codonInfo.preference === 'rare') prefIcon = '▫️';
                                 else if (codonInfo.preference === 'highly rare') prefIcon = '❌';
                                 else prefIcon = '▪️';
-                                
+
                                 // Create visual bar for percentage
                                 const barLength = Math.round(codonInfo.percentage / 100 * 20);
                                 const bar = '█'.repeat(barLength) + '░'.repeat(20 - barLength);
-                                
+
                                 response += `    ${prefIcon} **${codonInfo.codon}**: ${codonInfo.percentage}% |${bar}| RSCU: ${codonInfo.rscu} (${codonInfo.count.toLocaleString()} uses)\n`;
                             }
                         }
-                        
+
                         // Add single-codon amino acids summary
                         if (singleCodonAAs.length > 0) {
                             response += `\n### Single-Codon Amino Acids (${singleCodonAAs.length} amino acids with no codon bias)\n`;
@@ -7740,7 +7740,7 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
                                 response += `- **${aa} - ${aaFullName}**: ${codon.codon} (${pref.totalCount.toLocaleString()} occurrences, no alternatives)\n`;
                             }
                         }
-                        
+
                         // Add interpretation guide
                         response += `\n### Understanding the Results\n\n`;
                         response += `**RSCU (Relative Synonymous Codon Usage):**\n`;
@@ -7758,7 +7758,7 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
                 } else {
                     return "Genome-wide codon usage analysis completed, but no results were obtained.";
                 }
-                
+
             default:
                 // For unknown tools (including MCP tools), show full results if available
                 if (result.result) {
@@ -7770,7 +7770,7 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
                             const taskId = result.result.taskId;
                             const initialStatus = result.result.status;
                             const createdAt = result.result.createdAt || new Date().toISOString();
-                            
+
                             // Store task info for polling
                             const taskInfo = {
                                 taskId: taskId,
@@ -7782,16 +7782,16 @@ ${data.mostFrequentCodons.slice(0, 10).map(codon =>
                                 lastUpdated: new Date().toISOString(),
                                 messageElement: null // Will store the message element for updates
                             };
-                            
+
                             // Start polling for task status
                             this.startTaskPolling(taskInfo);
-                            
+
                             // Return initial task status message
                             return `✅ **Deep Gene Research Task Started**\n\n` +
-                                   `📋 **Task ID**: ${taskId}\n` +
-                                   `📊 **Status**: ${initialStatus}\n` +
-                                   `⏱️ **Created**: ${new Date(createdAt).toLocaleString()}\n\n` +
-                                   `🔄 The system will automatically update this message as the research progresses...`;
+                                `📋 **Task ID**: ${taskId}\n` +
+                                `📊 **Status**: ${initialStatus}\n` +
+                                `⏱️ **Created**: ${new Date(createdAt).toLocaleString()}\n\n` +
+                                `🔄 The system will automatically update this message as the research progresses...`;
                         }
                         // If result has a summary or message, use it
                         else if (result.result.summary || result.result.message) {
@@ -7845,23 +7845,23 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
 
         console.log('🧪 Testing function call parsing with sample response...');
         console.log('Sample response:', sampleResponse);
-        
+
         // Test parseToolCall
         const parsedToolCall = this.parseToolCall(sampleResponse);
         console.log('Parsed tool call:', parsedToolCall);
-        
+
         // Test displayLLMThinking
         console.log('Testing thinking display...');
         this.displayLLMThinking(sampleResponse);
-        
+
         // Expected result
         const expectedResult = {
             tool_name: "search_gene_by_name",
             parameters: { name: "lacZ" }
         };
-        
+
         // Verify result
-        if (parsedToolCall && 
+        if (parsedToolCall &&
             parsedToolCall.tool_name === expectedResult.tool_name &&
             JSON.stringify(parsedToolCall.parameters) === JSON.stringify(expectedResult.parameters)) {
             console.log('✅ Function call parsing test PASSED');
@@ -7873,30 +7873,30 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
             return false;
         }
     }
-    
+
     /**
      * Store for active tasks being polled
      */
     activeTasks = new Map();
-    
+
     /**
      * Start polling for task status updates
      */
     startTaskPolling(taskInfo) {
         // Add task to active tasks map
         this.activeTasks.set(taskInfo.taskId, taskInfo);
-        
+
         // Start the polling interval
         const pollInterval = setInterval(async () => {
             await this.checkTaskStatus(taskInfo);
         }, 5000); // Check every 5 seconds
-        
+
         // Store the interval ID for cleanup
         taskInfo.pollInterval = pollInterval;
-        
+
         console.log(`🔄 Started polling for task ${taskInfo.taskId} with 5-second interval`);
     }
-    
+
     /**
      * Check task status and update the message
      */
@@ -7904,12 +7904,12 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         try {
             // Get the latest status from the server
             const statusResult = await this.mcpServerManager.checkTaskStatus(
-                taskInfo.serverId, 
+                taskInfo.serverId,
                 taskInfo.taskId
             );
-            
+
             console.log(`📊 Task ${taskInfo.taskId} status:`, statusResult);
-            
+
             // Update task info
             const oldStatus = taskInfo.status;
             taskInfo.status = statusResult.status || taskInfo.status;
@@ -7918,30 +7918,30 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
             taskInfo.currentStep = statusResult.currentStep || taskInfo.currentStep;
             taskInfo.totalSteps = statusResult.totalSteps || taskInfo.totalSteps;
             taskInfo.error = statusResult.error || null;
-            
+
             // If status has changed or we have new progress info, update the message
-            if (oldStatus !== taskInfo.status || 
-                statusResult.progress || 
-                statusResult.currentStep || 
+            if (oldStatus !== taskInfo.status ||
+                statusResult.progress ||
+                statusResult.currentStep ||
                 statusResult.error) {
-                
+
                 // Update the chat message
                 this.updateTaskMessage(taskInfo, statusResult);
-                
+
                 // If task is completed or failed, stop polling
                 if (taskInfo.status === 'completed' || taskInfo.status === 'failed') {
                     this.stopTaskPolling(taskInfo.taskId);
-                    
+
                     // If completed, get the final results
                     if (taskInfo.status === 'completed') {
                         await this.getFinalTaskResults(taskInfo);
                     }
                 }
             }
-            
+
         } catch (error) {
             console.error(`❌ Error checking status for task ${taskInfo.taskId}:`, error);
-            
+
             // Update message with error
             taskInfo.status = 'error';
             taskInfo.error = error.message;
@@ -7949,12 +7949,12 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
                 status: 'error',
                 error: error.message
             });
-            
+
             // Stop polling on error
             this.stopTaskPolling(taskInfo.taskId);
         }
     }
-    
+
     /**
      * Update the chat message with current task status
      */
@@ -7970,19 +7970,19 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
                 }
             }
         }
-        
+
         if (!taskInfo.messageElement) {
             console.warn(`⚠️ Could not find message element for task ${taskInfo.taskId}`);
             return;
         }
-        
+
         // Create updated message content
         let updatedContent = `✅ **Deep Gene Research Task - ${taskInfo.status.toUpperCase()}**\n\n`;
         updatedContent += `📋 **Task ID**: ${taskInfo.taskId}\n`;
         updatedContent += `📊 **Status**: ${taskInfo.status}\n`;
         updatedContent += `⏱️ **Created**: ${new Date(taskInfo.createdAt).toLocaleString()}\n`;
         updatedContent += `🔄 **Last Updated**: ${new Date(taskInfo.lastUpdated).toLocaleString()}\n\n`;
-        
+
         // Add progress information if available
         if (taskInfo.progress || taskInfo.currentStep) {
             updatedContent += `📈 **Progress**: ${taskInfo.progress || 'N/A'}%\n`;
@@ -7993,17 +7993,17 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
             }
             updatedContent += `\n`;
         }
-        
+
         // Add current step details if available
         if (statusResult.currentStepInfo) {
             updatedContent += `📝 **Current Activity**: ${statusResult.currentStepInfo}\n\n`;
         }
-        
+
         // Add error message if any
         if (taskInfo.error) {
             updatedContent += `❌ **Error**: ${taskInfo.error}\n\n`;
         }
-        
+
         // Add final status messages
         if (taskInfo.status === 'completed') {
             updatedContent += `🎉 Research completed successfully! Final results will be available shortly...\n\n`;
@@ -8012,48 +8012,48 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         } else {
             updatedContent += `🔄 The system will continue to update this message as the research progresses...\n\n`;
         }
-        
+
         // Update the message content
         const messageContent = taskInfo.messageElement.querySelector('.message-content');
         if (messageContent) {
             // Use markdown to render the updated content
             messageContent.innerHTML = this.renderMarkdown(updatedContent);
         }
-        
+
         console.log(`📝 Updated message for task ${taskInfo.taskId} with status: ${taskInfo.status}`);
     }
-    
+
     /**
      * Get final task results and update the message
      */
     async getFinalTaskResults(taskInfo) {
         try {
             console.log(`📥 Getting final results for task ${taskInfo.taskId}`);
-            
+
             // Get the final results from the server
             const result = await this.mcpServerManager.getTaskResult(
-                taskInfo.serverId, 
+                taskInfo.serverId,
                 taskInfo.taskId
             );
-            
+
             console.log(`✅ Got final results for task ${taskInfo.taskId}:`, result);
-            
+
             // Find the message element
             if (!taskInfo.messageElement) {
                 console.warn(`⚠️ Could not find message element for task ${taskInfo.taskId}`);
                 return;
             }
-            
+
             // Create final message content
             let finalContent = `✅ **Deep Gene Research Task - COMPLETED**\n\n`;
             finalContent += `📋 **Task ID**: ${taskInfo.taskId}\n`;
             finalContent += `📊 **Status**: ${taskInfo.status}\n`;
             finalContent += `⏱️ **Created**: ${new Date(taskInfo.createdAt).toLocaleString()}\n`;
             finalContent += `🔄 **Last Updated**: ${new Date(taskInfo.lastUpdated).toLocaleString()}\n\n`;
-            
+
             // Add results information
             finalContent += `📚 **Research Results**\n\n`;
-            
+
             if (result.summary || result.message) {
                 finalContent += `${result.summary || result.message}\n\n`;
             } else if (result.result && typeof result.result === 'object') {
@@ -8065,7 +8065,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
                     finalContent += `Results obtained but could not be formatted.\n\n`;
                 }
             }
-            
+
             // Add download links if available
             if (result.downloadLinks) {
                 finalContent += `📥 **Download Reports**\n\n`;
@@ -8080,16 +8080,16 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
                 finalContent += `- [PDF Report](javascript:chatManager.downloadTaskReport('${taskInfo.taskId}', 'pdf'))\n`;
                 finalContent += `- [DOCX Report](javascript:chatManager.downloadTaskReport('${taskInfo.taskId}', 'docx'))\n\n`;
             }
-            
+
             // Update the message content
             const messageContent = taskInfo.messageElement.querySelector('.message-content');
             if (messageContent) {
                 messageContent.innerHTML = this.renderMarkdown(finalContent);
             }
-            
+
         } catch (error) {
             console.error(`❌ Error getting final results for task ${taskInfo.taskId}:`, error);
-            
+
             // Update message with error
             if (taskInfo.messageElement) {
                 const messageContent = taskInfo.messageElement.querySelector('.message-content');
@@ -8100,7 +8100,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
             }
         }
     }
-    
+
     /**
      * Download a task report in the specified format
      */
@@ -8111,16 +8111,16 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
             if (!taskInfo) {
                 throw new Error(`Task ${taskId} not found`);
             }
-            
+
             console.log(`📥 Downloading ${format} report for task ${taskId}`);
-            
+
             // Download the report from the server
             const downloadResult = await this.mcpServerManager.downloadTaskReport(
-                taskInfo.serverId, 
-                taskId, 
+                taskInfo.serverId,
+                taskId,
                 format
             );
-            
+
             // Create a download link and trigger it
             const blobUrl = URL.createObjectURL(downloadResult.blob);
             const link = document.createElement('a');
@@ -8129,20 +8129,20 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             // Revoke the blob URL after download
             setTimeout(() => {
                 URL.revokeObjectURL(blobUrl);
             }, 1000);
-            
+
             console.log(`✅ Report downloaded successfully: ${downloadResult.filename}`);
-            
+
         } catch (error) {
             console.error(`❌ Error downloading report for task ${taskId}:`, error);
             alert(`Failed to download report: ${error.message}`);
         }
     }
-    
+
     /**
      * Stop polling for a task
      */
@@ -8151,10 +8151,10 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         if (taskInfo) {
             // Clear the polling interval
             clearInterval(taskInfo.pollInterval);
-            
+
             // Remove from active tasks map
             this.activeTasks.delete(taskId);
-            
+
             console.log(`⏹️ Stopped polling for task ${taskId}`);
         }
     }
@@ -8167,7 +8167,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         const tracks = this.getVisibleTracks();
         const mcpServers = this.mcpServerManager.getServerStatus();
         const connectedServers = mcpServers.filter(s => s.connected);
-        
+
         let detailedState = `GENOME BROWSER CURRENT STATE:
 
 NAVIGATION & POSITION:
@@ -8203,7 +8203,7 @@ TOOL AVAILABILITY:
         const mcpServers = this.mcpServerManager.getServerStatus();
         const connectedServers = mcpServers.filter(s => s.connected);
         const toolsByCategory = this.mcpServerManager.getToolsByCategory();
-        
+
         let toolsInfo = `COMPREHENSIVE TOOLS DOCUMENTATION:
 
 TOOL STATISTICS:
@@ -8213,18 +8213,18 @@ TOOL STATISTICS:
 - MCP Server Tools: ${context.genomeBrowser.toolSources.mcp}
 
 MCP SERVER TOOLS:`;
-        
+
         if (connectedServers.length > 0) {
             toolsInfo += `
 Connected Servers: ${connectedServers.length}
 ${connectedServers.map(server => `- ${server.name} (${server.category}): ${server.toolCount} tools`).join('\n')}
 
 MCP Tools by Category:
-${Object.entries(toolsByCategory).map(([category, tools]) => 
-    `${category.toUpperCase()}:\n${tools.map(tool => 
-        `  - ${tool.name}: ${tool.description || 'No description'}`
-    ).join('\n')}`
-).join('\n\n')}`;
+${Object.entries(toolsByCategory).map(([category, tools]) =>
+                `${category.toUpperCase()}:\n${tools.map(tool =>
+                    `  - ${tool.name}: ${tool.description || 'No description'}`
+                ).join('\n')}`
+            ).join('\n\n')}`;
         } else {
             toolsInfo += `
 No MCP servers connected. Available tools are limited to local and plugin functions.`;
@@ -8237,11 +8237,11 @@ No MCP servers connected. Available tools are limited to local and plugin functi
                 toolsInfo += `
 
 MICROBE GENOMICS FUNCTIONS:
-${Object.entries(categories).map(([category, info]) => 
-    `${category.toUpperCase()} (${info.description}):\n${info.functions.map(fn => 
-        `  - ${fn}: Use as "${fn.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase()}"`
-    ).join('\n')}`
-).join('\n\n')}`;
+${Object.entries(categories).map(([category, info]) =>
+                    `${category.toUpperCase()} (${info.description}):\n${info.functions.map(fn =>
+                        `  - ${fn}: Use as "${fn.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase()}"`
+                    ).join('\n')}`
+                ).join('\n\n')}`;
             } catch (error) {
                 toolsInfo += `\nMicrobeGenomics Functions: Available but details unavailable`;
             }
@@ -8252,7 +8252,7 @@ ${Object.entries(categories).map(([category, info]) =>
             try {
                 const pluginInfo = this.pluginFunctionCallsIntegrator.getPluginFunctionsSystemInfo();
                 const stats = this.pluginFunctionCallsIntegrator.getPluginFunctionStats();
-                
+
                 toolsInfo += `
 
 PLUGIN SYSTEM TOOLS:
@@ -8355,19 +8355,19 @@ Data Management:
         try {
             const categories = this.MicrobeFns.getFunctionCategories();
             const examples = this.MicrobeFns.getUsageExamples();
-            
+
             let info = `MicrobeGenomics Functions: Available with ${Object.keys(categories).length} categories\n\n`;
-            
+
             info += 'CATEGORIES:\n';
             Object.entries(categories).forEach(([category, categoryInfo]) => {
                 info += `- ${category}: ${categoryInfo.description} (${categoryInfo.functions.length} functions)\n`;
             });
-            
+
             info += '\nUSAGE EXAMPLES:\n';
             examples.forEach((example, index) => {
                 info += `${index + 1}. ${example.task}\n`;
             });
-            
+
             return info;
         } catch (error) {
             return 'MicrobeGenomics Functions: Available but details unavailable';
@@ -8380,17 +8380,17 @@ Data Management:
     getCoreToolsByCategory() {
         const categories = {
             'SEARCH & NAVIGATION': [
-                'search_gene_by_name', 'search_features', 'jump_to_gene', 
+                'search_gene_by_name', 'search_features', 'jump_to_gene',
                 'navigate_to_position', 'search_by_position', 'open_new_tab',
                 'zoom_in', 'zoom_out'
             ],
             'SYSTEM STATUS': [
-                'get_genome_info', 'check_genomics_environment', 'get_file_info', 
+                'get_genome_info', 'check_genomics_environment', 'get_file_info',
                 'get_current_state', 'get_chromosome_list', 'get_selected_gene',
                 'get_current_region_details', 'get_sequence_selection'
             ],
             'SEQUENCE ANALYSIS': [
-                'get_coding_sequence', 'get_multiple_coding_sequences', 'get_sequence', 
+                'get_coding_sequence', 'get_multiple_coding_sequences', 'get_sequence',
                 'translate_dna', 'reverse_complement', 'compute_gc'
             ],
             'GENOMIC FEATURES': [
@@ -8429,7 +8429,7 @@ Data Management:
         // Add plugin tool categories dynamically
         const pluginCategories = this.getPluginToolCategories();
         const allCategories = { ...categories, ...pluginCategories };
-        
+
         return Object.entries(allCategories)
             .map(([category, tools]) => `${category}: ${tools.join(', ')}`)
             .join('\n');
@@ -8442,7 +8442,7 @@ Data Management:
         if (!this.pluginManager || !this.pluginManager.getPluginToolCategories) {
             return {};
         }
-        
+
         try {
             return this.pluginManager.getPluginToolCategories();
         } catch (error) {
@@ -8457,25 +8457,25 @@ Data Management:
      */
     getOptimizedToolContext() {
         const context = this.getCurrentContext();
-        
+
         // Get MCP server information (simplified)
         const mcpServers = this.mcpServerManager.getServerStatus();
         const connectedServers = mcpServers.filter(s => s.connected);
-        
+
         // Core tool categories for better organization
         const coreTools = this.getCoreToolsByCategory();
-        
+
         // Get current genome info if available
         const genomeInfo = this.getGenomeInfoSummary();
-        
+
         return `
 CURRENT GENOME STATE:
 - Chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None loaded'}
 - Position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
-- Selected Gene: ${context.genomeBrowser.currentState.selectedGene ? 
-    `${context.genomeBrowser.currentState.selectedGene.geneName} (${context.genomeBrowser.currentState.selectedGene.locusTag})` : 'None'}
-- Sequence Selection: ${context.genomeBrowser.currentState.sequenceSelection?.active ? 
-    `${context.genomeBrowser.currentState.sequenceSelection.start}-${context.genomeBrowser.currentState.sequenceSelection.end} (${context.genomeBrowser.currentState.sequenceSelection.length} bp)` : 'None'}
+- Selected Gene: ${context.genomeBrowser.currentState.selectedGene ?
+                `${context.genomeBrowser.currentState.selectedGene.geneName} (${context.genomeBrowser.currentState.selectedGene.locusTag})` : 'None'}
+- Sequence Selection: ${context.genomeBrowser.currentState.sequenceSelection?.active ?
+                `${context.genomeBrowser.currentState.sequenceSelection.start}-${context.genomeBrowser.currentState.sequenceSelection.end} (${context.genomeBrowser.currentState.sequenceSelection.length} bp)` : 'None'}
 - Visible Tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
 - Loaded Files: ${context.genomeBrowser.currentState.loadedFiles.length} files
 - Sequence Length: ${context.genomeBrowser.currentState.sequenceLength?.toLocaleString() || 'Unknown'}
@@ -8497,20 +8497,20 @@ ${coreTools}
      */
     getToolPriorityString() {
         // Get tool priority from settings
-        const toolPriority = this.configManager.get('chatboxSettings.toolPriority', 
+        const toolPriority = this.configManager.get('chatboxSettings.toolPriority',
             ['local', 'genomics', 'plugins', 'mcp']);
-        
+
         const priorityLabels = {
             'local': 'Local Tools',
-            'genomics': 'Specialized Genomics Tools', 
+            'genomics': 'Specialized Genomics Tools',
             'plugins': 'Plugin Tools',
             'mcp': 'MCP Server Tools'
         };
-        
-        const priorityList = toolPriority.map((type, index) => 
+
+        const priorityList = toolPriority.map((type, index) =>
             `${index + 1}) ${priorityLabels[type] || type}`
         ).join('\n');
-        
+
         return `TOOL SELECTION PRIORITY:\n${priorityList}`;
     }
 
@@ -8519,11 +8519,11 @@ ${coreTools}
      */
     async executeToolWithPriority(toolName, parameters) {
         // Get tool priority from settings
-        const toolPriority = this.configManager.get('chatboxSettings.toolPriority', 
+        const toolPriority = this.configManager.get('chatboxSettings.toolPriority',
             ['local', 'genomics', 'plugins', 'mcp']);
-        
+
         console.log(`🔧 Executing tool '${toolName}' with priority order:`, toolPriority);
-        
+
         // Try to execute tool based on priority order
         for (const category of toolPriority) {
             const result = await this.tryExecuteToolInCategory(toolName, parameters, category);
@@ -8532,7 +8532,7 @@ ${coreTools}
                 return result;
             }
         }
-        
+
         console.log(`❌ Tool '${toolName}' not found in any priority category`);
         return undefined; // Tool not found
     }
@@ -8542,20 +8542,20 @@ ${coreTools}
      */
     async tryExecuteToolInCategory(toolName, parameters, category) {
         console.log(`🔍 Trying to execute '${toolName}' in category '${category}'`);
-        
+
         switch (category) {
             case 'local':
                 return await this.executeLocalTool(toolName, parameters);
-                
+
             case 'genomics':
                 return await this.executeGenomicsTool(toolName, parameters);
-                
+
             case 'plugins':
                 return await this.executePluginTool(toolName, parameters);
-                
+
             case 'mcp':
                 return await this.executeMCPTool(toolName, parameters);
-                
+
             default:
                 console.warn(`Unknown tool category: ${category}`);
                 return undefined;
@@ -8574,23 +8574,23 @@ ${coreTools}
             'load_reads_file': () => this.loadReadsFile(parameters),
             'load_wig_tracks': () => this.loadWigTracks(parameters),
             'load_operon_file': () => this.loadOperonFile(parameters),
-            
+
             // Navigation and state tools
             'navigate_to_position': () => this.navigateToPosition(parameters),
             'open_new_tab': () => this.openNewTab(parameters),
             'search_features': () => this.searchFeatures(parameters),
             'get_current_state': () => this.getCurrentState(),
-            
+
             // Sequence tools
             'get_sequence': () => this.getSequence(parameters),
             'translate_sequence': () => this.translateSequence(parameters),
             'calculate_gc_content': () => this.calculateGCContent(parameters),
-            
+
             // Track and display tools
             'toggle_track': () => this.toggleTrack(parameters),
             'toggle_annotation_track': () => this.toggleAnnotationTrack(parameters),
             'get_track_status': () => this.getTrackStatus(),
-            
+
             // Annotation tools
             'create_annotation': () => this.createAnnotation(parameters),
             'analyze_region': () => this.analyzeRegion(parameters),
@@ -8599,13 +8599,13 @@ ${coreTools}
             'zoom_to_gene': () => this.zoomToGene(parameters),
             'get_nearby_features': () => this.getNearbyFeatures(parameters),
             'find_intergenic_regions': () => this.findIntergenicRegions(parameters),
-            
+
             // Analysis and external tools
             'compute_gc': () => this.computeGC(parameters),
             'translate_dna': () => this.translateDNA(parameters),
             'reverse_complement': () => this.reverseComplement(parameters),
             'codon_usage_analysis': () => this.codonUsageAnalysis(parameters),
-            
+
             // Database tools
             'analyze_interpro_domains': () => this.analyzeInterProDomains(parameters),
             'search_uniprot_database': () => this.searchUniProtDatabase(parameters),
@@ -8613,7 +8613,7 @@ ${coreTools}
             'search_pattern': () => this.searchPattern(parameters),
             'find_restriction_sites': () => this.findRestrictionSites(parameters),
             'virtual_digest': () => this.virtualDigest(parameters),
-            
+
             // Export tools - built-in equivalents for Export As dropdown menu
             'export_fasta_sequence': () => this.exportFastaSequence(parameters),
             'export_genbank_format': () => this.exportGenBankFormat(parameters),
@@ -8622,12 +8622,12 @@ ${coreTools}
             'export_gff_annotations': () => this.exportGFFAnnotations(parameters),
             'export_bed_format': () => this.exportBEDFormat(parameters),
             'export_current_view_fasta': () => this.exportCurrentViewFasta(parameters),
-            
+
             // System tools
             'get_chromosome_list': () => this.getChromosomeList(),
             'export_data': () => this.exportData(parameters),
             'set_working_directory': () => this.setWorkingDirectory(parameters),
-            
+
             // Action system tools (if available)
             'copy_sequence': () => this.executeActionTool('copy_sequence', parameters),
             'cut_sequence': () => this.executeActionTool('cut_sequence', parameters),
@@ -8640,7 +8640,7 @@ ${coreTools}
             'clear_actions': () => this.executeActionTool('clear_actions', parameters),
             'get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters)
         };
-        
+
         if (localTools[toolName]) {
             try {
                 const result = await localTools[toolName]();
@@ -8651,7 +8651,7 @@ ${coreTools}
                 throw error;
             }
         }
-        
+
         return undefined; // Tool not found in local tools
     }
 
@@ -8664,7 +8664,7 @@ ${coreTools}
             console.log(`📦 MicrobeGenomicsFunctions not available for '${toolName}'`);
             return undefined;
         }
-        
+
         const genomicsTools = {
             'search_gene_by_name': () => window.MicrobeGenomicsFunctions.searchGeneByName(parameters),
             'get_coding_sequence': () => window.MicrobeGenomicsFunctions.getCodingSequence(parameters),
@@ -8672,7 +8672,7 @@ ${coreTools}
             'delete_gene': () => window.MicrobeGenomicsFunctions.deleteGene(parameters),
             'search_gene_by_locus_tag': () => window.MicrobeGenomicsFunctions.searchGeneByLocusTag(parameters)
         };
-        
+
         if (genomicsTools[toolName]) {
             try {
                 const result = await genomicsTools[toolName]();
@@ -8683,7 +8683,7 @@ ${coreTools}
                 throw error;
             }
         }
-        
+
         return undefined; // Tool not found in genomics tools
     }
 
@@ -8705,12 +8705,12 @@ ${coreTools}
             console.log(`📡 MCP Server Manager not available for '${toolName}'`);
             return undefined;
         }
-        
+
         try {
             // Get all available MCP tools
             const mcpTools = this.mcpServerManager.getAllAvailableTools();
             const tool = mcpTools.find(t => t.name === toolName);
-            
+
             if (tool) {
                 console.log(`🎯 Found MCP tool '${toolName}' on server '${tool.serverId}'`);
                 const result = await this.mcpServerManager.executeToolOnServer(tool.serverId, toolName, parameters);
@@ -8721,7 +8721,7 @@ ${coreTools}
             console.error(`❌ MCP tool '${toolName}' execution failed:`, error);
             throw error;
         }
-        
+
         return undefined; // Tool not found in MCP tools
     }
 
@@ -8733,7 +8733,7 @@ ${coreTools}
             console.log(`⚡ Action Manager not available for '${toolName}'`);
             return { error: 'Action system not available' };
         }
-        
+
         try {
             switch (toolName) {
                 case 'copy_sequence':
@@ -8780,7 +8780,7 @@ ${coreTools}
      */
     getOptimizedSystemMessage() {
         const toolPriority = this.getToolPriorityString();
-        
+
         return `You are an AI assistant for CodeXomics, a comprehensive bioinformatics application. You have access to powerful genomic analysis, protein structure, and sequence analysis tools.
 
 IMPORTANT: Task Completion Instructions
@@ -8980,27 +8980,27 @@ EXAMPLES:
      */
     getCompleteToolContext() {
         const context = this.getCurrentContext();
-        
+
         // Get MCP server information
         const mcpServers = this.mcpServerManager.getServerStatus();
         const connectedServers = mcpServers.filter(s => s.connected);
         const allMcpTools = this.mcpServerManager.getAllAvailableTools();
         const toolsByCategory = this.mcpServerManager.getToolsByCategory();
-        
+
         let mcpServersInfo = '';
         if (connectedServers.length > 0) {
             mcpServersInfo = `
 Connected MCP Servers: ${connectedServers.length}
-${connectedServers.map(server => 
-    `- ${server.name} (${server.category}): ${server.toolCount} tools`
-).join('\n')}
+${connectedServers.map(server =>
+                `- ${server.name} (${server.category}): ${server.toolCount} tools`
+            ).join('\n')}
 
 MCP Tools by Category:
-${Object.entries(toolsByCategory).map(([category, tools]) => 
-    `${category.toUpperCase()}:\n${tools.map(tool => 
-        `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`
-    ).join('\n')}`
-).join('\n\n')}
+${Object.entries(toolsByCategory).map(([category, tools]) =>
+                `${category.toUpperCase()}:\n${tools.map(tool =>
+                    `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`
+                ).join('\n')}`
+            ).join('\n\n')}
 `;
         } else {
             mcpServersInfo = `
@@ -9015,19 +9015,19 @@ Note: Additional tools may be available when MCP servers are connected.
             try {
                 const categories = this.MicrobeFns.getFunctionCategories();
                 const examples = this.MicrobeFns.getUsageExamples();
-                
+
                 microbeGenomicsInfo = `
 MICROBE GENOMICS FUNCTIONS (Advanced Analysis Tools):
-${Object.entries(categories).map(([category, info]) => 
-    `${category.toUpperCase()} (${info.description}):\n${info.functions.map(fn => 
-        `  - ${fn}: Use as "${fn.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase()}"`
-    ).join('\n')}`
-).join('\n\n')}
+${Object.entries(categories).map(([category, info]) =>
+                    `${category.toUpperCase()} (${info.description}):\n${info.functions.map(fn =>
+                        `  - ${fn}: Use as "${fn.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase()}"`
+                    ).join('\n')}`
+                ).join('\n\n')}
 
 MICROBE GENOMICS USAGE EXAMPLES:
-${examples.map(example => 
-    `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`
-).join('\n\n')}
+${examples.map(example =>
+                    `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`
+                ).join('\n\n')}
 `;
             } catch (error) {
                 microbeGenomicsInfo = '\nMicrobeGenomicsFunctions: Available but could not load details\n';
@@ -9200,7 +9200,7 @@ Metabolic Pathway Examples:
     getEssentialToolInformation() {
         const context = this.getCurrentContext();
         const toolCount = context.genomeBrowser.toolSources.total;
-        
+
         // Get a sample of key tools from each category
         const keyTools = [
             // Navigation & State
@@ -9218,7 +9218,7 @@ Metabolic Pathway Examples:
             // Data Management
             'get_genome_info', 'export_data', 'create_annotation'
         ];
-        
+
         return `
 ===CRITICAL INSTRUCTION FOR TOOL CALLS===
 When a user asks you to perform ANY action that requires using tools, you MUST respond with ONLY a JSON object:
@@ -9248,27 +9248,27 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
      */
     getBaseSystemMessage() {
         const context = this.getCurrentContext();
-        
+
         // Get MCP server information
         const mcpServers = this.mcpServerManager.getServerStatus();
         const connectedServers = mcpServers.filter(s => s.connected);
         const allMcpTools = this.mcpServerManager.getAllAvailableTools();
         const toolsByCategory = this.mcpServerManager.getToolsByCategory();
-        
+
         let mcpServersInfo = '';
         if (connectedServers.length > 0) {
             mcpServersInfo = `
 Connected MCP Servers: ${connectedServers.length}
-${connectedServers.map(server => 
-    `- ${server.name} (${server.category}): ${server.toolCount} tools`
-).join('\n')}
+${connectedServers.map(server =>
+                `- ${server.name} (${server.category}): ${server.toolCount} tools`
+            ).join('\n')}
 
 MCP Tools by Category:
-${Object.entries(toolsByCategory).map(([category, tools]) => 
-    `${category.toUpperCase()}:\n${tools.map(tool => 
-        `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`
-    ).join('\n')}`
-).join('\n\n')}
+${Object.entries(toolsByCategory).map(([category, tools]) =>
+                `${category.toUpperCase()}:\n${tools.map(tool =>
+                    `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`
+                ).join('\n')}`
+            ).join('\n\n')}
 `;
         } else {
             mcpServersInfo = `
@@ -9283,19 +9283,19 @@ Note: Additional tools may be available when MCP servers are connected.
             try {
                 const categories = this.MicrobeFns.getFunctionCategories();
                 const examples = this.MicrobeFns.getUsageExamples();
-                
+
                 microbeGenomicsInfo = `
 MICROBE GENOMICS FUNCTIONS (Advanced Analysis Tools):
-${Object.entries(categories).map(([category, info]) => 
-    `${category.toUpperCase()} (${info.description}):\n${info.functions.map(fn => 
-        `  - ${fn}: Use as "${fn.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase()}"`
-    ).join('\n')}`
-).join('\n\n')}
+${Object.entries(categories).map(([category, info]) =>
+                    `${category.toUpperCase()} (${info.description}):\n${info.functions.map(fn =>
+                        `  - ${fn}: Use as "${fn.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase()}"`
+                    ).join('\n')}`
+                ).join('\n\n')}
 
 MICROBE GENOMICS USAGE EXAMPLES:
-${examples.map(example => 
-    `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`
-).join('\n\n')}
+${examples.map(example =>
+                    `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`
+                ).join('\n\n')}
 `;
             } catch (error) {
                 microbeGenomicsInfo = '\nMicrobeGenomicsFunctions: Available but could not load details\n';
@@ -9462,12 +9462,12 @@ ${this.getPluginSystemInfo()}`;
         if (!this.app || !this.app.currentSequence) {
             return 'No genome loaded';
         }
-        
+
         const sequences = Object.keys(this.app.currentSequence);
         const totalLength = Object.values(this.app.currentSequence).reduce((sum, seq) => sum + seq.length, 0);
-        const annotationCount = this.app.currentAnnotations ? 
+        const annotationCount = this.app.currentAnnotations ?
             Object.values(this.app.currentAnnotations).reduce((sum, annotations) => sum + annotations.length, 0) : 0;
-        
+
         return `${sequences.length} sequence(s), ${totalLength.toLocaleString()} bp total, ${annotationCount} annotations`;
     }
 
@@ -9497,7 +9497,7 @@ ${this.getPluginSystemInfo()}`;
     getMCPServersSummary() {
         const servers = this.mcpServerManager.getServerStatus();
         const connected = servers.filter(s => s.connected);
-        return connected.length > 0 ? 
+        return connected.length > 0 ?
             `${connected.length} connected: ${connected.map(s => s.name).join(', ')}` :
             'No MCP servers connected';
     }
@@ -9522,25 +9522,25 @@ ${this.getPluginSystemInfo()}`;
                 console.error('Error getting plugin system prompt section:', error);
             }
         }
-        
+
         // Use the integrator if available (fallback)
         if (this.pluginFunctionCallsIntegrator) {
             try {
                 const systemInfo = this.pluginFunctionCallsIntegrator.getPluginFunctionsSystemInfo();
                 const stats = this.pluginFunctionCallsIntegrator.getPluginFunctionStats();
-                
+
                 let info = systemInfo;
                 info += '\\n\\nPLUGIN SYSTEM STATISTICS:\\n';
                 info += `Total Plugin Functions: ${stats.totalFunctions}\\n`;
                 info += `Available Plugins: ${Object.keys(stats.pluginCounts).join(', ')}\\n`;
                 info += `Function Categories: ${Object.keys(stats.categoryStats).join(', ')}\\n`;
-                
+
                 return info;
             } catch (error) {
                 console.error('Error getting plugin system info from integrator:', error);
             }
         }
-        
+
         // Fallback to original method
         if (!this.pluginManager) {
             return 'Plugin system not available.';
@@ -9549,15 +9549,15 @@ ${this.getPluginSystemInfo()}`;
         try {
             const pluginFunctions = this.pluginManager.getAvailableFunctions();
             const visualizations = this.pluginManager.getAvailableVisualizations();
-            
+
             let info = '';
-            
+
             if (pluginFunctions.length > 0) {
                 info += 'Available Plugin Functions:\\n';
                 pluginFunctions.forEach(func => {
                     info += `- ${func.name}: ${func.description}\\n`;
                 });
-                
+
                 info += '\\nPlugin Function Examples:\\n';
                 info += '- Analyze GC content: {"tool_name": "genomic-analysis.analyzeGCContent", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "windowSize": 1000}}\\n';
                 info += '- Find motifs: {"tool_name": "genomic-analysis.findMotifs", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "motif": "GAATTC", "strand": "both"}}\\n';
@@ -9566,7 +9566,7 @@ ${this.getPluginSystemInfo()}`;
                 info += '- Build phylogenetic tree: {"tool_name": "phylogenetic-analysis.buildPhylogeneticTree", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGC", "name": "Sequence 1"}], "method": "nj"}}\\n';
                 info += '- Predict gene function: {"tool_name": "ml-analysis.predictGeneFunction", "parameters": {"sequence": "ATGCGCTATCG", "model": "cnn", "threshold": 0.7}}\\n';
                 info += '- Cluster sequences: {"tool_name": "ml-analysis.clusterSequences", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGC"}], "algorithm": "kmeans", "numClusters": 3}}\\n';
-                
+
                 // UniProt Database Search Functions
                 info += '\\nUNIPROT DATABASE SEARCH FUNCTIONS:\\n';
                 info += '- Search UniProt database: {"tool_name": "uniprot-search.searchUniProt", "parameters": {"query": "TP53", "organism": "human", "reviewedOnly": true, "maxResults": 10}}\\n';
@@ -9575,18 +9575,18 @@ ${this.getPluginSystemInfo()}`;
                 info += '- Get protein by ID: {"tool_name": "uniprot-search.getProteinById", "parameters": {"uniprotId": "P04637", "includeSequence": true}}\\n';
                 info += '- Search by function: {"tool_name": "uniprot-search.searchByFunction", "parameters": {"keywords": "kinase", "organism": "mouse", "maxResults": 15}}\\n';
             }
-            
+
             if (visualizations.length > 0) {
                 info += '\\nAvailable Visualization Plugins:\\n';
                 visualizations.forEach(viz => {
                     info += `- ${viz.id}: ${viz.description} (supports: ${viz.supportedDataTypes.join(', ')})\\n`;
                 });
-                
+
                 info += '\\nVisualization Examples:\\n';
                 info += 'Note: Visualizations are automatically rendered when plugin functions return compatible data.\\n';
                 info += 'For example, GC content analysis will automatically show a plot, phylogenetic analysis will show a tree.\\n';
             }
-            
+
             return info;
         } catch (error) {
             console.error('Error getting plugin system info:', error);
@@ -9599,26 +9599,26 @@ ${this.getPluginSystemInfo()}`;
         if (response === null || response === undefined) {
             return null;
         }
-        
+
         // Handle empty strings differently - they might be valid in some contexts
         if (response === '') {
             // Empty string - continue with parsing logic
         }
-        
+
         try {
             // Clean the response by removing any leading/trailing whitespace
             let cleanResponse = response.trim();
-            
+
             // If response contains thinking tags, extract content after them
             if (cleanResponse.includes('</think>')) {
                 const thinkEndIndex = cleanResponse.lastIndexOf('</think>');
                 cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
             }
-            
+
             // Remove any potential code block markers
             cleanResponse = cleanResponse.replace(/```json\s*|\s*```/gi, '').trim();
             cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '').trim();
-            
+
             // If the response starts with non-JSON text (like "✅"), check if there's a JSON after it
             if (!cleanResponse.startsWith('{')) {
                 const jsonMatch = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
@@ -9631,11 +9631,11 @@ ${this.getPluginSystemInfo()}`;
                     }
                 }
             }
-            
+
             // Try to parse the entire response as JSON first (most direct approach)
             try {
                 const parsed = JSON.parse(cleanResponse);
-                
+
                 // ENHANCED: Fix malformed parameters if needed
                 if (parsed.tool_name && parsed.parameters !== undefined) {
                     // Fix malformed parameters for set_working_directory
@@ -9650,19 +9650,19 @@ ${this.getPluginSystemInfo()}`;
                             }
                         }
                     }
-                    
+
                     return parsed;
                 }
             } catch (e) {
                 // Continue to other parsing methods if direct parse fails
             }
-            
+
             // Try to extract JSON from potential markdown or mixed content
             const jsonMatches = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
             if (jsonMatches) {
                 try {
                     const parsed = JSON.parse(jsonMatches[0]);
-                    
+
                     // ENHANCED: Fix malformed parameters if needed
                     if (parsed.tool_name && parsed.parameters !== undefined) {
                         // Fix malformed parameters for set_working_directory
@@ -9677,20 +9677,20 @@ ${this.getPluginSystemInfo()}`;
                                 }
                             }
                         }
-                        
+
                         return parsed;
                     }
                 } catch (e) {
                     // Continue to next method
                 }
             }
-            
+
             // Try a more flexible JSON extraction that can handle nested braces
             const startIndex = cleanResponse.indexOf('{');
             if (startIndex !== -1) {
                 let braceCount = 0;
                 let endIndex = startIndex;
-                
+
                 for (let i = startIndex; i < cleanResponse.length; i++) {
                     if (cleanResponse[i] === '{') braceCount++;
                     if (cleanResponse[i] === '}') braceCount--;
@@ -9699,12 +9699,12 @@ ${this.getPluginSystemInfo()}`;
                         break;
                     }
                 }
-                
+
                 if (braceCount === 0) {
                     const jsonCandidate = cleanResponse.substring(startIndex, endIndex + 1);
                     try {
                         const parsed = JSON.parse(jsonCandidate);
-                        
+
                         // ENHANCED: Fix malformed parameters if needed
                         if (parsed.tool_name && parsed.parameters !== undefined) {
                             // Fix malformed parameters for set_working_directory
@@ -9721,7 +9721,7 @@ ${this.getPluginSystemInfo()}`;
                                     }
                                 }
                             }
-                            
+
                             return parsed;
                         }
                     } catch (e) {
@@ -9729,7 +9729,7 @@ ${this.getPluginSystemInfo()}`;
                     }
                 }
             }
-            
+
             // Try to find any valid JSON object that has tool_name and parameters
             const allJsonMatches = cleanResponse.match(/\{[^}]*\}/g);
             if (allJsonMatches) {
@@ -9745,12 +9745,12 @@ ${this.getPluginSystemInfo()}`;
                     }
                 }
             }
-            
+
             // If no valid tool call found, return null
             return null;
             return null;
-            
-            } catch (error) {
+
+        } catch (error) {
             console.error('=== parseToolCall ERROR ===');
             console.error('Error:', error);
             console.error('Stack:', error.stack);
@@ -9767,32 +9767,32 @@ ${this.getPluginSystemInfo()}`;
      */
     parseMultipleToolCalls(response) {
         const toolCalls = [];
-        
+
         try {
             let cleanResponse = response.trim();
-            
+
             // Remove thinking tags if present
             if (cleanResponse.includes('</think>')) {
                 const thinkEndIndex = cleanResponse.lastIndexOf('</think>');
                 cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
             }
-            
+
             // Remove code block markers but preserve structure for multiple JSON objects
             cleanResponse = cleanResponse.replace(/```json\s*/gi, '').replace(/\s*```/g, '');
-            
+
             // Clean up residual 'json' text that might remain between objects
             // Handle cases like: }json{ and standalone 'json' strings
             cleanResponse = cleanResponse.replace(/}\s*json\s*{/g, '}\n{');
             cleanResponse = cleanResponse.replace(/^json\s*/, '').replace(/\s*json\s*$/, '');
             cleanResponse = cleanResponse.replace(/}\s*json\s*/g, '}\n');
             cleanResponse = cleanResponse.replace(/\s*json\s*{/g, '\n{');
-            
+
             // Try to parse as array first (if properly formatted)
             if (cleanResponse.startsWith('[')) {
                 try {
                     const parsedArray = JSON.parse(cleanResponse);
                     if (Array.isArray(parsedArray)) {
-                        const validTools = parsedArray.filter(item => 
+                        const validTools = parsedArray.filter(item =>
                             item && typeof item === 'object' && item.tool_name && item.parameters !== undefined
                         );
                         return validTools;
@@ -9801,19 +9801,19 @@ ${this.getPluginSystemInfo()}`;
                     // Continue to other parsing methods
                 }
             }
-            
+
             // Find all JSON objects in the response using flexible regex
             // This handles both simple and nested JSON objects
             const jsonMatches = [];
             let index = 0;
-            
+
             while (index < cleanResponse.length) {
                 const start = cleanResponse.indexOf('{', index);
                 if (start === -1) break;
-                
+
                 let braceCount = 0;
                 let end = start;
-                
+
                 // Find matching closing brace
                 for (let i = start; i < cleanResponse.length; i++) {
                     if (cleanResponse[i] === '{') braceCount++;
@@ -9823,7 +9823,7 @@ ${this.getPluginSystemInfo()}`;
                         break;
                     }
                 }
-                
+
                 if (braceCount === 0) {
                     const jsonCandidate = cleanResponse.substring(start, end + 1);
                     jsonMatches.push(jsonCandidate);
@@ -9833,7 +9833,7 @@ ${this.getPluginSystemInfo()}`;
                     index = start + 1;
                 }
             }
-            
+
             // Parse each JSON object and validate
             for (let i = 0; i < jsonMatches.length; i++) {
                 const match = jsonMatches[i];
@@ -9846,11 +9846,11 @@ ${this.getPluginSystemInfo()}`;
                     // Skip invalid JSON
                 }
             }
-            
+
         } catch (error) {
             // Continue with empty toolCalls array
         }
-        
+
         return toolCalls;
     }
 
@@ -9858,43 +9858,43 @@ ${this.getPluginSystemInfo()}`;
         const startTime = Date.now();
         let success = false;
         let executionId = null;
-        
+
         // Record execution start in tracker
         if (this.toolExecutionTracker) {
             executionId = this.toolExecutionTracker.recordExecutionStart(toolName, parameters);
         }
-        
+
         // Check if multi-agent system is enabled
         const multiAgentEnabled = this.configManager.get('multiAgentSettings.multiAgentSystemEnabled', false);
         const showAgentInfo = this.configManager.get('multiAgentSettings.multiAgentShowInfo', true);
-        
+
         let agentName = 'System Agent';
         let reasoning = 'Direct tool execution';
-        
+
         if (multiAgentEnabled && showAgentInfo) {
             // Determine which agent should handle this tool
             agentName = this.getAgentForTool(toolName);
             reasoning = this.getAgentReasoning(toolName, parameters);
-            
+
             // Show agent decision process
             this.addAgentDecisionMessage(agentName, toolName, reasoning, parameters);
         }
-        
+
         // Memory recording will be done after execution with result
-        
+
         try {
             // 如果启用了多智能体系统，尝试通过智能体执行
             if (this.agentSystemEnabled && this.multiAgentSystem) {
                 try {
                     const agentResult = await this.multiAgentSystem.executeTool(toolName, parameters);
-                    
+
                     if (agentResult.success) {
                         // 记录成功执行到内存
                         if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
                             const executionTime = Date.now() - startTime;
                             this.memorySystem.recordToolCall(toolName, parameters, agentResult.result, executionTime, agentName);
                         }
-                        
+
                         return agentResult.result;
                     } else {
                         // Fall through to standard execution
@@ -9903,32 +9903,32 @@ ${this.getPluginSystemInfo()}`;
                     // Fall through to standard execution
                 }
             }
-            
+
             // First, try to execute on MCP servers
             const allTools = this.mcpServerManager.getAllAvailableTools();
             const mcpTool = allTools.find(t => t.name === toolName);
-            
+
             if (mcpTool) {
                 try {
                     const result = await this.mcpServerManager.executeToolOnServer(
-                        mcpTool.serverId, 
-                        toolName, 
+                        mcpTool.serverId,
+                        toolName,
                         parameters
                     );
-                    
+
                     // 记录MCP工具调用到内存系统
                     if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
                         const executionTime = Date.now() - startTime;
                         this.memorySystem.recordToolCall(toolName, parameters, result, executionTime, agentName);
                     }
-                    
+
                     return result;
                 } catch (error) {
                     console.warn(`MCP tool execution failed for ${toolName}, attempting fallback:`, error.message);
                     // Fall through to local execution
                 }
             }
-            
+
             // Check if this is a tool from the YAML registry that requires MCP
             // This handles external_apis category tools that aren't available locally
             if (this.dynamicToolsEnabled && this.dynamicTools) {
@@ -9950,648 +9950,648 @@ ${this.getPluginSystemInfo()}`;
                     }
                 }
             }
-            
+
             // Check if this is a plugin function first
             if (this.pluginFunctionCallsIntegrator && this.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
                 try {
                     const result = await this.pluginFunctionCallsIntegrator.executePluginFunction(toolName, parameters);
-                    
+
                     // 记录插件工具调用到内存系统
                     if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
                         const executionTime = Date.now() - startTime;
                         this.memorySystem.recordToolCall(toolName, parameters, result, executionTime, agentName);
                     }
-                    
+
                     return result;
                 } catch (error) {
                     throw error;
                 }
             }
-            
+
             // Fallback to local tool execution
             let result;
             switch (toolName) {
                 case 'navigate_to_position':
                     result = await this.navigateToPosition(parameters);
                     break;
-                
+
                 case 'open_new_tab':
                     result = await this.openNewTab(parameters);
                     break;
-                    
+
                 case 'search_features':
                     result = await this.searchFeatures(parameters);
                     break;
-                    
+
                 case 'get_current_state':
                     result = this.getCurrentState();
                     break;
-                    
+
                 case 'get_sequence':
                     result = await this.getSequence(parameters);
                     break;
-                    
+
                 case 'toggle_track':
                     result = await this.toggleTrack(parameters);
                     break;
-                    
+
                 case 'create_annotation':
                     result = await this.createAnnotation(parameters);
                     break;
-                    
+
                 case 'analyze_region':
                     result = await this.analyzeRegion(parameters);
                     break;
-                    
+
                 case 'export_data':
                     result = await this.exportData(parameters);
                     break;
-                    
+
                 // Built-in Export Tools - NEW ADDITIONS
                 case 'export_fasta_sequence':
                     result = await this.exportFastaSequence(parameters);
                     break;
-                    
+
                 case 'export_genbank_format':
                     result = await this.exportGenBankFormat(parameters);
                     break;
-                    
+
                 case 'export_cds_fasta':
                     result = await this.exportCDSFasta(parameters);
                     break;
-                    
+
                 case 'export_protein_fasta':
                     result = await this.exportProteinFasta(parameters);
                     break;
-                    
+
                 case 'export_gff_annotations':
                     result = await this.exportGFFAnnotations(parameters);
                     break;
-                    
+
                 case 'export_bed_format':
                     result = await this.exportBEDFormat(parameters);
                     break;
-                    
+
                 case 'export_current_view_fasta':
                     result = await this.exportCurrentViewFasta(parameters);
                     break;
-                    
+
                 case 'get_gene_details':
                     result = await this.getGeneDetails(parameters);
                     break;
-                    
+
                 case 'translate_sequence':
                     result = await this.translateSequence(parameters);
                     break;
-                    
+
                 case 'calculate_gc_content':
                     result = await this.calculateGCContent(parameters);
                     break;
-                    
 
-                    
+
+
                 case 'get_operons':
                     result = await this.getOperons(parameters);
                     break;
-                    
+
                 case 'get_coding_sequence':
                     result = await this.getCodingSequence(parameters);
                     break;
-                    
+
                 case 'get_multiple_coding_sequences':
                     result = await this.getMultipleCodingSequences(parameters);
                     break;
-                    
+
                 case 'toggle_annotation_track':
                     result = await this.toggleAnnotationTrack(parameters);
                     break;
-                    
+
                 case 'zoom_to_gene':
                     result = await this.zoomToGene(parameters);
                     break;
-                    
+
                 case 'get_chromosome_list':
                     result = this.getChromosomeList();
                     break;
-                    
+
                 case 'get_track_status':
                     result = this.getTrackStatus();
                     break;
-                    
+
                 case 'search_motif':
                     result = await this.searchMotif(parameters);
                     break;
-                    
+
                 case 'search_pattern':
                     result = await this.searchPattern(parameters);
                     break;
-                    
+
                 case 'get_nearby_features':
                     result = await this.getNearbyFeatures(parameters);
                     break;
-                    
+
                 case 'find_intergenic_regions':
                     result = await this.findIntergenicRegions(parameters);
                     break;
-                    
+
                 case 'find_restriction_sites':
                     result = await this.findRestrictionSites(parameters);
                     break;
-                    
+
                 case 'virtual_digest':
                     result = await this.virtualDigest(parameters);
                     break;
-                    
+
                 case 'sequence_statistics':
                     result = await this.sequenceStatistics(parameters);
                     break;
-                    
+
                 case 'codon_usage_analysis':
                     result = await this.codonUsageAnalysis(parameters);
                     break;
-                    
+
                 case 'genome_codon_usage_analysis':
                     result = await this.genomeCodonUsageAnalysis(parameters);
                     break;
-                    
+
                 case 'amino_acid_composition':
                     result = await this.aminoAcidComposition(parameters);
                     break;
-                    
+
                 case 'bookmark_position':
                     result = await this.bookmarkPosition(parameters);
                     break;
-                    
+
                 case 'get_bookmarks':
                     result = this.getBookmarks(parameters);
                     break;
-                    
+
                 case 'save_view_state':
                     result = await this.saveViewState(parameters);
                     break;
-                    
+
                 case 'compare_regions':
                     result = await this.compareRegions(parameters);
                     break;
-                    
+
                 case 'find_similar_sequences':
                     result = await this.findSimilarSequences(parameters);
                     break;
-                    
+
                 case 'edit_annotation':
                     result = await this.editAnnotation(parameters);
                     break;
-                    
+
                 case 'delete_annotation':
                     result = await this.deleteAnnotation(parameters);
                     break;
-                    
+
                 case 'batch_create_annotations':
                     result = await this.batchCreateAnnotations(parameters);
                     break;
-                    
+
                 case 'get_file_info':
                     result = this.getFileInfo(parameters);
                     break;
-                    
+
                 case 'export_region_features':
                     result = await this.exportRegionFeatures(parameters);
                     break;
-                    
+
                 case 'open_protein_viewer':
                     result = await this.openProteinViewer(parameters);
                     break;
-                    
+
                 // File Loading tools (Built-in) - CRITICAL FIX FOR TOOL EXECUTION
                 case 'load_genome_file':
                     result = await this.loadGenomeFile(parameters);
                     break;
-                    
+
                 case 'load_annotation_file':
                     result = await this.loadAnnotationFile(parameters);
                     break;
-                    
+
                 case 'load_variant_file':
                     result = await this.loadVariantFile(parameters);
                     break;
-                    
+
                 case 'load_reads_file':
                     result = await this.loadReadsFile(parameters);
                     break;
-                    
+
                 // System Management Tools (Built-in) - CRITICAL FIX FOR set_working_directory
                 case 'set_working_directory':
                     result = await this.setWorkingDirectory(parameters);
                     break;
-                    
+
                 case 'load_wig_tracks':
                     result = await this.loadWigTracks(parameters);
                     break;
-                    
+
                 case 'load_operon_file':
                     result = await this.loadOperonFile(parameters);
                     break;
-                    
+
                 case 'get_loaded_files_list':
                     result = await this.getLoadedFilesList(parameters);
                     break;
-                    
+
                 // MicrobeGenomicsFunctions Integration
                 case 'navigate_to':
                     result = this.executeMicrobeFunction('navigateTo', parameters);
                     break;
-                    
+
                 case 'jump_to_gene':
                     result = this.executeMicrobeFunction('jumpToGene', parameters);
                     break;
-                    
+
                 case 'get_current_region':
                     result = this.executeMicrobeFunction('getCurrentRegion', parameters);
                     break;
-                    
+
                 case 'scroll_left':
                     result = this.executeMicrobeFunction('scrollLeft', parameters);
                     break;
-                    
+
                 case 'scroll_right':
                     result = this.executeMicrobeFunction('scrollRight', parameters);
                     break;
-                    
+
                 case 'zoom_in':
                     result = this.executeMicrobeFunction('zoomIn', parameters);
                     break;
-                    
+
                 case 'zoom_out':
                     result = this.executeMicrobeFunction('zoomOut', parameters);
                     break;
-                    
+
                 case 'search_gene_by_name':
                     result = await this.searchGeneByName(parameters);
                     break;
-                    
+
                 case 'search_by_position':
                     result = this.executeMicrobeFunction('searchByPosition', parameters);
                     break;
-                    
+
                 case 'search_sequence_motif':
                     result = this.executeMicrobeFunction('searchSequenceMotif', parameters);
                     break;
-                    
+
                 case 'search_intergenic_regions':
                     result = this.executeMicrobeFunction('searchIntergenicRegions', parameters);
                     break;
-                    
+
                 case 'translate_dna':
                     result = this.executeMicrobeFunction('translateDNA', parameters);
                     break;
-                    
+
                 case 'compute_gc':
                     result = this.executeMicrobeFunction('computeGC', parameters);
                     break;
-                    
+
                 case 'calc_region_gc':
                     result = this.executeMicrobeFunction('calcRegionGC', parameters);
                     break;
-                    
+
                 case 'reverse_complement':
                     result = this.executeMicrobeFunction('reverseComplement', parameters);
                     break;
-                    
+
                 case 'analyze_codon_usage':
                     result = this.executeMicrobeFunction('analyzeCodonUsage', parameters);
                     break;
-                    
+
                 case 'calculate_entropy':
                     result = this.executeMicrobeFunction('calculateEntropy', parameters);
                     break;
-                    
+
                 case 'calculate_melting_temp':
                     result = this.executeMicrobeFunction('calculateMeltingTemp', parameters);
                     break;
-                    
+
                 case 'calculate_molecular_weight':
                     result = this.executeMicrobeFunction('calculateMolecularWeight', parameters);
                     break;
-                    
+
                 case 'predict_promoter':
                     result = this.executeMicrobeFunction('predictPromoter', parameters);
                     break;
-                    
+
                 case 'predict_rbs':
                     result = this.executeMicrobeFunction('predictRBS', parameters);
                     break;
-                    
+
                 case 'predict_terminator':
                     result = this.executeMicrobeFunction('predictTerminator', parameters);
                     break;
-                    
+
                 case 'get_upstream_region':
                     result = this.executeMicrobeFunction('getUpstreamRegion', parameters);
                     break;
-                    
+
                 case 'get_downstream_region':
                     result = this.executeMicrobeFunction('getDownstreamRegion', parameters);
                     break;
-                    
+
                 case 'add_annotation':
                     result = this.executeMicrobeFunction('addAnnotation', parameters);
                     break;
-                    
+
                 case 'merge_annotations':
                     result = this.executeMicrobeFunction('mergeAnnotations', parameters);
                     break;
-                    
+
                 case 'add_track':
                     result = this.executeMicrobeFunction('addTrack', parameters);
                     break;
-                    
+
                 case 'add_variant':
                     result = this.executeMicrobeFunction('addVariant', parameters);
                     break;
-                    
+
                 case 'get_genome_info':
                     result = await this.getGenomeInfo(parameters);
                     break;
-                    
+
                 case 'check_genomics_environment':
                     result = this.checkGenomicsEnvironment();
                     break;
-                    
+
                 case 'get_selected_gene':
                     result = this.getSelectedGene();
                     break;
-                    
+
                 case 'get_current_region_details':
                     result = await this.getCurrentRegionDetails();
                     break;
-                    
+
                 case 'get_sequence_selection':
                     result = this.getSequenceSelection();
                     break;
-                    
+
                 case 'fetch_protein_structure':
                     result = await this.fetchProteinStructure(parameters);
                     break;
-                    
+
                 case 'search_pdb_structures':
                     result = await this.searchPDBStructures(parameters);
                     break;
-                    
+
                 case 'search_uniprot_database':
                     result = await this.searchUniProtDatabase(parameters);
                     break;
-                    
+
                 case 'advanced_uniprot_search':
                     result = await this.advancedUniProtSearch(parameters);
                     break;
-                    
+
                 case 'get_uniprot_entry':
                     result = await this.getUniProtEntry(parameters);
                     break;
-                    
+
                 case 'analyze_interpro_domains':
                     result = await this.analyzeInterProDomains(parameters);
                     break;
-                    
+
                 case 'search_interpro_entry':
                     result = await this.searchInterProEntry(parameters);
                     break;
-                    
+
                 case 'get_interpro_entry_details':
                     result = await this.getInterProEntryDetails(parameters);
                     break;
-                    
+
                 case 'get_pdb_details':
                     result = await this.getPDBDetails(parameters.pdbId);
                     break;
-                    
+
                 case 'search_alphafold_by_gene':
                     result = await this.searchAlphaFoldByGene(parameters);
                     break;
-                    
+
                 case 'fetch_alphafold_structure':
                     result = await this.fetchAlphaFoldStructure(parameters);
                     break;
-                    
+
                 case 'open_alphafold_viewer':
                     result = await this.openAlphaFoldViewer(parameters);
                     break;
-                    
+
                 case 'calculate_entropy':
                     result = this.executeMicrobeFunction('calculateEntropy', parameters);
                     break;
-                    
+
                 case 'calc_region_gc':
                     result = this.executeMicrobeFunction('calcRegionGC', parameters);
                     break;
-                    
+
                 case 'calculate_melting_temp':
                     result = this.executeMicrobeFunction('calculateMeltingTemp', parameters);
                     break;
-                    
+
                 case 'calculate_molecular_weight':
                     result = this.executeMicrobeFunction('calculateMolecularWeight', parameters);
                     break;
-                    
+
                 case 'analyze_codon_usage':
                     result = this.executeMicrobeFunction('analyzeCodonUsage', parameters);
                     break;
-                    
+
                 case 'predict_promoter':
                     result = this.executeMicrobeFunction('predictPromoter', parameters);
                     break;
-                    
+
                 case 'predict_rbs':
                     result = this.executeMicrobeFunction('predictRBS', parameters);
                     break;
-                    
+
                 case 'predict_terminator':
                     result = this.executeMicrobeFunction('predictTerminator', parameters);
                     break;
-                    
+
                 case 'search_gene_by_name':
                     result = await this.searchGeneByName(parameters);
                     break;
-                    
+
                 case 'search_sequence_motif':
                     result = this.executeMicrobeFunction('searchSequenceMotif', parameters);
                     break;
-                    
+
                 case 'search_by_position':
                     result = this.executeMicrobeFunction('searchByPosition', parameters);
                     break;
-                    
+
                 case 'search_intergenic_regions':
                     result = this.executeMicrobeFunction('searchIntergenicRegions', parameters);
                     break;
-                    
+
                 case 'edit_annotation':
                     result = this.executeMicrobeFunction('editAnnotation', parameters);
                     break;
-                    
+
                 case 'delete_annotation':
                     result = this.executeMicrobeFunction('deleteAnnotation', parameters);
                     break;
-                    
+
                 case 'merge_annotations':
                     result = this.executeMicrobeFunction('mergeAnnotations', parameters);
                     break;
-                    
+
                 case 'add_annotation':
                     result = this.executeMicrobeFunction('addAnnotation', parameters);
                     break;
-                    
+
                 case 'get_upstream_region':
                     result = this.executeMicrobeFunction('getUpstreamRegion', parameters);
                     break;
-                    
+
                 case 'get_downstream_region':
                     result = this.executeMicrobeFunction('getDownstreamRegion', parameters);
                     break;
-                    
+
                 case 'add_track':
                     result = this.executeMicrobeFunction('addTrack', parameters);
                     break;
-                    
+
                 case 'add_variant':
                     result = this.executeMicrobeFunction('addVariant', parameters);
                     break;
                 case 'fetch_protein_structure':
-                    result = this.fetchProteinStructure( parameters);
+                    result = this.fetchProteinStructure(parameters);
                     break;
-                    
+
                 case 'get_genome_info':
                     result = await this.getGenomeInfo(parameters);
                     break;
-                    
+
                 // BLAST tools
                 case 'blast_search':
                     result = await this.blastSearch(parameters);
                     break;
-                    
+
                 case 'blast_sequence_from_region':
                     result = await this.blastSequenceFromRegion(parameters);
                     break;
-                    
+
                 case 'get_blast_databases':
                     result = this.getBlastDatabases(parameters);
                     break;
-                    
+
                 case 'batch_blast_search':
                     result = await this.batchBlastSearch(parameters);
                     break;
-                    
+
                 case 'advanced_blast_search':
                     result = await this.advancedBlastSearch(parameters);
                     break;
-                    
+
                 case 'local_blast_database_info':
                     result = await this.localBlastDatabaseInfo(parameters);
                     break;
-                    
+
                 // Metabolic pathway tools
                 case 'show_metabolic_pathway':
                     result = await this.showMetabolicPathway(parameters);
                     break;
-                    
+
                 case 'find_pathway_genes':
                     result = await this.findPathwayGenes(parameters);
                     break;
-                    
+
                 // Action Manager functions (underscore naming convention)
                 case 'copy_sequence':
                     result = await this.executeActionFunction('copy_sequence', parameters);
                     break;
-                    
+
                 case 'cut_sequence':
                     result = await this.executeActionFunction('cut_sequence', parameters);
                     break;
-                    
+
                 case 'paste_sequence':
                     result = await this.executeActionFunction('paste_sequence', parameters);
                     break;
-                    
+
                 case 'delete_sequence':
                     result = await this.executeDeleteSequence(parameters);
                     break;
-                    
+
                 case 'delete_gene':
                     result = await this.executeDeleteGene(parameters);
                     break;
-                    
+
                 case 'insert_sequence':
                     result = await this.executeActionFunction('insertSequence', parameters);
                     break;
-                    
+
                 case 'replace_sequence':
                     result = await this.executeActionFunction('replace_sequence', parameters);
                     break;
-                    
+
                 case 'get_action_list':
                     result = await this.executeActionFunction('get_action_list', parameters);
                     break;
-                    
+
                 case 'execute_actions':
                     result = await this.executeActionFunction('execute_actions', parameters);
                     break;
-                    
+
                 case 'clear_actions':
                     result = await this.executeActionFunction('clearActions', parameters);
                     break;
-                    
+
                 case 'get_clipboard_content':
                     result = await this.executeActionFunction('getClipboardContent', parameters);
                     break;
-                    
+
                 case 'open_new_tab':
                     result = await this.openNewTab(parameters);
                     break;
-                    
+
                 case 'switch_to_tab':
                     result = await this.switchToTab(parameters);
                     break;
-                    
+
                 // Legacy camelCase support for backward compatibility
                 case 'copy_sequence':
                     result = await this.executeActionFunction('copy_sequence', parameters);
                     break;
-                    
+
                 case 'cut_sequence':
                     result = await this.executeActionFunction('cut_sequence', parameters);
                     break;
-                    
+
                 case 'paste_sequence':
                     result = await this.executeActionFunction('paste_sequence', parameters);
                     break;
-                    
+
                 case 'deleteSequence':
                     result = await this.executeActionFunction('deleteSequence', parameters);
                     break;
-                    
+
                 case 'insertSequence':
                     result = await this.executeActionFunction('insertSequence', parameters);
                     break;
-                    
+
                 case 'replace_sequence':
                     result = await this.executeActionFunction('replace_sequence', parameters);
                     break;
-                    
+
                 case 'get_action_list':
                     result = await this.executeActionFunction('get_action_list', parameters);
                     break;
-                    
+
                 case 'execute_actions':
                     result = await this.executeActionFunction('execute_actions', parameters);
                     break;
-                    
+
                 case 'clearActions':
                     result = await this.executeActionFunction('clearActions', parameters);
                     break;
-                    
+
                 case 'getClipboardContent':
                     result = await this.executeActionFunction('getClipboardContent', parameters);
                     break;
-                    
+
                 // Plugin system functions
                 default:
                     // Check if this is a plugin tool
@@ -10608,14 +10608,14 @@ ${this.getPluginSystemInfo()}`;
                                 throw new Error(`Visualization plugin execution failed: ${vizError.message}`);
                             }
                         }
-                        
+
                         // Check if this is a plugin command
                         // Commands are tools that call registered command handlers (e.g., STRING search)
                         const plugin = this.pluginManager.getPlugin(toolName.split('.')[0]);
                         if (plugin && plugin._commandHandlers) {
                             // Extract command name from tool name (e.g., 'search' from 'string-network-explorer.search')
                             const commandName = toolName.split('.').slice(1).join('.');
-                            
+
                             // Try to find the full command ID by checking registered commands
                             let commandId = null;
                             for (const [registeredCommandId] of plugin._commandHandlers) {
@@ -10624,7 +10624,7 @@ ${this.getPluginSystemInfo()}`;
                                     break;
                                 }
                             }
-                            
+
                             if (commandId && plugin._commandHandlers.has(commandId)) {
                                 console.log(`🚀 [ChatManager] Executing plugin command: ${commandId}`);
                                 try {
@@ -10638,7 +10638,7 @@ ${this.getPluginSystemInfo()}`;
                                 }
                             }
                         }
-                        
+
                         // Try regular plugin function execution
                         try {
                             result = await this.pluginManager.executeFunctionByName(toolName, parameters);
@@ -10649,45 +10649,45 @@ ${this.getPluginSystemInfo()}`;
                             throw new Error(`Plugin function execution failed: ${pluginError.message}`);
                         }
                     }
-                    
+
                     // If no plugin function found, throw error
                     throw new Error(`Unknown tool: ${toolName}`);
             }
-            
+
             console.log(`Local tool ${toolName} execution result:`, result);
-            
+
             // Handle visualization plugin DOM elements
             if (result && result instanceof HTMLElement) {
                 console.log(`🎨 [ChatManager] Visualization DOM element detected, displaying in chat`);
                 this.displayVisualizationInChat(toolName, result, parameters);
             }
-            
+
             // Show agent execution result if multi-agent system is enabled
             if (multiAgentEnabled && showAgentInfo) {
                 const executionTime = Date.now() - startTime;
                 this.addAgentExecutionResult(agentName, toolName, result, executionTime);
             }
-            
+
             // 记录成功的工具调用到内存系统
             if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
                 const executionTime = Date.now() - startTime;
                 this.memorySystem.recordToolCall(toolName, parameters, result, executionTime, agentName);
             }
-            
+
             // Track tool usage for Dynamic Tools Registry optimization
             if (this.dynamicToolsEnabled && this.dynamicTools) {
                 const executionTime = Date.now() - startTime;
                 this.dynamicTools.trackToolUsage(toolName, true, executionTime);
             }
-            
+
             // Record successful execution in tracker
             if (this.toolExecutionTracker && executionId) {
                 this.toolExecutionTracker.recordExecutionSuccess(executionId, result);
             }
-            
+
             success = true;
             return result;
-            
+
         } catch (error) {
             console.error(`=== TOOL EXECUTION ERROR ===`);
             console.error(`Tool: ${toolName}`);
@@ -10695,7 +10695,7 @@ ${this.getPluginSystemInfo()}`;
             console.error(`Error:`, error);
             console.error(`Stack:`, error.stack);
             console.error(`===========================`);
-            
+
             const errorResult = {
                 success: false,
                 error: error.message,
@@ -10703,24 +10703,24 @@ ${this.getPluginSystemInfo()}`;
                 parameters: parameters,
                 timestamp: new Date().toISOString()
             };
-            
+
             // 记录失败的工具调用到内存系统
             if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
                 const executionTime = Date.now() - startTime;
                 this.memorySystem.recordToolCall(toolName, parameters, errorResult, executionTime, agentName || 'System Agent');
             }
-            
+
             // Track failed tool usage for Dynamic Tools Registry optimization
             if (this.dynamicToolsEnabled && this.dynamicTools) {
                 const executionTime = Date.now() - startTime;
                 this.dynamicTools.trackToolUsage(toolName, false, executionTime);
             }
-            
+
             // Record failed execution in tracker
             if (this.toolExecutionTracker && executionId) {
                 this.toolExecutionTracker.recordExecutionFailure(executionId, error);
             }
-            
+
             return errorResult;
         }
     }
@@ -10731,39 +10731,39 @@ ${this.getPluginSystemInfo()}`;
     async executeDeleteSequence(parameters) {
         try {
             const { chromosome, start, end, strand = '+' } = parameters;
-            
+
             // Validate parameters
             if (!chromosome || start === undefined || end === undefined) {
                 throw new Error('Missing required parameters: chromosome, start, end');
             }
-            
+
             if (start > end) {
                 throw new Error('Start position must be less than or equal to end position');
             }
-            
+
             // Use MicrobeGenomicsFunctions if available
             if (window.MicrobeFns && window.MicrobeFns.delete_sequence) {
                 const result = window.MicrobeFns.delete_sequence(chromosome, start, end);
                 return result;
             }
-            
+
             // Fallback to ActionManager if MicrobeFns not available
             const genomeBrowser = window.genomeBrowser;
             if (!genomeBrowser || !genomeBrowser.actionManager) {
                 throw new Error('Neither MicrobeFns nor ActionManager available');
             }
-            
+
             const target = `${chromosome}:${start}-${end}`;
             const length = end - start + 1;
             const metadata = { chromosome, start, end, strand, selectionSource: 'function_call' };
-            
+
             const actionId = genomeBrowser.actionManager.addAction(
                 genomeBrowser.actionManager.ACTION_TYPES.DELETE_SEQUENCE,
                 target,
                 `Delete ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
                 metadata
             );
-            
+
             const result = {
                 success: true,
                 actionId: actionId,
@@ -10772,9 +10772,9 @@ ${this.getPluginSystemInfo()}`;
                 length: length,
                 message: `Delete action queued for ${chromosome}:${start}-${end} (${length} bp)`
             };
-            
+
             return result;
-            
+
         } catch (error) {
             throw error;
         }
@@ -10786,31 +10786,31 @@ ${this.getPluginSystemInfo()}`;
     async executeDeleteGene(parameters) {
         try {
             const { geneName, chromosome } = parameters;
-            
+
             // Validate parameters
             if (!geneName) {
                 throw new Error('Missing required parameter: geneName (can be gene name or locus tag)');
             }
-            
+
             // First, find the gene using existing search functionality
             const searchResult = await this.searchGeneByName({ name: geneName, chromosome });
-            
+
             if (!searchResult.found || !searchResult.genes || searchResult.genes.length === 0) {
                 throw new Error(`Gene/locus tag "${geneName}" not found${chromosome ? ` in chromosome ${chromosome}` : ''}. Make sure the gene name or locus tag is correct.`);
             }
-            
+
             // Get the first matching gene (prefer CDS over other features)
             let targetGene = searchResult.genes.find(gene => gene.type === 'CDS') || searchResult.genes[0];
-            
+
             if (!targetGene || !targetGene.start || !targetGene.end) {
                 throw new Error(`Invalid gene data for "${geneName}": missing coordinates`);
             }
-            
+
             const geneChromosome = targetGene.chromosome || searchResult.chromosome;
             const geneStart = targetGene.start;
             const geneEnd = targetGene.end;
             const geneStrand = targetGene.strand || '+';
-            
+
             // Use the delete_sequence functionality with gene coordinates
             const deleteResult = await this.executeDeleteSequence({
                 chromosome: geneChromosome,
@@ -10818,7 +10818,7 @@ ${this.getPluginSystemInfo()}`;
                 end: geneEnd,
                 strand: geneStrand
             });
-            
+
             // Enhance the result with gene-specific information
             const result = {
                 ...deleteResult,
@@ -10834,9 +10834,9 @@ ${this.getPluginSystemInfo()}`;
                 },
                 message: `Gene/locus tag "${geneName}" deletion queued: ${geneChromosome}:${geneStart}-${geneEnd} (${geneEnd - geneStart + 1} bp)`
             };
-            
+
             return result;
-            
+
         } catch (error) {
             throw error;
         }
@@ -10849,11 +10849,11 @@ ${this.getPluginSystemInfo()}`;
         try {
             // Use window.genomeBrowser for access
             const genomeBrowser = window.genomeBrowser;
-            
+
             if (!genomeBrowser) {
                 throw new Error('Genome browser not available via window.genomeBrowser');
             }
-            
+
             if (!genomeBrowser.actionManager) {
                 throw new Error('ActionManager not available in genome browser');
             }
@@ -10861,7 +10861,7 @@ ${this.getPluginSystemInfo()}`;
             // Use ActionManager's executeActionFunction method which delegates to function* methods
             // This ensures parameters are used instead of showing UI dialogs
             const result = await genomeBrowser.actionManager.executeActionFunction(functionName, parameters);
-            
+
             return result;
 
         } catch (error) {
@@ -10871,7 +10871,7 @@ ${this.getPluginSystemInfo()}`;
 
     getCurrentContext() {
         // Build comprehensive context for the LLM
-        
+
         // Collect all available tools from different sources
         const localTools = [
             // Core Navigation & State
@@ -10888,7 +10888,7 @@ ${this.getPluginSystemInfo()}`;
             'bookmark_position',
             'get_bookmarks',
             'save_view_state',
-            
+
             // Search & Discovery  
             'search_features',
             'search_gene_by_name',
@@ -10899,7 +10899,7 @@ ${this.getPluginSystemInfo()}`;
             'search_intergenic_regions',
             'get_nearby_features',
             'find_intergenic_regions',
-            
+
             // Sequence Analysis
             'get_sequence',
             'translate_sequence',
@@ -10914,7 +10914,7 @@ ${this.getPluginSystemInfo()}`;
             'calculate_entropy',
             'calculate_melting_temp',
             'calculate_molecular_weight',
-            
+
             // Advanced Analysis
             'analyze_region',
             'compare_regions',
@@ -10926,7 +10926,7 @@ ${this.getPluginSystemInfo()}`;
             'predict_terminator',
             'get_upstream_region',
             'get_downstream_region',
-            
+
             // Annotation & Features
             'get_gene_details',
             'get_operons',
@@ -10936,20 +10936,20 @@ ${this.getPluginSystemInfo()}`;
             'delete_annotation',
             'batch_create_annotations',
             'merge_annotations',
-            
+
             // Track Management
             'toggle_track',
             'get_track_status',
             'add_track',
             'add_variant',
-            
+
             // Data Export/Import
             'export_data',
             'export_region_features',
             'get_file_info',
             'get_chromosome_list',
             'get_genome_info',
-            
+
             // BLAST & External Analysis
             'blast_search',
             'blast_sequence_from_region',
@@ -10957,18 +10957,18 @@ ${this.getPluginSystemInfo()}`;
             'batch_blast_search',
             'advanced_blast_search',
             'local_blast_database_info',
-            
+
             // Protein Structure
             'open_protein_viewer',
             'fetch_protein_structure',
             'search_pdb_structures',
             'search_pdb_structures',
             'get_pdb_details',
-            
+
             // Metabolic Pathways
             'show_metabolic_pathway',
             'find_pathway_genes',
-            
+
             // Action Manager - Sequence Editing
             'copy_sequence',
             'cut_sequence',
@@ -10982,7 +10982,7 @@ ${this.getPluginSystemInfo()}`;
             'clear_actions',
             'get_clipboard_content'
         ];
-        
+
         // Add plugin functions if available
         const pluginTools = [];
         if (this.pluginFunctionCallsIntegrator) {
@@ -10993,7 +10993,7 @@ ${this.getPluginSystemInfo()}`;
                 // Silently handle error
             }
         }
-        
+
         // Add MCP tools if available
         const mcpTools = [];
         if (this.mcpServerManager) {
@@ -11004,10 +11004,10 @@ ${this.getPluginSystemInfo()}`;
                 // Silently handle error
             }
         }
-        
+
         // Combine all tools and remove duplicates
         const allAvailableTools = [...new Set([...localTools, ...pluginTools, ...mcpTools])];
-        
+
         const context = {
             genomeBrowser: {
                 currentState: this.getCurrentState(),
@@ -11026,10 +11026,10 @@ ${this.getPluginSystemInfo()}`;
 
     addMessageToChat(message, sender, isError = false) {
         const timestamp = new Date().toISOString();
-        
+
         // Add to configuration manager for persistence (ChatBox原有功能)
         const messageId = this.configManager.addChatMessage(message, sender, timestamp);
-        
+
         // Add to Evolution data structure for detailed analysis
         this.addToEvolutionData({
             type: 'message',
@@ -11043,7 +11043,7 @@ ${this.getPluginSystemInfo()}`;
                 visible: true
             }
         });
-        
+
         // Display the message in UI
         this.displayChatMessage(message, sender, timestamp, messageId);
     }
@@ -11053,7 +11053,7 @@ ${this.getPluginSystemInfo()}`;
         if (messageElement) {
             // Get the text content, stripping HTML but preserving line breaks
             let textContent = messageElement.innerText || messageElement.textContent;
-            
+
             // Copy to clipboard
             navigator.clipboard.writeText(textContent).then(() => {
                 // Show brief success indication
@@ -11061,7 +11061,7 @@ ${this.getPluginSystemInfo()}`;
                 const originalHTML = copyBtn.innerHTML;
                 copyBtn.innerHTML = '<i class="fas fa-check"></i>';
                 copyBtn.style.color = '#10b981';
-                
+
                 setTimeout(() => {
                     copyBtn.innerHTML = originalHTML;
                     copyBtn.style.color = '';
@@ -11085,7 +11085,7 @@ ${this.getPluginSystemInfo()}`;
     formatMessage(message) {
         // Trim leading/trailing whitespace
         let formattedMessage = message.trim();
-        
+
         // Remove common leading whitespace while preserving relative indentation
         const lines = formattedMessage.split('\n');
         if (lines.length > 1) {
@@ -11095,7 +11095,7 @@ ${this.getPluginSystemInfo()}`;
                     const match = line.match(/^(\s*)/);
                     return match ? match[1].length : 0;
                 }));
-                
+
                 if (minIndent > 0) {
                     formattedMessage = lines.map(line => {
                         return line.length > 0 ? line.substring(minIndent) : line;
@@ -11103,7 +11103,7 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
         }
-        
+
         // Use marked library for proper Markdown rendering if available
         if (typeof marked !== 'undefined' && marked.parse) {
             try {
@@ -11118,10 +11118,10 @@ ${this.getPluginSystemInfo()}`;
                     smartypants: true,  // Use smart typography
                     xhtml: false        // Don't use XHTML tags
                 });
-                
+
                 // Parse markdown to HTML
                 const htmlContent = marked.parse(formattedMessage);
-                
+
                 // Sanitize the HTML output to prevent XSS while preserving formatting
                 return this.sanitizeHTML(htmlContent);
             } catch (error) {
@@ -11130,11 +11130,11 @@ ${this.getPluginSystemInfo()}`;
                 return this.basicMarkdownFormat(formattedMessage);
             }
         }
-        
+
         // Fallback to basic formatting if marked is not available
         return this.basicMarkdownFormat(formattedMessage);
     }
-    
+
     /**
      * Basic Markdown formatting fallback
      * Used when marked library is not available
@@ -11164,7 +11164,7 @@ ${this.getPluginSystemInfo()}`;
             // Line breaks
             .replace(/\n/g, '<br>');
     }
-    
+
     /**
      * Sanitize HTML to prevent XSS attacks while preserving formatting
      * Allows safe HTML tags and attributes
@@ -11181,7 +11181,7 @@ ${this.getPluginSystemInfo()}`;
             'div', 'span',
             'del', 'ins', 'sup', 'sub'
         ];
-        
+
         // Allow these attributes
         const allowedAttributes = {
             'a': ['href', 'title', 'target', 'rel'],
@@ -11191,30 +11191,30 @@ ${this.getPluginSystemInfo()}`;
             'div': ['class'],
             'span': ['class']
         };
-        
+
         // Create a temporary DOM element for parsing
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
-        
+
         // Recursively sanitize the DOM
         const sanitizeNode = (node) => {
             if (node.nodeType === Node.TEXT_NODE) {
                 return node.cloneNode(true);
             }
-            
+
             if (node.nodeType === Node.ELEMENT_NODE) {
                 const tagName = node.tagName.toLowerCase();
-                
+
                 // Remove disallowed tags
                 if (!allowedTags.includes(tagName)) {
                     // Return text content only for disallowed tags
                     const textNode = document.createTextNode(node.textContent);
                     return textNode;
                 }
-                
+
                 // Create new element
                 const newElement = document.createElement(tagName);
-                
+
                 // Copy allowed attributes
                 if (allowedAttributes[tagName]) {
                     Array.from(node.attributes).forEach(attr => {
@@ -11231,7 +11231,7 @@ ${this.getPluginSystemInfo()}`;
                             }
                         }
                     });
-                    
+
                     // Add security attributes for links
                     if (tagName === 'a' && !newElement.hasAttribute('target')) {
                         newElement.setAttribute('target', '_blank');
@@ -11240,7 +11240,7 @@ ${this.getPluginSystemInfo()}`;
                         newElement.setAttribute('rel', 'noopener noreferrer');
                     }
                 }
-                
+
                 // Recursively sanitize children
                 Array.from(node.childNodes).forEach(child => {
                     const sanitizedChild = sanitizeNode(child);
@@ -11248,13 +11248,13 @@ ${this.getPluginSystemInfo()}`;
                         newElement.appendChild(sanitizedChild);
                     }
                 });
-                
+
                 return newElement;
             }
-            
+
             return null;
         };
-        
+
         // Sanitize all child nodes
         const sanitizedDiv = document.createElement('div');
         Array.from(tempDiv.childNodes).forEach(child => {
@@ -11263,7 +11263,7 @@ ${this.getPluginSystemInfo()}`;
                 sanitizedDiv.appendChild(sanitizedChild);
             }
         });
-        
+
         return sanitizedDiv.innerHTML;
     }
 
@@ -11276,13 +11276,13 @@ ${this.getPluginSystemInfo()}`;
     displayVisualizationInChat(toolName, domElement, parameters = {}) {
         try {
             console.log(`🎨 [ChatManager] Displaying visualization: ${toolName}`);
-            
+
             const messagesContainer = document.getElementById('chatMessages');
             if (!messagesContainer) {
                 console.error('❌ [ChatManager] Chat messages container not found');
                 return;
             }
-            
+
             // Create visualization message container
             const vizMessage = document.createElement('div');
             vizMessage.className = 'chat-message assistant-message visualization-message';
@@ -11295,7 +11295,7 @@ ${this.getPluginSystemInfo()}`;
                 max-width: 90%;
                 box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
             `;
-            
+
             // Create header
             const vizHeader = document.createElement('div');
             vizHeader.style.cssText = `
@@ -11325,7 +11325,7 @@ ${this.getPluginSystemInfo()}`;
                     <i class="fas fa-expand-alt"></i>
                 </button>
             `;
-            
+
             // Create content container
             const vizContent = document.createElement('div');
             vizContent.className = 'visualization-content';
@@ -11337,7 +11337,7 @@ ${this.getPluginSystemInfo()}`;
                 max-height: 600px;
                 overflow: auto;
             `;
-            
+
             // Validate and append DOM element
             if (domElement instanceof Node) {
                 // Style the visualization element
@@ -11349,12 +11349,12 @@ ${this.getPluginSystemInfo()}`;
                 console.error('❌ [ChatManager] Invalid DOM element', domElement);
                 vizContent.innerHTML = '<div style="color: #e74c3c; padding: 20px; text-align: center;">Invalid visualization element</div>';
             }
-            
+
             // Assemble message
             vizMessage.appendChild(vizHeader);
             vizMessage.appendChild(vizContent);
             messagesContainer.appendChild(vizMessage);
-            
+
             // Add expand functionality
             const expandBtn = vizHeader.querySelector('.viz-expand-btn');
             if (expandBtn) {
@@ -11362,10 +11362,10 @@ ${this.getPluginSystemInfo()}`;
                     this.expandVisualization(domElement, toolName);
                 });
             }
-            
+
             // Scroll to show the visualization
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
+
             // Track in Evolution data
             this.addToEvolutionData({
                 type: 'visualization_displayed',
@@ -11374,7 +11374,7 @@ ${this.getPluginSystemInfo()}`;
                 parameters: parameters,
                 success: true
             });
-            
+
         } catch (error) {
             console.error('❌ [ChatManager] Error displaying visualization:', error);
         }
@@ -11415,7 +11415,7 @@ ${this.getPluginSystemInfo()}`;
             justify-content: center;
             padding: 20px;
         `;
-        
+
         // Clone the element for modal display
         const clonedElement = element.cloneNode(true);
         clonedElement.style.width = '90%';
@@ -11424,7 +11424,7 @@ ${this.getPluginSystemInfo()}`;
         clonedElement.style.background = 'white';
         clonedElement.style.borderRadius = '8px';
         clonedElement.style.padding = '20px';
-        
+
         // Add close button
         const closeBtn = document.createElement('button');
         closeBtn.innerHTML = '<i class="fas fa-times"></i> Close';
@@ -11441,11 +11441,11 @@ ${this.getPluginSystemInfo()}`;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         `;
         closeBtn.onclick = () => document.body.removeChild(modal);
-        
+
         modal.appendChild(clonedElement);
         modal.appendChild(closeBtn);
         document.body.appendChild(modal);
-        
+
         // Close on escape key
         const escHandler = (e) => {
             if (e.key === 'Escape' && document.body.contains(modal)) {
@@ -11473,7 +11473,7 @@ ${this.getPluginSystemInfo()}`;
                 </div>
             </div>
         `;
-        
+
         messagesContainer.appendChild(typingDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -11492,14 +11492,14 @@ ${this.getPluginSystemInfo()}`;
         if (welcomeMessage) {
             messagesContainer.appendChild(welcomeMessage);
         }
-        
+
         // Clear chat input box
         const chatInput = document.getElementById('chatInput');
         if (chatInput) {
             chatInput.value = '';
             chatInput.style.height = 'auto'; // Reset height for auto-resize
         }
-        
+
         // Clear chat history from config
         this.configManager.clearChatHistory();
     }
@@ -11525,7 +11525,7 @@ ${this.getPluginSystemInfo()}`;
                     filename = `chat-history-${new Date().toISOString().split('T')[0]}.json`;
                     mimeType = 'application/json';
                     break;
-                    
+
                 case 'txt':
                     content = history.map(msg => {
                         const time = new Date(msg.timestamp).toLocaleString();
@@ -11534,7 +11534,7 @@ ${this.getPluginSystemInfo()}`;
                     filename = `chat-history-${new Date().toISOString().split('T')[0]}.txt`;
                     mimeType = 'text/plain';
                     break;
-                    
+
                 case 'csv':
                     const csvHeader = 'Timestamp,Sender,Message\n';
                     const csvContent = history.map(msg => {
@@ -11545,7 +11545,7 @@ ${this.getPluginSystemInfo()}`;
                     filename = `chat-history-${new Date().toISOString().split('T')[0]}.csv`;
                     mimeType = 'text/csv';
                     break;
-                    
+
                 default:
                     throw new Error(`Unsupported export format: ${format}`);
             }
@@ -11572,7 +11572,7 @@ ${this.getPluginSystemInfo()}`;
     showSuggestions() {
         const suggestions = [
             "Go to chr1:1000-2000",
-            "Find lacZ gene", 
+            "Find lacZ gene",
             "Show current state",
             "Get sequence from 1000 to 2000",
             "Find EcoRI sites",
@@ -11582,7 +11582,7 @@ ${this.getPluginSystemInfo()}`;
             "Export current region as FASTA"
         ];
 
-        const suggestionsHTML = suggestions.map(s => 
+        const suggestionsHTML = suggestions.map(s =>
             `<span class="suggestion-chip" onclick="document.getElementById('chatInput').value = '${s}'">${s}</span>`
         ).join('');
 
@@ -11606,7 +11606,7 @@ ${this.getPluginSystemInfo()}`;
             console.log('Loading chat history...');
             const history = this.configManager.getChatHistory();
             console.log(`Found ${history.length} chat messages in history`);
-            
+
             if (history.length > 0) {
                 this.displayChatHistory(history);
                 console.log(`Successfully loaded and displayed ${history.length} chat messages`);
@@ -11633,7 +11633,7 @@ ${this.getPluginSystemInfo()}`;
 
         // Preserve welcome message but clear other messages
         const welcomeMessage = messagesContainer.querySelector('.welcome-message');
-        
+
         // Clear all messages except welcome
         const existingMessages = messagesContainer.querySelectorAll('.message:not(.welcome-message .message)');
         existingMessages.forEach(msg => msg.remove());
@@ -11646,7 +11646,7 @@ ${this.getPluginSystemInfo()}`;
 
         // Scroll to bottom to show most recent messages
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
+
         console.log('Chat history display completed');
     }
 
@@ -11657,18 +11657,16 @@ ${this.getPluginSystemInfo()}`;
         const messagesContainer = document.getElementById('chatMessages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}-message`;
-        
+
         const displayTime = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
         const displayId = messageId || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
+
         messageDiv.innerHTML = `
             <div class="message-content">
                 <div class="message-icon">
                     <i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i>
                 </div>
-                <div class="message-text" id="${displayId}">
-                    ${this.formatMessage(message)}
-                </div>
+<div class="message-text" id="${displayId}">${this.formatMessage(message)}</div>
                 <div class="message-actions">
                     <button class="copy-message-btn" onclick="chatManager.copyMessage('${displayId}')" title="Copy message">
                         <i class="fas fa-copy"></i>
@@ -11677,7 +11675,7 @@ ${this.getPluginSystemInfo()}`;
             </div>
             <div class="message-time">${displayTime}</div>
         `;
-        
+
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -11685,7 +11683,7 @@ ${this.getPluginSystemInfo()}`;
     showConfigOptions() {
         const options = [
             'Export chat history as JSON',
-            'Export chat history as TXT', 
+            'Export chat history as TXT',
             'Export chat history as CSV',
             'Clear all chat history',
             'Export all configurations',
@@ -11695,7 +11693,7 @@ ${this.getPluginSystemInfo()}`;
             'Test tool execution'
         ];
 
-        const optionsHTML = options.map((option, index) => 
+        const optionsHTML = options.map((option, index) =>
             `<button class="suggestion-btn" onclick="chatManager.handleConfigOption(${index})">${option}</button>`
         ).join('');
 
@@ -11710,7 +11708,7 @@ ${this.getPluginSystemInfo()}`;
 
     async handleConfigOption(optionIndex) {
         try {
-            switch(optionIndex) {
+            switch (optionIndex) {
                 case 0: // Export JSON
                     await this.exportChatHistory('json');
                     this.addMessageToChat('✅ Chat history exported as JSON', 'assistant');
@@ -11792,22 +11790,22 @@ ${this.getPluginSystemInfo()}`;
     // New comprehensive function calls
     async getGeneDetails(params) {
         const { geneName, chromosome } = params;
-        
+
         if (!this.app || !this.app.currentAnnotations) {
             throw new Error('No annotations loaded');
         }
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         const annotations = this.app.currentAnnotations[chr] || [];
         const matchingGenes = annotations.filter(gene => {
             const name = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || '';
             return name && typeof name === 'string' && name.toLowerCase().includes(geneName.toLowerCase());
         });
-        
+
         if (matchingGenes.length === 0) {
             return {
                 geneName: geneName,
@@ -11816,7 +11814,7 @@ ${this.getPluginSystemInfo()}`;
                 message: `No genes found matching "${geneName}" in ${chr}`
             };
         }
-        
+
         const geneDetails = matchingGenes.map(gene => ({
             name: gene.qualifiers?.gene || gene.qualifiers?.locus_tag || 'Unknown',
             type: gene.type,
@@ -11828,7 +11826,7 @@ ${this.getPluginSystemInfo()}`;
             locusTag: gene.qualifiers?.locus_tag || 'N/A',
             note: gene.qualifiers?.note || 'No additional notes'
         }));
-        
+
         return {
             geneName: geneName,
             chromosome: chr,
@@ -11840,15 +11838,15 @@ ${this.getPluginSystemInfo()}`;
 
     async translateSequence(params) {
         const { chromosome, start, end, strand = 1, frame = 1 } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         const sequence = await this.app.getSequenceForRegion(chr, start, end);
         const proteinSequence = this.app.translateDNA(sequence, strand);
-        
+
         return {
             chromosome: chr,
             start: start,
@@ -11866,18 +11864,18 @@ ${this.getPluginSystemInfo()}`;
 
     async calculateGCContent(params) {
         const { chromosome, start, end, windowSize = 100 } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         const sequence = await this.app.getSequenceForRegion(chr, start, end);
-        
+
         // Overall GC content
         const gcCount = (sequence.match(/[GC]/gi) || []).length;
         const overallGC = (gcCount / sequence.length * 100).toFixed(2);
-        
+
         // Windowed GC content
         const windows = [];
         for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
@@ -11890,7 +11888,7 @@ ${this.getPluginSystemInfo()}`;
                 gcContent: parseFloat(windowGCPercent)
             });
         }
-        
+
         return {
             chromosome: chr,
             region: `${start}-${end}`,
@@ -11904,25 +11902,25 @@ ${this.getPluginSystemInfo()}`;
 
     async findOpenReadingFrames(params) {
         const { chromosome, start, end, minLength = 300 } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         const sequence = await this.app.getSequenceForRegion(chr, start, end);
         const orfs = [];
-        
+
         // Find ORFs in all 6 reading frames
         for (let strand = 1; strand >= -1; strand -= 2) {
             const seq = strand === 1 ? sequence : this.reverseComplement(sequence);
-            
+
             for (let frame = 0; frame < 3; frame++) {
                 let currentORF = null;
-                
+
                 for (let i = frame; i < seq.length - 2; i += 3) {
                     const codon = seq.substring(i, i + 3);
-                    
+
                     if (codon === 'ATG' && !currentORF) {
                         // Start codon
                         currentORF = { start: i, frame: frame + 1, strand: strand };
@@ -11930,13 +11928,13 @@ ${this.getPluginSystemInfo()}`;
                         // Stop codon
                         currentORF.end = i + 2;
                         currentORF.length = currentORF.end - currentORF.start + 1;
-                        
+
                         if (currentORF.length >= minLength) {
                             // Convert to original coordinates
                             if (strand === 1) {
                                 currentORF.start += start;
                                 currentORF.end += start;
-        } else {
+                            } else {
                                 const temp = sequence.length - currentORF.end - 1 + start;
                                 currentORF.end = sequence.length - currentORF.start - 1 + start;
                                 currentORF.start = temp;
@@ -11948,7 +11946,7 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
         }
-        
+
         return {
             chromosome: chr,
             region: `${start}-${end}`,
@@ -11964,7 +11962,7 @@ ${this.getPluginSystemInfo()}`;
             const result = window.UnifiedSequenceProcessing.legacyReverseComplement(sequence);
             return result;
         }
-        
+
         // Fallback to original implementation if unified module not available
         const complement = { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G' };
         return sequence.split('').reverse().map(base => complement[base] || base).join('');
@@ -11975,7 +11973,7 @@ ${this.getPluginSystemInfo()}`;
         // YAML schema uses 'gene_name', but legacy code uses 'identifier'
         const identifier = params.identifier || params.gene_name;
         const { includeProtein = true, format = 'object' } = params;
-        
+
         if (!identifier) {
             throw new Error('Gene identifier (name or locus_tag) is required');
         }
@@ -11988,24 +11986,24 @@ ${this.getPluginSystemInfo()}`;
 
         try {
             const result = window.MicrobeFns.getCodingSequence(identifier);
-            
+
             if (!result.success) {
                 // Enhanced error handling with suggestions
                 let errorMessage = result.error;
                 let suggestions = '';
-                
+
                 if (result.error.includes('not found')) {
                     if (result.suggestions && result.suggestions.length > 0) {
                         suggestions = `\n\nSimilar genes found: ${result.suggestions.join(', ')}`;
                     }
-                    
+
                     if (result.availableGenesCount > 0) {
                         suggestions += `\n\nAvailable genes in this genome: ${result.availableGenesCount} total`;
                         if (result.availableGenesSample && result.availableGenesSample.length > 0) {
                             suggestions += `\nSample genes: ${result.availableGenesSample.join(', ')}`;
                         }
                     }
-                    
+
                     errorMessage += `\n\nSuggestions:
 - Try using search_gene_by_name to find the exact gene name
 - Use search_features to see all available genes
@@ -12046,7 +12044,7 @@ ${this.getPluginSystemInfo()}`;
             }
 
             return response;
-            
+
         } catch (error) {
             throw new Error(`Failed to get coding sequence for "${identifier}": ${error.message}`);
         }
@@ -12155,10 +12153,10 @@ ${this.getPluginSystemInfo()}`;
             length: gene.end - gene.start + 1,
             strand: gene.strand === -1 ? '-' : '+',
             type: gene.type || 'Unknown',
-            
+
             // Additional gene attributes
             qualifiers: gene.qualifiers || {},
-            
+
             // Operon information if available
             operonInfo: operonInfo ? {
                 operonName: operonInfo.name,
@@ -12204,7 +12202,7 @@ ${this.getPluginSystemInfo()}`;
         // Get features in the region
         let featuresInRegion = [];
         if (this.app.currentAnnotations && this.app.currentAnnotations[chromosome]) {
-            featuresInRegion = this.app.currentAnnotations[chromosome].filter(feature => 
+            featuresInRegion = this.app.currentAnnotations[chromosome].filter(feature =>
                 feature.start <= end && feature.end >= start
             ).map(feature => ({
                 type: feature.type,
@@ -12240,18 +12238,18 @@ ${this.getPluginSystemInfo()}`;
             end: end,
             length: length,
             centerPosition: Math.floor((start + end) / 2),
-            
+
             // Sequence information
             hasSequence: !!sequence,
             gcContent: gcContent,
             sequencePreview: sequence ? sequence.substring(0, 100) + (sequence.length > 100 ? '...' : '') : null,
-            
+
             // Features information
             featuresCount: featuresInRegion.length,
             features: featuresInRegion,
             userFeaturesCount: userFeaturesInRegion.length,
             userFeatures: userFeaturesInRegion,
-            
+
             // Statistics
             statistics: {
                 totalFeatures: featuresInRegion.length + userFeaturesInRegion.length,
@@ -12315,16 +12313,16 @@ ${this.getPluginSystemInfo()}`;
             start: start,
             end: end,
             length: length,
-            
+
             // Sequence information
             sequence: selectedSequence,
             gcContent: gcContent,
             sequencePreview: selectedSequence ? selectedSequence.substring(0, 100) + (selectedSequence.length > 100 ? '...' : '') : null,
-            
+
             // Overlapping features
             overlappingFeaturesCount: overlappingFeatures.length,
             overlappingFeatures: overlappingFeatures,
-            
+
             // Analysis suggestions
             suggestions: {
                 canTranslate: length >= 3 && length % 3 === 0,
@@ -12337,30 +12335,30 @@ ${this.getPluginSystemInfo()}`;
 
     async getMultipleCodingSequences(params) {
         const { identifiers, includeProtein = true, format = 'object' } = params;
-        
+
         if (!identifiers || !Array.isArray(identifiers)) {
             throw new Error('Identifiers array is required');
         }
-        
+
         if (identifiers.length === 0) {
             throw new Error('At least one identifier is required');
         }
-        
+
         if (identifiers.length > 50) {
             throw new Error('Maximum 50 identifiers allowed per request');
         }
-        
+
         // Use MicrobeGenomicsFunctions to get multiple coding sequences
         if (!window.MicrobeFns || !window.MicrobeFns.getMultipleCodingSequences) {
             throw new Error('MicrobeGenomicsFunctions not available');
         }
-        
+
         try {
             const results = window.MicrobeFns.getMultipleCodingSequences(identifiers);
-            
+
             const successful = results.filter(r => r.success);
             const failed = results.filter(r => !r.success);
-            
+
             const response = {
                 totalRequested: identifiers.length,
                 successful: successful.length,
@@ -12381,7 +12379,7 @@ ${this.getPluginSystemInfo()}`;
                 })),
                 errors: failed.map(f => ({ identifier: f.identifier, error: f.error }))
             };
-            
+
             // Add full sequences if requested
             if (format === 'full_sequences') {
                 response.fullSequences = successful.map(result => ({
@@ -12391,9 +12389,9 @@ ${this.getPluginSystemInfo()}`;
                     proteinSequence: includeProtein ? result.proteinSequence : undefined
                 }));
             }
-            
+
             return response;
-            
+
         } catch (error) {
             throw new Error(`Failed to get multiple coding sequences: ${error.message}`);
         }
@@ -12401,19 +12399,19 @@ ${this.getPluginSystemInfo()}`;
 
     async getOperons(params) {
         const { chromosome } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         if (!this.app.currentAnnotations || !this.app.currentAnnotations[chr]) {
             throw new Error('No annotations loaded for chromosome');
         }
-        
+
         const annotations = this.app.currentAnnotations[chr];
         const operons = this.app.detectOperons(annotations, chr);
-        
+
         const operonSummary = operons.map(operon => ({
             name: operon.name,
             start: operon.start,
@@ -12423,7 +12421,7 @@ ${this.getPluginSystemInfo()}`;
             genes: operon.genes.map(g => g.qualifiers?.gene || g.qualifiers?.locus_tag || 'Unknown').slice(0, 5),
             length: operon.end - operon.start + 1
         }));
-        
+
         return {
             chromosome: chr,
             operonsFound: operons.length,
@@ -12433,24 +12431,24 @@ ${this.getPluginSystemInfo()}`;
 
     async zoomToGene(params) {
         const { geneName, chromosome, padding = 1000 } = params;
-        
+
         const geneDetails = await this.getGeneDetails({ geneName, chromosome });
-        
+
         if (!geneDetails.found || geneDetails.genes.length === 0) {
             throw new Error(`Gene "${geneName}" not found`);
         }
-        
+
         const gene = geneDetails.genes[0]; // Use first match
         const newStart = Math.max(0, gene.start - padding);
         const newEnd = gene.end + padding;
-        
+
         // Navigate to the gene location
         await this.navigateToPosition({
             chromosome: geneDetails.chromosome,
             start: newStart,
             end: newEnd
         });
-        
+
         return {
             geneName: geneName,
             gene: gene,
@@ -12468,14 +12466,14 @@ ${this.getPluginSystemInfo()}`;
                 message: 'No genome sequence loaded'
             };
         }
-        
+
         const chromosomes = Object.keys(this.app.currentSequence);
         const chromosomeInfo = chromosomes.map(chr => ({
             name: chr,
             length: this.app.currentSequence[chr].length,
             isSelected: chr === this.app.currentChromosome
         }));
-        
+
         return {
             chromosomes: chromosomeInfo,
             count: chromosomes.length,
@@ -12487,16 +12485,16 @@ ${this.getPluginSystemInfo()}`;
         if (!this.app) {
             throw new Error('Genome browser not initialized');
         }
-        
+
         const visibleTracks = this.getVisibleTracks();
         const allTracks = ['genes', 'sequence', 'gc', 'variants', 'reads', 'proteins'];
-        
+
         const trackStatus = allTracks.map(track => ({
             name: track,
             visible: visibleTracks.includes(track),
             description: this.getTrackDescription(track)
         }));
-        
+
         return {
             visibleTracks: visibleTracks,
             totalTracks: allTracks.length,
@@ -12523,24 +12521,24 @@ ${this.getPluginSystemInfo()}`;
     // 1. MOTIF AND PATTERN SEARCHING
     async searchMotif(params) {
         const { pattern, chromosome, start, end, allowMismatches = 0 } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         const regionStart = start || this.app.currentPosition?.start || 0;
         const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
-        
+
         const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
         const motifPattern = pattern.toUpperCase();
         const matches = [];
-        
+
         // Search for exact matches and with mismatches
         for (let i = 0; i <= sequence.length - motifPattern.length; i++) {
             const subsequence = sequence.substring(i, i + motifPattern.length);
             const mismatches = this.countMismatches(subsequence, motifPattern);
-            
+
             if (mismatches <= allowMismatches) {
                 matches.push({
                     position: regionStart + i,
@@ -12550,13 +12548,13 @@ ${this.getPluginSystemInfo()}`;
                 });
             }
         }
-        
+
         // Search reverse complement
         const reverseComplement = this.reverseComplement(motifPattern);
         for (let i = 0; i <= sequence.length - reverseComplement.length; i++) {
             const subsequence = sequence.substring(i, i + reverseComplement.length);
             const mismatches = this.countMismatches(subsequence, reverseComplement);
-            
+
             if (mismatches <= allowMismatches) {
                 matches.push({
                     position: regionStart + i,
@@ -12566,7 +12564,7 @@ ${this.getPluginSystemInfo()}`;
                 });
             }
         }
-        
+
         return {
             pattern: pattern,
             chromosome: chr,
@@ -12579,19 +12577,19 @@ ${this.getPluginSystemInfo()}`;
 
     async searchPattern(params) {
         const { regex, chromosome, start, end, description = 'Custom pattern' } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         const regionStart = start || this.app.currentPosition?.start || 0;
         const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
-        
+
         const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
         const pattern = new RegExp(regex, 'gi');
         const matches = [];
-        
+
         let match;
         while ((match = pattern.exec(sequence)) !== null) {
             matches.push({
@@ -12599,13 +12597,13 @@ ${this.getPluginSystemInfo()}`;
                 sequence: match[0],
                 length: match[0].length
             });
-            
+
             // Prevent infinite loop on zero-length matches
             if (match.index === pattern.lastIndex) {
                 pattern.lastIndex++;
             }
         }
-        
+
         return {
             regex: regex,
             description: description,
@@ -12619,37 +12617,37 @@ ${this.getPluginSystemInfo()}`;
     // 2. NEARBY FEATURES AND CONTEXT
     async getNearbyFeatures(params) {
         const { chromosome, position, distance = 5000, featureTypes = [] } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         if (!this.app.currentAnnotations || !this.app.currentAnnotations[chr]) {
             throw new Error('No annotations loaded for chromosome');
         }
-        
+
         const annotations = this.app.currentAnnotations[chr];
         const nearbyFeatures = annotations.filter(feature => {
             if (featureTypes.length > 0 && !featureTypes.includes(feature.type)) {
                 return false;
             }
-            
+
             const featureDistance = Math.min(
                 Math.abs(feature.start - position),
                 Math.abs(feature.end - position)
             );
-            
+
             return featureDistance <= distance;
         });
-        
+
         // Sort by distance
         nearbyFeatures.sort((a, b) => {
             const distA = Math.min(Math.abs(a.start - position), Math.abs(a.end - position));
             const distB = Math.min(Math.abs(b.start - position), Math.abs(b.end - position));
             return distA - distB;
         });
-        
+
         const featureSummary = nearbyFeatures.map(feature => ({
             name: feature.qualifiers?.gene || feature.qualifiers?.locus_tag || 'Unknown',
             type: feature.type,
@@ -12659,7 +12657,7 @@ ${this.getPluginSystemInfo()}`;
             distance: Math.min(Math.abs(feature.start - position), Math.abs(feature.end - position)),
             direction: feature.start > position ? 'downstream' : feature.end < position ? 'upstream' : 'overlapping'
         }));
-        
+
         return {
             chromosome: chr,
             position: position,
@@ -12671,27 +12669,27 @@ ${this.getPluginSystemInfo()}`;
 
     async findIntergenicRegions(params) {
         const { chromosome, minLength = 100 } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         if (!this.app.currentAnnotations || !this.app.currentAnnotations[chr]) {
             throw new Error('No annotations loaded for chromosome');
         }
-        
+
         const annotations = this.app.currentAnnotations[chr];
         const genes = annotations.filter(f => f.type === 'gene' || f.type === 'CDS').sort((a, b) => a.start - b.start);
         const intergenicRegions = [];
-        
+
         for (let i = 0; i < genes.length - 1; i++) {
             const currentGene = genes[i];
             const nextGene = genes[i + 1];
             const intergenicStart = currentGene.end + 1;
             const intergenicEnd = nextGene.start - 1;
             const length = intergenicEnd - intergenicStart + 1;
-            
+
             if (length >= minLength) {
                 intergenicRegions.push({
                     start: intergenicStart,
@@ -12702,7 +12700,7 @@ ${this.getPluginSystemInfo()}`;
                 });
             }
         }
-        
+
         return {
             chromosome: chr,
             minLength: minLength,
@@ -12715,17 +12713,17 @@ ${this.getPluginSystemInfo()}`;
     // 3. RESTRICTION ENZYME ANALYSIS
     async findRestrictionSites(params) {
         const { enzyme, chromosome, start, end } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         const regionStart = start || this.app.currentPosition?.start || 0;
         const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
-        
+
         const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
-        
+
         // Common restriction enzyme recognition sites
         const restrictionSites = {
             'EcoRI': 'GAATTC',
@@ -12739,15 +12737,15 @@ ${this.getPluginSystemInfo()}`;
             'SacI': 'GAGCTC',
             'PstI': 'CTGCAG'
         };
-        
+
         const recognitionSite = restrictionSites[enzyme];
         if (!recognitionSite) {
             throw new Error(`Unknown restriction enzyme: ${enzyme}. Supported: ${Object.keys(restrictionSites).join(', ')}`);
         }
-        
+
         const sites = [];
         const siteLength = recognitionSite.length;
-        
+
         // Search forward strand
         for (let i = 0; i <= sequence.length - siteLength; i++) {
             const subsequence = sequence.substring(i, i + siteLength);
@@ -12759,7 +12757,7 @@ ${this.getPluginSystemInfo()}`;
                 });
             }
         }
-        
+
         // Search reverse strand
         const reverseComplement = this.reverseComplement(recognitionSite);
         for (let i = 0; i <= sequence.length - siteLength; i++) {
@@ -12772,7 +12770,7 @@ ${this.getPluginSystemInfo()}`;
                 });
             }
         }
-        
+
         return {
             enzyme: enzyme,
             recognitionSite: recognitionSite,
@@ -12785,15 +12783,15 @@ ${this.getPluginSystemInfo()}`;
 
     async virtualDigest(params) {
         const { enzymes, chromosome } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         const sequenceLength = this.app.currentSequence[chr]?.length || 0;
         const allSites = [];
-        
+
         // Find all restriction sites for all enzymes
         for (const enzyme of enzymes) {
             const result = await this.findRestrictionSites({ enzyme, chromosome: chr, start: 0, end: sequenceLength });
@@ -12801,14 +12799,14 @@ ${this.getPluginSystemInfo()}`;
                 allSites.push({ ...site, enzyme });
             });
         }
-        
+
         // Sort all sites by position
         allSites.sort((a, b) => a.position - b.position);
-        
+
         // Calculate fragment sizes
         const fragments = [];
         let lastPosition = 0;
-        
+
         allSites.forEach(site => {
             const fragmentLength = site.position - lastPosition;
             if (fragmentLength > 0) {
@@ -12821,7 +12819,7 @@ ${this.getPluginSystemInfo()}`;
             }
             lastPosition = site.position;
         });
-        
+
         // Add final fragment
         if (lastPosition < sequenceLength) {
             fragments.push({
@@ -12831,7 +12829,7 @@ ${this.getPluginSystemInfo()}`;
                 cutBy: 'terminal'
             });
         }
-        
+
         return {
             enzymes: enzymes,
             chromosome: chr,
@@ -12847,9 +12845,9 @@ ${this.getPluginSystemInfo()}`;
     // 4. ENHANCED SEQUENCE STATISTICS
     async sequenceStatistics(params) {
         const { chromosome, start, end, include = ['basic', 'composition', 'complexity'], sequence, sequenceType = 'dna' } = params;
-        
+
         let inputSequence;
-        
+
         // If sequence is provided directly, use it
         if (sequence) {
             inputSequence = sequence.replace(/\s/g, '').toUpperCase();
@@ -12863,56 +12861,56 @@ ${this.getPluginSystemInfo()}`;
             if (!chr) {
                 throw new Error('No chromosome specified and none currently selected');
             }
-            
+
             const regionStart = start || this.app.currentPosition?.start || 0;
             const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
-            
+
             inputSequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
         }
-        
+
         const stats = {};
-        
+
         // Basic composition
         if (include.includes('basic') || include.includes('composition')) {
             if (sequenceType === 'protein') {
                 // Protein amino acid composition
                 const aaCounts = {};
                 const aminoAcids = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V'];
-                
+
                 // Initialize counts
                 aminoAcids.forEach(aa => aaCounts[aa] = 0);
-                
+
                 // Count amino acids
                 for (const aa of inputSequence) {
                     if (aminoAcids.includes(aa)) {
                         aaCounts[aa]++;
                     }
                 }
-                
+
                 const length = inputSequence.length;
                 const composition = { length: length };
-                
+
                 // Calculate percentages
                 aminoAcids.forEach(aa => {
-                    composition[aa] = { 
-                        count: aaCounts[aa], 
-                        percentage: (aaCounts[aa] / length * 100).toFixed(2) 
+                    composition[aa] = {
+                        count: aaCounts[aa],
+                        percentage: (aaCounts[aa] / length * 100).toFixed(2)
                     };
                 });
-                
+
                 // Add amino acid properties
                 const hydrophobic = ['A', 'V', 'I', 'L', 'M', 'F', 'W', 'Y'];
                 const charged = ['R', 'K', 'D', 'E'];
                 const polar = ['N', 'Q', 'S', 'T', 'Y'];
                 const basic = ['R', 'K', 'H'];
                 const acidic = ['D', 'E'];
-                
+
                 const hydrophobicCount = hydrophobic.reduce((sum, aa) => sum + aaCounts[aa], 0);
                 const chargedCount = charged.reduce((sum, aa) => sum + aaCounts[aa], 0);
                 const polarCount = polar.reduce((sum, aa) => sum + aaCounts[aa], 0);
                 const basicCount = basic.reduce((sum, aa) => sum + aaCounts[aa], 0);
                 const acidicCount = acidic.reduce((sum, aa) => sum + aaCounts[aa], 0);
-                
+
                 composition.properties = {
                     hydrophobic: { count: hydrophobicCount, percentage: (hydrophobicCount / length * 100).toFixed(2) },
                     charged: { count: chargedCount, percentage: (chargedCount / length * 100).toFixed(2) },
@@ -12920,16 +12918,16 @@ ${this.getPluginSystemInfo()}`;
                     basic: { count: basicCount, percentage: (basicCount / length * 100).toFixed(2) },
                     acidic: { count: acidicCount, percentage: (acidicCount / length * 100).toFixed(2) }
                 };
-                
+
                 stats.composition = composition;
-                
+
             } else {
                 // DNA nucleotide composition
                 const counts = { A: 0, T: 0, G: 0, C: 0, N: 0 };
                 for (const base of inputSequence) {
                     counts[base] = (counts[base] || 0) + 1;
                 }
-                
+
                 const length = inputSequence.length;
                 stats.composition = {
                     length: length,
@@ -12942,42 +12940,42 @@ ${this.getPluginSystemInfo()}`;
                 };
             }
         }
-        
+
         // AT/GC skew
         if (include.includes('skew') || include.includes('at_skew') || include.includes('gc_skew')) {
             const windowSize = Math.max(100, Math.floor(sequence.length / 50));
             const skewData = [];
-            
+
             for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
                 const window = sequence.substring(i, i + windowSize);
                 const A = (window.match(/A/g) || []).length;
                 const T = (window.match(/T/g) || []).length;
                 const G = (window.match(/G/g) || []).length;
                 const C = (window.match(/C/g) || []).length;
-                
+
                 const atSkew = (A - T) / (A + T) || 0;
                 const gcSkew = (G - C) / (G + C) || 0;
-                
+
                 skewData.push({
                     position: regionStart + i + windowSize / 2,
                     atSkew: parseFloat(atSkew.toFixed(3)),
                     gcSkew: parseFloat(gcSkew.toFixed(3))
                 });
             }
-            
+
             stats.skew = skewData.slice(0, 20); // Limit data points
         }
-        
+
         // Complexity (low complexity regions)
         if (include.includes('complexity')) {
             const windowSize = 50;
             const lowComplexityRegions = [];
-            
+
             for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
                 const window = sequence.substring(i, i + windowSize);
                 const uniqueBases = new Set(window).size;
                 const complexity = uniqueBases / 4; // Normalized to 0-1
-                
+
                 if (complexity < 0.6) { // Low complexity threshold
                     lowComplexityRegions.push({
                         start: regionStart + i,
@@ -12986,13 +12984,13 @@ ${this.getPluginSystemInfo()}`;
                     });
                 }
             }
-            
+
             stats.complexity = {
                 lowComplexityRegions: lowComplexityRegions.length,
                 regions: lowComplexityRegions.slice(0, 10)
             };
         }
-        
+
         return {
             chromosome: chr,
             region: `${regionStart}-${regionEnd}`,
@@ -13003,20 +13001,20 @@ ${this.getPluginSystemInfo()}`;
 
     async codonUsageAnalysis(params) {
         const { sequence, geneName, locusTag, chromosome } = params;
-        
+
         let analysisSequence = sequence;
         let geneInfo = null;
         let searchTerm = null;
-        
+
         // If sequence is provided directly, use it
         if (sequence && typeof sequence === 'string') {
             analysisSequence = sequence.replace(/\s/g, '').toUpperCase();
-            
+
             // Validate DNA sequence
             if (!/^[ATGC]+$/.test(analysisSequence)) {
                 throw new Error('Sequence must contain only A, T, G, C nucleotides');
             }
-        } 
+        }
         // Otherwise, try to get sequence from gene name or locus tag
         else if (geneName || locusTag) {
             searchTerm = geneName || locusTag;
@@ -13024,30 +13022,30 @@ ${this.getPluginSystemInfo()}`;
             if (!geneDetails.found || geneDetails.genes.length === 0) {
                 throw new Error(`Gene "${searchTerm}" not found`);
             }
-            
+
             const gene = geneDetails.genes.find(g => g.type === 'CDS') || geneDetails.genes[0];
             const chr = geneDetails.chromosome;
-            
+
             analysisSequence = await this.app.getSequenceForRegion(chr, gene.start, gene.end);
-            
+
             // Handle negative strand genes - get reverse complement
             if (gene.strand === '-') {
                 analysisSequence = this.reverseComplement(analysisSequence);
             }
-            
+
             geneInfo = gene;
         } else {
             throw new Error('Either sequence, geneName, or locusTag must be provided');
         }
-        
+
         // Check if sequence length is multiple of 3 (complete codons)
         if (analysisSequence.length % 3 !== 0) {
             console.warn('Warning: Sequence length is not a multiple of 3, some nucleotides at the end will be ignored');
         }
-        
+
         const codonCounts = {};
         const aminoAcidCounts = {};
-        
+
         // Genetic code
         const geneticCode = {
             'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
@@ -13067,7 +13065,7 @@ ${this.getPluginSystemInfo()}`;
             'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
             'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
         };
-        
+
         // Synonymous codon groups
         const synonymousCodons = {
             'F': ['TTT', 'TTC'],
@@ -13092,41 +13090,41 @@ ${this.getPluginSystemInfo()}`;
             'G': ['GGT', 'GGC', 'GGA', 'GGG'],
             '*': ['TAA', 'TAG', 'TGA']
         };
-        
+
         // Count codons
         for (let i = 0; i < analysisSequence.length - 2; i += 3) {
             const codon = analysisSequence.substring(i, i + 3);
             const aminoAcid = geneticCode[codon];
-            
+
             if (aminoAcid) {
                 codonCounts[codon] = (codonCounts[codon] || 0) + 1;
                 aminoAcidCounts[aminoAcid] = (aminoAcidCounts[aminoAcid] || 0) + 1;
             }
         }
-        
+
         const totalCodons = Object.values(codonCounts).reduce((sum, count) => sum + count, 0);
-        
+
         // Calculate RSCU (Relative Synonymous Codon Usage)
         const rscu = {};
         const codonPreferences = {};
-        
+
         for (const [aa, codons] of Object.entries(synonymousCodons)) {
             const aaCount = aminoAcidCounts[aa] || 0;
             if (aaCount > 0 && codons.length > 1) {
                 const expectedFreq = aaCount / codons.length;
-                
+
                 codonPreferences[aa] = {
                     aminoAcid: aa,
                     totalCount: aaCount,
                     synonymousCodons: codons.length,
                     codons: []
                 };
-                
+
                 for (const codon of codons) {
                     const observedCount = codonCounts[codon] || 0;
                     const rscuValue = expectedFreq > 0 ? observedCount / expectedFreq : 0;
                     rscu[codon] = rscuValue;
-                    
+
                     codonPreferences[aa].codons.push({
                         codon: codon,
                         count: observedCount,
@@ -13135,14 +13133,14 @@ ${this.getPluginSystemInfo()}`;
                         preference: rscuValue > 1.0 ? 'preferred' : (rscuValue < 0.5 ? 'rare' : 'neutral')
                     });
                 }
-                
+
                 // Sort codons by usage within each amino acid
                 codonPreferences[aa].codons.sort((a, b) => b.percentage - a.percentage);
                 codonPreferences[aa].mostPreferred = codonPreferences[aa].codons[0].codon;
                 codonPreferences[aa].leastPreferred = codonPreferences[aa].codons[codonPreferences[aa].codons.length - 1].codon;
             }
         }
-        
+
         // Calculate relative usage
         const codonUsage = Object.entries(codonCounts).map(([codon, count]) => ({
             codon: codon,
@@ -13151,7 +13149,7 @@ ${this.getPluginSystemInfo()}`;
             frequency: parseFloat((count / totalCodons * 100).toFixed(2)),
             rscu: rscu[codon] ? parseFloat(rscu[codon].toFixed(3)) : null
         })).sort((a, b) => b.frequency - a.frequency);
-        
+
         return {
             geneName: geneName || (geneInfo ? geneInfo.name : null),
             locusTag: locusTag || (geneInfo ? geneInfo.locusTag : null),
@@ -13173,16 +13171,16 @@ ${this.getPluginSystemInfo()}`;
      */
     async genomeCodonUsageAnalysis(params) {
         const { chromosome, featureType = 'CDS', minLength = 300, maxGenes } = params;
-        
+
         console.log('🧬 [ChatManager] Starting genome-wide codon usage analysis:', params);
-        
+
         if (!this.app || !this.app.currentAnnotations) {
             console.error('❌ [ChatManager] No genome data loaded');
             console.error('App exists:', !!this.app);
             console.error('currentAnnotations exists:', !!this.app?.currentAnnotations);
             throw new Error('No genome data loaded');
         }
-        
+
         // Debug: Log the current annotations structure
         console.log('🔍 [ChatManager] currentAnnotations structure:', {
             type: typeof this.app.currentAnnotations,
@@ -13191,22 +13189,22 @@ ${this.getPluginSystemInfo()}`;
             keysCount: Object.keys(this.app.currentAnnotations).length,
             sample: Object.keys(this.app.currentAnnotations).slice(0, 3)
         });
-        
+
         // Get all chromosomes to analyze
         const chromosomes = chromosome ? [chromosome] : Object.keys(this.app.currentAnnotations);
-        
+
         console.log('📊 [ChatManager] Chromosomes to analyze:', {
             requested: chromosome,
             found: chromosomes,
             count: chromosomes.length
         });
-        
+
         if (chromosomes.length === 0) {
             console.error('❌ [ChatManager] No chromosomes found');
             console.error('Available keys in currentAnnotations:', Object.keys(this.app.currentAnnotations));
             console.error('Data structure type:', typeof this.app.currentAnnotations);
             console.error('Is array?', Array.isArray(this.app.currentAnnotations));
-            
+
             // Check alternative data sources
             if (this.app.annotations) {
                 console.log('🔍 Found alternative: app.annotations', Object.keys(this.app.annotations));
@@ -13214,10 +13212,10 @@ ${this.getPluginSystemInfo()}`;
             if (this.app.genomeData) {
                 console.log('🔍 Found alternative: app.genomeData', Object.keys(this.app.genomeData));
             }
-            
+
             throw new Error('No chromosomes found in loaded genome. The genome file may not have been loaded properly or the annotation data is empty.');
         }
-        
+
         // Genetic code and synonymous codon groups
         const geneticCode = {
             'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
@@ -13237,7 +13235,7 @@ ${this.getPluginSystemInfo()}`;
             'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
             'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
         };
-        
+
         const synonymousCodons = {
             'F': ['TTT', 'TTC'],
             'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
@@ -13261,7 +13259,7 @@ ${this.getPluginSystemInfo()}`;
             'G': ['GGT', 'GGC', 'GGA', 'GGG'],
             '*': ['TAA', 'TAG', 'TGA']
         };
-        
+
         // Genome-wide codon counts
         const genomeCodonCounts = {};
         const genomeAminoAcidCounts = {};
@@ -13269,50 +13267,50 @@ ${this.getPluginSystemInfo()}`;
         let totalCodons = 0;
         let totalSequenceLength = 0;
         const geneResults = [];
-        
+
         // Iterate through all chromosomes
         for (const chr of chromosomes) {
             const features = this.app.currentAnnotations[chr] || [];
-            
+
             // Filter for CDS features
             const cdsFeatures = features.filter(f => f.type === featureType);
-            
+
             for (const feature of cdsFeatures) {
                 // Apply length filter
                 const featureLength = feature.end - feature.start + 1;
                 if (featureLength < minLength) {
                     continue;
                 }
-                
+
                 // Apply max genes limit if specified
                 if (maxGenes && totalGenes >= maxGenes) {
                     break;
                 }
-                
+
                 try {
                     // Get sequence for this feature
                     let featureSeq = await this.app.getSequenceForRegion(chr, feature.start, feature.end);
-                    
+
                     // Handle negative strand
                     if (feature.strand === '-') {
                         featureSeq = this.reverseComplement(featureSeq);
                     }
-                    
+
                     // Count codons in this feature
                     for (let i = 0; i < featureSeq.length - 2; i += 3) {
                         const codon = featureSeq.substring(i, i + 3);
                         const aminoAcid = geneticCode[codon];
-                        
+
                         if (aminoAcid) {
                             genomeCodonCounts[codon] = (genomeCodonCounts[codon] || 0) + 1;
                             genomeAminoAcidCounts[aminoAcid] = (genomeAminoAcidCounts[aminoAcid] || 0) + 1;
                             totalCodons++;
                         }
                     }
-                    
+
                     totalSequenceLength += featureSeq.length;
                     totalGenes++;
-                    
+
                     geneResults.push({
                         chromosome: chr,
                         name: feature.name || feature.id,
@@ -13322,32 +13320,32 @@ ${this.getPluginSystemInfo()}`;
                         length: featureLength,
                         strand: feature.strand
                     });
-                    
+
                 } catch (error) {
                     console.warn(`Failed to analyze gene ${feature.name || feature.id}:`, error);
                     continue;
                 }
             }
-            
+
             // Break if maxGenes reached
             if (maxGenes && totalGenes >= maxGenes) {
                 break;
             }
         }
-        
+
         if (totalGenes === 0) {
             throw new Error(`No ${featureType} features found matching criteria (minLength: ${minLength})`);
         }
-        
+
         // Calculate genome-wide RSCU and preferences
         const genomeRSCU = {};
         const genomeCodonPreferences = {};
-        
+
         for (const [aa, codons] of Object.entries(synonymousCodons)) {
             const aaCount = genomeAminoAcidCounts[aa] || 0;
             if (aaCount > 0) {
                 const expectedFreq = codons.length > 1 ? aaCount / codons.length : aaCount;
-                
+
                 genomeCodonPreferences[aa] = {
                     aminoAcid: aa,
                     totalCount: aaCount,
@@ -13355,13 +13353,13 @@ ${this.getPluginSystemInfo()}`;
                     codons: [],
                     statistics: {}
                 };
-                
+
                 // Calculate RSCU for each codon
                 for (const codon of codons) {
                     const observedCount = genomeCodonCounts[codon] || 0;
                     const rscuValue = expectedFreq > 0 ? observedCount / expectedFreq : 0;
                     genomeRSCU[codon] = rscuValue;
-                    
+
                     // Classify preference level
                     let preference = 'neutral';
                     if (codons.length > 1) {
@@ -13370,7 +13368,7 @@ ${this.getPluginSystemInfo()}`;
                         else if (rscuValue < 0.3) preference = 'highly rare';
                         else if (rscuValue < 0.6) preference = 'rare';
                     }
-                    
+
                     genomeCodonPreferences[aa].codons.push({
                         codon: codon,
                         count: observedCount,
@@ -13379,29 +13377,29 @@ ${this.getPluginSystemInfo()}`;
                         preference: preference
                     });
                 }
-                
+
                 // Sort codons by usage within each amino acid (descending)
                 genomeCodonPreferences[aa].codons.sort((a, b) => b.percentage - a.percentage);
-                
+
                 // Set most and least preferred
                 if (genomeCodonPreferences[aa].codons.length > 0) {
                     genomeCodonPreferences[aa].mostPreferred = genomeCodonPreferences[aa].codons[0].codon;
                     genomeCodonPreferences[aa].leastPreferred = genomeCodonPreferences[aa].codons[genomeCodonPreferences[aa].codons.length - 1].codon;
-                    
+
                     // Calculate usage statistics for multi-codon amino acids
                     if (codons.length > 1) {
                         const usagePercentages = genomeCodonPreferences[aa].codons.map(c => c.percentage);
                         const mean = usagePercentages.reduce((sum, p) => sum + p, 0) / usagePercentages.length;
                         const variance = usagePercentages.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / usagePercentages.length;
                         const stdDev = Math.sqrt(variance);
-                        
+
                         // Calculate Effective Number of Codons (ENC) for this amino acid
                         // ENC = 1 / sum(p_i^2) where p_i is the proportion of each codon
                         const encValue = 1 / genomeCodonPreferences[aa].codons.reduce((sum, c) => {
                             const proportion = c.percentage / 100;
                             return sum + (proportion * proportion);
                         }, 0);
-                        
+
                         genomeCodonPreferences[aa].statistics = {
                             mean: parseFloat(mean.toFixed(2)),
                             stdDev: parseFloat(stdDev.toFixed(2)),
@@ -13421,7 +13419,7 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
         }
-        
+
         // Calculate overall codon usage
         const genomeCodonUsage = Object.entries(genomeCodonCounts).map(([codon, count]) => ({
             codon: codon,
@@ -13430,7 +13428,7 @@ ${this.getPluginSystemInfo()}`;
             frequency: parseFloat((count / totalCodons * 100).toFixed(2)),
             rscu: genomeRSCU[codon] ? parseFloat(genomeRSCU[codon].toFixed(3)) : null
         })).sort((a, b) => b.frequency - a.frequency);
-        
+
         // Calculate GC content at different codon positions
         const gcByPosition = { pos1: 0, pos2: 0, pos3: 0 };
         for (const [codon, count] of Object.entries(genomeCodonCounts)) {
@@ -13440,16 +13438,16 @@ ${this.getPluginSystemInfo()}`;
                 if (codon[2] === 'G' || codon[2] === 'C') gcByPosition.pos3 += count;
             }
         }
-        
+
         const gcContent = {
             position1: parseFloat((gcByPosition.pos1 / totalCodons * 100).toFixed(2)),
             position2: parseFloat((gcByPosition.pos2 / totalCodons * 100).toFixed(2)),
             position3: parseFloat((gcByPosition.pos3 / totalCodons * 100).toFixed(2)),
             overall: parseFloat(((gcByPosition.pos1 + gcByPosition.pos2 + gcByPosition.pos3) / (totalCodons * 3) * 100).toFixed(2))
         };
-        
+
         console.log(`✅ [ChatManager] Genome-wide codon usage analysis complete: ${totalGenes} genes, ${totalCodons} codons`);
-        
+
         return {
             success: true,
             analysisType: 'genome-wide',
@@ -13473,17 +13471,17 @@ ${this.getPluginSystemInfo()}`;
     // Amino acid composition analysis
     async aminoAcidComposition(params) {
         const { proteinSequence, geneName } = params;
-        
+
         if (!proteinSequence) {
             throw new Error('Protein sequence is required for amino acid composition analysis');
         }
-        
+
         // Clean the sequence (remove stop codon if present)
         let cleanSequence = proteinSequence.replace(/\s/g, '').toUpperCase();
         if (cleanSequence.endsWith('*')) {
             cleanSequence = cleanSequence.slice(0, -1);
         }
-        
+
         // Define amino acids and their properties
         const aminoAcids = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V'];
         const aminoAcidNames = {
@@ -13493,7 +13491,7 @@ ${this.getPluginSystemInfo()}`;
             'M': 'Methionine', 'F': 'Phenylalanine', 'P': 'Proline', 'S': 'Serine',
             'T': 'Threonine', 'W': 'Tryptophan', 'Y': 'Tyrosine', 'V': 'Valine'
         };
-        
+
         const hydrophobic = ['A', 'V', 'I', 'L', 'M', 'F', 'W', 'Y'];
         const charged = ['R', 'K', 'D', 'E'];
         const polar = ['N', 'Q', 'S', 'T', 'Y'];
@@ -13501,19 +13499,19 @@ ${this.getPluginSystemInfo()}`;
         const acidic = ['D', 'E'];
         const aromatic = ['F', 'W', 'Y'];
         const small = ['A', 'G', 'S'];
-        
+
         // Count amino acids
         const aaCounts = {};
         aminoAcids.forEach(aa => aaCounts[aa] = 0);
-        
+
         for (const aa of cleanSequence) {
             if (aminoAcids.includes(aa)) {
                 aaCounts[aa]++;
             }
         }
-        
+
         const length = cleanSequence.length;
-        
+
         // Calculate composition
         const composition = aminoAcids.map(aa => ({
             aa: aa,
@@ -13521,7 +13519,7 @@ ${this.getPluginSystemInfo()}`;
             count: aaCounts[aa],
             percentage: (aaCounts[aa] / length * 100).toFixed(2)
         })).sort((a, b) => b.count - a.count);
-        
+
         // Calculate property groups
         const hydrophobicCount = hydrophobic.reduce((sum, aa) => sum + aaCounts[aa], 0);
         const chargedCount = charged.reduce((sum, aa) => sum + aaCounts[aa], 0);
@@ -13530,7 +13528,7 @@ ${this.getPluginSystemInfo()}`;
         const acidicCount = acidic.reduce((sum, aa) => sum + aaCounts[aa], 0);
         const aromaticCount = aromatic.reduce((sum, aa) => sum + aaCounts[aa], 0);
         const smallCount = small.reduce((sum, aa) => sum + aaCounts[aa], 0);
-        
+
         const properties = {
             hydrophobic: { count: hydrophobicCount, percentage: (hydrophobicCount / length * 100).toFixed(2) },
             charged: { count: chargedCount, percentage: (chargedCount / length * 100).toFixed(2) },
@@ -13540,7 +13538,7 @@ ${this.getPluginSystemInfo()}`;
             aromatic: { count: aromaticCount, percentage: (aromaticCount / length * 100).toFixed(2) },
             small: { count: smallCount, percentage: (smallCount / length * 100).toFixed(2) }
         };
-        
+
         return {
             gene: geneName || 'Unknown',
             length: length,
@@ -13554,15 +13552,15 @@ ${this.getPluginSystemInfo()}`;
     // 5. BOOKMARK AND SESSION MANAGEMENT
     async bookmarkPosition(params) {
         const { name, chromosome, start, end, notes = '' } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         const bookmarkStart = start || this.app.currentPosition?.start;
         const bookmarkEnd = end || this.app.currentPosition?.end;
-        
+
         if (!chr || bookmarkStart === undefined || bookmarkEnd === undefined) {
             throw new Error('Invalid bookmark parameters');
         }
-        
+
         const bookmark = {
             id: Date.now() + Math.random().toString(36).substr(2, 9),
             name: name,
@@ -13572,13 +13570,13 @@ ${this.getPluginSystemInfo()}`;
             notes: notes,
             created: new Date().toISOString()
         };
-        
+
         // Store in configuration
         let bookmarks = this.configManager.get('bookmarks', []);
         bookmarks.push(bookmark);
         this.configManager.set('bookmarks', bookmarks);
         await this.configManager.save();
-        
+
         return {
             success: true,
             bookmark: bookmark,
@@ -13589,12 +13587,12 @@ ${this.getPluginSystemInfo()}`;
     getBookmarks(params) {
         const { chromosome } = params;
         const bookmarks = this.configManager.get('bookmarks', []);
-        
+
         let filteredBookmarks = bookmarks;
         if (chromosome) {
             filteredBookmarks = bookmarks.filter(b => b.chromosome === chromosome);
         }
-        
+
         return {
             totalBookmarks: bookmarks.length,
             filteredBookmarks: filteredBookmarks.length,
@@ -13605,7 +13603,7 @@ ${this.getPluginSystemInfo()}`;
 
     async saveViewState(params) {
         const { name, description = '' } = params;
-        
+
         const viewState = {
             id: Date.now() + Math.random().toString(36).substr(2, 9),
             name: name,
@@ -13615,12 +13613,12 @@ ${this.getPluginSystemInfo()}`;
             visibleTracks: this.getVisibleTracks(),
             created: new Date().toISOString()
         };
-        
+
         let savedStates = this.configManager.get('viewStates', []);
         savedStates.push(viewState);
         this.configManager.set('viewStates', savedStates);
         await this.configManager.save();
-        
+
         return {
             success: true,
             viewState: viewState,
@@ -13641,7 +13639,7 @@ ${this.getPluginSystemInfo()}`;
     // 6. SEQUENCE COMPARISON AND ANALYSIS
     async compareRegions(params) {
         const { region1, region2, alignmentType = 'simple' } = params;
-        
+
         // Parse regions (format: "chr:start-end")
         const parseRegion = (regionStr) => {
             const parts = regionStr.split(':');
@@ -13649,17 +13647,17 @@ ${this.getPluginSystemInfo()}`;
             const [start, end] = parts[1].split('-').map(Number);
             return { chromosome, start, end };
         };
-        
+
         const reg1 = parseRegion(region1);
         const reg2 = parseRegion(region2);
-        
+
         const seq1 = await this.app.getSequenceForRegion(reg1.chromosome, reg1.start, reg1.end);
         const seq2 = await this.app.getSequenceForRegion(reg2.chromosome, reg2.start, reg2.end);
-        
+
         // Simple comparison metrics
         const similarity = this.calculateSimilarity(seq1, seq2);
         const identity = this.calculateIdentity(seq1, seq2);
-        
+
         return {
             region1: region1,
             region2: region2,
@@ -13676,25 +13674,25 @@ ${this.getPluginSystemInfo()}`;
 
     async findSimilarSequences(params) {
         const { querySequence, chromosome, minSimilarity = 0.8, maxResults = 20 } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified and none currently selected');
         }
-        
+
         const chromosomeSequence = this.app.currentSequence[chr];
         if (!chromosomeSequence) {
             throw new Error('No sequence loaded for chromosome');
         }
-        
+
         const queryLength = querySequence.length;
         const similarRegions = [];
-        
+
         // Sliding window search
         for (let i = 0; i <= chromosomeSequence.length - queryLength; i += 100) { // Step by 100 for efficiency
             const subsequence = chromosomeSequence.substring(i, i + queryLength);
             const similarity = this.calculateSimilarity(querySequence, subsequence);
-            
+
             if (similarity >= minSimilarity) {
                 similarRegions.push({
                     start: i,
@@ -13704,10 +13702,10 @@ ${this.getPluginSystemInfo()}`;
                 });
             }
         }
-        
+
         // Sort by similarity
         similarRegions.sort((a, b) => b.similarity - a.similarity);
-        
+
         return {
             querySequence: querySequence.substring(0, 50) + (querySequence.length > 50 ? '...' : ''),
             chromosome: chr,
@@ -13720,27 +13718,27 @@ ${this.getPluginSystemInfo()}`;
     // 7. ANNOTATION MANAGEMENT (CRUD)
     async editAnnotation(params) {
         const { annotationId, updates } = params;
-        
+
         if (!this.app.currentAnnotations) {
             throw new Error('No annotations loaded');
         }
-        
+
         let annotationFound = false;
         let updatedAnnotation = null;
-        
+
         // Find and update annotation across all chromosomes
         Object.keys(this.app.currentAnnotations).forEach(chr => {
             const annotations = this.app.currentAnnotations[chr];
-            const annotationIndex = annotations.findIndex(a => 
-                a.id === annotationId || 
+            const annotationIndex = annotations.findIndex(a =>
+                a.id === annotationId ||
                 a.qualifiers?.locus_tag === annotationId ||
                 a.qualifiers?.gene === annotationId
             );
-            
+
             if (annotationIndex !== -1) {
                 annotationFound = true;
                 const annotation = annotations[annotationIndex];
-                
+
                 // Apply updates
                 Object.keys(updates).forEach(key => {
                     if (key === 'qualifiers') {
@@ -13749,16 +13747,16 @@ ${this.getPluginSystemInfo()}`;
                         annotation[key] = updates[key];
                     }
                 });
-                
+
                 updatedAnnotation = annotation;
                 annotations[annotationIndex] = annotation;
             }
         });
-        
+
         if (!annotationFound) {
             throw new Error(`Annotation "${annotationId}" not found`);
         }
-        
+
         return {
             success: true,
             annotationId: annotationId,
@@ -13769,34 +13767,34 @@ ${this.getPluginSystemInfo()}`;
 
     async deleteAnnotation(params) {
         const { annotationId } = params;
-        
+
         if (!this.app.currentAnnotations) {
             throw new Error('No annotations loaded');
         }
-        
+
         let annotationFound = false;
         let deletedAnnotation = null;
-        
+
         // Find and delete annotation across all chromosomes
         Object.keys(this.app.currentAnnotations).forEach(chr => {
             const annotations = this.app.currentAnnotations[chr];
-            const annotationIndex = annotations.findIndex(a => 
-                a.id === annotationId || 
+            const annotationIndex = annotations.findIndex(a =>
+                a.id === annotationId ||
                 a.qualifiers?.locus_tag === annotationId ||
                 a.qualifiers?.gene === annotationId
             );
-            
+
             if (annotationIndex !== -1) {
                 annotationFound = true;
                 deletedAnnotation = annotations[annotationIndex];
                 annotations.splice(annotationIndex, 1);
             }
         });
-        
+
         if (!annotationFound) {
             throw new Error(`Annotation "${annotationId}" not found`);
         }
-        
+
         return {
             success: true,
             annotationId: annotationId,
@@ -13807,22 +13805,22 @@ ${this.getPluginSystemInfo()}`;
 
     async batchCreateAnnotations(params) {
         const { annotations, chromosome } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified');
         }
-        
+
         if (!this.app.currentAnnotations) {
             this.app.currentAnnotations = {};
         }
-        
+
         if (!this.app.currentAnnotations[chr]) {
             this.app.currentAnnotations[chr] = [];
         }
-        
+
         const createdAnnotations = [];
-        
+
         annotations.forEach(annotationData => {
             const annotation = {
                 id: Date.now() + Math.random().toString(36).substr(2, 9),
@@ -13833,11 +13831,11 @@ ${this.getPluginSystemInfo()}`;
                 qualifiers: annotationData.qualifiers || {},
                 created: new Date().toISOString()
             };
-            
+
             this.app.currentAnnotations[chr].push(annotation);
             createdAnnotations.push(annotation);
         });
-        
+
         return {
             success: true,
             chromosome: chr,
@@ -13849,19 +13847,19 @@ ${this.getPluginSystemInfo()}`;
     // 8. FILE AND DATA MANAGEMENT
     getFileInfo(params) {
         const { fileType } = params;
-        
+
         const fileInfo = {
             genome: null,
             annotations: null,
             tracks: null
         };
-        
+
         // Get genome file info
         if (this.app.currentSequence && Object.keys(this.app.currentSequence).length > 0) {
             const chromosomes = Object.keys(this.app.currentSequence);
-            const totalLength = chromosomes.reduce((sum, chr) => 
+            const totalLength = chromosomes.reduce((sum, chr) =>
                 sum + (this.app.currentSequence[chr]?.length || 0), 0);
-            
+
             fileInfo.genome = {
                 chromosomes: chromosomes.length,
                 chromosomeList: chromosomes,
@@ -13869,20 +13867,20 @@ ${this.getPluginSystemInfo()}`;
                 currentChromosome: this.app.currentChromosome
             };
         }
-        
+
         // Get annotation file info
         if (this.app.currentAnnotations) {
             const chromosomes = Object.keys(this.app.currentAnnotations);
-            const totalFeatures = chromosomes.reduce((sum, chr) => 
+            const totalFeatures = chromosomes.reduce((sum, chr) =>
                 sum + (this.app.currentAnnotations[chr]?.length || 0), 0);
-            
+
             const featureTypes = new Set();
             chromosomes.forEach(chr => {
                 this.app.currentAnnotations[chr]?.forEach(feature => {
                     featureTypes.add(feature.type);
                 });
             });
-            
+
             fileInfo.annotations = {
                 chromosomes: chromosomes.length,
                 totalFeatures: totalFeatures,
@@ -13890,14 +13888,14 @@ ${this.getPluginSystemInfo()}`;
                 chromosomeList: chromosomes
             };
         }
-        
+
         // Get track info
         fileInfo.tracks = this.getTrackStatus();
-        
+
         if (fileType && fileInfo[fileType]) {
             return { fileType, info: fileInfo[fileType] };
         }
-        
+
         return {
             fileType: fileType || 'all',
             fileInfo: fileInfo
@@ -13906,37 +13904,37 @@ ${this.getPluginSystemInfo()}`;
 
     async exportRegionFeatures(params) {
         const { chromosome, start, end, featureTypes = [], format = 'json' } = params;
-        
+
         const chr = chromosome || this.app.currentChromosome;
         if (!chr) {
             throw new Error('No chromosome specified');
         }
-        
+
         if (!this.app.currentAnnotations || !this.app.currentAnnotations[chr]) {
             throw new Error('No annotations loaded for chromosome');
         }
-        
+
         const regionStart = start || this.app.currentPosition?.start || 0;
         const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
-        
+
         const annotations = this.app.currentAnnotations[chr];
         const regionFeatures = annotations.filter(feature => {
             // Filter by position overlap
             const overlaps = feature.start <= regionEnd && feature.end >= regionStart;
-            
+
             // Filter by feature type if specified
             const typeMatch = featureTypes.length === 0 || featureTypes.includes(feature.type);
-            
+
             return overlaps && typeMatch;
         });
-        
+
         const exportData = {
             region: `${chr}:${regionStart}-${regionEnd}`,
             featureCount: regionFeatures.length,
             exportDate: new Date().toISOString(),
             features: regionFeatures
         };
-        
+
         return {
             chromosome: chr,
             region: `${regionStart}-${regionEnd}`,
@@ -13950,26 +13948,26 @@ ${this.getPluginSystemInfo()}`;
     calculateSimilarity(seq1, seq2) {
         const maxLength = Math.max(seq1.length, seq2.length);
         if (maxLength === 0) return 1;
-        
+
         const minLength = Math.min(seq1.length, seq2.length);
         let matches = 0;
-        
+
         for (let i = 0; i < minLength; i++) {
             if (seq1[i] === seq2[i]) matches++;
         }
-        
+
         return matches / maxLength;
     }
 
     calculateIdentity(seq1, seq2) {
         const minLength = Math.min(seq1.length, seq2.length);
         if (minLength === 0) return 0;
-        
+
         let matches = 0;
         for (let i = 0; i < minLength; i++) {
             if (seq1[i] === seq2[i]) matches++;
         }
-        
+
         return matches / minLength;
     }
 
@@ -13987,7 +13985,7 @@ ${this.getPluginSystemInfo()}`;
         if (this.configManager.getChatHistory().length > 0) {
             this.configManager.addChatMessage('--- CONVERSATION_SEPARATOR ---', 'system', new Date().toISOString());
         }
-        
+
         // Clear the UI display only, keep history
         const messagesContainer = document.getElementById('chatMessages');
         const welcomeMessage = messagesContainer.querySelector('.welcome-message');
@@ -13995,17 +13993,17 @@ ${this.getPluginSystemInfo()}`;
         if (welcomeMessage) {
             messagesContainer.appendChild(welcomeMessage);
         }
-        
+
         // Clear chat input box
         const chatInput = document.getElementById('chatInput');
         if (chatInput) {
             chatInput.value = '';
             chatInput.style.height = 'auto'; // Reset height for auto-resize
         }
-        
+
         // Add a new conversation indicator in UI only
         this.displayChatMessage('🆕 **New conversation started**', 'assistant', new Date().toISOString(), 'new-conversation-' + Date.now());
-        
+
         console.log('Started new chat conversation');
     }
 
@@ -14056,22 +14054,22 @@ ${this.getPluginSystemInfo()}`;
      */
     testChatFunctionality() {
         console.log('=== Testing Chat Functionality ===');
-        
+
         // Test 1: Check if UI elements exist
         const chatInput = document.getElementById('chatInput');
         const newChatBtn = document.getElementById('newChatBtn');
-        
+
         console.log('UI Elements Check:');
         console.log('- Chat Input:', chatInput ? '✅' : '❌');
         console.log('- New Chat Button:', newChatBtn ? '✅' : '❌');
-        
+
         // Test 2: Check chat history loading
         const history = this.configManager.getChatHistory();
         console.log('Chat History:', history.length, 'messages');
-        
+
         // Test 3: Show notification
         this.showNotification('🧪 Chat functionality test completed', 'success');
-        
+
         return {
             uiElements: {
                 chatInput: !!chatInput,
@@ -14087,7 +14085,7 @@ ${this.getPluginSystemInfo()}`;
      */
     showChatHistoryModal() {
         const history = this.configManager.getChatHistory();
-        
+
         if (history.length === 0) {
             this.showNotification('📭 No chat history found', 'info');
             return;
@@ -14103,22 +14101,22 @@ ${this.getPluginSystemInfo()}`;
         const modal = document.createElement('div');
         modal.id = 'chatHistoryModal';
         modal.className = 'modal chat-history-modal show';
-        
+
         // Group messages into conversations
         const conversations = this.groupMessagesIntoConversations(history);
-        
+
         let historyHTML = '';
         conversations.forEach((conversation, index) => {
             const startTime = new Date(conversation.startTime);
             const endTime = new Date(conversation.endTime);
             const duration = this.formatDuration(endTime - startTime);
-            
+
             // Get conversation preview (first user message or first 100 chars of first message)
             const firstUserMessage = conversation.messages.find(m => m.sender === 'user');
-            const preview = firstUserMessage ? 
+            const preview = firstUserMessage ?
                 (firstUserMessage.message.length > 80 ? firstUserMessage.message.substring(0, 80) + '...' : firstUserMessage.message) :
                 conversation.messages[0].message.substring(0, 80) + '...';
-            
+
             historyHTML += `
                 <div class="conversation-item" onclick="chatManager.showConversationDetails(${index})">
                     <div class="conversation-header">
@@ -14197,7 +14195,7 @@ ${this.getPluginSystemInfo()}`;
 
         // Add escape key handler
         document.addEventListener('keydown', this.handleHistoryModalKeydown.bind(this));
-        
+
         // Store conversations for later use
         this.cachedConversations = conversations;
     }
@@ -14207,17 +14205,17 @@ ${this.getPluginSystemInfo()}`;
      */
     groupMessagesIntoConversations(history) {
         if (history.length === 0) return [];
-        
+
         const conversations = [];
         let currentConversation = {
             messages: [],
             startTime: null,
             endTime: null
         };
-        
+
         for (let i = 0; i < history.length; i++) {
             const currentMsg = history[i];
-            
+
             // Check for conversation separator
             if (currentMsg.sender === 'system' && currentMsg.message === '--- CONVERSATION_SEPARATOR ---') {
                 // End current conversation if it has messages
@@ -14231,31 +14229,31 @@ ${this.getPluginSystemInfo()}`;
                 }
                 continue; // Skip the separator message itself
             }
-            
+
             // Initialize conversation times if this is the first message
             if (currentConversation.messages.length === 0) {
                 currentConversation.startTime = currentMsg.timestamp;
                 currentConversation.endTime = currentMsg.timestamp;
             }
-            
+
             // Add message to current conversation
             currentConversation.messages.push(currentMsg);
             currentConversation.endTime = currentMsg.timestamp;
-            
+
             // Check for time-based conversation break (30 minutes gap)
             if (i > 0) {
                 const previousMsg = history[i - 1];
                 const timeDiff = new Date(currentMsg.timestamp) - new Date(previousMsg.timestamp);
                 const CONVERSATION_GAP = 30 * 60 * 1000; // 30 minutes
-                
+
                 if (timeDiff > CONVERSATION_GAP && currentConversation.messages.length > 1) {
                     // Remove the current message from this conversation
                     currentConversation.messages.pop();
                     currentConversation.endTime = previousMsg.timestamp;
-                    
+
                     // End current conversation
                     conversations.push(currentConversation);
-                    
+
                     // Start new conversation with current message
                     currentConversation = {
                         messages: [currentMsg],
@@ -14265,15 +14263,15 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
         }
-        
+
         // Add the last conversation if it has messages
         if (currentConversation.messages.length > 0) {
             conversations.push(currentConversation);
         }
-        
+
         // Sort conversations by start time (newest first)
         conversations.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
-        
+
         return conversations;
     }
 
@@ -14284,7 +14282,7 @@ ${this.getPluginSystemInfo()}`;
         const seconds = Math.floor(milliseconds / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
-        
+
         if (hours > 0) {
             return `${hours}h ${minutes % 60}m`;
         } else if (minutes > 0) {
@@ -14306,7 +14304,7 @@ ${this.getPluginSystemInfo()}`;
 
         const modal = document.createElement('div');
         modal.className = 'modal conversation-detail-modal show';
-        
+
         let messagesHTML = '';
         conversation.messages.forEach(msg => {
             const time = new Date(msg.timestamp).toLocaleTimeString();
@@ -14361,7 +14359,7 @@ ${this.getPluginSystemInfo()}`;
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
     }
 
@@ -14443,21 +14441,21 @@ ${this.getPluginSystemInfo()}`;
 
         try {
             let history = this.configManager.getChatHistory();
-            
+
             // Remove all messages from this conversation
             const messageIds = conversation.messages.map(m => m.id);
             history = history.filter(msg => !messageIds.includes(msg.id));
-            
+
             // Save updated history
             this.configManager.setChatHistory(history);
             this.configManager.save();
 
             this.showNotification('Conversation deleted successfully', 'success');
-            
+
             // Refresh the modal
             this.closeChatHistoryModal();
             setTimeout(() => this.showChatHistoryModal(), 100);
-            
+
         } catch (error) {
             console.error('Error deleting conversation:', error);
             this.showNotification('❌ Failed to delete conversation', 'error');
@@ -14490,7 +14488,7 @@ ${this.getPluginSystemInfo()}`;
     showFullMessage(messageId) {
         const history = this.configManager.getChatHistory();
         const message = history.find(msg => msg.id === messageId);
-        
+
         if (!message) {
             this.showNotification('❌ Message not found', 'error');
             return;
@@ -14514,9 +14512,7 @@ ${this.getPluginSystemInfo()}`;
                         <strong>Time:</strong> ${new Date(message.timestamp).toLocaleString()}<br>
                         <strong>ID:</strong> ${message.id}
                     </div>
-                    <div class="full-message-content">
-                        ${this.formatMessage(message.message)}
-                    </div>
+<div class="full-message-content">${this.formatMessage(message.message)}</div>
                     <div class="message-actions">
                         <button class="btn btn-sm btn-secondary" onclick="chatManager.copyHistoryMessage('${message.id}')">
                             <i class="fas fa-copy"></i>
@@ -14526,7 +14522,7 @@ ${this.getPluginSystemInfo()}`;
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
     }
 
@@ -14536,7 +14532,7 @@ ${this.getPluginSystemInfo()}`;
     copyHistoryMessage(messageId) {
         const history = this.configManager.getChatHistory();
         const message = history.find(msg => msg.id === messageId);
-        
+
         if (!message) {
             this.showNotification('❌ Message not found', 'error');
             return;
@@ -14560,7 +14556,7 @@ ${this.getPluginSystemInfo()}`;
         try {
             let history = this.configManager.getChatHistory();
             const messageIndex = history.findIndex(msg => msg.id === messageId);
-            
+
             if (messageIndex === -1) {
                 this.showNotification('❌ Message not found', 'error');
                 return;
@@ -14568,17 +14564,17 @@ ${this.getPluginSystemInfo()}`;
 
             // Remove the message
             history.splice(messageIndex, 1);
-            
+
             // Save updated history
             this.configManager.setChatHistory(history);
             this.configManager.save();
 
             this.showNotification('Message deleted from history', 'success');
-            
+
             // Refresh the modal
             this.closeChatHistoryModal();
             setTimeout(() => this.showChatHistoryModal(), 100);
-            
+
         } catch (error) {
             console.error('Error deleting message:', error);
             this.showNotification('❌ Failed to delete message', 'error');
@@ -14598,13 +14594,13 @@ ${this.getPluginSystemInfo()}`;
         try {
             this.configManager.clearChatHistory();
             this.configManager.save();
-            
+
             this.showNotification('All chat history cleared', 'success');
             this.closeChatHistoryModal();
-            
+
             // Also clear the current chat display
             this.clearChat();
-            
+
         } catch (error) {
             console.error('Error clearing history:', error);
             this.showNotification('❌ Failed to clear history', 'error');
@@ -14619,7 +14615,7 @@ ${this.getPluginSystemInfo()}`;
         if (!searchTerm) return;
 
         const history = this.configManager.getChatHistory();
-        const results = history.filter(msg => 
+        const results = history.filter(msg =>
             msg.message.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
@@ -14637,10 +14633,10 @@ ${this.getPluginSystemInfo()}`;
      */
     showSearchResults(searchTerm, results) {
         this.closeChatHistoryModal();
-        
+
         const modal = document.createElement('div');
         modal.className = 'modal chat-search-modal show';
-        
+
         let resultsHTML = '';
         results.forEach(msg => {
             const time = new Date(msg.timestamp).toLocaleString();
@@ -14648,7 +14644,7 @@ ${this.getPluginSystemInfo()}`;
                 new RegExp(`(${searchTerm})`, 'gi'),
                 '<mark>$1</mark>'
             );
-            
+
             resultsHTML += `
                 <div class="search-result-item" onclick="chatManager.showFullMessage('${msg.id}')">
                     <div class="result-header">
@@ -14688,7 +14684,7 @@ ${this.getPluginSystemInfo()}`;
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
     }
 
@@ -14704,43 +14700,43 @@ ${this.getPluginSystemInfo()}`;
         chatHeader.addEventListener('mousedown', (e) => {
             // Don't drag if clicking on buttons
             if (e.target.closest('button')) return;
-            
+
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
             startLeft = parseInt(window.getComputedStyle(chatPanel).left, 10);
             startTop = parseInt(window.getComputedStyle(chatPanel).top, 10);
-            
+
             chatPanel.classList.add('dragging');
             document.body.style.userSelect = 'none';
-            
+
             e.preventDefault();
         });
 
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            
+
             const newLeft = startLeft + e.clientX - startX;
             const newTop = startTop + e.clientY - startY;
-            
+
             // Constrain to viewport
             const maxLeft = window.innerWidth - chatPanel.offsetWidth;
             const maxTop = window.innerHeight - chatPanel.offsetHeight;
-            
+
             const constrainedLeft = Math.max(0, Math.min(newLeft, maxLeft));
             const constrainedTop = Math.max(0, Math.min(newTop, maxTop));
-            
+
             chatPanel.style.left = constrainedLeft + 'px';
             chatPanel.style.top = constrainedTop + 'px';
         });
 
         document.addEventListener('mouseup', () => {
             if (!isDragging) return;
-            
+
             isDragging = false;
             chatPanel.classList.remove('dragging');
             document.body.style.userSelect = '';
-            
+
             // Save position
             this.saveChatPosition();
         });
@@ -14769,10 +14765,10 @@ ${this.getPluginSystemInfo()}`;
                 startHeight = parseInt(window.getComputedStyle(chatPanel).height, 10);
                 startLeft = parseInt(window.getComputedStyle(chatPanel).left, 10);
                 startTop = parseInt(window.getComputedStyle(chatPanel).top, 10);
-                
+
                 chatPanel.classList.add('resizing');
                 document.body.style.userSelect = 'none';
-                
+
                 e.preventDefault();
                 e.stopPropagation();
             });
@@ -14780,15 +14776,15 @@ ${this.getPluginSystemInfo()}`;
 
         document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
-            
+
             const deltaX = e.clientX - startX;
             const deltaY = e.clientY - startY;
-            
+
             let newWidth = startWidth;
             let newHeight = startHeight;
             let newLeft = startLeft;
             let newTop = startTop;
-            
+
             // Apply resize based on direction
             if (resizeDirection.includes('e')) {
                 newWidth = Math.max(300, startWidth + deltaX);
@@ -14804,14 +14800,14 @@ ${this.getPluginSystemInfo()}`;
                 newHeight = Math.max(400, startHeight - deltaY);
                 newTop = startTop + (startHeight - newHeight);
             }
-            
+
             // Constrain to viewport
             const maxLeft = window.innerWidth - newWidth;
             const maxTop = window.innerHeight - newHeight;
-            
+
             newLeft = Math.max(0, Math.min(newLeft, maxLeft));
             newTop = Math.max(0, Math.min(newTop, maxTop));
-            
+
             chatPanel.style.width = newWidth + 'px';
             chatPanel.style.height = newHeight + 'px';
             chatPanel.style.left = newLeft + 'px';
@@ -14820,12 +14816,12 @@ ${this.getPluginSystemInfo()}`;
 
         document.addEventListener('mouseup', () => {
             if (!isResizing) return;
-            
+
             isResizing = false;
             resizeDirection = '';
             chatPanel.classList.remove('resizing');
             document.body.style.userSelect = '';
-            
+
             // Save size and position
             this.saveChatPosition();
             this.saveChatSize();
@@ -14874,17 +14870,17 @@ ${this.getPluginSystemInfo()}`;
             const chatPanel = document.getElementById('llmChatPanel');
             const defaultSize = { width: 400, height: 600 };
             const defaultPosition = this.getDefaultChatPosition();
-            
+
             chatPanel.style.left = defaultPosition.x + 'px';
             chatPanel.style.top = defaultPosition.y + 'px';
             chatPanel.style.width = defaultSize.width + 'px';
             chatPanel.style.height = defaultSize.height + 'px';
-            
+
             // Save to config
             await this.configManager.set('chat.position', defaultPosition);
             await this.configManager.set('chat.size', defaultSize);
             await this.configManager.saveConfig();
-            
+
             // Removed notification message as requested
         } catch (error) {
             console.error('Error resetting chat position:', error);
@@ -14898,22 +14894,22 @@ ${this.getPluginSystemInfo()}`;
      */
     async openProteinViewer(params) {
         let { pdbData, proteinName, pdbId } = params;
-        
+
         try {
             // Check if protein structure viewer is available
             if (!window.proteinStructureViewer || !window.proteinStructureViewer.openStructureViewer) {
                 throw new Error('Protein structure viewer not available');
             }
-            
+
             // If no pdbData provided but pdbId is available, fetch the protein structure first
             if (!pdbData && pdbId) {
                 console.log('🔬 [openProteinViewer] No PDB data provided, fetching structure for PDB ID:', pdbId);
-                
+
                 try {
                     // Directly download PDB file from RCSB database
                     console.log('🔬 [openProteinViewer] Directly downloading PDB structure for ID:', pdbId);
                     const pdbDataFromDownload = await this.downloadPDBFile(pdbId);
-                    
+
                     if (pdbDataFromDownload) {
                         pdbData = pdbDataFromDownload;
                         proteinName = proteinName || pdbId;
@@ -14929,25 +14925,25 @@ ${this.getPluginSystemInfo()}`;
                     throw new Error(`Failed to fetch protein structure for ${pdbId}: ${fetchError.message}`);
                 }
             }
-            
+
             // Validate that we now have the required data
             if (!pdbData) {
                 throw new Error('No protein structure data available');
             }
-            
+
             if (!proteinName) {
                 proteinName = pdbId || 'Unknown Protein';
             }
-            
+
             // Open the 3D viewer
             window.proteinStructureViewer.openStructureViewer(pdbData, proteinName, pdbId);
-            
+
             return {
                 success: true,
                 pdbId: pdbId,
                 message: `Opened 3D protein structure viewer for ${proteinName} (${pdbId})`
             };
-            
+
         } catch (error) {
             console.error('Error in openProteinViewer:', error);
             throw new Error(`Failed to open protein viewer: ${error.message}`);
@@ -14960,13 +14956,13 @@ ${this.getPluginSystemInfo()}`;
      */
     async fetchProteinStructure(parameters) {
         const { geneName, pdbId, organism } = parameters;
-        
+
         console.log('=== MCP SERVER: FETCH PROTEIN STRUCTURE ===');
         console.log('Received parameters:', { geneName, pdbId, organism });
-        
+
         try {
             let targetPdbId = pdbId;
-            
+
             // If no PDB ID provided, search by gene name
             if (!targetPdbId && geneName) {
                 console.log('No PDB ID provided, searching by gene name:', geneName);
@@ -14977,18 +14973,18 @@ ${this.getPluginSystemInfo()}`;
                 targetPdbId = searchResults[0].pdbId;
                 console.log('Found PDB ID from gene search:', targetPdbId);
             }
-            
+
             if (!targetPdbId) {
                 throw new Error('No PDB ID specified or found');
             }
-            
+
             console.log('Downloading PDB file for ID:', targetPdbId);
-            
+
             // Download PDB file
             const pdbData = await this.downloadPDBFile(targetPdbId);
-            
+
             console.log('PDB file downloaded successfully, size:', pdbData.length, 'characters');
-            
+
             const result = {
                 success: true,
                 pdbId: targetPdbId,
@@ -14996,12 +14992,12 @@ ${this.getPluginSystemInfo()}`;
                 geneName: geneName || targetPdbId,
                 downloadedAt: new Date().toISOString()
             };
-            
+
             console.log('Returning result with PDB ID:', result.pdbId);
             console.log('=== MCP SERVER: FETCH PROTEIN STRUCTURE END ===');
-            
+
             return result;
-            
+
         } catch (error) {
             console.error('Error in fetchProteinStructure:', error.message);
             throw new Error(`Failed to fetch protein structure: ${error.message}`);
@@ -15014,36 +15010,36 @@ ${this.getPluginSystemInfo()}`;
     async downloadPDBFile(pdbId) {
         try {
             console.log(`🌐 [downloadPDBFile] Starting download for PDB ID: ${pdbId}`);
-            
+
             const url = `https://files.rcsb.org/download/${pdbId}.pdb`;
             console.log(`🌐 [downloadPDBFile] Fetching URL: ${url}`);
-            
+
             const response = await fetch(url);
             console.log(`🌐 [downloadPDBFile] Response status: ${response.status} ${response.statusText}`);
             console.log(`🌐 [downloadPDBFile] Response headers:`, Object.fromEntries(response.headers.entries()));
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             console.log(`🌐 [downloadPDBFile] Reading response text...`);
             const pdbData = await response.text();
             console.log(`🌐 [downloadPDBFile] Response text length: ${pdbData.length}`);
             console.log(`🌐 [downloadPDBFile] First 200 chars:`, pdbData.substring(0, 200));
-            
+
             if (!pdbData || pdbData.trim().length === 0) {
                 throw new Error('Empty PDB file received');
             }
-            
+
             // Basic validation - check if it looks like a PDB file
             if (!pdbData.includes('HEADER') && !pdbData.includes('ATOM')) {
                 console.error(`🌐 [downloadPDBFile] Invalid PDB format. Content preview:`, pdbData.substring(0, 500));
                 throw new Error('Invalid PDB file format');
             }
-            
+
             console.log(`✅ [downloadPDBFile] Successfully downloaded PDB file for ${pdbId}, size: ${pdbData.length} characters`);
             return pdbData;
-            
+
         } catch (error) {
             console.error(`❌ [downloadPDBFile] Error downloading PDB file for ${pdbId}:`, error);
             console.error(`❌ [downloadPDBFile] Error type:`, error.constructor.name);
@@ -15061,22 +15057,22 @@ ${this.getPluginSystemInfo()}`;
         const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
         const organism = parameters.organism || 'Escherichia coli';
         const maxResults = parameters.maxResults || 10;
-        
+
         try {
             console.log(`Searching PDB for experimental structures: ${geneName}, organism: ${organism}`);
-            
+
             if (!geneName) {
                 throw new Error('Gene name is required for PDB structure search');
             }
-            
+
             // Perform PDB search using multiple methods
             const searchResults = await this.performPDBSearch(geneName, organism, maxResults);
-            
+
             // Display results in sidebar if any found
             if (searchResults.length > 0) {
                 this.displayPDBResultsInSidebar(searchResults, geneName);
             }
-            
+
             return {
                 success: true,
                 tool: 'search_pdb_structures',
@@ -15084,11 +15080,11 @@ ${this.getPluginSystemInfo()}`;
                 results: searchResults,
                 count: searchResults.length,
                 timestamp: new Date().toISOString(),
-                message: searchResults.length > 0 ? 
+                message: searchResults.length > 0 ?
                     `Found ${searchResults.length} PDB structure(s) for ${geneName}. Results displayed in sidebar.` :
                     `No PDB structures found for ${geneName}.`
             };
-            
+
         } catch (error) {
             console.error('PDB search error:', error);
             return {
@@ -15108,11 +15104,11 @@ ${this.getPluginSystemInfo()}`;
      * @returns {Promise<Object>} Search results
      */
     async searchUniProtDatabase(parameters) {
-        const { 
-            search_query, 
-            search_type = 'all_fields', 
-            organism, 
-            reviewed_only = false, 
+        const {
+            search_query,
+            search_type = 'all_fields',
+            organism,
+            reviewed_only = false,
             max_results = 50,
             evidence_filter = [],
             length_range = {},
@@ -15131,12 +15127,12 @@ ${this.getPluginSystemInfo()}`;
             // Try MCP server first if available
             const allTools = this.mcpServerManager.getAllAvailableTools();
             const mcpTool = allTools.find(t => t.name === 'search_uniprot_database');
-            
+
             if (mcpTool) {
                 console.log('🔍 [ChatManager] Executing via MCP server');
                 const result = await this.mcpServerManager.executeToolOnServer(
-                    mcpTool.serverId, 
-                    'search_uniprot_database', 
+                    mcpTool.serverId,
+                    'search_uniprot_database',
                     {
                         query: search_query,
                         searchType: search_type,
@@ -15157,7 +15153,7 @@ ${this.getPluginSystemInfo()}`;
 
             // Manual implementation as fallback
             console.log('🔍 [ChatManager] No MCP/plugin available, implementing basic search');
-            
+
             return {
                 success: false,
                 error: 'UniProt search service not available. Please install and configure the UniProt plugin or MCP server.',
@@ -15189,13 +15185,13 @@ ${this.getPluginSystemInfo()}`;
         try {
             const url = `https://data.rcsb.org/rest/v1/core/entry/${pdbId}`;
             const response = await fetch(url);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const data = await response.json();
-            
+
             return {
                 title: data.struct?.title,
                 resolution: data.rcsb_entry_info?.resolution_combined?.[0],
@@ -15217,24 +15213,24 @@ ${this.getPluginSystemInfo()}`;
         const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
         const organism = parameters.organism || 'Escherichia coli';
         const maxResults = parameters.maxResults || 10;
-        
+
         try {
             console.log(`Searching AlphaFold for gene: ${geneName}, organism: ${organism}`);
             console.log('AlphaFold search parameters received:', JSON.stringify(parameters, null, 2));
-            
+
             if (!geneName) {
                 console.error('Gene name not found in parameters:', parameters);
                 throw new Error('Gene name is required for AlphaFold search');
             }
-            
+
             // Real AlphaFold search implementation using UniProt API
             const searchResults = await this.performAlphaFoldSearch(geneName, organism, maxResults);
-            
+
             // Display results in sidebar if any found
             if (searchResults.length > 0) {
                 this.displayAlphaFoldResultsInSidebar(searchResults, geneName);
             }
-            
+
             return {
                 success: true,
                 tool: 'search_alphafold_by_gene',
@@ -15242,11 +15238,11 @@ ${this.getPluginSystemInfo()}`;
                 results: searchResults,
                 count: searchResults.length,
                 timestamp: new Date().toISOString(),
-                message: searchResults.length > 0 ? 
+                message: searchResults.length > 0 ?
                     `Found ${searchResults.length} AlphaFold structure(s) for ${geneName}. Results displayed in sidebar.` :
                     `No AlphaFold structures found for ${geneName}.`
             };
-            
+
         } catch (error) {
             console.error('AlphaFold search error:', error);
             return {
@@ -15267,17 +15263,17 @@ ${this.getPluginSystemInfo()}`;
         const uniprotId = parameters.uniprotId || parameters.uniprot_id;
         const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
         const format = parameters.format || 'pdb';
-        
+
         try {
             console.log(`Fetching AlphaFold structure for UniProt ID: ${uniprotId}, gene: ${geneName}`);
-            
+
             if (!uniprotId) {
                 throw new Error('UniProt ID is required to fetch AlphaFold structure');
             }
-            
+
             // Download AlphaFold structure from AlphaFold database
             const structureData = await this.downloadAlphaFoldStructure(uniprotId, format);
-            
+
             return {
                 success: true,
                 tool: 'fetch_alphafold_structure',
@@ -15289,7 +15285,7 @@ ${this.getPluginSystemInfo()}`;
                 modelDate: structureData.modelDate,
                 timestamp: new Date().toISOString()
             };
-            
+
         } catch (error) {
             console.error('AlphaFold structure fetch error:', error);
             return {
@@ -15307,28 +15303,28 @@ ${this.getPluginSystemInfo()}`;
      */
     async openAlphaFoldViewer(parameters) {
         const { uniprotId, geneName, structureData, pdbData } = parameters;
-        
+
         try {
             console.log(`Opening AlphaFold viewer for UniProt ID: ${uniprotId}, gene: ${geneName}`);
-            
+
             let pdbStructureData = structureData || pdbData;
-            
+
             // If no structure data provided, fetch it first
             if (!pdbStructureData && uniprotId) {
                 console.log('No structure data provided, fetching AlphaFold structure...');
                 const fetchResult = await this.fetchAlphaFoldStructure({ uniprotId, geneName });
-                
+
                 if (fetchResult.success) {
                     pdbStructureData = fetchResult.pdbData;
                 } else {
                     throw new Error(`Failed to fetch AlphaFold structure: ${fetchResult.error}`);
                 }
             }
-            
+
             if (!pdbStructureData) {
                 throw new Error('No structure data available and no UniProt ID provided to fetch structure');
             }
-            
+
             // Open the protein viewer with AlphaFold structure data
             return await this.openProteinViewer({
                 pdbData: pdbStructureData,
@@ -15336,7 +15332,7 @@ ${this.getPluginSystemInfo()}`;
                 pdbId: uniprotId,
                 isAlphaFold: true
             });
-            
+
         } catch (error) {
             console.error('AlphaFold viewer error:', error);
             return {
@@ -15355,45 +15351,45 @@ ${this.getPluginSystemInfo()}`;
     async performAlphaFoldSearch(geneName, organism, maxResults = 10) {
         try {
             console.log(`Performing AlphaFold search for gene: ${geneName}, organism: ${organism}`);
-            
+
             // First, search UniProt for proteins matching the gene name and organism
             const uniprotSearchUrl = `https://rest.uniprot.org/uniprotkb/search?query=gene_exact:${geneName}+AND+organism_name:"${organism}"&format=json&size=${maxResults}`;
-            
+
             console.log('UniProt search URL:', uniprotSearchUrl);
-            
+
             const response = await fetch(uniprotSearchUrl, {
                 headers: {
                     'Accept': 'application/json',
                     'User-Agent': 'CodeXomics/1.0'
                 }
             });
-            
+
             if (!response.ok) {
                 // Try alternative search format
                 const altUrl = `https://rest.uniprot.org/uniprotkb/search?query=${geneName}+AND+${organism.replace(' ', '+')}&format=json&size=${maxResults}`;
                 console.log('Trying alternative UniProt search URL:', altUrl);
-                
+
                 const altResponse = await fetch(altUrl, {
                     headers: {
                         'Accept': 'application/json',
                         'User-Agent': 'CodeXomics/1.0'
                     }
                 });
-                
+
                 if (!altResponse.ok) {
                     throw new Error(`UniProt search failed: ${response.status} ${response.statusText}`);
                 }
-                
+
                 const altData = await altResponse.json();
                 console.log('Alternative UniProt search response:', altData);
                 return this.processUniProtResults(altData, geneName, organism, maxResults);
             }
-            
+
             const data = await response.json();
             console.log('UniProt search response:', data);
-            
+
             return this.processUniProtResults(data, geneName, organism, maxResults);
-            
+
         } catch (error) {
             console.error('AlphaFold search error:', error);
             throw new Error(`Failed to search AlphaFold: ${error.message}`);
@@ -15408,39 +15404,39 @@ ${this.getPluginSystemInfo()}`;
             console.log(`No UniProt results found for gene ${geneName}`);
             return [];
         }
-        
+
         console.log(`Processing ${data.results.length} UniProt results for gene ${geneName}, checking AlphaFold availability...`);
-        
+
         // Sort results to prioritize reviewed entries and those with gene names matching our search
         const sortedResults = data.results.slice(0, maxResults).sort((a, b) => {
             // Prioritize reviewed entries
             const aReviewed = a.entryType === 'UniProtKB reviewed (Swiss-Prot)' ? 1 : 0;
             const bReviewed = b.entryType === 'UniProtKB reviewed (Swiss-Prot)' ? 1 : 0;
             if (aReviewed !== bReviewed) return bReviewed - aReviewed;
-            
+
             // Prioritize entries with matching gene names
             const aHasGene = a.genes?.some(g => g.geneName?.value?.toLowerCase() === geneName.toLowerCase()) ? 1 : 0;
             const bHasGene = b.genes?.some(g => g.geneName?.value?.toLowerCase() === geneName.toLowerCase()) ? 1 : 0;
             if (aHasGene !== bHasGene) return bHasGene - aHasGene;
-            
+
             return 0;
         });
-        
+
         // Process results and check for AlphaFold availability
         const alphaFoldResults = [];
         let checkedCount = 0;
         const maxChecks = Math.min(sortedResults.length, 5); // Limit to 5 checks for performance
-        
+
         for (const protein of sortedResults.slice(0, maxChecks)) {
             const uniprotId = protein.primaryAccession;
-            const proteinName = protein.proteinDescription?.recommendedName?.fullName?.value || 
-                               protein.proteinDescription?.submissionNames?.[0]?.fullName?.value || 
-                               'Unknown protein';
+            const proteinName = protein.proteinDescription?.recommendedName?.fullName?.value ||
+                protein.proteinDescription?.submissionNames?.[0]?.fullName?.value ||
+                'Unknown protein';
             const geneNames = protein.genes?.map(g => g.geneName?.value).filter(Boolean) || [];
-            
+
             checkedCount++;
             console.log(`[${checkedCount}/${maxChecks}] Checking ${uniprotId} (${proteinName})...`);
-            
+
             // For lysC/thrC, we know the UniProt ID for E. coli
             let hasAlphaFold = false;
             if ((geneName.toLowerCase() === 'lysc' || geneName.toLowerCase() === 'thrc') && organism.includes('Escherichia')) {
@@ -15449,7 +15445,7 @@ ${this.getPluginSystemInfo()}`;
             } else {
                 hasAlphaFold = await this.checkAlphaFoldAvailability(uniprotId);
             }
-            
+
             if (hasAlphaFold) {
                 alphaFoldResults.push({
                     uniprotId: uniprotId,
@@ -15464,11 +15460,11 @@ ${this.getPluginSystemInfo()}`;
                 console.log(`✓ Added ${uniprotId} to AlphaFold results`);
             }
         }
-        
+
         // If no results found, try with known structures for common genes
         if (alphaFoldResults.length === 0) {
             console.log('No AlphaFold results found, checking for known structures...');
-            
+
             // Known good AlphaFold structures for E. coli genes
             const knownStructures = {
                 'lysc': {
@@ -15500,12 +15496,12 @@ ${this.getPluginSystemInfo()}`;
                     length: 1023
                 }
             };
-            
+
             const lowerGeneName = geneName.toLowerCase();
             if (knownStructures[lowerGeneName] && organism.toLowerCase().includes('escherichia')) {
                 const knownStructure = knownStructures[lowerGeneName];
                 console.log(`Adding known AlphaFold structure for ${geneName}: ${knownStructure.uniprotId}`);
-                
+
                 alphaFoldResults.push({
                     uniprotId: knownStructure.uniprotId,
                     proteinName: knownStructure.proteinName,
@@ -15519,7 +15515,7 @@ ${this.getPluginSystemInfo()}`;
                 });
             }
         }
-        
+
         console.log(`✓ Found ${alphaFoldResults.length} AlphaFold structures for gene ${geneName} (checked ${checkedCount} proteins)`);
         return alphaFoldResults;
     }
@@ -15531,18 +15527,18 @@ ${this.getPluginSystemInfo()}`;
         try {
             // Check if AlphaFold structure exists by trying to access the download URL
             const checkUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`;
-            
+
             // Use AbortController to handle timeouts cleanly
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-            
-            const response = await fetch(checkUrl, { 
+
+            const response = await fetch(checkUrl, {
                 method: 'HEAD',
                 signal: controller.signal
             });
-            
+
             clearTimeout(timeoutId);
-            
+
             if (response.ok) {
                 console.log(`✓ AlphaFold structure available for ${uniprotId}`);
                 return true;
@@ -15570,28 +15566,28 @@ ${this.getPluginSystemInfo()}`;
     async downloadAlphaFoldStructure(uniprotId, format = 'pdb') {
         try {
             console.log(`Downloading AlphaFold structure for ${uniprotId} in ${format} format`);
-            
+
             const downloadUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v6.pdb`;
-            
+
             console.log('AlphaFold download URL:', downloadUrl);
-            
+
             const response = await fetch(downloadUrl);
             if (!response.ok) {
                 throw new Error(`Failed to download AlphaFold structure: ${response.status} ${response.statusText}`);
             }
-            
+
             const pdbData = await response.text();
-            
+
             if (!pdbData || pdbData.length < 100) {
                 throw new Error('Downloaded PDB data appears to be invalid or too short');
             }
-            
+
             console.log(`Successfully downloaded AlphaFold structure for ${uniprotId}, size: ${pdbData.length} characters`);
-            
+
             // Extract metadata from PDB header
             const confidenceInfo = this.extractAlphaFoldConfidence(pdbData);
             const modelDate = this.extractModelDate(pdbData);
-            
+
             return {
                 pdbData: pdbData,
                 confidence: confidenceInfo,
@@ -15599,7 +15595,7 @@ ${this.getPluginSystemInfo()}`;
                 source: 'AlphaFold',
                 downloadUrl: downloadUrl
             };
-            
+
         } catch (error) {
             console.error('AlphaFold structure download error:', error);
             throw new Error(`Failed to download AlphaFold structure: ${error.message}`);
@@ -15614,18 +15610,18 @@ ${this.getPluginSystemInfo()}`;
             // AlphaFold stores confidence in the B-factor column
             const lines = pdbData.split('\n');
             const atomLines = lines.filter(line => line.startsWith('ATOM'));
-            
+
             if (atomLines.length === 0) return null;
-            
+
             const confidenceValues = atomLines.map(line => {
                 const bFactor = parseFloat(line.substring(60, 66).trim());
                 return isNaN(bFactor) ? 0 : bFactor;
             });
-            
+
             const avgConfidence = confidenceValues.reduce((a, b) => a + b, 0) / confidenceValues.length;
             const minConfidence = Math.min(...confidenceValues);
             const maxConfidence = Math.max(...confidenceValues);
-            
+
             return {
                 average: Math.round(avgConfidence * 100) / 100,
                 min: Math.round(minConfidence * 100) / 100,
@@ -15667,30 +15663,30 @@ ${this.getPluginSystemInfo()}`;
     displayAlphaFoldResultsInSidebar(results, geneName) {
         try {
             console.log('Displaying AlphaFold results in sidebar:', results);
-            
+
             // Get or create sidebar container
             let sidebar = document.querySelector('.alphafold-results-sidebar');
             if (!sidebar) {
                 sidebar = this.createAlphaFoldSidebar();
             }
-            
+
             // Clear previous results
             const resultsContainer = sidebar.querySelector('.alphafold-results-list');
             resultsContainer.innerHTML = '';
-            
+
             // Update header
             const header = sidebar.querySelector('.sidebar-header h3');
             header.textContent = `AlphaFold Results for ${geneName}`;
-            
+
             // Add results
             results.forEach((result, index) => {
                 const resultElement = this.createAlphaFoldResultElement(result, index);
                 resultsContainer.appendChild(resultElement);
             });
-            
+
             // Show sidebar
             sidebar.classList.add('visible');
-            
+
             // Add close functionality
             const closeBtn = sidebar.querySelector('.sidebar-close');
             if (closeBtn) {
@@ -15698,7 +15694,7 @@ ${this.getPluginSystemInfo()}`;
                     sidebar.classList.remove('visible');
                 };
             }
-            
+
         } catch (error) {
             console.error('Error displaying AlphaFold results in sidebar:', error);
         }
@@ -15713,7 +15709,7 @@ ${this.getPluginSystemInfo()}`;
         if (existing) {
             existing.remove();
         }
-        
+
         const sidebar = document.createElement('div');
         sidebar.className = 'alphafold-results-sidebar';
         sidebar.innerHTML = `
@@ -15727,13 +15723,13 @@ ${this.getPluginSystemInfo()}`;
                 <div class="alphafold-results-list"></div>
             </div>
         `;
-        
+
         // Add styles
         this.addAlphaFoldSidebarStyles();
-        
+
         // Append to body
         document.body.appendChild(sidebar);
-        
+
         return sidebar;
     }
 
@@ -15777,24 +15773,24 @@ ${this.getPluginSystemInfo()}`;
                 </button>
             </div>
         `;
-        
+
         // Add click handlers
         const viewStructureBtn = element.querySelector('.view-structure');
         const viewPageBtn = element.querySelector('.view-alphafold-page');
-        
+
         viewStructureBtn.onclick = async () => {
             const uniprotId = viewStructureBtn.dataset.uniprotId;
             const geneName = viewStructureBtn.dataset.geneName;
-            
+
             try {
                 viewStructureBtn.disabled = true;
                 viewStructureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-                
+
                 const result = await this.openAlphaFoldViewer({
                     uniprotId: uniprotId,
                     geneName: geneName
                 });
-                
+
                 if (result.success) {
                     console.log('Successfully opened AlphaFold structure viewer');
                 } else {
@@ -15808,12 +15804,12 @@ ${this.getPluginSystemInfo()}`;
                 viewStructureBtn.innerHTML = '<i class="fas fa-cube"></i> View 3D Structure';
             }
         };
-        
+
         viewPageBtn.onclick = () => {
             const url = viewPageBtn.dataset.url;
             window.open(url, '_blank');
         };
-        
+
         return element;
     }
 
@@ -15825,7 +15821,7 @@ ${this.getPluginSystemInfo()}`;
         if (document.getElementById('alphafold-sidebar-styles')) {
             return;
         }
-        
+
         const style = document.createElement('style');
         style.id = 'alphafold-sidebar-styles';
         style.textContent = `
@@ -16007,7 +16003,7 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
         `;
-        
+
         document.head.appendChild(style);
     }
 
@@ -16017,7 +16013,7 @@ ${this.getPluginSystemInfo()}`;
     async performPDBSearch(geneName, organism, maxResults = 10) {
         try {
             console.log(`Performing PDB search for gene: ${geneName}, organism: ${organism}`);
-            
+
             // Use RCSB PDB search API with improved query (POST request)
             const searchQuery = {
                 "query": {
@@ -16052,9 +16048,9 @@ ${this.getPluginSystemInfo()}`;
                 },
                 "return_type": "entry"
             };
-            
+
             console.log('PDB search query:', JSON.stringify(searchQuery, null, 2));
-            
+
             // Fixed: Use POST request instead of GET with URL parameter
             const response = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
                 method: 'POST',
@@ -16064,16 +16060,16 @@ ${this.getPluginSystemInfo()}`;
                 },
                 body: JSON.stringify(searchQuery)
             });
-            
+
             if (!response.ok) {
                 console.warn(`PDB search failed with ${response.status}: ${response.statusText}`);
                 // Try simpler search if complex query fails
                 return await this.performSimplePDBSearch(geneName, organism, maxResults);
             }
-            
+
             const searchData = await response.json();
             return await this.processPDBResults(searchData, geneName, organism, maxResults);
-            
+
         } catch (error) {
             console.error('PDB search error:', error);
             // Fallback to simple search
@@ -16092,7 +16088,7 @@ ${this.getPluginSystemInfo()}`;
      */
     async performSimplePDBSearch(geneName, organism, maxResults) {
         console.log('Performing simple PDB search as fallback');
-        
+
         const simpleQuery = {
             "query": {
                 "type": "terminal",
@@ -16111,7 +16107,7 @@ ${this.getPluginSystemInfo()}`;
             },
             "return_type": "entry"
         };
-        
+
         // Fixed: Use POST request for fallback search as well
         const response = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
             method: 'POST',
@@ -16121,11 +16117,11 @@ ${this.getPluginSystemInfo()}`;
             },
             body: JSON.stringify(simpleQuery)
         });
-        
+
         if (!response.ok) {
             throw new Error(`Simple PDB search failed: ${response.status} ${response.statusText}`);
         }
-        
+
         const searchData = await response.json();
         return await this.processPDBResults(searchData, geneName, organism, maxResults);
     }
@@ -16135,11 +16131,11 @@ ${this.getPluginSystemInfo()}`;
      */
     async processPDBResults(searchData, geneName, organism, maxResults) {
         const results = [];
-        
+
         if (searchData.result_set && searchData.result_set.length > 0) {
             for (const result of searchData.result_set.slice(0, maxResults)) {
                 const pdbId = result.identifier;
-                
+
                 try {
                     const details = await this.getPDBDetails(pdbId);
                     results.push({
@@ -16168,7 +16164,7 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
         }
-        
+
         console.log(`Found ${results.length} PDB structures for gene ${geneName}`);
         return results;
     }
@@ -16195,12 +16191,12 @@ ${this.getPluginSystemInfo()}`;
                 ]
             }
         };
-        
+
         const geneKey = geneName.toLowerCase();
         if (knownStructures[geneKey] && knownStructures[geneKey][organism]) {
             return knownStructures[geneKey][organism];
         }
-        
+
         return [];
     }
 
@@ -16210,30 +16206,30 @@ ${this.getPluginSystemInfo()}`;
     displayPDBResultsInSidebar(results, geneName) {
         try {
             console.log('Displaying PDB results in sidebar:', results);
-            
+
             // Get or create sidebar container
             let sidebar = document.querySelector('.pdb-results-sidebar');
             if (!sidebar) {
                 sidebar = this.createPDBSidebar();
             }
-            
+
             // Clear previous results
             const resultsContainer = sidebar.querySelector('.pdb-results-list');
             resultsContainer.innerHTML = '';
-            
+
             // Update header
             const header = sidebar.querySelector('.sidebar-header h3');
             header.textContent = `PDB Results for ${geneName}`;
-            
+
             // Add results
             results.forEach((result, index) => {
                 const resultElement = this.createPDBResultElement(result, index);
                 resultsContainer.appendChild(resultElement);
             });
-            
+
             // Show sidebar
             sidebar.classList.add('visible');
-            
+
             // Add close functionality
             const closeBtn = sidebar.querySelector('.sidebar-close');
             if (closeBtn) {
@@ -16241,7 +16237,7 @@ ${this.getPluginSystemInfo()}`;
                     sidebar.classList.remove('visible');
                 };
             }
-            
+
         } catch (error) {
             console.error('Error displaying PDB results in sidebar:', error);
         }
@@ -16256,7 +16252,7 @@ ${this.getPluginSystemInfo()}`;
         if (existing) {
             existing.remove();
         }
-        
+
         const sidebar = document.createElement('div');
         sidebar.className = 'pdb-results-sidebar';
         sidebar.innerHTML = `
@@ -16270,13 +16266,13 @@ ${this.getPluginSystemInfo()}`;
                 <div class="pdb-results-list"></div>
             </div>
         `;
-        
+
         // Add styles
         this.addPDBSidebarStyles();
-        
+
         // Append to body
         document.body.appendChild(sidebar);
-        
+
         return sidebar;
     }
 
@@ -16328,24 +16324,24 @@ ${this.getPluginSystemInfo()}`;
                 </button>
             </div>
         `;
-        
+
         // Add click handlers
         const viewStructureBtn = element.querySelector('.view-structure');
         const viewPageBtn = element.querySelector('.view-pdb-page');
-        
+
         viewStructureBtn.onclick = async () => {
             const pdbId = viewStructureBtn.dataset.pdbId;
             const geneName = viewStructureBtn.dataset.geneName;
-            
+
             try {
                 viewStructureBtn.disabled = true;
                 viewStructureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-                
+
                 const result = await this.openProteinViewer({
                     pdbId: pdbId,
                     geneName: geneName
                 });
-                
+
                 if (result.success) {
                     console.log('Successfully opened PDB structure viewer');
                 } else {
@@ -16359,12 +16355,12 @@ ${this.getPluginSystemInfo()}`;
                 viewStructureBtn.innerHTML = '<i class="fas fa-cube"></i> View 3D Structure';
             }
         };
-        
+
         viewPageBtn.onclick = () => {
             const url = viewPageBtn.dataset.url;
             window.open(url, '_blank');
         };
-        
+
         return element;
     }
 
@@ -16376,7 +16372,7 @@ ${this.getPluginSystemInfo()}`;
         if (document.getElementById('pdb-sidebar-styles')) {
             return;
         }
-        
+
         const style = document.createElement('style');
         style.id = 'pdb-sidebar-styles';
         style.textContent = `
@@ -16553,7 +16549,7 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
         `;
-        
+
         document.head.appendChild(style);
     }
 
@@ -16562,7 +16558,7 @@ ${this.getPluginSystemInfo()}`;
      */
     testMicrobeGenomicsIntegration() {
         console.log('=== Testing MicrobeGenomicsFunctions Integration ===');
-        
+
         if (!this.MicrobeFns) {
             console.error('❌ MicrobeGenomicsFunctions not available');
             return {
@@ -16570,25 +16566,25 @@ ${this.getPluginSystemInfo()}`;
                 error: 'MicrobeGenomicsFunctions not loaded'
             };
         }
-        
+
         const testResults = {
             functionsAvailable: {},
             categoriesAvailable: false,
             examplesAvailable: false,
             totalFunctions: 0
         };
-        
+
         try {
             // Test if categories method works
-                const categories = this.MicrobeFns.getFunctionCategories();
+            const categories = this.MicrobeFns.getFunctionCategories();
             testResults.categoriesAvailable = !!categories;
             console.log('✅ Categories available:', Object.keys(categories));
-            
+
             // Test if examples method works
-                const examples = this.MicrobeFns.getUsageExamples();
+            const examples = this.MicrobeFns.getUsageExamples();
             testResults.examplesAvailable = !!examples;
             console.log('✅ Examples available:', examples.length);
-            
+
             // Test individual function availability
             const testFunctions = [
                 'navigateTo', 'jumpToGene', 'getCurrentRegion', 'scrollLeft', 'scrollRight',
@@ -16600,7 +16596,7 @@ ${this.getPluginSystemInfo()}`;
                 'deleteAnnotation', 'mergeAnnotations', 'addAnnotation',
                 'getUpstreamRegion', 'getDownstreamRegion', 'addTrack', 'addVariant'
             ];
-            
+
             testFunctions.forEach(funcName => {
                 const isAvailable = typeof this.MicrobeFns[funcName] === 'function';
                 testResults.functionsAvailable[funcName] = isAvailable;
@@ -16611,7 +16607,7 @@ ${this.getPluginSystemInfo()}`;
                     console.log(`❌ ${funcName} NOT available`);
                 }
             });
-            
+
             // Test a simple function call
             try {
                 const testSequence = 'ATGCGCTATCG';
@@ -16622,18 +16618,18 @@ ${this.getPluginSystemInfo()}`;
                 console.log(`❌ Function call test failed: ${error.message}`);
                 testResults.functionCallTest = { success: false, error: error.message };
             }
-            
+
             console.log('=== Integration Test Summary ===');
             console.log(`Total functions available: ${testResults.totalFunctions}/${testFunctions.length}`);
             console.log(`Categories available: ${testResults.categoriesAvailable}`);
             console.log(`Examples available: ${testResults.examplesAvailable}`);
             console.log('===================================');
-            
+
             return {
                 success: true,
                 ...testResults
             };
-            
+
         } catch (error) {
             console.error('❌ Integration test failed:', error);
             return {
@@ -16643,7 +16639,7 @@ ${this.getPluginSystemInfo()}`;
             };
         }
     }
-    
+
     /**
      * Test tool execution through ChatManager
      */
@@ -16653,7 +16649,7 @@ ${this.getPluginSystemInfo()}`;
                 pdbId: '1TUP',
                 title: 'Test Protein Structure'
             });
-            
+
             console.log('Tool execution test result:', testResult);
             this.addMessageToChat('Tool execution test completed. Check console for details.', 'assistant');
         } catch (error) {
@@ -16983,7 +16979,7 @@ ${this.getPluginSystemInfo()}`;
             };
 
             const result = await this.blastSearch(basicParams);
-            
+
             if (result.success && params.filters) {
                 // Apply local filtering
                 result.filteredHits = this.applyBlastFilters(result.topHits, params.filters);
@@ -17009,26 +17005,26 @@ ${this.getPluginSystemInfo()}`;
         let filteredHits = [...hits];
 
         if (filters.minIdentity) {
-            filteredHits = filteredHits.filter(hit => 
+            filteredHits = filteredHits.filter(hit =>
                 parseFloat(hit.identity.replace('%', '')) >= filters.minIdentity
             );
         }
 
         if (filters.minCoverage) {
-            filteredHits = filteredHits.filter(hit => 
+            filteredHits = filteredHits.filter(hit =>
                 parseFloat(hit.coverage.replace('%', '')) >= filters.minCoverage
             );
         }
 
         if (filters.maxEvalue) {
-            filteredHits = filteredHits.filter(hit => 
+            filteredHits = filteredHits.filter(hit =>
                 parseFloat(hit.evalue) <= filters.maxEvalue
             );
         }
 
         if (filters.excludePatterns) {
-            filteredHits = filteredHits.filter(hit => 
-                !filters.excludePatterns.some(pattern => 
+            filteredHits = filteredHits.filter(hit =>
+                !filters.excludePatterns.some(pattern =>
                     hit.description.toLowerCase().includes(pattern.toLowerCase())
                 )
             );
@@ -17080,7 +17076,7 @@ ${this.getPluginSystemInfo()}`;
             for (const [chromosome, annotations] of Object.entries(this.app.currentAnnotations)) {
                 if (genomeInfo.loadedGenomes[chromosome]) {
                     genomeInfo.loadedGenomes[chromosome].annotations = annotations.length;
-                    
+
                     // Count feature types
                     const featureTypes = {};
                     annotations.forEach(feature => {
@@ -17118,7 +17114,7 @@ ${this.getPluginSystemInfo()}`;
                     serovar: sourceInfo.serovar,
                     dbXref: sourceInfo.db_xref
                 };
-                
+
                 // Add to loaded genome info if it exists
                 if (genomeInfo.loadedGenomes[chromosome]) {
                     genomeInfo.loadedGenomes[chromosome].sourceInfo = genomeInfo.sourceInformation[chromosome];
@@ -17198,7 +17194,7 @@ ${this.getPluginSystemInfo()}`;
     async showMetabolicPathway(params) {
         try {
             const { pathwayName, highlightGenes = [], organism = 'generic' } = params;
-            
+
             // Define pathway templates
             const pathwayTemplates = {
                 glycolysis: {
@@ -17208,7 +17204,7 @@ ${this.getPluginSystemInfo()}`;
                     enzymes: [
                         'Glucokinase (glk)',
                         'Glucose-6-phosphate isomerase (pgi)',
-                        'Phosphofructokinase (pfkA)', 
+                        'Phosphofructokinase (pfkA)',
                         'Fructose-bisphosphate aldolase (fbaA)',
                         'Triosephosphate isomerase (tpiA)',
                         'Glyceraldehyde-3-phosphate dehydrogenase (gapA)',
@@ -17259,17 +17255,17 @@ ${this.getPluginSystemInfo()}`;
                     ]
                 }
             };
-            
-            const pathway = pathwayTemplates[pathwayName.toLowerCase()] || 
-                            pathwayTemplates[pathwayName.replace(/[\s-]/g, '_').toLowerCase()];
-            
+
+            const pathway = pathwayTemplates[pathwayName.toLowerCase()] ||
+                pathwayTemplates[pathwayName.replace(/[\s-]/g, '_').toLowerCase()];
+
             if (!pathway) {
                 return {
                     success: false,
                     error: `Pathway '${pathwayName}' not found. Available pathways: ${Object.keys(pathwayTemplates).join(', ')}`
                 };
             }
-            
+
             // Search for pathway genes in the current genome
             const foundGenes = [];
             const searchPromises = pathway.genes.map(async (gene) => {
@@ -17289,9 +17285,9 @@ ${this.getPluginSystemInfo()}`;
                     foundGenes.push({ gene: gene, found: false, error: error.message });
                 }
             });
-            
+
             await Promise.all(searchPromises);
-            
+
             // Generate pathway visualization
             const visualization = {
                 pathwayName: pathway.name,
@@ -17304,10 +17300,10 @@ ${this.getPluginSystemInfo()}`;
                 highlightedGenes: highlightGenes,
                 organism: organism
             };
-            
+
             // Show notification with pathway info
             this.showNotification(`${pathway.name}: Found ${visualization.foundGenes}/${visualization.totalGenes} genes in current genome`, 'info');
-            
+
             return {
                 success: true,
                 pathway: visualization,
@@ -17315,7 +17311,7 @@ ${this.getPluginSystemInfo()}`;
                 details: `Found ${visualization.foundGenes} out of ${visualization.totalGenes} expected genes`,
                 genes: foundGenes.filter(g => g.found)
             };
-            
+
         } catch (error) {
             console.error('Error showing metabolic pathway:', error);
             return {
@@ -17331,16 +17327,16 @@ ${this.getPluginSystemInfo()}`;
     async findPathwayGenes(params) {
         try {
             const { pathwayName, includeRegulation = false } = params;
-            
+
             // Use the same pathway templates
             const result = await this.showMetabolicPathway({ pathwayName });
-            
+
             if (!result.success) {
                 return result;
             }
-            
+
             const foundGenes = result.genes || [];
-            
+
             // If includeRegulation is true, search for regulatory genes
             let regulatoryGenes = [];
             if (includeRegulation) {
@@ -17348,7 +17344,7 @@ ${this.getPluginSystemInfo()}`;
                     `${pathwayName}R`, `${pathwayName}regulator`, `${pathwayName}activator`,
                     'crp', 'cra', 'fnr', 'arcA' // Common regulatory genes
                 ];
-                
+
                 for (const term of regulatorySearchTerms) {
                     try {
                         const regResult = await this.searchFeatures({ query: term, caseSensitive: false });
@@ -17360,7 +17356,7 @@ ${this.getPluginSystemInfo()}`;
                     }
                 }
             }
-            
+
             return {
                 success: true,
                 pathwayName: result.pathway.pathwayName,
@@ -17370,7 +17366,7 @@ ${this.getPluginSystemInfo()}`;
                 totalGenes: foundGenes.length + (includeRegulation ? regulatoryGenes.length : 0),
                 summary: `Found ${foundGenes.length} metabolic genes${includeRegulation ? ` and ${regulatoryGenes.length} regulatory genes` : ''} for ${pathwayName}`
             };
-            
+
         } catch (error) {
             console.error('Error finding pathway genes:', error);
             return {
@@ -17392,11 +17388,11 @@ ${this.getPluginSystemInfo()}`;
             issues: [],
             recommendations: []
         };
-        
+
         try {
             const context = this.getCurrentContext();
             const allTools = context.genomeBrowser.availableTools;
-            
+
             // 统计各类工具数量
             report.summary = {
                 totalTools: allTools.length,
@@ -17404,7 +17400,7 @@ ${this.getPluginSystemInfo()}`;
                 pluginTools: context.genomeBrowser.toolSources.plugins,
                 mcpTools: context.genomeBrowser.toolSources.mcp
             };
-            
+
             // 检查每个工具的可执行性
             const toolCategories = {
                 navigation: [],
@@ -17417,10 +17413,10 @@ ${this.getPluginSystemInfo()}`;
                 plugin: [],
                 mcp: []
             };
-            
+
             allTools.forEach(tool => {
                 let category = 'other';
-                
+
                 if (tool.includes('navigate') || tool.includes('zoom') || tool.includes('scroll') || tool.includes('jump')) {
                     category = 'navigation';
                 } else if (tool.includes('search') || tool.includes('find')) {
@@ -17438,12 +17434,12 @@ ${this.getPluginSystemInfo()}`;
                 } else if (tool.includes('.')) {
                     category = 'plugin';
                 }
-                
+
                 toolCategories[category].push(tool);
             });
-            
+
             report.details.categories = toolCategories;
-            
+
             // 检查MicrobeGenomicsFunctions集成
             const microbeTools = [];
             if (window.MicrobeGenomicsFunctions) {
@@ -17452,50 +17448,50 @@ ${this.getPluginSystemInfo()}`;
                     microbeTools.push(...category.functions);
                 });
             }
-            
+
             report.details.microbeGenomics = {
                 available: !!window.MicrobeGenomicsFunctions,
                 functionCount: microbeTools.length,
                 functions: microbeTools
             };
-            
+
             // 检查插件系统
             report.details.plugins = {
                 integratorAvailable: !!this.pluginFunctionCallsIntegrator,
                 managerAvailable: !!this.pluginManager,
-                mappedFunctions: this.pluginFunctionCallsIntegrator ? 
+                mappedFunctions: this.pluginFunctionCallsIntegrator ?
                     this.pluginFunctionCallsIntegrator.pluginFunctionMap.size : 0
             };
-            
+
             // 检查MCP服务器
             report.details.mcp = {
                 managerAvailable: !!this.mcpServerManager,
-                connectedServers: this.mcpServerManager ? 
+                connectedServers: this.mcpServerManager ?
                     this.mcpServerManager.getConnectedServersCount() : 0,
-                availableTools: this.mcpServerManager ? 
+                availableTools: this.mcpServerManager ?
                     this.mcpServerManager.getAllAvailableTools().length : 0
             };
-            
+
             // 生成建议
             if (report.summary.totalTools < 50) {
                 report.recommendations.push('工具数量较少，可能需要检查插件和MCP服务器连接');
             }
-            
+
             if (!report.details.microbeGenomics.available) {
                 report.issues.push('MicrobeGenomicsFunctions未正确加载');
             }
-            
+
             if (!report.details.plugins.integratorAvailable) {
                 report.issues.push('插件函数调用集成器未初始化');
             }
-            
+
             if (report.details.mcp.connectedServers === 0) {
                 report.recommendations.push('建议连接MCP服务器以获得更多工具');
             }
-            
+
             console.log('🔍 Tools Validation Report:', report);
             return report;
-            
+
         } catch (error) {
             report.issues.push(`验证过程出错: ${error.message}`);
             console.error('Tools validation failed:', error);
@@ -17512,7 +17508,7 @@ ${this.getPluginSystemInfo()}`;
         this.conversationState.startTime = Date.now();
         this.conversationState.processSteps = [];
         this.conversationState.currentStep = 0;
-        
+
         // 更新UI状态
         this.updateUIState();
     }
@@ -17523,20 +17519,20 @@ ${this.getPluginSystemInfo()}`;
     endConversation() {
         // 在清除状态之前，先保存当前的思考过程
         const currentRequestId = this.conversationState.currentRequestId;
-        
+
         // 将当前思考过程转换为历史记录
         this.finalizeCurrentThinkingProcess(currentRequestId);
-        
+
         this.conversationState.isProcessing = false;
         this.conversationState.currentRequestId = null;
         this.conversationState.abortController = null;
         this.conversationState.startTime = null;
         this.conversationState.processSteps = [];
         this.conversationState.currentStep = 0;
-        
+
         // 更新UI状态
         this.updateUIState();
-        
+
         // 注意：我们不再自动移除思考过程，而是将其转换为历史记录
     }
 
@@ -17545,7 +17541,7 @@ ${this.getPluginSystemInfo()}`;
      */
     finalizeCurrentThinkingProcess(requestId) {
         if (!requestId) return;
-        
+
         const thinkingElement = document.getElementById(`thinkingProcess_${requestId}`);
         if (thinkingElement) {
             // 移除动画和交互元素，转换为静态历史记录
@@ -17555,19 +17551,19 @@ ${this.getPluginSystemInfo()}`;
                 spinningIcon.classList.remove('fa-cog');
                 spinningIcon.classList.add('fa-check-circle');
             }
-            
+
             // 更新头部文本表示已完成
             const headerText = thinkingElement.querySelector('.thinking-header span');
             if (headerText) {
                 headerText.textContent = 'AI Thinking Process (Completed)';
             }
-            
+
             // 更改样式表示已完成
             thinkingElement.classList.add('thinking-completed');
-            
+
             // 移除ID，避免与新的思考过程冲突
             thinkingElement.removeAttribute('id');
-            
+
             // 添加时间戳（如果启用）
             if (this.showTimestamps) {
                 const timestamp = new Date().toLocaleTimeString();
@@ -17586,10 +17582,10 @@ ${this.getPluginSystemInfo()}`;
         if (this.conversationState.isProcessing && this.conversationState.abortController) {
             this.conversationState.abortController.abort();
             this.showNotification('Conversation aborted', 'warning');
-            
+
             // 移除输入指示器
             this.removeTypingIndicator();
-            
+
             // 结束对话状态
             this.endConversation();
         }
@@ -17602,7 +17598,7 @@ ${this.getPluginSystemInfo()}`;
         const sendBtn = document.getElementById('sendChatBtn');
         const abortBtn = document.getElementById('abortChatBtn');
         const chatInput = document.getElementById('chatInput');
-        
+
         if (this.conversationState.isProcessing) {
             // Conversation in progress - disable send button, show abort button
             if (sendBtn) {
@@ -17654,14 +17650,14 @@ ${this.getPluginSystemInfo()}`;
             });
             return;
         }
-        
+
         // 只移除当前正在进行的思考过程（如果有的话）
         const currentRequestId = this.conversationState.currentRequestId || Date.now();
         const existingThinking = document.getElementById(`thinkingProcess_${currentRequestId}`);
         if (existingThinking) {
             existingThinking.remove();
         }
-        
+
         const messagesContainer = document.getElementById('chatMessages');
         const thinkingDiv = document.createElement('div');
         thinkingDiv.className = 'message assistant-message thinking-process';
@@ -17681,9 +17677,9 @@ ${this.getPluginSystemInfo()}`;
                 </div>
             </div>
         `;
-        
+
         messagesContainer.appendChild(thinkingDiv);
-        
+
         // Add to Evolution data structure
         this.addToEvolutionData({
             type: 'thinking_process',
@@ -17697,13 +17693,13 @@ ${this.getPluginSystemInfo()}`;
                 step: 'initial_thinking'
             }
         });
-        
+
         // 根据设置决定是否自动滚动
         if (this.autoScrollToBottom) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
-    
+
     /**
      * 添加多智能体系统激活消息
      */
@@ -17731,9 +17727,9 @@ ${this.getPluginSystemInfo()}`;
                 </div>
             </div>
         `;
-        
+
         messagesContainer.appendChild(activationDiv);
-        
+
         // Add to Evolution data
         this.addToEvolutionData({
             type: 'multi_agent_activation',
@@ -17746,12 +17742,12 @@ ${this.getPluginSystemInfo()}`;
                 step: 'system_activation'
             }
         });
-        
+
         if (this.autoScrollToBottom) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
-    
+
     /**
      * 添加智能体决策消息
      */
@@ -17788,9 +17784,9 @@ ${this.getPluginSystemInfo()}`;
                 </div>
             </div>
         `;
-        
+
         messagesContainer.appendChild(decisionDiv);
-        
+
         // Add to Evolution data
         this.addToEvolutionData({
             type: 'agent_decision',
@@ -17810,7 +17806,7 @@ ${this.getPluginSystemInfo()}`;
                 toolName
             }
         });
-        
+
         // Update status after a short delay to show completion
         setTimeout(() => {
             const statusDot = decisionDiv.querySelector('.status-dot');
@@ -17820,12 +17816,12 @@ ${this.getPluginSystemInfo()}`;
                 statusText.textContent = 'Completed';
             }
         }, 2000);
-        
+
         if (this.autoScrollToBottom) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
-    
+
     /**
      * 添加智能体执行结果消息
      */
@@ -17855,9 +17851,9 @@ ${this.getPluginSystemInfo()}`;
                 </div>
             </div>
         `;
-        
+
         messagesContainer.appendChild(resultDiv);
-        
+
         // Add to Evolution data
         this.addToEvolutionData({
             type: 'agent_execution_result',
@@ -17878,12 +17874,12 @@ ${this.getPluginSystemInfo()}`;
                 executionTime
             }
         });
-        
+
         if (this.autoScrollToBottom) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
-    
+
     /**
      * 获取智能体图标
      */
@@ -17900,7 +17896,7 @@ ${this.getPluginSystemInfo()}`;
         };
         return agentIcons[agentName] || '🤖';
     }
-    
+
     /**
      * 格式化智能体执行结果
      */
@@ -17913,7 +17909,7 @@ ${this.getPluginSystemInfo()}`;
             return String(result);
         }
     }
-    
+
     /**
      * 根据工具名称确定负责的智能体
      */
@@ -17933,7 +17929,7 @@ ${this.getPluginSystemInfo()}`;
             'get_current_state': 'Navigation Agent',
             'get_current_region': 'Navigation Agent',
             'jump_to_gene': 'Navigation Agent',
-            
+
             // Analysis Agent - 数据分析和统计
             'analyze_region': 'Analysis Agent',
             'compare_regions': 'Analysis Agent',
@@ -17947,7 +17943,7 @@ ${this.getPluginSystemInfo()}`;
             'predict_rbs': 'Analysis Agent',
             'predict_terminator': 'Analysis Agent',
             'find_similar_sequences': 'Analysis Agent',
-            
+
             // Data Agent - 数据管理和导出
             'export_data': 'Data Agent',
             'export_region_features': 'Data Agent',
@@ -17957,7 +17953,7 @@ ${this.getPluginSystemInfo()}`;
             'get_track_status': 'Data Agent',
             'add_track': 'Data Agent',
             'add_variant': 'Data Agent',
-            
+
             // Sequence Agent - 序列分析
             'get_sequence': 'Sequence Agent',
             'translate_sequence': 'Sequence Agent',
@@ -17971,14 +17967,14 @@ ${this.getPluginSystemInfo()}`;
             'get_upstream_region': 'Sequence Agent',
             'get_downstream_region': 'Sequence Agent',
             'search_sequence_motif': 'Sequence Agent',
-            
+
             // Protein Agent - 蛋白质相关
             'open_protein_viewer': 'Protein Agent',
             'fetch_protein_structure': 'Protein Agent',
             'search_pdb_structures': 'Protein Agent',
             'get_pdb_details': 'Protein Agent',
             'amino_acid_composition': 'Protein Agent',
-            
+
             // Network Agent - 网络和外部数据
             'blast_search': 'Network Agent',
             'blast_sequence_from_region': 'Network Agent',
@@ -17988,7 +17984,7 @@ ${this.getPluginSystemInfo()}`;
             'local_blast_database_info': 'Network Agent',
             'show_metabolic_pathway': 'Network Agent',
             'find_pathway_genes': 'Network Agent',
-            
+
             // External Agent - 外部工具和API
             'search_features': 'External Agent',
             'search_gene_by_name': 'External Agent',
@@ -17998,7 +17994,7 @@ ${this.getPluginSystemInfo()}`;
             'search_intergenic_regions': 'External Agent',
             'get_nearby_features': 'External Agent',
             'find_intergenic_regions': 'External Agent',
-            
+
             // Plugin Agent - 插件功能
             'get_gene_details': 'Plugin Agent',
             'get_operons': 'Plugin Agent',
@@ -18011,16 +18007,16 @@ ${this.getPluginSystemInfo()}`;
             'toggle_track': 'Plugin Agent',
             'toggle_annotation_track': 'Plugin Agent'
         };
-        
+
         return toolAgentMap[toolName] || 'System Agent';
     }
-    
+
     /**
      * 生成智能体决策推理
      */
     getAgentReasoning(toolName, parameters) {
         const agentName = this.getAgentForTool(toolName);
-        
+
         const reasoningTemplates = {
             'Navigation Agent': `This tool requires navigation and positioning capabilities. ${agentName} specializes in spatial operations and view management, making it the optimal choice for coordinate-based tasks.`,
             'Analysis Agent': `This tool involves data analysis and statistical computation. ${agentName} is designed for analytical operations and pattern recognition, ensuring accurate and efficient processing.`,
@@ -18032,7 +18028,7 @@ ${this.getPluginSystemInfo()}`;
             'Plugin Agent': `This tool utilizes plugin functionality and annotation systems. ${agentName} is designed to manage plugin integrations and annotation workflows.`,
             'System Agent': `This tool requires general system operations. ${agentName} provides standard execution capabilities for system-level tasks.`
         };
-        
+
         return reasoningTemplates[agentName] || reasoningTemplates['System Agent'];
     }
 
@@ -18052,21 +18048,21 @@ ${this.getPluginSystemInfo()}`;
                 step: 'update_thinking'
             }
         });
-        
+
         // 检查是否启用思考过程显示
         if (!this.showThinkingProcess) {
             return;
         }
-        
+
         // 查找当前请求的思考过程消息
         const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
         let thinkingDiv = document.getElementById(thinkingId);
-        
+
         // 如果没有找到，查找任何思考过程消息
         if (!thinkingDiv) {
             thinkingDiv = document.querySelector('.thinking-process');
         }
-        
+
         if (thinkingDiv) {
             const thinkingContent = thinkingDiv.querySelector('.thinking-content');
             if (thinkingContent) {
@@ -18076,7 +18072,7 @@ ${this.getPluginSystemInfo()}`;
         } else {
             this.addThinkingMessage(message);
         }
-        
+
         // 根据设置决定是否自动滚动
         const messagesContainer = document.getElementById('chatMessages');
         if (this.autoScrollToBottom) {
@@ -18097,11 +18093,11 @@ ${this.getPluginSystemInfo()}`;
             this.updateThinkingMessage(`💭 <strong>Model reasoning:</strong>`);
             this.updateThinkingMessage(`&nbsp;&nbsp;${formattedThinking.replace(/\n/g, '\n&nbsp;&nbsp;')}`);
         }
-        
+
         // 检查是否有工具调用，并显示参数提取过程
         if (response.includes('tool_name') || response.includes('function_name')) {
             this.updateThinkingMessage(`🔧 Analyzing tool call structure...`);
-            
+
             // Extract and display parameter information
             try {
                 const toolCall = this.parseToolCall(response);
@@ -18109,7 +18105,7 @@ ${this.getPluginSystemInfo()}`;
                     const paramCount = Object.keys(toolCall.parameters || {}).length;
                     this.updateThinkingMessage(`&nbsp;&nbsp;✅ Tool identified: <strong>${toolCall.tool_name}</strong>`);
                     this.updateThinkingMessage(`&nbsp;&nbsp;📊 Parameters extracted: ${paramCount} parameter(s)`);
-                    
+
                     // Display parameter details
                     if (paramCount > 0) {
                         const paramKeys = Object.keys(toolCall.parameters);
@@ -18136,18 +18132,18 @@ ${this.getPluginSystemInfo()}`;
         let formatted = thinkingContent
             .replace(/\n\s*\n/g, '\n') // 移除多余的空行
             .trim();
-        
+
         // 如果内容很长，进行适当的换行处理
         if (formatted.length > 200) {
             // 在句号、问号、感叹号后添加换行（如果后面不是换行符）
             formatted = formatted.replace(/([.!?])\s+(?=[A-Z])/g, '$1\n\n');
         }
-        
+
         // 确保内容以适当的格式结束
         if (!formatted.endsWith('.') && !formatted.endsWith('!') && !formatted.endsWith('?')) {
             formatted += '...';
         }
-        
+
         return formatted;
     }
 
@@ -18168,21 +18164,21 @@ ${this.getPluginSystemInfo()}`;
                 toolNames: toolsToExecute.map(t => t.tool_name)
             }
         });
-        
+
         // 检查是否启用工具调用显示
         if (!this.showToolCalls) {
             return;
         }
-        
+
         // 为每个工具获取来源信息
         const toolsWithSource = await Promise.all(toolsToExecute.map(async (tool) => {
             const source = await this.getToolSource(tool.tool_name);
             return { ...tool, source };
         }));
-        
+
         const toolList = toolsWithSource.map(tool => {
             let toolDisplay = `• <strong>${tool.tool_name}</strong>`;
-            
+
             // 显示智能体信息（如果启用）
             if (this.agentSystemEnabled && this.agentSystemSettings.showAgentInfo && this.multiAgentSystem) {
                 try {
@@ -18198,20 +18194,20 @@ ${this.getPluginSystemInfo()}`;
                     console.error('Error getting agent info for tool:', tool.tool_name, error);
                 }
             }
-            
+
             // 显示来源信息（如果启用）
             if (this.showToolCallSource && tool.source) {
                 const sourceColor = this.getSourceColor(tool.source.type);
                 toolDisplay += ` <span style="color: ${sourceColor}; font-size: 0.9em;">[${tool.source.display}]</span>`;
             }
-            
+
             // 显示参数
             const paramsStr = JSON.stringify(tool.parameters, null, 2);
             toolDisplay += `<br>&nbsp;&nbsp;<em>Parameters:</em> <code style="font-size: 0.8em;">${paramsStr}</code>`;
-            
+
             return toolDisplay;
         }).join('<br><br>');
-        
+
         this.updateThinkingMessage(`⚡ Executing tool calls:<br><br>${toolList}`);
     }
 
@@ -18223,7 +18219,7 @@ ${this.getPluginSystemInfo()}`;
             // 检查是否是MCP服务器工具
             const allMCPTools = this.mcpServerManager.getAllAvailableTools();
             const mcpTool = allMCPTools.find(t => t.name === toolName);
-            
+
             if (mcpTool) {
                 return {
                     type: 'mcp',
@@ -18232,7 +18228,7 @@ ${this.getPluginSystemInfo()}`;
                     serverName: mcpTool.serverName
                 };
             }
-            
+
             // 检查是否是插件函数
             if (this.pluginFunctionCallsIntegrator && this.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
                 return {
@@ -18241,7 +18237,7 @@ ${this.getPluginSystemInfo()}`;
                     source: 'plugin-system'
                 };
             }
-            
+
             // 检查是否是内置本地函数 - 使用 FunctionCallsOrganizer 获取完整列表
             if (this.smartExecutor && this.smartExecutor.organizer) {
                 const category = this.smartExecutor.organizer.getFunctionCategory(toolName);
@@ -18256,7 +18252,7 @@ ${this.getPluginSystemInfo()}`;
                     };
                 }
             }
-            
+
             // Fallback: Check builtin_tools_integration for database and other built-in tools
             if (this.builtInTools && this.builtInTools.builtInToolsMap) {
                 const builtInTool = this.builtInTools.builtInToolsMap.get(toolName);
@@ -18270,14 +18266,14 @@ ${this.getPluginSystemInfo()}`;
                     };
                 }
             }
-            
+
             // 未知工具
             return {
                 type: 'unknown',
                 display: 'Unknown Source',
                 source: 'unknown'
             };
-            
+
         } catch (error) {
             console.warn(`Failed to get source for tool ${toolName}:`, error);
             return {
@@ -18299,7 +18295,7 @@ ${this.getPluginSystemInfo()}`;
             'unknown': '#9E9E9E',  // 灰色 - 未知
             'error': '#F44336'     // 红色 - 错误
         };
-        
+
         return colors[sourceType] || colors['unknown'];
     }
 
@@ -18313,7 +18309,7 @@ ${this.getPluginSystemInfo()}`;
             // 添加淡出动画
             thinkingDiv.style.transition = 'opacity 0.5s ease-out';
             thinkingDiv.style.opacity = '0';
-            
+
             setTimeout(() => {
                 if (thinkingDiv.parentNode) {
                     thinkingDiv.parentNode.removeChild(thinkingDiv);
@@ -18330,14 +18326,14 @@ ${this.getPluginSystemInfo()}`;
         thinkingDivs.forEach(thinkingDiv => {
             thinkingDiv.style.transition = 'opacity 0.3s ease-out';
             thinkingDiv.style.opacity = '0';
-            
+
             setTimeout(() => {
                 if (thinkingDiv.parentNode) {
                     thinkingDiv.parentNode.removeChild(thinkingDiv);
                 }
             }, 300);
         });
-        
+
         this.showNotification('Thinking process history cleared', 'success');
     }
 
@@ -18347,14 +18343,14 @@ ${this.getPluginSystemInfo()}`;
     toggleThinkingHistory() {
         const thinkingDivs = document.querySelectorAll('.thinking-process.thinking-completed');
         const toggleBtn = document.getElementById('toggleThinkingBtn');
-        
+
         if (thinkingDivs.length === 0) {
             this.showNotification('📝 No thinking history to toggle', 'info');
             return;
         }
-        
+
         const isCurrentlyVisible = thinkingDivs[0].style.display !== 'none';
-        
+
         thinkingDivs.forEach(thinkingDiv => {
             if (isCurrentlyVisible) {
                 thinkingDiv.style.display = 'none';
@@ -18362,7 +18358,7 @@ ${this.getPluginSystemInfo()}`;
                 thinkingDiv.style.display = 'block';
             }
         });
-        
+
         // 更新按钮文本和图标
         if (toggleBtn) {
             if (isCurrentlyVisible) {
@@ -18371,7 +18367,7 @@ ${this.getPluginSystemInfo()}`;
                 toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide History';
             }
         }
-        
+
         const action = isCurrentlyVisible ? 'hidden' : 'shown';
         this.showNotification(`✅ Thinking history ${action}`, 'success');
     }
@@ -18382,7 +18378,7 @@ ${this.getPluginSystemInfo()}`;
     addToolResultMessage(toolResults) {
         const successCount = toolResults.filter(r => r.success).length;
         const failCount = toolResults.filter(r => !r.success).length;
-        
+
         // Add to Evolution data first (always record tool results)
         this.addToEvolutionData({
             type: 'tool_results',
@@ -18398,23 +18394,23 @@ ${this.getPluginSystemInfo()}`;
                 tools: toolResults.map(r => ({ tool: r.tool, success: r.success }))
             }
         });
-        
+
         if (!this.showToolCalls) return;
-        
+
         let resultMessage = `✅ Tool execution completed: ${successCount} succeeded`;
         if (failCount > 0) {
             resultMessage += `, ${failCount} failed`;
         }
-        
+
         // 显示详细结果
         const detailsHtml = toolResults.map(result => {
             const icon = result.success ? '✅' : '❌';
             let resultDisplay = `<div style="margin: 8px 0; padding: 8px; border-left: 3px solid ${result.success ? '#4CAF50' : '#F44336'};">`;
             resultDisplay += `<strong>${icon} ${result.tool}</strong><br>`;
-            
+
             if (result.success) {
                 resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
-                
+
                 // 显示详细数据（如果启用）
                 if (this.showDetailedToolData) {
                     // Check for result.result first (standard tool execution result), then fallback to result.data (legacy)
@@ -18423,7 +18419,7 @@ ${this.getPluginSystemInfo()}`;
                         resultDisplay += `<br><details style="margin-top: 8px;">`;
                         resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
                         resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
-                        
+
                         try {
                             // 格式化数据显示
                             const formattedData = this.formatToolResultData(resultData);
@@ -18431,7 +18427,7 @@ ${this.getPluginSystemInfo()}`;
                         } catch (error) {
                             resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
                         }
-                        
+
                         resultDisplay += `</div></details>`;
                     }
                 }
@@ -18441,11 +18437,11 @@ ${this.getPluginSystemInfo()}`;
                     resultDisplay += `<br><span style="color: #F44336; font-size: 0.9em;">Error: ${result.error}</span>`;
                 }
             }
-            
+
             resultDisplay += `</div>`;
             return resultDisplay;
         }).join('');
-        
+
         this.updateThinkingMessage(`${resultMessage}<br><div style="margin-top: 8px;">${detailsHtml}</div>`);
     }
 
@@ -18454,7 +18450,7 @@ ${this.getPluginSystemInfo()}`;
      */
     formatToolResultData(data) {
         if (!data) return 'No data available';
-        
+
         try {
             // 如果是字符串，尝试解析为JSON
             if (typeof data === 'string') {
@@ -18465,13 +18461,13 @@ ${this.getPluginSystemInfo()}`;
                     return `<pre>${this.escapeHtml(data)}</pre>`;
                 }
             }
-            
+
             // 如果是数组
             if (Array.isArray(data)) {
                 if (data.length === 0) {
                     return '<em>Empty array</em>';
                 }
-                
+
                 // 如果数组元素是对象，创建表格
                 if (typeof data[0] === 'object' && data[0] !== null) {
                     return this.formatArrayAsTable(data);
@@ -18479,15 +18475,15 @@ ${this.getPluginSystemInfo()}`;
                     return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
                 }
             }
-            
+
             // 如果是对象
             if (typeof data === 'object' && data !== null) {
                 return this.formatObjectAsKeyValue(data);
             }
-            
+
             // 其他类型直接显示
             return `<pre>${String(data)}</pre>`;
-            
+
         } catch (error) {
             console.warn('Error formatting tool result data:', error);
             return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
@@ -18499,19 +18495,19 @@ ${this.getPluginSystemInfo()}`;
      */
     formatArrayAsTable(array) {
         if (array.length === 0) return '<em>Empty array</em>';
-        
+
         const sample = array[0];
         const keys = Object.keys(sample);
-        
+
         let table = '<table style="width: 100%; border-collapse: collapse; margin: 4px 0;">';
-        
+
         // 表头
         table += '<thead><tr>';
         keys.forEach(key => {
             table += `<th style="border: 1px solid #ddd; padding: 4px 8px; background: #f0f0f0; text-align: left;">${this.escapeHtml(key)}</th>`;
         });
         table += '</tr></thead>';
-        
+
         // 表体
         table += '<tbody>';
         array.slice(0, 100).forEach(item => { // 限制显示前100行
@@ -18525,11 +18521,11 @@ ${this.getPluginSystemInfo()}`;
         });
         table += '</tbody>';
         table += '</table>';
-        
+
         if (array.length > 100) {
             table += `<div style="margin-top: 8px; color: #666; font-size: 0.8em;">... and ${array.length - 100} more items</div>`;
         }
-        
+
         return table;
     }
 
@@ -18538,11 +18534,11 @@ ${this.getPluginSystemInfo()}`;
      */
     formatObjectAsKeyValue(obj) {
         let html = '<div style="font-family: monospace;">';
-        
+
         for (const [key, value] of Object.entries(obj)) {
             html += '<div style="margin: 4px 0; padding: 2px 0; border-bottom: 1px solid #eee;">';
             html += `<strong style="color: #2196F3;">${this.escapeHtml(key)}:</strong> `;
-            
+
             if (value === null || value === undefined) {
                 html += '<em style="color: #999;">null</em>';
             } else if (typeof value === 'object') {
@@ -18566,10 +18562,10 @@ ${this.getPluginSystemInfo()}`;
             } else {
                 html += this.escapeHtml(String(value));
             }
-            
+
             html += '</div>';
         }
-        
+
         html += '</div>';
         return html;
     }
@@ -18654,23 +18650,23 @@ ${this.getPluginSystemInfo()}`;
 
     startNewChat() {
         console.log('Starting new chat...');
-        
+
         // Original ChatBox functionality
         this.clearChat();
         this.conversationState.contextModeEnabled = false;
-        
+
         // Add conversation separator for ChatBox history
         if (this.configManager) {
             this.configManager.addChatMessage('--- CONVERSATION_SEPARATOR ---', 'system');
         }
-        
+
         this.showNotification('New conversation started', 'success');
     }
 
     /**
      * Message History Browsing Methods
      */
-    
+
     /**
      * Update user message history array
      */
@@ -18680,29 +18676,29 @@ ${this.getPluginSystemInfo()}`;
             this.messageHistory.userMessages = fullHistory
                 .filter(msg => msg.sender === 'user')
                 .map(msg => msg.message);
-            
+
             console.log(`Updated user message history: ${this.messageHistory.userMessages.length} messages`);
         } catch (error) {
             console.warn('Failed to update user message history:', error);
             this.messageHistory.userMessages = [];
         }
     }
-    
+
     /**
      * Browse up in message history (ArrowUp key)
      */
     browseHistoryUp() {
         const chatInput = document.getElementById('chatInput');
         if (!chatInput) return;
-        
+
         // Update history array first
         this.updateUserMessageHistory();
-        
+
         // If no history available, do nothing
         if (this.messageHistory.userMessages.length === 0) {
             return;
         }
-        
+
         // If not currently browsing, save original content and start browsing
         if (!this.messageHistory.isBrowsing) {
             this.messageHistory.originalContent = chatInput.value;
@@ -18717,32 +18713,32 @@ ${this.getPluginSystemInfo()}`;
                 this.messageHistory.currentIndex = this.messageHistory.userMessages.length - 1;
             }
         }
-        
+
         // Set input to current history message
         const currentMessage = this.messageHistory.userMessages[this.messageHistory.currentIndex];
         chatInput.value = currentMessage;
-        
+
         // Auto-resize textarea
         chatInput.style.height = 'auto';
         chatInput.style.height = chatInput.scrollHeight + 'px';
-        
+
         // Position cursor at end
         chatInput.setSelectionRange(chatInput.value.length, chatInput.value.length);
-        
+
         console.log(`History browse up: ${this.messageHistory.currentIndex + 1}/${this.messageHistory.userMessages.length}`);
     }
-    
+
     /**
      * Browse down in message history (ArrowDown key)
      */
     browseHistoryDown() {
         const chatInput = document.getElementById('chatInput');
         if (!chatInput || !this.messageHistory.isBrowsing) return;
-        
+
         // Move down in history (newer messages)
         if (this.messageHistory.currentIndex < this.messageHistory.userMessages.length - 1) {
             this.messageHistory.currentIndex++;
-            
+
             // Set input to current history message
             const currentMessage = this.messageHistory.userMessages[this.messageHistory.currentIndex];
             chatInput.value = currentMessage;
@@ -18751,38 +18747,38 @@ ${this.getPluginSystemInfo()}`;
             chatInput.value = this.messageHistory.originalContent;
             this.exitHistoryBrowsing();
         }
-        
+
         // Auto-resize textarea
         chatInput.style.height = 'auto';
         chatInput.style.height = chatInput.scrollHeight + 'px';
-        
+
         // Position cursor at end
         chatInput.setSelectionRange(chatInput.value.length, chatInput.value.length);
-        
+
         if (this.messageHistory.isBrowsing) {
             console.log(`History browse down: ${this.messageHistory.currentIndex + 1}/${this.messageHistory.userMessages.length}`);
         } else {
             console.log('History browse ended, original content restored');
         }
     }
-    
+
     /**
      * Cancel history browsing and restore original content (Escape key)
      */
     cancelHistoryBrowsing() {
         const chatInput = document.getElementById('chatInput');
         if (!chatInput || !this.messageHistory.isBrowsing) return;
-        
+
         chatInput.value = this.messageHistory.originalContent;
         this.exitHistoryBrowsing();
-        
+
         // Auto-resize textarea
         chatInput.style.height = 'auto';
         chatInput.style.height = chatInput.scrollHeight + 'px';
-        
+
         console.log('History browsing cancelled, original content restored');
     }
-    
+
     /**
      * Exit history browsing mode
      */
@@ -18797,20 +18793,20 @@ ${this.getPluginSystemInfo()}`;
      */
     testEvolutionIntegration() {
         console.log('=== Testing Evolution Integration ===');
-        
+
         const summary = this.getEvolutionDataSummary();
         console.log('Current Evolution Data:', summary);
-        
+
         // Test adding some sample data
         this.addToEvolutionData({
             type: 'test_event',
             content: 'This is a test event for Evolution integration',
             metadata: { source: 'integration_test' }
         });
-        
+
         const updatedSummary = this.getEvolutionDataSummary();
         console.log('Updated Evolution Data:', updatedSummary);
-        
+
         return {
             status: 'Evolution integration test completed',
             summary: updatedSummary,
