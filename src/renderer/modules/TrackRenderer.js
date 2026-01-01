@@ -6827,16 +6827,17 @@ class TrackRenderer {
         return this.arrangeGenesCompactly(genes, operons, settings);
     }
 
-    // New: Arranges genes by feature type
+    // New: Arranges genes by feature type - consolidates all same-type elements on a single row
     arrangeGenesByType(genes, settings) {
         const sortedGenes = [...genes].sort((a, b) => a.start - b.start);
         const typeMap = new Map();
 
         // Define a canonical order for feature types
         const typeOrder = [
+            'CDS', 'gene', 'mRNA',
             'promoter', 'terminator', 'regulatory',
-            'CDS', 'mRNA', 'tRNA', 'rRNA',
-            'gene', 'misc_feature', 'repeat_region'
+            'tRNA', 'rRNA',
+            'repeat_region', 'misc_feature'
         ];
 
         // Initialize the map to maintain order
@@ -6853,29 +6854,15 @@ class TrackRenderer {
 
         const finalRows = [];
         // Iterate over the ordered map to build final rows
+        // CHANGE: Consolidate all elements of the same type onto a SINGLE row (allowing overlaps)
         for (const [type, genesForType] of typeMap.entries()) {
             if (genesForType.length === 0) continue;
 
-            const typeRows = [];
-            // Arrange genes within this type into non-overlapping rows
-            genesForType.forEach(gene => {
-                let placed = false;
-                for (const row of typeRows) {
-                    let conflicts = row.some(existingGene => this.genesOverlap(gene, existingGene));
-                    if (!conflicts) {
-                        row.push(gene);
-                        placed = true;
-                        break;
-                    }
-                }
-                if (!placed) {
-                    typeRows.push([gene]);
-                }
-            });
-            finalRows.push(...typeRows);
+            // All genes of this type go on ONE row (overlaps are allowed)
+            finalRows.push(genesForType);
         }
 
-        console.log(`arrangeGenesByType result: created ${finalRows.length} rows`);
+        console.log(`arrangeGenesByType result: created ${finalRows.length} rows (one per type with elements)`);
         return finalRows;
     }
 
