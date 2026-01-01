@@ -5,12 +5,12 @@
  * across the application. All other files should import from this file.
  * 
  * @author CodeXomics Team
- * @version 0.527
+ * @version 0.528
  */
 
 // Core application version
 const VERSION_MAJOR = 0;
-const VERSION_MINOR = 527;
+const VERSION_MINOR = 528;
 const VERSION_PATCH = 0;
 const VERSION_PRERELEASE = 'beta';
 
@@ -43,40 +43,40 @@ const VERSION_INFO = {
     minor: VERSION_MINOR,
     patch: VERSION_PATCH,
     prerelease: VERSION_PRERELEASE,
-    
+
     // Version strings
     version: VERSION_STRING,
     fullVersion: VERSION_FULL,
     displayVersion: VERSION_DISPLAY,
     displayFullVersion: VERSION_DISPLAY_FULL,
-    
+
     // Application info
     appName: APP_NAME,
     appTitle: APP_TITLE,
     appTitleFull: APP_TITLE_FULL,
-    
+
     // Build info
     buildDate: BUILD_DATE,
     buildYear: BUILD_YEAR,
-    
+
     // API versions
     apiVersion: API_VERSION,
     configVersion: CONFIG_VERSION,
     pluginApiVersion: PLUGIN_API_VERSION,
-    
+
     // Utility methods
     toString() {
         return VERSION_FULL;
     },
-    
+
     toDisplayString() {
         return VERSION_DISPLAY;
     },
-    
+
     getAppTitle() {
         return APP_TITLE;
     },
-    
+
     getBuildInfo() {
         return {
             version: VERSION_FULL,
@@ -84,7 +84,7 @@ const VERSION_INFO = {
             buildYear: BUILD_YEAR
         };
     },
-    
+
     // Semantic version comparison
     compareVersion(otherVersion) {
         const parseVersion = (version) => {
@@ -92,21 +92,21 @@ const VERSION_INFO = {
             const [major, minor, patch] = main.split('.').map(Number);
             return { major, minor, patch, prerelease: pre };
         };
-        
+
         const current = parseVersion(VERSION_FULL);
         const other = parseVersion(otherVersion);
-        
+
         if (current.major !== other.major) return current.major - other.major;
         if (current.minor !== other.minor) return current.minor - other.minor;
         if (current.patch !== other.patch) return current.patch - other.patch;
-        
+
         // Handle prerelease comparison
         if (current.prerelease && !other.prerelease) return -1;
         if (!current.prerelease && other.prerelease) return 1;
         if (current.prerelease && other.prerelease) {
             return current.prerelease.localeCompare(other.prerelease);
         }
-        
+
         return 0;
     }
 };
