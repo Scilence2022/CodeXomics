@@ -1236,9 +1236,10 @@ class TrackRenderer {
         // tRNA and rRNA should scale proportionally, so use smaller minimum width for them
         const geneType = gene.type ? gene.type.toLowerCase() : 'gene';
         const isSpecialized = this.shouldUseSpecializedShape(geneType);
-        const isRNAType = ['trna', 'rrna', 'mrna'].includes(geneType);
-        // Use 1px min for RNA types to allow proper scaling when zoomed out
-        const minWidth = isSpecialized ? (isRNAType ? 1 : 8) : 1;
+        // RNA types and repeat regions should scale proportionally down to 1px
+        const isSmallMinWidthType = ['trna', 'rrna', 'mrna', 'repeat_region'].includes(geneType);
+        // Use 1px min for these types to allow proper scaling when zoomed out
+        const minWidth = isSpecialized ? (isSmallMinWidthType ? 1 : 8) : 1;
 
         const elementWidth = Math.max((width / 100) * containerWidth, minWidth);
         const elementHeight = layout.geneHeight;
@@ -1260,7 +1261,9 @@ class TrackRenderer {
         const viewportRange = viewport.end - viewport.start;
         const baseRange = 10000;
         const zoomFactor = baseRange / viewportRange;
-        const strokeWidth = Math.max(0.3, Math.min(2, 1.5 * zoomFactor));
+        // Cap stroke width at user-defined maximum (default 1)
+        const maxStrokeWidth = settings.maxBorderWidth !== undefined ? settings.maxBorderWidth : 1;
+        const strokeWidth = Math.min(maxStrokeWidth, Math.max(0.3, Math.min(2, 1.5 * zoomFactor)));
 
         // Create gradient for gene background
         const gradientId = `gene-gradient-${gene.start}-${gene.end}-${rowIndex}`;
@@ -1505,23 +1508,19 @@ class TrackRenderer {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-promoter ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
 
-        // Use the promoter-specific colors (blue tones)
-        const fillColor = '#3b82f6'; // Blue fill for promoter
-        const strokeColor = '#1e40af'; // Darker blue stroke
-
-        // Use zoom-based stroke width (passed as parameter)
+        // Purple color scheme for promoter (matching reference)
+        const fillColor = '#a855f7'; // Purple
+        const strokeColor = '#7c3aed'; // Darker purple
 
         if (isLeftTruncated || isRightTruncated) {
-            // For truncated promoters, use simplified shape
+            // For truncated promoters, use simplified jagged shape
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             let pathData;
-
             if (isLeftTruncated) {
                 pathData = this.createJaggedPromoterPath(width, height, true, false, isForward);
             } else {
                 pathData = this.createJaggedPromoterPath(width, height, false, true, isForward);
             }
-
             path.setAttribute('d', pathData);
             path.setAttribute('fill', fillColor);
             path.setAttribute('stroke', strokeColor);
@@ -1530,64 +1529,77 @@ class TrackRenderer {
             return group;
         }
 
-        // Modern promoter design: Bent elbow arrow shape
-        // Creates a filled arrow shape that bends upward then points in the direction of transcription
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        let pathData;
+        // New design: Circle at origin + horizontal arrow extending upward
+        // The arrow extends into negative Y space (above the element's bounding box)
+        const circleRadius = Math.max(3, Math.min(height * 0.25, width * 0.15));
+        const arrowThickness = Math.max(2, height * 0.15);
+        const arrowHeadSize = Math.max(4, height * 0.3);
 
-        // Arrow dimensions
-        const stemWidth = Math.max(3, height * 0.25); // Thickness of arrow stem
-        const arrowHeadWidth = Math.max(6, height * 0.5); // Width of arrowhead
-        const arrowHeadLength = Math.max(5, width * 0.25); // Length of arrowhead
-        const verticalHeight = height * 0.6; // Height of vertical portion
+        // Upward extension amount (how far the arrow goes above y=0)
+        const upwardExtension = height * 0.6;
 
+        // Circle position (at the bottom, center of element width for origin point)
+        const circleX = isForward ? circleRadius + 2 : width - circleRadius - 2;
+        const circleY = height - circleRadius - 2;
+
+        // Create the circle at the origin
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', circleX);
+        circle.setAttribute('cy', circleY);
+        circle.setAttribute('r', circleRadius);
+        circle.setAttribute('fill', fillColor);
+        circle.setAttribute('stroke', strokeColor);
+        circle.setAttribute('stroke-width', strokeWidth.toString());
+        group.appendChild(circle);
+
+        // Create the arrow line (horizontal with arrowhead)
+        // Arrow starts from circle, goes up briefly, then horizontally to the arrowhead
+        const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const arrowY = -upwardExtension + height * 0.5; // Y position of arrow (extends upward)
+
+        let arrowPathData;
         if (isForward) {
-            // Forward promoter: vertical line going up, then arrow pointing right
-            // Start at bottom-left of vertical stem
-            const stemLeft = width * 0.15;
-            const stemRight = stemLeft + stemWidth;
-            const horizontalY = height * 0.3; // Y level of horizontal arrow
-            const arrowTipX = Math.min(width - 2, width * 0.95);
+            // Arrow pointing right
+            const arrowStartX = circleX;
+            const arrowEndX = width - 2;
 
-            pathData = `
-                M ${stemLeft} ${height}
-                L ${stemLeft} ${horizontalY}
-                L ${arrowTipX - arrowHeadLength} ${horizontalY}
-                L ${arrowTipX - arrowHeadLength} ${horizontalY - arrowHeadWidth / 2}
-                L ${arrowTipX} ${horizontalY + stemWidth / 2}
-                L ${arrowTipX - arrowHeadLength} ${horizontalY + stemWidth + arrowHeadWidth / 2}
-                L ${arrowTipX - arrowHeadLength} ${horizontalY + stemWidth}
-                L ${stemRight} ${horizontalY + stemWidth}
-                L ${stemRight} ${height}
+            arrowPathData = `
+                M ${arrowStartX} ${circleY - circleRadius}
+                L ${arrowStartX} ${arrowY}
+                L ${arrowEndX - arrowHeadSize} ${arrowY}
+                L ${arrowEndX - arrowHeadSize} ${arrowY - arrowHeadSize / 2}
+                L ${arrowEndX} ${arrowY + arrowThickness / 2}
+                L ${arrowEndX - arrowHeadSize} ${arrowY + arrowThickness + arrowHeadSize / 2}
+                L ${arrowEndX - arrowHeadSize} ${arrowY + arrowThickness}
+                L ${arrowStartX + arrowThickness} ${arrowY + arrowThickness}
+                L ${arrowStartX + arrowThickness} ${circleY - circleRadius}
                 Z
             `;
         } else {
-            // Reverse promoter: vertical line going up, then arrow pointing left
-            const stemRight = width * 0.85;
-            const stemLeft = stemRight - stemWidth;
-            const horizontalY = height * 0.3;
-            const arrowTipX = Math.max(2, width * 0.05);
+            // Arrow pointing left
+            const arrowStartX = circleX;
+            const arrowEndX = 2;
 
-            pathData = `
-                M ${stemRight} ${height}
-                L ${stemRight} ${horizontalY}
-                L ${arrowTipX + arrowHeadLength} ${horizontalY}
-                L ${arrowTipX + arrowHeadLength} ${horizontalY - arrowHeadWidth / 2}
-                L ${arrowTipX} ${horizontalY + stemWidth / 2}
-                L ${arrowTipX + arrowHeadLength} ${horizontalY + stemWidth + arrowHeadWidth / 2}
-                L ${arrowTipX + arrowHeadLength} ${horizontalY + stemWidth}
-                L ${stemLeft} ${horizontalY + stemWidth}
-                L ${stemLeft} ${height}
+            arrowPathData = `
+                M ${arrowStartX} ${circleY - circleRadius}
+                L ${arrowStartX} ${arrowY}
+                L ${arrowEndX + arrowHeadSize} ${arrowY}
+                L ${arrowEndX + arrowHeadSize} ${arrowY - arrowHeadSize / 2}
+                L ${arrowEndX} ${arrowY + arrowThickness / 2}
+                L ${arrowEndX + arrowHeadSize} ${arrowY + arrowThickness + arrowHeadSize / 2}
+                L ${arrowEndX + arrowHeadSize} ${arrowY + arrowThickness}
+                L ${arrowStartX - arrowThickness} ${arrowY + arrowThickness}
+                L ${arrowStartX - arrowThickness} ${circleY - circleRadius}
                 Z
             `;
         }
 
-        path.setAttribute('d', pathData);
-        path.setAttribute('fill', fillColor);
-        path.setAttribute('stroke', strokeColor);
-        path.setAttribute('stroke-width', strokeWidth.toString());
-        path.setAttribute('stroke-linejoin', 'round');
-        group.appendChild(path);
+        arrowPath.setAttribute('d', arrowPathData);
+        arrowPath.setAttribute('fill', fillColor);
+        arrowPath.setAttribute('stroke', strokeColor);
+        arrowPath.setAttribute('stroke-width', strokeWidth.toString());
+        arrowPath.setAttribute('stroke-linejoin', 'round');
+        group.appendChild(arrowPath);
 
         return group;
     }
@@ -1601,23 +1613,19 @@ class TrackRenderer {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-terminator ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
 
-        // Use terminator-specific colors (red tones)
-        const fillColor = '#dc2626'; // Red fill for terminator
-        const strokeColor = '#7f1d1d'; // Darker red stroke
-
-        // Use zoom-based stroke width (passed as parameter)
+        // Red color scheme for terminator (matching reference)
+        const fillColor = '#ef4444'; // Red
+        const strokeColor = '#b91c1c'; // Darker red
 
         if (isLeftTruncated || isRightTruncated) {
-            // For truncated terminators, use simplified shape
+            // For truncated terminators, use simplified jagged shape
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             let pathData;
-
             if (isLeftTruncated) {
                 pathData = this.createJaggedTerminatorPath(width, height, true, false);
             } else {
                 pathData = this.createJaggedTerminatorPath(width, height, false, true);
             }
-
             path.setAttribute('d', pathData);
             path.setAttribute('fill', fillColor);
             path.setAttribute('stroke', strokeColor);
@@ -1626,44 +1634,39 @@ class TrackRenderer {
             return group;
         }
 
-        // T-shaped stem-loop design
-        // Create a filled T shape with a loop/ball at the top
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        // New design: Lollipop shape (vertical stem + filled circle at top)
+        // The element extends into negative Y space (above the element's bounding box)
+        const stemWidth = Math.max(2, width * 0.15);
+        const circleRadius = Math.max(3, Math.min(height * 0.3, width * 0.25));
 
-        // Dimensions
-        const stemWidth = Math.max(3, width * 0.2); // Width of vertical stem
-        const stemHeight = height * 0.6; // Height of vertical stem (from bottom)
-        const loopRadius = Math.min(height * 0.25, width * 0.35); // Radius of the loop at top
-        const crossBarHeight = Math.max(3, height * 0.15); // Height of horizontal crossbar
+        // Upward extension amount
+        const upwardExtension = height * 0.6;
 
+        // Stem position (center of element width)
         const centerX = width / 2;
-        const stemLeft = centerX - stemWidth / 2;
-        const stemRight = centerX + stemWidth / 2;
-        const stemTop = height - stemHeight; // Top of the stem
-        const loopCenterY = stemTop - loopRadius; // Center of the loop
+        const stemBottom = height - 2;
+        const stemTop = -upwardExtension + circleRadius + 2; // Top of stem, leaving room for circle
 
-        // Create T-shape with loop
-        // The path creates: vertical stem + horizontal crossbar + circular loop at top
-        const pathData = `
-            M ${stemLeft} ${height}
-            L ${stemLeft} ${stemTop + crossBarHeight}
-            L ${width * 0.1} ${stemTop + crossBarHeight}
-            L ${width * 0.1} ${stemTop}
-            L ${centerX - loopRadius} ${stemTop}
-            A ${loopRadius} ${loopRadius} 0 1 1 ${centerX + loopRadius} ${stemTop}
-            L ${width * 0.9} ${stemTop}
-            L ${width * 0.9} ${stemTop + crossBarHeight}
-            L ${stemRight} ${stemTop + crossBarHeight}
-            L ${stemRight} ${height}
-            Z
-        `;
+        // Create the vertical stem
+        const stem = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        stem.setAttribute('x', centerX - stemWidth / 2);
+        stem.setAttribute('y', stemTop);
+        stem.setAttribute('width', stemWidth);
+        stem.setAttribute('height', stemBottom - stemTop);
+        stem.setAttribute('fill', fillColor);
+        stem.setAttribute('stroke', strokeColor);
+        stem.setAttribute('stroke-width', strokeWidth.toString());
+        group.appendChild(stem);
 
-        path.setAttribute('d', pathData);
-        path.setAttribute('fill', fillColor);
-        path.setAttribute('stroke', strokeColor);
-        path.setAttribute('stroke-width', strokeWidth.toString());
-        path.setAttribute('stroke-linejoin', 'round');
-        group.appendChild(path);
+        // Create the circle at the top
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', centerX);
+        circle.setAttribute('cy', stemTop - circleRadius + 2);
+        circle.setAttribute('r', circleRadius);
+        circle.setAttribute('fill', fillColor);
+        circle.setAttribute('stroke', strokeColor);
+        circle.setAttribute('stroke-width', strokeWidth.toString());
+        group.appendChild(circle);
 
         return group;
     }
@@ -1707,48 +1710,72 @@ class TrackRenderer {
      * Create repeat region shape (wavy rectangle)
      * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
+    /**
+     * Create repeat region shape (stacked capsules)
+     * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
+     */
     createRepeatShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        let pathData;
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', `gene-repeat ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+
+        // Colors from user request
+        const fillColor = '#ef4444'; // Solid red
+        const strokeColor = '#991b1b'; // Darker red stroke
 
         if (isLeftTruncated || isRightTruncated) {
-            // Use jagged edges for truncated repeats
+            // Keep jagged edges for truncated repeats
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData;
+
             if (isLeftTruncated) {
                 pathData = this.createJaggedRepeatPath(width, height, true, false);
             } else {
                 pathData = this.createJaggedRepeatPath(width, height, false, true);
             }
-        } else {
-            // Wavy top and bottom edges
-            const waveCount = Math.max(2, Math.floor(width / 8));
-            const waveHeight = height * 0.1;
-            let topWave = `M 0 ${waveHeight}`;
-            let bottomWave = `L 0 ${height - waveHeight}`;
 
-            for (let i = 0; i <= waveCount; i++) {
-                const x = (i / waveCount) * width;
-                const topY = i % 2 === 0 ? waveHeight : 0;
-                const bottomY = i % 2 === 0 ? height - waveHeight : height;
-                topWave += ` L ${x} ${topY}`;
-                bottomWave = `L ${x} ${bottomY} ` + bottomWave;
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', fillColor);
+
+            if (strokeWidth > 0) {
+                path.setAttribute('stroke', strokeColor);
+                path.setAttribute('stroke-width', strokeWidth.toString());
+            } else {
+                path.setAttribute('stroke', 'transparent');
+                path.setAttribute('stroke-width', '0');
             }
-
-            pathData = topWave + ` L ${width} ${height - waveHeight} ` + bottomWave + ` Z`;
-        }
-
-        path.setAttribute('d', pathData);
-        path.setAttribute('fill', `url(#${gradientId})`);
-
-        // Use zoom-based stroke width (passed as parameter)
-        if (strokeWidth > 0) {
-            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            path.setAttribute('stroke-width', strokeWidth.toString());
+            group.appendChild(path);
         } else {
-            path.setAttribute('stroke', 'transparent');
-            path.setAttribute('stroke-width', '0');
+            // Stacked capsules design (3 stacked rounded rectangles)
+            const capsuleCount = 3;
+            // Add small spacing between capsules if height allows, otherwise stick together
+            const spacing = height < 12 ? 0 : height / 20;
+            const totalSpacing = spacing * (capsuleCount - 1);
+            const capsuleHeight = (height - totalSpacing) / capsuleCount;
+            const rx = capsuleHeight / 2; // Full rounding
+
+            for (let i = 0; i < capsuleCount; i++) {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', 0);
+                rect.setAttribute('y', i * (capsuleHeight + spacing));
+                rect.setAttribute('width', width);
+                rect.setAttribute('height', capsuleHeight);
+                rect.setAttribute('rx', rx); // Rounded ends
+                rect.setAttribute('ry', rx);
+
+                rect.setAttribute('fill', fillColor);
+
+                if (strokeWidth > 0) {
+                    rect.setAttribute('stroke', strokeColor);
+                    rect.setAttribute('stroke-width', strokeWidth.toString());
+                } else {
+                    rect.setAttribute('stroke', 'transparent');
+                    rect.setAttribute('stroke-width', '0');
+                }
+                group.appendChild(rect);
+            }
         }
-        path.setAttribute('class', `gene-repeat ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
-        return path;
+
+        return group;
     }
 
     /**
@@ -2598,12 +2625,25 @@ class TrackRenderer {
         const geneHeight = settings?.geneHeight || 12;
         const rowSpacing = 6;
         const rulerHeight = 35;
-        const topPadding = 2;
         const bottomPadding = 0;
 
         // Apply maximal rows setting
         const maxRows = settings?.maxRows || 6;
         const effectiveRows = Math.min(geneRows.length, maxRows);
+
+        // Check if first row contains upward-extending elements (promoters/terminators)
+        // These elements extend above their bounding box and need extra top padding
+        let topPadding = 2;
+        if (geneRows.length > 0 && geneRows[0] && geneRows[0].length > 0) {
+            const hasUpwardElements = geneRows[0].some(gene => {
+                const geneType = (gene.type || '').toLowerCase();
+                return geneType === 'promoter' || geneType === 'terminator';
+            });
+            if (hasUpwardElements) {
+                // Add extra padding for upward-extending elements (approximately geneHeight * 0.8)
+                topPadding = Math.max(2, Math.round(geneHeight * 0.8));
+            }
+        }
 
         return {
             geneHeight,
@@ -10166,6 +10206,11 @@ This action cannot be undone.`;
                     <div class="help-text">Font size for gene names and labels.</div>
                 </div>
                 <div class="form-group">
+                    <label for="genesMaxBorderWidth">Maximum Border Width (px):</label>
+                    <input type="number" id="genesMaxBorderWidth" min="0.5" max="5" step="0.1" value="${settings.maxBorderWidth !== undefined ? settings.maxBorderWidth : 1}">
+                    <div class="help-text">Maximum thickness of gene borders when zoomed in.</div>
+                </div>
+                <div class="form-group">
                     <label for="genesFontFamily">Gene Name Font Family:</label>
                     <select id="genesFontFamily">
                         <option value="Arial, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
@@ -11350,6 +11395,9 @@ This action cannot be undone.`;
                 settings.sequenceHeight = parseInt(sequenceHeightElement?.value) || 25;
                 settings.highlightEffect = highlightEffectElement?.value || 'pulse';
                 settings.autoHighlightSequence = autoHighlightSequenceElement?.checked || false;
+
+                const maxBorderWidthElement = modal.querySelector('#genesMaxBorderWidth');
+                settings.maxBorderWidth = parseFloat(maxBorderWidthElement?.value) || 1;
 
                 console.log('Collected gene settings from form:', settings);
                 break;
