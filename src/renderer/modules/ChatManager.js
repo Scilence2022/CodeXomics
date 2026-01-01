@@ -11661,20 +11661,7 @@ ${this.getPluginSystemInfo()}`;
         const displayTime = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
         const displayId = messageId || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        messageDiv.innerHTML = `
-            <div class="message-content">
-                <div class="message-icon">
-                    <i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i>
-                </div>
-<div class="message-text" id="${displayId}">${this.formatMessage(message)}</div>
-                <div class="message-actions">
-                    <button class="copy-message-btn" onclick="chatManager.copyMessage('${displayId}')" title="Copy message">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="message-time">${displayTime}</div>
-        `;
+        messageDiv.innerHTML = `<div class="message-content"><div class="message-icon"><i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i></div><div class="message-text" id="${displayId}">${this.formatMessage(message)}</div><div class="message-actions"><button class="copy-message-btn" onclick="chatManager.copyMessage('${displayId}')" title="Copy message"><i class="fas fa-copy"></i></button></div></div><div class="message-time">${displayTime}</div>`;
 
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -17663,20 +17650,7 @@ ${this.getPluginSystemInfo()}`;
         thinkingDiv.className = 'message assistant-message thinking-process';
         const thinkingId = `thinkingProcess_${currentRequestId}`;
         thinkingDiv.id = thinkingId;
-        thinkingDiv.innerHTML = `
-            <div class="message-content">
-                <div class="message-icon">
-                    <i class="fas fa-brain"></i>
-                </div>
-                <div class="message-text thinking-text">
-                    <div class="thinking-header">
-                        <i class="fas fa-cog fa-spin"></i>
-                        <span>AI Thinking Process</span>
-                    </div>
-                    <div class="thinking-content">${message}</div>
-                </div>
-            </div>
-        `;
+        thinkingDiv.innerHTML = `<div class="message-content"><div class="message-icon"><i class="fas fa-brain"></i></div><div class="message-text thinking-text"><div class="thinking-header"><i class="fas fa-cog fa-spin"></i><span>AI Thinking Process</span></div><div class="thinking-content">${message}</div></div></div>`;
 
         messagesContainer.appendChild(thinkingDiv);
 
