@@ -8,6 +8,27 @@ class EnhancedCitationDisplay {
         this.displayMode = 'summary'; // 'pmid', 'summary', 'detailed' - default to summary for Nature-style citations
         this.isLoading = false;
         this.literatureData = new Map();
+
+        // Pagination state
+        this.currentPage = 1;
+        this.totalCitations = 0;
+        this.settings = window.literatureSettings || null;
+    }
+
+    /**
+     * Get current page size from settings
+     * @returns {number} Page size
+     */
+    getPageSize() {
+        return this.settings ? this.settings.getPageSize() : 10;
+    }
+
+    /**
+     * Called when settings are changed
+     */
+    onSettingsChanged() {
+        this.currentPage = 1; // Reset to first page
+        this.refreshDisplay();
     }
 
     /**
@@ -322,6 +343,66 @@ class EnhancedCitationDisplay {
                 padding: 20px;
                 font-style: italic;
             }
+
+            /* Pagination Controls */
+            .pagination-controls {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 10px 0;
+                border-top: 1px solid #dee2e6;
+                margin-top: 8px;
+            }
+
+            .page-btn {
+                padding: 4px 8px;
+                font-size: 12px;
+                border: 1px solid #dee2e6;
+                background: white;
+                color: #212529;
+                cursor: pointer;
+                border-radius: 4px;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .page-btn:hover:not(:disabled) {
+                background: #f8f9fa;
+                border-color: #007bff;
+            }
+
+            .page-btn:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+
+            .page-info {
+                font-size: 11px;
+                color: #6c757d;
+                min-width: 80px;
+                text-align: center;
+            }
+
+            /* Settings Button */
+            .settings-btn {
+                padding: 4px 8px;
+                font-size: 11px;
+                border: 1px solid #dee2e6;
+                background: white;
+                color: #6c757d;
+                cursor: pointer;
+                border-radius: 4px;
+                transition: all 0.2s ease;
+            }
+
+            .settings-btn:hover {
+                background: #f8f9fa;
+                border-color: #007bff;
+                color: #007bff;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -333,7 +414,7 @@ class EnhancedCitationDisplay {
      */
     generateEnhancedCitationList(citations) {
         console.log('EnhancedCitationDisplay.generateEnhancedCitationList called with:', citations);
-        
+
         if (!citations || citations.length === 0) {
             console.log('No citations provided, returning empty state');
             return `
@@ -345,7 +426,19 @@ class EnhancedCitationDisplay {
         }
 
         const sortedCitations = citations.sort((a, b) => a.number - b.number);
-        console.log('Sorted citations:', sortedCitations);
+        this.totalCitations = sortedCitations.length;
+
+        // Calculate pagination
+        const pageSize = this.getPageSize();
+        const totalPages = Math.ceil(this.totalCitations / pageSize);
+        this.currentPage = Math.min(this.currentPage, totalPages);
+        this.currentPage = Math.max(1, this.currentPage);
+
+        const startIdx = (this.currentPage - 1) * pageSize;
+        const endIdx = Math.min(startIdx + pageSize, this.totalCitations);
+        const paginatedCitations = sortedCitations.slice(startIdx, endIdx);
+
+        console.log(`Showing citations ${startIdx + 1}-${endIdx} of ${this.totalCitations} (page ${this.currentPage}/${totalPages})`);
 
         let html = `
             <div class="enhanced-citations">
@@ -375,6 +468,11 @@ class EnhancedCitationDisplay {
                                 title="Refresh literature data">
                             <i class="fas fa-sync-alt ${this.isLoading ? 'fa-spin' : ''}"></i>
                         </button>
+                        <button class="settings-btn" 
+                                onclick="window.literatureSettings.showModal()" 
+                                title="Citation display settings">
+                            <i class="fas fa-cog"></i>
+                        </button>
                     </div>
                 </h4>
                 <div class="citation-list">
@@ -388,18 +486,111 @@ class EnhancedCitationDisplay {
                 </div>
             `;
         } else {
-            sortedCitations.forEach(citation => {
+            paginatedCitations.forEach(citation => {
                 html += this.generateCitationItem(citation);
             });
         }
 
         html += `
                 </div>
+        `;
+
+        // Add pagination controls if more than one page
+        if (totalPages > 1) {
+            html += this.generatePaginationControls(startIdx + 1, endIdx, this.totalCitations, totalPages);
+        }
+
+        html += `
             </div>
         `;
 
         return html;
     }
+
+    /**
+     * Generate pagination controls HTML
+     * @param {number} start - Start index (1-based)
+     * @param {number} end - End index
+     * @param {number} total - Total count
+     * @param {number} totalPages - Total pages
+     * @returns {string} HTML for pagination controls
+     */
+    generatePaginationControls(start, end, total, totalPages) {
+        const prevDisabled = this.currentPage <= 1;
+        const nextDisabled = this.currentPage >= totalPages;
+
+        return `
+            <div class="pagination-controls">
+                <button class="page-btn" 
+                        onclick="window.enhancedCitationDisplay.goToPage(${this.currentPage - 1})"
+                        ${prevDisabled ? 'disabled' : ''}
+                        title="Previous page">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="page-info">${start}-${end} of ${total}</span>
+                <button class="page-btn" 
+                        onclick="window.enhancedCitationDisplay.goToPage(${this.currentPage + 1})"
+                        ${nextDisabled ? 'disabled' : ''}
+                        title="Next page">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Navigate to a specific page
+     * @param {number} page - Page number
+     */
+    goToPage(page) {
+        const pageSize = this.getPageSize();
+        const totalPages = Math.ceil(this.totalCitations / pageSize);
+
+        if (page >= 1 && page <= totalPages) {
+            this.currentPage = page;
+            this.refreshDisplay();
+            this.loadCurrentPageData();
+        }
+    }
+
+    /**
+     * Load literature data for current page only
+     */
+    async loadCurrentPageData() {
+        if (this.isLoading) return;
+
+        const citations = Array.from(this.genomeBrowser.citationCollector.values());
+        if (citations.length === 0) return;
+
+        const sortedCitations = citations.sort((a, b) => a.number - b.number);
+        const pageSize = this.getPageSize();
+        const startIdx = (this.currentPage - 1) * pageSize;
+        const endIdx = Math.min(startIdx + pageSize, sortedCitations.length);
+        const pageCitations = sortedCitations.slice(startIdx, endIdx);
+
+        // Filter to only citations that need loading
+        const pmidsToLoad = pageCitations
+            .filter(c => !this.literatureData.has(c.id))
+            .map(c => c.id);
+
+        if (pmidsToLoad.length === 0) {
+            console.log('All citations for current page already loaded');
+            return;
+        }
+
+        console.log(`Loading ${pmidsToLoad.length} citations for current page...`);
+
+        try {
+            const results = await this.literatureAPI.fetchMultipleLiteratureInfo(pmidsToLoad);
+            results.forEach(result => {
+                this.literatureData.set(result.pmid, result);
+            });
+            this.refreshDisplay();
+        } catch (error) {
+            console.error('Error loading page data:', error);
+        }
+    }
+
 
     /**
      * Generate HTML for a single citation item
@@ -411,7 +602,7 @@ class EnhancedCitationDisplay {
         const hasLiteratureData = literatureInfo && !literatureInfo.error;
 
         let content = '';
-        
+
         if (this.displayMode === 'pmid') {
             content = this.generatePMIDContent(citation);
         } else if (this.displayMode === 'summary') {
@@ -523,7 +714,7 @@ class EnhancedCitationDisplay {
             `;
         }
 
-        const authors = literatureInfo.authors.length > 0 
+        const authors = literatureInfo.authors.length > 0
             ? literatureInfo.authors.map(a => a.fullName || `${a.initials} ${a.lastName}`).join(', ')
             : 'Unknown authors';
 
@@ -595,7 +786,7 @@ class EnhancedCitationDisplay {
         try {
             const pmids = citations.map(c => c.id);
             const literatureResults = await this.literatureAPI.fetchMultipleLiteratureInfo(pmids);
-            
+
             // Update literature data map
             this.literatureData.clear();
             literatureResults.forEach(result => {
@@ -618,7 +809,7 @@ class EnhancedCitationDisplay {
         if (this.genomeBrowser && this.genomeBrowser.citationCollector) {
             const citations = Array.from(this.genomeBrowser.citationCollector.values());
             const enhancedHtml = this.generateEnhancedCitationList(citations);
-            
+
             // Replace the existing citation list
             const geneDetailsContent = document.getElementById('geneDetailsContent');
             if (geneDetailsContent) {
@@ -635,17 +826,14 @@ class EnhancedCitationDisplay {
 
     /**
      * Load literature data for citations if not already loaded
+     * Uses pagination to load only the current page
      */
     async loadLiteratureDataIfNeeded() {
         const citations = Array.from(this.genomeBrowser.citationCollector.values());
         if (citations.length === 0) return;
 
-        // Check if we need to load any literature data
-        const needsLoading = citations.some(c => !this.literatureData.has(c.id));
-        if (!needsLoading) return;
-
-        // Load data in background
-        this.refreshLiteratureData();
+        // Load current page data instead of all data
+        this.loadCurrentPageData();
     }
 }
 
