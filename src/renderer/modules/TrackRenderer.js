@@ -1162,14 +1162,47 @@ class TrackRenderer {
             left: 0;
         `;
 
-        // Create SVG-based gene visualization
-        this.renderGeneElementsSVG(unifiedContainer, geneRows, viewport, operons, layout, settings);
+        // Dispatch based on rendering mode
+        if (settings.renderingMode === 'canvas') {
+            this.renderGeneElementsCanvas(unifiedContainer, geneRows, viewport, layout, operons, settings);
+        } else {
+            // Create SVG-based gene visualization
+            this.renderGeneElementsSVG(unifiedContainer, geneRows, viewport, operons, layout, settings);
+        }
 
         // Add statistics and update operons panel
         this.addGeneTrackStatistics(trackContent, visibleGenes, operons, settings, layout);
 
         // Add the unified container to trackContent
         trackContent.appendChild(unifiedContainer);
+    }
+
+    /**
+     * Create Canvas-based gene visualization
+     */
+    renderGeneElementsCanvas(container, geneRows, viewport, layout, operons, settings) {
+        // Create or update Canvas renderer
+        // Note: We use a lightweight wrapper or check if one exists for this container
+        // Since the container is recreated on each render, we might need to be careful with resource management
+
+        // Ensure container is empty or properly set up
+        container.innerHTML = '';
+
+        // We can instantiate the CanvasGenesRenderer directly
+        // It handles its own canvas creation and lifecycle
+        const renderer = new CanvasGenesRenderer(
+            container,
+            geneRows,
+            viewport,
+            layout,
+            operons,
+            settings,
+            this.genomeBrowser
+        );
+
+        // Store reference if needed for cleanup, though in this architecture 
+        // the renderer is often recreated with the track content
+        // We could store it in a map using the track or container ID if we wanted to reuse it more aggressively
     }
 
     /**
@@ -10102,6 +10135,14 @@ This action cannot be undone.`;
             <div class="settings-section">
                 <h4>Display Options</h4>
                 <div class="form-group">
+                    <label for="genesRenderingMode">Rendering Mode:</label>
+                    <select id="genesRenderingMode">
+                        <option value="svg" ${settings.renderingMode === 'svg' ? 'selected' : ''}>SVG (Default)</option>
+                        <option value="canvas" ${settings.renderingMode === 'canvas' ? 'selected' : ''}>Canvas (Better Performance)</option>
+                    </select>
+                    <div class="help-text">Canvas mode offers improved performance for large datasets.</div>
+                </div>
+                <div class="form-group">
                     <label for="genesMaxRows">Maximal rows for displaying features:</label>
                     <input type="number" id="genesMaxRows" min="1" max="20" value="${settings.maxRows || 6}">
                     <div class="help-text">Limits the number of rows shown. Features beyond this limit will be hidden or merged depending on the layout mode.</div>
@@ -10716,7 +10757,8 @@ This action cannot be undone.`;
                 highlightEffect: 'pulse', // 'pulse', 'border', 'both'
                 autoHighlightSequence: false, // Auto-highlight sequence region when gene is selected
                 showSequence: false, // Show reference sequence
-                sequenceHeight: 25 // Height of reference sequence display
+                sequenceHeight: 25, // Height of reference sequence display
+                renderingMode: 'svg' // 'svg' or 'canvas'
             },
             sequence: {
                 visible: true,
@@ -11340,6 +11382,7 @@ This action cannot be undone.`;
 
         switch (trackType) {
             case 'genes':
+                const renderingModeElement = modal.querySelector('#genesRenderingMode');
                 const maxRowsElement = modal.querySelector('#genesMaxRows');
                 const showOperonsElement = modal.querySelector('#genesShowOperonsSameRow');
                 const heightElement = modal.querySelector('#genesTrackHeight');
@@ -11356,6 +11399,7 @@ This action cannot be undone.`;
                 const autoHighlightSequenceElement = modal.querySelector('#genesAutoHighlightSequence');
 
                 console.log('Form elements found:', {
+                    renderingModeElement: !!renderingModeElement,
                     maxRowsElement: !!maxRowsElement,
                     showOperonsElement: !!showOperonsElement,
                     heightElement: !!heightElement,
@@ -11368,6 +11412,7 @@ This action cannot be undone.`;
                     overrideGlobalZoomElement: !!overrideGlobalZoomElement
                 });
 
+                settings.renderingMode = renderingModeElement?.value || 'svg';
                 settings.maxRows = parseInt(maxRowsElement?.value) || 6;
                 settings.showOperonsSameRow = showOperonsElement?.checked || false;
                 settings.height = parseInt(heightElement?.value) || 120;
