@@ -344,6 +344,12 @@ class EnhancedCitationDisplay {
                 font-style: italic;
             }
 
+            .citation-loading {
+                color: #6c757d;
+                font-style: italic;
+                font-size: 11px;
+            }
+
             /* Pagination Controls */
             .pagination-controls {
                 display: flex;
@@ -643,7 +649,18 @@ class EnhancedCitationDisplay {
      * @returns {string} HTML content
      */
     generateSummaryContent(citation, literatureInfo) {
-        if (!literatureInfo || literatureInfo.error) {
+        // If no literature info at all, show loading state
+        if (!literatureInfo) {
+            return `
+                <div class="citation-text">
+                    <span class="citation-loading">Loading citation data...</span>
+                    PMID: <a href="${citation.url}" target="_blank" class="citation-link">${citation.id}</a>
+                </div>
+            `;
+        }
+
+        // If there was an error loading, show error state
+        if (literatureInfo.error) {
             return `
                 <div class="citation-text">
                     <span class="citation-authors">Unable to load citation.</span>
@@ -703,11 +720,23 @@ class EnhancedCitationDisplay {
      * @returns {string} HTML content
      */
     generateDetailedContent(citation, literatureInfo) {
-        if (!literatureInfo || literatureInfo.error) {
+        // If no literature info at all, show loading state
+        if (!literatureInfo) {
+            return `
+                <div class="citation-pmid">PMID: ${citation.id}</div>
+                <div class="citation-title">Loading citation data...</div>
+                <div class="citation-links">
+                    <a href="${citation.url}" target="_blank" class="citation-link">View on PubMed</a>
+                </div>
+            `;
+        }
+
+        // If there was an error loading, show error state
+        if (literatureInfo.error) {
             return `
                 <div class="citation-pmid">PMID: ${citation.id}</div>
                 <div class="citation-title">Unable to load literature information</div>
-                ${literatureInfo?.error ? `<div class="error-message">Error: ${literatureInfo.error}</div>` : ''}
+                <div class="error-message">Error: ${literatureInfo.error}</div>
                 <div class="citation-links">
                     <a href="${citation.url}" target="_blank" class="citation-link">View on PubMed</a>
                 </div>
