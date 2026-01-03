@@ -1931,89 +1931,65 @@ class TrackRenderer {
 
         // Use zoom-based stroke width (passed as parameter)
 
-        if (isLeftTruncated || isRightTruncated) {
-            // For truncated rRNA, use path with jagged edges
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            let pathData;
-
-            if (isLeftTruncated) {
-                pathData = this.createJaggedRNAPath(width, height, true, false);
-            } else {
-                pathData = this.createJaggedRNAPath(width, height, false, true);
-            }
-
-            path.setAttribute('d', pathData);
-            path.setAttribute('fill', fillColor);
-            path.setAttribute('stroke', strokeColor);
-            path.setAttribute('stroke-width', strokeWidth.toString());
-            group.appendChild(path);
-            return group;
-        }
-
-        // For very small widths, use a simple ellipse
-        if (width < 10) {
-            const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-            ellipse.setAttribute('cx', width / 2);
-            ellipse.setAttribute('cy', height / 2);
-            ellipse.setAttribute('rx', width / 2);
-            ellipse.setAttribute('ry', height / 2);
-            ellipse.setAttribute('fill', fillColor);
-            ellipse.setAttribute('stroke', strokeColor);
-            ellipse.setAttribute('stroke-width', strokeWidth.toString());
-            group.appendChild(ellipse);
-            return group;
-        }
-
-        // Wavy ribbon design with multiple waves
+        // Legacy jagged RNA path logic removed - now using standard arrow logic below for consistency
+        // Use standard arrow shape for cleaner, professional look (replacing "ugly" wavy ribbon)
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let pathData;
 
-        // Calculate wave parameters - more waves for wider elements
-        const waveCount = Math.max(2, Math.min(4, Math.floor(width / 20)));
-        const waveAmplitude = height * 0.15; // How much the wave deviates from center
-        const ribbonHeight = height * 0.4; // Height of the ribbon
+        // Calculate arrow size (consistent with standard genes)
+        const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
 
-        const centerY = height / 2;
-        const topY = centerY - ribbonHeight / 2;
-        const bottomY = centerY + ribbonHeight / 2;
-
-        // Build wavy top edge
-        let topPath = `M 0 ${topY + waveAmplitude}`;
-        let bottomPath = `L 0 ${bottomY - waveAmplitude}`;
-
-        // Create control points for smooth waves
-        for (let i = 0; i < waveCount; i++) {
-            const segmentWidth = width / waveCount;
-            const x1 = i * segmentWidth + segmentWidth * 0.25;
-            const x2 = i * segmentWidth + segmentWidth * 0.75;
-            const x3 = (i + 1) * segmentWidth;
-
-            // Alternate wave direction
-            const amplitude = (i % 2 === 0) ? -waveAmplitude : waveAmplitude;
-
-            topPath += ` Q ${x1} ${topY + amplitude}, ${(x1 + x2) / 2} ${topY}`;
-            topPath += ` Q ${x2} ${topY - amplitude}, ${x3} ${topY + (i % 2 === 0 ? -waveAmplitude : waveAmplitude)}`;
+        if (width < 8) {
+            // Small genes: Triangle
+            if (isForward) {
+                if (isLeftTruncated) {
+                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
+                } else if (isRightTruncated) {
+                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
+                } else {
+                    pathData = `M 0 0 L ${width} ${height / 2} L 0 ${height} Z`;
+                }
+            } else {
+                if (isLeftTruncated) {
+                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
+                } else if (isRightTruncated) {
+                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
+                } else {
+                    pathData = `M ${width} 0 L 0 ${height / 2} L ${width} ${height} Z`;
+                }
+            }
+        } else {
+            // Larger genes: Arrow
+            if (isForward) {
+                if (isLeftTruncated) {
+                    pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
+                } else if (isRightTruncated) {
+                    pathData = this.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
+                } else {
+                    pathData = `M 0 0 
+                           L ${width - arrowSize} 0 
+                           L ${width} ${height / 2} 
+                           L ${width - arrowSize} ${height} 
+                           L 0 ${height} 
+                           Z`;
+                }
+            } else {
+                if (isLeftTruncated) {
+                    pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
+                } else if (isRightTruncated) {
+                    pathData = this.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
+                } else {
+                    pathData = `M ${arrowSize} 0 
+                           L ${width} 0 
+                           L ${width} ${height} 
+                           L ${arrowSize} ${height} 
+                           L 0 ${height / 2} 
+                           Z`;
+                }
+            }
         }
 
-        // Continue to right edge and down
-        topPath += ` L ${width} ${bottomY + (waveCount % 2 === 0 ? waveAmplitude : -waveAmplitude)}`;
-
-        // Build wavy bottom edge (reverse direction)
-        for (let i = waveCount - 1; i >= 0; i--) {
-            const segmentWidth = width / waveCount;
-            const x1 = i * segmentWidth + segmentWidth * 0.75;
-            const x2 = i * segmentWidth + segmentWidth * 0.25;
-            const x3 = i * segmentWidth;
-
-            // Alternate wave direction (same pattern as top, but reversed)
-            const amplitude = (i % 2 === 0) ? waveAmplitude : -waveAmplitude;
-
-            bottomPath += ` Q ${x1} ${bottomY + amplitude}, ${(x1 + x2) / 2} ${bottomY}`;
-            bottomPath += ` Q ${x2} ${bottomY - amplitude}, ${x3} ${bottomY + (i % 2 === 0 ? waveAmplitude : -waveAmplitude)}`;
-        }
-
-        bottomPath += ' Z';
-
-        path.setAttribute('d', topPath + bottomPath);
+        path.setAttribute('d', pathData);
         path.setAttribute('fill', fillColor);
         path.setAttribute('stroke', strokeColor);
         path.setAttribute('stroke-width', strokeWidth.toString());
