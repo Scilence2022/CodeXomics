@@ -336,6 +336,30 @@ class TrackRenderer {
 
         // Add gallery button for Genes & Features track (top-right corner - last button)
         if (trackType === 'genes') {
+            // Add ruler toggle button
+            const rulerBtn = document.createElement('button');
+            rulerBtn.className = 'track-btn track-ruler-btn';
+            rulerBtn.innerHTML = '<i class="fas fa-ruler-horizontal"></i>';
+            rulerBtn.title = 'Show/Hide Ruler';
+            rulerBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Find the track content and then the ruler container
+                const trackElement = trackHeader.parentElement;
+                const rulerContainer = trackElement.querySelector('.detailed-ruler-container');
+                if (rulerContainer) {
+                    if (rulerContainer.style.display === 'none') {
+                        rulerContainer.style.display = 'block';
+                        rulerBtn.classList.remove('active'); // active means hidden? No, let's keep it simple.
+                        rulerBtn.style.color = ''; // Reset color
+                    } else {
+                        rulerContainer.style.display = 'none';
+                        rulerBtn.classList.add('active'); // Maybe style it to show it's disabled/hidden
+                        rulerBtn.style.color = '#ccc'; // Grey out to indicate hidden
+                    }
+                }
+            });
+            buttonsContainer.appendChild(rulerBtn);
+
             const galleryBtn = document.createElement('button');
             galleryBtn.className = 'track-btn track-gallery-btn';
             galleryBtn.innerHTML = '<i class="fas fa-images"></i>';
