@@ -90,9 +90,7 @@ class LLMConfigManager {
                 baseUrl: 'https://api.siliconflow.cn/v1',
                 enabled: false,
                 availableModels: [
-                    // 🤖 Qwen Series (Arranged by size: high to low)
-
-                    // Qwen3 Coder Series (Largest - 480B)
+                    // 🤖 Qwen3 Coder Series (Largest - 480B)
                     'Qwen/Qwen3-Coder-480B-A35B-Instruct',      // 480B total, 35B active
 
                     // Qwen3 235B Series  
@@ -108,75 +106,24 @@ class LLMConfigManager {
                     'Qwen/Qwen3-30B-A3B-Instruct-2507',         // 30B total, 3B active
                     'Qwen/Qwen3-Coder-30B-A3B-Instruct',        // 30B total, 3B active (Coder)
 
-                    // Qwen3 Standard Series (32B and below)
-                    'Qwen/Qwen3-32B',                           // 32B
-                    'Qwen/QwQ-32B',                            // 32B (Reasoning)
-                    'Qwen/QwQ-32B-Preview',                    // 32B (Reasoning Preview)
-                    'Qwen/Qwen3-14B',                           // 14B
-                    'Qwen/Qwen3-8B',                            // 8B
-
-                    // Qwen2.5 Coder Series (Legacy)
-                    'Qwen/Qwen2.5-Coder-32B-Instruct',         // 32B (Legacy)
-                    'Qwen/Qwen2.5-Coder-7B-Instruct',          // 7B (Legacy)
-
-                    // Qwen Long Context Series
-                    'Tongyi-Zhiwen/QwenLong-L1-32B',           // 32B (Long context)
 
                     // 🧠 DeepSeek Series (Arranged by capability and size)
-
-                    // DeepSeek Pro Series
                     'Pro/deepseek-ai/DeepSeek-R1',             // Latest R1 Pro
-                    'Pro/deepseek-ai/DeepSeek-V3',             // V3 Pro
-                    'Pro/THUDM/glm-4-9b-chat',                 // GLM Pro variant
-                    'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', // R1 Distilled Pro
-
-                    // DeepSeek Standard Series
-                    'deepseek-ai/DeepSeek-R1',                 // Latest R1
-                    'deepseek-ai/DeepSeek-V3',                 // V3
-                    'deepseek-ai/DeepSeek-V3.1-Terminus',      // V3.1 Terminus
-                    'deepseek-ai/DeepSeek-V2.5',               // V2.5
-
-                    // DeepSeek R1 Distilled Series (by size)
-                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B', // 32B Distilled
-                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B', // 14B Distilled
-                    'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B',    // 8B R1
-                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',  // 7B Distilled
+                    'deepseek-ai/DeepSeek-V3.2',               // V3.2
 
                     // 🌙 Kimi Series (Moonshot AI)
-
                     'Pro/moonshotai/Kimi-K2-Instruct-0905',    // Kimi K2 Pro (Latest)
-                    'moonshotai/Kimi-K2-Instruct',             // Kimi K2 Standard
                     'moonshotai/Kimi-K2-Thinking',             // Kimi K2 Thinking (Reasoning)
 
-                    // 🔮 GLM Series (Zhipu AI - Arranged by version and size)
-
-                    // GLM Latest Series
-                    'zai-org/GLM-4.6',                         // GLM-4.6 (Latest)
-                    'zai-org/GLM-4.5',                         // GLM-4.5
+                    // 🔮 GLM Series (Zhipu AI)
+                    'Pro/zai-org/GLM-4.7',                     // GLM-4.7 Pro (Latest)
+                    'zai-org/GLM-4.6V',                        // GLM-4.6V (Vision)
+                    'zai-org/GLM-4.6',                         // GLM-4.6
                     'zai-org/GLM-4.5-Air',                     // GLM-4.5-Air (Lightweight)
 
-                    // GLM THUDM Series (by size)
-                    'THUDM/GLM-Z1-32B-0414',                   // 32B Z1
-                    'THUDM/GLM-4-32B-0414',                    // 32B GLM-4
-                    'THUDM/GLM-Z1-Rumination-32B-0414',       // 32B Z1 Rumination
-                    'THUDM/GLM-4-9B-0414',                     // 9B GLM-4
-                    'THUDM/glm-4-9b-chat',                     // 9B Chat
-
-                    // 🏢 Enterprise & Commercial Models
-
-                    // Baidu ERNIE Series
-                    'baidu/ERNIE-4.5-300B-A47B',              // 300B ERNIE (47B active)
-
-                    // Other Large Enterprise Models
-                    'ascend-tribe/pangu-pro-moe',             // PanGu Pro MoE
-                    'tencent/Hunyuan-A13B-Instruct',          // Hunyuan 13B
-                    'MiniMaxAI/MiniMax-M1-80k',               // MiniMax M1
+                    // MiniMax Series
                     'MiniMaxAI/MiniMax-M2',                   // MiniMax M2 (Latest)
-                    'TeleAI/TeleChat2',                       // TeleChat2
 
-                    // InternLM Series (by size)
-                    'internlm/internlm2_5-20b-chat',          // 20B InternLM
-                    'internlm/internlm2_5-7b-chat'            // 7B InternLM
                 ]
             },
             // OpenRouter - Access to GPT-5 series via OpenRouter API
