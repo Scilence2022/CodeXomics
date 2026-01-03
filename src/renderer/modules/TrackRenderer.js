@@ -3871,9 +3871,18 @@ class TrackRenderer {
                 // Create coverage visualization if enabled (respect toggle state)
                 const showCoverage = (settings.showCoverage !== false) && this.elementVisibilityStates.readsCoverage;
                 let coverageHeight = 0;
-                if (showCoverage) {
+
+                // Only create SVG coverage if NOT using canvas mode (CanvasReadsRenderer handles its own coverage)
+                const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
+
+                if (showCoverage && !isCanvasMode) {
                     coverageHeight = parseInt(settings.coverageHeight) || 50;
                     this.createCoverageVisualization(trackContent, visibleReads, viewport, coverageHeight, settings);
+                } else if (showCoverage && isCanvasMode) {
+                    // For Canvas mode, we don't create SVG but we might need to know the height for calculations if we were mixing, 
+                    // but since Canvas handles everything, we can treat external coverage height as 0 
+                    // and let CanvasReadsRenderer handle the layout internally.
+                    coverageHeight = 0;
                 }
 
                 // Create fixed reference visualization above reads (respect toggle state)
@@ -4127,7 +4136,11 @@ class TrackRenderer {
                 // Create coverage visualization if enabled (respect toggle state)
                 const showCoverage = (settings.showCoverage !== false) && this.elementVisibilityStates.readsCoverage;
                 let coverageHeight = 0;
-                if (showCoverage) {
+
+                // Only create SVG coverage if NOT using canvas mode
+                const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
+
+                if (showCoverage && !isCanvasMode) {
                     coverageHeight = parseInt(settings.coverageHeight) || 50;
                     this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
                 }
@@ -4347,7 +4360,9 @@ class TrackRenderer {
 
                 // Create coverage visualization if enabled (respect toggle state)
                 const showCoverage = (settings.showCoverage !== false) && this.elementVisibilityStates.readsCoverage;
-                if (showCoverage) {
+                const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
+
+                if (showCoverage && !isCanvasMode) {
                     coverageHeight = parseInt(settings.coverageHeight) || 50;
                     this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
                 }
