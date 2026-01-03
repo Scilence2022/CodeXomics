@@ -57,10 +57,12 @@ class CanvasGenesRenderer {
             top: 0;
             left: 0;
             width: 100%;
+            width: 100%;
             height: 100%;
             display: block;
             image-rendering: crisp-edges;
             z-index: 10;
+            pointer-events: auto;
         `;
 
         // Get 2D context
@@ -320,7 +322,7 @@ class CanvasGenesRenderer {
      * Draw standard gene arrow/triangle path
      */
     drawStandardShapePath(gene, width, height, isLeftTruncated, isRightTruncated) {
-        const isForward = gene.strand !== -1;
+        const isForward = gene.strand != -1; // Use loose equality to handle string "-1"
         const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
 
         if (width < 8) {
@@ -363,7 +365,7 @@ class CanvasGenesRenderer {
      */
     drawSpecializedShapePath(gene, width, height, isLeftTruncated, isRightTruncated) {
         const geneType = gene.type.toLowerCase();
-        const isForward = gene.strand !== -1;
+        const isForward = gene.strand != -1; // Use loose equality to handle string "-1"
 
         switch (geneType) {
             case 'promoter':
