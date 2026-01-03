@@ -1218,10 +1218,12 @@ class TrackRenderer {
         // Calculate SVG content height (excluding ruler)
         const svgContentHeight = layout.totalHeight - layout.rulerHeight;
 
-        svg.setAttribute('width', '100%');
+        // Use explicit pixel width to prevent distortion/stretching
+        // This ensures viewBox matches logic dimensions exactly 1:1
+        svg.setAttribute('width', containerWidth);
         svg.setAttribute('height', svgContentHeight);
         svg.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContentHeight}`);
-        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('preserveAspectRatio', 'none'); // Safe now because width matches viewBox width
         svg.setAttribute('class', 'genes-svg-container');
         svg.style.position = 'relative';
         svg.style.top = '0';
