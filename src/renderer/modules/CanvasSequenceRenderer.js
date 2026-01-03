@@ -24,25 +24,25 @@ class CanvasSequenceRenderer {
             proteinFontSize: 12,
             ...options
         };
-        
+
         // Base color scheme for nucleotides
         this.baseColors = {
             'A': '#e74c3c',
-            'T': '#3498db', 
+            'T': '#3498db',
             'G': '#2ecc71',
             'C': '#f39c12',
             'N': '#95a5a6',
             'a': '#e74c3c',
             't': '#3498db',
-            'g': '#2ecc71', 
+            'g': '#2ecc71',
             'c': '#f39c12',
             'n': '#95a5a6'
         };
-        
+
         // Highlighting configuration
         this.highlightedRanges = [];
         this.highlightColor = 'rgba(255, 255, 0, 0.6)'; // Yellow highlight background
-        
+
         // Amino acid color scheme for protein translations - more opaque and clear
         this.aminoAcidColors = {
             // Nonpolar (hydrophobic) - darker green tones
@@ -58,7 +58,7 @@ class CanvasSequenceRenderer {
             'G': '#9E9E9E', // Glycine - neutral gray
             '*': '#E91E63'  // Stop codon - magenta for visibility
         };
-        
+
         // Standard genetic code table
         this.geneticCode = {
             'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
@@ -78,36 +78,36 @@ class CanvasSequenceRenderer {
             'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
             'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
         };
-        
+
         // Canvas and rendering context
         this.canvas = null;
         this.ctx = null;
         this.devicePixelRatio = window.devicePixelRatio || 1;
-        
+
         // Rendering metrics
         this.charWidth = 0;
         this.charHeight = 0;
         this.actualFontSize = 0;
         this.canvasWidth = 0;
         this.canvasHeight = 0;
-        
+
         // Performance tracking
         this.renderCount = 0;
         this.lastRenderTime = 0;
-        
+
         this.initialize();
     }
-    
+
     /**
      * Translate DNA sequence to protein in all three reading frames
      */
     translateDNAToProtein(sequence, frame = 0) {
         if (!sequence || sequence.length < 3) return '';
-        
+
         // Adjust for frame offset
         const startIndex = frame;
         let protein = '';
-        
+
         // Translate codon by codon
         for (let i = startIndex; i < sequence.length - 2; i += 3) {
             const codon = sequence.substring(i, i + 3).toUpperCase();
@@ -115,26 +115,26 @@ class CanvasSequenceRenderer {
                 protein += this.geneticCode[codon] || 'X';
             }
         }
-        
+
         return protein;
     }
-    
+
     /**
      * Get CDS regions from annotations for the current viewport
      */
     getCDSRegions() {
         if (!this.viewport || !this.genomeBrowser?.currentAnnotations) return [];
-        
+
         const chromosome = this.viewport.chromosome || 'chromosome1';
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
-        
-        return annotations.filter(annotation => 
+
+        return annotations.filter(annotation =>
             annotation.type === 'CDS' &&
             annotation.start < this.viewport.end &&
             annotation.end > this.viewport.start
         );
     }
-    
+
     /**
      * Check if a position is within any CDS region
      */
@@ -142,10 +142,10 @@ class CanvasSequenceRenderer {
         const cdsRegions = this.getCDSRegions();
         return cdsRegions.some(cds => position >= cds.start && position <= cds.end);
     }
-    
+
     initialize() {
         console.log('🎨 [CanvasSequenceRenderer] Initializing Canvas renderer');
-        
+
         // Create canvas element
         this.canvas = document.createElement('canvas');
         this.canvas.className = 'sequence-canvas';
@@ -159,32 +159,32 @@ class CanvasSequenceRenderer {
             image-rendering: crisp-edges;
             image-rendering: pixelated;
         `;
-        
+
         // Get 2D context with alpha for transparency
         this.ctx = this.canvas.getContext('2d', { alpha: true });
-        
+
         // Setup canvas container
         this.setupContainer();
-        
+
         // Calculate optimal sizing
         this.calculateMetrics();
-        
+
         // Setup canvas dimensions
         this.setupCanvas();
-        
+
         // Render initial sequence
         this.render();
-        
+
         // Setup resize observer for responsive updates
         this.setupResizeObserver();
-        
+
         console.log('✅ [CanvasSequenceRenderer] Canvas renderer initialized successfully');
     }
-    
+
     setupContainer() {
         // Clear existing content
         this.container.innerHTML = '';
-        
+
         // Apply container styles for Canvas rendering
         this.container.style.cssText = `
             position: relative;
@@ -199,23 +199,23 @@ class CanvasSequenceRenderer {
             padding: ${this.options.padding}px 0;
             box-sizing: border-box;
         `;
-        
+
         // Append canvas to container
         this.container.appendChild(this.canvas);
     }
-    
+
     calculateMetrics() {
         // Create temporary canvas for accurate text measurements
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
-        
+
         // Set font for measurement
         tempCtx.font = `${this.options.fontWeight} ${this.options.fontSize}px ${this.options.fontFamily}`;
-        
+
         // Measure character dimensions using different test strings
         const testStrings = ['ATCG', 'AAAAA', 'MMMMM', 'iiiii'];
         const measurements = [];
-        
+
         testStrings.forEach(str => {
             const metrics = tempCtx.measureText(str);
             const charWidth = metrics.width / str.length;
@@ -223,18 +223,18 @@ class CanvasSequenceRenderer {
                 measurements.push(charWidth);
             }
         });
-        
+
         // Use average measurement for consistency
         this.charWidth = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-        
+
         // Calculate character height based on font metrics
         const sampleMetrics = tempCtx.measureText('Mg'); // Characters with ascenders and descenders
         this.charHeight = Math.abs(sampleMetrics.actualBoundingBoxAscent) + Math.abs(sampleMetrics.actualBoundingBoxDescent);
-        
+
         // Fallback if measurement fails
         if (this.charWidth <= 0) this.charWidth = this.options.fontSize * 0.6;
         if (this.charHeight <= 0) this.charHeight = this.options.fontSize * 1.2;
-        
+
         console.log('📏 [CanvasSequenceRenderer] Calculated metrics:', {
             charWidth: this.charWidth.toFixed(2),
             charHeight: this.charHeight.toFixed(2),
@@ -242,16 +242,16 @@ class CanvasSequenceRenderer {
             measurements: measurements.map(m => m.toFixed(2))
         });
     }
-    
+
     setupCanvas() {
         // Get container dimensions
         const containerRect = this.container.getBoundingClientRect();
         this.canvasWidth = Math.max(containerRect.width, 800);
-        
+
         // Calculate adaptive height
         if (this.options.adaptiveHeight) {
             let baseHeight = this.charHeight + (this.options.padding * 2);
-            
+
             // Add space for protein translations if enabled
             if (this.options.showProteinTranslation) {
                 const framesToShow = this.options.proteinFramesToShow.length;
@@ -259,7 +259,7 @@ class CanvasSequenceRenderer {
                 // Add extra padding at bottom to prevent clipping of the last frame
                 baseHeight += framesToShow * proteinLineHeight + (this.options.padding * 3);
             }
-            
+
             this.canvasHeight = Math.max(
                 this.options.minHeight,
                 Math.min(this.options.maxHeight * 2, baseHeight) // Allow double max height for protein display
@@ -267,21 +267,21 @@ class CanvasSequenceRenderer {
         } else {
             this.canvasHeight = this.options.maxHeight;
         }
-        
+
         // Set canvas size accounting for device pixel ratio
         this.canvas.width = this.canvasWidth * this.devicePixelRatio;
         this.canvas.height = this.canvasHeight * this.devicePixelRatio;
-        
+
         // Scale CSS size back to logical pixels
         this.canvas.style.width = this.canvasWidth + 'px';
         this.canvas.style.height = this.canvasHeight + 'px';
-        
+
         // Scale context for crisp rendering on high-DPI displays
         this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio);
-        
+
         // Update container height to match canvas
         this.container.style.height = this.canvasHeight + 'px';
-        
+
         console.log('🖼️ [CanvasSequenceRenderer] Canvas setup:', {
             canvasWidth: this.canvasWidth,
             canvasHeight: this.canvasHeight,
@@ -290,39 +290,42 @@ class CanvasSequenceRenderer {
             physicalSize: `${this.canvas.width}x${this.canvas.height}`
         });
     }
-    
+
     render() {
         const startTime = performance.now();
         this.renderCount++;
-        
+
+        // CRITICAL FIX: Always reset drag transform when rendering to prevent resize glitches
+        this.resetDragTransform();
+
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-        
+
         // Calculate adaptive font size based on available space
         const availableWidth = this.canvasWidth - (this.options.padding * 2);
         const maxCharWidth = availableWidth / this.sequence.length;
-        
+
         // Calculate optimal font size
         let adaptiveFontSize = this.options.fontSize;
         if (maxCharWidth < this.charWidth) {
             adaptiveFontSize = Math.max(8, (maxCharWidth / this.charWidth) * this.options.fontSize);
         }
-        
+
         // Update rendering metrics if font size changed
         if (Math.abs(adaptiveFontSize - this.actualFontSize) > 0.5) {
             this.actualFontSize = adaptiveFontSize;
             this.updateFontMetrics();
         }
-        
+
         // Set font properties
         this.ctx.font = `${this.options.fontWeight} ${this.actualFontSize}px ${this.options.fontFamily}`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        
+
         // Calculate positioning with intelligent stretching for short sequences
         let effectiveCharWidth;
         let startX;
-        
+
         if (this.sequence.length * this.charWidth < availableWidth) {
             // Short sequence: stretch to fill available width
             effectiveCharWidth = availableWidth / this.sequence.length;
@@ -333,7 +336,7 @@ class CanvasSequenceRenderer {
             effectiveCharWidth = Math.min(this.charWidth, maxCharWidth);
             startX = this.options.padding;
         }
-        
+
         // Calculate layout positions
         let dnaY, proteinStartY;
         if (this.options.showProteinTranslation) {
@@ -344,34 +347,34 @@ class CanvasSequenceRenderer {
             // DNA sequence centered
             dnaY = this.canvasHeight / 2;
         }
-        
+
         // Render highlighted backgrounds first
         this.renderHighlights(startX, effectiveCharWidth, dnaY, this.charHeight);
-        
+
         // Render DNA sequence
         for (let i = 0; i < this.sequence.length; i++) {
             const base = this.sequence[i];
             const x = startX + (i * effectiveCharWidth) + (effectiveCharWidth / 2);
-            
+
             // Skip if outside visible area (basic culling)
             if (x > this.canvasWidth + 10) break;
             if (x < -10) continue;
-            
+
             // Set color for base
             this.ctx.fillStyle = this.baseColors[base] || this.baseColors['N'];
-            
+
             // Render character
             this.ctx.fillText(base, x, dnaY);
         }
-        
+
         // Render protein translations if enabled
         if (this.options.showProteinTranslation) {
             this.renderProteinTranslations(startX, effectiveCharWidth, proteinStartY);
         }
-        
+
         // Performance tracking
         this.lastRenderTime = performance.now() - startTime;
-        
+
         if (this.renderCount % 100 === 0) {
             console.log('⚡ [CanvasSequenceRenderer] Performance stats:', {
                 renderCount: this.renderCount,
@@ -381,38 +384,38 @@ class CanvasSequenceRenderer {
             });
         }
     }
-    
+
     /**
      * Render protein translations for the specified reading frames
      */
     renderProteinTranslations(startX, effectiveCharWidth, startY) {
         const proteinLineHeight = this.options.proteinFontSize * 1.2; // Reduced from 1.4 to 1.2 for tighter spacing
-        
+
         // Set font for protein rendering
         this.ctx.font = `${this.options.fontWeight} ${this.options.proteinFontSize}px ${this.options.fontFamily}`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        
+
         // Render each requested reading frame
         this.options.proteinFramesToShow.forEach((frame, index) => {
             const frameIndex = frame - 1; // Convert to 0-based index
             const yPosition = startY + (index * proteinLineHeight);
-            
+
             // Translate sequence for this frame
             const proteinSequence = this.translateDNAToProtein(this.sequence, frameIndex);
-            
+
             // Render each amino acid
             for (let i = 0; i < proteinSequence.length; i++) {
                 const aminoAcid = proteinSequence[i];
-                
+
                 // Calculate position - each amino acid represents 3 DNA bases
                 const dnaBaseIndex = frameIndex + (i * 3);
                 const x = startX + (dnaBaseIndex * effectiveCharWidth) + (effectiveCharWidth * 1.5); // Center over the 3 bases
-                
+
                 // Skip if outside visible area
                 if (x > this.canvasWidth + 10) break;
                 if (x < -10) continue;
-                
+
                 // Apply filtering based on translation mode
                 if (this.options.proteinTranslationMode === 'cds_only') {
                     // Only show if this position is within a CDS region
@@ -421,58 +424,58 @@ class CanvasSequenceRenderer {
                         continue; // Skip this amino acid
                     }
                 }
-                
+
                 // Set color for amino acid
                 this.ctx.fillStyle = this.aminoAcidColors[aminoAcid] || this.aminoAcidColors['G'];
-                
+
                 // Add subtle white outline for better contrast
                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
                 this.ctx.lineWidth = 0.5;
                 this.ctx.strokeText(aminoAcid, x, yPosition);
-                
+
                 // Render amino acid character
                 this.ctx.fillText(aminoAcid, x, yPosition);
             }
         });
     }
-    
+
     updateFontMetrics() {
         // Recalculate character dimensions for new font size
         this.ctx.font = `${this.options.fontWeight} ${this.actualFontSize}px ${this.options.fontFamily}`;
         const metrics = this.ctx.measureText('M');
         this.charWidth = metrics.width;
         this.charHeight = Math.abs(metrics.actualBoundingBoxAscent) + Math.abs(metrics.actualBoundingBoxDescent);
-        
+
         // Fallback calculations
         if (this.charWidth <= 0) this.charWidth = this.actualFontSize * 0.6;
         if (this.charHeight <= 0) this.charHeight = this.actualFontSize * 1.2;
     }
-    
+
     /**
      * Render highlight backgrounds for specified ranges
      */
     renderHighlights(startX, effectiveCharWidth, dnaY, charHeight) {
         if (this.highlightedRanges.length === 0) return;
-        
+
         this.ctx.save();
         this.ctx.fillStyle = this.highlightColor;
-        
+
         this.highlightedRanges.forEach(range => {
             const startPos = Math.max(0, range.start);
             const endPos = Math.min(this.sequence.length - 1, range.end);
-            
+
             if (startPos <= endPos) {
                 const x = startX + (startPos * effectiveCharWidth);
                 const width = (endPos - startPos + 1) * effectiveCharWidth;
                 const y = dnaY - charHeight / 2;
-                
+
                 this.ctx.fillRect(x, y, width, charHeight);
             }
         });
-        
+
         this.ctx.restore();
     }
-    
+
     /**
      * Add a highlight range to the sequence
      */
@@ -481,7 +484,7 @@ class CanvasSequenceRenderer {
         this.highlightedRanges.push({ start, end, color: highlightColor });
         this.render(); // Re-render to show highlight
     }
-    
+
     /**
      * Clear all highlights
      */
@@ -489,7 +492,7 @@ class CanvasSequenceRenderer {
         this.highlightedRanges = [];
         this.render(); // Re-render to remove highlights
     }
-    
+
     /**
      * Highlight search matches in the sequence
      */
@@ -501,7 +504,7 @@ class CanvasSequenceRenderer {
             }
         });
     }
-    
+
     setupResizeObserver() {
         if (typeof ResizeObserver !== 'undefined') {
             this.resizeObserver = new ResizeObserver((entries) => {
@@ -511,7 +514,7 @@ class CanvasSequenceRenderer {
                     }
                 }
             });
-            
+
             this.resizeObserver.observe(this.container);
         } else {
             // Fallback to window resize
@@ -519,65 +522,65 @@ class CanvasSequenceRenderer {
             window.addEventListener('resize', this.resizeHandler);
         }
     }
-    
+
     handleResize() {
         // Debounce resize operations
         if (this.resizeTimeout) {
             clearTimeout(this.resizeTimeout);
         }
-        
+
         this.resizeTimeout = setTimeout(() => {
             console.log('🔄 [CanvasSequenceRenderer] Handling resize');
             this.setupCanvas();
             this.render();
         }, 100);
     }
-    
+
     // High-performance drag transform - only requires canvas style update
     applyDragTransform(deltaX, deltaY = 0) {
         // Use CSS transform for hardware acceleration - no re-rendering needed
         this.canvas.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
     }
-    
+
     resetDragTransform() {
         this.canvas.style.transform = '';
     }
-    
+
     // Update sequence data without full re-initialization
     updateSequence(newSequence, newViewport = null) {
         console.log('🔄 [CanvasSequenceRenderer] Updating sequence data');
-        
+
         this.sequence = newSequence;
         if (newViewport) {
             this.viewport = newViewport;
         }
-        
+
         // Check if canvas needs resizing
         if (this.options.adaptiveHeight) {
             this.setupCanvas();
         }
-        
+
         // Re-render with new data
         this.render();
     }
-    
+
     // Update color scheme
     updateColors(newColors) {
         this.baseColors = { ...this.baseColors, ...newColors };
         this.render();
     }
-    
+
     // Update font settings
     updateFont(fontSize, fontFamily, fontWeight) {
         if (fontSize) this.options.fontSize = fontSize;
         if (fontFamily) this.options.fontFamily = fontFamily;
         if (fontWeight) this.options.fontWeight = fontWeight;
-        
+
         this.calculateMetrics();
         this.setupCanvas();
         this.render();
     }
-    
+
     // Get performance statistics
     getPerformanceStats() {
         return {
@@ -588,33 +591,33 @@ class CanvasSequenceRenderer {
             sequenceLength: this.sequence.length
         };
     }
-    
+
     // Clean up resources
     destroy() {
         console.log('🧹 [CanvasSequenceRenderer] Cleaning up Canvas renderer');
-        
+
         // Remove resize observer/handler
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
         } else if (this.resizeHandler) {
             window.removeEventListener('resize', this.resizeHandler);
         }
-        
+
         // Clear timeouts
         if (this.resizeTimeout) {
             clearTimeout(this.resizeTimeout);
         }
-        
+
         // Clear canvas
         if (this.ctx) {
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         }
-        
+
         // Remove canvas from DOM
         if (this.canvas && this.canvas.parentNode) {
             this.canvas.parentNode.removeChild(this.canvas);
         }
-        
+
         // Reset references
         this.canvas = null;
         this.ctx = null;

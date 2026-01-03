@@ -262,6 +262,10 @@ class CanvasReadsRenderer {
         const startTime = performance.now();
         this.renderCount++;
 
+        // CRITICAL FIX: Always reset drag transform when rendering
+        // This ensures resize operations don't leave the canvas shifted
+        this.resetDragTransform();
+
         console.log('🎨 [CanvasReadsRenderer] Starting render:', {
             readRows: this.readRows.length,
             totalReads: this.readRows.reduce((sum, row) => sum + row.length, 0),
