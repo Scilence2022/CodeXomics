@@ -4147,10 +4147,19 @@ class TrackRenderer {
 
                 // Create reference visualization (respect toggle state)
                 let referenceHeight = 0;
-                const showReference = (settings.showReference !== false) && this.elementVisibilityStates.readsReference;
-                if (showReference) {
-                    referenceHeight = parseInt(settings.referenceHeight) || 25;
-                    this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
+                // Only create separate reference visualization if NOT using canvas mode
+                // CanvasReadsRenderer handles its own reference sequence rendering to ensure proper stacking
+                if (!isCanvasMode) {
+                    const showReference = (settings.showReference !== false) && this.elementVisibilityStates.readsReference;
+                    if (showReference) {
+                        referenceHeight = parseInt(settings.referenceHeight) || 25;
+                        this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
+                    }
+                } else if (settings.showReference !== false && this.elementVisibilityStates.readsReference) {
+                    // In Canvas mode, we acknowledge the reference exists but don't draw it separately
+                    // We set referenceHeight to 0 here because the canvas renderer manages its own internal offsets
+                    // and we don't want to push the canvas container down by this amount in the DOM layout
+                    referenceHeight = 0;
                 }
 
                 // Arrange reads into rows
@@ -4368,10 +4377,16 @@ class TrackRenderer {
                 }
 
                 // Create reference visualization (respect toggle state)
+                // Create reference visualization (respect toggle state)
                 const showReference = (settings.showReference !== false) && this.elementVisibilityStates.readsReference;
-                if (showReference) {
+
+                // Only create separate reference visualization if NOT using canvas mode
+                if (showReference && !isCanvasMode) {
                     referenceHeight = parseInt(settings.referenceHeight) || 25;
                     this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
+                } else if (showReference && isCanvasMode) {
+                    // For Canvas mode, the renderer handles reference internally
+                    referenceHeight = 0;
                 }
 
                 // Arrange reads in rows
