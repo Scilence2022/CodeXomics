@@ -76,14 +76,14 @@ class CanvasReadsRenderer {
         const totalRows = this.readRows.length;
         let totalHeight = this.options.topPadding;
 
-        // Add space for reference sequence if enabled
-        if (this.options.showReference) {
-            totalHeight += 20; // Reference sequence height + spacing
+        // Add space for coverage if enabled (top-most)
+        if (this.options.showCoverage) {
+            totalHeight += 55; // Coverage height (50) + spacing (5)
         }
 
-        // Add space for coverage if enabled
-        if (this.options.showCoverage) {
-            totalHeight += 35; // Coverage height + spacing
+        // Add space for reference sequence if enabled
+        if (this.options.showReference) {
+            totalHeight += 25; // Reference sequence height (20) + spacing (5)
         }
 
         // Add space for reads
@@ -154,14 +154,14 @@ class CanvasReadsRenderer {
         const totalRows = this.readRows.length;
         let totalHeight = this.options.topPadding;
 
-        // Add space for reference sequence if enabled
-        if (this.options.showReference) {
-            totalHeight += 20; // Reference sequence height + spacing
+        // Add space for coverage if enabled (top-most)
+        if (this.options.showCoverage) {
+            totalHeight += 55; // Coverage height (50) + spacing (5)
         }
 
-        // Add space for coverage if enabled
-        if (this.options.showCoverage) {
-            totalHeight += 35; // Coverage height + spacing
+        // Add space for reference sequence if enabled
+        if (this.options.showReference) {
+            totalHeight += 25; // Reference sequence height (20) + spacing (5)
         }
 
         // Add space for reads
@@ -321,10 +321,14 @@ class CanvasReadsRenderer {
         // as requested by user
 
         /* 
-        const y = 5;
+        let y = this.options.topPadding || 10;
+        if (this.options.showCoverage) {
+            y += 55;
+        }
+        
         this.ctx.fillStyle = '#666';
         this.ctx.font = `10px 'Courier New', monospace`;
-        this.ctx.fillText('Reference sequence', 10, y);
+        this.ctx.fillText('Reference sequence', 10, y + 15);
         */
 
         // We still need to account for the space in setupCanvas/renderReadRow, 
@@ -332,35 +336,124 @@ class CanvasReadsRenderer {
     }
 
     renderCoverage() {
-        // Coverage visualization placeholder
-        // Would calculate read depth at each position
-        const coverageHeight = 30;
-        const y = this.options.showReference ? 20 : 5;
+        if (!this.options.showCoverage) return;
 
-        // Draw a subtle background to indicate coverage area exists but without clutter
-        this.ctx.fillStyle = 'rgba(100, 149, 237, 0.1)'; // Very light blue
+        const coverageHeight = 50;
+        // Position coverage at the top (respecting top padding) - draw ABOVE reference
+        const y = this.options.topPadding || 10;
+
+        // Draw faint background for the coverage track area
+        this.ctx.fillStyle = 'rgba(240, 243, 244, 0.4)';
         this.ctx.fillRect(0, y, this.canvasWidth, coverageHeight);
 
-        // Remove text placeholder as requested
-        /*
+        // Calculate coverage based on visible reads
+        const startBp = this.viewport.start;
+        const endBp = this.viewport.end;
+        const bpLength = endBp - startBp;
+
+        if (bpLength <= 0) return;
+
+        // Use a typed array for efficient coverage counting
+        // We only need to track coverage within the viewport
+        const coverage = new Uint32Array(bpLength);
+        let maxCoverage = 0;
+
+        // Iterate through all reads to build coverage map
+        // Flatten the readRows structure which contains all visible reads for this view
+        for (const row of this.readRows) {
+            for (const read of row) {
+                // read.start is 1-based, convert to 0-based relative to viewport
+                const readStartRel = (read.start - 1) - startBp;
+                const readEndRel = read.end - startBp; // read.end is usually 0-based exclusive from backend or normalized
+
+                // Clamp to viewport boundaries
+                const start = Math.max(0, readStartRel);
+                const end = Math.min(bpLength, readEndRel);
+
+                // Increment coverage for each base covered by the read
+                for (let i = start; i < end; i++) {
+                    coverage[i]++;
+                    if (coverage[i] > maxCoverage) maxCoverage = coverage[i];
+                }
+            }
+        }
+
+        if (maxCoverage === 0) return;
+
+        // Draw the histogram
+        this.ctx.fillStyle = '#a0c4ff'; // Light blue fill
+        this.ctx.strokeStyle = '#4a90e2'; // Darker blue stroke
+        this.ctx.lineWidth = 1;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, y + coverageHeight);
+
+        // Calculate pixels per base pair to determine drawing strategy
+        const pixelsPerBp = this.canvasWidth / bpLength;
+
+        if (pixelsPerBp < 1) {
+            // [ZOOOMED OUT] BP is smaller than a pixel - need to bin/aggregate
+            const bpPerPixel = 1 / pixelsPerBp;
+
+            for (let px = 0; px < this.canvasWidth; px++) {
+                const bpStart = Math.floor(px * bpPerPixel);
+                const bpEnd = Math.min(bpLength, Math.floor((px + 1) * bpPerPixel));
+
+                // Calculate max coverage in this pixel bin (peak detection for visibility)
+                let localMax = 0;
+                for (let i = bpStart; i < bpEnd; i++) {
+                    if (coverage[i] > localMax) localMax = coverage[i];
+                }
+
+                const barHeight = (localMax / maxCoverage) * (coverageHeight - 5); // 5px padding at top
+                const yPos = y + coverageHeight - barHeight;
+
+                this.ctx.lineTo(px, yPos);
+                // Draw 'step' style for cleaner look
+                if (px < this.canvasWidth - 1) {
+                    this.ctx.lineTo(px + 1, yPos);
+                }
+            }
+        } else {
+            // [ZOOMED IN] BP is wider than a pixel - draw exact bars
+            for (let i = 0; i < bpLength; i++) {
+                const x = i * pixelsPerBp;
+                const barHeight = (coverage[i] / maxCoverage) * (coverageHeight - 5);
+                const yPos = y + coverageHeight - barHeight;
+
+                this.ctx.lineTo(x, yPos);
+                this.ctx.lineTo(x + pixelsPerBp, yPos);
+            }
+        }
+
+        // Close the path at the bottom right
+        this.ctx.lineTo(this.canvasWidth, y + coverageHeight);
+        this.ctx.closePath();
+
+        // Fill and stroke
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Add max coverage label
         this.ctx.fillStyle = '#666';
-        this.ctx.font = `10px 'Courier New', monospace`;
-        this.ctx.fillText('Coverage visualization', 10, y + 15);
-        */
+        this.ctx.font = '10px sans-serif';
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(`Max: ${maxCoverage}x`, this.canvasWidth - 5, y + 12);
     }
 
     renderReadRow(rowReads, rowIndex) {
         // Calculate Y position accounting for reference sequence and coverage
+        // Reads are always at the bottom
         let yOffset = this.options.topPadding;
 
-        // Add space for reference sequence if enabled
-        if (this.options.showReference) {
-            yOffset += 20; // Reference sequence height + spacing
+        // Coverage is now top-most (if enabled)
+        if (this.options.showCoverage) {
+            yOffset += 55; // Coverage height (50) + spacing (5)
         }
 
-        // Add space for coverage if enabled  
-        if (this.options.showCoverage) {
-            yOffset += 35; // Coverage height + spacing
+        // Reference sequence follows coverage (if enabled)
+        if (this.options.showReference) {
+            yOffset += 25; // Reference sequence height (20) + spacing (5)
         }
 
         const y = yOffset + (rowIndex * (this.options.readHeight + this.options.rowSpacing));
