@@ -90,7 +90,10 @@ class TrackRenderer {
         // UI Element visibility states - persists across navigation
         this.elementVisibilityStates = {
             genesRuler: true,
-            wigManagement: true
+            wigManagement: true,
+            readsCoverage: true,
+            readsReference: true,
+            readsReads: true
         };
 
         // Track settings storage
@@ -258,6 +261,22 @@ class TrackRenderer {
             samplingContainer.appendChild(samplingInput);
             samplingContainer.appendChild(samplingPercent);
             trackHeader.appendChild(samplingContainer);
+
+            // --- Add toggle buttons for Reads track components ---
+            const readsTogglesContainer = document.createElement('div');
+            readsTogglesContainer.className = 'track-reads-toggles';
+            readsTogglesContainer.style.cssText = `display: inline-flex; align-items: center; margin-left: 15px; gap: 4px;`;
+
+            const coverageBtn = this.createReadsToggleButton('chart-area', 'Coverage', 'readsCoverage');
+            readsTogglesContainer.appendChild(coverageBtn);
+
+            const referenceBtn = this.createReadsToggleButton('dna', 'Reference', 'readsReference');
+            readsTogglesContainer.appendChild(referenceBtn);
+
+            const readsBtn = this.createReadsToggleButton('align-left', 'Reads', 'readsReads');
+            readsTogglesContainer.appendChild(readsBtn);
+
+            trackHeader.appendChild(readsTogglesContainer);
         }
 
         // Create buttons container
@@ -3849,17 +3868,18 @@ class TrackRenderer {
                 trackContent.style.height = '80px'; // Default height for empty track
             } else {
 
-                // Create coverage visualization if enabled
-                const showCoverage = settings.showCoverage !== false; // Default to true
+                // Create coverage visualization if enabled (respect toggle state)
+                const showCoverage = (settings.showCoverage !== false) && this.elementVisibilityStates.readsCoverage;
                 let coverageHeight = 0;
                 if (showCoverage) {
                     coverageHeight = parseInt(settings.coverageHeight) || 50;
                     this.createCoverageVisualization(trackContent, visibleReads, viewport, coverageHeight, settings);
                 }
 
-                // Create fixed reference visualization above reads (like coverage)
+                // Create fixed reference visualization above reads (respect toggle state)
                 let referenceHeight = 0;
-                if (settings.showReference !== false) {
+                const showReference = (settings.showReference !== false) && this.elementVisibilityStates.readsReference;
+                if (showReference) {
                     referenceHeight = parseInt(settings.referenceHeight) || 25;
                     this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
                 }
@@ -3903,13 +3923,15 @@ class TrackRenderer {
                         console.log(`🖼️ [DEBUG] [TrackRenderer] Switching to SVG rendering mode`);
                     }
 
-                    if (renderingMode === 'canvas') {
-                        // Use Canvas rendering for high performance
-                        this.renderReadsElementsCanvas(trackContent, limitedReadRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
-                    } else {
-                        // Create SVG-based read visualization
-                        // Pass just topPadding - reads SVG will be positioned after coverage automatically  
-                        this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
+                    if (this.elementVisibilityStates.readsReads) {
+                        if (renderingMode === 'canvas') {
+                            // Use Canvas rendering for high performance
+                            this.renderReadsElementsCanvas(trackContent, limitedReadRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                        } else {
+                            // Create SVG-based read visualization
+                            // Pass just topPadding - reads SVG will be positioned after coverage automatically  
+                            this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
+                        }
                     }
                 }
 
@@ -7175,6 +7197,41 @@ class TrackRenderer {
     }
 
     // Helper to check if two genes overlap with a buffer
+    /**
+     * Create a toggle button for Reads track components (Coverage, Reference, Reads)
+     */
+    createReadsToggleButton(iconName, labelText, stateKey) {
+        const btn = document.createElement('button');
+        btn.className = 'track-btn track-reads-toggle-btn';
+        btn.innerHTML = `<i class="fas fa-${iconName}"></i>`;
+        btn.title = `Toggle ${labelText}`;
+        btn.style.cssText = `padding: 2px 5px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; background: white; cursor: pointer; transition: background 0.2s, color 0.2s;`;
+
+        if (!this.elementVisibilityStates[stateKey]) {
+            btn.style.background = '#eee';
+            btn.style.color = '#aaa';
+        }
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.elementVisibilityStates[stateKey] = !this.elementVisibilityStates[stateKey];
+
+            if (this.elementVisibilityStates[stateKey]) {
+                btn.style.background = 'white';
+                btn.style.color = '#333';
+            } else {
+                btn.style.background = '#eee';
+                btn.style.color = '#aaa';
+            }
+
+            if (this.genomeBrowser && typeof this.genomeBrowser.updateCurrentView === 'function') {
+                this.genomeBrowser.updateCurrentView();
+            }
+        });
+
+        return btn;
+    }
+
     genesOverlap(gene1, gene2) {
         const buffer = 10; // Reduced buffer from 50bp to 10bp for tighter packing
         return (gene1.start < gene2.end + buffer && gene1.end + buffer > gene2.start);
