@@ -396,6 +396,22 @@ class TrackRenderer {
             });
             buttonsContainer.appendChild(rulerBtn);
 
+            // Add layout mode toggle button
+            const layoutBtn = document.createElement('button');
+            layoutBtn.className = 'track-btn track-layout-btn';
+            // Set initial icon based on current settings
+            const currentLayout = this.getTrackSettings('genes').layoutMode || 'expanded';
+            layoutBtn.innerHTML = currentLayout === 'compact' ?
+                '<i class="fas fa-compress-alt"></i>' :
+                '<i class="fas fa-expand-alt"></i>';
+            layoutBtn.title = `Switch to ${currentLayout === 'compact' ? 'Expanded' : 'Compact'} Layout`;
+
+            layoutBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleTrackLayout(trackType, layoutBtn);
+            });
+            buttonsContainer.appendChild(layoutBtn);
+
             const galleryBtn = document.createElement('button');
             galleryBtn.className = 'track-btn track-gallery-btn';
             galleryBtn.innerHTML = '<i class="fas fa-images"></i>';
@@ -2701,11 +2717,83 @@ class TrackRenderer {
     }
 
     /**
+     * Toggle track layout mode (Expanded → Compact → Group by Type → Expanded)
+     */
+    toggleTrackLayout(trackType, buttonElement) {
+        if (trackType !== 'genes') return;
+
+        const settings = this.getTrackSettings('genes');
+        const currentMode = settings.layoutMode || 'expanded';
+
+        // Cycle through modes: expanded → compact → groupByType → expanded
+        let newMode;
+        if (currentMode === 'expanded') {
+            newMode = 'compact';
+        } else if (currentMode === 'compact') {
+            newMode = 'groupByType';
+        } else {
+            newMode = 'expanded';
+        }
+
+        console.log(`Switching ${trackType} layout from ${currentMode} to ${newMode}`);
+
+        // Update settings
+        settings.layoutMode = newMode;
+        this.trackSettings['genes'] = settings; // Ensure it's saved back
+
+        // Update button appearance
+        this.updateLayoutButtonAppearance(buttonElement, newMode);
+
+        // Refresh the track to apply changes
+        this.refreshTrack(trackType);
+    }
+
+    /**
+     * Update the layout toggle button appearance based on mode
+     */
+    updateLayoutButtonAppearance(buttonElement, mode) {
+        if (!buttonElement) return;
+
+        let icon, title;
+        switch (mode) {
+            case 'compact':
+                icon = '<i class="fas fa-compress-alt"></i>';
+                title = 'Switch to Group by Type Layout';
+                break;
+            case 'groupByType':
+                icon = '<i class="fas fa-layer-group"></i>';
+                title = 'Switch to Expanded Layout';
+                break;
+            default: // expanded
+                icon = '<i class="fas fa-expand-alt"></i>';
+                title = 'Switch to Compact Layout';
+        }
+
+        buttonElement.innerHTML = icon;
+        buttonElement.title = title;
+    }
+
+    /**
+     * Sync the genes layout button with current settings (called after settings modal save)
+     */
+    syncGenesLayoutButton() {
+        const layoutBtn = document.querySelector('.gene-track .track-layout-btn');
+        if (!layoutBtn) return;
+
+        const settings = this.getTrackSettings('genes');
+        const currentMode = settings.layoutMode || 'expanded';
+        this.updateLayoutButtonAppearance(layoutBtn, currentMode);
+    }
+
+    /**
      * Calculate layout parameters for gene track
      */
     calculateGeneTrackLayout(geneRows, settings) {
-        const geneHeight = settings?.geneHeight || 12;
-        const rowSpacing = 6;
+        const layoutMode = settings?.layoutMode || 'expanded';
+        const isCompact = layoutMode === 'compact';
+
+        const geneHeight = settings?.geneHeight || (isCompact ? 8 : 12);
+        const rowSpacing = isCompact ? 2 : 6;
         const rulerHeight = 35;
         const bottomPadding = 0;
 
@@ -2735,7 +2823,8 @@ class TrackRenderer {
             bottomPadding,
             maxRows,
             effectiveRows,
-            totalHeight: rulerHeight + topPadding + (effectiveRows * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding
+            totalHeight: rulerHeight + topPadding + (effectiveRows * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding,
+            layoutMode // Pass this through for renderer to use
         };
     }
 
@@ -10406,10 +10495,11 @@ This action cannot be undone.`;
                 <div class="form-group">
                     <label for="genesLayoutMode">Layout Mode:</label>
                     <select id="genesLayoutMode">
+                        <option value="expanded" ${settings.layoutMode === 'expanded' || !settings.layoutMode ? 'selected' : ''}>Expanded</option>
                         <option value="compact" ${settings.layoutMode === 'compact' ? 'selected' : ''}>Compact</option>
                         <option value="groupByType" ${settings.layoutMode === 'groupByType' ? 'selected' : ''}>Group by Type</option>
                     </select>
-                    <div class="help-text">"Compact": Fits all features within max rows, allowing overlaps. "Group by Type": Separates features into dedicated rows by type.</div>
+                    <div class="help-text">"Expanded": Full-size features with labels. "Compact": Smaller features without labels. "Group by Type": Separates features into dedicated rows by type.</div>
                 </div>
                 <div class="form-group">
                     <label>
@@ -11676,7 +11766,7 @@ This action cannot be undone.`;
                 settings.geneHeight = parseInt(geneHeightElement?.value) || 12;
                 settings.fontSize = parseInt(fontSizeElement?.value) || 11;
                 settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
-                settings.layoutMode = layoutModeElement?.value || 'compact';
+                settings.layoutMode = layoutModeElement?.value || 'expanded';
                 settings.enableGlobalDragging = enableGlobalDraggingElement?.checked !== false; // Default to true
                 settings.wheelZoomSensitivity = parseFloat(wheelZoomSensitivityElement?.value) || 0.1;
                 settings.overrideGlobalZoom = overrideGlobalZoomElement?.checked || false;
@@ -12088,9 +12178,9 @@ This action cannot be undone.`;
             this.syncReadsToggleButtons(settings);
         }
 
-        // Sync UI Buttons (specifically for Reads track)
-        if (trackType === 'reads') {
-            this.syncReadsToggleButtons(settings);
+        // Sync UI Buttons (specifically for Genes track layout button)
+        if (trackType === 'genes') {
+            this.syncGenesLayoutButton();
         }
 
         // Special handling for sequence track settings

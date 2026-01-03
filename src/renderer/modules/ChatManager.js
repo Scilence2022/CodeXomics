@@ -5678,6 +5678,65 @@ class ChatManager {
     }
 
     async buildSystemMessage() {
+        // [MCP Integration] Check for specific MCP server prompts first
+        if (this.mcpServerManager && this.mcpServerManager.serverPrompts) {
+            for (const [serverId, prompts] of this.mcpServerManager.serverPrompts) {
+                // Look for Deep Gene Research Assistant prompt
+                const deepGenePrompt = prompts.find(p =>
+                    p.name === 'Deep Gene Research Assistant' ||
+                    p.name === 'deep-gene-research-assistant' ||
+                    p.name === 'deep_gene_research_assistant'
+                );
+
+                if (deepGenePrompt) {
+                    console.log(`🤖 Found MCP system prompt from server ${serverId}: ${deepGenePrompt.name}`);
+                    try {
+                        // Fetch the full prompt content
+                        const promptResult = await this.mcpServerManager.getPrompt(serverId, deepGenePrompt.name);
+
+                        if (promptResult && promptResult.messages && promptResult.messages.length > 0) {
+                            console.log(`✅ Using MCP system prompt:`, promptResult.description || deepGenePrompt.name);
+
+                            // Extract text content from messages
+                            // MCP prompts return a list of messages (role + content)
+                            // We'll combine all system/user/assistant messages into one system instruction for now,
+                            // or just extract the content if it's primarily a system prompt.
+                            // For simplicity and compatibility with current single-string system prompt, we join text parts.
+
+                            let promptText = '';
+
+                            for (const msg of promptResult.messages) {
+                                if (msg.content) {
+                                    if (typeof msg.content === 'string') {
+                                        promptText += msg.content + '\n\n';
+                                    } else if (msg.content.text) {
+                                        promptText += msg.content.text + '\n\n';
+                                    } else if (msg.content.type === 'text' && msg.content.text) {
+                                        promptText += msg.content.text + '\n\n';
+                                    }
+                                }
+                            }
+
+                            if (promptText.trim()) {
+                                // Append standard tool context if needed, or rely on the prompt to ask for tools?
+                                // Usually MCP prompts are standalone system instructions.
+                                // But we still need our tools available.
+
+                                const useOptimizedPrompt = this.configManager.get('chatboxSettings.useOptimizedPrompt',
+                                    this.configManager.get('llm.useOptimizedPrompt', true));
+                                const toolContext = useOptimizedPrompt ? this.getOptimizedToolContext() : this.getCompleteToolContext();
+
+                                return `${promptText}\n\n${toolContext}`;
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`❌ Failed to get/apply prompt '${deepGenePrompt.name}':`, error);
+                        // Fallback to standard logic if prompt fetching fails
+                    }
+                }
+            }
+        }
+
         // Get user-defined system prompt
         const userSystemPrompt = this.configManager.get('llm.systemPrompt', '');
 

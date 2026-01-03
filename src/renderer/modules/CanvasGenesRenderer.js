@@ -276,8 +276,8 @@ class CanvasGenesRenderer {
         this.ctx.shadowBlur = 0;
         this.ctx.shadowColor = 'transparent';
 
-        // Draw label if space permits
-        if (elementWidth > 30) {
+        // Draw label if space permits and not in compact mode
+        if (elementWidth > 30 && this.layout.layoutMode !== 'compact') {
             this.drawGeneLabel(gene, elementWidth, height);
         }
 
