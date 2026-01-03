@@ -1932,69 +1932,20 @@ class TrackRenderer {
         // Use zoom-based stroke width (passed as parameter)
 
         // Legacy jagged RNA path logic removed - now using standard arrow logic below for consistency
-        // Use standard arrow shape for cleaner, professional look (replacing "ugly" wavy ribbon)
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        let pathData;
+        // Use geometric ellipse shape as requested by user
+        const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
 
-        // Calculate arrow size (consistent with standard genes)
-        const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
+        ellipse.setAttribute('cx', width / 2);
+        ellipse.setAttribute('cy', height / 2);
+        ellipse.setAttribute('rx', width / 2);
+        // Use slightly shorter height for the ellipse to make it look distinct and not touch borders
+        ellipse.setAttribute('ry', (height * 0.8) / 2);
 
-        if (width < 8) {
-            // Small genes: Triangle
-            if (isForward) {
-                if (isLeftTruncated) {
-                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
-                } else if (isRightTruncated) {
-                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
-                } else {
-                    pathData = `M 0 0 L ${width} ${height / 2} L 0 ${height} Z`;
-                }
-            } else {
-                if (isLeftTruncated) {
-                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
-                } else if (isRightTruncated) {
-                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
-                } else {
-                    pathData = `M ${width} 0 L 0 ${height / 2} L ${width} ${height} Z`;
-                }
-            }
-        } else {
-            // Larger genes: Arrow
-            if (isForward) {
-                if (isLeftTruncated) {
-                    pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
-                } else if (isRightTruncated) {
-                    pathData = this.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
-                } else {
-                    pathData = `M 0 0 
-                           L ${width - arrowSize} 0 
-                           L ${width} ${height / 2} 
-                           L ${width - arrowSize} ${height} 
-                           L 0 ${height} 
-                           Z`;
-                }
-            } else {
-                if (isLeftTruncated) {
-                    pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
-                } else if (isRightTruncated) {
-                    pathData = this.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
-                } else {
-                    pathData = `M ${arrowSize} 0 
-                           L ${width} 0 
-                           L ${width} ${height} 
-                           L ${arrowSize} ${height} 
-                           L 0 ${height / 2} 
-                           Z`;
-                }
-            }
-        }
+        ellipse.setAttribute('fill', fillColor);
+        ellipse.setAttribute('stroke', strokeColor);
+        ellipse.setAttribute('stroke-width', strokeWidth.toString());
 
-        path.setAttribute('d', pathData);
-        path.setAttribute('fill', fillColor);
-        path.setAttribute('stroke', strokeColor);
-        path.setAttribute('stroke-width', strokeWidth.toString());
-        path.setAttribute('stroke-linejoin', 'round');
-        group.appendChild(path);
+        group.appendChild(ellipse);
 
         return group;
     }
