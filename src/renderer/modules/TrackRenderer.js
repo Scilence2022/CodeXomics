@@ -4124,12 +4124,20 @@ class TrackRenderer {
                 this.trackSettings = this.trackSettings || {};
                 this.trackSettings['reads'] = settings;
 
-                // Create coverage visualization if enabled
-                const showCoverage = settings.showCoverage !== false; // Default to true
+                // Create coverage visualization if enabled (respect toggle state)
+                const showCoverage = (settings.showCoverage !== false) && this.elementVisibilityStates.readsCoverage;
                 let coverageHeight = 0;
                 if (showCoverage) {
                     coverageHeight = parseInt(settings.coverageHeight) || 50;
                     this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
+                }
+
+                // Create reference visualization (respect toggle state)
+                let referenceHeight = 0;
+                const showReference = (settings.showReference !== false) && this.elementVisibilityStates.readsReference;
+                if (showReference) {
+                    referenceHeight = parseInt(settings.referenceHeight) || 25;
+                    this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
                 }
 
                 // Arrange reads into rows
@@ -4138,7 +4146,8 @@ class TrackRenderer {
                 // Calculate rendering parameters
                 const readHeight = settings.readHeight || 4;
                 const rowSpacing = settings.readSpacing || 2;
-                const topPadding = 0;
+                // Adjust top padding based on fixed elements above (coverage + reference)
+                const topPadding = (showCoverage || referenceHeight > 0) ? (coverageHeight + referenceHeight + 2) : 0;
                 const bottomPadding = 0;
 
                 // Check if we should use scrollable mode (disabled by default to match original Canvas behavior)
@@ -4152,7 +4161,7 @@ class TrackRenderer {
 
                 if (forceScrollable) {
                     // Use new scrollable track system for performance
-                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + coverageHeight, bottomPadding, settings);
+                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings);
                 } else {
                     // Use traditional limited rows approach
                     console.log('🔧 [DEBUG] [createSingleReadsTrack] Using traditional limited rows approach');
@@ -4161,7 +4170,7 @@ class TrackRenderer {
                     console.log('🔧 [DEBUG] [createSingleReadsTrack] Limited rows created, count:', limitedReadRows.length);
 
                     // Calculate adaptive track height including reference sequence
-                    let trackHeight = coverageHeight + topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
+                    let trackHeight = coverageHeight + referenceHeight + topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
                     trackHeight = Math.max(trackHeight, settings.height || 150);
                     trackContent.style.height = `${trackHeight}px`;
 
@@ -4170,20 +4179,25 @@ class TrackRenderer {
                     console.log(`🔧 [DEBUG] [createSingleReadsTrack] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
                     console.log(`🔧 [DEBUG] [createSingleReadsTrack] Full settings object:`, settings);
 
-                    if (renderingMode === 'canvas') {
-                        console.log(`🎨 [DEBUG] [createSingleReadsTrack] Switching to Canvas rendering mode`);
-                        // Use Canvas rendering for high performance
-                        this.renderReadsElementsCanvas(trackContent, limitedReadRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
-                    } else {
-                        // Pass just topPadding - reads SVG will be positioned after coverage automatically
-                        this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
+                    if (this.elementVisibilityStates.readsReads) {
+                        if (renderingMode === 'canvas') {
+                            console.log(`🎨 [DEBUG] [createSingleReadsTrackContent] Switching to Canvas rendering mode`);
+                            // Use Canvas rendering for high performance
+                            this.renderReadsElementsCanvas(trackContent, limitedReadRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                        } else {
+                            // ... SVG rendering ...
+                            this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
+                        }
                     }
                 }
-
-                // Add file-specific statistics
-                const statsText = `${bamFile.metadata.name}: ${reads.length} reads, ${readRows.length} rows`;
-                console.log(`📊 [TrackRenderer] ${statsText}`);
             }
+
+            // Add file-specific statistics
+            const statsText = `${bamFile.metadata.name}: ${reads.length} reads, ${readRows.length} rows`;
+            console.log(`📊 [TrackRenderer] ${statsText}`);
+            const statsElement = this.createStatsElement(statsText, 'reads-track-stats');
+            trackContent.appendChild(statsElement);
+
         } catch (error) {
             console.error('🔍 [TrackRenderer] Error creating reads track content:', error);
 
@@ -4320,6 +4334,7 @@ class TrackRenderer {
                     'no-reads-message'
                 );
                 trackContent.appendChild(noReadsMsg);
+                trackContent.style.height = '80px'; // Default height for empty track
             } else {
                 // Use the settings already configured at the method start
 
@@ -4327,17 +4342,19 @@ class TrackRenderer {
                 this.trackSettings = this.trackSettings || {};
                 this.trackSettings['reads'] = settings;
 
-                // Create coverage visualization if enabled
-                const showCoverage = settings.showCoverage !== false; // Default to true
                 let coverageHeight = 0;
+                let referenceHeight = 0;
+
+                // Create coverage visualization if enabled (respect toggle state)
+                const showCoverage = (settings.showCoverage !== false) && this.elementVisibilityStates.readsCoverage;
                 if (showCoverage) {
                     coverageHeight = parseInt(settings.coverageHeight) || 50;
                     this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
                 }
 
-                // Create fixed reference visualization above reads (like coverage)
-                let referenceHeight = 0;
-                if (settings.showReference !== false) {
+                // Create reference visualization (respect toggle state)
+                const showReference = (settings.showReference !== false) && this.elementVisibilityStates.readsReference;
+                if (showReference) {
                     referenceHeight = parseInt(settings.referenceHeight) || 25;
                     this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
                 }
@@ -4357,32 +4374,26 @@ class TrackRenderer {
                 const trackHeight = totalTopHeight + topPadding + (readRows.length * (readHeight + rowSpacing)) + bottomPadding;
                 trackContent.style.height = `${trackHeight}px`;
 
-                // Check if vertical scrolling is needed (disabled by default to match original Canvas behavior)
+                // Check if vertical scrolling is needed
                 const maxVisibleRows = parseInt(settings.maxVisibleRows) || 50;
                 const enableVerticalScroll = settings.enableVerticalScroll === true;
 
                 if (enableVerticalScroll && readRows.length > maxVisibleRows) {
                     this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings);
                 } else {
-                    // Render all reads normally using Canvas or SVG based on settings
+                    // Render all reads normally
                     const renderingMode = settings.renderingMode || 'canvas';
-                    console.log(`🔧 [DEBUG] [createMultiReadsTrack] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
-                    console.log(`🔧 [DEBUG] [createMultiReadsTrack] Full settings object:`, settings);
+                    console.log(`🔧 [DEBUG] [createMultiReadsTrack] Selected rendering mode: ${renderingMode}`);
 
-                    if (renderingMode === 'canvas') {
-                        console.log(`🎨 [DEBUG] [createMultiReadsTrack] Switching to Canvas rendering mode`);
-                        // Use Canvas rendering for high performance
-                        this.renderReadsElementsCanvas(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
-                    } else {
-                        console.log(`🔧 [DEBUG] [createMultiReadsTrack] Calling renderReadsElementsSVG with:`, {
-                            readRowsCount: readRows.length,
-                            totalReads: readRows.reduce((sum, row) => sum + row.length, 0),
-                            viewportStart: viewport.start,
-                            viewportEnd: viewport.end
-                        });
-                        // Pass just topPadding - reads SVG will be positioned after coverage automatically
-                        this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
-                        console.log(`🔧 [DEBUG] [createMultiReadsTrack] renderReadsElementsSVG call completed`);
+                    // Only render reads if toggle is on
+                    if (this.elementVisibilityStates.readsReads) {
+                        if (renderingMode === 'canvas') {
+                            console.log(`🎨 [DEBUG] [createMultiReadsTrack] Switching to Canvas rendering mode`);
+                            this.renderReadsElementsCanvas(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                        } else {
+                            console.log(`🔧 [DEBUG] [createMultiReadsTrack] Calling renderReadsElementsSVG`);
+                            this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
+                        }
                     }
                 }
 
