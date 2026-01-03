@@ -314,25 +314,65 @@ class CanvasReadsRenderer {
     }
 
     renderReferenceSequence() {
-        // Reference sequence rendering would need access to the reference genome
-        // This is a placeholder for future implementation
+        if (!this.options.showReference || !this.options.referenceSequence) return;
 
-        // Only draw background/structure if needed, but remove text placeholder to avoid clutter
-        // as requested by user
+        const referenceHeight = 20;
+        const sequence = this.options.referenceSequence;
+        const bpLength = this.viewport.end - this.viewport.start;
 
-        /* 
+        if (bpLength <= 0 || sequence.length === 0) return;
+
+        // Position reference below coverage if enabled
         let y = this.options.topPadding || 10;
         if (this.options.showCoverage) {
-            y += 55;
+            y += 55; // Coverage height (50) + spacing (5)
         }
-        
-        this.ctx.fillStyle = '#666';
-        this.ctx.font = `10px 'Courier New', monospace`;
-        this.ctx.fillText('Reference sequence', 10, y + 15);
-        */
 
-        // We still need to account for the space in setupCanvas/renderReadRow, 
-        // effectively "reserving" the space when the toggle is ON, but keeping it clean.
+        // Draw background
+        this.ctx.fillStyle = 'rgba(240, 243, 244, 0.6)';
+        this.ctx.fillRect(0, y, this.canvasWidth, referenceHeight);
+
+        // Calculate pixels per base pair
+        const pixelsPerBp = this.canvasWidth / bpLength;
+        const charWidth = pixelsPerBp;
+
+        // Only render if we have a reasonable width per base
+        if (pixelsPerBp > 0.1) {
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+
+            // Choose font size based on zoom level
+            const showLetters = pixelsPerBp >= 8;
+            if (showLetters) {
+                const fontSize = Math.min(12, Math.floor(pixelsPerBp * 0.8));
+                this.ctx.font = `bold ${fontSize}px sans-serif`;
+            }
+
+            // Loop through sequence and draw color-coded bases
+            // We use the sequence string directly
+            for (let i = 0; i < sequence.length; i++) {
+                const base = sequence[i];
+                const x = i * pixelsPerBp;
+
+                // Get color for base
+                this.ctx.fillStyle = this.baseColors[base] || '#95a5a6';
+
+                if (pixelsPerBp >= 1) {
+                    // Draw block
+                    this.ctx.fillRect(x, y, pixelsPerBp, referenceHeight);
+
+                    // Draw letter if zoomed in enough
+                    if (showLetters) {
+                        this.ctx.fillStyle = 'white';
+                        this.ctx.fillText(base, x + pixelsPerBp / 2, y + referenceHeight / 2 + 1);
+                    }
+                } else {
+                    // Very small - draw as a line or thin block to avoid overhead
+                    // For performance, we could batch these but for 10kb reference it's fine
+                    this.ctx.fillRect(x, y, pixelsPerBp + 0.5, referenceHeight);
+                }
+            }
+        }
     }
 
     renderCoverage() {
