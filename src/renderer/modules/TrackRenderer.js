@@ -371,6 +371,36 @@ class TrackRenderer {
             buttonsContainer.appendChild(galleryBtn);
         }
 
+
+
+        // Add WIG Track Management toggle button
+        if (trackType === 'wigTracks') {
+            const wiggleBtn = document.createElement('button');
+            wiggleBtn.className = 'track-btn track-wiggle-btn';
+            wiggleBtn.innerHTML = '<i class="fas fa-sliders-h"></i>';
+            wiggleBtn.title = 'Toggle Management Interface';
+            wiggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // Find the management header
+                const trackElement = trackHeader.parentElement;
+                const managementHeader = trackElement.querySelector('.wig-management-header');
+
+                if (managementHeader) {
+                    if (managementHeader.style.display === 'none') {
+                        managementHeader.style.display = 'block';
+                        wiggleBtn.classList.remove('active');
+                        wiggleBtn.style.color = '';
+                    } else {
+                        managementHeader.style.display = 'none';
+                        wiggleBtn.classList.add('active');
+                        wiggleBtn.style.color = '#ccc';
+                    }
+                }
+            });
+            buttonsContainer.appendChild(wiggleBtn);
+        }
+
         trackHeader.appendChild(buttonsContainer);
 
         return trackHeader;
@@ -2437,8 +2467,8 @@ class TrackRenderer {
     }
 
     /**
- * Create SVG text label for gene with advanced anti-stretch protection
- */
+    * Create SVG text label for gene with advanced anti-stretch protection
+    */
     createSVGGeneText(gene, width, height, settings) {
         const geneName = this.genomeBrowser.getQualifierValue(gene.qualifiers, 'gene') ||
             this.genomeBrowser.getQualifierValue(gene.qualifiers, 'locus_tag') ||
