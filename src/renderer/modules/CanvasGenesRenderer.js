@@ -402,7 +402,74 @@ class CanvasGenesRenderer {
      */
     drawSpecializedShapePath(gene, width, height, isLeftTruncated, isRightTruncated) {
         const geneType = gene.type.toLowerCase();
-        const isForward = gene.strand != -1; // Use loose equality to handle string "-1"
+        const isForward = gene.strand != -1;
+
+        // Custom shapes for specific types
+        if (geneType === 'rrna') {
+            // rRNA: Geometric Ellipse
+            const rx = width / 2;
+            const ry = (height * 0.8) / 2;
+            this.ctx.beginPath();
+            this.ctx.ellipse(width / 2, height / 2, rx, ry, 0, 0, 2 * Math.PI);
+            this.ctx.closePath();
+            return;
+        }
+
+        if (geneType === 'trna') {
+            // tRNA: Cloverleaf or Rounded Rect
+            if (width < 15) {
+                // Simple rounded rect for small
+                const r = Math.min(height * 0.3, width * 0.2, 3);
+                this.ctx.beginPath();
+                this.ctx.roundRect(0, 0, width, height, r);
+                this.ctx.closePath();
+                return;
+            }
+
+            // Simplified Cloverleaf for Canvas
+            const centerX = width / 2;
+            const loopRadius = Math.min(height * 0.15, width * 0.12);
+            const stemWidth = Math.max(2, width * 0.15);
+            const loopY = height * 0.35;
+
+            // Visual approximation of cloverleaf using arcs and rects
+            this.ctx.beginPath();
+            // Stem
+            this.ctx.moveTo(centerX - stemWidth / 2, height);
+            this.ctx.lineTo(centerX - stemWidth / 2, loopY);
+            // Stem Crossbar (Loops base)
+            this.ctx.lineTo(centerX - stemWidth / 2 - loopRadius, loopY);
+            // Left Loop
+            this.ctx.arc(centerX - stemWidth / 2 - loopRadius, loopY - loopRadius, loopRadius, 0.5 * Math.PI, 2.5 * Math.PI);
+            // Top Loop
+            this.ctx.moveTo(centerX + loopRadius, loopY - loopRadius * 2);
+            this.ctx.arc(centerX, loopY - loopRadius * 2, loopRadius, 0, 2 * Math.PI);
+            // Right Loop
+            this.ctx.moveTo(centerX + stemWidth / 2 + loopRadius * 2, loopY - loopRadius);
+            this.ctx.arc(centerX + stemWidth / 2 + loopRadius, loopY - loopRadius, loopRadius, -0.5 * Math.PI, 1.5 * Math.PI);
+            // Back to stem
+            this.ctx.lineTo(centerX + stemWidth / 2, loopY);
+            this.ctx.lineTo(centerX + stemWidth / 2, height);
+            this.ctx.closePath();
+            return;
+        }
+
+        if (geneType === 'repeat_region') {
+            // Repeat Region: Stacked Capsules
+            const capsuleCount = 3;
+            const spacing = height < 12 ? 0 : height / 20;
+            const totalSpacing = spacing * (capsuleCount - 1);
+            const capsuleHeight = (height - totalSpacing) / capsuleCount;
+            const rx = capsuleHeight / 2;
+
+            this.ctx.beginPath();
+            for (let i = 0; i < capsuleCount; i++) {
+                const y = i * (capsuleHeight + spacing);
+                this.ctx.roundRect(0, y, width, capsuleHeight, rx);
+            }
+            // Note: closePath not needed for disjoint rects but good practice
+            return;
+        }
 
         switch (geneType) {
             case 'promoter':
@@ -411,20 +478,8 @@ class CanvasGenesRenderer {
             case 'terminator':
                 this.drawTerminatorPath(width, height, isForward);
                 break;
-            case 'regulatory':
-            case 'repeat_region':
-            case 'trna':
-            case 'rrna':
-            case 'mrna':
-            case 'comment':
-            case 'note':
-            case 'misc_feature':
-                // Most of these use a boxy shape or arrow similar to standard but with specific coloring
-                // Using standard arrow shape for now as specialized logic in SVG is complex 
-                // and mostly differs by gradient/color which is handled separately
-                this.drawStandardShapePath(gene, width, height, isLeftTruncated, isRightTruncated);
-                break;
             default:
+                // Fallback to standard arrow for others (mrna, etc)
                 this.drawStandardShapePath(gene, width, height, isLeftTruncated, isRightTruncated);
         }
     }
