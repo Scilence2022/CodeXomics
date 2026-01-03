@@ -29,6 +29,7 @@ class CanvasGenesRenderer {
 
         // Track gene positions for interaction
         this.geneHitRegions = [];
+        this.hoveredGene = null;
 
         // Canvas and context
         this.canvas = null;
@@ -120,6 +121,9 @@ class CanvasGenesRenderer {
 
         // Hover/Cursor handler
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+
+        // Right-click context menu
+        this.canvas.addEventListener('contextmenu', (e) => this.handleCanvasContextMenu(e));
 
         // Mouse leave
         this.canvas.addEventListener('mouseleave', () => {
@@ -236,8 +240,41 @@ class CanvasGenesRenderer {
         this.ctx.save();
         this.ctx.translate(x, y);
 
+        // Check for selection state (matching SVG logic)
+        const isSelected = this.genomeBrowser && this.genomeBrowser.selectedGene &&
+            this.genomeBrowser.selectedGene.gene &&
+            this.genomeBrowser.selectedGene.gene.start === gene.start &&
+            this.genomeBrowser.selectedGene.gene.end === gene.end &&
+            this.genomeBrowser.selectedGene.gene.type === gene.type;
+
+        if (isSelected) {
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = 'rgba(0, 100, 200, 0.8)';
+            // Also subtly scale selected gene if desired, but shadow is the main SVG effect
+        }
+
+        // Apply hover effects (consistent with SVG)
+        const isHovered = this.hoveredGene &&
+            this.hoveredGene.start === gene.start &&
+            this.hoveredGene.end === gene.end &&
+            this.hoveredGene.type === gene.type;
+
+        if (isHovered) {
+            this.ctx.globalAlpha = 0.8;
+            this.ctx.scale(1.02, 1.02); // subtle scale (SVG is 1.05, but canvas scaling might clipping edges if not careful)
+            // Center scaling by adjusting translation
+            const scaleOffsetW = (elementWidth * 0.02) / 2;
+            const scaleOffsetH = (height * 0.02) / 2;
+            this.ctx.translate(-scaleOffsetW, -scaleOffsetH);
+        }
+
         // Draw the shape
         this.drawGeneShape(gene, elementWidth, height, operonInfo, isLeftTruncated, isRightTruncated, strokeWidth);
+
+        // Reset global alpha and shadow for text and other elements
+        this.ctx.globalAlpha = 1.0;
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowColor = 'transparent';
 
         // Draw label if space permits
         if (elementWidth > 30) {
@@ -490,15 +527,31 @@ class CanvasGenesRenderer {
 
                 console.log('Canvas gene clicked:', region.gene);
 
-                // Trigger selection in GenomeBrowser
-                if (this.genomeBrowser && this.genomeBrowser.handleGeneClick) {
-                    // Create a synthetic event or pass what's needed
-                    // The SVG version just triggers handleGeneClick(gene, event)
-                    // We need to pass the gene object and operon info
+                // Trigger selection in TrackRenderer (consistent with SVG)
+                if (this.genomeBrowser && this.genomeBrowser.trackRenderer) {
+                    this.genomeBrowser.trackRenderer.showGeneDetails(region.gene, region.operonInfo);
+                }
+                return;
+            }
+        }
+    }
 
-                    // Emulate the DOM element that would be expected if needed,
-                    // but usually handleGeneClick uses the gene data object
-                    this.genomeBrowser.handleGeneClick(region.gene, event);
+    handleCanvasContextMenu(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        // Find clicked gene
+        for (let i = this.geneHitRegions.length - 1; i >= 0; i--) {
+            const region = this.geneHitRegions[i];
+            if (x >= region.x && x <= region.x + region.width &&
+                y >= region.y && y <= region.y + region.height) {
+
+                event.preventDefault();
+                console.log('Canvas gene context menu:', region.gene);
+
+                if (this.genomeBrowser && this.genomeBrowser.trackRenderer) {
+                    this.genomeBrowser.trackRenderer.showGeneContextMenu(event, region.gene);
                 }
                 return;
             }
@@ -510,20 +563,59 @@ class CanvasGenesRenderer {
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
 
-        let hovered = false;
+        let newHoveredGene = null;
         for (let i = this.geneHitRegions.length - 1; i >= 0; i--) {
             const region = this.geneHitRegions[i];
             if (x >= region.x && x <= region.x + region.width &&
                 y >= region.y && y <= region.y + region.height) {
-                hovered = true;
+                newHoveredGene = region.gene;
                 break;
             }
         }
 
-        this.canvas.style.cursor = hovered ? 'pointer' : 'default';
+        // Only re-render if hover state changed
+        const isSameGene = (a, b) => {
+            if (!a || !b) return a === b;
+            return a.start === b.start && a.end === b.end && a.type === b.type;
+        };
 
-        // Could implement tooltip showing here by calling out to a tooltip manager
-        // similar to how SVG titles or tippy.js works
+        if (!isSameGene(this.hoveredGene, newHoveredGene)) {
+            this.hoveredGene = newHoveredGene;
+            this.canvas.style.cursor = this.hoveredGene ? 'pointer' : 'default';
+
+            // Update tooltip (title attribute)
+            if (this.hoveredGene) {
+                const region = this.geneHitRegions.find(r => r.gene === this.hoveredGene);
+                this.canvas.title = this.formatTooltip(this.hoveredGene, region ? region.rowIndex : 0);
+            } else {
+                this.canvas.title = '';
+            }
+
+            this.render(); // Re-render for hover effect
+        }
+    }
+
+    formatTooltip(gene, rowIndex) {
+        const geneName = this.getGeneName(gene);
+        const geneInfo = `${geneName} (${gene.type})`;
+        const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
+
+        // Get operon info
+        const operonInfo = this.genomeBrowser ? this.genomeBrowser.getGeneOperonInfo(gene, this.operons) : { isInOperon: false };
+        const operonDisplay = operonInfo.isInOperon ? `\nOperon: ${operonInfo.operonName}` : '\nSingle gene';
+        const rowInfo = `\nRow: ${rowIndex + 1}`;
+
+        // Add truncation info if needed
+        let truncationInfo = '';
+        if (gene.start < this.viewport.start && gene.end > this.viewport.end) {
+            truncationInfo = '\n⚠️ Gene extends beyond both edges';
+        } else if (gene.start < this.viewport.start) {
+            truncationInfo = '\n⚠️ Gene extends beyond left edge';
+        } else if (gene.end > this.viewport.end) {
+            truncationInfo = '\n⚠️ Gene extends beyond right edge';
+        }
+
+        return `${geneInfo}\nPosition: ${positionInfo}${operonDisplay}${rowInfo}${truncationInfo}`;
     }
 
     // Utility for dragging
