@@ -10221,12 +10221,12 @@ This action cannot be undone.`;
                 </div>
                 <div class="form-group">
                     <label for="genesGeneHeight">Gene Element Height (px):</label>
-                    <input type="number" id="genesGeneHeight" min="12" max="40" value="${settings.geneHeight || 12}">
+                    <input type="number" id="genesGeneHeight" min="12" max="60" value="${settings.geneHeight || 24}">
                     <div class="help-text">Height of individual gene elements. Affects spacing between gene rows.</div>
                 </div>
                 <div class="form-group">
                     <label for="genesFontSize">Gene Name Font Size (px):</label>
-                    <input type="number" id="genesFontSize" min="8" max="16" value="${settings.fontSize || 11}">
+                    <input type="number" id="genesFontSize" min="8" max="48" value="${settings.fontSize || 24}">
                     <div class="help-text">Font size for gene names and labels.</div>
                 </div>
                 <div class="form-group">
@@ -10744,9 +10744,10 @@ This action cannot be undone.`;
             genes: {
                 maxRows: 6,
                 showOperonsSameRow: false,
-                height: 120,
-                geneHeight: 12,
-                fontSize: 11,
+                height: 120, // Default track height
+                geneHeight: 24, // Updated default to 24px as requested
+                displayType: 'standard',
+                fontSize: 24, // Updated default to 24px as requested
                 fontFamily: 'Arial, sans-serif',
                 layoutMode: 'compact', // 'compact' or 'groupByType'
                 enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false, // Inherit from global setting, default to true
