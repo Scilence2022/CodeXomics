@@ -7218,32 +7218,75 @@ class TrackRenderer {
         btn.title = `Toggle ${labelText}`;
         btn.style.cssText = `padding: 2px 5px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; background: white; cursor: pointer; transition: background 0.2s, color 0.2s;`;
 
+        // Map state keys to renderer options for lookup
+        const optionMap = {
+            'readsCoverage': 'showCoverage',
+            'readsReference': 'showReference',
+            'readsReads': 'showReads'
+        };
+        const optionKey = optionMap[stateKey];
+
+        // Initialize elementVisibilityStates based on trackSettings if available
+        if (this.trackSettings && this.trackSettings['reads'] && this.trackSettings['reads'][stateKey] !== undefined) {
+            // If setting exists, use it
+            this.elementVisibilityStates[stateKey] = this.trackSettings['reads'][stateKey] !== false;
+        }
+
+        // If we have a mapped setting key, check that too (it's the preferred key)
+        if (optionKey && this.trackSettings && this.trackSettings['reads'] && this.trackSettings['reads'][optionKey] !== undefined) {
+            this.elementVisibilityStates[stateKey] = this.trackSettings['reads'][optionKey] !== false;
+        }
+
+        // Default to true if no setting is found
+        if (this.elementVisibilityStates[stateKey] === undefined) {
+            this.elementVisibilityStates[stateKey] = true;
+        }
+
         if (!this.elementVisibilityStates[stateKey]) {
             btn.style.background = '#eee';
             btn.style.color = '#aaa';
+            btn.classList.remove('active');
+        } else {
+            btn.classList.add('active');
         }
+
+        // Mark button for easy finding later
+        btn.dataset.toggleType = stateKey;
 
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.elementVisibilityStates[stateKey] = !this.elementVisibilityStates[stateKey];
 
-            if (this.elementVisibilityStates[stateKey]) {
+            // Toggle state
+            this.elementVisibilityStates[stateKey] = !this.elementVisibilityStates[stateKey];
+            const newValue = this.elementVisibilityStates[stateKey];
+
+            // Update visuals
+            if (newValue) {
                 btn.style.background = 'white';
                 btn.style.color = '#333';
+                btn.classList.add('active');
             } else {
                 btn.style.background = '#eee';
                 btn.style.color = '#aaa';
+                btn.classList.remove('active');
             }
 
-            // Map state keys to renderer options
-            const optionMap = {
-                'readsCoverage': 'showCoverage',
-                'readsReference': 'showReference',
-                'readsReads': 'showReads'
-            };
+            // Update settings if mapped
+            if (optionKey) {
+                // Get current settings or init
+                if (!this.trackSettings) this.trackSettings = {};
+                if (!this.trackSettings['reads']) this.trackSettings['reads'] = {};
 
-            const optionKey = optionMap[stateKey];
-            const newValue = this.elementVisibilityStates[stateKey];
+                // Update and save
+                this.trackSettings['reads'][optionKey] = newValue;
+                // Also update the legacy key if it exists to be safe
+                this.trackSettings['reads'][stateKey] = newValue;
+
+                // Persist settings
+                if (typeof this.saveTrackSettings === 'function') {
+                    this.saveTrackSettings('reads', this.trackSettings['reads']);
+                }
+            }
 
             // Update all active CanvasReadsRenderers
             if (this.canvasRenderers) {
@@ -11961,6 +12004,16 @@ This action cannot be undone.`;
         console.log(`🔧 [applySettingsToTrack] Stored settings for ${trackType}:`, this.trackSettings[trackType]);
         console.log(`🔧 [applySettingsToTrack] Stored renderingMode: ${this.trackSettings[trackType].renderingMode}`);
 
+        // Sync UI Buttons (specifically for Reads track)
+        if (trackType === 'reads') {
+            this.syncReadsToggleButtons(settings);
+        }
+
+        // Sync UI Buttons (specifically for Reads track)
+        if (trackType === 'reads') {
+            this.syncReadsToggleButtons(settings);
+        }
+
         // Special handling for sequence track settings
         if (trackType === 'sequence' && this.genomeBrowser.sequenceUtils) {
             console.log('🔧 [TrackRenderer] Applying sequence settings...');
@@ -14071,6 +14124,53 @@ This action cannot be undone.`;
         if (applyImmediately) {
             console.log(`🔧 [updateTrackSetting] Applying settings immediately for ${trackType}`);
             this.applySettingsToTrack(trackType, this.trackSettings[trackType]);
+        }
+    }
+
+    /**
+     * Sync header toggle buttons with current settings
+     */
+    syncReadsToggleButtons(settings) {
+        // Map settings keys to toggle types
+        const settingToToggle = {
+            'showCoverage': 'readsCoverage',
+            'showReference': 'readsReference',
+            'showReads': 'readsReads'
+        };
+
+        Object.keys(settingToToggle).forEach(settingKey => {
+            const toggleType = settingToToggle[settingKey];
+            // Find buttons with this toggle type
+            const buttons = document.querySelectorAll(`.track-reads-toggle-btn[data-toggle-type="${toggleType}"]`);
+
+            buttons.forEach(btn => {
+                // Determine state: default to true if undefined, otherwise use setting value
+                const isActive = settings[settingKey] !== false;
+
+                // Update internal state
+                this.elementVisibilityStates[toggleType] = isActive;
+
+                // Update visual state
+                if (isActive) {
+                    btn.style.background = 'white';
+                    btn.style.color = '#333';
+                    btn.classList.add('active');
+                } else {
+                    btn.style.background = '#eee';
+                    btn.style.color = '#aaa';
+                    btn.classList.remove('active');
+                }
+            });
+        });
+
+        // Also update any active renderers to ensure they match current settings
+        // This handles the case where settings change from the panel -> renderers need update
+        if (this.canvasRenderers) {
+            this.canvasRenderers.forEach((renderer) => {
+                if (renderer && typeof renderer.updateOptions === 'function') {
+                    renderer.updateOptions(settings);
+                }
+            });
         }
     }
 
