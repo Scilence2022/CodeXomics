@@ -1211,16 +1211,34 @@ class TrackRenderer {
     renderGeneElementsSVG(trackContent, geneRows, viewport, operons, layout, settings) {
         // Force layout calculation to get accurate width
         trackContent.style.width = '100%';
-        const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+
+        // Improved width calculation with better fallback to prevent distortion
+        let searchWidth = 0;
+        if (trackContent.getBoundingClientRect().width > 100) {
+            searchWidth = trackContent.getBoundingClientRect().width;
+        } else if (trackContent.offsetWidth > 100) {
+            searchWidth = trackContent.offsetWidth;
+        } else {
+            // Fallback: try to find parent track-container or use window width
+            const parent = trackContent.closest('.track-content') || trackContent.parentElement;
+            if (parent && parent.getBoundingClientRect().width > 100) {
+                searchWidth = parent.getBoundingClientRect().width;
+            } else {
+                // Last resort: window width minus approximate sidebar/padding
+                searchWidth = window.innerWidth - 300; // Approx sidebar width
+            }
+        }
+        const containerWidth = searchWidth || 800;
 
         // Create SVG container that fills width but preserves text aspect ratio
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         // Calculate SVG content height (excluding ruler)
         const svgContentHeight = layout.totalHeight - layout.rulerHeight;
 
-        // Use explicit pixel width to prevent distortion/stretching
-        // This ensures viewBox matches logic dimensions exactly 1:1
-        svg.setAttribute('width', containerWidth);
+        // Use 100% width to ensure it always fills the available space (User Request)
+        // We use preserveAspectRatio="none" to allow exact fitting, but we rely on 
+        // accurate containerWidth for the viewBox to minimize distortion.
+        svg.setAttribute('width', '100%');
         svg.setAttribute('height', svgContentHeight);
         svg.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContentHeight}`);
         svg.setAttribute('preserveAspectRatio', 'none'); // Safe now because width matches viewBox width
