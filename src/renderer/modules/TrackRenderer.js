@@ -87,6 +87,12 @@ class TrackRenderer {
         // Track header visibility state - survives track recreation
         this.headerStates = new Map();
 
+        // UI Element visibility states - persists across navigation
+        this.elementVisibilityStates = {
+            genesRuler: true,
+            wigManagement: true
+        };
+
         // Track settings storage
         this.trackSettings = {};
 
@@ -341,20 +347,31 @@ class TrackRenderer {
             rulerBtn.className = 'track-btn track-ruler-btn';
             rulerBtn.innerHTML = '<i class="fas fa-ruler-horizontal"></i>';
             rulerBtn.title = 'Show/Hide Ruler';
+
+            // Set initial state based on persistent storage
+            if (!this.elementVisibilityStates.genesRuler) {
+                rulerBtn.classList.add('active'); // active here means hidden/dimmed based on previous logic
+                rulerBtn.style.color = '#ccc';
+            }
+
             rulerBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 // Find the track content and then the ruler container
                 const trackElement = trackHeader.parentElement;
                 const rulerContainer = trackElement.querySelector('.detailed-ruler-container');
+
+                // Toggle state
+                this.elementVisibilityStates.genesRuler = !this.elementVisibilityStates.genesRuler;
+
                 if (rulerContainer) {
-                    if (rulerContainer.style.display === 'none') {
+                    if (this.elementVisibilityStates.genesRuler) {
                         rulerContainer.style.display = 'block';
-                        rulerBtn.classList.remove('active'); // active means hidden? No, let's keep it simple.
-                        rulerBtn.style.color = ''; // Reset color
+                        rulerBtn.classList.remove('active');
+                        rulerBtn.style.color = '';
                     } else {
                         rulerContainer.style.display = 'none';
-                        rulerBtn.classList.add('active'); // Maybe style it to show it's disabled/hidden
-                        rulerBtn.style.color = '#ccc'; // Grey out to indicate hidden
+                        rulerBtn.classList.add('active');
+                        rulerBtn.style.color = '#ccc';
                     }
                 }
             });
@@ -379,6 +396,13 @@ class TrackRenderer {
             wiggleBtn.className = 'track-btn track-wiggle-btn';
             wiggleBtn.innerHTML = '<i class="fas fa-sliders-h"></i>';
             wiggleBtn.title = 'Toggle Management Interface';
+
+            // Set initial state based on persistent storage
+            if (!this.elementVisibilityStates.wigManagement) {
+                wiggleBtn.classList.add('active');
+                wiggleBtn.style.color = '#ccc';
+            }
+
             wiggleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
 
@@ -386,8 +410,11 @@ class TrackRenderer {
                 const trackElement = trackHeader.parentElement;
                 const managementHeader = trackElement.querySelector('.wig-management-header');
 
+                // Toggle state
+                this.elementVisibilityStates.wigManagement = !this.elementVisibilityStates.wigManagement;
+
                 if (managementHeader) {
-                    if (managementHeader.style.display === 'none') {
+                    if (this.elementVisibilityStates.wigManagement) {
                         managementHeader.style.display = 'block';
                         wiggleBtn.classList.remove('active');
                         wiggleBtn.style.color = '';
@@ -801,6 +828,8 @@ class TrackRenderer {
 
         return track;
     }
+
+
 
     /**
      * Create section for out-of-view BLAST results with navigation options
@@ -7155,6 +7184,10 @@ class TrackRenderer {
     createDetailedRuler(chromosome) {
         const rulerContainer = document.createElement('div');
         rulerContainer.className = 'detailed-ruler-container';
+
+        // Apply persistent visibility state
+        const displayStyle = this.elementVisibilityStates && !this.elementVisibilityStates.genesRuler ? 'none' : 'block';
+
         rulerContainer.style.cssText = `
             position: relative;
             height: 35px;
@@ -7163,6 +7196,7 @@ class TrackRenderer {
             margin-bottom: 0px;
             z-index: 10;
             overflow: visible;
+            display: ${displayStyle};
         `;
 
         const canvas = document.createElement('canvas');
@@ -8858,6 +8892,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     createWIGManagementHeader(wigTracks) {
         const header = document.createElement('div');
         header.className = 'wig-management-header';
+
+        // Apply persistent visibility state
+        const displayStyle = this.elementVisibilityStates && !this.elementVisibilityStates.wigManagement ? 'none' : 'block';
+
         header.style.cssText = `
             background: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -8865,6 +8903,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             padding: 8px;
             margin-bottom: 10px;
             font-size: 12px;
+            display: ${displayStyle};
         `;
 
         const title = document.createElement('div');
