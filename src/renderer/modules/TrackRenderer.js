@@ -7235,8 +7235,34 @@ class TrackRenderer {
                 btn.style.color = '#aaa';
             }
 
+            // Map state keys to renderer options
+            const optionMap = {
+                'readsCoverage': 'showCoverage',
+                'readsReference': 'showReference',
+                'readsReads': 'showReads'
+            };
+
+            const optionKey = optionMap[stateKey];
+            const newValue = this.elementVisibilityStates[stateKey];
+
+            // Update all active CanvasReadsRenderers
+            if (this.canvasRenderers) {
+                this.canvasRenderers.forEach((renderer) => {
+                    // Check if it has the updateOptions method (is a CanvasReadsRenderer)
+                    if (renderer && typeof renderer.updateOptions === 'function') {
+                        renderer.updateOptions({
+                            [optionKey]: newValue
+                        });
+                    }
+                });
+            }
+
+            // Force immediate update by invalidating cache if possible or just calling update
+            // Using requestAnimationFrame to ensure the click event propagates first
             if (this.genomeBrowser && typeof this.genomeBrowser.updateCurrentView === 'function') {
-                this.genomeBrowser.updateCurrentView();
+                requestAnimationFrame(() => {
+                    this.genomeBrowser.updateCurrentView();
+                });
             }
         });
 
@@ -12705,18 +12731,10 @@ This action cannot be undone.`;
             console.warn(`🔍 [createReferenceVisualization] No reference sequence available, creating placeholder`);
 
             // Create placeholder text when no reference sequence is available
-            const placeholderDiv = document.createElement('div');
-            placeholderDiv.style.cssText = `
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100%;
-                font-family: Arial, sans-serif;
-                font-size: 10px;
-                color: #666;
-            `;
-            placeholderDiv.textContent = 'Reference sequence not available';
-            referenceContainer.appendChild(placeholderDiv);
+            // Do not create placeholder text when no reference sequence is available
+            // Just return early to collapse the section
+            console.warn(`🔍 [createReferenceVisualization] No reference sequence available, skipping (clean view)`);
+            return 0; // Return 0 height
         } else {
             // Use the same high-quality renderer as Single-line sequence track
             const referenceDisplay = this.createReferenceSequenceDisplay(referenceSequence, viewport, referenceHeight, settings);
@@ -12955,19 +12973,9 @@ This action cannot be undone.`;
             console.warn(`🧬 [createGenesSequenceVisualization] No reference sequence available, creating placeholder`);
 
             // Create placeholder text when no reference sequence is available
-            const placeholderDiv = document.createElement('div');
-            placeholderDiv.style.cssText = `
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100%;
-                font-family: Arial, sans-serif;
-                font-size: 11px;
-                color: #6c757d;
-                font-style: italic;
-            `;
-            placeholderDiv.textContent = 'Reference sequence not available';
-            sequenceContainer.appendChild(placeholderDiv);
+            // Do not create placeholder text when no reference sequence is available
+            console.warn(`🧬 [createGenesSequenceVisualization] No reference sequence available, skipping (clean view)`);
+            return 0; // Return 0 height
         } else {
             // Use the same high-quality renderer as Single-line sequence track
             const sequenceDisplay = this.createReferenceSequenceDisplay(referenceSequence, viewport, sequenceHeight, settings);
