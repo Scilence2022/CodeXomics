@@ -17,21 +17,6 @@ class LLMConfigManager {
                     'gpt-5.2',              // Latest flagship for coding/agentic tasks
                     'gpt-5.1',              // Previous GPT-5 generation
                     'gpt-5.2-codex',        // Specialized for long coding tasks
-
-                    // o-Series (Reasoning Models)
-                    'o3',                   // Latest reasoning model
-                    'o3-mini',              // Compact reasoning model
-                    'o4-mini',              // Fast reasoning model
-                    'o1',                   // Original reasoning model
-
-                    // GPT-4o Series (Current stable)
-                    'gpt-4o',               // Multimodal flagship
-                    'gpt-4o-mini',          // Fast and efficient
-
-                    // GPT-4 Series (Legacy)
-                    'gpt-4-turbo',          // GPT-4 Turbo
-                    'gpt-4',                // Original GPT-4
-                    'gpt-3.5-turbo'         // Legacy fast model
                 ]
             },
             anthropic: {
@@ -46,9 +31,6 @@ class LLMConfigManager {
                     'claude-sonnet-4.5-20250929',      // Balanced intelligence and speed
                     'claude-haiku-4.5-20251001',       // Fast and cost-efficient
 
-                    // Claude 3.5 Series (Previous generation, still supported)
-                    'claude-3-5-sonnet-20241022',      // Previous Sonnet version
-                    'claude-3-5-haiku-20241022'        // Previous Haiku version
                 ]
             },
             // Google - Direct API access to Gemini models
@@ -64,16 +46,8 @@ class LLMConfigManager {
 
                     // Gemini 2.0 Series (Current stable)
                     'gemini-2.0-flash',         // Latest multimodal model
-                    'gemini-2.0-flash-exp',     // Experimental version
 
-                    // Gemini 1.5 Series (Legacy)
-                    'gemini-1.5-pro-latest',    // Large context, most capable
-                    'gemini-1.5-flash-latest',  // Fast, efficient
-                    'gemini-1.5-pro',           // Legacy 1.5 Pro
-                    'gemini-1.5-flash',         // Legacy 1.5 Flash
 
-                    // Gemini 1.0 Series (Deprecated)
-                    'gemini-pro'                // Legacy 1.0 Pro
                 ]
             },
             deepseek: {
@@ -81,7 +55,12 @@ class LLMConfigManager {
                 apiKey: '',
                 model: 'deepseek-chat',
                 baseUrl: 'https://api.deepseek.com/v1',
-                enabled: false
+                enabled: false,
+                availableModels: [
+                    // DeepSeek Series (Latest - 2026)
+                    'deepseek-chat',
+                    'deepseek-chat-exp',
+                ]
             },
             siliconflow: {
                 name: 'SiliconFlow',
@@ -90,7 +69,9 @@ class LLMConfigManager {
                 baseUrl: 'https://api.siliconflow.cn/v1',
                 enabled: false,
                 availableModels: [
-                    // 🤖 Qwen3 Coder Series (Largest - 480B)
+                    // 🤖 Qwen Series (Arranged by size: high to low)
+
+                    // Qwen3 Coder Series (Largest - 480B)
                     'Qwen/Qwen3-Coder-480B-A35B-Instruct',      // 480B total, 35B active
 
                     // Qwen3 235B Series  
@@ -106,23 +87,77 @@ class LLMConfigManager {
                     'Qwen/Qwen3-30B-A3B-Instruct-2507',         // 30B total, 3B active
                     'Qwen/Qwen3-Coder-30B-A3B-Instruct',        // 30B total, 3B active (Coder)
 
+                    // Qwen3 Standard Series (32B and below)
+                    'Qwen/Qwen3-32B',                           // 32B
+                    'Qwen/QwQ-32B',                            // 32B (Reasoning)
+                    'Qwen/QwQ-32B-Preview',                    // 32B (Reasoning Preview)
+                    'Qwen/Qwen3-14B',                           // 14B
+                    'Qwen/Qwen3-8B',                            // 8B
+
+                    // Qwen2.5 Coder Series (Legacy)
+                    'Qwen/Qwen2.5-Coder-32B-Instruct',         // 32B (Legacy)
+                    'Qwen/Qwen2.5-Coder-7B-Instruct',          // 7B (Legacy)
+
+                    // Qwen Long Context Series
+                    'Tongyi-Zhiwen/QwenLong-L1-32B',           // 32B (Long context)
 
                     // 🧠 DeepSeek Series (Arranged by capability and size)
+
+                    // DeepSeek Pro Series
                     'Pro/deepseek-ai/DeepSeek-R1',             // Latest R1 Pro
+                    'Pro/deepseek-ai/DeepSeek-V3',             // V3 Pro
+                    'Pro/THUDM/glm-4-9b-chat',                 // GLM Pro variant
+                    'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', // R1 Distilled Pro
+
+                    // DeepSeek Standard Series
+                    'deepseek-ai/DeepSeek-R1',                 // Latest R1
                     'deepseek-ai/DeepSeek-V3.2',               // V3.2
+                    'deepseek-ai/DeepSeek-V3',                 // V3
+                    'deepseek-ai/DeepSeek-V3.1-Terminus',      // V3.1 Terminus
+                    'deepseek-ai/DeepSeek-V2.5',               // V2.5
+
+                    // DeepSeek R1 Distilled Series (by size)
+                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B', // 32B Distilled
+                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B', // 14B Distilled
+                    'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B',    // 8B R1
+                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',  // 7B Distilled
 
                     // 🌙 Kimi Series (Moonshot AI)
+
                     'Pro/moonshotai/Kimi-K2-Instruct-0905',    // Kimi K2 Pro (Latest)
+                    'moonshotai/Kimi-K2-Instruct',             // Kimi K2 Standard
                     'moonshotai/Kimi-K2-Thinking',             // Kimi K2 Thinking (Reasoning)
 
-                    // 🔮 GLM Series (Zhipu AI)
+                    // 🔮 GLM Series (Zhipu AI - Arranged by version and size)
+
+                    // GLM Latest Series
                     'Pro/zai-org/GLM-4.7',                     // GLM-4.7 Pro (Latest)
                     'zai-org/GLM-4.6V',                        // GLM-4.6V (Vision)
                     'zai-org/GLM-4.6',                         // GLM-4.6
+                    'zai-org/GLM-4.5',                         // GLM-4.5
                     'zai-org/GLM-4.5-Air',                     // GLM-4.5-Air (Lightweight)
 
-                    // MiniMax Series
+                    // GLM THUDM Series (by size)
+                    'THUDM/GLM-Z1-32B-0414',                   // 32B Z1
+                    'THUDM/GLM-4-32B-0414',                    // 32B GLM-4
+                    'THUDM/GLM-Z1-Rumination-32B-0414',       // 32B Z1 Rumination
+                    'THUDM/GLM-4-9B-0414',                     // 9B GLM-4
+                    'THUDM/glm-4-9b-chat',                     // 9B Chat
+
+                    // 🏢 Enterprise & Commercial Models
+
+                    // Baidu ERNIE Series
+                    'baidu/ERNIE-4.5-300B-A47B',              // 300B ERNIE (47B active)
+
+                    // Other Large Enterprise Models
+                    'ascend-tribe/pangu-pro-moe',             // PanGu Pro MoE
+                    'tencent/Hunyuan-A13B-Instruct',          // Hunyuan 13B
                     'MiniMaxAI/MiniMax-M2',                   // MiniMax M2 (Latest)
+                    'TeleAI/TeleChat2',                       // TeleChat2
+
+                    // InternLM Series (by size)
+                    'internlm/internlm2_5-20b-chat',          // 20B InternLM
+                    'internlm/internlm2_5-7b-chat'            // 7B InternLM
 
                 ]
             },
@@ -146,17 +181,14 @@ class LLMConfigManager {
                     'z-ai/glm-4.5v',        // GLM-4.5V (Vision capable)
 
                     // Google Gemini Series
-                    'google/gemini-2.0-flash',    // Latest multimodal, competitive pricing
-                    'google/gemini-1.5-pro-latest',   // Large context, most capable
-                    'google/gemini-1.5-flash-latest', // Fast, efficient
+                    'google/gemini-3-flash-preview',    // Latest multimodal, competitive pricing
+                    'google/gemini-3.0-pro',
 
                     // Anthropic Claude Series
-                    'anthropic/claude-3-5-sonnet-20241022',
-                    'anthropic/claude-3-5-haiku-20241022',
+                    'anthropic/claude-sonnet-4.5-20250929',
+                    'anthropic/claude-haiku-4.5-20251001',
 
-                    // Fallback models
-                    'openai/gpt-4o',
-                    'openai/gpt-4-turbo'
+
                 ]
             },
             local: {
