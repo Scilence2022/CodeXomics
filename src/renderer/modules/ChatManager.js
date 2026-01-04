@@ -4688,7 +4688,7 @@ class ChatManager {
             }
 
             // Get maximum function call rounds from configuration
-            const maxRounds = this.configManager.get('llm.functionCallRounds', 3);
+            const maxRounds = this.configManager.get('llm.functionCallRounds', 10);
             const enableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion', true);
             console.log('🔧 Maximum function call rounds from config:', maxRounds);
             console.log('🔧 Early completion enabled:', enableEarlyCompletion);

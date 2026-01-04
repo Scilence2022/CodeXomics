@@ -13,54 +13,54 @@ class ChatBoxSettingsManager {
             showDetailedToolData: true, // 新增：显示详细数据展示
             hideThinkingAfterConversation: false,
             preserveThinkingHistory: true, // 新增：保留历史思考过程
-            
+
             // Behavior settings
             autoScrollToBottom: true,
             showTimestamps: false,
-            
+
             // History settings
             maxHistoryMessages: 1000,
             enableHistorySearch: true,
-            
+
             // Performance settings
             responseTimeout: 30000, // 30 seconds
             typingIndicatorDelay: 500,
-            
+
             // UI settings
             animateThinking: true,
             compactMode: false,
             fontSize: 'medium', // small, medium, large
             theme: 'auto', // auto, light, dark
-            
+
             // Advanced settings
             debugMode: false,
             logToolCalls: false,
             enableAbortButton: true,
             useOptimizedPrompt: true, // 新增：使用优化的系统提示
             enableDynamicToolsRegistry: true, // 新增：启用Dynamic Tools Registry
-            
+
             // Tool priority settings
             toolPriority: ['local', 'genomics', 'plugins', 'mcp'], // 工具优先级顺序
-            
+
             // Window settings
             rememberPosition: true,
             rememberSize: true,
             startMinimized: false,
-            
+
             // Multi-Agent System settings
             agentSystemEnabled: false,
             agentAutoOptimize: true,
             agentShowInfo: true,
             agentMemoryEnabled: true,
             agentCacheEnabled: true,
-            
+
             // Memory System settings
             memorySystemEnabled: true,
             memoryCacheEnabled: true,
             memoryOptimizationEnabled: true,
             memoryCleanupInterval: 300000, // 5 minutes
             memoryMaxEntries: 10000,
-            
+
             // Multi-Agent LLM settings
             agentLLMProvider: 'auto', // auto, openai, anthropic, google, local
             agentLLMModel: 'auto', // auto or specific model
@@ -70,12 +70,12 @@ class ChatBoxSettingsManager {
             agentLLMRetryAttempts: 3,
             agentLLMUseSystemPrompt: true,
             agentLLMEnableFunctionCalling: true,
-            
+
             // Function Call Settings
-            functionCallRounds: 5,
+            functionCallRounds: 10,
             enableEarlyCompletion: true,
             completionThreshold: 0.7,
-            
+
             // Model Selection Settings
             chatboxModelType: 'auto',
             chatboxLLMProvider: 'auto', // New: specific provider override
@@ -86,7 +86,7 @@ class ChatBoxSettingsManager {
             chatboxLLMUseSystemPrompt: true,
             chatboxLLMEnableFunctionCalling: true
         };
-        
+
         this.loadSettings();
         this.setupEventListeners();
     }
@@ -97,12 +97,12 @@ class ChatBoxSettingsManager {
     loadSettings() {
         const savedSettings = this.configManager.get('chatboxSettings', {});
         this.settings = { ...this.settings, ...savedSettings };
-        
+
         // Sync Function Call Settings from the main LLM configuration
         const llmFunctionCallRounds = this.configManager.get('llm.functionCallRounds');
         const llmEnableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion');
         const llmCompletionThreshold = this.configManager.get('llm.completionThreshold');
-        
+
         if (llmFunctionCallRounds !== undefined) {
             this.settings.functionCallRounds = llmFunctionCallRounds;
         }
@@ -112,7 +112,7 @@ class ChatBoxSettingsManager {
         if (llmCompletionThreshold !== undefined) {
             this.settings.completionThreshold = llmCompletionThreshold;
         }
-        
+
         console.log('🔧 ChatBox settings loaded:', this.settings);
         console.log('🔄 Synced Function Call Settings from LLM config');
     }
@@ -122,7 +122,7 @@ class ChatBoxSettingsManager {
      */
     saveSettings() {
         this.configManager.set('chatboxSettings', this.settings);
-        
+
         // Sync Function Call Settings to the main LLM configuration
         if (this.settings.hasOwnProperty('functionCallRounds')) {
             this.configManager.set('llm.functionCallRounds', this.settings.functionCallRounds);
@@ -133,11 +133,11 @@ class ChatBoxSettingsManager {
         if (this.settings.hasOwnProperty('completionThreshold')) {
             this.configManager.set('llm.completionThreshold', this.settings.completionThreshold);
         }
-        
+
         console.log('💾 ChatBox settings saved:', this.settings);
         console.log('🔄 Synced Function Call Settings to LLM config');
         console.log('📊 Current LLM functionCallRounds:', this.configManager.get('llm.functionCallRounds'));
-        
+
         // Emit settings changed event
         this.emit('settingsChanged', this.settings);
     }
@@ -167,18 +167,18 @@ class ChatBoxSettingsManager {
      */
     updateSettings(newSettings) {
         let hasChanges = false;
-        
+
         for (const [key, value] of Object.entries(newSettings)) {
             if (this.settings.hasOwnProperty(key) && this.settings[key] !== value) {
                 this.settings[key] = value;
                 hasChanges = true;
             }
         }
-        
+
         if (hasChanges) {
             this.saveSettings();
         }
-        
+
         return hasChanges;
     }
 
@@ -210,12 +210,12 @@ class ChatBoxSettingsManager {
             rememberPosition: true,
             rememberSize: true,
             startMinimized: false,
-            
+
             // Function Call Settings (duplicated in defaultSettings)
-            functionCallRounds: 5,
+            functionCallRounds: 10,
             enableEarlyCompletion: true,
             completionThreshold: 0.7,
-            
+
             // Model Selection Settings
             chatboxModelType: 'auto',
             chatboxLLMTemperature: 0.7,
@@ -224,7 +224,7 @@ class ChatBoxSettingsManager {
             chatboxLLMUseSystemPrompt: true,
             chatboxLLMEnableFunctionCalling: true
         };
-        
+
         this.settings = { ...defaultSettings };
         this.saveSettings();
         console.log('🔄 ChatBox settings reset to defaults');
@@ -242,31 +242,31 @@ class ChatBoxSettingsManager {
      */
     validateSettings() {
         const errors = [];
-        
+
         // Validate numeric settings
         if (typeof this.settings.maxHistoryMessages !== 'number' || this.settings.maxHistoryMessages < 1) {
             errors.push('maxHistoryMessages must be a positive number');
         }
-        
+
         if (typeof this.settings.responseTimeout !== 'number' || this.settings.responseTimeout < 1000) {
             errors.push('responseTimeout must be at least 1000ms');
         }
-        
+
         if (typeof this.settings.typingIndicatorDelay !== 'number' || this.settings.typingIndicatorDelay < 0) {
             errors.push('typingIndicatorDelay must be a non-negative number');
         }
-        
+
         // Validate enum settings
         const validFontSizes = ['small', 'medium', 'large'];
         if (!validFontSizes.includes(this.settings.fontSize)) {
             errors.push('fontSize must be one of: ' + validFontSizes.join(', '));
         }
-        
+
         const validThemes = ['auto', 'light', 'dark'];
         if (!validThemes.includes(this.settings.theme)) {
             errors.push('theme must be one of: ' + validThemes.join(', '));
         }
-        
+
         return errors;
     }
 
@@ -281,11 +281,11 @@ class ChatBoxSettingsManager {
                 this.setSetting(key, value);
             });
         }
-        
+
         // Setup chatbox-specific model event listeners
         this.setupChatboxModelEventListeners();
     }
-    
+
     /**
      * Setup event listeners for chatbox-specific model configuration
      */
@@ -298,25 +298,25 @@ class ChatBoxSettingsManager {
             });
         }
     }
-    
+
     /**
      * Update model options based on selected provider
      */
     updateChatboxModelOptions() {
         const providerSelect = document.getElementById('chatboxLLMProvider');
         const modelSelect = document.getElementById('chatboxLLMModel');
-        
+
         if (!providerSelect || !modelSelect) return;
-        
+
         const selectedProvider = providerSelect.value;
-        
+
         // Clear existing options
         modelSelect.innerHTML = '<option value="auto">Auto (Use provider default)</option>';
-        
+
         // Get LLM configuration if available
         if (window.llmConfigManager && selectedProvider !== 'auto') {
             const provider = window.llmConfigManager.providers[selectedProvider];
-            
+
             if (provider && provider.enabled) {
                 if (provider.models) {
                     Object.entries(provider.models).forEach(([modelId, modelName]) => {
@@ -350,7 +350,7 @@ class ChatBoxSettingsManager {
         if (window.llmConfigManager && window.llmConfigManager.modelTypes && window.llmConfigManager.modelTypes.main) {
             const mainConfig = window.llmConfigManager.modelTypes.main;
             const provider = window.llmConfigManager.providers[mainConfig.provider];
-            
+
             if (provider && provider.enabled) {
                 return {
                     provider: mainConfig.provider,
@@ -361,7 +361,7 @@ class ChatBoxSettingsManager {
                 };
             }
         }
-        
+
         // Fallback to first enabled provider
         if (window.llmConfigManager && window.llmConfigManager.providers) {
             for (const [providerName, provider] of Object.entries(window.llmConfigManager.providers)) {
@@ -376,7 +376,7 @@ class ChatBoxSettingsManager {
                 }
             }
         }
-        
+
         return null;
     }
 
@@ -399,8 +399,8 @@ class ChatBoxSettingsManager {
             modal = this.createSettingsModal();
             document.body.appendChild(modal);
         }
-        
-        
+
+
         // Add reset to defaults button handler
         const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
         if (resetDefaultsBtn) {
@@ -409,7 +409,7 @@ class ChatBoxSettingsManager {
                 this.populateSettingsForm(modal);
             });
         }
-        
+
         // Add reset position button handler
         const resetPositionBtn = modal.querySelector('.reset-position-btn');
         if (resetPositionBtn) {
@@ -424,14 +424,14 @@ class ChatBoxSettingsManager {
                 }
             });
         }
-        
+
         // Populate current settings
         this.populateSettingsForm(modal);
-        
+
         // Show modal with proper positioning
         modal.style.display = 'block';
         modal.classList.add('show');
-        
+
         // Initialize draggable and resizable using centralized managers
         if (window.modalDragManager) {
             window.modalDragManager.makeDraggable('#chatboxSettingsModal');
@@ -439,7 +439,7 @@ class ChatBoxSettingsManager {
         if (window.resizableModalManager) {
             window.resizableModalManager.makeResizable('#chatboxSettingsModal');
         }
-        
+
         // Focus first input
         const firstInput = modal.querySelector('input, select');
         if (firstInput) {
@@ -454,7 +454,7 @@ class ChatBoxSettingsManager {
         const modal = document.createElement('div');
         modal.id = 'chatboxSettingsModal';
         modal.className = 'modal';
-        
+
         modal.innerHTML = `
             <div class="modal-content resizable" style="max-width: 800px;">
                 <div class="modal-header">
@@ -626,8 +626,8 @@ class ChatBoxSettingsManager {
                                 <h4>Function Call Settings</h4>
                                 <div class="form-group">
                                     <label for="functionCallRounds">Maximum Function Call Rounds:</label>
-                                    <input type="number" id="functionCallRounds" class="input-full" min="1" max="10" step="1">
-                                    <small class="help-text">Maximum number of consecutive function calls the AI can make (1-10). Higher values allow more complex multi-step operations but may take longer.</small>
+                                    <input type="number" id="functionCallRounds" class="input-full" min="1" max="20" step="1">
+                                    <small class="help-text">Maximum number of consecutive function calls the AI can make (1-20). Higher values allow more complex multi-step operations but may take longer.</small>
                                 </div>
                                 <div class="form-group">
                                     <label>
@@ -964,19 +964,19 @@ class ChatBoxSettingsManager {
                 <div class="resize-handle resize-handle-sw"></div>
             </div>
         `;
-        
+
         // Add event listeners for tabs
         const tabButtons = modal.querySelectorAll('.tab-btn');
         const tabPanels = modal.querySelectorAll('.tab-content');
-        
+
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const targetTab = button.dataset.tab;
-                
+
                 // Update active tab button
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                
+
                 // Update active tab panel
                 tabPanels.forEach(panel => {
                     panel.classList.remove('active');
@@ -986,11 +986,11 @@ class ChatBoxSettingsManager {
                 });
             });
         });
-        
-        
+
+
         // Setup tool priority functionality
         this.setupToolPriorityHandlers(modal);
-        
+
         // Setup save button handler
         const saveBtn = modal.querySelector('#chatboxSaveSettingsBtn');
         if (saveBtn) {
@@ -999,7 +999,7 @@ class ChatBoxSettingsManager {
                 this.saveSettingsFromForm(modal);
             });
         }
-        
+
         return modal;
     }
 
@@ -1037,29 +1037,29 @@ class ChatBoxSettingsManager {
         const items = container.querySelectorAll('.priority-item');
         items.forEach(item => {
             item.draggable = true;
-            
+
             item.addEventListener('dragstart', (e) => {
                 e.dataTransfer.setData('text/plain', '');
                 item.classList.add('dragging');
             });
-            
+
             item.addEventListener('dragend', () => {
                 item.classList.remove('dragging');
                 this.updatePriorityNumbers(container);
                 this.updatePriorityStatus(container);
             });
-            
+
             item.addEventListener('dragover', (e) => {
                 e.preventDefault();
             });
-            
+
             item.addEventListener('drop', (e) => {
                 e.preventDefault();
                 const draggingItem = container.querySelector('.dragging');
                 if (draggingItem && draggingItem !== item) {
                     const rect = item.getBoundingClientRect();
                     const midY = rect.top + rect.height / 2;
-                    
+
                     if (e.clientY < midY) {
                         container.insertBefore(draggingItem, item);
                     } else {
@@ -1080,11 +1080,11 @@ class ChatBoxSettingsManager {
             if (numberSpan) {
                 numberSpan.textContent = index + 1;
             }
-            
+
             // Update button states
             const upBtn = item.querySelector('.priority-btn.up');
             const downBtn = item.querySelector('.priority-btn.down');
-            
+
             if (upBtn) upBtn.disabled = index === 0;
             if (downBtn) downBtn.disabled = index === items.length - 1;
         });
@@ -1096,13 +1096,13 @@ class ChatBoxSettingsManager {
     updatePriorityStatus(container) {
         const statusElement = document.querySelector('#priorityStatus');
         if (!statusElement) return;
-        
+
         const items = container.querySelectorAll('.priority-item');
         const priorityList = Array.from(items).map((item, index) => {
             const label = item.querySelector('.priority-label').textContent;
             return `${index + 1}. ${label}`;
         });
-        
+
         statusElement.innerHTML = `
             <small>
                 <strong>Current Order:</strong> ${priorityList.join(' → ')}
@@ -1116,7 +1116,7 @@ class ChatBoxSettingsManager {
     getToolPriorityFromUI(modal) {
         const container = modal.querySelector('#toolPriorityContainer');
         if (!container) return this.settings.toolPriority;
-        
+
         const items = container.querySelectorAll('.priority-item');
         return Array.from(items).map(item => item.dataset.type);
     }
@@ -1127,27 +1127,27 @@ class ChatBoxSettingsManager {
     setToolPriorityInUI(modal, priority) {
         const container = modal.querySelector('#toolPriorityContainer');
         if (!container || !Array.isArray(priority)) return;
-        
+
         // Reorder items based on priority array
         const items = Array.from(container.querySelectorAll('.priority-item'));
         const orderedItems = [];
-        
+
         priority.forEach(type => {
             const item = items.find(item => item.dataset.type === type);
             if (item) orderedItems.push(item);
         });
-        
+
         // Add any missing items at the end
         items.forEach(item => {
             if (!orderedItems.includes(item)) {
                 orderedItems.push(item);
             }
         });
-        
+
         // Clear container and re-add in correct order
         container.innerHTML = '';
         orderedItems.forEach(item => container.appendChild(item));
-        
+
         this.updatePriorityNumbers(container);
         this.updatePriorityStatus(container);
     }
@@ -1162,7 +1162,7 @@ class ChatBoxSettingsManager {
                 this.setToolPriorityInUI(modal, value);
                 continue;
             }
-            
+
             const element = modal.querySelector(`#${key}`);
             if (element) {
                 if (element.type === 'checkbox') {
@@ -1195,11 +1195,11 @@ class ChatBoxSettingsManager {
                 }
             }
         }
-        
+
         // Setup range slider event listeners
         this.setupRangeSliders(modal);
     }
-    
+
     /**
      * Setup range slider event listeners
      */
@@ -1226,14 +1226,14 @@ class ChatBoxSettingsManager {
      */
     saveSettingsFromForm(modal) {
         const newSettings = {};
-        
+
         for (const key of Object.keys(this.settings)) {
             if (key === 'toolPriority') {
                 // Handle tool priority specially
                 newSettings[key] = this.getToolPriorityFromUI(modal);
                 continue;
             }
-            
+
             const element = modal.querySelector(`#${key}`);
             if (element) {
                 if (element.type === 'checkbox') {
@@ -1256,72 +1256,72 @@ class ChatBoxSettingsManager {
                 }
             }
         }
-        
+
         // Validate settings
         const tempSettings = { ...this.settings, ...newSettings };
         const settingsManager = { settings: tempSettings };
         const errors = this.validateSettings.call(settingsManager);
-        
+
         if (errors.length > 0) {
             alert('Settings validation failed:\n' + errors.join('\n'));
             return;
         }
-        
+
         // Update settings
         const hasChanges = this.updateSettings(newSettings);
-        
+
         if (hasChanges) {
             // Show success message with detailed feedback
             this.showSaveSuccessMessage(newSettings);
-            
+
             // Close modal
             modal.style.display = 'none';
             modal.classList.remove('show');
         } else {
             // Show no changes message
             this.showNotification('No changes detected. Settings are already up to date.', 'info');
-            
+
             // Close modal
             modal.style.display = 'none';
             modal.classList.remove('show');
         }
     }
-    
+
     /**
      * Show detailed save success message
      */
     showSaveSuccessMessage(newSettings) {
         const changedSettings = [];
-        
+
         // Check which settings were changed
         for (const [key, value] of Object.entries(newSettings)) {
             if (this.settings[key] !== value) {
                 changedSettings.push(key);
             }
         }
-        
+
         if (changedSettings.length === 0) {
             this.showNotification('Settings saved successfully!', 'success');
             return;
         }
-        
+
         // Create detailed message
         let message = '✅ Settings saved successfully!\n\n';
         message += 'Updated settings:\n';
-        
+
         changedSettings.forEach(setting => {
             const value = newSettings[setting];
             const displayValue = typeof value === 'boolean' ? (value ? 'Enabled' : 'Disabled') : value;
             message += `• ${this.getSettingDisplayName(setting)}: ${displayValue}\n`;
         });
-        
+
         // Show notification
         this.showNotification(message, 'success');
-        
+
         // Also log to console for debugging
         console.log('💾 Settings saved:', changedSettings);
     }
-    
+
     /**
      * Get display name for setting key
      */
@@ -1373,7 +1373,7 @@ class ChatBoxSettingsManager {
             'chatboxLLMUseSystemPrompt': 'LLM System Prompt',
             'chatboxLLMEnableFunctionCalling': 'LLM Function Calling'
         };
-        
+
         return displayNames[key] || key;
     }
 
