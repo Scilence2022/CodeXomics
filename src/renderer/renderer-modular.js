@@ -171,7 +171,7 @@ if (typeof window !== 'undefined') {
                     window.modalDragManager.initializeAllModals();
                 }, 500);
             }
-            
+
             if (typeof ResizableModalManager !== 'undefined') {
                 window.resizableModalManager = new ResizableModalManager();
             }
@@ -188,7 +188,7 @@ class GenomeBrowser {
     constructor() {
         // Initialize ConfigManager first
         this.configManager = new ConfigManager();
-        
+
         this.fileManager = new FileManager(this);
         this.trackRenderer = new TrackRenderer(this);
         this.navigationManager = new NavigationManager(this);
@@ -200,23 +200,23 @@ class GenomeBrowser {
         this.trackStateManager = new TrackStateManager(this);  // Add track state manager
         this.blastManager = new BlastManager(this); // Initialize BLAST manager
         this.multiFileManager = new MultiFileManager(this); // Initialize multi-file manager
-        
+
         // Initialize citation system
         this.citationCollector = new Map();
         this.citationCounter = 0;
-        
+
         // Initialize enhanced citation display (will be set up after DOM is ready)
         this.enhancedCitationDisplay = null;
-        
+
         // Initialize Tab Management System (for multi-genome analysis) - delayed to ensure DOM is ready
         this.initializeTabManager();
-        
+
         // Initialize Internal MCP Server for direct communication with main process MCP server
         this.initializeInternalMCPServer();
-        
+
         // Initialize Action Management System
         this.initializeActionSystem();
-        
+
         // State
         this.currentChromosome = null;
         this.currentSequence = {};
@@ -258,22 +258,25 @@ class GenomeBrowser {
             terminator: true,
             regulatory: true,
             source: false,  // Default: don't show source features
-            other: true
+            misc_feature: true,
+            repeat_region: true,
+            bed_feature: true,
+            other: true  // For comment, note, and unknown types
         };
 
         this.currentFile = null;
         this.searchResults = [];
         this.currentSearchIndex = 0;
-        
+
         // Visual settings
         this.viewMode = 'overview'; // 'overview' or 'detail'
         this.basePairsPerPixel = 10;
         this.minBasePairsPerPixel = 0.1;
         this.maxBasePairsPerPixel = 1000;
         this.ZOOM_SENSITIVITY = 0.1;
-        
+
         this._cachedCharWidth = null; // Cache for character width measurement
-        
+
         // Operon color assignment
         this.operonColors = [
             '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
@@ -281,13 +284,13 @@ class GenomeBrowser {
         ];
         this.operonColorIndex = 0;
         this.operonColorMap = new Map(); // Map operon names to colors
-        
+
         // User-defined features storage
         this.currentSequenceSelection = null; // Track current sequence selection
-        
+
         // Initialize track visibility
         this.visibleTracks = new Set(['genes', 'gc', 'sequence']); // Default visible tracks (sequence = bottom panel, sequenceLine = single-line track)
-        
+
         // Initialize gene filters (corresponds to featureVisibility)
         this.geneFilters = {
             genes: false,
@@ -298,10 +301,13 @@ class GenomeBrowser {
             promoter: true,
             terminator: true,
             regulatory: true,
+            misc_feature: true,
+            repeat_region: true,
+            bed_feature: true,
             other: true,
             source: false  // Default: don't show source features
         };
-        
+
         this.init();
     }
 
@@ -310,20 +316,20 @@ class GenomeBrowser {
      */
     getQualifierValue(qualifiers, key) {
         if (!qualifiers || !qualifiers[key]) return null;
-        
+
         const value = qualifiers[key];
         if (Array.isArray(value)) {
             return value.length > 0 ? value[0] : null;
         }
         return value;
     }
-    
+
     /**
      * Helper function to get all values from a qualifier as an array
      */
     getAllQualifierValues(qualifiers, key) {
         if (!qualifiers || !qualifiers[key]) return [];
-        
+
         const value = qualifiers[key];
         if (Array.isArray(value)) {
             return value;
@@ -334,23 +340,23 @@ class GenomeBrowser {
     init() {
         // Force reload timestamp: 2025-05-31-15:05
         console.log('🚀 GenomeBrowser initialization starting...');
-        
+
         // Step 0: Initialize version information
         console.log('📋 Initializing version information...');
         this.initializeVersionInfo();
-        
+
         // Step 1: Setup basic event listeners
         console.log('📝 Setting up event listeners...');
         this.setupEventListeners();
-        
+
         // Step 2: Setup feature filters
         console.log('🔧 Setting up feature filter listeners...');
         this.setupFeatureFilterListeners();
-        
+
         // Step 3: Initialize user features
         console.log('👤 Initializing user features...');
         this.initializeUserFeatures();
-        
+
         // Step 4: Initialize LLM configuration
         console.log('🤖 About to initialize LLMConfigManager...');
         try {
@@ -359,7 +365,7 @@ class GenomeBrowser {
         } catch (error) {
             console.error('❌ Error initializing LLMConfigManager:', error);
         }
-        
+
         // Step 5: Initialize ChatManager
         console.log('💬 About to initialize ChatManager...');
         try {
@@ -368,7 +374,7 @@ class GenomeBrowser {
         } catch (error) {
             console.error('❌ Error initializing ChatManager:', error);
         }
-        
+
         // Step 5.1: Benchmark System (will be loaded on demand when menu is accessed)
         console.log('🧪 Benchmark System will be loaded on demand...');
         this.benchmarkManager = null; // Initialize as null, will be created when needed
@@ -394,23 +400,23 @@ class GenomeBrowser {
             // Initialize asynchronously and then apply global dragging setting
             this.generalSettingsManager.init().then(() => {
                 console.log('✅ GeneralSettingsManager initialized successfully');
-                
+
                 // Initialize global dragging setting after settings are loaded
                 this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging !== false;
-                
+
                 // Apply the setting immediately
                 this.setGlobalDragging(this.globalDraggingEnabled);
             }).catch((error) => {
                 console.error('❌ Error initializing GeneralSettingsManager:', error);
                 this.globalDraggingEnabled = true; // Default to true when settings can't be loaded
             });
-            
+
             window.generalSettingsManager = this.generalSettingsManager; // Make globally available
         } catch (error) {
             console.error('❌ Error initializing GeneralSettingsManager:', error);
             this.globalDraggingEnabled = true; // Default to true when initialization fails
         }
-        
+
         // Step 5.7: Initialize External Tools Manager
         console.log('🔧 About to initialize ExternalToolsManager...');
         try {
@@ -420,16 +426,16 @@ class GenomeBrowser {
             }).catch((error) => {
                 console.error('❌ Error initializing ExternalToolsManager:', error);
             });
-            
+
             window.externalToolsManager = this.externalToolsManager; // Make globally available
         } catch (error) {
             console.error('❌ Error initializing ExternalToolsManager:', error);
         }
-        
 
-        
+
+
         // Step 5.8: Removed Conversation Evolution System (cleanup completed)
-        
+
         // Add global tool validation function for debugging
         window.validateAllTools = () => {
             if (this.chatManager && this.chatManager.validateAllTools) {
@@ -444,24 +450,24 @@ class GenomeBrowser {
         console.log('📡 Setting up IPC communication...');
         this.setupIPC();
         this.updateStatus('Ready');
-        
+
         // Step 7: Make globally available
         console.log('🌐 Making instance globally available...');
         window.genomeBrowser = this;
         window.genomeApp = this; // For compatibility with ChatManager
         window.app = this; // For benchmark system compatibility
-        
+
         // Step 8: Initialize UI components
         console.log('🎨 Initializing UI components...');
         this.uiManager.initializeSplitter();
         this.uiManager.initializeHorizontalSplitter();
-        
+
         // Step 9: Add resize listener
         console.log('📏 Adding window resize listener...');
         window.addEventListener('resize', () => {
             this.uiManager.handleWindowResize();
         });
-        
+
         // Step 10: Debug Options button after delay
         console.log('⏱️ Setting up Options button debug...');
         setTimeout(() => {
@@ -484,16 +490,16 @@ class GenomeBrowser {
                 console.error('❌ DEBUG: Options button not found in DOM');
             }
         }, 1000);
-        
+
         console.log('🎉 CodeXomics initialized successfully!');
-        
+
         // Initialize MCP server status check
         this.initializeMCPServerStatus();
-        
+
         // Initialize Action Management System
         this.initializeActionSystem();
     }
-    
+
     /**
      * Initialize version information display
      */
@@ -504,18 +510,18 @@ class GenomeBrowser {
             if (versionTag && typeof VERSION_INFO !== 'undefined') {
                 versionTag.textContent = VERSION_INFO.displayVersion;
             }
-            
+
             // Update version in about dialog
             const aboutVersion = document.getElementById('about-version');
             if (aboutVersion && typeof VERSION_INFO !== 'undefined') {
                 aboutVersion.textContent = `Version ${VERSION_INFO.fullVersion}`;
             }
-            
+
             // Update document title
             if (typeof VERSION_INFO !== 'undefined') {
                 document.title = VERSION_INFO.appTitle;
             }
-            
+
             // Make version info globally available
             if (typeof VERSION_INFO !== 'undefined') {
                 window.appVersion = VERSION_INFO;
@@ -523,12 +529,12 @@ class GenomeBrowser {
             } else {
                 console.warn('⚠️ VERSION_INFO not available');
             }
-            
+
         } catch (error) {
             console.error('❌ Error initializing version information:', error);
         }
     }
-    
+
     /**
      * Initialize Action Management System
      */
@@ -538,13 +544,13 @@ class GenomeBrowser {
             try {
                 if (typeof InternalMCPServer !== 'undefined') {
                     this.internalMCPServer = new InternalMCPServer();
-                    
+
                     // Initialize with this Genome Studio instance
                     this.internalMCPServer.initialize(this);
-                    
+
                     // Start the internal server
                     this.internalMCPServer.start();
-                    
+
                     window.internalMCPServer = this.internalMCPServer; // Keep for debugging
                     console.log('✅ Internal MCP Server initialized and started');
                 } else {
@@ -555,7 +561,7 @@ class GenomeBrowser {
             }
         }, 200); // Small delay to ensure modules are ready
     }
-    
+
     /**
      * Initialize Tab Management System with DOM ready check
      */
@@ -567,18 +573,18 @@ class GenomeBrowser {
                 const tabContainer = document.getElementById('tabContainer');
                 const newTabButton = document.getElementById('newTabButton');
                 const tabSettingsButton = document.getElementById('tabSettingsButton');
-                
+
                 if (!tabContainer || !newTabButton || !tabSettingsButton) {
                     console.warn('⚠️ Tab UI elements not found, retrying TabManager initialization...');
                     // Retry after another delay
                     setTimeout(() => this.initializeTabManager(), 500);
                     return;
                 }
-                
+
                 // Initialize TabManager
                 this.tabManager = new TabManager(this);
                 console.log('✅ TabManager initialized successfully');
-                
+
             } catch (error) {
                 console.error('❌ Failed to initialize TabManager:', error);
                 // Retry once more
@@ -598,7 +604,7 @@ class GenomeBrowser {
                 } else {
                     console.warn('⚠️ ActionManager class not available');
                 }
-                
+
                 if (typeof CheckpointManager !== 'undefined') {
                     this.checkpointManager = new CheckpointManager(this);
                     window.checkpointManager = this.checkpointManager; // Keep for backward compatibility
@@ -606,15 +612,15 @@ class GenomeBrowser {
                 } else {
                     console.warn('⚠️ CheckpointManager class not available');
                 }
-                
+
                 // Action system initialized - menu items handled by main menu
-                
+
             } catch (error) {
                 console.error('❌ Error initializing Action Management System:', error);
             }
         }, 500);
     }
-    
+
     /**
      * Load and initialize Benchmark System on demand
      */
@@ -625,11 +631,11 @@ class GenomeBrowser {
         }
 
         console.log('🧪 Loading Benchmark System on demand...');
-        
+
         try {
             // Load benchmark modules
             await this.loadBenchmarkModules();
-            
+
             // Initialize benchmark system
             if (typeof BenchmarkManager !== 'undefined') {
                 this.benchmarkManager = new BenchmarkManager(this, this.chatManager, this.configManager);
@@ -651,14 +657,14 @@ class GenomeBrowser {
     async loadBenchmarkModules() {
         const modules = [
             'modules/BenchmarkStatistics.js',
-            'modules/BenchmarkReportGenerator.js', 
+            'modules/BenchmarkReportGenerator.js',
             'modules/LLMBenchmarkFramework.js',
             'modules/BenchmarkUI.js',
             'modules/BenchmarkManager.js'
         ];
-        
+
         console.log('📦 Loading benchmark modules...');
-        
+
         for (const modulePath of modules) {
             if (!document.querySelector(`script[src="${modulePath}"]`)) {
                 await new Promise((resolve, reject) => {
@@ -673,7 +679,7 @@ class GenomeBrowser {
                 });
             }
         }
-        
+
         console.log('✅ Benchmark modules loaded');
     }
 
@@ -682,12 +688,12 @@ class GenomeBrowser {
         document.getElementById('openFileBtn').addEventListener('click', () => this.uiManager.toggleFileDropdown());
         document.getElementById('openGenomeBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('genome'));
         // Annotation file submenu is handled by CSS hover, no JS needed
-        
+
         // Annotation file action handlers
         document.getElementById('openAnnotationMergeBtn').addEventListener('click', () => {
             this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: true });
         });
-        
+
         document.getElementById('openAnnotationNewBtn').addEventListener('click', () => {
             this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: false });
         });
@@ -703,7 +709,7 @@ class GenomeBrowser {
         document.getElementById('exportFastaBtn').addEventListener('click', () => this.exportManager.exportAsFasta());
         document.getElementById('exportGenbankBtn').addEventListener('click', () => this.exportManager.exportAsGenBank());
         document.getElementById('exportCDSFastaBtn').addEventListener('click', () => this.exportManager.exportCDSAsFasta());
-        
+
         // MCP Server control - temporarily commented out
         // document.getElementById('mcpServerBtn').addEventListener('click', () => this.toggleMCPServer());
         document.getElementById('exportProteinFastaBtn').addEventListener('click', () => this.exportManager.exportProteinAsFasta());
@@ -721,7 +727,7 @@ class GenomeBrowser {
                     try {
                         // Close the export dropdown first
                         this.uiManager.closeExportDropdown();
-                        
+
                         this.exportManager.showExportConfigDialog();
                     } catch (error) {
                         console.error('Error opening export config dialog:', error);
@@ -763,12 +769,12 @@ class GenomeBrowser {
                 this.uiManager.closeFileDropdown();
                 this.uiManager.closeExportDropdown();
             }
-            
+
             // Auto-hide toggle panels when clicking outside
             if (!e.target.closest('#toggleTracks') && !e.target.closest('#trackCheckboxes')) {
                 this.uiManager.hideTracksPanel();
             }
-            
+
             if (!e.target.closest('#toggleFeatureFilters') && !e.target.closest('#featureFilterCheckboxes')) {
                 this.uiManager.hideFeatureFiltersPanel();
             }
@@ -813,7 +819,7 @@ class GenomeBrowser {
                 this.trackRenderer.openTrackSettings('sequence');
             }
         });
-        
+
         // Add click event for selected sequences (both gene and manual)
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('gene-sequence-selected')) {
@@ -826,7 +832,7 @@ class GenomeBrowser {
                 }
             }
         });
-        
+
         // Update copy button state when text selection changes
         document.addEventListener('selectionchange', () => {
             // Debounce to avoid too frequent updates
@@ -888,23 +894,23 @@ class GenomeBrowser {
         document.getElementById('toggleTracks').addEventListener('click', () => {
             this.uiManager.toggleTracks();
         });
-        
+
         // Sidebar toggle button
         document.getElementById('toggleSidebar').addEventListener('click', () => {
             this.uiManager.toggleSidebar();
         });
-        
+
         // Splitter toggle button
         document.getElementById('splitterToggleBtn').addEventListener('click', () => {
             this.uiManager.toggleSidebarFromSplitter();
         });
-        
+
         // MCP Settings modal
         document.getElementById('mcpSettingsBtn')?.addEventListener('click', () => this.showMCPSettingsModal());
-        
+
         // General Settings modal
         document.getElementById('settingsBtn')?.addEventListener('click', () => this.showGeneralSettingsModal());
-        
+
         // Debug Tools modal
         document.getElementById('debugToolsBtn')?.addEventListener('click', () => this.showDebugToolsModal());
     }
@@ -919,27 +925,27 @@ class GenomeBrowser {
                 serverUrl: 'ws://localhost:3001',
                 reconnectDelay: 5
             };
-            
-            const mcpSettings = this.configManager ? 
-                this.configManager.get('mcpSettings', defaultSettings) : 
+
+            const mcpSettings = this.configManager ?
+                this.configManager.get('mcpSettings', defaultSettings) :
                 defaultSettings;
-            
+
             // Populate modal fields
             document.getElementById('mcpAllowAutoActivation').checked = mcpSettings.allowAutoActivation;
             document.getElementById('mcpAutoConnect').checked = mcpSettings.autoConnect;
             document.getElementById('mcpServerUrl').value = mcpSettings.serverUrl;
             document.getElementById('mcpReconnectDelay').value = mcpSettings.reconnectDelay;
-            
+
             // Populate new server management interface
             this.populateMCPServersList();
             this.populateMCPToolsList();
-            
+
             // Update connection status
             this.updateMCPConnectionStatus();
-            
+
             // Setup modal event listeners if not already done
             this.setupMCPModalListeners();
-            
+
             // Show modal
             modal.classList.add('show');
         }
@@ -951,7 +957,7 @@ class GenomeBrowser {
             // Initialize GeneralSettingsManager if not already done
             if (this.generalSettingsManager) {
                 console.log('🔄 [GeneralSettings] Loading settings and initializing tabs...');
-                
+
                 // Check if it's initialized, if not initialize it first
                 if (!this.generalSettingsManager.isInitialized) {
                     console.log('🔄 [GeneralSettings] Initializing GeneralSettingsManager...');
@@ -999,7 +1005,7 @@ class GenomeBrowser {
                     console.error('❌ [GeneralSettings] Failed to create GeneralSettingsManager:', error);
                 }
             }
-            
+
             // Show modal
             modal.classList.add('show');
             console.log('✅ [GeneralSettings] Modal shown');
@@ -1037,7 +1043,7 @@ class GenomeBrowser {
             modal = this.createDebugToolsModal();
             document.body.appendChild(modal);
         }
-        
+
         // Show modal
         modal.classList.add('show');
     }
@@ -1167,13 +1173,13 @@ class GenomeBrowser {
 
         try {
             console.log('🧪 Opening Benchmark Interface...');
-            
+
             // Initialize benchmark manager if not already done
             const benchmarkManager = await this.initializeBenchmarkSystemOnDemand();
-            
+
             // Show the benchmark interface
             await benchmarkManager.showBenchmarkInterface();
-            
+
         } catch (error) {
             console.error('❌ Failed to open benchmark interface:', error);
             alert('Failed to open benchmark interface. Please check the console for details.');
@@ -1210,10 +1216,10 @@ class GenomeBrowser {
             total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB',
             limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + ' MB'
         } : 'Not available');
-        
+
         // Show alert with basic performance info
-        alert(`Performance Monitor\n\nMemory Usage: ${performance.memory ? 
-            Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB' : 
+        alert(`Performance Monitor\n\nMemory Usage: ${performance.memory ?
+            Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB' :
             'Not available'}\n\nCheck console for detailed information.`);
     }
 
@@ -1228,36 +1234,36 @@ class GenomeBrowser {
             trackRenderer: !!this.trackRenderer,
             readsManager: !!this.readsManager
         });
-        
+
         alert('Console Logger activated!\n\nCheck the browser console for detailed logging information.');
     }
 
     setupMCPModalListeners() {
         const modal = document.getElementById('mcpSettingsModal');
         if (!modal || modal.hasAttribute('data-listeners-setup')) return;
-        
+
         modal.setAttribute('data-listeners-setup', 'true');
-        
+
         // Save settings button
         document.getElementById('saveMCPSettingsBtn')?.addEventListener('click', () => {
             this.saveMCPSettings();
         });
-        
+
         // Add Server button - NEW
         document.getElementById('addMcpServerBtn')?.addEventListener('click', () => {
             this.showAddServerModal();
         });
-        
+
         // JSON Import/Export buttons
         document.getElementById('importJsonServersBtn')?.addEventListener('click', () => {
             this.showJsonImportModal();
         });
-        
+
         document.getElementById('exportJsonServersBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleExportDropdown();
         });
-        
+
         // Export dropdown options
         document.querySelectorAll('.export-option').forEach(option => {
             option.addEventListener('click', (e) => {
@@ -1267,19 +1273,19 @@ class GenomeBrowser {
                 this.hideExportDropdown();
             });
         });
-        
+
         // Close dropdown when clicking outside
         document.addEventListener('click', () => {
             this.hideExportDropdown();
         });
-        
+
         // Legacy connect/disconnect buttons
         document.getElementById('mcpConnectBtn')?.addEventListener('click', () => {
             if (this.chatManager) {
                 this.chatManager.setupMCPConnection();
             }
         });
-        
+
         document.getElementById('mcpDisconnectBtn')?.addEventListener('click', () => {
             if (this.chatManager) {
                 this.chatManager.disconnectMCP();
@@ -1290,7 +1296,7 @@ class GenomeBrowser {
         document.getElementById('mcpConnectAllBtn')?.addEventListener('click', () => {
             this.connectAllMCPServers();
         });
-        
+
         document.getElementById('mcpDisconnectAllBtn')?.addEventListener('click', () => {
             this.disconnectAllMCPServers();
         });
@@ -1308,22 +1314,22 @@ class GenomeBrowser {
             document.getElementById('fileImportTab')?.addEventListener('click', () => {
                 this.switchJsonImportTab('file');
             });
-            
+
             document.getElementById('textImportTab')?.addEventListener('click', () => {
                 this.switchJsonImportTab('text');
             });
-            
+
             // File input change
             document.getElementById('jsonFileInput')?.addEventListener('change', (e) => {
                 this.handleJsonFileSelect(e);
             });
-            
+
             // Process import button
             document.getElementById('processImportBtn')?.addEventListener('click', () => {
                 this.processJsonImport();
             });
         }
-        
+
         // Add Server modal event listeners
         const addServerModal = document.getElementById('mcpServerEditModal');
         if (addServerModal) {
@@ -1338,14 +1344,14 @@ class GenomeBrowser {
             document.getElementById('testServerConnectionBtn')?.addEventListener('click', () => {
                 this.testMCPServerConnectionFromForm();
             });
-            
+
             // Close modal handlers for add server modal
             addServerModal.querySelectorAll('.modal-close').forEach(btn => {
                 btn.addEventListener('click', () => {
                     addServerModal.classList.remove('show');
                 });
             });
-            
+
             // Close modal only on close button click, not background
             addServerModal.addEventListener('click', (e) => {
                 if (e.target.classList.contains('modal-close')) {
@@ -1353,14 +1359,14 @@ class GenomeBrowser {
                 }
             });
         }
-        
+
         // Close modal handlers for main MCP settings modal
         modal.querySelectorAll('.modal-close').forEach(btn => {
             btn.addEventListener('click', () => {
                 modal.classList.remove('show');
             });
         });
-        
+
         // Close modal when clicking outside
         modal.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal-close')) {
@@ -1406,36 +1412,36 @@ class GenomeBrowser {
             serverUrl: document.getElementById('mcpServerUrl').value.trim(),
             reconnectDelay: parseInt(document.getElementById('mcpReconnectDelay').value) || 5
         };
-        
+
         // Validate settings
         if (!mcpSettings.serverUrl) {
             alert('Please enter a valid MCP server URL');
             return;
         }
-        
+
         if (mcpSettings.reconnectDelay < 1 || mcpSettings.reconnectDelay > 60) {
             alert('Reconnection delay must be between 1 and 60 seconds');
             return;
         }
-        
+
         // Save settings if configManager is available
         if (this.configManager) {
             this.configManager.set('mcpSettings', mcpSettings);
         } else {
             console.warn('ConfigManager not available, settings not saved');
         }
-        
+
         // Close modal
         document.getElementById('mcpSettingsModal').classList.remove('show');
-        
+
         // Show confirmation
         this.updateStatus('MCP settings saved successfully');
-        
+
         // If auto-connect is now enabled and not currently connected, try to connect (only if auto-activation is allowed)
         if (mcpSettings.allowAutoActivation && mcpSettings.autoConnect && this.chatManager && !this.chatManager.isConnected) {
             this.chatManager.setupMCPConnection();
         }
-        
+
         // If auto-connect is disabled and currently connected, disconnect
         if (!mcpSettings.autoConnect && this.chatManager && this.chatManager.isConnected) {
             this.chatManager.disconnectMCP();
@@ -1452,16 +1458,16 @@ class GenomeBrowser {
         document.getElementById('jsonTextInput').value = '';
         document.getElementById('overwriteExisting').checked = true;
         document.getElementById('validateBeforeImport').checked = true;
-        
+
         // Hide status and results
         const statusDiv = document.getElementById('importStatus');
         const resultsDiv = document.getElementById('importResults');
         if (statusDiv) statusDiv.style.display = 'none';
         if (resultsDiv) resultsDiv.style.display = 'none';
-        
+
         // Reset to file tab
         this.switchJsonImportTab('file');
-        
+
         modal.classList.add('show');
     }
 
@@ -1493,7 +1499,7 @@ class GenomeBrowser {
             try {
                 const content = e.target.result;
                 const jsonData = JSON.parse(content);
-                
+
                 // Show preview
                 const previewDiv = document.getElementById('filePreview');
                 const previewContent = document.getElementById('filePreviewContent');
@@ -1514,9 +1520,9 @@ class GenomeBrowser {
         const textInput = document.getElementById('jsonTextInput');
         const fileTab = document.getElementById('fileImportTab');
         const isFileMode = fileTab?.classList.contains('active');
-        
+
         let jsonData;
-        
+
         try {
             if (isFileMode) {
                 const file = fileInput.files[0];
@@ -1524,7 +1530,7 @@ class GenomeBrowser {
                     this.showImportStatus('error', 'Please select a JSON file');
                     return;
                 }
-                
+
                 const content = await this.readFileAsText(file);
                 jsonData = JSON.parse(content);
             } else {
@@ -1533,21 +1539,21 @@ class GenomeBrowser {
                     this.showImportStatus('error', 'Please enter JSON configuration');
                     return;
                 }
-                
+
                 jsonData = JSON.parse(text);
             }
-            
+
             // Validate JSON structure
             const validationResult = this.validateJsonImport(jsonData);
             if (!validationResult.valid) {
                 this.showImportStatus('error', `Validation failed: ${validationResult.error}`);
                 return;
             }
-            
+
             // Process import based on format
             const importResult = await this.importJsonServers(jsonData, validationResult.format);
             this.showImportResults(importResult);
-            
+
         } catch (error) {
             console.error('Error processing JSON import:', error);
             this.showImportStatus('error', `Error processing JSON: ${error.message}`);
@@ -1568,14 +1574,14 @@ class GenomeBrowser {
         if (typeof jsonData !== 'object' || jsonData === null) {
             return { valid: false, error: 'JSON must be an object' };
         }
-        
+
         // Check for new format: mcpServers object
         if (jsonData.mcpServers && typeof jsonData.mcpServers === 'object') {
             const serverNames = Object.keys(jsonData.mcpServers);
             if (serverNames.length === 0) {
                 return { valid: false, error: 'mcpServers object is empty' };
             }
-            
+
             // Validate each server in the object
             for (let i = 0; i < serverNames.length; i++) {
                 const serverName = serverNames[i];
@@ -1585,16 +1591,16 @@ class GenomeBrowser {
                     return { valid: false, error: `Server "${serverName}": ${serverValidation.error}` };
                 }
             }
-            
+
             return { valid: true, format: 'mcpServers' };
         }
-        
+
         // Check for legacy format: servers array
         if (Array.isArray(jsonData.servers)) {
             if (jsonData.servers.length === 0) {
                 return { valid: false, error: 'servers array is empty' };
             }
-            
+
             // Validate each server
             for (let i = 0; i < jsonData.servers.length; i++) {
                 const server = jsonData.servers[i];
@@ -1603,17 +1609,17 @@ class GenomeBrowser {
                     return { valid: false, error: `Server ${i + 1}: ${serverValidation.error}` };
                 }
             }
-            
+
             return { valid: true, format: 'servers' };
         }
-        
+
         // Check for servers object format (similar to mcpServers but with "servers" key)
         if (jsonData.servers && typeof jsonData.servers === 'object' && !Array.isArray(jsonData.servers)) {
             const serverNames = Object.keys(jsonData.servers);
             if (serverNames.length === 0) {
                 return { valid: false, error: 'servers object is empty' };
             }
-            
+
             // Validate each server in the object
             for (let i = 0; i < serverNames.length; i++) {
                 const serverName = serverNames[i];
@@ -1623,10 +1629,10 @@ class GenomeBrowser {
                     return { valid: false, error: `Server "${serverName}": ${serverValidation.error}` };
                 }
             }
-            
+
             return { valid: true, format: 'serversObject' };
         }
-        
+
         return { valid: false, error: 'JSON must contain "mcpServers" object, "servers" array, or "servers" object' };
     }
 
@@ -1634,7 +1640,7 @@ class GenomeBrowser {
         if (typeof server !== 'object' || server === null) {
             return { valid: false, error: 'Server must be an object' };
         }
-        
+
         // Required fields
         const requiredFields = ['name', 'url'];
         for (const field of requiredFields) {
@@ -1642,29 +1648,29 @@ class GenomeBrowser {
                 return { valid: false, error: `Missing or invalid required field: ${field}` };
             }
         }
-        
+
         // Validate URL format
         if (!this.isValidUrl(server.url)) {
             return { valid: false, error: 'Invalid URL format' };
         }
-        
+
         // Validate optional fields
         if (server.enabled !== undefined && typeof server.enabled !== 'boolean') {
             return { valid: false, error: 'enabled must be a boolean' };
         }
-        
+
         if (server.autoConnect !== undefined && typeof server.autoConnect !== 'boolean') {
             return { valid: false, error: 'autoConnect must be a boolean' };
         }
-        
+
         if (server.reconnectDelay !== undefined && (typeof server.reconnectDelay !== 'number' || server.reconnectDelay < 1 || server.reconnectDelay > 60)) {
             return { valid: false, error: 'reconnectDelay must be a number between 1 and 60' };
         }
-        
+
         if (server.capabilities !== undefined && !Array.isArray(server.capabilities)) {
             return { valid: false, error: 'capabilities must be an array' };
         }
-        
+
         return { valid: true };
     }
 
@@ -1672,7 +1678,7 @@ class GenomeBrowser {
         if (typeof server !== 'object' || server === null) {
             return { valid: false, error: 'Server must be an object' };
         }
-        
+
         // Required fields for new format
         const requiredFields = ['url'];
         for (const field of requiredFields) {
@@ -1680,12 +1686,12 @@ class GenomeBrowser {
                 return { valid: false, error: `Missing or invalid required field: ${field}` };
             }
         }
-        
+
         // Validate URL format
         if (!this.isValidUrl(server.url)) {
             return { valid: false, error: 'Invalid URL format' };
         }
-        
+
         // Validate transportType if present
         if (server.transportType !== undefined) {
             const validTransportTypes = ['websocket', 'streamable-http', 'http', 'https', 'sse', 'server-sent-events'];
@@ -1693,34 +1699,34 @@ class GenomeBrowser {
                 return { valid: false, error: `Invalid transportType. Must be one of: ${validTransportTypes.join(', ')}` };
             }
         }
-        
+
         // Validate timeout if present
         if (server.timeout !== undefined && (typeof server.timeout !== 'number' || server.timeout < 1 || server.timeout > 3600)) {
             return { valid: false, error: 'timeout must be a number between 1 and 3600 seconds' };
         }
-        
+
         // Validate headers if present
         if (server.headers !== undefined && (typeof server.headers !== 'object' || server.headers === null || Array.isArray(server.headers))) {
             return { valid: false, error: 'headers must be an object' };
         }
-        
+
         // Validate other optional fields
         if (server.enabled !== undefined && typeof server.enabled !== 'boolean') {
             return { valid: false, error: 'enabled must be a boolean' };
         }
-        
+
         if (server.autoConnect !== undefined && typeof server.autoConnect !== 'boolean') {
             return { valid: false, error: 'autoConnect must be a boolean' };
         }
-        
+
         if (server.reconnectDelay !== undefined && (typeof server.reconnectDelay !== 'number' || server.reconnectDelay < 1 || server.reconnectDelay > 60)) {
             return { valid: false, error: 'reconnectDelay must be a number between 1 and 60' };
         }
-        
+
         if (server.capabilities !== undefined && !Array.isArray(server.capabilities)) {
             return { valid: false, error: 'capabilities must be an array' };
         }
-        
+
         return { valid: true };
     }
 
@@ -1735,32 +1741,32 @@ class GenomeBrowser {
 
     convertToWebSocketUrl(url) {
         if (!url) return url;
-        
+
         try {
             const urlObj = new URL(url);
-            
+
             // If it's already a WebSocket URL, return as is
             if (urlObj.protocol === 'ws:' || urlObj.protocol === 'wss:') {
                 return url;
             }
-            
+
             // Convert HTTP/HTTPS to WebSocket
             if (urlObj.protocol === 'http:') {
                 return `ws://${urlObj.host}${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
             } else if (urlObj.protocol === 'https:') {
                 return `wss://${urlObj.host}${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
             }
-            
+
             // For other protocols, try to convert to WebSocket
             // Common MCP server patterns
             if (url.includes('/api/mcp')) {
                 // Convert http://localhost:3000/api/mcp to ws://localhost:3000/api/mcp
                 return url.replace(/^https?:\/\//, 'ws://');
             }
-            
+
             // Default: assume it should be WebSocket
             return url.startsWith('ws') ? url : `ws://${url}`;
-            
+
         } catch (error) {
             console.warn('Failed to convert URL to WebSocket:', url, error);
             // If conversion fails, try to make it a WebSocket URL
@@ -1774,15 +1780,15 @@ class GenomeBrowser {
             return url;
         }
     }
-    
+
     convertUrlBasedOnTransport(url, transportType) {
         if (!url) return url;
-        
+
         // If transport type is WebSocket, convert to WebSocket URL
         if (transportType === 'websocket') {
             return this.convertToWebSocketUrl(url);
         }
-        
+
         // For HTTP-based transports, ensure URL has correct protocol
         if (transportType === 'streamable-http' || transportType === 'http') {
             if (url.startsWith('ws://') || url.startsWith('wss://')) {
@@ -1798,7 +1804,7 @@ class GenomeBrowser {
             }
             return url;
         }
-        
+
         if (transportType === 'https') {
             if (url.startsWith('ws://') || url.startsWith('http://')) {
                 return url.replace(/^(ws|http):\/\//, 'https://');
@@ -1807,7 +1813,7 @@ class GenomeBrowser {
             }
             return url;
         }
-        
+
         // For unknown transport types, return as is
         return url;
     }
@@ -1817,7 +1823,7 @@ class GenomeBrowser {
         if (!mcpManager) {
             return { success: false, error: 'MCP Server Manager not available' };
         }
-        
+
         const results = {
             success: true,
             imported: 0,
@@ -1825,11 +1831,11 @@ class GenomeBrowser {
             errors: 0,
             details: []
         };
-        
+
         const overwriteExisting = document.getElementById('overwriteExisting').checked;
-        
+
         let serversToImport = [];
-        
+
         if (format === 'mcpServers') {
             // Convert mcpServers object format to array
             serversToImport = Object.entries(jsonData.mcpServers).map(([serverName, serverConfig]) => {
@@ -1873,13 +1879,13 @@ class GenomeBrowser {
                 url: this.convertUrlBasedOnTransport(server.url, server.protocol || 'websocket')
             }));
         }
-        
+
         for (const serverConfig of serversToImport) {
             try {
                 // Check if server with same name already exists
                 const existingServers = Array.from(mcpManager.servers.values());
                 const existingServer = existingServers.find(s => s.name === serverConfig.name);
-                
+
                 if (existingServer) {
                     if (overwriteExisting) {
                         // Remove existing server
@@ -1899,32 +1905,32 @@ class GenomeBrowser {
                         continue;
                     }
                 }
-                
+
                 // Add server
                 const serverId = mcpManager.addServer(serverConfig);
                 results.imported++;
-                
+
                 // Check if URL was converted
-                const originalUrl = jsonData.servers ? 
-                    (Array.isArray(jsonData.servers) ? 
+                const originalUrl = jsonData.servers ?
+                    (Array.isArray(jsonData.servers) ?
                         jsonData.servers.find(s => s.name === serverConfig.name)?.url :
                         Object.values(jsonData.servers).find(s => s.name === serverConfig.name)?.url) :
-                    (jsonData.mcpServers ? 
-                        Object.values(jsonData.mcpServers).find(s => s.name === serverConfig.name)?.url : 
+                    (jsonData.mcpServers ?
+                        Object.values(jsonData.mcpServers).find(s => s.name === serverConfig.name)?.url :
                         null);
-                
+
                 const urlConverted = originalUrl && originalUrl !== serverConfig.url;
-                const message = urlConverted ? 
-                    `Successfully imported (URL converted: ${originalUrl} → ${serverConfig.url})` : 
+                const message = urlConverted ?
+                    `Successfully imported (URL converted: ${originalUrl} → ${serverConfig.url})` :
                     'Successfully imported';
-                
+
                 results.details.push({
                     name: serverConfig.name,
                     status: 'imported',
                     message: message,
                     serverId: serverId
                 });
-                
+
             } catch (error) {
                 results.errors++;
                 results.success = false;
@@ -1935,10 +1941,10 @@ class GenomeBrowser {
                 });
             }
         }
-        
+
         // Refresh the UI
         this.populateMCPServersList();
-        
+
         return results;
     }
 
@@ -1946,13 +1952,13 @@ class GenomeBrowser {
         const statusDiv = document.getElementById('importStatus');
         const messageDiv = document.getElementById('importStatusMessage');
         const resultsDiv = document.getElementById('importResults');
-        
+
         if (statusDiv && messageDiv) {
             statusDiv.className = `import-status ${type}`;
             statusDiv.style.display = 'block';
             messageDiv.textContent = message;
         }
-        
+
         if (resultsDiv) {
             resultsDiv.style.display = 'none';
         }
@@ -1963,16 +1969,16 @@ class GenomeBrowser {
         const messageDiv = document.getElementById('importStatusMessage');
         const resultsDiv = document.getElementById('importResults');
         const resultsContent = document.getElementById('importResultsContent');
-        
+
         if (statusDiv && messageDiv) {
             const statusType = results.success ? 'success' : 'warning';
             const message = `Import completed: ${results.imported} imported, ${results.skipped} skipped, ${results.errors} errors`;
-            
+
             statusDiv.className = `import-status ${statusType}`;
             statusDiv.style.display = 'block';
             messageDiv.textContent = message;
         }
-        
+
         if (resultsDiv && resultsContent) {
             resultsDiv.style.display = 'block';
             resultsContent.innerHTML = results.details.map(detail => {
@@ -1990,19 +1996,19 @@ class GenomeBrowser {
             alert('MCP Server Manager not available');
             return;
         }
-        
+
         const servers = Array.from(mcpManager.servers.values());
         let exportData;
-        
+
         if (format === 'mcpServers') {
             // New mcpServers object format
             const mcpServers = {};
             servers.forEach(server => {
                 mcpServers[server.name] = {
                     url: server.url,
-                    transportType: server.protocol === 'websocket' ? 'websocket' : 
-                                  server.protocol === 'http' ? 'streamable-http' : 
-                                  server.protocol || 'websocket',
+                    transportType: server.protocol === 'websocket' ? 'websocket' :
+                        server.protocol === 'http' ? 'streamable-http' :
+                            server.protocol || 'websocket',
                     timeout: server.timeout || 30,
                     headers: server.headers || {},
                     description: server.description || '',
@@ -2013,7 +2019,7 @@ class GenomeBrowser {
                     capabilities: server.capabilities || []
                 };
             });
-            
+
             exportData = {
                 mcpServers: mcpServers
             };
@@ -2036,11 +2042,11 @@ class GenomeBrowser {
                 }))
             };
         }
-        
+
         const jsonString = JSON.stringify(exportData, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
+
         const formatSuffix = format === 'mcpServers' ? 'mcpServers' : 'servers';
         const a = document.createElement('a');
         a.href = url;
@@ -2079,14 +2085,14 @@ class GenomeBrowser {
         }
 
         const servers = mcpManager.getServerStatus(); // Use getServerStatus instead of getServers
-        
+
         if (servers.length === 0) {
             serversList.innerHTML = '<div class="empty-state">No MCP servers configured</div>';
             return;
         }
 
         serversList.innerHTML = '';
-        
+
         servers.forEach(server => {
             const serverItem = document.createElement('div');
             serverItem.className = 'server-item';
@@ -2141,7 +2147,7 @@ class GenomeBrowser {
         }
 
         const allTools = mcpManager.getAllAvailableTools(); // Use getAllAvailableTools instead of getAllTools
-        
+
         if (allTools.length === 0) {
             toolsList.innerHTML = '<div class="empty-state">No tools available from connected servers</div>';
             return;
@@ -2183,7 +2189,7 @@ class GenomeBrowser {
     updateMCPConnectionStatus() {
         const statusTextElement = document.getElementById('mcpStatusText');
         const statusIconElement = document.getElementById('mcpStatusIcon');
-        
+
         if (!statusTextElement || !statusIconElement) return;
 
         let statusText, statusClass;
@@ -2361,7 +2367,7 @@ class GenomeBrowser {
 
         mcpManager.connectAll();
         this.updateStatus('Connecting to all servers...');
-        
+
         // Update UI after a short delay
         setTimeout(() => {
             this.populateMCPServersList();
@@ -2375,7 +2381,7 @@ class GenomeBrowser {
 
         mcpManager.disconnectAll();
         this.updateStatus('Disconnecting from all servers...');
-        
+
         // Update UI immediately
         this.populateMCPServersList();
         this.updateMCPConnectionStatus();
@@ -2397,7 +2403,7 @@ class GenomeBrowser {
 
     testMCPServerConnectionFromForm() {
         const testStatus = document.getElementById('testConnectionStatus');
-        
+
         // Get form data
         const serverConfig = {
             name: document.getElementById('serverName').value.trim(),
@@ -2417,7 +2423,7 @@ class GenomeBrowser {
         } else if (serverConfig.url.startsWith('ws://') || serverConfig.url.startsWith('wss://')) {
             transportType = 'websocket';
         }
-        
+
         serverConfig.transportType = transportType;
 
         if (testStatus) {
@@ -2463,7 +2469,7 @@ class GenomeBrowser {
     setGlobalDragging(enabled) {
         this.globalDraggingEnabled = enabled;
         console.log(`🎯 Global track dragging ${enabled ? 'enabled' : 'disabled'}`);
-        
+
         // Notify NavigationManager about the setting change
         if (this.navigationManager) {
             this.navigationManager.setGlobalDragging(enabled);
@@ -2474,18 +2480,21 @@ class GenomeBrowser {
         // Toolbar feature filter controls
         const toolbarFilters = [
             'showGenes', 'showCDS', 'showMRNA', 'showTRNA', 'showRRNA',
-            'showPromoter', 'showTerminator', 'showRegulatory', 'showSource', 'showOther'
+            'showPromoter', 'showTerminator', 'showRegulatory', 'showSource',
+            'showMiscFeature', 'showRepeatRegion', 'showBedFeature', 'showOther'
         ];
-        
+
         const sidebarFilters = [
             'sidebarShowGenes', 'sidebarShowCDS', 'sidebarShowMRNA', 'sidebarShowTRNA', 'sidebarShowRRNA',
-            'sidebarShowPromoter', 'sidebarShowTerminator', 'sidebarShowRegulatory', 'sidebarShowSource', 'sidebarShowOther'
+            'sidebarShowPromoter', 'sidebarShowTerminator', 'sidebarShowRegulatory', 'sidebarShowSource',
+            'sidebarShowMiscFeature', 'sidebarShowRepeatRegion', 'sidebarShowBedFeature', 'sidebarShowOther'
         ];
 
         // Map filter IDs to gene filter keys
         const filterMap = {
             'showGenes': 'genes', 'showCDS': 'CDS', 'showMRNA': 'mRNA', 'showTRNA': 'tRNA', 'showRRNA': 'rRNA',
-            'showPromoter': 'promoter', 'showTerminator': 'terminator', 'showRegulatory': 'regulatory', 'showSource': 'source', 'showOther': 'other'
+            'showPromoter': 'promoter', 'showTerminator': 'terminator', 'showRegulatory': 'regulatory', 'showSource': 'source',
+            'showMiscFeature': 'misc_feature', 'showRepeatRegion': 'repeat_region', 'showBedFeature': 'bed_feature', 'showOther': 'other'
         };
 
         // Setup toolbar listeners
@@ -2546,7 +2555,7 @@ class GenomeBrowser {
         // Handle plugin menu actions
         ipcRenderer.on('show-plugin-management', () => {
             console.log('🧩 Plugin Management requested from main menu');
-            
+
             // Try to show the modal directly if PluginManagementUI is available
             if (window.pluginManagementUI) {
                 console.log('✅ PluginManagementUI found globally, showing modal directly...');
@@ -2573,16 +2582,16 @@ class GenomeBrowser {
 
         ipcRenderer.on('show-plugin-marketplace', () => {
             console.log('🛒 Plugin Marketplace requested from main menu');
-            
+
             // Try multiple approaches to open plugin marketplace
             const pluginMarketplaceBtn = document.getElementById('pluginMarketplaceBtn');
-            
+
             if (pluginMarketplaceBtn) {
                 console.log('✅ Plugin Marketplace button found, clicking...');
                 pluginMarketplaceBtn.click();
             } else {
                 console.warn('⚠️ Plugin Marketplace button not found, trying direct approach...');
-                
+
                 // Try to show the marketplace directly if PluginManagementUI is available
                 if (window.pluginManagementUI) {
                     console.log('✅ PluginManagementUI found globally, opening marketplace directly...');
@@ -2647,16 +2656,16 @@ class GenomeBrowser {
 
         ipcRenderer.on('multi-agent-settings', () => {
             console.log('🤖 Multi-Agent Settings requested from main menu');
-            
+
             // Try multiple approaches to open multi-agent settings
             const multiAgentSettingsBtn = document.getElementById('multiAgentSettingsBtn');
-            
+
             if (multiAgentSettingsBtn) {
                 console.log('✅ Multi-Agent Settings button found, clicking...');
                 multiAgentSettingsBtn.click();
             } else {
                 console.warn('⚠️ Multi-Agent Settings button not found, trying direct approach...');
-                
+
                 // Try to show the modal directly if MultiAgentSettingsManager is available
                 if (window.multiAgentSettingsManager) {
                     console.log('✅ MultiAgentSettingsManager found globally, showing modal directly...');
@@ -2870,7 +2879,7 @@ class GenomeBrowser {
                 if (project.filePath) {
                     // Open the project manager window if not already open
                     const projectManagerWindow = await this.openProjectManagerWindow();
-                    
+
                     if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
                         // Load the project from the file
                         await projectManagerWindow.projectManagerWindow.loadProjectFromFile(project.filePath);
@@ -2891,7 +2900,7 @@ class GenomeBrowser {
             console.log('🗑️ Clear recent projects requested');
             try {
                 const projectManagerWindow = await this.openProjectManagerWindow();
-                
+
                 if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
                     // Clear recent projects in ProjectManager
                     projectManagerWindow.projectManagerWindow.clearRecentProjects();
@@ -2908,17 +2917,17 @@ class GenomeBrowser {
         // Handle MCP tool calls for action functions
         ipcRenderer.on('mcp-tool-call', async (event, data) => {
             console.log('🔧 MCP tool call received:', data);
-            
+
             try {
                 const { requestId, method, parameters } = data;
-                
+
                 // Check if this is an action function call
                 if (method && method.startsWith('action_')) {
                     const actionFunctionName = method.substring(7); // Remove 'action_' prefix
-                    
+
                     if (this.actionManager) {
                         const result = await this.actionManager.executeActionFunction(actionFunctionName, parameters);
-                        
+
                         // Send success response
                         ipcRenderer.send('mcp-tool-response', {
                             requestId,
@@ -2943,7 +2952,7 @@ class GenomeBrowser {
                 }
             } catch (error) {
                 console.error('Error handling MCP tool call:', error);
-                
+
                 // Send error response
                 ipcRenderer.send('mcp-tool-response', {
                     requestId: data.requestId,
@@ -2958,10 +2967,10 @@ class GenomeBrowser {
         ipcRenderer.on('execute-tool-request', async (event, data) => {
             console.log('🔧 [Renderer] Received tool execution request:', data);
             const { requestId, toolName, parameters, clientId } = data;
-            
+
             try {
                 let result;
-                
+
                 // Use ChatManager's tool execution system
                 if (window.genomeBrowser && window.genomeBrowser.chatManager) {
                     console.log('📋 [Renderer] Executing tool via ChatManager:', toolName);
@@ -2972,19 +2981,19 @@ class GenomeBrowser {
                 } else {
                     throw new Error('ChatManager not available for tool execution');
                 }
-                
+
                 console.log('✅ [Renderer] Tool executed successfully:', toolName, result);
-                
+
                 // Send success response back to main process
                 ipcRenderer.send('tool-response', {
                     requestId,
                     success: true,
                     result
                 });
-                
+
             } catch (error) {
                 console.error('❌ [Renderer] Tool execution failed:', error);
-                
+
                 // Send error response back to main process
                 ipcRenderer.send('tool-response', {
                     requestId,
@@ -2997,10 +3006,10 @@ class GenomeBrowser {
         // Handle notifications from main process
         ipcRenderer.on('show-notification', (event, notificationData) => {
             console.log('📢 Received notification from main process:', notificationData);
-            
+
             if (notificationData && notificationData.title && notificationData.message) {
                 const { type = 'info', title, message, duration = 5000 } = notificationData;
-                
+
                 // Use the existing notification system
                 this.showNotification(`${title}: ${message}`, type);
             }
@@ -3028,14 +3037,14 @@ class GenomeBrowser {
             return;
         }
         console.log(`🔧 [DEBUG] [createTrackByType] Creating ${trackType} track`);
-        
+
         // Skip 'sequence' as it's handled by the bottom sequence panel, not as a regular track
         if (trackType === 'sequence') {
             return;
         }
-        
+
         let trackElement = null;
-        
+
         switch (trackType) {
             case 'genes':
                 // Gene track (only if annotations exist)
@@ -3043,54 +3052,54 @@ class GenomeBrowser {
                     trackElement = this.trackRenderer.createGeneTrack(chromosome);
                 }
                 break;
-                
+
             case 'gc':
                 // GC Content track
                 trackElement = this.trackRenderer.createGCTrack(chromosome, sequence);
                 break;
-                
+
             case 'variants':
                 // Variants track (show even without data)
                 trackElement = this.trackRenderer.createVariantTrack(chromosome);
                 break;
-                
+
             case 'reads':
                 // Aligned reads track (async)
                 trackElement = await this.trackRenderer.createReadsTrack(chromosome);
                 break;
-                
+
             case 'wigTracks':
                 // WIG tracks (show even without data)
                 trackElement = this.trackRenderer.createWIGTrack(chromosome);
                 break;
-                
+
             case 'proteins':
                 // Protein track (only if we have CDS annotations)
                 if (this.currentAnnotations && this.currentAnnotations[chromosome]) {
                     trackElement = this.trackRenderer.createProteinTrack(chromosome);
                 }
                 break;
-                
+
             case 'actions':
                 // Actions track (show even without data)
                 trackElement = this.trackRenderer.createActionsTrack(chromosome);
                 break;
-                
+
             case 'sequenceLine':
                 // Single-line sequence track
                 trackElement = this.trackRenderer.createSequenceLineTrack(chromosome, sequence);
                 break;
-            
+
             case 'blast':
                 // Blast results track
                 trackElement = this.trackRenderer.createBlastTrack(chromosome);
                 break;
-                
+
             default:
                 console.warn(`Unknown track type: ${trackType}`);
                 return;
         }
-        
+
         if (trackElement) {
             tracksToShow.push({ element: trackElement, type: trackType });
         }
@@ -3103,19 +3112,19 @@ class GenomeBrowser {
             console.log('[displayGenomeView] Already rendering, skipping duplicate call');
             return;
         }
-        
+
         this._isRenderingView = true;
 
         try {
             // Create EcoCyc-like studio view
             const container = document.getElementById('genomeViewer');
-            
+
             // Show and update the navigation bar
             this.genomeNavigationBar.show(chromosome, sequence.length);
-            
+
             // PRESERVE TRACK HEIGHTS AND HEADER STATES before clearing container
             this.trackRenderer.saveHeaderStates();
-            
+
             const preservedHeights = new Map();
             const trackTypeMapping = {
                 'gene': 'genes',
@@ -3157,23 +3166,23 @@ class GenomeBrowser {
                 }
             });
             console.log('[displayGenomeView] Preserved heights map:', preservedHeights);
-            
+
             container.innerHTML = '';
-            
+
             // Show navigation controls
             document.getElementById('genomeNavigation').style.display = 'block';
-            
+
             // Create CodeXomics container
             const browserContainer = document.createElement('div');
             browserContainer.className = 'genome-browser-container';
-            
+
             // Collect all tracks to be displayed in tab-specific order
             const tracksToShow = [];
-            
+
             // Get current tab's track order from TabManager
             const currentTabState = this.tabManager && this.tabManager.getCurrentTabState();
             let currentTabOrder;
-            
+
             if (currentTabState && currentTabState.trackOrder && Array.isArray(currentTabState.trackOrder) && currentTabState.trackOrder.length > 0) {
                 currentTabOrder = currentTabState.trackOrder;
                 console.log('[displayGenomeView] Using saved tab track order:', currentTabOrder);
@@ -3188,14 +3197,14 @@ class GenomeBrowser {
                     console.log('[displayGenomeView] Using default track order:', currentTabOrder);
                 }
             }
-            
+
             console.log('[displayGenomeView] Current tab state available:', !!currentTabState);
-            
+
             // Create tracks according to the tab's specific order
             for (const trackType of currentTabOrder) {
                 await this.createTrackByType(trackType, chromosome, sequence, tracksToShow);
             }
-            
+
             // Also create any visible tracks that aren't in the saved order (for backward compatibility)
             const defaultOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'sequenceLine', 'actions', 'blast'];
             for (const trackType of defaultOrder) {
@@ -3203,7 +3212,7 @@ class GenomeBrowser {
                     await this.createTrackByType(trackType, chromosome, sequence, tracksToShow);
                 }
             }
-            
+
             // Create separate tracks for each annotation track
             if (this.annotationTracks && this.annotationTracks.length > 0) {
                 for (const annotationTrack of this.annotationTracks) {
@@ -3215,12 +3224,12 @@ class GenomeBrowser {
                     }
                 }
             }
-            
+
             // Add tracks without splitters, but make them draggable and resizable
             tracksToShow.forEach((track, index) => {
                 // Add the track
                 browserContainer.appendChild(track.element);
-                
+
                 // RESTORE PRESERVED HEIGHT if it exists (current session)
                 const trackContent = track.element.querySelector('.track-content');
                 const typeToRestore = track.type;
@@ -3229,23 +3238,23 @@ class GenomeBrowser {
                     trackContent.style.height = heightToRestore;
                     console.log(`[displayGenomeView] Restored height for ${typeToRestore}: ${heightToRestore}`);
                 } else if (trackContent) {
-                     console.log(`[displayGenomeView] No preserved height found for ${typeToRestore}. Current height: ${trackContent.style.height}`);
+                    console.log(`[displayGenomeView] No preserved height found for ${typeToRestore}. Current height: ${trackContent.style.height}`);
                 }
-                
+
                 // Make tracks draggable for reordering and add resize handle
                 this.makeTrackDraggable(track.element, track.type);
                 this.addTrackResizeHandle(track.element, track.type);
             });
-            
+
             container.appendChild(browserContainer);
-            
+
             // Apply saved track state (sizes) from previous sessions
             // Note: Track order is already applied during track creation
             this.trackStateManager.applyTrackSizes(browserContainer);
-            
+
             // Handle bottom sequence panel separately (always docked to bottom)
             this.handleBottomSequencePanel(chromosome, sequence);
-            
+
             // Notify reads manager of navigation change for cache management
             if (this.readsManager) {
                 this.readsManager.onNavigationChange(chromosome, this.currentPosition.start, this.currentPosition.end);
@@ -3255,7 +3264,7 @@ class GenomeBrowser {
             this._isRenderingView = false;
         }
     }
-    
+
     // Setup the existing toggle button to work with new bottom sequence panel
     setupToggleButtonListener() {
         // Toggle button has been removed - no longer needed
@@ -3268,16 +3277,16 @@ class GenomeBrowser {
         splitter.className = 'track-splitter';
         splitter.setAttribute('data-top-track', topTrackType);
         splitter.setAttribute('data-bottom-track', bottomTrackType);
-        
+
         // Add visual indicator
         const handle = document.createElement('div');
         handle.className = 'track-splitter-handle';
         handle.innerHTML = '⋯';
         splitter.appendChild(handle);
-        
+
         // Add resize functionality
         this.makeTrackSplitterResizable(splitter);
-        
+
         return splitter;
     }
 
@@ -3289,7 +3298,7 @@ class GenomeBrowser {
         let startBottomHeight = 0;
         let topTrack = null;
         let bottomTrack = null;
-        
+
         const startResize = (e) => {
             isResizing = true;
             startY = e.clientY || e.touches[0].clientY;
@@ -3309,7 +3318,7 @@ class GenomeBrowser {
             document.body.style.userSelect = 'none';
             e.preventDefault();
         };
-        
+
         const doResize = (e) => {
             if (!isResizing || !topTrack || !bottomTrack) return;
             const currentY = e.clientY || e.touches[0].clientY;
@@ -3340,18 +3349,18 @@ class GenomeBrowser {
             }
             e.preventDefault();
         };
-        
+
         const stopResize = () => {
             if (!isResizing) return;
-            
+
             isResizing = false;
             splitter.classList.remove('resizing');
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
-            
+
             // Remove the global flag to allow track content dragging again
             document.body.removeAttribute('data-splitter-resizing');
-            
+
             // Trigger sequence track window re-render if it was affected
             if (bottomTrack && (bottomTrack.classList.contains('sequence-track') || bottomTrack.id === 'sequenceDisplaySection')) {
                 const currentChr = document.getElementById('chromosomeSelect')?.value;
@@ -3363,30 +3372,30 @@ class GenomeBrowser {
                     }, 50);
                 }
             }
-            
+
             topTrack = null;
             bottomTrack = null;
         };
-        
+
         // Auto-adjust height calculation - triggered on double-click
         const autoAdjustHeight = () => {
             const topTrack = splitter.previousElementSibling;
             const bottomTrack = splitter.nextElementSibling;
-            
+
             if (topTrack && bottomTrack) {
                 const topContent = topTrack.querySelector('.track-content');
                 const bottomContent = bottomTrack.querySelector('.track-content');
-                
+
                 if (topContent && bottomContent) {
                     // Add visual feedback
                     splitter.classList.add('auto-adjusting');
-                    
+
                     // Calculate optimal height for top track based on its content
                     let optimalHeight = 80;
-                    
+
                     // Get track type from data attributes
                     const topTrackType = splitter.getAttribute('data-top-track');
-                    
+
                     switch (topTrackType) {
                         case 'genes':
                             const geneElements = topContent.querySelectorAll('.gene-element');
@@ -3439,11 +3448,11 @@ class GenomeBrowser {
                         default:
                             optimalHeight = 80;
                     }
-                    
+
                     // Apply the optimal height with smooth transition
                     topContent.style.transition = 'height 0.3s ease';
                     topContent.style.height = `${optimalHeight}px`;
-                    
+
                     // Remove transition and animation classes after animation completes
                     setTimeout(() => {
                         topContent.style.transition = '';
@@ -3452,27 +3461,27 @@ class GenomeBrowser {
                 }
             }
         };
-        
+
         // Mouse events
         splitter.addEventListener('mousedown', startResize);
         document.addEventListener('mousemove', doResize);
         document.addEventListener('mouseup', stopResize);
-        
+
         // Touch events for mobile
         splitter.addEventListener('touchstart', startResize, { passive: false });
         document.addEventListener('touchmove', doResize, { passive: false });
         document.addEventListener('touchend', stopResize);
-        
+
         // Double-click for auto-adjust
         splitter.addEventListener('dblclick', autoAdjustHeight);
-        
+
         // Make splitter focusable for keyboard navigation
         splitter.setAttribute('tabindex', '0');
         splitter.addEventListener('keydown', (e) => {
             const step = 10; // pixels to move per keypress
             let deltaY = 0;
-            
-            switch(e.key) {
+
+            switch (e.key) {
                 case 'ArrowUp':
                     deltaY = -step;
                     break;
@@ -3486,26 +3495,26 @@ class GenomeBrowser {
                 default:
                     return;
             }
-            
+
             e.preventDefault();
-            
+
             // Apply keyboard movement
             const topTrack = splitter.previousElementSibling;
             const bottomTrack = splitter.nextElementSibling;
-            
+
             if (topTrack && bottomTrack) {
                 const topContent = topTrack.querySelector('.track-content');
                 const bottomContent = bottomTrack.querySelector('.track-content');
-                
+
                 if (topContent && bottomContent) {
                     const currentTopHeight = topContent.offsetHeight;
                     const currentBottomHeight = bottomContent.offsetHeight;
-                    
+
                     const newTopHeight = currentTopHeight + deltaY;
                     const newBottomHeight = currentBottomHeight - deltaY;
-                    
+
                     const minHeight = 40;
-                    
+
                     if (newTopHeight >= minHeight && newBottomHeight >= minHeight) {
                         topContent.style.height = `${newTopHeight}px`;
                         bottomContent.style.height = `${newBottomHeight}px`;
@@ -3523,7 +3532,7 @@ class GenomeBrowser {
             trackHeader.style.cursor = 'move';
             trackHeader.setAttribute('draggable', true);
             trackHeader.setAttribute('data-track-type', trackType);
-            
+
             // Add drag handle icon
             const dragHandle = document.createElement('div');
             dragHandle.className = 'track-drag-handle';
@@ -3541,7 +3550,7 @@ class GenomeBrowser {
             trackHeader.style.position = 'relative';
             trackHeader.style.paddingLeft = '30px';
             trackHeader.insertBefore(dragHandle, trackHeader.firstChild);
-            
+
             // Drag event handlers
             trackHeader.addEventListener('dragstart', (e) => {
                 e.dataTransfer.setData('text/plain', trackType);
@@ -3549,48 +3558,48 @@ class GenomeBrowser {
                 trackElement.classList.add('dragging');
                 dragHandle.style.cursor = 'grabbing';
             });
-            
+
             trackHeader.addEventListener('dragend', (e) => {
                 trackElement.classList.remove('dragging');
                 dragHandle.style.cursor = 'grab';
-                
+
                 // Remove all drop indicators
                 document.querySelectorAll('.track-drop-indicator').forEach(indicator => {
                     indicator.remove();
                 });
             });
         }
-        
+
         // Make track a drop target
         trackElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            
+
             const draggingElement = document.querySelector('.dragging');
             if (draggingElement && draggingElement !== trackElement) {
                 this.showDropIndicator(trackElement, e.clientY);
             }
         });
-        
+
         trackElement.addEventListener('dragleave', (e) => {
             if (!trackElement.contains(e.relatedTarget)) {
                 this.hideDropIndicator(trackElement);
             }
         });
-        
+
         trackElement.addEventListener('drop', (e) => {
             e.preventDefault();
             const draggedTrackType = e.dataTransfer.getData('text/plain');
             const draggedElement = document.querySelector('.dragging');
-            
+
             if (draggedElement && draggedElement !== trackElement) {
                 this.reorderTracks(draggedElement, trackElement, e.clientY);
             }
-            
+
             this.hideDropIndicator(trackElement);
         });
     }
-    
+
     // Add resize handle to track
     addTrackResizeHandle(trackElement, trackType) {
         const resizeHandle = document.createElement('div');
@@ -3616,93 +3625,93 @@ class GenomeBrowser {
             transition: all 0.2s ease;
             z-index: 10;
         `;
-        
+
         trackElement.style.position = 'relative';
         trackElement.appendChild(resizeHandle);
-        
+
         // Hover effects
         resizeHandle.addEventListener('mouseenter', () => {
             resizeHandle.style.opacity = '1';
             resizeHandle.style.height = '10px';
             resizeHandle.style.bottom = '-5px';
         });
-        
+
         resizeHandle.addEventListener('mouseleave', () => {
             resizeHandle.style.opacity = '0.7';
             resizeHandle.style.height = '8px';
             resizeHandle.style.bottom = '-4px';
         });
-        
+
         // Resize functionality
         this.makeResizeHandleResizable(resizeHandle, trackElement, trackType);
     }
-    
+
     // Make resize handle functional
     makeResizeHandleResizable(resizeHandle, trackElement, trackType) {
         let isResizing = false;
         let startY = 0;
         let startHeight = 0;
-        
+
         const startResize = (e) => {
             isResizing = true;
             startY = e.clientY || e.touches[0].clientY;
-            
+
             const trackContent = trackElement.querySelector('.track-content');
             if (trackContent) {
                 startHeight = trackContent.offsetHeight;
             }
-            
+
             document.body.style.cursor = 'row-resize';
             document.body.style.userSelect = 'none';
             resizeHandle.style.background = 'linear-gradient(to bottom, #ced4da, #adb5bd, #ced4da)';
-            
+
             e.preventDefault();
             e.stopPropagation();
         };
-        
+
         const doResize = (e) => {
             if (!isResizing) return;
-            
+
             const currentY = e.clientY || e.touches[0].clientY;
             const deltaY = currentY - startY;
-            
+
             const trackContent = trackElement.querySelector('.track-content');
             if (trackContent) {
                 const newHeight = Math.max(50, startHeight + deltaY);
                 trackContent.style.height = `${newHeight}px`;
-                
+
                 // Save the new size to track state manager
                 this.trackStateManager.saveTrackSize(trackType, `${newHeight}px`);
             }
-            
+
             e.preventDefault();
         };
-        
+
         const stopResize = () => {
             if (!isResizing) return;
-            
+
             isResizing = false;
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             resizeHandle.style.background = 'linear-gradient(to bottom, #e9ecef, #dee2e6, #e9ecef)';
         };
-        
+
         // Mouse events
         resizeHandle.addEventListener('mousedown', startResize);
         document.addEventListener('mousemove', doResize);
         document.addEventListener('mouseup', stopResize);
-        
+
         // Touch events
         resizeHandle.addEventListener('touchstart', startResize, { passive: false });
         document.addEventListener('touchmove', doResize, { passive: false });
         document.addEventListener('touchend', stopResize);
-        
+
         // Double-click to auto-adjust height
         resizeHandle.addEventListener('dblclick', () => {
             const trackContent = trackElement.querySelector('.track-content');
             if (trackContent) {
                 let optimalHeight = 80;
-                
+
                 switch (trackType) {
                     case 'genes':
                         const geneElements = trackContent.querySelectorAll('.gene-element');
@@ -3744,12 +3753,12 @@ class GenomeBrowser {
                     default:
                         optimalHeight = 80;
                 }
-                
+
                 trackContent.style.height = `${optimalHeight}px`;
-                
+
                 // Save the new size to track state manager
                 this.trackStateManager.saveTrackSize(trackType, `${optimalHeight}px`);
-                
+
                 // Visual feedback
                 resizeHandle.style.background = 'linear-gradient(to bottom, #28a745, #20c997, #28a745)';
                 setTimeout(() => {
@@ -3758,15 +3767,15 @@ class GenomeBrowser {
             }
         });
     }
-    
+
     // Show drop indicator when dragging tracks
     showDropIndicator(targetElement, mouseY) {
         this.hideDropIndicator(targetElement);
-        
+
         const rect = targetElement.getBoundingClientRect();
         const midPoint = rect.top + rect.height / 2;
         const isAbove = mouseY < midPoint;
-        
+
         const indicator = document.createElement('div');
         indicator.className = 'track-drop-indicator';
         indicator.style.cssText = `
@@ -3779,11 +3788,11 @@ class GenomeBrowser {
             box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
             ${isAbove ? 'top: -2px;' : 'bottom: -2px;'}
         `;
-        
+
         targetElement.style.position = 'relative';
         targetElement.appendChild(indicator);
     }
-    
+
     // Hide drop indicator
     hideDropIndicator(targetElement) {
         const indicator = targetElement.querySelector('.track-drop-indicator');
@@ -3791,32 +3800,32 @@ class GenomeBrowser {
             indicator.remove();
         }
     }
-    
+
     // Reorder tracks based on drop position
     reorderTracks(draggedElement, targetElement, mouseY) {
         const container = targetElement.parentElement;
         const rect = targetElement.getBoundingClientRect();
         const midPoint = rect.top + rect.height / 2;
         const insertBefore = mouseY < midPoint;
-        
+
         if (insertBefore) {
             container.insertBefore(draggedElement, targetElement);
         } else {
             container.insertBefore(draggedElement, targetElement.nextSibling);
         }
-        
+
         // Update track visibility state based on new order
         this.updateTrackOrder();
     }
-    
+
     // Update internal track order state
     updateTrackOrder() {
         const container = document.querySelector('.genome-browser-container');
         if (!container) return;
-        
+
         const trackElements = Array.from(container.querySelectorAll('[class*="-track"]'));
         const newOrder = [];
-        
+
         trackElements.forEach(element => {
             const classList = Array.from(element.classList);
             const trackClass = classList.find(cls => cls.endsWith('-track'));
@@ -3835,17 +3844,17 @@ class GenomeBrowser {
                 newOrder.push(mappedType);
             }
         });
-        
+
         console.log('New track order:', newOrder);
-        
+
         // Save the new order to track state manager
         this.trackStateManager.saveTrackOrder(newOrder);
-        
+
         // Store the order preference if needed
         if (this.configManager) {
             this.configManager.set('trackOrder', newOrder);
         }
-        
+
         // Notify TabManager of track order change IMMEDIATELY
         // to ensure track state is synchronized before any re-rendering
         if (this.tabManager) {
@@ -3860,12 +3869,12 @@ class GenomeBrowser {
         if (this._updateTracksTimeout) {
             clearTimeout(this._updateTracksTimeout);
         }
-        
+
         this._updateTracksTimeout = setTimeout(() => {
             this._doUpdateVisibleTracks();
         }, 50); // 50ms debounce
     }
-    
+
     _doUpdateVisibleTracks() {
         // Get selected tracks from toolbar checkboxes
         const tracks = new Set();
@@ -3879,7 +3888,7 @@ class GenomeBrowser {
         const trackSequenceLine = document.getElementById('trackSequenceLine');
         const trackActions = document.getElementById('trackActions');
         const trackBlast = document.getElementById('trackBlast');
-        
+
         if (trackGenes && trackGenes.checked) tracks.add('genes');
         if (trackGC && trackGC.checked) tracks.add('gc');
         if (trackVariants && trackVariants.checked) tracks.add('variants');
@@ -3890,9 +3899,9 @@ class GenomeBrowser {
         if (trackSequenceLine && trackSequenceLine.checked) tracks.add('sequenceLine');
         if (trackActions && trackActions.checked) tracks.add('actions');
         if (trackBlast && trackBlast.checked) tracks.add('blast');
-        
+
         this.visibleTracks = tracks;
-        
+
         // Sync with sidebar
         const sidebarTrackGenes = document.getElementById('sidebarTrackGenes');
         const sidebarTrackGC = document.getElementById('sidebarTrackGC');
@@ -3904,7 +3913,7 @@ class GenomeBrowser {
         const sidebarTrackSequenceLine = document.getElementById('sidebarTrackSequenceLine');
         const sidebarTrackActions = document.getElementById('sidebarTrackActions');
         const sidebarTrackBlast = document.getElementById('sidebarTrackBlast');
-        
+
         if (sidebarTrackGenes) sidebarTrackGenes.checked = tracks.has('genes');
         if (sidebarTrackGC) sidebarTrackGC.checked = tracks.has('gc');
         if (sidebarTrackVariants) sidebarTrackVariants.checked = tracks.has('variants');
@@ -3915,7 +3924,7 @@ class GenomeBrowser {
         if (sidebarTrackSequenceLine) sidebarTrackSequenceLine.checked = tracks.has('sequenceLine');
         if (sidebarTrackActions) sidebarTrackActions.checked = tracks.has('actions');
         if (sidebarTrackBlast) sidebarTrackBlast.checked = tracks.has('blast');
-        
+
         // Update trackVisibility object to match visibleTracks
         this.trackVisibility.genes = tracks.has('genes');
         this.trackVisibility.gc = tracks.has('gc');
@@ -3926,12 +3935,12 @@ class GenomeBrowser {
         this.trackVisibility.sequenceLine = tracks.has('sequenceLine');
         this.trackVisibility.actions = tracks.has('actions');
         this.trackVisibility.blast = tracks.has('blast');
-        
+
         // Notify TabManager of track visibility change
         if (this.tabManager) {
             this.tabManager.onTrackVisibilityChanged();
         }
-        
+
         // Refresh the genome view if a file is loaded
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
@@ -3944,12 +3953,12 @@ class GenomeBrowser {
         if (this._updateTracksFromSidebarTimeout) {
             clearTimeout(this._updateTracksFromSidebarTimeout);
         }
-        
+
         this._updateTracksFromSidebarTimeout = setTimeout(() => {
             this._doUpdateVisibleTracksFromSidebar();
         }, 50); // 50ms debounce
     }
-    
+
     _doUpdateVisibleTracksFromSidebar() {
         // Get selected tracks from sidebar checkboxes
         const tracks = new Set();
@@ -3963,7 +3972,7 @@ class GenomeBrowser {
         const sidebarTrackSequenceLine = document.getElementById('sidebarTrackSequenceLine');
         const sidebarTrackActions = document.getElementById('sidebarTrackActions');
         const sidebarTrackBlast = document.getElementById('sidebarTrackBlast');
-        
+
         if (sidebarTrackGenes && sidebarTrackGenes.checked) tracks.add('genes');
         if (sidebarTrackGC && sidebarTrackGC.checked) tracks.add('gc');
         if (sidebarTrackVariants && sidebarTrackVariants.checked) tracks.add('variants');
@@ -3974,9 +3983,9 @@ class GenomeBrowser {
         if (sidebarTrackSequenceLine && sidebarTrackSequenceLine.checked) tracks.add('sequenceLine');
         if (sidebarTrackActions && sidebarTrackActions.checked) tracks.add('actions');
         if (sidebarTrackBlast && sidebarTrackBlast.checked) tracks.add('blast');
-        
+
         this.visibleTracks = tracks;
-        
+
         // Sync with toolbar
         const trackGenes = document.getElementById('trackGenes');
         const trackGC = document.getElementById('trackGC');
@@ -3988,7 +3997,7 @@ class GenomeBrowser {
         const trackSequenceLine = document.getElementById('trackSequenceLine');
         const trackActions = document.getElementById('trackActions');
         const trackBlast = document.getElementById('trackBlast');
-        
+
         if (trackGenes) trackGenes.checked = tracks.has('genes');
         if (trackGC) trackGC.checked = tracks.has('gc');
         if (trackVariants) trackVariants.checked = tracks.has('variants');
@@ -3999,7 +4008,7 @@ class GenomeBrowser {
         if (trackSequenceLine) trackSequenceLine.checked = tracks.has('sequenceLine');
         if (trackActions) trackActions.checked = tracks.has('actions');
         if (trackBlast) trackBlast.checked = tracks.has('blast');
-        
+
         // Update trackVisibility object to match visibleTracks
         this.trackVisibility.genes = tracks.has('genes');
         this.trackVisibility.gc = tracks.has('gc');
@@ -4009,12 +4018,12 @@ class GenomeBrowser {
         this.trackVisibility.sequence = tracks.has('sequence');
         this.trackVisibility.sequenceLine = tracks.has('sequenceLine');
         this.trackVisibility.actions = tracks.has('actions');
-        
+
         // Notify TabManager of track visibility change
         if (this.tabManager) {
             this.tabManager.onTrackVisibilityChanged();
         }
-        
+
         // Refresh the genome view if a file is loaded
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
@@ -4026,20 +4035,20 @@ class GenomeBrowser {
     enableActionsTrack() {
         // Add to visible tracks
         this.visibleTracks.add('actions');
-        
+
         // Update checkboxes to reflect the change
         const trackActions = document.getElementById('trackActions');
         const sidebarTrackActions = document.getElementById('sidebarTrackActions');
-        
+
         if (trackActions) trackActions.checked = true;
         if (sidebarTrackActions) sidebarTrackActions.checked = true;
-        
+
         // Refresh the display to show the track
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
             this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
         }
-        
+
         console.log('✅ Actions track enabled and displayed');
     }
 
@@ -4058,11 +4067,11 @@ class GenomeBrowser {
             'comment': 'other',
             'note': 'other',
             'other': 'other',
-            'misc_feature': 'other',
-            'repeat_region': 'other',
-            'BED_feature': 'other'  // BED features are treated as other features
+            'misc_feature': 'misc_feature',
+            'repeat_region': 'repeat_region',
+            'BED_feature': 'bed_feature'  // BED features have their own category
         };
-        
+
         const filterKey = typeMap[type] || 'other';
         return this.geneFilters[filterKey];
     }
@@ -4076,27 +4085,27 @@ class GenomeBrowser {
                 console.log(`🚀 Using cached ${this.mappedOperons.length} mapped operons (no re-mapping needed)`);
                 return this.mappedOperons;
             }
-            
+
             // Need to map operons for the first time or for a new chromosome
             console.log(`📋 Mapping ${this.loadedOperons.length} loaded operons to annotations for chromosome ${chromosome}...`);
             const startTime = performance.now();
-            
+
             this.mappedOperons = this.loadedOperons.map(operon => ({
                 ...operon,
                 genes: this.mapOperonGenesToAnnotations(operon, annotations)
             }));
-            
+
             this.operonMappingChromosome = chromosome;
-            
+
             const endTime = performance.now();
             console.log(`✅ Operon mapping completed in ${(endTime - startTime).toFixed(2)}ms, cached for future use`);
-            
+
             return this.mappedOperons;
         }
 
         // Fall back to simple operon detection based on gene proximity and strand
         const operons = [];
-        const genes = annotations.filter(feature => 
+        const genes = annotations.filter(feature =>
             ['CDS', 'mRNA', 'tRNA', 'rRNA'].includes(feature.type)
         ).sort((a, b) => a.start - b.start);
 
@@ -4108,11 +4117,11 @@ class GenomeBrowser {
         for (let i = 1; i < genes.length; i++) {
             const prevGene = genes[i - 1];
             const currentGene = genes[i];
-            
+
             // Check if genes are close enough and on the same strand to be in the same operon
             const gap = currentGene.start - prevGene.end;
             const sameStrand = prevGene.strand === currentGene.strand;
-            
+
             if (gap <= maxGap && sameStrand && gap >= 0) {
                 currentOperon.push(currentGene);
             } else {
@@ -4147,56 +4156,56 @@ class GenomeBrowser {
     mapOperonGenesToAnnotations(operon, annotations) {
         // Map operon gene names to actual annotation features
         const mappedGenes = [];
-        
+
         for (const geneName of operon.genes) {
             // Try to find matching annotation by gene name or locus tag
             const matchingFeature = annotations.find(feature => {
                 const featureGeneName = feature.qualifiers?.gene || '';
                 const featureLocus = feature.qualifiers?.locus_tag || '';
-                
+
                 // Try exact match first
                 if (featureGeneName === geneName || featureLocus === geneName) {
                     return true;
                 }
-                
+
                 // Try case-insensitive match
-                if (featureGeneName.toLowerCase() === geneName.toLowerCase() || 
+                if (featureGeneName.toLowerCase() === geneName.toLowerCase() ||
                     featureLocus.toLowerCase() === geneName.toLowerCase()) {
                     return true;
                 }
-                
+
                 // Try partial match
-                if (featureGeneName && geneName && 
+                if (featureGeneName && geneName &&
                     (featureGeneName.includes(geneName) || geneName.includes(featureGeneName))) {
                     return true;
                 }
-                
-                if (featureLocus && geneName && 
+
+                if (featureLocus && geneName &&
                     (featureLocus.includes(geneName) || geneName.includes(featureLocus))) {
                     return true;
                 }
-                
+
                 return false;
             });
-            
+
             if (matchingFeature) {
                 mappedGenes.push(matchingFeature);
             }
             // Skip unmapped genes silently - allows operons to work even if some genes can't be mapped
         }
-        
+
         return mappedGenes;
     }
 
     generateOperonName(genes) {
         // Generate operon name based on first gene or common prefix
         const firstGene = genes[0];
-        const geneName = this.getQualifierValue(firstGene.qualifiers, 'gene') || 
-                        this.getQualifierValue(firstGene.qualifiers, 'locus_tag') || 'unknown';
-        
+        const geneName = this.getQualifierValue(firstGene.qualifiers, 'gene') ||
+            this.getQualifierValue(firstGene.qualifiers, 'locus_tag') || 'unknown';
+
         // Try to find common prefix among gene names
-        const geneNames = genes.map(g => 
-            this.getQualifierValue(g.qualifiers, 'gene') || 
+        const geneNames = genes.map(g =>
+            this.getQualifierValue(g.qualifiers, 'gene') ||
             this.getQualifierValue(g.qualifiers, 'locus_tag') || ''
         ).filter(n => n);
         if (geneNames.length > 1) {
@@ -4205,13 +4214,13 @@ class GenomeBrowser {
                 return `${commonPrefix}_operon`;
             }
         }
-        
+
         return `${geneName}_operon`;
     }
 
     findCommonPrefix(strings) {
         if (strings.length === 0) return '';
-        
+
         let prefix = strings[0];
         for (let i = 1; i < strings.length; i++) {
             while (strings[i].indexOf(prefix) !== 0) {
@@ -4242,7 +4251,7 @@ class GenomeBrowser {
                 name: null
             };
         }
-        
+
         // Find which operon this gene belongs to
         // Check by: 1) exact feature match, 2) position overlap, 3) name match
         for (const operon of operons) {
@@ -4254,7 +4263,7 @@ class GenomeBrowser {
                     isInOperon: true
                 };
             }
-            
+
             // Method 2: Check by position match (start and end)
             if (operon.genes.some(g => g.start === gene.start && g.end === gene.end)) {
                 return {
@@ -4263,15 +4272,15 @@ class GenomeBrowser {
                     isInOperon: true
                 };
             }
-            
+
             // Method 3: Check if gene is within operon boundaries and has matching strand
             if (gene.start >= operon.start && gene.end <= operon.end && gene.strand === operon.strand) {
                 // Also check if gene name matches any gene in the operon
-                const geneName = this.getQualifierValue(gene.qualifiers, 'gene') || 
-                                this.getQualifierValue(gene.qualifiers, 'locus_tag') || '';
+                const geneName = this.getQualifierValue(gene.qualifiers, 'gene') ||
+                    this.getQualifierValue(gene.qualifiers, 'locus_tag') || '';
                 if (geneName && operon.genes.some(g => {
-                    const operonGeneName = this.getQualifierValue(g.qualifiers, 'gene') || 
-                                          this.getQualifierValue(g.qualifiers, 'locus_tag') || '';
+                    const operonGeneName = this.getQualifierValue(g.qualifiers, 'gene') ||
+                        this.getQualifierValue(g.qualifiers, 'locus_tag') || '';
                     return operonGeneName === geneName;
                 })) {
                     return {
@@ -4282,11 +4291,11 @@ class GenomeBrowser {
                 }
             }
         }
-        
+
         // Gene is not in an operon, assign individual color
-        const geneName = this.getQualifierValue(gene.qualifiers, 'gene') || 
-                        this.getQualifierValue(gene.qualifiers, 'locus_tag') || 
-                        `${gene.type}_${gene.start}`;
+        const geneName = this.getQualifierValue(gene.qualifiers, 'gene') ||
+            this.getQualifierValue(gene.qualifiers, 'locus_tag') ||
+            `${gene.type}_${gene.start}`;
         return {
             operonName: geneName,
             color: this.assignOperonColor(geneName),
@@ -4355,7 +4364,7 @@ class GenomeBrowser {
             const result = window.UnifiedDNATranslation.strandBasedTranslateDNA(dnaSequence, strand);
             return result;
         }
-        
+
         // Fallback to sequenceUtils implementation
         return this.sequenceUtils.translateDNA(dnaSequence, strand);
     }
@@ -4368,15 +4377,15 @@ class GenomeBrowser {
     selectGene(gene, operonInfo = null) {
         // Remove selection from previously selected gene
         this.clearGeneSelection();
-        
+
         // Set new selected gene
         this.selectedGene = { gene, operonInfo };
-        
+
         // Add selection styling to gene elements using multiple identification methods
         this.highlightSelectedGene(gene);
-        
+
         console.log('Selected gene:', gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type);
-        
+
         // Show visual feedback that a gene was selected
         this.showGeneSelectionFeedback(gene);
     }
@@ -4387,12 +4396,12 @@ class GenomeBrowser {
     showGeneSelectionFeedback(gene) {
         const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
         const message = `Selected gene: ${geneName}`;
-        
+
         // Show notification if available
         if (typeof this.showNotification === 'function') {
             this.showNotification(message, 'info');
         }
-        
+
         // Update status bar if available
         const statusBar = document.querySelector('.status-bar');
         if (statusBar) {
@@ -4401,7 +4410,7 @@ class GenomeBrowser {
             statusMessage.textContent = message;
             statusMessage.style.color = '#3b82f6';
             statusMessage.style.fontWeight = 'bold';
-            
+
             // Reset after 3 seconds
             setTimeout(() => {
                 statusMessage.textContent = originalText;
@@ -4419,7 +4428,7 @@ class GenomeBrowser {
         // Get highlight effect setting from genes track settings
         const genesSettings = this.trackRenderer?.getTrackSettings('genes') || {};
         const highlightEffect = genesSettings.highlightEffect || 'pulse';
-        
+
         // Method 1: Find gene elements by data attributes (most reliable)
         const geneElementsByData = document.querySelectorAll(`[data-gene-start="${gene.start}"][data-gene-end="${gene.end}"]`);
         geneElementsByData.forEach(el => {
@@ -4433,8 +4442,8 @@ class GenomeBrowser {
             // Check if the element has the correct gene position data
             const geneStart = el.getAttribute('data-gene-start') || el.getAttribute('data-start');
             const geneEnd = el.getAttribute('data-gene-end') || el.getAttribute('data-end');
-            
-            if ((geneStart && parseInt(geneStart) === gene.start) && 
+
+            if ((geneStart && parseInt(geneStart) === gene.start) &&
                 (geneEnd && parseInt(geneEnd) === gene.end)) {
                 el.classList.add('selected');
                 this.applyHighlightEffect(el, highlightEffect);
@@ -4447,7 +4456,7 @@ class GenomeBrowser {
             // Check title for position information
             const elementTitle = el.title || '';
             const genePosition = `${gene.start}-${gene.end}`;
-            
+
             // Check if title contains the gene position
             if (elementTitle.includes(genePosition)) {
                 el.classList.add('selected');
@@ -4458,9 +4467,9 @@ class GenomeBrowser {
             // Check data attributes as fallback
             const dataStart = el.getAttribute('data-start') || el.getAttribute('data-gene-start');
             const dataEnd = el.getAttribute('data-end') || el.getAttribute('data-gene-end');
-            
-            if (dataStart && dataEnd && 
-                parseInt(dataStart) === gene.start && 
+
+            if (dataStart && dataEnd &&
+                parseInt(dataStart) === gene.start &&
                 parseInt(dataEnd) === gene.end) {
                 el.classList.add('selected');
                 this.applyHighlightEffect(el, highlightEffect);
@@ -4469,7 +4478,7 @@ class GenomeBrowser {
 
         // Method 4: Check if we successfully highlighted any elements
         const highlightedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
-        
+
         if (highlightedElements.length === 0) {
             console.warn('No gene elements found to highlight for gene:', gene);
             // Force refresh of the gene track to ensure elements are present
@@ -4477,13 +4486,13 @@ class GenomeBrowser {
         } else {
             console.log(`Highlighted ${highlightedElements.length} gene element(s) for gene:`, gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type);
         }
-        
+
         // Auto-highlight sequence region if enabled
         if (genesSettings.autoHighlightSequence) {
             this.highlightGeneSequence(gene);
         }
     }
-    
+
     /**
      * Apply the appropriate highlight effect to a gene element
      * @param {HTMLElement} element - The gene element to apply effect to
@@ -4492,7 +4501,7 @@ class GenomeBrowser {
     applyHighlightEffect(element, effect) {
         // Remove existing highlight effect classes
         element.classList.remove('border-highlight');
-        
+
         // Apply the selected effect
         switch (effect) {
             case 'border':
@@ -4528,12 +4537,12 @@ class GenomeBrowser {
         if (geneDetailsSection) {
             geneDetailsSection.style.display = 'block';
             this.uiManager.showSidebarIfHidden();
-            
+
             // Update tab manager about sidebar panel state change
             if (this.tabManager) {
                 this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
             }
-            
+
             // Scroll sidebar to bring gene details section into view
             this.scrollSidebarToSection(geneDetailsSection);
         }
@@ -4544,12 +4553,12 @@ class GenomeBrowser {
         if (readDetailsSection) {
             readDetailsSection.style.display = 'block';
             this.uiManager.showSidebarIfHidden();
-            
+
             // Update tab manager about sidebar panel state change
             if (this.tabManager) {
                 this.tabManager.updateCurrentTabSidebarPanel('readDetailsSection', true, readDetailsSection.innerHTML);
             }
-            
+
             // Scroll sidebar to bring read details section into view
             this.scrollSidebarToSection(readDetailsSection);
         }
@@ -4560,12 +4569,12 @@ class GenomeBrowser {
         if (variantDetailsSection) {
             variantDetailsSection.style.display = 'block';
             this.uiManager.showSidebarIfHidden();
-            
+
             // Update tab manager about sidebar panel state change
             if (this.tabManager) {
                 this.tabManager.updateCurrentTabSidebarPanel('variantDetailsSection', true, variantDetailsSection.innerHTML);
             }
-            
+
             // Scroll sidebar to bring variant details section into view
             this.scrollSidebarToSection(variantDetailsSection);
         }
@@ -4575,7 +4584,7 @@ class GenomeBrowser {
      * Unified Citation System for Gene Details
      * Collects and numbers all citations across all sections
      */
-    
+
     /**
      * Add a citation to the unified citation collector
      * @param {string} citationType - Type of citation (PMID, DOI, etc.)
@@ -4585,7 +4594,7 @@ class GenomeBrowser {
      */
     addUnifiedCitation(citationType, citationId, citationText = null) {
         const citationKey = `${citationType}:${citationId}`;
-        
+
         if (!this.citationCollector.has(citationKey)) {
             this.citationCounter++;
             this.citationCollector.set(citationKey, {
@@ -4596,10 +4605,10 @@ class GenomeBrowser {
                 url: this.getCitationUrl(citationType, citationId)
             });
         }
-        
+
         return this.citationCollector.get(citationKey).number;
     }
-    
+
     /**
      * Get URL for a citation based on its type
      */
@@ -4619,7 +4628,7 @@ class GenomeBrowser {
                 return null;
         }
     }
-    
+
     /**
      * Process text and replace citations with unified numbered references
      * @param {string} text - The text to process
@@ -4627,37 +4636,37 @@ class GenomeBrowser {
      */
     processUnifiedCitations(text) {
         if (!text || typeof text !== 'string') return text;
-        
+
         let processedText = text;
-        
+
         // Pattern for PMID references: PMID:1234567 or PMID 1234567
         const pmidPattern = /\b(PMID:?\s*(\d{7,8}))/gi;
         processedText = processedText.replace(pmidPattern, (match, fullMatch, pmidId) => {
             const citationNumber = this.addUnifiedCitation('PMID', pmidId);
             return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}/" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>${citationNumber}</sup></a>`;
         });
-        
+
         // Pattern for DOI references: doi:10.xxxx/xxxx or DOI:10.xxxx/xxxx
         const doiPattern = /\b(DOI|doi):\s*(10\.\d{4,}\/[^\s]+)/gi;
         processedText = processedText.replace(doiPattern, (match, prefix, doiId) => {
             const citationNumber = this.addUnifiedCitation('DOI', doiId);
             return `<a href="https://doi.org/${doiId}" target="_blank" class="pmid-link" title="View DOI publication"><sup>${citationNumber}</sup></a>`;
         });
-        
+
         // Pattern for ArXiv references: arXiv:1234.5678
         const arxivPattern = /\barXiv:(\d{4}\.\d{4,5}(v\d+)?)\b/gi;
         processedText = processedText.replace(arxivPattern, (match, arxivId) => {
             const citationNumber = this.addUnifiedCitation('arXiv', arxivId);
             return `<a href="https://arxiv.org/abs/${arxivId}" target="_blank" class="pmid-link" title="View on ArXiv"><sup>${citationNumber}</sup></a>`;
         });
-        
+
         // Pattern for bioRxiv references: bioRxiv:1234.5678
         const biorxivPattern = /\bbioRxiv[:\s]+(\d{4}\.\d{2}\.\d{2}\.\d+)\b/gi;
         processedText = processedText.replace(biorxivPattern, (match, biorxivId) => {
             const citationNumber = this.addUnifiedCitation('bioRxiv', biorxivId);
             return `<a href="https://www.biorxiv.org/content/10.1101/${biorxivId}" target="_blank" class="pmid-link" title="View bioRxiv preprint"><sup>${citationNumber}</sup></a>`;
         });
-        
+
         // Pattern for ISBN references: ISBN-13 or ISBN-10
         const isbnPattern = /\bISBN[:\s-]*(97[89][\d\s-]{10,17}|\d[\d\s-]{8,13}[0-9X])\b/gi;
         processedText = processedText.replace(isbnPattern, (match) => {
@@ -4665,7 +4674,7 @@ class GenomeBrowser {
             const citationNumber = this.addUnifiedCitation('ISBN', cleanIsbn);
             return `<a href="https://www.worldcat.org/isbn/${cleanIsbn}" target="_blank" class="pmid-link" title="Search book in WorldCat"><sup>${citationNumber}</sup></a>`;
         });
-        
+
         // Pattern for generic numeric references in brackets: [1234567]
         const genericPmidPattern = /\[(\d{7,8})\]/g;
         processedText = processedText.replace(genericPmidPattern, (match, pmidId) => {
@@ -4676,7 +4685,7 @@ class GenomeBrowser {
             const citationNumber = this.addUnifiedCitation('PMID', pmidId);
             return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>${citationNumber}</sup></a>`;
         });
-        
+
         // Pattern for CITS format: |CITS: [PMID1 PMID2]| or |CITS: 1 2 3| -> unified numbering (remove |CITS: prefix)
         const citsPattern = /\|CITS:\s*(\[[\d\s]+\]|[\d\s]+)\|/gi;
         processedText = processedText.replace(citsPattern, (match, content) => {
@@ -4692,10 +4701,10 @@ class GenomeBrowser {
             });
             return `<sup>${citationNumbers.join(', ')}</sup>`;
         });
-        
+
         return processedText;
     }
-    
+
     /**
      * Generate unified citation list HTML
      * @returns {string} HTML for the citation list
@@ -4704,11 +4713,11 @@ class GenomeBrowser {
         if (!this.citationCollector || this.citationCollector.size === 0) {
             return '';
         }
-        
+
         console.log('Generating citation list...');
         console.log('Enhanced citation display available:', !!this.enhancedCitationDisplay);
         console.log('Citation count:', this.citationCollector.size);
-        
+
         // Use enhanced citation display if available
         if (this.enhancedCitationDisplay) {
             console.log('Using enhanced citation display');
@@ -4717,23 +4726,23 @@ class GenomeBrowser {
             console.log('Enhanced citation display result length:', result.length);
             return result;
         }
-        
+
         console.log('Using fallback citation display');
         // Fallback to original simple citation list
         const sortedCitations = Array.from(this.citationCollector.values())
             .sort((a, b) => a.number - b.number);
-        
+
         let html = `
             <div class="gene-citations">
                 <h4>References</h4>
                 <div class="citation-list">
         `;
-        
+
         sortedCitations.forEach(citation => {
-            const linkText = citation.url ? 
-                `<a href="${citation.url}" target="_blank" class="citation-link">${citation.text}</a>` : 
+            const linkText = citation.url ?
+                `<a href="${citation.url}" target="_blank" class="citation-link">${citation.text}</a>` :
                 citation.text;
-            
+
             html += `
                 <div class="citation-item">
                     <span class="citation-number">${citation.number}</span>
@@ -4741,34 +4750,34 @@ class GenomeBrowser {
                 </div>
             `;
         });
-        
+
         html += `
                 </div>
             </div>
         `;
-        
+
         return html;
     }
 
     populateGeneDetails(gene, operonInfo = null) {
         const geneDetailsContent = document.getElementById('geneDetailsContent');
         if (!geneDetailsContent) return;
-        
+
         // Get basic gene information
         const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || 'Unknown Gene';
         const geneType = gene.type;
         const position = `${gene.start.toLocaleString()}-${gene.end.toLocaleString()}`;
         const length = (gene.end - gene.start + 1).toLocaleString();
         const strand = gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)';
-        
+
         // Get current chromosome and sequence for sequence extraction
         const currentChr = document.getElementById('chromosomeSelect').value;
         const fullSequence = this.currentSequence ? this.currentSequence[currentChr] : null;
-        
+
         // Initialize unified citation system
         this.citationCollector = new Map(); // Will store all citations with their unified numbers
         this.citationCounter = 0;
-        
+
         // Ensure enhanced citation display is available
         if (!this.enhancedCitationDisplay && window.EnhancedCitationDisplay && window.LiteratureAPIService) {
             console.log('Initializing enhanced citation display on demand...');
@@ -4781,7 +4790,7 @@ class GenomeBrowser {
                 console.error('Error initializing enhanced citation display on demand:', error);
             }
         }
-        
+
         // Create the gene details HTML
         let html = `
             <div class="gene-details-info">
@@ -4792,7 +4801,7 @@ class GenomeBrowser {
                     <div class="gene-strand">Strand: ${strand} | Length: ${length} bp</div>
                 </div>
         `;
-        
+
         // Add operon information if available
         if (operonInfo) {
             html += `
@@ -4804,23 +4813,23 @@ class GenomeBrowser {
                 </div>
             `;
         }
-        
+
         // Add sequences section if we have sequence data
         if (fullSequence) {
             html += this.createSequencesSection(gene, fullSequence, geneName, currentChr);
         }
-        
+
         // Add gene attributes if available
         if (gene.qualifiers && Object.keys(gene.qualifiers).length > 0) {
             html += `
                 <div class="gene-attributes">
                     <h4>Attributes</h4>
             `;
-            
+
             Object.entries(gene.qualifiers).forEach(([key, value]) => {
                 // Handle both single values and arrays of values
                 let valuesToDisplay = [];
-                
+
                 if (Array.isArray(value)) {
                     // Multiple values for the same qualifier
                     valuesToDisplay = value.filter(v => {
@@ -4834,7 +4843,7 @@ class GenomeBrowser {
                         valuesToDisplay = [stringValue];
                     }
                 }
-                
+
                 // Display each value
                 valuesToDisplay.forEach((val, index) => {
                     const displayLabel = index === 0 ? key.replace(/_/g, ' ') : ''; // Only show label for first occurrence
@@ -4846,10 +4855,10 @@ class GenomeBrowser {
                     `;
                 });
             });
-            
+
             html += `</div>`;
         }
-        
+
         // Add action buttons
         html += `
             <div class="gene-actions">
@@ -4860,7 +4869,7 @@ class GenomeBrowser {
                     <i class="fas fa-copy"></i> Copy CDS Sequence
                 </button>
         `;
-        
+
         // Add copy translation button if it's a CDS or has translation
         if (geneType === 'CDS' || (gene.qualifiers && this.getQualifierValue(gene.qualifiers, 'translation'))) {
             html += `
@@ -4869,7 +4878,7 @@ class GenomeBrowser {
                 </button>
             `;
         }
-        
+
         // Add search structure buttons for proteins/genes
         if (geneType === 'CDS' || geneType === 'gene') {
             html += `
@@ -4881,14 +4890,14 @@ class GenomeBrowser {
                 </button>
             `;
         }
-        
+
         // Add Deep Gene Research button for all gene types
         html += `
             <button class="btn gene-deep-research-btn gene-action-btn" onclick="window.genomeBrowser.openDeepGeneResearch('${geneName}')" title="Open Deep Gene Research for this gene">
                 <i class="fas fa-search-plus"></i> Deep Gene Research
             </button>
         `;
-        
+
         // Add edit button
         html += `
                 <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
@@ -4900,20 +4909,20 @@ class GenomeBrowser {
                 </button> -->
             </div>
         `;
-        
+
         // Add unified citation list if there are any citations (in separate container)
         const citationList = this.generateUnifiedCitationList();
         if (citationList) {
             html += citationList;
         }
-        
+
         html += `</div>`;
-        
+
         geneDetailsContent.innerHTML = html;
-        
+
         // Add event listeners for expandable sections
         this.setupExpandableSequences();
-        
+
         // Load literature data if enhanced citation display is available
         if (this.enhancedCitationDisplay && this.citationCollector.size > 0) {
             console.log('Loading literature data for citations...');
@@ -4923,7 +4932,7 @@ class GenomeBrowser {
             console.log('Enhanced citation display available:', !!this.enhancedCitationDisplay);
             console.log('Citation count:', this.citationCollector.size);
         }
-        
+
         // Update tab manager about gene details content change
         if (this.tabManager) {
             const geneDetailsSection = document.getElementById('geneDetailsSection');
@@ -4936,20 +4945,20 @@ class GenomeBrowser {
     populateReadDetails(read, fileInfo = null) {
         const readDetailsContent = document.getElementById('readDetailsContent');
         if (!readDetailsContent) return;
-        
+
         // Ensure selectedRead is set for copy button functionality
         this.selectedRead = { read: read, fileInfo: fileInfo };
         console.log('populateReadDetails called with read:', read.id || read.qname, 'selectedRead set:', !!this.selectedRead);
-        
+
         // Get basic read information
         const readName = read.id || read.qname || 'Unknown Read';
         const position = `${read.start.toLocaleString()}-${read.end.toLocaleString()}`;
         const length = (read.end - read.start + 1).toLocaleString();
         const strand = read.strand === '+' || read.strand === 1 ? 'Forward (+)' : 'Reverse (-)';
-        
+
         // Get current chromosome for context
         const currentChr = document.getElementById('chromosomeSelect').value;
-        
+
         // Create the read details HTML
         let html = `
             <div class="read-details-info">
@@ -4959,7 +4968,7 @@ class GenomeBrowser {
                     <div class="read-position">Position: ${position}</div>
                     <div class="read-strand">Strand: ${strand} | Length: ${length} bp</div>
         `;
-        
+
         // Add file information if available
         if (fileInfo) {
             html += `
@@ -4970,14 +4979,14 @@ class GenomeBrowser {
                     </div>
             `;
         }
-        
+
         html += `</div>`;
-        
+
         // Add sequences section if we have sequence data
         if (read.sequence || read.quality) {
             html += this.createReadSequencesSection(read, readName, currentChr);
         }
-        
+
         // Add read attributes if available
         const attributes = this.getReadAttributes(read);
         if (Object.keys(attributes).length > 0) {
@@ -4985,7 +4994,7 @@ class GenomeBrowser {
                 <div class="read-attributes">
                     <h4>Read Properties</h4>
             `;
-            
+
             Object.entries(attributes).forEach(([key, value]) => {
                 if (value != null && String(value).trim() !== '') {
                     html += `
@@ -4996,10 +5005,10 @@ class GenomeBrowser {
                     `;
                 }
             });
-            
+
             html += `</div>`;
         }
-        
+
         // Add action buttons
         html += `
             <div class="read-actions">
@@ -5010,7 +5019,7 @@ class GenomeBrowser {
                     <i class="fas fa-copy"></i> Copy Sequence
                 </button>
         `;
-        
+
         // Add copy quality button if quality data is available
         if (read.quality && read.quality.length > 0) {
             html += `
@@ -5019,11 +5028,11 @@ class GenomeBrowser {
                 </button>
             `;
         }
-        
+
         html += `</div></div>`;
-        
+
         readDetailsContent.innerHTML = html;
-        
+
         // Add event listeners for expandable sequences
         this.setupExpandableReadSequences();
     }
@@ -5033,12 +5042,12 @@ class GenomeBrowser {
             <div class="read-sequences">
                 <h4>Sequences</h4>
         `;
-        
+
         // Add DNA sequence if available
         if (read.sequence && read.sequence.length > 0) {
             const sequencePreview = this.formatSequencePreview(read.sequence, 100);
             const sequenceFormatted = this.formatSequenceFull(read.sequence);
-            
+
             html += `
                 <div class="read-sequence-section">
                     <div class="read-sequence-header">
@@ -5065,12 +5074,12 @@ class GenomeBrowser {
                 </div>
             `;
         }
-        
+
         // Add quality scores if available
         if (read.quality && read.quality.length > 0) {
             const qualityPreview = this.formatQualityPreview(read.quality, 100);
             const qualityFormatted = this.formatQualityFull(read.quality);
-            
+
             html += `
                 <div class="read-sequence-section">
                     <div class="read-sequence-header">
@@ -5097,7 +5106,7 @@ class GenomeBrowser {
                 </div>
             `;
         }
-        
+
         // Add CIGAR string if available
         if (read.cigar && read.cigar.length > 0) {
             html += `
@@ -5118,43 +5127,43 @@ class GenomeBrowser {
                 </div>
             `;
         }
-        
+
         html += `</div>`;
         return html;
     }
 
     getReadAttributes(read) {
         const attributes = {};
-        
+
         // Basic read properties
         if (read.mappingQuality != null) {
             attributes['Mapping Quality'] = read.mappingQuality;
         }
-        
+
         if (read.flags != null) {
             attributes['SAM Flags'] = `${read.flags} (${this.interpretSamFlags(read.flags)})`;
         }
-        
+
         if (read.templateLength != null && read.templateLength !== 0) {
             attributes['Template Length'] = read.templateLength;
         }
-        
+
         if (read.chromosome) {
             attributes['Reference'] = read.chromosome;
         }
-        
+
         // Add mutations if available
         if (read.mutations && read.mutations.length > 0) {
             attributes['Mutations'] = `${read.mutations.length} variants detected`;
         }
-        
+
         // Add tags if available
         if (read.tags && Object.keys(read.tags).length > 0) {
             Object.entries(read.tags).forEach(([tag, value]) => {
                 attributes[`Tag ${tag}`] = value;
             });
         }
-        
+
         return attributes;
     }
 
@@ -5166,15 +5175,15 @@ class GenomeBrowser {
                 let qualityClass = 'quality-low';
                 if (numValue >= 30) qualityClass = 'quality-high';
                 else if (numValue >= 20) qualityClass = 'quality-medium';
-                
+
                 return `<span class="${qualityClass}" style="font-weight: 600;">${value}</span>`;
             }
         }
-        
+
         if (key.toLowerCase().includes('flags')) {
             return `<code style="font-family: 'Courier New', monospace; font-size: 11px;">${value}</code>`;
         }
-        
+
         return value;
     }
 
@@ -5192,38 +5201,38 @@ class GenomeBrowser {
         if (flags & 0x200) flagMeanings.push('qcfail');
         if (flags & 0x400) flagMeanings.push('duplicate');
         if (flags & 0x800) flagMeanings.push('supplementary');
-        
+
         return flagMeanings.length > 0 ? flagMeanings.join(', ') : 'none';
     }
 
     formatQualityPreview(quality, maxLength = 60) {
         if (!quality || quality.length === 0) return 'No quality data';
-        
-        const qualityStr = typeof quality === 'string' ? quality : 
-                          Array.isArray(quality) ? quality.join(' ') : String(quality);
-        
+
+        const qualityStr = typeof quality === 'string' ? quality :
+            Array.isArray(quality) ? quality.join(' ') : String(quality);
+
         if (qualityStr.length <= maxLength) {
             return qualityStr;
         }
-        
+
         return qualityStr.substring(0, maxLength) + '...';
     }
 
     formatQualityWithLineNumbers(quality, startPosition = 1) {
         if (!quality || quality.length === 0) return 'No quality data';
-        
-        const qualityStr = typeof quality === 'string' ? quality : 
-                          Array.isArray(quality) ? quality.join(' ') : String(quality);
-        
+
+        const qualityStr = typeof quality === 'string' ? quality :
+            Array.isArray(quality) ? quality.join(' ') : String(quality);
+
         const lines = [];
         const charsPerLine = 60;
-        
+
         for (let i = 0; i < qualityStr.length; i += charsPerLine) {
             const lineNumber = Math.floor(i / charsPerLine) * charsPerLine + startPosition;
             const line = qualityStr.substring(i, i + charsPerLine);
             lines.push(`<span class="sequence-position">${lineNumber.toString().padStart(8, ' ')}</span>${line}`);
         }
-        
+
         return lines.join('<br>');
     }
 
@@ -5232,10 +5241,10 @@ class GenomeBrowser {
      */
     formatQualityFull(quality) {
         if (!quality || quality.length === 0) return 'No quality data';
-        
-        const qualityStr = typeof quality === 'string' ? quality : 
-                          Array.isArray(quality) ? quality.join(' ') : String(quality);
-        
+
+        const qualityStr = typeof quality === 'string' ? quality :
+            Array.isArray(quality) ? quality.join(' ') : String(quality);
+
         // Display entire quality string as one continuous line without breaking
         return `<div class="quality-full-line">${qualityStr}</div>`;
     }
@@ -5252,30 +5261,30 @@ class GenomeBrowser {
         if (!attributeValue || typeof attributeValue !== 'string') {
             return attributeValue;
         }
-        
+
         let enhancedValue = attributeValue;
-        
+
         // Pattern for GO terms: GO:XXXXXXX or goid XXXXXXX
         const goTermPattern = /\b(GO:\d{7}|goid\s+(\d{7}))\b/gi;
         enhancedValue = enhancedValue.replace(goTermPattern, (match, fullMatch, goidNumber) => {
             const goId = goidNumber ? `GO:${goidNumber}` : fullMatch;
             return `<a href="https://amigo.geneontology.org/amigo/term/${goId}" target="_blank" class="go-term-link" title="View in Gene Ontology database">${goId}</a>`;
         });
-        
+
         // PMID references are now handled by the unified citation system in processUnifiedCitations()
-        
+
         // Pattern for evidence codes in brackets: [evidence XXX]
         const evidencePattern = /\[evidence\s+([A-Z]{2,4})\]/gi;
         enhancedValue = enhancedValue.replace(evidencePattern, (match, evidenceCode) => {
             return `<span class="evidence-tag" title="Evidence code: ${evidenceCode}">${evidenceCode}</span>`;
         });
-        
+
         // Pattern for database cross-references - expanded to include many more databases
         const dbXrefPattern = /\b(UniProt|SwissProt|TrEMBL|InterPro|Pfam|KEGG|COG|KO|PROSITE|SMART|SUPERFAMILY|PRINTS|PANTHER|TIGRFAM|HAMAP|PIR|PDB|RefSeq|GenBank|EMBL|DDBJ|CDD|OrthoDB|EggNOG|STRING|Reactome|BioCyc|MetaCyc|ENZYME|BRENDA|ExPASy|NCBI|ENSEMBL|FlyBase|WormBase|SGD|MGI|RGD|ZFIN|TAIR|MaizeGDB|Gramene|PlantGDB|Phytozome|JGI|DOI|PubChem|ChEBI|ChEMBL|DrugBank)[:=]\s*([A-Za-z0-9_\.-]+)\b/gi;
         enhancedValue = enhancedValue.replace(dbXrefPattern, (match, database, id) => {
             let url = '';
             let title = '';
-            
+
             switch (database.toLowerCase()) {
                 case 'uniprot':
                 case 'swissprot':
@@ -5463,13 +5472,13 @@ class GenomeBrowser {
                     title = 'View in DrugBank';
                     break;
             }
-            
+
             if (url) {
                 return `<a href="${url}" target="_blank" class="db-xref-link" title="${title}">${database}:${id}</a>`;
             }
             return match;
         });
-        
+
         // Pattern for EC numbers: EC:X.X.X.X or EC X.X.X.X
         const ecPattern = /\b(EC:?\s*([\d\.-]+))\b/gi;
         enhancedValue = enhancedValue.replace(ecPattern, (match, fullMatch, ecNumber) => {
@@ -5493,7 +5502,7 @@ class GenomeBrowser {
         enhancedValue = enhancedValue.replace(accessionPattern, (match) => {
             let url = '';
             let title = '';
-            
+
             if (match.match(/^(NC_|NP_|XP_|YP_|WP_|[A-Z]{1,2}_)/)) {
                 // RefSeq accessions
                 if (match.startsWith('NP_') || match.startsWith('XP_') || match.startsWith('YP_') || match.startsWith('WP_')) {
@@ -5508,7 +5517,7 @@ class GenomeBrowser {
                 url = `https://www.ncbi.nlm.nih.gov/nuccore/${match}`;
                 title = 'View in GenBank';
             }
-            
+
             return `<a href="${url}" target="_blank" class="db-xref-link" title="${title}">${match}</a>`;
         });
 
@@ -5599,20 +5608,20 @@ class GenomeBrowser {
 
         return enhancedValue;
     }
-    
+
     /**
      * Create sequences section with CDS and translation
      */
     createSequencesSection(gene, fullSequence, geneName, chromosome) {
-       // let html = `<div class="gene-sequences">`;
-       let html = '';
-        
+        // let html = `<div class="gene-sequences">`;
+        let html = '';
+
         // Get DNA sequence
-      //  const dnaSequence = fullSequence.substring(gene.start - 1, gene.end);
-       // const dnaLength = dnaSequence.length;
-        
+        //  const dnaSequence = fullSequence.substring(gene.start - 1, gene.end);
+        // const dnaLength = dnaSequence.length;
+
         // DNA Sequence section
-      
+
         /*
         
         // CDS and Translation sections if applicable
@@ -5645,51 +5654,51 @@ class GenomeBrowser {
             `;
             
             */
-           // Translation section
-           // const translationLength = translation.replace(/\*/g, '').length; // Remove stop codons for length count
-            /*
-            html += `
-                <div class="sequence-section">
-                    <h4><i class="fas fa-atom"></i> Protein Translation (${translationLength} aa)</h4>
-                    <div class="sequence-content">
-                        <div class="sequence-display" data-sequence-type="translation">
-                            <div class="sequence-preview">${this.formatProteinPreview(translation, 40)}</div>
-                            <div class="sequence-full" style="display: none;">
-                                <div class="sequence-formatted">${this.formatProteinWithLineNumbers(translation)}</div>
-                            </div>
-                        </div>
-                        <div class="sequence-actions">
-                            <button class="btn btn-sm toggle-sequence-btn" data-target="translation">
-                                <i class="fas fa-expand"></i> Show Full Sequence
-                            </button>
-                            <button class="btn btn-sm copy-sequence-btn" data-sequence-type="translation" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
-                                <i class="fas fa-copy"></i> Copy
-                            </button>
+        // Translation section
+        // const translationLength = translation.replace(/\*/g, '').length; // Remove stop codons for length count
+        /*
+        html += `
+            <div class="sequence-section">
+                <h4><i class="fas fa-atom"></i> Protein Translation (${translationLength} aa)</h4>
+                <div class="sequence-content">
+                    <div class="sequence-display" data-sequence-type="translation">
+                        <div class="sequence-preview">${this.formatProteinPreview(translation, 40)}</div>
+                        <div class="sequence-full" style="display: none;">
+                            <div class="sequence-formatted">${this.formatProteinWithLineNumbers(translation)}</div>
                         </div>
                     </div>
+                    <div class="sequence-actions">
+                        <button class="btn btn-sm toggle-sequence-btn" data-target="translation">
+                            <i class="fas fa-expand"></i> Show Full Sequence
+                        </button>
+                        <button class="btn btn-sm copy-sequence-btn" data-sequence-type="translation" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
                 </div>
-            `;
-        }
-        */
-        
-       // html += `</div>`;
-        
+            </div>
+        `;
+    }
+    */
+
+        // html += `</div>`;
+
         return html;
     }
-    
+
     /**
      * Format sequence preview (first N characters with ellipsis)
      */
     formatSequencePreview(sequence, maxLength = 60) {
         const previewSequence = sequence.length <= maxLength ? sequence : sequence.substring(0, maxLength);
         const colorizedSequence = this.colorizeSequenceBases(previewSequence);
-        
+
         if (sequence.length <= maxLength) {
             return colorizedSequence;
         }
         return colorizedSequence + '<span class="sequence-ellipsis">...</span>';
     }
-    
+
     /**
      * Format protein preview with colored amino acids
      */
@@ -5705,14 +5714,14 @@ class GenomeBrowser {
         }
         return `<span class="sequence-text">${formatted}</span>`;
     }
-    
+
     /**
      * Format sequence with line numbers for full display
      */
     formatSequenceWithLineNumbers(sequence, startPosition = 1) {
         const lineLength = 60;
         let formatted = '';
-        
+
         for (let i = 0; i < sequence.length; i += lineLength) {
             const lineNumber = startPosition + i;
             const lineSequence = sequence.substring(i, i + lineLength);
@@ -5724,7 +5733,7 @@ class GenomeBrowser {
                 </div>
             `;
         }
-        
+
         return formatted;
     }
 
@@ -5736,14 +5745,14 @@ class GenomeBrowser {
         const colorizedSequence = this.colorizeSequenceBases(sequence);
         return `<div class="sequence-full-line">${colorizedSequence}</div>`;
     }
-    
+
     /**
      * Format protein with line numbers
      */
     formatProteinWithLineNumbers(sequence) {
         const lineLength = 50;
         let formatted = '';
-        
+
         for (let i = 0; i < sequence.length; i += lineLength) {
             const lineNumber = i + 1;
             const lineSequence = sequence.substring(i, i + lineLength);
@@ -5752,7 +5761,7 @@ class GenomeBrowser {
                 const aa = lineSequence[j];
                 colorizedSeq += `<span class="amino-acid">${aa}</span>`;
             }
-            
+
             formatted += `
                 <div class="sequence-line">
                     <span class="sequence-position">${lineNumber}</span>
@@ -5760,10 +5769,10 @@ class GenomeBrowser {
                 </div>
             `;
         }
-        
+
         return formatted;
     }
-    
+
     /**
      * Colorize DNA sequence bases
      */
@@ -5775,7 +5784,7 @@ class GenomeBrowser {
         }
         return colorized;
     }
-    
+
     /**
      * Setup expandable sequences functionality
      */
@@ -5789,7 +5798,7 @@ class GenomeBrowser {
                 const full = sequenceDisplay.querySelector('.sequence-full');
                 const icon = e.target.closest('.toggle-sequence-btn').querySelector('i');
                 const text = e.target.closest('.toggle-sequence-btn');
-                
+
                 if (full.style.display === 'none') {
                     preview.style.display = 'none';
                     full.style.display = 'block';
@@ -5803,7 +5812,7 @@ class GenomeBrowser {
                 }
             });
         });
-        
+
         // Copy individual sequences
         document.querySelectorAll('.copy-sequence-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -5814,12 +5823,12 @@ class GenomeBrowser {
                 const start = button.dataset.start;
                 const end = button.dataset.end;
                 const strand = button.dataset.strand;
-                
+
                 this.copySpecificSequence(type, geneName, chr, start, end, strand);
             });
         });
     }
-    
+
     /**
      * Copy specific sequence type
      */
@@ -5836,10 +5845,10 @@ class GenomeBrowser {
             }
             return;
         }
-        
+
         const fullSequence = this.currentSequence[chromosome];
         let sequence, header, description;
-        
+
         switch (type) {
             case 'dna':
             case 'cds':
@@ -5850,7 +5859,7 @@ class GenomeBrowser {
                 header = `>${geneName}_${type.toUpperCase()} ${chromosome}:${start}-${end} (${strand === '-1' ? '-' : '+'} strand)`;
                 description = `${type.toUpperCase()} sequence`;
                 break;
-                
+
             case 'translation':
                 const dnaSeq = fullSequence.substring(start - 1, end);
                 let rawTranslation = this.translateDNA(dnaSeq, parseInt(strand));
@@ -5858,14 +5867,14 @@ class GenomeBrowser {
                 header = `>${geneName}_TRANSLATION ${chromosome}:${start}-${end} (${strand === '-1' ? '-' : '+'} strand)`;
                 description = 'protein translation';
                 break;
-                
+
             default:
                 alert('Unknown sequence type');
                 return;
         }
-        
+
         const fastaContent = `${header}\n${sequence}`;
-        
+
         navigator.clipboard.writeText(fastaContent).then(() => {
             // Choose appropriate icon and color based on sequence type
             let icon, color;
@@ -5883,13 +5892,13 @@ class GenomeBrowser {
                     icon = '📋';
                     color = '#4CAF50';
             }
-            
+
             const successMessage = `${icon} Copied ${geneName} ${description} (${sequence.length} ${type === 'translation' ? 'aa' : 'bp'}) to clipboard`;
             if (this.uiManager) {
-                this.uiManager.updateStatus(successMessage, { 
-                    highlight: true, 
-                    color: color, 
-                    duration: 4000 
+                this.uiManager.updateStatus(successMessage, {
+                    highlight: true,
+                    color: color,
+                    duration: 4000
                 });
             } else {
                 const statusElement = document.getElementById('statusText');
@@ -5907,10 +5916,10 @@ class GenomeBrowser {
             console.error('Failed to copy: ', err);
             const errorMessage = '❌ Failed to copy to clipboard';
             if (this.uiManager) {
-                this.uiManager.updateStatus(errorMessage, { 
-                    highlight: true, 
-                    color: '#f44336', 
-                    duration: 4000 
+                this.uiManager.updateStatus(errorMessage, {
+                    highlight: true,
+                    color: '#f44336',
+                    duration: 4000
                 });
             } else {
                 const statusElement = document.getElementById('statusText');
@@ -5920,13 +5929,13 @@ class GenomeBrowser {
             }
         });
     }
-    
+
     /**
      * Copy gene translation (main button functionality)
      */
     copyGeneTranslation() {
         if (!this.selectedGene) return;
-        
+
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
             const errorMessage = 'No sequence available to copy';
@@ -5940,30 +5949,30 @@ class GenomeBrowser {
             }
             return;
         }
-        
+
         const gene = this.selectedGene.gene;
         let translation;
-        
+
         // Always translate from DNA to ensure we get the complete sequence
         // The translation qualifier might be truncated during GenBank parsing for memory efficiency
         const sequence = this.currentSequence[currentChr];
         const geneSequence = sequence.substring(gene.start - 1, gene.end);
         translation = this.translateDNA(geneSequence, gene.strand);
-        
+
         // Remove stop codons (*) from the translation
         const cleanTranslation = translation.replace(/\*/g, '');
-        
+
         const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
         const fastaHeader = `>${geneName}_TRANSLATION ${currentChr}:${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
         const fastaContent = `${fastaHeader}\n${cleanTranslation}`;
-        
+
         navigator.clipboard.writeText(fastaContent).then(() => {
             const successMessage = `🧬 Copied ${geneName} translation (${cleanTranslation.length} aa) to clipboard`;
             if (this.uiManager) {
-                this.uiManager.updateStatus(successMessage, { 
-                    highlight: true, 
-                    color: '#2196F3', 
-                    duration: 4000 
+                this.uiManager.updateStatus(successMessage, {
+                    highlight: true,
+                    color: '#2196F3',
+                    duration: 4000
                 });
             } else {
                 const statusElement = document.getElementById('statusText');
@@ -5981,10 +5990,10 @@ class GenomeBrowser {
             console.error('Failed to copy: ', err);
             const errorMessage = '❌ Failed to copy translation to clipboard';
             if (this.uiManager) {
-                this.uiManager.updateStatus(errorMessage, { 
-                    highlight: true, 
-                    color: '#f44336', 
-                    duration: 4000 
+                this.uiManager.updateStatus(errorMessage, {
+                    highlight: true,
+                    color: '#f44336',
+                    duration: 4000
                 });
             } else {
                 const statusElement = document.getElementById('statusText');
@@ -5999,16 +6008,16 @@ class GenomeBrowser {
         // Clear previous highlights and selections
         this.clearSequenceHighlights();
         this.clearSequenceSelection();
-        
+
         // Only highlight if the gene is within the current view
         const currentStart = this.currentPosition.start;
         const currentEnd = this.currentPosition.end;
-        
+
         if (gene.end < currentStart || gene.start > currentEnd) {
             console.log('Gene is outside current view, skipping sequence highlight');
             return;
         }
-        
+
         // Set the sequence selection to the gene region
         const currentChr = document.getElementById('chromosomeSelect').value;
         this.sequenceSelection = {
@@ -6019,35 +6028,35 @@ class GenomeBrowser {
             source: 'gene', // Mark that this selection came from a gene click
             geneName: gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type
         };
-        
+
         // Find sequence bases within the gene range and mark them as selected
         const sequenceBases = document.querySelectorAll('.sequence-bases span');
         sequenceBases.forEach(baseElement => {
             const parentLine = baseElement.closest('.sequence-line');
             if (!parentLine) return;
-            
+
             const positionElement = parentLine.querySelector('.sequence-position');
             if (!positionElement) return;
-            
+
             const lineStartPos = parseInt(positionElement.textContent.replace(/,/g, '')) - 1; // Convert to 0-based
             const baseIndex = Array.from(parentLine.querySelectorAll('.sequence-bases span')).indexOf(baseElement);
             const absolutePos = lineStartPos + baseIndex + 1; // Convert back to 1-based for comparison
-            
+
             // Check if this base is within the gene range
             if (absolutePos >= gene.start && absolutePos <= gene.end) {
                 baseElement.classList.add('sequence-selected');
                 baseElement.classList.add('gene-sequence-selected');
             }
         });
-        
+
         // Update copy button text to indicate gene sequence is selected
         this.updateCopyButtonState();
-        
+
         // Update status bar with gene selection information
         const selectionLength = gene.end - gene.start + 1;
         const geneName = this.sequenceSelection.geneName;
         const statusMessage = `🔵 Gene Selection: ${geneName} (${gene.start.toLocaleString()}-${gene.end.toLocaleString()}, ${selectionLength.toLocaleString()} bp)`;
-        
+
         if (this.uiManager) {
             this.uiManager.updateStatus(statusMessage);
         } else {
@@ -6056,7 +6065,7 @@ class GenomeBrowser {
                 statusElement.textContent = statusMessage;
                 statusElement.style.color = '#3b82f6';
                 statusElement.style.fontWeight = 'bold';
-                
+
                 // Reset to normal after 5 seconds
                 setTimeout(() => {
                     statusElement.style.color = '';
@@ -6065,20 +6074,20 @@ class GenomeBrowser {
                 }, 5000);
             }
         }
-        
+
         console.log(`Selected gene sequence for ${this.sequenceSelection.geneName} (${gene.start}-${gene.end})`);
     }
-    
+
     updateCopyButtonState() {
         const copyBtn = document.getElementById('copySequenceBtn');
         if (!copyBtn) return;
-        
+
         // Check if there's any active selection (gene or manual)
         const hasGeneSelection = this.sequenceSelection && this.sequenceSelection.active && this.sequenceSelection.source === 'gene';
         const hasManualSelection = this.currentSequenceSelection !== null;
         const hasTextSelection = window.getSelection() && window.getSelection().toString().length > 0;
         const hasVisualSelection = document.querySelectorAll('.gene-sequence-selected').length > 0;
-        
+
         if (hasGeneSelection) {
             copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
             copyBtn.title = `Copy ${this.sequenceSelection.geneName} sequence`;
@@ -6093,7 +6102,7 @@ class GenomeBrowser {
             copyBtn.classList.remove('gene-copy-active');
         }
     }
-    
+
     showSelectionFeedback() {
         if (this.sequenceSelection && this.sequenceSelection.active && this.sequenceSelection.source === 'gene') {
             // Show a brief tooltip or notification
@@ -6113,21 +6122,21 @@ class GenomeBrowser {
     // Action methods for gene details buttons
     zoomToGene() {
         if (!this.selectedGene) return;
-        
+
         const gene = this.selectedGene.gene;
         const geneLength = gene.end - gene.start;
         const padding = Math.max(500, Math.floor(geneLength * 0.2)); // 20% padding or 500bp minimum
-        
+
         const newStart = Math.max(0, gene.start - padding);
         const newEnd = gene.end + padding;
-        
+
         this.currentPosition = { start: newStart, end: newEnd };
-        
+
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
             this.updateStatistics(currentChr, this.currentSequence[currentChr]);
             this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
-            
+
             // Update current tab title with new position
             if (this.tabManager) {
                 this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
@@ -6161,24 +6170,24 @@ class GenomeBrowser {
         const center = Math.floor((this.currentPosition.start + this.currentPosition.end) / 2);
         const newStart = Math.max(0, center - Math.floor(newRange / 2));
         const newEnd = Math.min(sequence.length, newStart + newRange);
-        
+
         this.currentPosition = { start: newStart, end: newEnd };
-        
+
         this.updateStatistics(currentChr, sequence);
         this.displayGenomeView(currentChr, sequence);
-        
+
         // Update navigation bar
         if (this.genomeNavigationBar) {
             this.genomeNavigationBar.update();
         }
-        
+
         // Update current tab title with new position
         if (this.tabManager) {
             this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
         }
 
-        return { 
-            success: true, 
+        return {
+            success: true,
             factor: zoomFactor,
             newRange: newRange,
             position: { start: newStart, end: newEnd }
@@ -6212,22 +6221,22 @@ class GenomeBrowser {
         const newEnd = Math.min(sequence.length, newStart + newRange);
 
         this.currentPosition = { start: newStart, end: newEnd };
-        
+
         this.updateStatistics(currentChr, sequence);
         this.displayGenomeView(currentChr, sequence);
-        
+
         // Update navigation bar
         if (this.genomeNavigationBar) {
             this.genomeNavigationBar.update();
         }
-        
+
         // Update current tab title with new position
         if (this.tabManager) {
             this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
         }
 
-        return { 
-            success: true, 
+        return {
+            success: true,
             factor: zoomFactor,
             newRange: newRange,
             position: { start: newStart, end: newEnd }
@@ -6236,7 +6245,7 @@ class GenomeBrowser {
 
     copyGeneSequence() {
         if (!this.selectedGene) return;
-        
+
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
             const errorMessage = 'No sequence available to copy';
@@ -6250,22 +6259,22 @@ class GenomeBrowser {
             }
             return;
         }
-        
+
         const gene = this.selectedGene.gene;
         const sequence = this.currentSequence[currentChr];
         const geneSequence = sequence.substring(gene.start - 1, gene.end); // Convert to 0-based indexing
-        
+
         const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
         const fastaHeader = `>${geneName} ${currentChr}:${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
         const fastaContent = `${fastaHeader}\n${geneSequence}`;
-        
+
         navigator.clipboard.writeText(fastaContent).then(() => {
             const successMessage = `✅ Copied ${geneName} sequence (${geneSequence.length} bp) to clipboard`;
             if (this.uiManager) {
-                this.uiManager.updateStatus(successMessage, { 
-                    highlight: true, 
-                    color: '#4CAF50', 
-                    duration: 4000 
+                this.uiManager.updateStatus(successMessage, {
+                    highlight: true,
+                    color: '#4CAF50',
+                    duration: 4000
                 });
             } else {
                 const statusElement = document.getElementById('statusText');
@@ -6283,10 +6292,10 @@ class GenomeBrowser {
             console.error('Failed to copy: ', err);
             const errorMessage = '❌ Failed to copy to clipboard';
             if (this.uiManager) {
-                this.uiManager.updateStatus(errorMessage, { 
-                    highlight: true, 
-                    color: '#f44336', 
-                    duration: 4000 
+                this.uiManager.updateStatus(errorMessage, {
+                    highlight: true,
+                    color: '#f44336',
+                    duration: 4000
                 });
             } else {
                 const statusElement = document.getElementById('statusText');
@@ -6299,7 +6308,7 @@ class GenomeBrowser {
 
     copyCDSSequence() {
         if (!this.selectedGene) return;
-        
+
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
             const errorMessage = 'No sequence available to copy';
@@ -6313,28 +6322,28 @@ class GenomeBrowser {
             }
             return;
         }
-        
+
         const gene = this.selectedGene.gene;
         const sequence = this.currentSequence[currentChr];
         let geneSequence = sequence.substring(gene.start - 1, gene.end); // Convert to 0-based indexing
-        
+
         // Apply reverse complement for reverse strand genes
         if (gene.strand === -1) {
             geneSequence = this.getReverseComplement(geneSequence);
         }
-        
+
         const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
         const strandInfo = gene.strand === -1 ? 'reverse strand (reverse complemented)' : 'forward strand';
         const fastaHeader = `>${geneName} CDS ${currentChr}:${gene.start}-${gene.end} (${strandInfo})`;
         const fastaContent = `${fastaHeader}\n${geneSequence}`;
-        
+
         navigator.clipboard.writeText(fastaContent).then(() => {
             const successMessage = `✅ Copied ${geneName} CDS sequence (${geneSequence.length} bp) to clipboard`;
             if (this.uiManager) {
-                this.uiManager.updateStatus(successMessage, { 
-                    highlight: true, 
-                    color: '#4CAF50', 
-                    duration: 4000 
+                this.uiManager.updateStatus(successMessage, {
+                    highlight: true,
+                    color: '#4CAF50',
+                    duration: 4000
                 });
             } else {
                 const statusElement = document.getElementById('statusText');
@@ -6352,10 +6361,10 @@ class GenomeBrowser {
             console.error('Failed to copy: ', err);
             const errorMessage = '❌ Failed to copy to clipboard';
             if (this.uiManager) {
-                this.uiManager.updateStatus(errorMessage, { 
-                    highlight: true, 
-                    color: '#f44336', 
-                    duration: 4000 
+                this.uiManager.updateStatus(errorMessage, {
+                    highlight: true,
+                    color: '#f44336',
+                    duration: 4000
                 });
             } else {
                 const statusElement = document.getElementById('statusText');
@@ -6382,17 +6391,17 @@ class GenomeBrowser {
             const result = window.UnifiedSequenceProcessing.reverseComplement(sequence);
             return result.success ? result.sequence : this.fallbackReverseComplement(sequence);
         }
-        
+
         // Try to use UnifiedDNATranslation if available
         if (window.UnifiedDNATranslation && window.UnifiedDNATranslation.reverseComplement) {
             return window.UnifiedDNATranslation.reverseComplement(sequence);
         }
-        
+
         // Try to use MicrobeGenomicsFunctions if available
         if (window.MicrobeGenomicsFunctions && window.MicrobeGenomicsFunctions.reverseComplement) {
             return window.MicrobeGenomicsFunctions.reverseComplement(sequence);
         }
-        
+
         // Fallback to simple implementation
         return this.fallbackReverseComplement(sequence);
     }
@@ -6406,7 +6415,7 @@ class GenomeBrowser {
             'a': 't', 't': 'a', 'g': 'c', 'c': 'g',
             'N': 'N', 'n': 'n'
         };
-        
+
         return sequence
             .split('')
             .reverse()
@@ -6428,16 +6437,16 @@ class GenomeBrowser {
 
         // Get current organism/species information
         const organism = this.getCurrentOrganismInfo();
-        
+
         // Create a specific PDB search message
         const searchMessage = `Search PDB experimental structures for gene ${geneName} from ${organism}. Please find experimentally determined protein structures in the Protein Data Bank (PDB) for this protein, including X-ray crystallography, NMR, and cryo-EM structures.`;
-        
+
         // Send the search message to the chat manager
         this.chatManager.sendMessageProgrammatically(searchMessage);
-        
+
         // Optionally show the chat box if it's hidden
         this.showChatIfHidden();
-        
+
         // Update status
         if (this.uiManager) {
             this.uiManager.updateStatus(`Searching PDB structures for ${geneName} in ${organism}...`);
@@ -6458,16 +6467,16 @@ class GenomeBrowser {
 
         // Get current organism/species information
         const organism = this.getCurrentOrganismInfo();
-        
+
         // Create a specific AlphaFold search message
         const searchMessage = `Search AlphaFold predicted structures for gene ${geneName} from ${organism}. Please find AI-predicted protein structures from the AlphaFold database for this protein, including confidence scores and structural predictions.`;
-        
+
         // Send the search message to the chat manager
         this.chatManager.sendMessageProgrammatically(searchMessage);
-        
+
         // Optionally show the chat box if it's hidden
         this.showChatIfHidden();
-        
+
         // Update status
         if (this.uiManager) {
             this.uiManager.updateStatus(`Searching AlphaFold structures for ${geneName} in ${organism}...`);
@@ -6483,20 +6492,20 @@ class GenomeBrowser {
 
         // Get current organism/species information
         const organism = this.getCurrentOrganismInfo();
-        
+
         // Create a detailed prompt for Deep Gene Research
         const prompt = `Please perform a Deep Gene Research of ${geneName} gene in ${organism}.`;
-        
+
         // Check if ChatManager is available and use it to send the prompt
         if (this.chatManager) {
             try {
                 this.chatManager.sendMessageProgrammatically(prompt);
-                
+
                 // Update status
                 if (this.uiManager) {
                     this.uiManager.updateStatus(`Sent Deep Gene Research request for ${geneName} to ChatBox`);
                 }
-                
+
                 console.log(`Sent Deep Gene Research prompt for ${geneName} to ChatBox`);
             } catch (error) {
                 console.error('Error sending Deep Gene Research prompt to ChatBox:', error);
@@ -6517,7 +6526,7 @@ class GenomeBrowser {
         try {
             // Get the currently selected gene information
             const selectedGene = this.getSelectedGeneInfo();
-            
+
             if (!selectedGene) {
                 console.warn('No gene selected for annotation refinement');
                 this.showNotification('Please select a gene first to refine its annotation', 'warning');
@@ -6555,7 +6564,7 @@ class GenomeBrowser {
         // This is a simplified approach - in a real implementation, you'd want to store this more reliably
         const geneNameElement = geneDetailsContent.querySelector('.gene-name');
         const locusTagElement = geneDetailsContent.querySelector('.locus-tag');
-        
+
         if (geneNameElement || locusTagElement) {
             return {
                 name: geneNameElement ? geneNameElement.textContent : null,
@@ -6571,28 +6580,28 @@ class GenomeBrowser {
     async updateGeneAnnotation(geneName, refinedAnnotation) {
         try {
             console.log('Updating gene annotation for:', geneName, refinedAnnotation);
-            
+
             // Find the gene in current annotations
             const gene = this.findGeneInAnnotations(geneName);
             if (!gene) {
                 throw new Error(`Gene ${geneName} not found in current annotations`);
             }
-            
+
             // Update the gene's qualifiers with refined information
             if (!gene.qualifiers) {
                 gene.qualifiers = {};
             }
-            
+
             // Update product/function (keep as single value)
             if (refinedAnnotation.product) {
                 gene.qualifiers.product = refinedAnnotation.product;
             }
-            
+
             // Update note (keep as single value)
             if (refinedAnnotation.note) {
                 gene.qualifiers.note = refinedAnnotation.note;
             }
-            
+
             // Update EC number (may have multiple values)
             if (refinedAnnotation.ec) {
                 if (!gene.qualifiers.ec_number) {
@@ -6603,7 +6612,7 @@ class GenomeBrowser {
                     gene.qualifiers.ec_number = [gene.qualifiers.ec_number, refinedAnnotation.ec];
                 }
             }
-            
+
             // Update GO terms (may have multiple values)
             if (refinedAnnotation.go) {
                 if (!gene.qualifiers.go_terms) {
@@ -6614,43 +6623,43 @@ class GenomeBrowser {
                     gene.qualifiers.go_terms = [gene.qualifiers.go_terms, refinedAnnotation.go];
                 }
             }
-            
+
             // Add new qualifiers
             if (refinedAnnotation.cofactors) {
                 gene.qualifiers.cofactors = refinedAnnotation.cofactors;
             }
-            
+
             if (refinedAnnotation.substrates) {
                 gene.qualifiers.substrates = refinedAnnotation.substrates;
             }
-            
+
             if (refinedAnnotation.products) {
                 gene.qualifiers.products = refinedAnnotation.products;
             }
-            
+
             if (refinedAnnotation.references) {
                 gene.qualifiers.references = refinedAnnotation.references;
             }
-            
+
             // Add enhancement metadata
             gene.qualifiers.enhanced = 'true';
             gene.qualifiers.enhancement_date = refinedAnnotation.enhancementDate || new Date().toISOString();
             gene.qualifiers.enhancement_source = refinedAnnotation.enhancementSource || 'Gene Annotation Refine Tool';
-            
+
             // Refresh the display
             this.refreshTrackDisplay();
-            
+
             // Update gene details if this gene is currently selected
             const geneDetailsContent = document.getElementById('geneDetailsContent');
             if (geneDetailsContent && !geneDetailsContent.querySelector('.no-gene-selected')) {
                 this.populateGeneDetails(gene);
             }
-            
+
             // Show success notification
             this.showNotification(`Gene annotation updated for ${geneName}`, 'success');
-            
+
             return { success: true, message: 'Annotation updated successfully' };
-            
+
         } catch (error) {
             console.error('Error updating gene annotation:', error);
             throw error;
@@ -6662,12 +6671,12 @@ class GenomeBrowser {
         if (!this.currentAnnotations) {
             return null;
         }
-        
+
         for (const [chromosome, annotations] of Object.entries(this.currentAnnotations)) {
             if (annotations && annotations.length) {
-                const gene = annotations.find(g => 
-                    g.name === geneName || 
-                    g.gene === geneName || 
+                const gene = annotations.find(g =>
+                    g.name === geneName ||
+                    g.gene === geneName ||
                     g.locus_tag === geneName ||
                     (g.qualifiers && (
                         this.getQualifierValue(g.qualifiers, 'gene') === geneName ||
@@ -6675,13 +6684,13 @@ class GenomeBrowser {
                         this.getQualifierValue(g.qualifiers, 'name') === geneName
                     ))
                 );
-                
+
                 if (gene) {
                     return gene;
                 }
             }
         }
-        
+
         return null;
     }
 
@@ -6699,16 +6708,16 @@ class GenomeBrowser {
 
         // Get current organism/species information
         const organism = this.getCurrentOrganismInfo();
-        
+
         // Create a comprehensive search message that will trigger both PDB and AlphaFold searches
         const searchMessage = `Search protein structures for gene ${geneName} in ${organism}. Please search both PDB experimental structures and AlphaFold predictions for this protein.`;
-        
+
         // Send the search message to the chat manager
         this.chatManager.sendMessageProgrammatically(searchMessage);
-        
+
         // Optionally show the chat box if it's hidden
         this.showChatIfHidden();
-        
+
         // Update status
         if (this.uiManager) {
             this.uiManager.updateStatus(`Searching protein structures for ${geneName}...`);
@@ -6742,15 +6751,15 @@ class GenomeBrowser {
             /\s+W3110/gi,                // W3110
             /\s+DH5α/gi,                 // DH5α
             /\s+BL21/gi,                 // BL21
-            
+
             // Serovar patterns
             /\s+serovar\s+\S+/gi,        // serovar Typhimurium
             /\s+sv\.\s+\S+/gi,           // sv. Typhimurium
-            
+
             // Subspecies patterns
             /\s+subsp\.\s+\S+/gi,        // subsp. enterica
             /\s+subspecies\s+\S+/gi,     // subspecies enterica
-            
+
             // Other common patterns
             /\s+ATCC\s+\d+/gi,           // ATCC numbers
             /\s+DSM\s+\d+/gi,            // DSM numbers
@@ -6758,26 +6767,26 @@ class GenomeBrowser {
             /\s+\([^)]*\)/g,             // Content in parentheses
             /\s+var\.\s+\S+/gi,          // var. variant
             /\s+f\.\s+sp\.\s+\S+/gi,     // f. sp. formae speciales
-            
+
             // Plasmid and specific identifiers
             /\s+plasmid\s+\S+/gi,        // plasmid names
             /\s+chromosome\s+\S+/gi,     // chromosome identifiers
-            
+
             // Generic patterns for numbered strains
             /\s+[A-Z]+\d+[A-Z]*\d*/gi,  // ABC123, K12, etc.
             /\s+\d+[A-Z]+\d*/gi,        // 123ABC, etc.
         ];
 
         let cleanName = organismName;
-        
+
         // Apply all cleaning patterns
         for (const pattern of cleaningPatterns) {
             cleanName = cleanName.replace(pattern, '');
         }
-        
+
         // Remove extra whitespace and clean up
         cleanName = cleanName.replace(/\s+/g, ' ').trim();
-        
+
         // Handle specific known mappings
         const specificMappings = {
             'Escherichia coli': 'Escherichia coli',
@@ -6799,20 +6808,20 @@ class GenomeBrowser {
             'Arabidopsis thaliana': 'Arabidopsis thaliana',
             'A. thaliana': 'Arabidopsis thaliana'
         };
-        
+
         // Check for specific mappings first
         for (const [key, value] of Object.entries(specificMappings)) {
             if (cleanName.toLowerCase().includes(key.toLowerCase())) {
                 return value;
             }
         }
-        
+
         // If we have a valid genus species format, return it
         const genusSpeciesMatch = cleanName.match(/^([A-Z][a-z]+)\s+([a-z]+)/);
         if (genusSpeciesMatch) {
             return `${genusSpeciesMatch[1]} ${genusSpeciesMatch[2]}`;
         }
-        
+
         // Return cleaned name or fallback
         return cleanName || 'Unknown organism';
     }
@@ -6829,7 +6838,7 @@ class GenomeBrowser {
                     return this.standardizeOrganismName(organism);
                 }
             }
-            
+
             // If current chromosome not found, try any available chromosome
             for (const [chr, sourceInfo] of Object.entries(this.sourceFeatures)) {
                 if (sourceInfo.organism && sourceInfo.organism !== 'Unknown') {
@@ -6838,23 +6847,23 @@ class GenomeBrowser {
                 }
             }
         }
-        
+
         // Second priority: Try to get organism from loaded file metadata
         if (this.fileManager && this.fileManager.currentFileInfo) {
             const fileInfo = this.fileManager.currentFileInfo;
-            
+
             // Check GenBank ORGANISM field
             if (fileInfo.organism) {
                 console.log(`Found organism from fileInfo.organism: ${fileInfo.organism}`);
                 return this.standardizeOrganismName(fileInfo.organism);
             }
-            
+
             // Check other common organism indicators
             if (fileInfo.source) {
                 console.log(`Found organism from fileInfo.source: ${fileInfo.source}`);
                 return this.standardizeOrganismName(fileInfo.source);
             }
-            
+
             // Check for species in features
             if (fileInfo.features) {
                 for (const feature of fileInfo.features) {
@@ -6873,7 +6882,7 @@ class GenomeBrowser {
                 }
             }
         }
-        
+
         // Third priority: Try to infer from current chromosome name
         const currentChr = document.getElementById('chromosomeSelect')?.value;
         if (currentChr) {
@@ -6886,12 +6895,12 @@ class GenomeBrowser {
                 'chrII': 'Saccharomyces cerevisiae',
                 'chrIII': 'Saccharomyces cerevisiae'
             };
-            
+
             // Check for exact matches
             if (organismMap[currentChr]) {
                 return this.standardizeOrganismName(organismMap[currentChr]);
             }
-            
+
             // Check for partial matches
             if (currentChr.startsWith('chr') && currentChr.length <= 5) {
                 return this.standardizeOrganismName('Homo sapiens');
@@ -6900,7 +6909,7 @@ class GenomeBrowser {
                 return this.standardizeOrganismName('Escherichia coli');
             }
         }
-        
+
         // Default fallback
         return 'Unknown organism';
     }
@@ -6908,22 +6917,22 @@ class GenomeBrowser {
     clearGeneSelection() {
         // Clear selected gene
         this.selectedGene = null;
-        
+
         // Remove selection styling from all gene elements (both regular and SVG)
         const selectedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
         selectedElements.forEach(el => {
             el.classList.remove('selected', 'border-highlight');
         });
-        
+
         // Clear sequence highlights and selection
         this.clearSequenceHighlights();
         this.clearSequenceSelection();
-        
+
         // Update tab manager about gene selection clear
         if (this.tabManager) {
             this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', false, null);
         }
-        
+
         console.log('Cleared gene selection');
     }
 
@@ -6936,7 +6945,7 @@ class GenomeBrowser {
 
         const gene = this.selectedGene.gene;
         const modal = document.getElementById('editGeneModal');
-        
+
         if (!modal) {
             console.error('Edit gene modal not found');
             return;
@@ -6944,10 +6953,10 @@ class GenomeBrowser {
 
         // Populate modal fields with current gene data
         this.populateEditModal(gene);
-        
+
         // Show the modal
         modal.classList.add('show');
-        
+
         // Set up event listeners for the modal
         this.setupEditModalEventListeners();
     }
@@ -7195,7 +7204,7 @@ class GenomeBrowser {
         if (this.visibleTracks.has('genes')) {
             const annotations = this.currentAnnotations[currentChr] || [];
             const operons = this.operons || [];
-            
+
             // Re-render the gene track
             const geneTrack = document.querySelector('.gene-track');
             if (geneTrack) {
@@ -7211,7 +7220,7 @@ class GenomeBrowser {
                     // Filter visible genes
                     const visibleGenes = annotations.filter(gene => {
                         return this.shouldShowGeneType(gene.type) &&
-                               gene.end >= viewport.start && gene.start <= viewport.end;
+                            gene.end >= viewport.start && gene.start <= viewport.end;
                     });
 
                     // Clear and re-render
@@ -7225,27 +7234,27 @@ class GenomeBrowser {
     selectRead(read, fileInfo = null) {
         // Store the selected read
         this.selectedRead = { read: read, fileInfo: fileInfo };
-        
+
         // Clear any existing read selection
         this.clearReadSelection(false);
-        
+
         // Show read selection feedback
         this.showReadSelectionFeedback(read);
-        
+
         // Highlight the selected read in the track
         this.highlightSelectedRead(read);
-        
+
         // Populate and show read details panel
         this.populateReadDetails(read, fileInfo);
         this.showReadDetailsPanel();
-        
+
         console.log('Read selected:', read.id || read.qname, 'at position', read.start + '-' + read.end);
     }
 
     showReadSelectionFeedback(read) {
         const readName = read.id || read.qname || 'Unknown Read';
         const position = `${read.start.toLocaleString()}-${read.end.toLocaleString()}`;
-        
+
         this.showNotification(`Selected read: ${readName} at ${position}`, 'info');
     }
 
@@ -7257,12 +7266,12 @@ class GenomeBrowser {
             element.style.stroke = '';
             element.style.strokeWidth = '';
         });
-        
+
         // Find and highlight the selected read element
         document.querySelectorAll('.svg-read-element').forEach(element => {
             const readGroup = element.closest('g[class*="svg-read-element"]') || element;
             const title = readGroup.querySelector('title');
-            
+
             if (title && title.textContent.includes(read.id || read.qname || '')) {
                 readGroup.classList.add('selected');
                 console.log('Highlighted selected read element');
@@ -7272,7 +7281,7 @@ class GenomeBrowser {
 
     clearReadSelection(hidePanel = true) {
         this.selectedRead = null;
-        
+
         // Remove selected class from all read elements
         document.querySelectorAll('.svg-read-element.selected').forEach(element => {
             element.classList.remove('selected');
@@ -7280,19 +7289,19 @@ class GenomeBrowser {
             element.style.stroke = '';
             element.style.strokeWidth = '';
         });
-        
+
         // Hide read details panel if requested
         if (hidePanel) {
             const readDetailsSection = document.getElementById('readDetailsSection');
             if (readDetailsSection) {
                 readDetailsSection.style.display = 'none';
             }
-            
+
             // Update tab manager about read selection clear
             if (this.tabManager) {
                 this.tabManager.updateCurrentTabSidebarPanel('readDetailsSection', false, null);
             }
-            
+
             this.uiManager.checkAndHideSidebarIfAllPanelsClosed();
         }
     }
@@ -7303,22 +7312,22 @@ class GenomeBrowser {
      */
     scrollSidebarToSection(sectionElement) {
         if (!sectionElement) return;
-        
+
         const sidebar = document.getElementById('sidebar');
         if (!sidebar) return;
-        
+
         // Add a small delay to ensure the section is fully displayed and rendered
         setTimeout(() => {
             // Check if section is already visible in the sidebar viewport
             const sidebarRect = sidebar.getBoundingClientRect();
             const sectionRect = sectionElement.getBoundingClientRect();
-            
+
             // Calculate if section is already visible
             const isVisible = (
                 sectionRect.top >= sidebarRect.top &&
                 sectionRect.bottom <= sidebarRect.bottom
             );
-            
+
             // Only scroll if section is not fully visible
             if (!isVisible) {
                 // Use scrollIntoView for smooth scrolling
@@ -7327,7 +7336,7 @@ class GenomeBrowser {
                     block: 'start',
                     inline: 'nearest'
                 });
-                
+
                 console.log('🔄 [Sidebar] Scrolled to section:', sectionElement.id);
             } else {
                 console.log('🔄 [Sidebar] Section already visible:', sectionElement.id);
@@ -7338,21 +7347,21 @@ class GenomeBrowser {
     // Action methods for read details buttons
     zoomToRead() {
         if (!this.selectedRead) return;
-        
+
         const read = this.selectedRead.read;
         const readLength = read.end - read.start;
         const padding = Math.max(500, Math.floor(readLength * 2)); // 2x padding or 500bp minimum
-        
+
         const newStart = Math.max(0, read.start - padding);
         const newEnd = read.end + padding;
-        
+
         this.currentPosition = { start: newStart, end: newEnd };
-        
+
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
             this.updateStatistics(currentChr, this.currentSequence[currentChr]);
             this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
-            
+
             // Update current tab title with new position
             if (this.tabManager) {
                 this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
@@ -7365,13 +7374,13 @@ class GenomeBrowser {
             this.showNotification('No sequence data available for selected read', 'warning');
             return;
         }
-        
+
         const read = this.selectedRead.read;
         const readName = read.id || read.qname || 'Unknown Read';
         const sequence = read.sequence;
-        
+
         const sequenceText = `>${readName} ${read.start}-${read.end} (${read.strand})\n${sequence}`;
-        
+
         navigator.clipboard.writeText(sequenceText).then(() => {
             this.showNotification(`Read sequence copied to clipboard (${sequence.length} bp)`, 'success');
         }).catch(err => {
@@ -7385,13 +7394,13 @@ class GenomeBrowser {
             this.showNotification('No quality data available for selected read', 'warning');
             return;
         }
-        
+
         const read = this.selectedRead.read;
         const readName = read.id || read.qname || 'Unknown Read';
         const quality = read.quality;
-        
+
         const qualityText = `>${readName} Quality Scores\n${quality}`;
-        
+
         navigator.clipboard.writeText(qualityText).then(() => {
             this.showNotification(`Read quality scores copied to clipboard`, 'success');
         }).catch(err => {
@@ -7403,27 +7412,27 @@ class GenomeBrowser {
     copySpecificReadSequence(type, readName) {
         // Use window.genomeBrowser to ensure we have the correct instance
         const genomeBrowser = window.genomeBrowser || this;
-        
-        console.log('Copy button clicked:', { 
-            type, 
-            readName, 
+
+        console.log('Copy button clicked:', {
+            type,
+            readName,
             selectedRead: genomeBrowser.selectedRead,
             genomeBrowserInstance: genomeBrowser,
             windowGenomeBrowser: window.genomeBrowser,
             isSameInstance: genomeBrowser === window.genomeBrowser
         });
-        
+
         if (!genomeBrowser.selectedRead) {
             console.error('No selected read available. Current selectedRead:', genomeBrowser.selectedRead);
             console.error('Available reads in current view:', genomeBrowser.reads ? genomeBrowser.reads.length : 'no reads loaded');
             genomeBrowser.showNotification('No read selected', 'warning');
             return;
         }
-        
+
         const read = genomeBrowser.selectedRead.read;
         let content = '';
         let description = '';
-        
+
         switch (type) {
             case 'dna':
                 if (read.sequence) {
@@ -7437,8 +7446,8 @@ class GenomeBrowser {
             case 'quality':
                 if (read.quality) {
                     // Handle quality data format (array, string, or other)
-                    content = typeof read.quality === 'string' ? read.quality : 
-                             Array.isArray(read.quality) ? read.quality.join(' ') : String(read.quality);
+                    content = typeof read.quality === 'string' ? read.quality :
+                        Array.isArray(read.quality) ? read.quality.join(' ') : String(read.quality);
                     description = 'quality scores';
                     console.log('Quality content:', content.substring(0, 50) + '...', 'Type:', typeof read.quality);
                 } else {
@@ -7455,7 +7464,7 @@ class GenomeBrowser {
                 }
                 break;
         }
-        
+
         if (content) {
             // Try modern clipboard API first
             if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -7489,11 +7498,11 @@ class GenomeBrowser {
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-            
+
             // Execute copy command
             const successful = document.execCommand('copy');
             document.body.removeChild(textArea);
-            
+
             if (successful) {
                 this.showNotification(`Read ${description} copied to clipboard`, 'success');
             } else {
@@ -7509,10 +7518,10 @@ class GenomeBrowser {
         const previewElement = document.getElementById(`${elementId}-preview`);
         const fullElement = document.getElementById(`${elementId}-full`);
         const toggleButton = document.querySelector(`button[onclick*="${elementId}"]`);
-        
+
         if (previewElement && fullElement && toggleButton) {
             const isShowingFull = fullElement.style.display !== 'none';
-            
+
             if (isShowingFull) {
                 previewElement.style.display = 'block';
                 fullElement.style.display = 'none';
@@ -7532,13 +7541,13 @@ class GenomeBrowser {
             e.stopPropagation();
             this.toggleAddFeaturesDropdown();
         });
-        
+
         // Actions dropdown menu
         document.getElementById('actionsMenuBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleActionsDropdown();
         });
-        
+
         // Dropdown feature buttons (ONLY in Add Features dropdown, NOT Actions dropdown)
         document.querySelectorAll('#addFeaturesDropdown .dropdown-feature-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -7547,19 +7556,19 @@ class GenomeBrowser {
                 this.hideAddFeaturesDropdown();
             });
         });
-        
+
         // Add feature modal
         document.getElementById('addFeatureBtn')?.addEventListener('click', () => this.addUserFeature());
-        
+
         // Close dropdown when clicking outside
         document.addEventListener('click', () => {
             this.hideAddFeaturesDropdown();
             this.hideActionsDropdown();
         });
-        
+
         // Enable sequence selection in bottom panel
         this.initializeSequenceSelection();
-        
+
         // Initialize copy button state
         this.updateCopyButtonState();
     }
@@ -7567,7 +7576,7 @@ class GenomeBrowser {
     toggleAddFeaturesDropdown() {
         const dropdown = document.getElementById('addFeaturesDropdown');
         const button = document.getElementById('addFeaturesBtn');
-        
+
         if (dropdown && button) {
             const isVisible = dropdown.style.display === 'block';
             dropdown.style.display = isVisible ? 'none' : 'block';
@@ -7578,17 +7587,17 @@ class GenomeBrowser {
     hideAddFeaturesDropdown() {
         const dropdown = document.getElementById('addFeaturesDropdown');
         const button = document.getElementById('addFeaturesBtn');
-        
+
         if (dropdown && button) {
             dropdown.style.display = 'none';
             button.classList.remove('active');
         }
     }
-    
+
     toggleActionsDropdown() {
         const dropdown = document.getElementById('actionsDropdown');
         const button = document.getElementById('actionsMenuBtn');
-        
+
         if (dropdown && button) {
             const isVisible = dropdown.style.display === 'block';
             dropdown.style.display = isVisible ? 'none' : 'block';
@@ -7599,7 +7608,7 @@ class GenomeBrowser {
     hideActionsDropdown() {
         const dropdown = document.getElementById('actionsDropdown');
         const button = document.getElementById('actionsMenuBtn');
-        
+
         if (dropdown && button) {
             dropdown.style.display = 'none';
             button.classList.remove('active');
@@ -7612,24 +7621,24 @@ class GenomeBrowser {
         const typeSelect = document.getElementById('featureType');
         const chromosomeSelect = document.getElementById('featureChromosome');
         const selectionInfo = document.getElementById('sequenceSelectionInfo');
-        
+
         if (!modal) return;
-        
+
         // Set modal title and feature type
         const displayFeatureType = featureType || 'gene';
         titleElement.textContent = `Add ${displayFeatureType.charAt(0).toUpperCase() + displayFeatureType.slice(1)}`;
         typeSelect.value = displayFeatureType;
-        
+
         // Populate chromosome dropdown
         this.populateChromosomeSelectForFeature(chromosomeSelect);
-        
+
         // Handle sequence selection
         if (this.currentSequenceSelection) {
             const { chromosome, start, end } = this.currentSequenceSelection;
             document.getElementById('featureChromosome').value = chromosome;
             document.getElementById('featureStart').value = start;
             document.getElementById('featureEnd').value = end;
-            document.getElementById('selectionText').textContent = 
+            document.getElementById('selectionText').textContent =
                 `Using selected region: ${chromosome}:${start}-${end} (${end - start + 1} bp)`;
             selectionInfo.style.display = 'block';
         } else {
@@ -7642,20 +7651,20 @@ class GenomeBrowser {
             }
             selectionInfo.style.display = 'none';
         }
-        
+
         // Clear previous values
         document.getElementById('featureName').value = '';
         document.getElementById('featureDescription').value = '';
-        
+
         // Show modal
         modal.classList.add('show');
     }
 
     populateChromosomeSelectForFeature(selectElement) {
         if (!selectElement) return;
-        
+
         selectElement.innerHTML = '';
-        
+
         // Add chromosomes from current sequence data
         if (this.currentSequence) {
             Object.keys(this.currentSequence).forEach(chr => {
@@ -7675,28 +7684,28 @@ class GenomeBrowser {
         const end = parseInt(document.getElementById('featureEnd').value);
         const strand = parseInt(document.getElementById('featureStrand').value);
         const description = document.getElementById('featureDescription').value.trim();
-        
+
         // Validation
         if (!featureName) {
             alert('Please enter a feature name');
             return;
         }
-        
+
         if (!chromosome) {
             alert('Please select a chromosome');
             return;
         }
-        
+
         if (isNaN(start) || isNaN(end) || start < 1 || end < 1) {
             alert('Please enter valid start and end positions');
             return;
         }
-        
+
         if (start > end) {
             alert('Start position must be less than or equal to end position');
             return;
         }
-        
+
         // Check if position is within sequence bounds
         if (this.currentSequence[chromosome]) {
             const seqLength = this.currentSequence[chromosome].length;
@@ -7705,7 +7714,7 @@ class GenomeBrowser {
                 return;
             }
         }
-        
+
         // Create the feature object
         const feature = {
             type: featureType,
@@ -7721,31 +7730,31 @@ class GenomeBrowser {
             userDefined: true,
             id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         };
-        
+
         // Store the feature
         if (!this.userDefinedFeatures[chromosome]) {
             this.userDefinedFeatures[chromosome] = [];
         }
         this.userDefinedFeatures[chromosome].push(feature);
-        
+
         // Add to current annotations for immediate display
         if (!this.currentAnnotations[chromosome]) {
             this.currentAnnotations[chromosome] = [];
         }
         this.currentAnnotations[chromosome].push(feature);
-        
+
         // Close modal
         document.getElementById('addFeatureModal').classList.remove('show');
-        
+
         // Clear selection
         this.clearSequenceSelection();
-        
+
         // Refresh the view
         if (chromosome === document.getElementById('chromosomeSelect')?.value) {
             this.displayGenomeView(chromosome, this.currentSequence[chromosome]);
             this.sequenceUtils.displayEnhancedSequence(chromosome, this.currentSequence[chromosome]);
         }
-        
+
         alert(`Added ${featureType} "${featureName}" to ${chromosome}:${start}-${end}`);
     }
 
@@ -7753,7 +7762,7 @@ class GenomeBrowser {
         // Add selection capability to sequence content in bottom panel
         const sequenceContent = document.getElementById('sequenceContent');
         if (!sequenceContent) return;
-        
+
         // Remove any existing listeners to prevent duplicates
         if (this._sequenceSelectionListeners) {
             sequenceContent.removeEventListener('mousedown', this._sequenceSelectionListeners.mousedown);
@@ -7761,13 +7770,13 @@ class GenomeBrowser {
             sequenceContent.removeEventListener('mouseup', this._sequenceSelectionListeners.mouseup);
             document.removeEventListener('mouseup', this._sequenceSelectionListeners.docMouseup);
         }
-        
+
         let isSelecting = false;
         let selectionStart = null;
         let selectionEnd = null;
         let mouseDownPosition = null; // Track initial mouse position
         let hasMoved = false; // Track if mouse has actually moved
-        
+
         const mousedownHandler = (e) => {
             if (e.target.matches('.sequence-bases span')) {
                 console.log('🖱️ [Selection] mousedown on base span');
@@ -7780,13 +7789,13 @@ class GenomeBrowser {
                 e.preventDefault();
             }
         };
-        
+
         const mousemoveHandler = (e) => {
             if (isSelecting && e.target.matches('.sequence-bases span')) {
                 const currentPosition = this.getSequencePosition(e.target);
-                
+
                 // Check if mouse has actually moved to a different base
-                if (currentPosition && mouseDownPosition && 
+                if (currentPosition && mouseDownPosition &&
                     currentPosition.position !== mouseDownPosition.position) {
                     console.log(`👁️ [Selection] Mouse moved from ${mouseDownPosition.position} to ${currentPosition.position}`);
                     hasMoved = true;
@@ -7795,10 +7804,10 @@ class GenomeBrowser {
                 }
             }
         };
-        
+
         const mouseupHandler = (e) => {
             console.log(`⬆️ [Selection] mouseup - isSelecting: ${isSelecting}, hasMoved: ${hasMoved}`);
-            
+
             // Only finalize selection if there was actual movement (drag)
             if (isSelecting && hasMoved && selectionStart && selectionEnd) {
                 console.log(`✅ [Selection] Finalizing selection from ${selectionStart.position} to ${selectionEnd.position}`);
@@ -7806,26 +7815,26 @@ class GenomeBrowser {
             } else if (isSelecting && !hasMoved && e.target.matches('.sequence-bases span')) {
                 // Single click detected - place cursor instead of creating selection
                 console.log('📌 [Selection] Single click detected - placing cursor');
-                
+
                 // Call SequenceUtils to place cursor at clicked position
                 if (this.sequenceUtils && this.sequenceUtils.handleSequenceClick) {
                     this.sequenceUtils.handleSequenceClick(e, e.target);
                 }
             }
-            
+
             // Reset all selection state
             isSelecting = false;
             hasMoved = false;
             mouseDownPosition = null;
         };
-        
+
         const docMouseupHandler = () => {
             // Also reset movement tracking when mouse up occurs outside
             isSelecting = false;
             hasMoved = false;
             mouseDownPosition = null;
         };
-        
+
         // Store listeners for cleanup
         this._sequenceSelectionListeners = {
             mousedown: mousedownHandler,
@@ -7833,7 +7842,7 @@ class GenomeBrowser {
             mouseup: mouseupHandler,
             docMouseup: docMouseupHandler
         };
-        
+
         // Add event listeners
         sequenceContent.addEventListener('mousedown', mousedownHandler);
         sequenceContent.addEventListener('mousemove', mousemoveHandler);
@@ -7844,13 +7853,13 @@ class GenomeBrowser {
     getSequencePosition(baseElement) {
         const parentLine = baseElement.closest('.sequence-line');
         if (!parentLine) return null;
-        
+
         const positionElement = parentLine.querySelector('.sequence-position');
         if (!positionElement) return null;
-        
+
         const lineStartPos = parseInt(positionElement.textContent.replace(/,/g, ''));
         const baseIndex = Array.from(parentLine.querySelectorAll('.sequence-bases span')).indexOf(baseElement);
-        
+
         return {
             chromosome: document.getElementById('chromosomeSelect')?.value,
             position: lineStartPos + baseIndex,
@@ -7860,12 +7869,12 @@ class GenomeBrowser {
 
     updateSequenceSelection(start, end) {
         if (!start || !end) return;
-        
+
         this.clearSequenceSelection();
-        
+
         const startPos = Math.min(start.position, end.position);
         const endPos = Math.max(start.position, end.position);
-        
+
         // Use the same styling as gene selection for consistency
         const sequenceBases = document.querySelectorAll('.sequence-bases span');
         sequenceBases.forEach(baseElement => {
@@ -7875,30 +7884,30 @@ class GenomeBrowser {
                 baseElement.classList.add('gene-sequence-selected'); // Use same styling as gene selection
             }
         });
-        
+
         // Update copy button state during selection
         this.updateCopyButtonState();
     }
 
     finalizeSequenceSelection(start, end) {
         if (!start || !end) return;
-        
+
         const startPos = Math.min(start.position, end.position);
         const endPos = Math.max(start.position, end.position);
-        
+
         this.currentSequenceSelection = {
             chromosome: start.chromosome,
             start: startPos,
             end: endPos
         };
-        
+
         // Update copy button state when manual selection is made
         this.updateCopyButtonState();
-        
+
         // Update status bar with selection information
         const selectionLength = endPos - startPos + 1;
         const statusMessage = `🔵 Sequence Track Selection: ${start.chromosome}:${startPos.toLocaleString()}-${endPos.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
-        
+
         if (this.uiManager) {
             this.uiManager.updateStatus(statusMessage);
         } else {
@@ -7907,7 +7916,7 @@ class GenomeBrowser {
                 statusElement.textContent = statusMessage;
                 statusElement.style.color = '#3b82f6';
                 statusElement.style.fontWeight = 'bold';
-                
+
                 // Reset to normal after 5 seconds
                 setTimeout(() => {
                     statusElement.style.color = '';
@@ -7916,27 +7925,27 @@ class GenomeBrowser {
                 }, 5000);
             }
         }
-        
+
         console.log(`Selected sequence: ${start.chromosome}:${startPos}-${endPos} (${endPos - startPos + 1} bp)`);
     }
 
     clearSequenceSelection() {
         this.currentSequenceSelection = null;
         this.sequenceSelection = { start: null, end: null, active: false };
-        
+
         // Remove visual selection (using consistent classes)
         const selectedElements = document.querySelectorAll('.sequence-selected, .gene-sequence-selected');
         selectedElements.forEach(element => {
             element.classList.remove('sequence-selected');
             element.classList.remove('gene-sequence-selected');
         });
-        
+
         // Hide selection info in modal
         const selectionInfo = document.getElementById('sequenceSelectionInfo');
         if (selectionInfo) {
             selectionInfo.style.display = 'none';
         }
-        
+
         // Update copy button state
         this.updateCopyButtonState();
     }
@@ -7951,23 +7960,23 @@ class GenomeBrowser {
         if (!sequence) {
             throw new Error(`Chromosome ${chromosome} not loaded`);
         }
-        
+
         return sequence.substring(start - 1, end);
     }
 
     async addUserDefinedFeature(feature) {
         const featureId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        
+
         if (!this.userDefinedFeatures[feature.chromosome]) {
             this.userDefinedFeatures[feature.chromosome] = [];
         }
-        
+
         const featureWithId = { ...feature, id: featureId, userDefined: true };
         this.userDefinedFeatures[feature.chromosome].push(featureWithId);
-        
+
         // Refresh the display
         this.updateGeneDisplay();
-        
+
         return featureId;
     }
 
@@ -8000,12 +8009,12 @@ class GenomeBrowser {
         const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
         const splitter = document.getElementById('splitter');
         const genomeViewerSection = document.getElementById('genomeViewerSection');
-        
+
         if (this.visibleTracks.has('sequence')) {
             // Show bottom sequence panel
             if (sequenceDisplaySection) {
                 sequenceDisplaySection.style.display = 'flex';
-                
+
                 // Set proper layout properties to ensure it reaches the bottom
                 sequenceDisplaySection.style.height = '250px'; // Default height
                 sequenceDisplaySection.style.minHeight = '50px';
@@ -8016,11 +8025,11 @@ class GenomeBrowser {
                 sequenceDisplaySection.style.order = '999'; // Ensure it's at the bottom
                 sequenceDisplaySection.style.flexDirection = 'column';
             }
-            
+
             if (splitter) {
                 splitter.style.display = 'flex';
             }
-            
+
             // Adjust genome viewer to make room for bottom panel and ensure proper ordering
             if (genomeViewerSection) {
                 genomeViewerSection.style.flex = '1'; // Fill remaining space
@@ -8030,10 +8039,10 @@ class GenomeBrowser {
                 genomeViewerSection.style.display = 'flex';
                 genomeViewerSection.style.flexDirection = 'column';
             }
-            
+
             // Display the sequence content
             this.sequenceUtils.displayEnhancedSequence(chromosome, sequence);
-            
+
             // Set up collapse/expand functionality for sequence header
             this.setupSequenceHeaderToggle();
         } else {
@@ -8041,11 +8050,11 @@ class GenomeBrowser {
             if (sequenceDisplaySection) {
                 sequenceDisplaySection.style.display = 'none';
             }
-            
+
             if (splitter) {
                 splitter.style.display = 'none';
             }
-            
+
             // Let genome viewer take full space
             if (genomeViewerSection) {
                 genomeViewerSection.style.flex = '1';
@@ -8062,11 +8071,11 @@ class GenomeBrowser {
         const sequenceContent = document.getElementById('sequenceContent');
         const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
         const splitter = document.getElementById('splitter');
-        
+
         if (sequenceHeader && !sequenceHeader.hasAttribute('data-toggle-setup')) {
             sequenceHeader.setAttribute('data-toggle-setup', 'true');
             sequenceHeader.style.cursor = 'pointer';
-            
+
             // Add visual indicator that it's clickable
             sequenceHeader.style.userSelect = 'none';
             sequenceHeader.addEventListener('mouseenter', () => {
@@ -8075,7 +8084,7 @@ class GenomeBrowser {
             sequenceHeader.addEventListener('mouseleave', () => {
                 sequenceHeader.style.backgroundColor = '';
             });
-            
+
             // Removed click listener to prevent collapse/uncollapse on header click
             // sequenceHeader.addEventListener('click', () => {
             //     this.toggleBottomSequencePanel();
@@ -8089,16 +8098,16 @@ class GenomeBrowser {
         const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
         const splitter = document.getElementById('splitter');
         const genomeViewerSection = document.getElementById('genomeViewerSection');
-        
+
         if (sequenceContent && sequenceDisplaySection) {
-            const isCollapsed = sequenceContent.style.display === 'none' || 
-                              sequenceDisplaySection.classList.contains('collapsed');
-            
+            const isCollapsed = sequenceContent.style.display === 'none' ||
+                sequenceDisplaySection.classList.contains('collapsed');
+
             if (isCollapsed) {
                 // Expand - show sequence content and restore proper layout
                 sequenceContent.style.display = 'flex';
                 sequenceDisplaySection.classList.remove('collapsed');
-                
+
                 // Restore proper height and flex properties
                 sequenceDisplaySection.style.minHeight = '50px';
                 sequenceDisplaySection.style.maxHeight = '60vh';
@@ -8107,7 +8116,7 @@ class GenomeBrowser {
                 sequenceDisplaySection.style.position = 'relative';
                 sequenceDisplaySection.style.bottom = '0';
                 sequenceDisplaySection.style.order = '999'; // Ensure it's at the bottom
-                
+
                 if (splitter) {
                     splitter.style.display = 'flex';
                 }
@@ -8115,23 +8124,23 @@ class GenomeBrowser {
                 // Collapse - hide only sequence content, keep header visible
                 sequenceContent.style.display = 'none';
                 sequenceDisplaySection.classList.add('collapsed');
-                
+
                 // Set collapsed height to just show the header
                 sequenceDisplaySection.style.minHeight = '50px';
                 sequenceDisplaySection.style.maxHeight = '50px';
                 sequenceDisplaySection.style.height = '50px';
                 sequenceDisplaySection.style.flex = '0 0 auto';
-                
+
                 if (splitter) {
                     splitter.style.display = 'none';
                 }
-                
+
                 // Let genome viewer expand to fill space
                 if (genomeViewerSection) {
                     genomeViewerSection.style.flexGrow = '1';
                 }
             }
-            
+
             // Trigger resize event for layout adjustment
             setTimeout(() => {
                 window.dispatchEvent(new Event('resize'));
@@ -8142,35 +8151,35 @@ class GenomeBrowser {
     createGCTrack(chromosome, sequence) {
         const track = document.createElement('div');
         track.className = 'gc-track';
-        
+
         const trackHeader = document.createElement('div');
         trackHeader.className = 'track-header';
         trackHeader.textContent = 'GC Content & Skew';
         track.appendChild(trackHeader);
-        
+
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content gc-content-skew-display';
-        
+
         // Add draggable functionality
         this.makeDraggable(trackContent, chromosome);
-        
+
         const start = this.currentPosition.start;
         const end = this.currentPosition.end;
         const subsequence = sequence.substring(start, end);
-        
+
         // Get GC track settings
         const gcSettings = this.trackRenderer.getTrackSettings('gc'); // Retrieve settings
 
         // Create GC content visualization (now passing settings)
         const gcCanvas = this.genomeBrowser.createGCContentVisualization(subsequence, gcSettings); // Pass settings
-        
+
         trackContent.appendChild(gcCanvas);
         track.appendChild(trackContent);
 
         // Add track settings button
         const settingsButton = this.trackRenderer.createTrackSettingsButton('gc'); // Use trackRenderer method
         trackHeader.appendChild(settingsButton);
-        
+
         return track;
     }
 
@@ -8178,7 +8187,7 @@ class GenomeBrowser {
         const canvas = document.createElement('canvas');
         canvas.className = 'gc-visualization-canvas';
         const context = canvas.getContext('2d');
-        
+
         // Default settings if none provided (should be handled by TrackRenderer, but for safety)
         const gcSettings = settings || {
             contentColor: '#3b82f6', // blue
@@ -8191,12 +8200,12 @@ class GenomeBrowser {
         const width = canvas.width = 800; // Arbitrary width, will be scaled by CSS
         const height = canvas.height = 120; // Fixed height for the visualization
         const barWidth = 1; // Width of each data point
-        
+
         const step = Math.max(1, Math.floor(sequence.length / width)); // Calculate step size to fit data to canvas width
-        
+
         let gcContentData = [];
         let gcSkewData = [];
-        
+
         // Calculate GC content and skew for sliding windows
         const windowSize = 500; // Window size for calculation
         for (let i = 0; i < sequence.length - windowSize; i += step) {
@@ -8204,61 +8213,61 @@ class GenomeBrowser {
             let g = 0;
             let c = 0;
             let total = 0;
-            
+
             for (let j = 0; j < windowSeq.length; j++) {
                 const base = windowSeq[j].toLowerCase();
                 if (base === 'g') g++;
                 else if (base === 'c') c++;
                 if (base === 'g' || base === 'c' || base === 'a' || base === 't') total++;
             }
-            
+
             const gcRatio = total > 0 ? (g + c) / total : 0;
             const gcSkew = (g + c) > 0 ? (g - c) / (g + c) : 0;
-            
+
             gcContentData.push(gcRatio * height); // Scale to canvas height
             gcSkewData.push(gcSkew * (height / 2) + (height / 2)); // Scale and offset for skew
         }
-        
+
         // Draw GC content and skew
         context.clearRect(0, 0, width, height);
-        
+
         // Draw GC Content (blue bars)
         context.fillStyle = gcSettings.contentColor; // Use setting
         for (let i = 0; i < gcContentData.length; i++) {
             const barHeight = gcContentData[i];
             context.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
         }
-        
+
         // Draw GC Skew (line graph, positive green, negative red)
         context.lineWidth = gcSettings.lineWidth; // Use setting
         context.beginPath();
         context.moveTo(0, gcSkewData[0]);
-        
+
         for (let i = 1; i < gcSkewData.length; i++) {
             context.lineTo(i * barWidth, gcSkewData[i]);
         }
-        
+
         // Apply color gradient based on skew value
         const gradient = context.createLinearGradient(0, 0, width, 0);
         // Create color stops based on skew values across the width
-        for(let i = 0; i < gcSkewData.length; i++) {
+        for (let i = 0; i < gcSkewData.length; i++) {
             const skewValue = (gcSkewData[i] - (height / 2)) / (height / 2);
             let color;
             if (skewValue > 0) {
-                 // Interpolate between white (0 skew) and positive color
-                 const ratio = skewValue; // Skew is already scaled from 0 to 1 relative to height/2
-                 color = this.interpolateColor('#ffffff', gcSettings.skewPositiveColor, ratio); // Use setting
+                // Interpolate between white (0 skew) and positive color
+                const ratio = skewValue; // Skew is already scaled from 0 to 1 relative to height/2
+                color = this.interpolateColor('#ffffff', gcSettings.skewPositiveColor, ratio); // Use setting
             } else {
-                 // Interpolate between white (0 skew) and negative color
-                 const ratio = -skewValue; // Use absolute value for interpolation
-                 color = this.interpolateColor('#ffffff', gcSettings.skewNegativeColor, ratio); // Use setting
+                // Interpolate between white (0 skew) and negative color
+                const ratio = -skewValue; // Use absolute value for interpolation
+                color = this.interpolateColor('#ffffff', gcSettings.skewNegativeColor, ratio); // Use setting
             }
-             gradient.addColorStop(i / gcSkewData.length, color);
+            gradient.addColorStop(i / gcSkewData.length, color);
         }
 
         context.strokeStyle = gradient;
         context.stroke();
-        
+
         return canvas;
     }
 
@@ -8270,7 +8279,7 @@ class GenomeBrowser {
             const c2 = parseInt(color2.substr(i, 2), 16);
             const c = Math.round(c1 + factor * (c2 - c1)).toString(16);
             result[i] = ('0' + c).slice(-2);
-            result[i+1] = ('0' + c).slice(-2);
+            result[i + 1] = ('0' + c).slice(-2);
         }
         return result.join('');
     }
@@ -8279,7 +8288,7 @@ class GenomeBrowser {
     async initializeMCPServerStatus() {
         try {
             await this.updateMCPServerStatus();
-            
+
             // Check status periodically
             setInterval(() => {
                 this.updateMCPServerStatus();
@@ -8293,23 +8302,23 @@ class GenomeBrowser {
         try {
             // Check both the main process server and the chat manager connections
             const mainProcessResult = await ipcRenderer.invoke('mcp-server-status');
-            
+
             // Check if ChatManager has connections to the built-in server
             let hasActiveConnections = false;
             if (this.chatManager?.mcpServerManager) {
                 const connectedCount = this.chatManager.mcpServerManager.getConnectedServersCount();
                 hasActiveConnections = connectedCount > 0;
-                
+
                 // Check specifically for genome-studio server connection
                 const genomeStudioServer = this.chatManager.mcpServerManager.getServer('genome-studio');
-                const isGenomeStudioConnected = genomeStudioServer && 
+                const isGenomeStudioConnected = genomeStudioServer &&
                     this.chatManager.mcpServerManager.activeServers.has('genome-studio');
-                
+
                 if (isGenomeStudioConnected) {
                     hasActiveConnections = true;
                 }
             }
-            
+
             // If main process says running OR we have active connections, show as running
             if (mainProcessResult.isRunning || hasActiveConnections) {
                 this.setMCPServerUIStatus('running', {
@@ -8379,36 +8388,36 @@ class GenomeBrowser {
     async toggleMCPServer() {
         try {
             const statusResult = await ipcRenderer.invoke('mcp-server-status');
-            
+
             // Check if we have active connections through ChatManager
             let hasActiveConnections = false;
             if (this.chatManager?.mcpServerManager) {
                 const connectedCount = this.chatManager.mcpServerManager.getConnectedServersCount();
                 hasActiveConnections = connectedCount > 0;
-                
+
                 // Check specifically for genome-studio server connection
                 const genomeStudioServer = this.chatManager.mcpServerManager.getServer('genome-studio');
-                const isGenomeStudioConnected = genomeStudioServer && 
+                const isGenomeStudioConnected = genomeStudioServer &&
                     this.chatManager.mcpServerManager.activeServers.has('genome-studio');
-                
+
                 if (isGenomeStudioConnected) {
                     hasActiveConnections = true;
                 }
             }
-            
+
             const isCurrentlyRunning = statusResult.isRunning || hasActiveConnections;
-            
+
             if (isCurrentlyRunning) {
                 // Stop the server and disconnect clients
                 this.setMCPServerUIStatus('stopping');
-                
+
                 // Disconnect from ChatManager first if connected
                 if (hasActiveConnections && this.chatManager?.mcpServerManager) {
                     this.chatManager.mcpServerManager.disconnectAll();
                 }
-                
+
                 const result = await ipcRenderer.invoke('mcp-server-stop');
-                
+
                 if (result.success) {
                     this.showNotification('MCP Server stopped successfully', 'success');
                 } else {
@@ -8418,16 +8427,16 @@ class GenomeBrowser {
                 // Start the server
                 this.setMCPServerUIStatus('starting');
                 const result = await ipcRenderer.invoke('mcp-server-start');
-                
+
                 if (result.success) {
                     const serverTypeText = result.serverType === 'unified-claude-mcp' ? 'Unified Claude MCP Server' : 'MCP Server';
                     this.showNotification(`${serverTypeText} started successfully! Claude Desktop can connect via custom connector: http://localhost:${result.httpPort}/mcp`, 'success');
-                    
+
                     // Auto-connect the ChatManager to the built-in server after starting (only if auto-activation is allowed)
-                    const currentSettings = this.configManager ? 
-                        this.configManager.get('mcpSettings', { allowAutoActivation: false }) : 
+                    const currentSettings = this.configManager ?
+                        this.configManager.get('mcpSettings', { allowAutoActivation: false }) :
                         { allowAutoActivation: false };
-                        
+
                     if (currentSettings.allowAutoActivation) {
                         // For unified RPC server, no WebSocket connection needed
                         // The RPC interface is automatically available when the server starts
@@ -8437,12 +8446,12 @@ class GenomeBrowser {
                     this.showNotification(`Failed to start MCP Server: ${result.message}`, 'error');
                 }
             }
-            
+
             // Update status after action
             setTimeout(() => {
                 this.updateMCPServerStatus();
             }, 1500);
-            
+
         } catch (error) {
             console.error('Error toggling MCP server:', error);
             this.showNotification(`Error controlling MCP Server: ${error.message}`, 'error');
@@ -8461,13 +8470,13 @@ class GenomeBrowser {
                 <span>${message}</span>
             </div>
         `;
-        
+
         // Add to page
         document.body.appendChild(notification);
-        
+
         // Animate in
         setTimeout(() => notification.classList.add('show'), 100);
-        
+
         // Remove after 3 seconds
         setTimeout(() => {
             notification.classList.remove('show');
@@ -8486,7 +8495,7 @@ class GenomeBrowser {
         try {
             // Use IPC to request opening the Resource Manager from main process
             ipcRenderer.send('open-resource-manager');
-            
+
             this.showNotification('Resource Manager window is opening...', 'info');
         } catch (error) {
             console.error('Failed to open Resource Manager:', error);
@@ -8501,9 +8510,9 @@ class GenomeBrowser {
         try {
             // Use IPC to request opening the Project Manager from main process
             ipcRenderer.send('open-project-manager');
-            
+
             this.showNotification('Project Manager window is opening...', 'info');
-            
+
             // 返回一个promise，等待项目管理器窗口可用
             return new Promise((resolve) => {
                 // 这里可以添加监听器等待窗口准备好
@@ -8534,10 +8543,10 @@ class GenomeBrowser {
         let attempts = 0;
         const maxAttempts = 10;
         const delay = 200; // 200ms delay between attempts
-        
+
         const tryInitialize = async () => {
             attempts++;
-            
+
             try {
                 // Wait for ChatManager's plugin manager to be fully initialized
                 if (this.chatManager && this.chatManager.waitForPluginManager) {
@@ -8545,7 +8554,7 @@ class GenomeBrowser {
                     await this.chatManager.waitForPluginManager();
                     console.log('✅ ChatManager.pluginManager is ready');
                 }
-                
+
                 if (this.chatManager && this.chatManager.pluginManager) {
                     this.pluginManagementUI = new PluginManagementUI(this.chatManager.pluginManager, this.configManager);
                     window.pluginManagementUI = this.pluginManagementUI; // Make globally available for onclick handlers
@@ -8569,7 +8578,7 @@ class GenomeBrowser {
                 }
             }
         };
-        
+
         return tryInitialize();
     }
 
@@ -8589,7 +8598,7 @@ class GenomeBrowser {
 
             // Get the currently focused element
             const activeElement = document.activeElement;
-            
+
             // If there's a text selection anywhere on the page
             const selection = window.getSelection();
             if (selection && selection.toString().trim()) {
@@ -8636,7 +8645,7 @@ class GenomeBrowser {
 
             // No content to copy
             this.showNotification('⚠️ No content selected to copy', 'warning');
-            
+
         } catch (error) {
             console.error('Error in handleMenuCopy:', error);
             this.showNotification('❌ Error copying content', 'error');
@@ -8652,7 +8661,7 @@ class GenomeBrowser {
             // This ensures menu copy/paste work when accessed via menu bar
 
             const activeElement = document.activeElement;
-            
+
             // If focused on an input field or textarea
             if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
                 navigator.clipboard.readText().then(text => {
@@ -8674,7 +8683,7 @@ class GenomeBrowser {
 
                     // Trigger input event for any listeners
                     activeElement.dispatchEvent(new Event('input', { bubbles: true }));
-                    
+
                     this.showNotification(`✅ Pasted ${text.length} characters`, 'success');
                 }).catch(err => {
                     console.error('Failed to paste text:', err);
@@ -8694,7 +8703,7 @@ class GenomeBrowser {
 
             // No suitable target for pasting
             this.showNotification('⚠️ No input field selected for pasting', 'warning');
-            
+
         } catch (error) {
             console.error('Error in handleMenuPaste:', error);
             this.showNotification('❌ Error pasting content', 'error');
@@ -8707,7 +8716,7 @@ class GenomeBrowser {
     handleMenuSelectAll() {
         try {
             const activeElement = document.activeElement;
-            
+
             // If focused on an input field or textarea
             if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
                 activeElement.select();
@@ -8743,7 +8752,7 @@ class GenomeBrowser {
             // Select all content on the page as fallback
             document.execCommand('selectAll');
             this.showNotification('All page content selected', 'success');
-            
+
         } catch (error) {
             console.error('Error in handleMenuSelectAll:', error);
             this.showNotification('❌ Error selecting content', 'error');
@@ -8777,13 +8786,13 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('✅ All required scripts loaded, initializing CodeXomics...');
         window.genomeBrowser = new GenomeBrowser();
         window.app = window.genomeBrowser; // Ensure app is available for benchmark system
-        
+
         // Initialize enhanced citation display after a delay to ensure modules are loaded
         const initializeEnhancedCitationDisplay = () => {
             console.log('Initializing Enhanced Citation Display...');
             console.log('EnhancedCitationDisplay available:', typeof window.EnhancedCitationDisplay);
             console.log('LiteratureAPIService available:', typeof window.LiteratureAPIService);
-            
+
             if (window.EnhancedCitationDisplay && window.LiteratureAPIService) {
                 try {
                     window.genomeBrowser.enhancedCitationDisplay = new EnhancedCitationDisplay(window.genomeBrowser);
@@ -8816,7 +8825,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fallback: initialize anyway
         window.genomeBrowser = new GenomeBrowser();
     });
-}); 
+});
 
 /**
  * TrackStateManager - Manages track sizes and order persistence
@@ -8873,9 +8882,9 @@ class TrackStateManager {
                 const trackType = trackClass.replace('-track', '');
                 const mappedType = trackTypeMapping[trackType] || trackType;
                 const savedSize = this.getTrackSize(mappedType);
-                
+
                 console.log(`[TrackStateManager] Processing track: class="${trackClass}", type="${trackType}", mapped="${mappedType}", savedSize="${savedSize}"`);
-                
+
                 if (savedSize) {
                     const trackContent = element.querySelector('.track-content');
                     if (trackContent) {
@@ -8960,22 +8969,22 @@ class TrackStateManager {
         localStorage.removeItem('genomeViewer_trackState');
         console.log('Cleared track state');
     }
-} 
+}
 
 // Load MicrobeGenomicsFunctions for chat integration
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Dynamically load MicrobeGenomicsFunctions if not already loaded
     if (!window.MicrobeFns) {
         const script = document.createElement('script');
         script.src = './modules/MicrobeGenomicsFunctions.js';
-        script.onload = function() {
+        script.onload = function () {
             console.log('MicrobeGenomicsFunctions loaded successfully');
             // Trigger re-initialization of ChatManager if it exists
             if (window.chatManager && window.chatManager.initializeMicrobeGenomicsFunctions) {
                 window.chatManager.initializeMicrobeGenomicsFunctions();
             }
         };
-        script.onerror = function() {
+        script.onerror = function () {
             console.error('Failed to load MicrobeGenomicsFunctions');
         };
         document.head.appendChild(script);
