@@ -1,6 +1,8 @@
 /**
  * ChatManager - Handles LLM chat interface and MCP communication
  */
+// Note: fs and path are required locally inside addToolResultMessage to avoid global scope conflicts
+
 class ChatManager {
     constructor(app, configManager = null) {
         this.app = app;
@@ -18442,26 +18444,114 @@ ${this.getPluginSystemInfo()}`;
             resultDisplay += `<strong>${icon} ${result.tool}</strong><br>`;
 
             if (result.success) {
-                resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
-
-                // 显示详细数据（如果启用）
-                if (this.showDetailedToolData) {
-                    // Check for result.result first (standard tool execution result), then fallback to result.data (legacy)
+                // Custom handling for Deep Gene Research tool
+                if (result.tool === 'deep-gene-research') {
                     const resultData = result.result || result.data;
-                    if (resultData) {
-                        resultDisplay += `<br><details style="margin-top: 8px;">`;
-                        resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
-                        resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
+                    let reportSaved = false;
+                    let reportPath = '';
+                    let geneSymbol = 'Unknown';
 
-                        try {
-                            // 格式化数据显示
-                            const formattedData = this.formatToolResultData(resultData);
-                            resultDisplay += formattedData;
-                        } catch (error) {
-                            resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+                    try {
+                        const fs = require('fs');
+                        const path = require('path');
+                        const parsedData = typeof resultData === 'string' ? JSON.parse(resultData) : resultData;
+
+                        // Extract and save report
+                        if (parsedData.report) {
+                            // Get gene symbol from metadata or search results
+                            geneSymbol = parsedData.metadata?.geneSymbol ||
+                                (parsedData.searchResults && parsedData.searchResults[0]?.symbol) ||
+                                'Unknown';
+
+                            const reportsDir = path.join(process.cwd(), 'reports');
+                            if (!fs.existsSync(reportsDir)) {
+                                fs.mkdirSync(reportsDir, { recursive: true });
+                            }
+
+                            const safeSymbol = geneSymbol.replace(/[^a-zA-Z0-9_-]/g, '_');
+                            const filename = `Gene_${safeSymbol}_Research_Report.md`;
+                            reportPath = path.join(reportsDir, filename);
+
+                            fs.writeFileSync(reportPath, parsedData.report);
+                            reportSaved = true;
+                            console.log(`✅ Deep Gene Research report saved to: ${reportPath}`);
                         }
 
-                        resultDisplay += `</div></details>`;
+                        // Formatted Display
+                        resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">`;
+                        resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Complete: ${geneSymbol}</h3>`;
+
+                        if (reportSaved) {
+                            resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;">`;
+                            resultDisplay += `<i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${path.basename(reportPath)}</code>`;
+                            resultDisplay += `</div>`;
+                        }
+
+                        resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
+                        resultDisplay += `Attempted ${parsedData.workflow?.steps?.length || 0} steps of analysis.<br>`;
+                        if (parsedData.statistics) {
+                            resultDisplay += `Found ${parsedData.statistics.totalCitations || 0} citations and ${parsedData.statistics.processedPapers || 0} papers.<br>`;
+                        }
+                        resultDisplay += `</div>`;
+
+                        // Collapsible detailed JSON
+                        if (this.showDetailedToolData) {
+                            resultDisplay += `<details style="margin-top: 8px;">`;
+                            resultDisplay += `<summary style="cursor: pointer; color: #2196F3; font-size: 0.9em;">📊 View raw data</summary>`;
+                            resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;">`;
+                            try {
+                                const formattedData = this.formatToolResultData(resultData);
+                                resultDisplay += formattedData;
+                            } catch (error) {
+                                resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+                            }
+                            resultDisplay += `</div></details>`;
+                        }
+
+                        resultDisplay += `</div>`;
+
+                    } catch (e) {
+                        console.error('Error processing deep-gene-research result:', e);
+                        // Fallback to default display
+                        resultDisplay += `<span style="color: #4CAF50;">Status: Success (Display Error)</span>`;
+                        if (this.showDetailedToolData) {
+                            const resultData = result.result || result.data;
+                            if (resultData) {
+                                resultDisplay += `<br><details style="margin-top: 8px;">`;
+                                resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
+                                resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
+                                try {
+                                    const formattedData = this.formatToolResultData(resultData);
+                                    resultDisplay += formattedData;
+                                } catch (error) {
+                                    resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+                                }
+                                resultDisplay += `</div></details>`;
+                            }
+                        }
+                    }
+
+                } else {
+                    // Standard display for other tools
+                    resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
+
+                    // 显示详细数据（如果启用）
+                    if (this.showDetailedToolData) {
+                        // Check for result.result first (standard tool execution result), then fallback to result.data (legacy)
+                        const resultData = result.result || result.data;
+                        if (resultData) {
+                            resultDisplay += `<br><details style="margin-top: 8px;">`;
+                            resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
+                            resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
+                            try {
+                                // 格式化数据显示
+                                const formattedData = this.formatToolResultData(resultData);
+                                resultDisplay += formattedData;
+                            } catch (error) {
+                                resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+                            }
+                            resultDisplay += `</div></details>`;
+                        }
                     }
                 }
             } else {
