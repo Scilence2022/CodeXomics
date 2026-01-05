@@ -18597,138 +18597,186 @@ ${this.getPluginSystemInfo()}`;
         let sources = [];
 
         try {
-            // Parse string data if needed
-            let data = resultData;
+            // First pass: extract the primary content/data object
+            let parsedData = resultData;
+
+            // Handle: string input
             if (typeof resultData === 'string') {
                 try {
-                    data = JSON.parse(resultData);
+                    parsedData = JSON.parse(resultData);
                 } catch (e) {
-                    // If it's just a raw string, treat it as the report
+                    // It's a raw string, use it as report for now
                     report = resultData;
-                    // Try to extract gene symbol from content
-                    const geneMatch = resultData.match(/gene[:\s]+([A-Za-z0-9_-]+)/i) ||
-                        resultData.match(/\*\*([A-Za-z0-9_-]+)\*\*/);
-                    if (geneMatch) geneSymbol = geneMatch[1];
-                    return { report, geneSymbol, stepsCount, statistics, images, sources };
                 }
             }
 
-            // Handle MCP content array format
-            // Format: { content: [{ type: "text", text: "..." }, { type: "image", data: "..." }] }
-            if (data.content && Array.isArray(data.content)) {
-                const textParts = [];
-                data.content.forEach(item => {
-                    if (item.type === 'text' && item.text) {
-                        textParts.push(item.text);
-                    } else if (item.type === 'image' && item.data) {
-                        images.push(item);
-                    } else if (item.type === 'resource' && item.resource) {
-                        sources.push(item.resource);
-                    }
+            // Handle: standard MCP "content" array
+            if (parsedData.content && Array.isArray(parsedData.content)) {
+                // Combine text parts
+                const textContent = parsedData.content
+                    .filter(item => item.type === 'text' && item.text)
+                    .map(item => item.text)
+                    .join('\n\n');
+
+                // Extract images and resources
+                parsedData.content.forEach(item => {
+                    if (item.type === 'image' && item.data) images.push(item);
+                    if (item.type === 'resource' && item.resource) sources.push(item.resource);
                 });
-                report = textParts.join('\n\n');
-            }
-            // Handle direct report field
-            else if (data.report) {
-                report = data.report;
-            }
-            // Handle result wrapper with content
-            else if (data.result && data.result.content && Array.isArray(data.result.content)) {
-                const textParts = [];
-                data.result.content.forEach(item => {
-                    if (item.type === 'text' && item.text) {
-                        textParts.push(item.text);
+
+                // Check if the extracted text is actually a JSON string (Nested JSON case)
+                if (textContent.trim().startsWith('{')) {
+                    try {
+                        const innerJson = JSON.parse(textContent);
+                        parsedData = innerJson; // Switch to using the inner JSON object
+                    } catch (e) {
+                        report = textContent; // Use text as report if not valid JSON
                     }
-                });
-                report = textParts.join('\n\n');
+                } else {
+                    report = textContent;
+                }
             }
-            // Handle simple text result
-            else if (data.result && typeof data.result === 'string') {
-                report = data.result;
+            // Handle: "result" wrapper (e.g., JSON-RPC style)
+            else if (parsedData.result) {
+                if (parsedData.result.content && Array.isArray(parsedData.result.content)) {
+                    // Similar logic for result.content
+                    const textContent = parsedData.result.content
+                        .filter(item => item.type === 'text' && item.text)
+                        .map(item => item.text)
+                        .join('\n\n');
+
+                    if (textContent.trim().startsWith('{')) {
+                        try {
+                            parsedData = JSON.parse(textContent);
+                        } catch (e) {
+                            report = textContent;
+                        }
+                    } else {
+                        report = textContent;
+                    }
+                } else {
+                    parsedData = parsedData.result;
+                }
             }
-            // Handle text field directly
-            else if (data.text) {
-                report = data.text;
+            // Handle: "text" field wrapper
+            else if (parsedData.text) {
+                if (parsedData.text.trim().startsWith('{')) {
+                    try {
+                        parsedData = JSON.parse(parsedData.text);
+                    } catch (e) {
+                        report = parsedData.text;
+                    }
+                } else {
+                    report = parsedData.text;
+                }
             }
-            // Fallback: convert object to formatted markdown
-            else if (typeof data === 'object') {
-                // Try common field names for research output
-                report = data.output || data.response || data.message || data.data || '';
-                if (!report && Object.keys(data).length > 0) {
-                    // Format the object as a readable report
-                    report = '# Deep Gene Research Results\n\n';
-                    for (const [key, value] of Object.entries(data)) {
-                        if (key === 'metadata' || key === 'statistics' || key === 'workflow') continue;
-                        if (typeof value === 'string' && value.length > 0) {
-                            report += `## ${key.charAt(0).toUpperCase() + key.slice(1)}\n\n${value}\n\n`;
+
+            // --- Phase 2: Extract Data from the Resolved Object (parsedData) ---
+
+            // 1. Extract Gene Symbol
+            if (parsedData.workflow && parsedData.workflow.geneIdentification && parsedData.workflow.geneIdentification.geneSymbol) {
+                geneSymbol = parsedData.workflow.geneIdentification.geneSymbol;
+            } else if (parsedData.metadata && parsedData.metadata.geneSymbol) {
+                geneSymbol = parsedData.metadata.geneSymbol;
+            } else if (parsedData.geneSymbol) {
+                geneSymbol = parsedData.geneSymbol;
+            } else if (parsedData.searchResults && parsedData.searchResults[0] && parsedData.searchResults[0].symbol) {
+                geneSymbol = parsedData.searchResults[0].symbol;
+            }
+
+            // Fallback: Regex extraction if still unknown and we have text content
+            if (geneSymbol === 'Unknown' && report) {
+                const patterns = [
+                    /gene[:\s]+\*?\*?([A-Za-z][A-Za-z0-9_-]{1,20})\*?\*?/i,
+                    /\*\*([A-Za-z][A-Za-z0-9_-]{1,20})\*\*\s+gene/i,
+                    /analysis\s+of\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_-]{1,20})\s+gene/i,
+                ];
+                for (const pattern of patterns) {
+                    const match = report.match(pattern);
+                    if (match && match[1]) {
+                        // Validate to ensure it's not a common word like "repression"
+                        // Simple heuristic: exact match or reasonable gene format
+                        if (match[1].length <= 10) {
+                            geneSymbol = match[1];
+                            break;
                         }
                     }
                 }
             }
 
-            // Extract gene symbol from metadata or content
-            if (data.metadata && data.metadata.geneSymbol) {
-                geneSymbol = data.metadata.geneSymbol;
-            } else if (data.geneSymbol) {
-                geneSymbol = data.geneSymbol;
-            } else if (data.searchResults && data.searchResults[0] && data.searchResults[0].symbol) {
-                geneSymbol = data.searchResults[0].symbol;
-            } else if (report) {
-                // Try to extract gene symbol from report content
-                // Look for patterns like "gene yejL" or "**dnaA**" or "Gene: lysC"
-                const patterns = [
-                    /gene[:\s]+\*?\*?([A-Za-z][A-Za-z0-9_-]{1,20})\*?\*?/i,
-                    /\*\*([A-Za-z][A-Za-z0-9_-]{1,20})\*\*\s+gene/i,
-                    /analysis\s+of\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_-]{1,20})\s+gene/i,
-                    /([A-Za-z][A-Za-z0-9_-]{1,20})\s+in\s+\*?Escherichia/i,
-                    /([A-Za-z][A-Za-z0-9_-]{1,20})\s+gene\s+in/i
-                ];
-                for (const pattern of patterns) {
-                    const match = report.match(pattern);
-                    if (match && match[1] && match[1].length >= 2 && match[1].length <= 20) {
-                        geneSymbol = match[1];
-                        break;
+            // 2. Extract/Construct Report Content
+            if (parsedData.report) {
+                report = parsedData.report;
+            } else if (!report) {
+                // If we don't have a direct report string yet, construct one from available fields
+                let builtReport = '';
+
+                if (geneSymbol !== 'Unknown') {
+                    builtReport += `# Deep Gene Research: ${geneSymbol}\n\n`;
+                }
+
+                if (parsedData.researchPlan) {
+                    builtReport += `## Research Plan\n\n${parsedData.researchPlan}\n\n`;
+                }
+
+                if (parsedData.researchGoal) {
+                    builtReport += `## Research Goal\n\n${parsedData.researchGoal}\n\n`;
+                }
+
+                if (parsedData.workflow) {
+                    builtReport += `## Workflow Configuration\n\n`;
+                    if (parsedData.workflow.organism) builtReport += `- **Organism**: ${parsedData.workflow.organism}\n`;
+                    if (parsedData.workflow.specificAspects && parsedData.workflow.specificAspects.length) {
+                        builtReport += `- **Focus Aspects**: ${parsedData.workflow.specificAspects.join(', ')}\n`;
                     }
+                    builtReport += '\n';
+                }
+
+                if (parsedData.searchTasks && Array.isArray(parsedData.searchTasks)) {
+                    builtReport += `## Search Tasks\n\n`;
+                    parsedData.searchTasks.forEach((task, idx) => {
+                        builtReport += `${idx + 1}. ${task.query || task}\n`;
+                    });
+                    builtReport += '\n';
+                }
+
+                // If we constructed something meaningful, use it
+                if (builtReport.length > 50) {
+                    report = builtReport;
+                } else if (typeof parsedData === 'object') {
+                    // Ultima ratio: dump the object as markdown code block
+                    report = '## Raw Data Output\n\n```json\n' + JSON.stringify(parsedData, null, 2) + '\n```';
                 }
             }
 
-            // Extract workflow steps count
-            if (data.workflow && data.workflow.steps) {
-                stepsCount = Array.isArray(data.workflow.steps) ? data.workflow.steps.length : 0;
-            } else if (data.steps) {
-                stepsCount = Array.isArray(data.steps) ? data.steps.length : (data.steps || 0);
+            // 3. Extract Statistics
+            if (parsedData.statistics) {
+                statistics.totalCitations = parsedData.statistics.totalCitations || parsedData.statistics.citations || 0;
+                statistics.processedPapers = parsedData.statistics.processedPapers || parsedData.statistics.papers || 0;
+            } else if (report) {
+                const doiMatches = report.match(/DOI:\s*[0-9.\/a-zA-Z-]+/gi);
+                const pmidMatches = report.match(/PMID:\s*[0-9]+/gi);
+                statistics.totalCitations = (doiMatches ? doiMatches.length : 0) + (pmidMatches ? pmidMatches.length : 0);
             }
 
-            // Extract statistics
-            if (data.statistics) {
-                statistics = {
-                    totalCitations: data.statistics.totalCitations || data.statistics.citations || 0,
-                    processedPapers: data.statistics.processedPapers || data.statistics.papers || 0
-                };
-            } else {
-                // Try to count citations from report content
-                if (report) {
-                    const doiMatches = report.match(/DOI:\s*[0-9.\/a-zA-Z-]+/gi);
-                    const pmidMatches = report.match(/PMID:\s*[0-9]+/gi);
-                    statistics.totalCitations = (doiMatches ? doiMatches.length : 0) + (pmidMatches ? pmidMatches.length : 0);
-                }
+            // 4. Extract Steps Count
+            if (parsedData.workflow && parsedData.workflow.steps) {
+                stepsCount = parsedData.workflow.steps.length;
+            } else if (parsedData.steps) {
+                stepsCount = Array.isArray(parsedData.steps) ? parsedData.steps.length : parsedData.steps;
+            } else if (parsedData.searchTasks) {
+                stepsCount = parsedData.searchTasks.length;
             }
 
-            // Extract sources/references
-            if (data.sources) {
-                sources = Array.isArray(data.sources) ? data.sources : [data.sources];
-            } else if (data.references) {
-                sources = Array.isArray(data.references) ? data.references : [data.references];
-            }
+            // 5. Extract Sources
+            if (parsedData.sources) sources = sources.concat(parsedData.sources);
+            if (parsedData.references) sources = sources.concat(parsedData.references);
 
         } catch (error) {
             console.error('Error extracting Deep Gene Research report:', error);
-            // Fallback to raw data
-            if (typeof resultData === 'string') {
-                report = resultData;
-            } else {
-                report = JSON.stringify(resultData, null, 2);
-            }
+            // Emergency fallback
+            if (!report && typeof resultData === 'string') report = resultData;
+            else if (!report) report = JSON.stringify(resultData, null, 2);
         }
 
         return { report, geneSymbol, stepsCount, statistics, images, sources };
