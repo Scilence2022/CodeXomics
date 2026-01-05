@@ -18449,20 +18449,17 @@ ${this.getPluginSystemInfo()}`;
                     const resultData = result.result || result.data;
                     let reportSaved = false;
                     let reportPath = '';
-                    let geneSymbol = 'Unknown';
 
                     try {
                         const fs = require('fs');
                         const path = require('path');
-                        const parsedData = typeof resultData === 'string' ? JSON.parse(resultData) : resultData;
 
-                        // Extract and save report
-                        if (parsedData.report) {
-                            // Get gene symbol from metadata or search results
-                            geneSymbol = parsedData.metadata?.geneSymbol ||
-                                (parsedData.searchResults && parsedData.searchResults[0]?.symbol) ||
-                                'Unknown';
+                        // Use the new helper to extract report from various formats
+                        const extracted = this.extractDeepGeneResearchReport(resultData);
+                        const { report, geneSymbol, stepsCount, statistics, images, sources } = extracted;
 
+                        // Save report if we have content
+                        if (report && report.trim().length > 0) {
                             const reportsDir = path.join(process.cwd(), 'reports');
                             if (!fs.existsSync(reportsDir)) {
                                 fs.mkdirSync(reportsDir, { recursive: true });
@@ -18472,7 +18469,7 @@ ${this.getPluginSystemInfo()}`;
                             const filename = `Gene_${safeSymbol}_Research_Report.md`;
                             reportPath = path.join(reportsDir, filename);
 
-                            fs.writeFileSync(reportPath, parsedData.report);
+                            fs.writeFileSync(reportPath, report);
                             reportSaved = true;
                             console.log(`✅ Deep Gene Research report saved to: ${reportPath}`);
                         }
@@ -18488,9 +18485,26 @@ ${this.getPluginSystemInfo()}`;
                         }
 
                         resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
-                        resultDisplay += `Attempted ${parsedData.workflow?.steps?.length || 0} steps of analysis.<br>`;
-                        if (parsedData.statistics) {
-                            resultDisplay += `Found ${parsedData.statistics.totalCitations || 0} citations and ${parsedData.statistics.processedPapers || 0} papers.<br>`;
+                        if (stepsCount > 0) {
+                            resultDisplay += `Completed ${stepsCount} steps of analysis.<br>`;
+                        }
+                        if (statistics.totalCitations > 0 || statistics.processedPapers > 0) {
+                            resultDisplay += `Found ${statistics.totalCitations} citations`;
+                            if (statistics.processedPapers > 0) {
+                                resultDisplay += ` and ${statistics.processedPapers} papers`;
+                            }
+                            resultDisplay += `.<br>`;
+                        }
+                        if (report && report.length > 0) {
+                            // Show a preview of the report content
+                            const previewLength = 500;
+                            const preview = report.length > previewLength
+                                ? report.substring(0, previewLength) + '...'
+                                : report;
+                            resultDisplay += `<details style="margin-top: 8px;">`;
+                            resultDisplay += `<summary style="cursor: pointer; color: #1565C0;">📄 Report Preview</summary>`;
+                            resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; white-space: pre-wrap; font-size: 0.85em;">${this.escapeHtml(preview)}</div>`;
+                            resultDisplay += `</details>`;
                         }
                         resultDisplay += `</div>`;
 
@@ -18515,16 +18529,16 @@ ${this.getPluginSystemInfo()}`;
                         // Fallback to default display
                         resultDisplay += `<span style="color: #4CAF50;">Status: Success (Display Error)</span>`;
                         if (this.showDetailedToolData) {
-                            const resultData = result.result || result.data;
-                            if (resultData) {
+                            const rawData = result.result || result.data;
+                            if (rawData) {
                                 resultDisplay += `<br><details style="margin-top: 8px;">`;
                                 resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
                                 resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 500px; overflow-y: auto;">`;
                                 try {
-                                    const formattedData = this.formatToolResultData(resultData);
+                                    const formattedData = this.formatToolResultData(rawData);
                                     resultDisplay += formattedData;
                                 } catch (error) {
-                                    resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+                                    resultDisplay += `<pre>${JSON.stringify(rawData, null, 2)}</pre>`;
                                 }
                                 resultDisplay += `</div></details>`;
                             }
@@ -18566,6 +18580,158 @@ ${this.getPluginSystemInfo()}`;
         }).join('');
 
         this.updateThinkingMessage(`${resultMessage}<br><div style="margin-top: 8px;">${detailsHtml}</div>`);
+    }
+
+    /**
+     * Extract Deep Gene Research report from various MCP response formats
+     * Handles: content arrays, direct report fields, raw text, and other structures
+     * @param {*} resultData - The raw result data from MCP tool execution
+     * @returns {Object} Normalized structure with report, geneSymbol, steps, and statistics
+     */
+    extractDeepGeneResearchReport(resultData) {
+        let report = '';
+        let geneSymbol = 'Unknown';
+        let stepsCount = 0;
+        let statistics = { totalCitations: 0, processedPapers: 0 };
+        let images = [];
+        let sources = [];
+
+        try {
+            // Parse string data if needed
+            let data = resultData;
+            if (typeof resultData === 'string') {
+                try {
+                    data = JSON.parse(resultData);
+                } catch (e) {
+                    // If it's just a raw string, treat it as the report
+                    report = resultData;
+                    // Try to extract gene symbol from content
+                    const geneMatch = resultData.match(/gene[:\s]+([A-Za-z0-9_-]+)/i) ||
+                        resultData.match(/\*\*([A-Za-z0-9_-]+)\*\*/);
+                    if (geneMatch) geneSymbol = geneMatch[1];
+                    return { report, geneSymbol, stepsCount, statistics, images, sources };
+                }
+            }
+
+            // Handle MCP content array format
+            // Format: { content: [{ type: "text", text: "..." }, { type: "image", data: "..." }] }
+            if (data.content && Array.isArray(data.content)) {
+                const textParts = [];
+                data.content.forEach(item => {
+                    if (item.type === 'text' && item.text) {
+                        textParts.push(item.text);
+                    } else if (item.type === 'image' && item.data) {
+                        images.push(item);
+                    } else if (item.type === 'resource' && item.resource) {
+                        sources.push(item.resource);
+                    }
+                });
+                report = textParts.join('\n\n');
+            }
+            // Handle direct report field
+            else if (data.report) {
+                report = data.report;
+            }
+            // Handle result wrapper with content
+            else if (data.result && data.result.content && Array.isArray(data.result.content)) {
+                const textParts = [];
+                data.result.content.forEach(item => {
+                    if (item.type === 'text' && item.text) {
+                        textParts.push(item.text);
+                    }
+                });
+                report = textParts.join('\n\n');
+            }
+            // Handle simple text result
+            else if (data.result && typeof data.result === 'string') {
+                report = data.result;
+            }
+            // Handle text field directly
+            else if (data.text) {
+                report = data.text;
+            }
+            // Fallback: convert object to formatted markdown
+            else if (typeof data === 'object') {
+                // Try common field names for research output
+                report = data.output || data.response || data.message || data.data || '';
+                if (!report && Object.keys(data).length > 0) {
+                    // Format the object as a readable report
+                    report = '# Deep Gene Research Results\n\n';
+                    for (const [key, value] of Object.entries(data)) {
+                        if (key === 'metadata' || key === 'statistics' || key === 'workflow') continue;
+                        if (typeof value === 'string' && value.length > 0) {
+                            report += `## ${key.charAt(0).toUpperCase() + key.slice(1)}\n\n${value}\n\n`;
+                        }
+                    }
+                }
+            }
+
+            // Extract gene symbol from metadata or content
+            if (data.metadata && data.metadata.geneSymbol) {
+                geneSymbol = data.metadata.geneSymbol;
+            } else if (data.geneSymbol) {
+                geneSymbol = data.geneSymbol;
+            } else if (data.searchResults && data.searchResults[0] && data.searchResults[0].symbol) {
+                geneSymbol = data.searchResults[0].symbol;
+            } else if (report) {
+                // Try to extract gene symbol from report content
+                // Look for patterns like "gene yejL" or "**dnaA**" or "Gene: lysC"
+                const patterns = [
+                    /gene[:\s]+\*?\*?([A-Za-z][A-Za-z0-9_-]{1,20})\*?\*?/i,
+                    /\*\*([A-Za-z][A-Za-z0-9_-]{1,20})\*\*\s+gene/i,
+                    /analysis\s+of\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_-]{1,20})\s+gene/i,
+                    /([A-Za-z][A-Za-z0-9_-]{1,20})\s+in\s+\*?Escherichia/i,
+                    /([A-Za-z][A-Za-z0-9_-]{1,20})\s+gene\s+in/i
+                ];
+                for (const pattern of patterns) {
+                    const match = report.match(pattern);
+                    if (match && match[1] && match[1].length >= 2 && match[1].length <= 20) {
+                        geneSymbol = match[1];
+                        break;
+                    }
+                }
+            }
+
+            // Extract workflow steps count
+            if (data.workflow && data.workflow.steps) {
+                stepsCount = Array.isArray(data.workflow.steps) ? data.workflow.steps.length : 0;
+            } else if (data.steps) {
+                stepsCount = Array.isArray(data.steps) ? data.steps.length : (data.steps || 0);
+            }
+
+            // Extract statistics
+            if (data.statistics) {
+                statistics = {
+                    totalCitations: data.statistics.totalCitations || data.statistics.citations || 0,
+                    processedPapers: data.statistics.processedPapers || data.statistics.papers || 0
+                };
+            } else {
+                // Try to count citations from report content
+                if (report) {
+                    const doiMatches = report.match(/DOI:\s*[0-9.\/a-zA-Z-]+/gi);
+                    const pmidMatches = report.match(/PMID:\s*[0-9]+/gi);
+                    statistics.totalCitations = (doiMatches ? doiMatches.length : 0) + (pmidMatches ? pmidMatches.length : 0);
+                }
+            }
+
+            // Extract sources/references
+            if (data.sources) {
+                sources = Array.isArray(data.sources) ? data.sources : [data.sources];
+            } else if (data.references) {
+                sources = Array.isArray(data.references) ? data.references : [data.references];
+            }
+
+        } catch (error) {
+            console.error('Error extracting Deep Gene Research report:', error);
+            // Fallback to raw data
+            if (typeof resultData === 'string') {
+                report = resultData;
+            } else {
+                report = JSON.stringify(resultData, null, 2);
+            }
+        }
+
+        return { report, geneSymbol, stepsCount, statistics, images, sources };
     }
 
     /**
