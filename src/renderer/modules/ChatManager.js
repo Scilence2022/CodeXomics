@@ -18491,8 +18491,9 @@ ${this.getPluginSystemInfo()}`;
                         const extracted = this.extractDeepGeneResearchReport(resultData);
                         const { report, geneSymbol, stepsCount, statistics, images, sources } = extracted;
 
-                        // Save report if we have content
-                        if (report && report.trim().length > 0) {
+                        // Save report if we have content (ensure report is a string)
+                        const reportStr = typeof report === 'string' ? report : (report ? JSON.stringify(report, null, 2) : '');
+                        if (reportStr && reportStr.trim().length > 0) {
                             const reportsDir = path.join(process.cwd(), 'reports');
                             if (!fs.existsSync(reportsDir)) {
                                 fs.mkdirSync(reportsDir, { recursive: true });
@@ -18502,7 +18503,7 @@ ${this.getPluginSystemInfo()}`;
                             const filename = `Gene_${safeSymbol}_Research_Report.md`;
                             reportPath = path.join(reportsDir, filename);
 
-                            fs.writeFileSync(reportPath, report);
+                            fs.writeFileSync(reportPath, reportStr);
                             reportSaved = true;
                             console.log(`✅ Deep Gene Research report saved to: ${reportPath}`);
                         }
@@ -18528,12 +18529,12 @@ ${this.getPluginSystemInfo()}`;
                             }
                             resultDisplay += `.<br>`;
                         }
-                        if (report && report.length > 0) {
+                        if (reportStr && reportStr.length > 0) {
                             // Show a preview of the report content
                             const previewLength = 500;
-                            const preview = report.length > previewLength
-                                ? report.substring(0, previewLength) + '...'
-                                : report;
+                            const preview = reportStr.length > previewLength
+                                ? reportStr.substring(0, previewLength) + '...'
+                                : reportStr;
                             resultDisplay += `<details style="margin-top: 8px;">`;
                             resultDisplay += `<summary style="cursor: pointer; color: #1565C0;">📄 Report Preview</summary>`;
                             resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; white-space: pre-wrap; font-size: 0.85em;">${this.escapeHtml(preview)}</div>`;
@@ -18718,7 +18719,8 @@ ${this.getPluginSystemInfo()}`;
             }
 
             // Fallback: Regex extraction if still unknown and we have text content
-            if (geneSymbol === 'Unknown' && report) {
+            // Ensure report is a string before regex operations
+            if (geneSymbol === 'Unknown' && report && typeof report === 'string') {
                 const patterns = [
                     /gene[:\s]+\*?\*?([A-Za-z][A-Za-z0-9_-]{1,20})\*?\*?/i,
                     /\*\*([A-Za-z][A-Za-z0-9_-]{1,20})\*\*\s+gene/i,
@@ -18786,7 +18788,7 @@ ${this.getPluginSystemInfo()}`;
             if (parsedData.statistics) {
                 statistics.totalCitations = parsedData.statistics.totalCitations || parsedData.statistics.citations || 0;
                 statistics.processedPapers = parsedData.statistics.processedPapers || parsedData.statistics.papers || 0;
-            } else if (report) {
+            } else if (report && typeof report === 'string') {
                 const doiMatches = report.match(/DOI:\s*[0-9.\/a-zA-Z-]+/gi);
                 const pmidMatches = report.match(/PMID:\s*[0-9]+/gi);
                 statistics.totalCitations = (doiMatches ? doiMatches.length : 0) + (pmidMatches ? pmidMatches.length : 0);
