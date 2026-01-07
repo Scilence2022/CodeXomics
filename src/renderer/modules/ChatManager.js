@@ -9965,7 +9965,40 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
 
-            // First, try to execute on MCP servers
+            // Special handling for known MCP tools that match their server IDs
+            // This handles cases where tool discovery fails but the server is connected
+            const knownMcpToolServerMapping = {
+                'deep-gene-research': 'deep-gene-research'
+            };
+
+            if (knownMcpToolServerMapping[toolName] && this.mcpServerManager) {
+                const serverId = knownMcpToolServerMapping[toolName];
+                // Check if this server is connected/active
+                if (this.mcpServerManager.activeServers &&
+                    this.mcpServerManager.activeServers.has(serverId)) {
+                    console.log(`🎯 [Direct MCP Routing] Tool '${toolName}' -> Server '${serverId}'`);
+                    try {
+                        const result = await this.mcpServerManager.executeToolOnServer(
+                            serverId,
+                            toolName,
+                            parameters
+                        );
+
+                        // Record MCP tool call to memory system
+                        if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
+                            const executionTime = Date.now() - startTime;
+                            this.memorySystem.recordToolCall(toolName, parameters, result, executionTime, agentName);
+                        }
+
+                        return result;
+                    } catch (directError) {
+                        console.warn(`⚠️ [Direct MCP Routing] Failed for ${toolName}:`, directError.message);
+                        // Fall through to standard tool lookup
+                    }
+                }
+            }
+
+            // First, try to execute on MCP servers via tool discovery
             const allTools = this.mcpServerManager.getAllAvailableTools();
             const mcpTool = allTools.find(t => t.name === toolName);
 
