@@ -182,6 +182,18 @@ categories:
       - "evo2_apis"
     tools_count: 12
 
+  utility:
+    name: "Utility Tools"
+    description: "General utility tools for file downloads, document viewing, and other helper functions"
+    icon: "🛠️"
+    priority: 2
+    color: "#78909C"
+    subcategories:
+      - "file_download"
+      - "document_viewer"
+      - "helper_functions"
+    tools_count: 2
+
 # Tool priority levels
 priority_levels:
   1: "Critical - Core functionality tools"

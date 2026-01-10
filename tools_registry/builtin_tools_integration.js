@@ -328,6 +328,21 @@ class BuiltInToolsIntegration {
             priority: 1
         });
 
+        // Utility Tools
+        this.builtInToolsMap.set('download_internet_file', {
+            method: 'downloadInternetFile',
+            category: 'utility',
+            type: 'built-in',
+            priority: 2
+        });
+
+        this.builtInToolsMap.set('view_markdown_file', {
+            method: 'viewMarkdownFile',
+            category: 'utility',
+            type: 'built-in',
+            priority: 2
+        });
+
         console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
     }
 
@@ -414,10 +429,10 @@ class BuiltInToolsIntegration {
         return {
             // Direct file path patterns
             file_path: /[\w\-\.\\\/]+\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)$/i,
-            
+
             // Quoted file paths
             quoted_path: /"[^"]*\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)"/i,
-            
+
             // Load commands with file types
             load_genome: /(load|open|import)\s+(genome|fasta|genbank|gbk|gb)\s+(file)?/i,
             load_annotation: /(load|open|import)\s+(annotation|gff|bed|gtf)\s+(file)?/i,
@@ -425,10 +440,10 @@ class BuiltInToolsIntegration {
             load_reads: /(load|open|import)\s+(reads|sam|bam|alignment)\s+(file)?/i,
             load_wig: /(load|open|import)\s+(wig|wiggle|bigwig|bedgraph|track)\s+(file)?/i,
             load_operon: /(load|open|import)\s+(operon|operons|regulatory)\s+(file)?/i,
-            
+
             // Generic file loading
             load_file: /(load|open|import)\s+(file|data)/i,
-            
+
             // File extensions in context
             has_extension: /\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)/i
         };
@@ -445,7 +460,7 @@ class BuiltInToolsIntegration {
         // Check for system management patterns (working directory, etc.)
         if (/\b(set|change|working|directory|folder|path|cd|current)\b/i.test(query) &&
             (/\b(working\s+directory|current\s+directory|set\s+directory|change\s+directory)\b/i.test(query) ||
-             /\b(working\s+dir|current\s+dir|set\s+working|change\s+working)\b/i.test(query))) {
+                /\b(working\s+dir|current\s+dir|set\s+working|change\s+working)\b/i.test(query))) {
             relevantTools.push({
                 name: 'set_working_directory',
                 confidence: 0.9,
@@ -457,7 +472,7 @@ class BuiltInToolsIntegration {
         for (const [patternName, regex] of Object.entries(patterns)) {
             if (regex.test(query)) {
                 console.log(`🎯 [Built-in Tools] File loading pattern detected: ${patternName}`);
-                
+
                 // Add relevant file loading tools based on pattern
                 if (patternName.includes('genome') || queryLower.includes('fasta') || queryLower.includes('genbank')) {
                     relevantTools.push({
@@ -466,7 +481,7 @@ class BuiltInToolsIntegration {
                         reason: `Genome file pattern detected: ${patternName}`
                     });
                 }
-                
+
                 if (patternName.includes('annotation') || queryLower.includes('gff') || queryLower.includes('bed')) {
                     relevantTools.push({
                         name: 'load_annotation_file',
@@ -474,7 +489,7 @@ class BuiltInToolsIntegration {
                         reason: `Annotation file pattern detected: ${patternName}`
                     });
                 }
-                
+
                 if (patternName.includes('variant') || queryLower.includes('vcf')) {
                     relevantTools.push({
                         name: 'load_variant_file',
@@ -482,7 +497,7 @@ class BuiltInToolsIntegration {
                         reason: `Variant file pattern detected: ${patternName}`
                     });
                 }
-                
+
                 if (patternName.includes('reads') || queryLower.includes('sam') || queryLower.includes('bam')) {
                     relevantTools.push({
                         name: 'load_reads_file',
@@ -490,7 +505,7 @@ class BuiltInToolsIntegration {
                         reason: `Reads file pattern detected: ${patternName}`
                     });
                 }
-                
+
                 if (patternName.includes('wig') || queryLower.includes('track')) {
                     relevantTools.push({
                         name: 'load_wig_tracks',
@@ -498,7 +513,7 @@ class BuiltInToolsIntegration {
                         reason: `WIG track pattern detected: ${patternName}`
                     });
                 }
-                
+
                 if (patternName.includes('operon') || queryLower.includes('regulatory')) {
                     relevantTools.push({
                         name: 'load_operon_file',
@@ -506,7 +521,7 @@ class BuiltInToolsIntegration {
                         reason: `Operon file pattern detected: ${patternName}`
                     });
                 }
-                
+
                 // Generic file loading - add all file loading tools with lower confidence
                 if (patternName === 'load_file' || patternName === 'file_path') {
                     const fileLoadingTools = this.getBuiltInToolsByCategory('file_loading');
@@ -520,7 +535,7 @@ class BuiltInToolsIntegration {
                         }
                     }
                 }
-                
+
                 break; // Use first matching pattern for primary detection
             }
         }
@@ -548,7 +563,7 @@ class BuiltInToolsIntegration {
         }
 
         // Check for tab management patterns
-        if (/\b(switch|change|activate|select|goto)\s+(tab|window)\b/i.test(query) || 
+        if (/\b(switch|change|activate|select|goto)\s+(tab|window)\b/i.test(query) ||
             /\b(tab\s+(switch|change|activate|select))\b/i.test(query)) {
             relevantTools.push({
                 name: 'switch_to_tab',
@@ -558,7 +573,7 @@ class BuiltInToolsIntegration {
         }
 
         // Check for new tab patterns
-        if (/\b(open|new|create)\s+(tab|window)\b/i.test(query) || 
+        if (/\b(open|new|create)\s+(tab|window)\b/i.test(query) ||
             /\b(new\s+tab)\b/i.test(query)) {
             relevantTools.push({
                 name: 'open_new_tab',
@@ -574,7 +589,7 @@ class BuiltInToolsIntegration {
                 confidence: 0.7,
                 reason: 'Sequence analysis keywords detected'
             });
-            
+
             if (/\b(gc|content)\b/i.test(query)) {
                 relevantTools.push({
                     name: 'compute_gc',
@@ -609,7 +624,7 @@ class BuiltInToolsIntegration {
 
         // Check for database search patterns - InterPro
         if (/\b(interpro|domain|family|families|functional\s+site)\b/i.test(query)) {
-            if (/\b(analyze|analysis|predict|domain\s+analysis)\b/i.test(query) || 
+            if (/\b(analyze|analysis|predict|domain\s+analysis)\b/i.test(query) ||
                 /\b(protein\s+domain|domain\s+architecture)\b/i.test(query)) {
                 relevantTools.push({
                     name: 'analyze_interpro_domains',
@@ -639,7 +654,7 @@ class BuiltInToolsIntegration {
         }
 
         // Check for protein/domain analysis patterns (generic)
-        if (/\b(protein|domain|pfam|smart|prosite)\b/i.test(query) && 
+        if (/\b(protein|domain|pfam|smart|prosite)\b/i.test(query) &&
             /\b(analyze|analysis|identify|predict|find)\b/i.test(query)) {
             // Add InterPro domain analysis if not already added
             if (!relevantTools.some(t => t.name === 'analyze_interpro_domains')) {
@@ -652,7 +667,7 @@ class BuiltInToolsIntegration {
         }
 
         // Check for specific domain names or "has/have domains" patterns
-        if (/\b(kinase|phosphatase|transferase|helicase|protease)\b/i.test(query) && 
+        if (/\b(kinase|phosphatase|transferase|helicase|protease)\b/i.test(query) &&
             /\b(domain|domains)\b/i.test(query)) {
             if (!relevantTools.some(t => t.name === 'search_interpro_entry')) {
                 relevantTools.push({
@@ -709,7 +724,7 @@ class BuiltInToolsIntegration {
         const sequenceTools = this.getBuiltInToolsByCategory('sequence');
         const databaseTools = this.getBuiltInToolsByCategory('database');
         const systemTools = this.getBuiltInToolsByCategory('system');
-        
+
         return `# CodeXomics - Built-in Tools System (Non-Dynamic Mode)
 
 You are an advanced AI assistant for CodeXomics with access to high-performance built-in tools.

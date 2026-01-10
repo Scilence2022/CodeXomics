@@ -1160,12 +1160,116 @@ class ChatManager {
     }
 
     /**
+     * Download a file from the internet - Built-in utility function tool
+     * @param {Object} parameters - Tool parameters
+     * @param {string} parameters.url - The URL to download from
+     * @param {string} parameters.destinationPath - The local directory to save to (optional)
+     * @param {string} parameters.filename - Custom filename (optional)
+     * @returns {Object} Download result
+     */
+    async downloadInternetFile(parameters = {}) {
+        try {
+            const { url, destinationPath, filename } = parameters;
+
+            console.log(`📥 [ChatManager] Downloading file from: ${url}`);
+
+            if (!url) {
+                throw new Error('URL is required for download');
+            }
+
+            // Call the Electron API to download the file
+            if (window.electronAPI && window.electronAPI.downloadInternetFile) {
+                const result = await window.electronAPI.downloadInternetFile({
+                    url,
+                    destinationPath,
+                    filename
+                });
+
+                if (result.success) {
+                    return {
+                        success: true,
+                        message: `Successfully downloaded file to: ${result.filePath}`,
+                        filePath: result.filePath,
+                        filename: result.filename,
+                        fileSize: result.fileSize,
+                        url: url,
+                        tool: 'download_internet_file'
+                    };
+                } else {
+                    throw new Error(result.error || 'Download failed');
+                }
+            } else {
+                throw new Error('electronAPI.downloadInternetFile not available');
+            }
+
+        } catch (error) {
+            console.error('❌ [ChatManager] Error downloading file:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'download_internet_file'
+            };
+        }
+    }
+
+    /**
+     * Open and view a markdown file - Built-in utility function tool
+     * @param {Object} parameters - Tool parameters
+     * @param {string} parameters.filePath - The path to the markdown file
+     * @param {string} parameters.title - Custom window title (optional)
+     * @returns {Object} Viewer result
+     */
+    async viewMarkdownFile(parameters = {}) {
+        try {
+            const { filePath, title } = parameters;
+
+            console.log(`📄 [ChatManager] Opening markdown file: ${filePath}`);
+
+            if (!filePath) {
+                throw new Error('File path is required');
+            }
+
+            // Call the Electron API to open the markdown viewer
+            if (window.electronAPI && window.electronAPI.openMarkdownViewer) {
+                const result = await window.electronAPI.openMarkdownViewer({
+                    filePath,
+                    title
+                });
+
+                if (result.success) {
+                    return {
+                        success: true,
+                        message: `Opened markdown viewer for: ${result.fileName}`,
+                        filePath: result.filePath,
+                        fileName: result.fileName,
+                        windowTitle: result.windowTitle,
+                        tool: 'view_markdown_file'
+                    };
+                } else {
+                    throw new Error(result.error || 'Failed to open markdown viewer');
+                }
+            } else {
+                throw new Error('electronAPI.openMarkdownViewer not available');
+            }
+
+        } catch (error) {
+            console.error('❌ [ChatManager] Error opening markdown viewer:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'view_markdown_file'
+            };
+        }
+    }
+
+    /**
      * Get list of loaded files - Built-in function tool
      * Returns information about all currently loaded files in the genome browser
      * @param {Object} parameters - Tool parameters (optional)
      * @param {boolean} parameters.includeMetadata - Include detailed file metadata (default: true)
      * @returns {Object} Loaded files list result
      */
+
     async getLoadedFilesList(parameters = {}) {
         try {
             const { includeMetadata = true } = parameters;
