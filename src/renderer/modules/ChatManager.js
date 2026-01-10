@@ -11291,21 +11291,21 @@ ${this.getPluginSystemInfo()}`;
 
             // Pattern 1: Convert plain text URLs like /api/mcp/download/... that are not already links
             // Match: 🔗 /api/mcp/download/... or just /api/mcp/download/...
-            text = text.replace(/🔗\s*(\/api\/mcp\/download\/[^\s\n]+)/g, (match, path) => {
+            text = text.replace(/🔗\s*(\/api\/mcp\/download\/[^\s\n`"<>]+)/g, (match, path) => {
                 const fullUrl = `${baseUrl}${path}`;
                 return `🔗 [Download](${fullUrl})`;
             });
 
             // Pattern 2: Convert standalone /api/mcp/download paths (not already in links)
             // Negative lookbehind to not match if preceded by ( or [
-            text = text.replace(/(?<!\(|\[)(\/api\/mcp\/download\/[^\s\n\)]+)/g, (match, path) => {
+            text = text.replace(/(?<!\(|\[)(\/api\/mcp\/download\/[^\s\n\)`"<>]+)/g, (match, path) => {
                 // Check if this is already inside a markdown link (basic check)
                 const fullUrl = `${baseUrl}${path}`;
                 return `[${path}](${fullUrl})`;
             });
 
             // Pattern 3: Fix existing markdown links with relative paths
-            text = text.replace(/\[([^\]]+)\]\((\/api\/mcp\/[^\)]+)\)/g, (match, label, path) => {
+            text = text.replace(/\[([^\]]+)\]\((\/api\/mcp\/[^\s\n\)]+)\)/g, (match, label, path) => {
                 const fullUrl = `${baseUrl}${path}`;
                 return `[${label}](${fullUrl})`;
             });
