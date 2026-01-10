@@ -11198,6 +11198,9 @@ ${this.getPluginSystemInfo()}`;
             }
         }
 
+        // Preprocess: Convert relative MCP download URLs to absolute clickable links
+        formattedMessage = this.convertMCPDownloadUrls(formattedMessage);
+
         // Use marked library for proper Markdown rendering if available
         if (typeof marked !== 'undefined' && marked.parse) {
             try {
@@ -11257,6 +11260,61 @@ ${this.getPluginSystemInfo()}`;
             .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
             // Line breaks
             .replace(/\n/g, '<br>');
+    }
+
+    /**
+     * Convert relative MCP download URLs to absolute clickable URLs
+     * Converts paths like /api/mcp/download/... to full URLs with the MCP server base URL
+     */
+    convertMCPDownloadUrls(text) {
+        if (!text || typeof text !== 'string') {
+            return text;
+        }
+
+        try {
+            // Get the MCP server base URL from MCPServerManager
+            let baseUrl = 'http://localhost:3000';  // Default fallback
+
+            if (this.mcpServerManager) {
+                // Try to get Deep Gene Research server URL
+                const deepGeneServer = this.mcpServerManager.servers?.get('deep-gene-research');
+                if (deepGeneServer && deepGeneServer.url) {
+                    // Extract base URL from the MCP endpoint URL (e.g., http://localhost:3000/api/mcp -> http://localhost:3000)
+                    try {
+                        const urlObj = new URL(deepGeneServer.url);
+                        baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+                    } catch (e) {
+                        console.warn('Failed to parse MCP server URL:', e);
+                    }
+                }
+            }
+
+            // Pattern 1: Convert plain text URLs like /api/mcp/download/... that are not already links
+            // Match: 🔗 /api/mcp/download/... or just /api/mcp/download/...
+            text = text.replace(/🔗\s*(\/api\/mcp\/download\/[^\s\n]+)/g, (match, path) => {
+                const fullUrl = `${baseUrl}${path}`;
+                return `🔗 [Download](${fullUrl})`;
+            });
+
+            // Pattern 2: Convert standalone /api/mcp/download paths (not already in links)
+            // Negative lookbehind to not match if preceded by ( or [
+            text = text.replace(/(?<!\(|\[)(\/api\/mcp\/download\/[^\s\n\)]+)/g, (match, path) => {
+                // Check if this is already inside a markdown link (basic check)
+                const fullUrl = `${baseUrl}${path}`;
+                return `[${path}](${fullUrl})`;
+            });
+
+            // Pattern 3: Fix existing markdown links with relative paths
+            text = text.replace(/\[([^\]]+)\]\((\/api\/mcp\/[^\)]+)\)/g, (match, label, path) => {
+                const fullUrl = `${baseUrl}${path}`;
+                return `[${label}](${fullUrl})`;
+            });
+
+            return text;
+        } catch (error) {
+            console.error('Error converting MCP download URLs:', error);
+            return text;
+        }
     }
 
     /**
