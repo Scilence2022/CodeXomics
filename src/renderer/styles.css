@@ -565,6 +565,75 @@
   color: var(--text-primary);
 }
 
+/* Section header buttons container */
+.section-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Settings panel button */
+.settings-panel-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+.settings-panel-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--primary-color);
+}
+
+/* Gene Details Settings Modal */
+.gene-detail-settings-modal {
+  max-width: 600px;
+}
+
+.gene-detail-settings-modal .form-group {
+  margin-bottom: 16px;
+}
+
+.gene-detail-settings-modal textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.gene-detail-settings-modal textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.gene-detail-settings-modal .help-text {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.gene-detail-settings-modal .help-text code {
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 11px;
+  color: var(--primary-color);
+}
+
 .genome-navigation {
   position: absolute;
   top: 50%;

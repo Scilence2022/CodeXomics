@@ -308,6 +308,11 @@ class GenomeBrowser {
             source: false  // Default: don't show source features
         };
 
+        // Gene Details sidebar settings
+        this.geneDetailSettings = {
+            deepGeneResearchPrompt: 'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata).'
+        };
+
         this.init();
     }
 
@@ -416,6 +421,10 @@ class GenomeBrowser {
             console.error('❌ Error initializing GeneralSettingsManager:', error);
             this.globalDraggingEnabled = true; // Default to true when initialization fails
         }
+
+        // Step 5.6.1: Load Gene Details Settings
+        console.log('⚙️ Loading Gene Details settings...');
+        this.loadGeneDetailSettings();
 
         // Step 5.7: Initialize External Tools Manager
         console.log('🔧 About to initialize ExternalToolsManager...');
@@ -6535,8 +6544,13 @@ class GenomeBrowser {
         // Get current organism/species information
         const organism = this.getCurrentOrganismInfo();
 
-        // Create a detailed prompt for Deep Gene Research
-        const prompt = `Please perform a Deep Gene Research of ${geneName} gene in ${organism}. Please display the final report after research.`;
+        // Get the configurable prompt template and replace placeholders
+        const promptTemplate = this.geneDetailSettings.deepGeneResearchPrompt ||
+            'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata).';
+
+        const prompt = promptTemplate
+            .replace(/\{geneName\}/g, geneName)
+            .replace(/\{organism\}/g, organism);
 
         // Check if ChatManager is available and use it to send the prompt
         if (this.chatManager) {
@@ -6559,6 +6573,70 @@ class GenomeBrowser {
             console.warn('ChatManager not available for Deep Gene Research');
             if (this.uiManager) {
                 this.uiManager.updateStatus(`ChatBox not available`);
+            }
+        }
+    }
+
+    // Show Gene Details Settings modal
+    showGeneDetailSettings() {
+        const modal = document.getElementById('geneDetailSettingsModal');
+        if (!modal) {
+            console.error('Gene Details Settings modal not found');
+            return;
+        }
+
+        // Populate the prompt textarea with current value
+        const promptTextarea = document.getElementById('deepGeneResearchPrompt');
+        if (promptTextarea) {
+            promptTextarea.value = this.geneDetailSettings.deepGeneResearchPrompt || '';
+        }
+
+        // Show the modal
+        modal.classList.add('show');
+    }
+
+    // Save Gene Details Settings
+    saveGeneDetailSettings() {
+        const promptTextarea = document.getElementById('deepGeneResearchPrompt');
+        if (promptTextarea) {
+            this.geneDetailSettings.deepGeneResearchPrompt = promptTextarea.value.trim();
+        }
+
+        // Save to configManager for persistence
+        if (this.configManager) {
+            this.configManager.set('geneDetailSettings', this.geneDetailSettings);
+        }
+
+        // Close the modal
+        const modal = document.getElementById('geneDetailSettingsModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+
+        // Show confirmation
+        this.showNotification('Gene Details settings saved', 'success');
+        console.log('Gene Details settings saved:', this.geneDetailSettings);
+    }
+
+    // Reset Deep Gene Research prompt to default
+    resetDeepGenePromptToDefault() {
+        const defaultPrompt = 'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata).';
+
+        const promptTextarea = document.getElementById('deepGeneResearchPrompt');
+        if (promptTextarea) {
+            promptTextarea.value = defaultPrompt;
+        }
+
+        this.showNotification('Prompt reset to default', 'info');
+    }
+
+    // Load Gene Details Settings from configManager
+    loadGeneDetailSettings() {
+        if (this.configManager) {
+            const savedSettings = this.configManager.get('geneDetailSettings');
+            if (savedSettings) {
+                this.geneDetailSettings = { ...this.geneDetailSettings, ...savedSettings };
+                console.log('Loaded Gene Details settings:', this.geneDetailSettings);
             }
         }
     }
