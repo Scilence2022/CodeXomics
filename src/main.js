@@ -3145,6 +3145,332 @@ ipcMain.handle('get-file-info', async (event, filePath) => {
   }
 });
 
+// ===== Utility Tools IPC Handlers =====
+
+/**
+ * Download a file from the internet to a local path
+ */
+ipcMain.handle('download-internet-file', async (event, options) => {
+  const { url, destinationPath, filename } = options;
+
+  try {
+    console.log(`📥 [Download] Starting download from: ${url}`);
+
+    // Validate URL
+    if (!url || typeof url !== 'string') {
+      return { success: false, error: 'Invalid URL provided' };
+    }
+
+    // Parse URL to get protocol and filename
+    const urlObj = new URL(url);
+    const protocol = urlObj.protocol === 'https:' ? require('https') : require('http');
+
+    // Determine filename from URL if not provided
+    const extractedFilename = filename || path.basename(urlObj.pathname) || 'downloaded_file';
+
+    // Determine destination directory
+    let destDir = destinationPath;
+    if (!destDir) {
+      // Default to Downloads folder in user's home directory
+      destDir = path.join(app.getPath('downloads'));
+    }
+
+    // Ensure destination directory exists
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+
+    const fullPath = path.join(destDir, extractedFilename);
+
+    return new Promise((resolve) => {
+      const file = fs.createWriteStream(fullPath);
+
+      const request = protocol.get(url, (response) => {
+        // Handle redirects
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+          console.log(`📥 [Download] Following redirect to: ${response.headers.location}`);
+          file.close();
+          fs.unlinkSync(fullPath);
+
+          // Recursively follow redirect
+          ipcMain.emit('download-internet-file', event, {
+            url: response.headers.location,
+            destinationPath,
+            filename
+          });
+          return;
+        }
+
+        if (response.statusCode !== 200) {
+          file.close();
+          fs.unlinkSync(fullPath);
+          resolve({
+            success: false,
+            error: `HTTP Error: ${response.statusCode} ${response.statusMessage}`
+          });
+          return;
+        }
+
+        const contentLength = parseInt(response.headers['content-length'], 10);
+        let downloadedBytes = 0;
+
+        response.on('data', (chunk) => {
+          downloadedBytes += chunk.length;
+          if (contentLength) {
+            const progress = Math.round((downloadedBytes / contentLength) * 100);
+            // Send progress to renderer if needed
+            event.sender.send('download-progress', {
+              url,
+              progress,
+              downloadedBytes,
+              totalBytes: contentLength
+            });
+          }
+        });
+
+        response.pipe(file);
+
+        file.on('finish', () => {
+          file.close();
+          const stats = fs.statSync(fullPath);
+          console.log(`✅ [Download] Completed: ${fullPath} (${stats.size} bytes)`);
+          resolve({
+            success: true,
+            filePath: fullPath,
+            filename: extractedFilename,
+            fileSize: stats.size,
+            url: url
+          });
+        });
+      });
+
+      request.on('error', (error) => {
+        file.close();
+        if (fs.existsSync(fullPath)) {
+          fs.unlinkSync(fullPath);
+        }
+        console.error(`❌ [Download] Error:`, error);
+        resolve({ success: false, error: error.message });
+      });
+
+      request.setTimeout(60000, () => {
+        request.destroy();
+        file.close();
+        if (fs.existsSync(fullPath)) {
+          fs.unlinkSync(fullPath);
+        }
+        resolve({ success: false, error: 'Download timeout (60 seconds)' });
+      });
+    });
+
+  } catch (error) {
+    console.error(`❌ [Download] Error:`, error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Open a markdown file in a dedicated viewer window
+ */
+ipcMain.handle('open-markdown-viewer', async (event, options) => {
+  const { filePath, title } = options;
+
+  try {
+    console.log(`📄 [Markdown Viewer] Opening: ${filePath}`);
+
+    // Validate file path
+    if (!filePath || typeof filePath !== 'string') {
+      return { success: false, error: 'Invalid file path provided' };
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: `File not found: ${filePath}` };
+    }
+
+    // Check file extension
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext !== '.md' && ext !== '.markdown') {
+      console.warn(`⚠️ [Markdown Viewer] File is not a markdown file: ${ext}`);
+    }
+
+    // Read the file content
+    const content = fs.readFileSync(filePath, 'utf8');
+    const fileName = path.basename(filePath);
+    const windowTitle = title || `${fileName} - Markdown Viewer`;
+
+    // Create viewer window
+    const viewerWindow = new BrowserWindow({
+      width: 900,
+      height: 700,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        preload: path.join(__dirname, 'preload.js')
+      },
+      title: windowTitle,
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      resizable: true,
+      minimizable: true,
+      maximizable: true,
+      show: false
+    });
+
+    // Load markdown viewer HTML
+    const viewerPath = path.join(__dirname, 'markdown-viewer.html');
+
+    if (fs.existsSync(viewerPath)) {
+      viewerWindow.loadFile(viewerPath);
+    } else {
+      // Create inline HTML if viewer file doesn't exist
+      const inlineHTML = createMarkdownViewerHTML(content, windowTitle);
+      viewerWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(inlineHTML)}`);
+    }
+
+    // Send markdown content once window is ready
+    viewerWindow.webContents.on('did-finish-load', () => {
+      viewerWindow.webContents.send('load-markdown', {
+        content: content,
+        filePath: filePath,
+        fileName: fileName,
+        title: windowTitle
+      });
+    });
+
+    viewerWindow.once('ready-to-show', () => {
+      viewerWindow.show();
+    });
+
+    console.log(`✅ [Markdown Viewer] Window opened for: ${fileName}`);
+
+    return {
+      success: true,
+      filePath: filePath,
+      fileName: fileName,
+      windowTitle: windowTitle
+    };
+
+  } catch (error) {
+    console.error(`❌ [Markdown Viewer] Error:`, error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Helper function to create inline markdown viewer HTML
+ */
+function createMarkdownViewerHTML(content, title) {
+  // Escape content for embedding in HTML
+  const escapedContent = content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #1e1e1e;
+      --text-color: #d4d4d4;
+      --heading-color: #569cd6;
+      --link-color: #4ec9b0;
+      --code-bg: #2d2d2d;
+      --border-color: #3c3c3c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      padding: 40px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1, h2, h3, h4, h5, h6 { color: var(--heading-color); margin: 1.5em 0 0.5em; }
+    h1 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+    h2 { font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+    a { color: var(--link-color); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code {
+      background-color: var(--code-bg);
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+    }
+    pre {
+      background-color: var(--code-bg);
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 1em 0;
+    }
+    pre code { background: none; padding: 0; }
+    blockquote {
+      border-left: 4px solid var(--link-color);
+      padding-left: 16px;
+      margin: 1em 0;
+      color: #999;
+    }
+    ul, ol { padding-left: 2em; margin: 1em 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
+    th { background-color: var(--code-bg); }
+    img { max-width: 100%; height: auto; }
+    hr { border: none; border-top: 1px solid var(--border-color); margin: 2em 0; }
+    #content { padding-bottom: 40px; }
+    .toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: var(--code-bg);
+      padding: 8px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    .toolbar-title { font-weight: 500; color: var(--heading-color); }
+    body { padding-top: 60px; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span class="toolbar-title">${title}</span>
+  </div>
+  <div id="content"></div>
+  <script>
+    const rawContent = "${escapedContent.replace(/\n/g, '\\n').replace(/\r/g, '')}";
+    const decodedContent = rawContent
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&amp;/g, '&');
+    
+    if (typeof marked !== 'undefined') {
+      document.getElementById('content').innerHTML = marked.parse(decodedContent);
+    } else {
+      document.getElementById('content').innerHTML = '<pre>' + decodedContent + '</pre>';
+    }
+  </script>
+</body>
+</html>`;
+}
+
+// ===== End Utility Tools IPC Handlers =====
+
+
 // Handle directory selection for benchmark default directory
 ipcMain.handle('show-directory-dialog', async (event, options = {}) => {
   try {

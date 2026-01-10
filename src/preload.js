@@ -9,18 +9,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeResource: (resourceId) => ipcRenderer.invoke('remove-resource', resourceId),
   exportResource: (resourceId, options) => ipcRenderer.invoke('export-resource', resourceId, options),
   openResourceInBrowser: (resourceId) => ipcRenderer.invoke('open-resource-in-browser', resourceId),
-  
+
   // File operations
   selectAndLoadFile: () => ipcRenderer.invoke('select-and-load-file'),
   getFileInfo: (filePath) => ipcRenderer.invoke('get-file-info', filePath),
-  
+
   // Directory selection for benchmark
   showDirectoryDialog: (options) => ipcRenderer.invoke('show-directory-dialog', options),
-  
+
   // File save dialog for exports
   showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
   writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
-  
+
   // Project Manager APIs
   selectProjectDirectory: () => ipcRenderer.invoke('selectProjectDirectory'),
   selectProjectFile: () => ipcRenderer.invoke('selectProjectFile'),
@@ -32,11 +32,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   moveFileInProject: (currentPath, projectName, targetFolderPath) => ipcRenderer.invoke('moveFileInProject', currentPath, projectName, targetFolderPath),
   renameFileInProject: (currentPath, newFileName) => ipcRenderer.invoke('renameFileInProject', currentPath, newFileName),
   scanProjectFolder: (projectPath, existingFileIds, existingFolderStructure) => ipcRenderer.invoke('scanProjectFolder', projectPath, existingFileIds, existingFolderStructure),
-  
+
   // Project file locking APIs
   lockProjectFile: (filePath) => ipcRenderer.invoke('lockProjectFile', filePath),
   unlockProjectFile: (filePath, lockId) => ipcRenderer.invoke('unlockProjectFile', filePath, lockId),
-  
+
   // Path utilities
   getDocumentsPath: () => ipcRenderer.invoke('getDocumentsPath'),
   getProjectDirectoryName: () => ipcRenderer.invoke('getProjectDirectoryName'),
@@ -45,54 +45,54 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadProjectsData: () => ipcRenderer.invoke('loadProjectsData'),
   saveProjectSettings: (settings) => ipcRenderer.invoke('saveProjectSettings', settings),
   loadProjectSettings: () => ipcRenderer.invoke('loadProjectSettings'),
-  
+
   // Enhanced File Opening APIs
   checkMainWindowStatus: () => ipcRenderer.invoke('checkMainWindowStatus'),
   createNewMainWindow: (filePath) => ipcRenderer.invoke('createNewMainWindow', filePath),
-  
-  // File Save APIs
-                  saveFile: (fileName, content) => ipcRenderer.invoke('saveFile', fileName, content),
-        saveProjectFile: (fileName, content) => ipcRenderer.invoke('saveProjectFile', fileName, content),
-    saveProjectFileDirect: (filePath, content) => ipcRenderer.invoke('saveProjectFileDirect', filePath, content),
-    createTempFile: (fileName, content) => ipcRenderer.invoke('createTempFile', fileName, content),
-    getFileInfo: (filePath) => ipcRenderer.invoke('getFileInfo', filePath),
-    checkFileExists: (filePath) => ipcRenderer.invoke('checkFileExists', filePath),
-    deletePhysicalFile: (filePath) => ipcRenderer.invoke('deletePhysicalFile', filePath),
-    updateRecentProjects: (recentProjects) => ipcRenderer.invoke('updateRecentProjects', recentProjects),
 
-      // File copying APIs
+  // File Save APIs
+  saveFile: (fileName, content) => ipcRenderer.invoke('saveFile', fileName, content),
+  saveProjectFile: (fileName, content) => ipcRenderer.invoke('saveProjectFile', fileName, content),
+  saveProjectFileDirect: (filePath, content) => ipcRenderer.invoke('saveProjectFileDirect', filePath, content),
+  createTempFile: (fileName, content) => ipcRenderer.invoke('createTempFile', fileName, content),
+  getFileInfo: (filePath) => ipcRenderer.invoke('getFileInfo', filePath),
+  checkFileExists: (filePath) => ipcRenderer.invoke('checkFileExists', filePath),
+  deletePhysicalFile: (filePath) => ipcRenderer.invoke('deletePhysicalFile', filePath),
+  updateRecentProjects: (recentProjects) => ipcRenderer.invoke('updateRecentProjects', recentProjects),
+
+  // File copying APIs
   copyFileToProject: (sourcePath, projectName, folderPath) => ipcRenderer.invoke('copyFileToProject', sourcePath, projectName, folderPath),
-  
+
   // New project structure APIs
   createNewProjectStructure: (location, projectName) => ipcRenderer.invoke('createNewProjectStructure', location, projectName),
   saveProjectToSpecificFile: (filePath, content) => ipcRenderer.invoke('saveProjectToSpecificFile', filePath, content),
   saveProjectAs: (defaultProjectName) => ipcRenderer.invoke('saveProjectAs', defaultProjectName),
   checkProjectExists: (directory, projectName) => ipcRenderer.invoke('checkProjectExists', directory, projectName),
   copyProject: (sourceProjectFile, sourceDataFolder, targetDirectory, projectName) => ipcRenderer.invoke('copyProject', sourceProjectFile, sourceDataFolder, targetDirectory, projectName),
-  
+
   // Communication with main window
   sendToMainWindow: (channel, data) => ipcRenderer.invoke('send-to-main-window', channel, data),
-  
+
   // Debug Tools API
   openDebugTool: (fileName) => ipcRenderer.invoke('openDebugTool', fileName),
-  
+
   // Window management
   closeWindow: () => ipcRenderer.send('close-resource-manager'),
-  
+
   // Plugin management APIs
   scanPluginDirectory: () => ipcRenderer.invoke('scan-plugin-directory'),
   readPluginFile: (filePath) => ipcRenderer.invoke('read-plugin-file', filePath),
   loadPluginMetadata: (pluginPath) => ipcRenderer.invoke('load-plugin-metadata', pluginPath),
-  
+
   // Event listeners
   onResourceUpdate: (callback) => {
     ipcRenderer.on('resource-update', callback);
   },
-  
+
   onResourceRemoved: (callback) => {
     ipcRenderer.on('resource-removed', callback);
   },
-  
+
   onResourceAdded: (callback) => {
     ipcRenderer.on('resource-added', callback);
   },
@@ -101,44 +101,44 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onCreateNewProject: (callback) => {
     ipcRenderer.on('create-new-project', callback);
   },
-  
+
   onLoadProjectFromMenu: (callback) => {
     ipcRenderer.on('load-project-from-menu', callback);
   },
-  
+
   // Remove listeners
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
   },
-  
+
   // Genomic Data Download APIs
   selectDirectory: () => ipcRenderer.invoke('selectDirectory'),
   downloadFile: (url, outputPath, projectInfo) => ipcRenderer.invoke('downloadFile', url, outputPath, projectInfo),
   getCurrentProject: () => ipcRenderer.invoke('getCurrentProject'),
   setActiveProject: (projectInfo) => ipcRenderer.invoke('setActiveProject', projectInfo),
-  
+
   // Project opening options
   showProjectOpenDialog: (projectName) => ipcRenderer.invoke('show-project-open-dialog', projectName),
   openProjectInNewProcess: (filePath) => ipcRenderer.invoke('open-project-in-new-process', filePath),
-  
+
   // Event listeners for genomic downloader
   onSetDownloadType: (callback) => {
     ipcRenderer.on('set-download-type', (event, downloadType) => {
       callback(downloadType);
     });
   },
-  
+
   onSetActiveProject: (callback) => {
     ipcRenderer.on('set-active-project', (event, projectInfo) => {
       callback(projectInfo);
     });
   },
-  
+
   // Window close handling
   onBeforeWindowClose: (callback) => {
     ipcRenderer.on('before-window-close', callback);
   },
-  
+
   // File reading API for project manager
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
 
@@ -146,7 +146,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPluginPaths: () => ipcRenderer.invoke('get-plugin-paths'),
   ensureDirectory: (dirPath) => ipcRenderer.invoke('ensure-directory', dirPath),
   listPlugins: (pluginPath) => ipcRenderer.invoke('list-plugins', pluginPath),
-  
+
   // Plugin file loading APIs
   selectPluginFile: () => ipcRenderer.invoke('select-plugin-file'),
   getPluginFileInfo: (filePath) => ipcRenderer.invoke('get-plugin-file-info', filePath),
@@ -156,11 +156,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
   copyPluginDirectory: (sourcePath, destPath) => ipcRenderer.invoke('copy-plugin-directory', sourcePath, destPath),
   copyPluginFile: (sourcePath, destPath) => ipcRenderer.invoke('copy-plugin-file', sourcePath, destPath),
   writePluginFile: (filePath, content) => ipcRenderer.invoke('write-plugin-file', filePath, content),
-  
+
   // Plugin installation and persistence APIs
   writePluginFiles: (options) => ipcRenderer.invoke('write-plugin-files', options),
   loadPluginFromDisk: (options) => ipcRenderer.invoke('load-plugin-from-disk', options),
   deletePluginFiles: (options) => ipcRenderer.invoke('delete-plugin-files', options),
+
+  // Utility Tools APIs
+  downloadInternetFile: (options) => ipcRenderer.invoke('download-internet-file', options),
+  openMarkdownViewer: (options) => ipcRenderer.invoke('open-markdown-viewer', options),
+
+  // Event listener for markdown viewer content loading
+  onLoadMarkdown: (callback) => {
+    ipcRenderer.on('load-markdown', (event, data) => callback(data));
+  },
+
+  // Event listener for download progress
+  onDownloadProgress: (callback) => {
+    ipcRenderer.on('download-progress', (event, data) => callback(data));
+  },
 
   // Expose ipcRenderer for menu system event handling
   ipcRenderer: {
@@ -184,7 +198,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         'menu-best-practices', 'menu-report-issue', 'menu-send-feedback', 'menu-about',
         'request-current-project-for-download', 'tool-menu-action'
       ];
-      
+
       if (validChannels.includes(channel)) {
         ipcRenderer.on(channel, listener);
       }
@@ -195,7 +209,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         'close-resource-manager',
         'project-manager-current-project-response'
       ];
-      
+
       if (validSendChannels.includes(channel)) {
         ipcRenderer.send(channel, ...args);
       }

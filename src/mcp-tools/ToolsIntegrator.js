@@ -10,11 +10,12 @@ const DatabaseTools = require('./database/DatabaseTools');
 const DataTools = require('./data/DataTools');
 const PathwayTools = require('./pathway/PathwayTools');
 const ActionTools = require('./action/ActionTools');
+const UtilityTools = require('./utility/UtilityTools');
 
 class ToolsIntegrator {
     constructor(server) {
         this.server = server;
-        
+
         // Initialize all tool modules
         this.navigationTools = new NavigationTools(server);
         this.sequenceTools = new SequenceTools(server);
@@ -23,7 +24,8 @@ class ToolsIntegrator {
         this.dataTools = new DataTools(server);
         this.pathwayTools = new PathwayTools(server);
         this.actionTools = new ActionTools(server);
-        
+        this.utilityTools = new UtilityTools(server);
+
         // Combine all tools
         this.allTools = this.combineAllTools();
     }
@@ -36,13 +38,14 @@ class ToolsIntegrator {
             ...this.databaseTools.getTools(),
             ...this.dataTools.getTools(),
             ...this.pathwayTools.getTools(),
-            ...this.actionTools.getTools()
+            ...this.actionTools.getTools(),
+            ...this.utilityTools.getTools()
         };
     }
 
     getAvailableTools() {
         const tools = Object.values(this.allTools);
-        
+
         // Convert 'parameters' to 'inputSchema' for MCP SDK compatibility
         return tools.map(tool => {
             if (tool.parameters && !tool.inputSchema) {
@@ -71,7 +74,7 @@ class ToolsIntegrator {
             if (this.navigationTools.getTools()[toolName]) {
                 return await this.navigationTools.executeClientTool(toolName, parameters, clientId);
             }
-            
+
             // Sequence tools
             if (this.sequenceTools.getTools()[toolName]) {
                 if (toolName === 'get_coding_sequence') {
@@ -86,7 +89,7 @@ class ToolsIntegrator {
                     return await this.sequenceTools.executeClientTool(toolName, parameters, clientId);
                 }
             }
-            
+
             // Protein tools (server-side only)
             if (this.proteinTools.getTools()[toolName] && toolName !== 'search_alphafold_by_gene') {
                 switch (toolName) {
@@ -104,7 +107,7 @@ class ToolsIntegrator {
                         return await this.proteinTools.executeClientTool(toolName, parameters, clientId);
                 }
             }
-            
+
             // Database tools
             if (this.databaseTools.getTools()[toolName]) {
                 switch (toolName) {
@@ -124,9 +127,9 @@ class ToolsIntegrator {
                         return await this.databaseTools.executeClientTool(toolName, parameters, clientId);
                 }
             }
-            
 
-            
+
+
             // Data tools
             if (this.dataTools.getTools()[toolName]) {
                 if (toolName === 'codon_usage_analysis') {
@@ -135,18 +138,18 @@ class ToolsIntegrator {
                     return await this.dataTools.executeClientTool(toolName, parameters, clientId);
                 }
             }
-            
+
             // Pathway tools
             if (this.pathwayTools.getTools()[toolName]) {
                 switch (toolName) {
                     case 'show_metabolic_pathway':
                         return this.pathwayTools.generatePathwayVisualization(
-                            parameters.pathwayName, 
+                            parameters.pathwayName,
                             parameters.highlightGenes || []
                         );
                     case 'find_pathway_genes':
                         return this.pathwayTools.findGenesInPathway(
-                            parameters.pathwayName, 
+                            parameters.pathwayName,
                             parameters.includeRegulation || false
                         );
                     case 'blast_search':
@@ -161,7 +164,7 @@ class ToolsIntegrator {
                         return await this.pathwayTools.executeClientTool(toolName, parameters, clientId);
                 }
             }
-            
+
             // Action tools
             if (this.actionTools.getTools()[toolName]) {
                 switch (toolName) {
@@ -189,14 +192,26 @@ class ToolsIntegrator {
                         return await this.actionTools.executeClientTool(toolName, parameters, clientId);
                 }
             }
-            
+
+            // Utility tools
+            if (this.utilityTools.getTools()[toolName]) {
+                switch (toolName) {
+                    case 'download_internet_file':
+                        return await this.utilityTools.download_internet_file(parameters, clientId);
+                    case 'view_markdown_file':
+                        return await this.utilityTools.view_markdown_file(parameters, clientId);
+                    default:
+                        return await this.utilityTools.executeClientTool(toolName, parameters, clientId);
+                }
+            }
+
             // Special client-side tools that need browser execution
             if (toolName === 'search_alphafold_by_gene') {
                 return await this.executeClientSideTool(toolName, parameters, clientId);
             }
-            
+
             throw new Error(`Tool execution handler not found for '${toolName}'`);
-            
+
         } catch (error) {
             console.error(`Error executing tool '${toolName}':`, error);
             throw error;
@@ -240,6 +255,11 @@ class ToolsIntegrator {
                 name: 'Pathway & Search',
                 description: 'Tools for metabolic pathway analysis and sequence search',
                 tools: Object.keys(this.pathwayTools.getTools())
+            },
+            utility: {
+                name: 'Utility Tools',
+                description: 'Utility tools for file download and viewing operations',
+                tools: Object.keys(this.utilityTools.getTools())
             }
         };
     }
@@ -248,13 +268,13 @@ class ToolsIntegrator {
     getToolStatistics() {
         const categories = this.getToolsByCategory();
         const totalTools = Object.keys(this.allTools).length;
-        
+
         return {
             totalTools: totalTools,
             categories: Object.keys(categories).length,
             toolsByCategory: Object.fromEntries(
                 Object.entries(categories).map(([key, category]) => [
-                    key, 
+                    key,
                     { name: category.name, count: category.tools.length }
                 ])
             ),
@@ -299,7 +319,7 @@ class ToolsIntegrator {
             if (properties[param]) {
                 const expectedType = properties[param].type;
                 const actualType = typeof value;
-                
+
                 if (expectedType === 'number' && actualType !== 'number') {
                     throw new Error(`Parameter '${param}' should be a number, got ${actualType}`);
                 }
@@ -327,7 +347,7 @@ class ToolsIntegrator {
 
         const categories = this.getToolsByCategory();
         let category = 'unknown';
-        
+
         for (const [catKey, catData] of Object.entries(categories)) {
             if (catData.tools.includes(toolName)) {
                 category = catData.name;
@@ -405,11 +425,11 @@ class ToolsIntegrator {
     async executeClientSideTool(toolName, parameters, clientId) {
         // This method delegates tool execution to the browser client
         // It's used for tools that need to run in the browser context (like UI updates)
-        
+
         if (!this.server) {
             throw new Error('Server instance not available for client-side tool execution');
         }
-        
+
         // Use the server's client tool execution method
         return await this.server.executeToolOnClient(toolName, parameters, clientId);
     }

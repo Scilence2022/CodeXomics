@@ -2923,7 +2923,7 @@ class GenomeBrowser {
             }
         });
 
-        // Handle MCP tool calls for action functions
+        // Handle MCP tool calls for action functions and utility functions
         ipcRenderer.on('mcp-tool-call', async (event, data) => {
             console.log('🔧 MCP tool call received:', data);
 
@@ -2951,8 +2951,46 @@ class GenomeBrowser {
                             error: 'ActionManager not available'
                         });
                     }
-                } else {
-                    // Not an action function, send error
+                }
+                // Check if this is a utility function call
+                else if (method && method.startsWith('utility_')) {
+                    const utilityFunctionName = method.substring(8); // Remove 'utility_' prefix
+                    console.log(`📥 [Renderer] Executing utility tool: ${utilityFunctionName}`);
+
+                    let result;
+
+                    switch (utilityFunctionName) {
+                        case 'download_internet_file':
+                            // Call the IPC handler for downloading files
+                            if (window.electronAPI && window.electronAPI.downloadInternetFile) {
+                                result = await window.electronAPI.downloadInternetFile(parameters);
+                            } else {
+                                throw new Error('electronAPI.downloadInternetFile not available');
+                            }
+                            break;
+
+                        case 'view_markdown_file':
+                            // Call the IPC handler for opening markdown viewer
+                            if (window.electronAPI && window.electronAPI.openMarkdownViewer) {
+                                result = await window.electronAPI.openMarkdownViewer(parameters);
+                            } else {
+                                throw new Error('electronAPI.openMarkdownViewer not available');
+                            }
+                            break;
+
+                        default:
+                            throw new Error(`Unknown utility function: ${utilityFunctionName}`);
+                    }
+
+                    // Send success response
+                    ipcRenderer.send('mcp-tool-response', {
+                        requestId,
+                        success: true,
+                        result
+                    });
+                }
+                else {
+                    // Not a known function, send error
                     ipcRenderer.send('mcp-tool-response', {
                         requestId,
                         success: false,
