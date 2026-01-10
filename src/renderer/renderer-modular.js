@@ -310,7 +310,7 @@ class GenomeBrowser {
 
         // Gene Details sidebar settings
         this.geneDetailSettings = {
-            deepGeneResearchPrompt: 'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata).'
+            deepGeneResearchPrompt: 'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata). If the Deep Gene Research tool is not available, please remind me to connect the Deep Gene Research Server.'
         };
 
         this.init();
@@ -6584,7 +6584,7 @@ class GenomeBrowser {
 
         // Get the configurable prompt template and replace placeholders
         const promptTemplate = this.geneDetailSettings.deepGeneResearchPrompt ||
-            'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata).';
+            'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata). If the Deep Gene Research tool is not available, please remind me to connect the Deep Gene Research Server.';
 
         const prompt = promptTemplate
             .replace(/\{geneName\}/g, geneName)
@@ -6658,7 +6658,7 @@ class GenomeBrowser {
 
     // Reset Deep Gene Research prompt to default
     resetDeepGenePromptToDefault() {
-        const defaultPrompt = 'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata).';
+        const defaultPrompt = 'Please perform a Deep Gene Research of {geneName} gene in {organism}. After research is complete, please provide the downloadable URLs for the final research report and detailed research data (workflow, sources, metadata). If the Deep Gene Research tool is not available, please remind me to connect the Deep Gene Research Server.';
 
         const promptTextarea = document.getElementById('deepGeneResearchPrompt');
         if (promptTextarea) {
