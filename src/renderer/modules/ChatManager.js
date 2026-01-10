@@ -11220,16 +11220,21 @@ ${this.getPluginSystemInfo()}`;
                 const htmlContent = marked.parse(formattedMessage);
 
                 // Sanitize the HTML output to prevent XSS while preserving formatting
-                return this.sanitizeHTML(htmlContent);
+                const sanitizedHtml = this.sanitizeHTML(htmlContent);
+
+                // Post-process to convert any remaining markdown-style MCP links to clickable HTML
+                return this.postProcessMCPLinks(sanitizedHtml);
             } catch (error) {
                 console.error('Markdown parsing error:', error);
                 // Fallback to basic formatting if marked fails
-                return this.basicMarkdownFormat(formattedMessage);
+                const basicHtml = this.basicMarkdownFormat(formattedMessage);
+                return this.postProcessMCPLinks(basicHtml);
             }
         }
 
         // Fallback to basic formatting if marked is not available
-        return this.basicMarkdownFormat(formattedMessage);
+        const basicHtml = this.basicMarkdownFormat(formattedMessage);
+        return this.postProcessMCPLinks(basicHtml);
     }
 
     /**
@@ -11265,6 +11270,7 @@ ${this.getPluginSystemInfo()}`;
     /**
      * Convert relative MCP download URLs to absolute clickable URLs
      * Converts paths like /api/mcp/download/... to full URLs with the MCP server base URL
+     * Generates both markdown links (for markdown contexts) and HTML links (for direct HTML contexts)
      */
     convertMCPDownloadUrls(text) {
         if (!text || typeof text !== 'string') {
@@ -11289,17 +11295,16 @@ ${this.getPluginSystemInfo()}`;
                 }
             }
 
-            // Pattern 1: Convert plain text URLs like /api/mcp/download/... that are not already links
-            // Match: 🔗 /api/mcp/download/... or just /api/mcp/download/...
+            // Pattern 1: Convert plain text URLs with 🔗 prefix
+            // Match: 🔗 /api/mcp/download/...
             text = text.replace(/🔗\s*(\/api\/mcp\/download\/[^\s\n`"<>]+)/g, (match, path) => {
                 const fullUrl = `${baseUrl}${path}`;
                 return `🔗 [Download](${fullUrl})`;
             });
 
-            // Pattern 2: Convert standalone /api/mcp/download paths (not already in links)
-            // Negative lookbehind to not match if preceded by ( or [
-            text = text.replace(/(?<!\(|\[)(\/api\/mcp\/download\/[^\s\n\)`"<>]+)/g, (match, path) => {
-                // Check if this is already inside a markdown link (basic check)
+            // Pattern 2: Convert standalone /api/mcp/download paths to markdown links
+            // Negative lookbehind to not match if preceded by ( or [ or "
+            text = text.replace(/(?<!\(|\[|")(\/api\/mcp\/download\/[^\s\n\)`"<>]+)/g, (match, path) => {
                 const fullUrl = `${baseUrl}${path}`;
                 return `[${path}](${fullUrl})`;
             });
@@ -11314,6 +11319,46 @@ ${this.getPluginSystemInfo()}`;
         } catch (error) {
             console.error('Error converting MCP download URLs:', error);
             return text;
+        }
+    }
+
+    /**
+     * Post-process HTML to convert remaining markdown-style links to clickable HTML links
+     * Called after sanitizeHTML to handle cases where markdown wasn't parsed
+     */
+    postProcessMCPLinks(html) {
+        if (!html || typeof html !== 'string') {
+            return html;
+        }
+
+        try {
+            // Get MCP base URL
+            let baseUrl = 'http://localhost:3000';
+            if (this.mcpServerManager) {
+                const deepGeneServer = this.mcpServerManager.servers?.get('deep-gene-research');
+                if (deepGeneServer && deepGeneServer.url) {
+                    try {
+                        const urlObj = new URL(deepGeneServer.url);
+                        baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+                    } catch (e) { /* ignore */ }
+                }
+            }
+
+            // Convert escaped markdown links like [text](url) that weren't rendered
+            // This handles cases where content wasn't markdown-parsed
+            html = html.replace(/\[([^\]]+)\]\((http[s]?:\/\/[^\s\)]+\/api\/mcp\/[^\s\)]+)\)/g, (match, label, url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="mcp-download-link">${label}</a>`;
+            });
+
+            // Also convert any remaining raw /api/mcp URLs to clickable links
+            html = html.replace(/(?<!href="|">)(http[s]?:\/\/[^\s<>"]+\/api\/mcp\/download\/[^\s<>"]+)/g, (match, url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="mcp-download-link">${url}</a>`;
+            });
+
+            return html;
+        } catch (error) {
+            console.error('Error post-processing MCP links:', error);
+            return html;
         }
     }
 
