@@ -3145,10 +3145,163 @@ ipcMain.handle('get-file-info', async (event, filePath) => {
   }
 });
 
+// ===== Gene Attachments IPC Handlers =====
+
+/**
+ * Open file selection dialog for gene attachments
+ */
+ipcMain.handle('select-attachment-files', async (event, options = {}) => {
+  try {
+    const { dialog } = require('electron');
+
+    const result = await dialog.showOpenDialog(null, {
+      title: options.title || 'Select Attachment Files',
+      filters: options.filters || [
+        { name: 'All Supported Files', extensions: ['pdf', 'md', 'txt', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'json', 'html'] },
+        { name: 'Documents', extensions: ['pdf', 'doc', 'docx', 'txt', 'md'] },
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg'] },
+        { name: 'Data Files', extensions: ['csv', 'json', 'xls', 'xlsx'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      properties: options.properties || ['openFile', 'multiSelections']
+    });
+
+    if (result.canceled) {
+      return { success: false, canceled: true };
+    }
+
+    return {
+      success: true,
+      filePaths: result.filePaths,
+      fileCount: result.filePaths.length
+    };
+
+  } catch (error) {
+    console.error('Error selecting attachment files:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Copy a file to the attachments storage location
+ */
+ipcMain.handle('copy-attachment-file', async (event, sourcePath, targetDir, filename) => {
+  try {
+    // Validate source file exists
+    if (!fs.existsSync(sourcePath)) {
+      return { success: false, error: 'Source file does not exist' };
+    }
+
+    // Ensure target directory exists
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    // Determine target path
+    const targetFilename = filename || path.basename(sourcePath);
+    const targetPath = path.join(targetDir, targetFilename);
+
+    // Copy file
+    fs.copyFileSync(sourcePath, targetPath);
+
+    // Get file info
+    const stats = fs.statSync(targetPath);
+
+    console.log(`📎 Attachment copied: ${sourcePath} -> ${targetPath}`);
+
+    return {
+      success: true,
+      targetPath: targetPath,
+      filename: targetFilename,
+      size: stats.size
+    };
+
+  } catch (error) {
+    console.error('Error copying attachment file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Delete an attachment file
+ */
+ipcMain.handle('delete-attachment-file', async (event, filePath) => {
+  try {
+    if (!filePath) {
+      return { success: false, error: 'File path is required' };
+    }
+
+    if (!fs.existsSync(filePath)) {
+      console.log(`Attachment file does not exist, skipping deletion: ${filePath}`);
+      return { success: true, message: 'File does not exist' };
+    }
+
+    fs.unlinkSync(filePath);
+    console.log(`🗑️ Attachment deleted: ${filePath}`);
+
+    return { success: true, message: 'Attachment deleted successfully' };
+
+  } catch (error) {
+    console.error('Error deleting attachment file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Open an attachment file in the system's default application
+ */
+ipcMain.handle('open-attachment-file', async (event, filePath) => {
+  try {
+    if (!filePath) {
+      return { success: false, error: 'File path is required' };
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: 'File does not exist' };
+    }
+
+    const { shell } = require('electron');
+    await shell.openPath(filePath);
+
+    console.log(`📂 Opened attachment: ${filePath}`);
+    return { success: true };
+
+  } catch (error) {
+    console.error('Error opening attachment file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Get the base storage path for gene attachments
+ */
+ipcMain.handle('get-attachments-storage-path', async (event) => {
+  try {
+    // Use app's user data directory for attachments storage
+    const userDataPath = app.getPath('userData');
+    const attachmentsPath = path.join(userDataPath, 'gene_attachments');
+
+    // Ensure directory exists
+    if (!fs.existsSync(attachmentsPath)) {
+      fs.mkdirSync(attachmentsPath, { recursive: true });
+    }
+
+    return {
+      success: true,
+      path: attachmentsPath
+    };
+
+  } catch (error) {
+    console.error('Error getting attachments storage path:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // ===== Utility Tools IPC Handlers =====
 
 /**
  * Download a file from the internet to a local path
+
  */
 ipcMain.handle('download-internet-file', async (event, options) => {
   const { url, destinationPath, filename } = options;

@@ -426,6 +426,23 @@ class GenomeBrowser {
         console.log('⚙️ Loading Gene Details settings...');
         this.loadGeneDetailSettings();
 
+        // Step 5.6.2: Initialize Gene Attachments Manager
+        console.log('📎 About to initialize GeneAttachmentsManager...');
+        try {
+            if (typeof GeneAttachmentsManager !== 'undefined') {
+                this.geneAttachmentsManager = new GeneAttachmentsManager(this, this.configManager);
+                window.geneAttachmentsManager = this.geneAttachmentsManager;
+                console.log('✅ GeneAttachmentsManager initialized successfully');
+            } else {
+                console.warn('⚠️ GeneAttachmentsManager class not found, will be loaded on demand');
+                this.geneAttachmentsManager = null;
+            }
+        } catch (error) {
+            console.error('❌ Error initializing GeneAttachmentsManager:', error);
+            this.geneAttachmentsManager = null;
+        }
+
+
         // Step 5.7: Initialize External Tools Manager
         console.log('🔧 About to initialize ExternalToolsManager...');
         try {
@@ -4960,6 +4977,30 @@ class GenomeBrowser {
             </div>
         `;
 
+        // Add Gene Attachments section
+        const geneId = this.geneAttachmentsManager ?
+            this.geneAttachmentsManager.getGeneIdentifier(gene) :
+            (gene.qualifiers?.locus_tag || gene.qualifiers?.gene || `${gene.type}_${gene.start}_${gene.end}`);
+
+        if (this.geneAttachmentsManager) {
+            html += this.geneAttachmentsManager.renderAttachmentsSection(geneId);
+        } else {
+            // Fallback: render a simple attachments placeholder
+            html += `
+                <div class="gene-attachments">
+                    <div class="gene-attachments-header">
+                        <h4><i class="fas fa-paperclip"></i> Attachments</h4>
+                        <button class="btn btn-sm gene-add-attachment-btn" disabled title="Attachments system not available">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                    <div class="gene-attachments-empty">
+                        <p>Attachments system initializing...</p>
+                    </div>
+                </div>
+            `;
+        }
+
         // Add unified citation list if there are any citations (in separate container)
         const citationList = this.generateUnifiedCitationList();
         if (citationList) {
@@ -4967,6 +5008,7 @@ class GenomeBrowser {
         }
 
         html += `</div>`;
+
 
         geneDetailsContent.innerHTML = html;
 
@@ -5031,7 +5073,125 @@ class GenomeBrowser {
         }
     }
 
+    /**
+     * Add an attachment to the currently selected gene
+     */
+    async addGeneAttachment() {
+        if (!this.selectedGene || !this.selectedGene.gene) {
+            this.showNotification('No gene selected', 'error');
+            return;
+        }
+
+        if (!this.geneAttachmentsManager) {
+            this.showNotification('Attachments system not available', 'error');
+            return;
+        }
+
+        const gene = this.selectedGene.gene;
+        const geneId = this.geneAttachmentsManager.getGeneIdentifier(gene);
+
+        const result = await this.geneAttachmentsManager.addAttachment(geneId);
+
+        if (result) {
+            // Refresh the gene details to show new attachments
+            this.refreshGeneAttachments(geneId);
+        }
+    }
+
+    /**
+     * Remove an attachment from a gene
+     */
+    async removeGeneAttachment(attachmentId, geneId) {
+        if (!this.geneAttachmentsManager) {
+            this.showNotification('Attachments system not available', 'error');
+            return;
+        }
+
+        // Confirm deletion
+        const confirmed = confirm('Are you sure you want to remove this attachment?');
+        if (!confirmed) return;
+
+        const success = await this.geneAttachmentsManager.removeAttachment(geneId, attachmentId);
+
+        if (success) {
+            // Refresh the attachments list
+            this.refreshGeneAttachments(geneId);
+        }
+    }
+
+    /**
+     * Open an attachment file
+     */
+    async openGeneAttachment(attachmentId, geneId) {
+        if (!this.geneAttachmentsManager) {
+            this.showNotification('Attachments system not available', 'error');
+            return;
+        }
+
+        await this.geneAttachmentsManager.openAttachment(attachmentId, geneId);
+    }
+
+    /**
+     * Refresh the attachments section in the gene details panel
+     */
+    refreshGeneAttachments(geneId) {
+        if (!this.geneAttachmentsManager) return;
+
+        const attachmentsList = document.getElementById('geneAttachmentsList');
+        if (!attachmentsList) return;
+
+        // Re-render just the attachments list content
+        const attachments = this.geneAttachmentsManager.getAttachmentsForGene(geneId);
+
+        if (attachments.length === 0) {
+            attachmentsList.innerHTML = `
+                <div class="gene-attachments-empty">
+                    <i class="fas fa-file-upload"></i>
+                    <p>No attachments yet</p>
+                    <small>Click "Add" to attach files to this gene</small>
+                </div>
+            `;
+        } else {
+            let html = '';
+            for (const attachment of attachments) {
+                const icon = this.geneAttachmentsManager.getFileIcon(attachment.extension);
+                const escapedId = attachment.id.replace(/'/g, "\\'");
+                const escapedGeneId = geneId.replace(/'/g, "\\'");
+
+                html += `
+                    <div class="gene-attachment-item" data-attachment-id="${attachment.id}">
+                        <div class="gene-attachment-icon">
+                            <i class="${icon}"></i>
+                        </div>
+                        <div class="gene-attachment-info">
+                            <div class="gene-attachment-name" title="${attachment.filename}">
+                                ${attachment.filename}
+                            </div>
+                            <div class="gene-attachment-meta">
+                                ${attachment.sizeFormatted} • ${this.geneAttachmentsManager.formatDate(attachment.addedDate)}
+                            </div>
+                        </div>
+                        <div class="gene-attachment-actions">
+                            <button class="gene-attachment-btn open-btn" 
+                                    onclick="window.genomeBrowser.openGeneAttachment('${escapedId}', '${escapedGeneId}')"
+                                    title="Open file">
+                                <i class="fas fa-external-link-alt"></i>
+                            </button>
+                            <button class="gene-attachment-btn delete-btn" 
+                                    onclick="window.genomeBrowser.removeGeneAttachment('${escapedId}', '${escapedGeneId}')"
+                                    title="Remove attachment">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            attachmentsList.innerHTML = html;
+        }
+    }
+
     populateReadDetails(read, fileInfo = null) {
+
         const readDetailsContent = document.getElementById('readDetailsContent');
         if (!readDetailsContent) return;
 

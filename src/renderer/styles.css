@@ -2130,6 +2130,222 @@
   padding-bottom: 4px;
 }
 
+/* ===== Gene Attachments Section ===== */
+.gene-attachments {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.gene-attachments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.gene-attachments-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gene-attachments-header h4 i {
+  color: var(--primary-color);
+}
+
+.gene-add-attachment-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gene-add-attachment-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.gene-add-attachment-btn:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.gene-attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.gene-attachments-empty {
+  text-align: center;
+  padding: 20px 16px;
+  color: var(--text-muted);
+}
+
+.gene-attachments-empty i {
+  font-size: 28px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+  display: block;
+}
+
+.gene-attachments-empty p {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+}
+
+.gene-attachments-empty small {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.gene-attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.gene-attachment-item:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.gene-attachment-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e3ecff 100%);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.gene-attachment-icon i {
+  font-size: 16px;
+  color: var(--primary-color);
+}
+
+/* File type specific icon colors */
+.gene-attachment-icon i.fa-file-pdf {
+  color: #e74c3c;
+}
+
+.gene-attachment-icon i.fa-file-word {
+  color: #2b579a;
+}
+
+.gene-attachment-icon i.fa-file-excel {
+  color: #1d6f42;
+}
+
+.gene-attachment-icon i.fa-file-image {
+  color: #9b59b6;
+}
+
+.gene-attachment-icon i.fa-file-alt {
+  color: #3498db;
+}
+
+.gene-attachment-icon i.fa-file-code {
+  color: #f39c12;
+}
+
+.gene-attachment-icon i.fa-file-csv {
+  color: #27ae60;
+}
+
+.gene-attachment-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.gene-attachment-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.gene-attachment-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.gene-attachment-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.gene-attachment-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.gene-attachment-btn i {
+  font-size: 12px;
+}
+
+.gene-attachment-btn.open-btn {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.gene-attachment-btn.open-btn:hover {
+  background: #1976d2;
+  color: white;
+  transform: scale(1.1);
+}
+
+.gene-attachment-btn.delete-btn {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.gene-attachment-btn.delete-btn:hover {
+  background: #c62828;
+  color: white;
+  transform: scale(1.1);
+}
+
+
 .citation-list {
   display: flex;
   flex-direction: column;

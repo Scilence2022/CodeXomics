@@ -166,6 +166,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadInternetFile: (options) => ipcRenderer.invoke('download-internet-file', options),
   openMarkdownViewer: (options) => ipcRenderer.invoke('open-markdown-viewer', options),
 
+  // Gene Attachments APIs
+  selectAttachmentFiles: (options) => ipcRenderer.invoke('select-attachment-files', options),
+  copyAttachmentFile: (sourcePath, targetDir, filename) => ipcRenderer.invoke('copy-attachment-file', sourcePath, targetDir, filename),
+  deleteAttachmentFile: (filePath) => ipcRenderer.invoke('delete-attachment-file', filePath),
+  openAttachmentFile: (filePath) => ipcRenderer.invoke('open-attachment-file', filePath),
+  getAttachmentsStoragePath: () => ipcRenderer.invoke('get-attachments-storage-path'),
+
+
   // Event listener for markdown viewer content loading
   onLoadMarkdown: (callback) => {
     ipcRenderer.on('load-markdown', (event, data) => callback(data));
