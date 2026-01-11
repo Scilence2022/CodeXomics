@@ -442,6 +442,21 @@ class GenomeBrowser {
             this.geneAttachmentsManager = null;
         }
 
+        // Step 5.6.3: Initialize Gene Notes Manager
+        console.log('📝 About to initialize GeneNotesManager...');
+        try {
+            if (typeof GeneNotesManager !== 'undefined') {
+                this.geneNotesManager = new GeneNotesManager(this, this.configManager);
+                window.geneNotesManager = this.geneNotesManager;
+                console.log('✅ GeneNotesManager initialized successfully');
+            } else {
+                console.warn('⚠️ GeneNotesManager class not found, will be loaded on demand');
+                this.geneNotesManager = null;
+            }
+        } catch (error) {
+            console.error('❌ Error initializing GeneNotesManager:', error);
+            this.geneNotesManager = null;
+        }
 
         // Step 5.7: Initialize External Tools Manager
         console.log('🔧 About to initialize ExternalToolsManager...');
@@ -5001,6 +5016,24 @@ class GenomeBrowser {
             `;
         }
 
+        // Add Gene Notes section
+        if (this.geneNotesManager) {
+            html += this.geneNotesManager.renderNotesSection(geneId);
+        } else {
+            // Fallback: render a simple notes placeholder
+            html += `
+                <div class="gene-notes-section">
+                    <div class="gene-notes-header">
+                        <h4><i class="fas fa-sticky-note"></i> Notes</h4>
+                    </div>
+                    <div class="gene-notes-content">
+                        <p style="color: var(--text-muted);">Notes system initializing...</p>
+                    </div>
+                </div>
+            `;
+        }
+
+
         // Add unified citation list if there are any citations (in separate container)
         const citationList = this.generateUnifiedCitationList();
         if (citationList) {
@@ -5190,7 +5223,55 @@ class GenomeBrowser {
         }
     }
 
+    /**
+     * Toggle gene notes visibility (for the notes button in header)
+     */
+    toggleGeneNotes() {
+        const notesSection = document.querySelector('.gene-notes-section');
+        if (!notesSection) {
+            this.showNotification('Notes section not found. Please select a gene first.', 'warning');
+            return;
+        }
+
+        // Toggle expanded state
+        notesSection.classList.toggle('expanded');
+
+        // Focus textarea when expanding
+        if (notesSection.classList.contains('expanded')) {
+            const textarea = notesSection.querySelector('.gene-notes-textarea');
+            if (textarea) {
+                textarea.focus();
+            }
+        }
+
+        // Update button state
+        const notesBtn = document.getElementById('geneNotesBtn');
+        if (notesBtn) {
+            notesBtn.classList.toggle('active', notesSection.classList.contains('expanded'));
+        }
+    }
+
+    /**
+     * Save the current gene note
+     */
+    async saveGeneNote(geneId) {
+        if (!this.geneNotesManager || !geneId) return;
+
+        const textarea = document.getElementById('geneNoteTextarea');
+        if (!textarea) return;
+
+        const content = textarea.value;
+        await this.geneNotesManager.saveNote(geneId, content);
+
+        // Update the "updated" timestamp display
+        const updatedSpan = document.querySelector('.gene-notes-updated');
+        if (updatedSpan) {
+            updatedSpan.textContent = 'Updated just now';
+        }
+    }
+
     populateReadDetails(read, fileInfo = null) {
+
 
         const readDetailsContent = document.getElementById('readDetailsContent');
         if (!readDetailsContent) return;

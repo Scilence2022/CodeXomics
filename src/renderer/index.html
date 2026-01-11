@@ -506,6 +506,10 @@
                                 title="Gene Details Settings">
                                 <i class="fas fa-cog"></i>
                             </button>
+                            <button class="notes-panel-btn" onclick="window.genomeBrowser.toggleGeneNotes()"
+                                title="Gene Notes" id="geneNotesBtn">
+                                <i class="fas fa-sticky-note"></i>
+                            </button>
                             <button class="close-panel-btn" data-panel="geneDetailsSection">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -4451,6 +4455,7 @@ Supported formats:
     <script src="modules/MultiAgentSettingsManager.js"></script>
     <script src="modules/GeneralSettingsManager.js"></script>
     <script src="modules/GeneAttachmentsManager.js"></script>
+    <script src="modules/GeneNotesManager.js"></script>
     <script src="modules/ExternalToolsManager.js"></script>
     <script src="modules/MCPServerManager.js"></script>
 

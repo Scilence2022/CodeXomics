@@ -2345,8 +2345,112 @@
   transform: scale(1.1);
 }
 
+/* ===== Gene Notes Section ===== */
+.gene-notes-section {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.gene-notes-section.expanded {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.gene-notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.gene-notes-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gene-notes-header h4 i {
+  color: #f59e0b;
+}
+
+.gene-notes-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gene-notes-updated {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.gene-notes-content {
+  margin-top: 8px;
+}
+
+.gene-notes-textarea {
+  width: 100%;
+  min-height: 80px;
+  max-height: 200px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gene-notes-textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.gene-notes-textarea::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Notes panel button in header */
+.notes-panel-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notes-panel-btn:hover {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.notes-panel-btn.active {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+}
+
 
 .citation-list {
+
   display: flex;
   flex-direction: column;
   gap: 4px;
