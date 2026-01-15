@@ -34,7 +34,7 @@ CodeXomics is an AI-powered bioinformatics analysis platform that combines tradi
 
 ### Pre-built Binaries
 
-Download the latest version (v0.527beta) from the [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.527beta) page.
+Download the latest version (v0.528beta) from the [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.528beta) page.
 
 #### macOS
 1. Download `CodeXomics-0.527.0-beta-x64.dmg` (Intel) or `CodeXomics-0.527.0-beta-arm64.dmg` (Apple Silicon)
@@ -415,7 +415,7 @@ Keyboard: Cmd/Ctrl+Shift+C
 
 **Access:**
 ```
-Tools → Visualization Tools → KGML Pathway Viewer
+Tools → KGML Pathway Viewer
 Keyboard: Cmd/Ctrl+Shift+K
 ```
 
@@ -736,6 +736,6 @@ A: AI provides helpful insights but should be validated. Use benchmark tests to 
 
 ---
 
-**CodeXomics v0.527beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
+**CodeXomics v0.528beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
 
 Made with ❤️ by the CodeXomics Team

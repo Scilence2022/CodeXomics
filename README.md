@@ -573,76 +573,12 @@ npm run test:plugin-framework
 - **Distributed computing** - Large-scale analysis capabilities
 - **Integration ecosystem** - Connect with major bioinformatics platforms
 
-## 📝 Contributing
-
-We welcome contributions from the genomics and bioinformatics community!
-
-### **How to Contribute**
-1. **Fork the repository** on GitHub
-2. **Create a feature branch** from main
-3. **Make your changes** with appropriate tests
-4. **Submit a pull request** with detailed description
-
-### **Plugin Development**
-1. **Study existing plugins** in `src/renderer/modules/Plugins/`
-2. **Follow plugin API** specifications
-3. **Test with Plugin Test Framework**
-4. **Submit to Plugin Marketplace**
-
-### **Development Guidelines**
-- Follow existing code style and patterns
-- Add documentation for new features
-- Include tests for new functionality
-- Update relevant markdown documentation
-- Test plugin compatibility
-
-## 🧪 What's New in v0.528beta
-
-### **✨ Latest Features and Improvements**
-- ✅ **Enhanced Plugin System** - Improved plugin update check (now only checks when marketplace is opened)
-- ✅ **Chatbox Improvements** - Added thinking history for transparent AI reasoning
-- ✅ **PDB Viewer Fix** - Fixed Protein Data Bank viewer functionality
-- ✅ **BLAST Service Updates** - Swapped BLAST service positions for better accessibility
-- ✅ **Menu Structure Optimization** - Removed redundant Analysis Tools and Visualization Tools submenus
-- ✅ **GPU Fixes for Windows** - Enhanced performance on Windows systems with GPU optimizations
-- ✅ **Plugin Download Counts** - Updated plugin download statistics tracking
-- ✅ **CSS Enhancements** - Fixed CSS syntax errors and improved styling consistency
-- ✅ **Version Format Fix** - Updated versioning system for better build compatibility
-- ✅ **Improved Error Messages** - Fixed typos and enhanced error reporting
-
-### **🧹 Menu Structure Changes**
-- **Removed**: Analysis Tools submenu from main menu
-- **Removed**: Visualization Tools submenu from main menu
-- **Streamlined**: Tool access with direct menu items
-
-### **🔧 Technical Improvements**
-- ✅ **Build System Updates** - Enhanced version compatibility for all platform builds
-- ✅ **GPU Acceleration Fixes** - Better Windows GPU support
-- ✅ **Plugin Update Optimization** - Reduced network calls by checking updates only when marketplace is opened
-- ✅ **Chatbox Thinking History** - Visual representation of AI reasoning process
-- ✅ **CSS Consistency** - Fixed syntax errors and improved styling
-- ✅ **Updated .gitignore** - Added new entries for better repository management
-
-### **📊 What's Stable**
-- ✅ **Genome Visualization** - SVG-based multi-track genome browser
-- ✅ **AI Chat Interface** - Natural language queries with LLM integration
-- ✅ **Multi-Provider Support** - OpenAI, Anthropic, Google Gemini, and local LLMs
-- ✅ **File Format Support** - FASTA, GenBank, GFF, VCF, BAM file handling
-- ✅ **Cross-Platform** - Works on macOS, Windows, and Linux
-- ✅ **Project Management** - Save and load analysis projects
-- ✅ **Testing Framework** - AI benchmark and evaluation tools
-- ✅ **Plugin Marketplace** - Enhanced plugin discovery and management
-
-### **🚀 Latest Beta Release**
-📦 **Release Notes**: [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.528beta)
-📋 **Full Changelog**: [CHANGELOG.md](CHANGELOG.md)
-
 ## 📚 Documentation
 
 - **[User Guide](docs/user-guides/)** - Comprehensive usage instructions
 - **[Developer Guide](docs/developer-guides/)** - Contribution and development setup
-- **[API Reference](docs/api-docs/)** - Complete API documentation
-- **[Fix Summaries](docs/fix-summaries/)** - Implementation details and bug fixes
+- **[Architecture](docs/architecture/)** - System design documentation
+- **[Reference Guides](docs/reference/)** - Technical references and guides
 - **[Release Notes](docs/release-notes/)** - Version history and changes
 
 ## 🤝 Contributing
@@ -656,7 +592,18 @@ We welcome contributions from the genomics and bioinformatics community!
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-See [PROJECT_RULES.md](docs/project-guides/PROJECT_RULES.md) for development guidelines.
+### **Plugin Development**
+1. **Study existing plugins** in `src/renderer/modules/Plugins/`
+2. **Follow plugin API** specifications
+3. **Test with Plugin Test Framework**
+4. **Submit to Plugin Marketplace**
+
+### **Development Guidelines**
+- Follow existing code style and patterns
+- Add documentation for new features
+- Include tests for new functionality
+- Update relevant markdown documentation
+- Test plugin compatibility
 
 ## 🐛 Issues and Support
 

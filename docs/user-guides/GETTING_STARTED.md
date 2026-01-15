@@ -1,6 +1,6 @@
 # Getting Started with CodeXomics
 
-Welcome to **CodeXomics v0.3 beta**! This guide will help you get up and running with the platform quickly and efficiently.
+Welcome to **CodeXomics v0.528beta**! This guide will help you get up and running with the platform quickly and efficiently.
 
 ## 📋 Prerequisites
 
@@ -19,11 +19,12 @@ Welcome to **CodeXomics v0.3 beta**! This guide will help you get up and running
 ### Option 1: Download Pre-built Release (Recommended)
 
 1. **Download the latest release**:
-   - Visit the [GitHub Releases page](https://github.com/Scilence2022/GenomeAIStudio/releases)
+   - Visit the [GitHub Releases page](https://github.com/Scilence2022/CodeXomics/releases)
    - Download the appropriate version for your platform:
-     - **macOS**: `Genome-AI-Studio-0.3.0-beta.dmg`
-     - **Windows**: `Genome-AI-Studio-Setup-0.3.0-beta.exe`
-     - **Linux**: `Genome-AI-Studio-0.3.0-beta.AppImage`
+     - **macOS Intel**: `CodeXomics-0.527.0-beta-x64.dmg`
+     - **macOS Apple Silicon**: `CodeXomics-0.527.0-beta-arm64.dmg`
+     - **Windows**: `CodeXomics Setup 0.527.0-beta.exe`
+     - **Linux**: `CodeXomics-0.527.0-beta.AppImage`
 
 2. **Install the application**:
    - **macOS**: Open the DMG file and drag the app to Applications
@@ -34,8 +35,8 @@ Welcome to **CodeXomics v0.3 beta**! This guide will help you get up and running
 
 1. **Clone the repository**:
 ```bash
-git clone https://github.com/Scilence2022/GenomeAIStudio.git
-cd GenomeAIStudio
+git clone https://github.com/Scilence2022/CodeXomics.git
+cd CodeXomics
 ```
 
 2. **Install dependencies**:
@@ -197,9 +198,9 @@ Switch between different project views:
 ## 📚 Learning Resources
 
 ### Tutorials
-- **[User Manual](USER_MANUAL.md)** - Comprehensive user guide
-- **[Bioinformatics Tools](BIOINFORMATICS_TOOLS_README.md)** - Analysis tools overview
-- **[Plugin Usage](PLUGIN_MARKETPLACE_USAGE_GUIDE.md)** - Working with plugins
+- **[User Guide](USER_GUIDE.md)** - Comprehensive user guide
+- **[BLAST Guide](../reference/BLAST_GUIDE.md)** - Sequence alignment tools
+- **[Plugin Development](../developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md)** - Working with plugins
 
 ### Example Data
 The application includes sample data for testing:
@@ -240,10 +241,10 @@ The application includes sample data for testing:
 
 Now that you're set up, explore these advanced features:
 
-1. **[Install plugins](PLUGIN_MARKETPLACE_USAGE_GUIDE.md)** from the marketplace
-2. **[Set up BLAST tools](../BLAST_GUIDE.md)** for sequence analysis
-3. **[Configure advanced visualization](USER_MANUAL.md#advanced-visualization)** options
-4. **[Learn about the API](API_DOCUMENTATION.md)** for custom development
+1. **[Install plugins](../developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md)** from the marketplace
+2. **[Set up BLAST tools](../reference/BLAST_GUIDE.md)** for sequence analysis
+3. **[Configure advanced visualization](USER_GUIDE.md#core-features)** options
+4. **[Learn about development](../developer-guides/DEVELOPER_GUIDE.md)** for custom development
 
 ## 📝 Feedback
 
@@ -257,4 +258,4 @@ We'd love to hear about your experience! Please:
 
 **Happy analyzing!** 🧬
 
-*This guide covers CodeXomics v0.3.0-beta. For the latest updates, check the project repository.* 
+*This guide covers CodeXomics v0.528beta. For the latest updates, check the [project repository](https://github.com/Scilence2022/CodeXomics).* 
