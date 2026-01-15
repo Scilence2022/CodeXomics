@@ -1950,120 +1950,264 @@ class TrackRenderer {
     }
 
     /**
-     * Create tRNA shape - cloverleaf-inspired design
-     * Design: A distinctive cloverleaf pattern representing the classic tRNA secondary structure
+     * Create tRNA shape - elegant rounded chevron design
+     * Design: A professional-looking rounded chevron that represents tRNA
      * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
     createTRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-trna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
 
-        // Use tRNA-specific colors (green tones)
-        const fillColor = '#22c55e'; // Green fill for tRNA
-        const strokeColor = '#166534'; // Darker green stroke
+        // Use tRNA-specific colors - vibrant lime green (different from rRNA's emerald)
+        const fillColor = '#65a30d'; // Lime green for tRNA
+        const fillColorLight = '#a3e635'; // Lighter lime for gradient
+        const strokeColor = '#4d7c0f'; // Darker lime stroke
 
-        // Use zoom-based stroke width (passed as parameter)
+        // Create gradient definition for depth
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        const gradId = `trna-grad-${Math.random().toString(36).substr(2, 9)}`;
+        const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        gradient.setAttribute('id', gradId);
+        gradient.setAttribute('x1', '0%');
+        gradient.setAttribute('y1', '0%');
+        gradient.setAttribute('x2', '0%');
+        gradient.setAttribute('y2', '100%');
+
+        const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop1.setAttribute('offset', '0%');
+        stop1.setAttribute('stop-color', fillColorLight);
+
+        const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop2.setAttribute('offset', '100%');
+        stop2.setAttribute('stop-color', fillColor);
+
+        gradient.appendChild(stop1);
+        gradient.appendChild(stop2);
+        defs.appendChild(gradient);
+        group.appendChild(defs);
+
+        // Calculate shape dimensions with proper padding
+        const verticalPadding = height * 0.1;
+        const shapeHeight = height - (verticalPadding * 2);
+        const shapeY = verticalPadding;
+        const cornerRadius = Math.min(shapeHeight / 3, 6);
+
+        // Chevron indent (pointing inward from the side)
+        const chevronIndent = Math.min(width * 0.12, 8);
 
         if (isLeftTruncated || isRightTruncated) {
-            // For truncated tRNA, use path with jagged edges
+            // For truncated tRNA, use clean zigzag edges
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            let pathData;
+            const zigzagDepth = Math.min(3, height * 0.12);
+            const zigzagCount = 3;
+            const zigzagStep = shapeHeight / zigzagCount;
 
+            let pathData;
             if (isLeftTruncated) {
-                pathData = this.createJaggedRNAPath(width, height, true, false);
+                // Left edge has clean zigzag, right edge is chevron
+                pathData = `M ${zigzagDepth} ${shapeY}`;
+                for (let i = 0; i < zigzagCount; i++) {
+                    const y = shapeY + zigzagStep * i;
+                    pathData += ` L 0 ${y + zigzagStep / 2}`;
+                    pathData += ` L ${zigzagDepth} ${y + zigzagStep}`;
+                }
+                pathData += ` L ${width - chevronIndent} ${shapeY + shapeHeight}`;
+                pathData += ` L ${width} ${shapeY + shapeHeight / 2}`;
+                pathData += ` L ${width - chevronIndent} ${shapeY}`;
+                pathData += ` Z`;
             } else {
-                pathData = this.createJaggedRNAPath(width, height, false, true);
+                // Right edge has clean zigzag, left edge is chevron
+                pathData = `M ${chevronIndent} ${shapeY}`;
+                pathData += ` L ${width - zigzagDepth} ${shapeY}`;
+                for (let i = 0; i < zigzagCount; i++) {
+                    const y = shapeY + zigzagStep * i;
+                    pathData += ` L ${width} ${y + zigzagStep / 2}`;
+                    pathData += ` L ${width - zigzagDepth} ${y + zigzagStep}`;
+                }
+                pathData += ` L ${chevronIndent} ${shapeY + shapeHeight}`;
+                pathData += ` L 0 ${shapeY + shapeHeight / 2}`;
+                pathData += ` Z`;
             }
 
             path.setAttribute('d', pathData);
-            path.setAttribute('fill', fillColor);
+            path.setAttribute('fill', `url(#${gradId})`);
             path.setAttribute('stroke', strokeColor);
             path.setAttribute('stroke-width', strokeWidth.toString());
+            path.setAttribute('stroke-linejoin', 'round');
             group.appendChild(path);
-            return group;
+        } else {
+            // Full chevron/hexagon shape 
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+            // Create a hexagon-like chevron shape (pointed on both ends if wide enough)
+            let pathData;
+            if (width > 20) {
+                // Wide enough for proper chevron on both sides
+                pathData = `M ${chevronIndent} ${shapeY}
+                           L ${width - chevronIndent} ${shapeY}
+                           L ${width} ${shapeY + shapeHeight / 2}
+                           L ${width - chevronIndent} ${shapeY + shapeHeight}
+                           L ${chevronIndent} ${shapeY + shapeHeight}
+                           L 0 ${shapeY + shapeHeight / 2}
+                           Z`;
+            } else {
+                // Narrow - just use rounded rectangle with chevron on right
+                pathData = `M ${cornerRadius} ${shapeY}
+                           L ${width - chevronIndent} ${shapeY}
+                           L ${width} ${shapeY + shapeHeight / 2}
+                           L ${width - chevronIndent} ${shapeY + shapeHeight}
+                           L ${cornerRadius} ${shapeY + shapeHeight}
+                           Q 0 ${shapeY + shapeHeight} 0 ${shapeY + shapeHeight - cornerRadius}
+                           L 0 ${shapeY + cornerRadius}
+                           Q 0 ${shapeY} ${cornerRadius} ${shapeY}
+                           Z`;
+            }
+
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', `url(#${gradId})`);
+            path.setAttribute('stroke', strokeColor);
+            path.setAttribute('stroke-width', strokeWidth.toString());
+            path.setAttribute('stroke-linejoin', 'round');
+            group.appendChild(path);
         }
 
-        // For very small widths, use a simple rounded rectangle
-        if (width < 15) {
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', '0');
-            rect.setAttribute('y', '0');
-            rect.setAttribute('width', width);
-            rect.setAttribute('height', height);
-            rect.setAttribute('rx', Math.min(height * 0.3, width * 0.2, 3));
-            rect.setAttribute('ry', Math.min(height * 0.3, width * 0.2, 3));
-            rect.setAttribute('fill', fillColor);
-            rect.setAttribute('stroke', strokeColor);
-            rect.setAttribute('stroke-width', strokeWidth.toString());
-            group.appendChild(rect);
-            return group;
+        // Add a small decorative circle at the pointed end when wide enough
+        if (width > 40 && height > 10) {
+            const dotRadius = Math.min(height * 0.12, 3);
+            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            dot.setAttribute('cx', (width - chevronIndent - dotRadius - 2).toString());
+            dot.setAttribute('cy', (height / 2).toString());
+            dot.setAttribute('r', dotRadius.toString());
+            dot.setAttribute('fill', fillColorLight);
+            dot.setAttribute('opacity', '0.6');
+            group.appendChild(dot);
         }
-
-        // Cloverleaf-inspired design: three loops at top + stem
-        const centerX = width / 2;
-        const loopRadius = Math.min(height * 0.15, width * 0.12);
-        const stemWidth = Math.max(2, width * 0.15);
-        const stemHeight = height * 0.45;
-
-        // Main body path (stem + base)
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const loopY = height * 0.25; // Y position of the loops
-
-        // Create the stem and base
-        const pathData = `
-            M ${centerX - stemWidth / 2} ${height}
-            L ${centerX - stemWidth / 2} ${loopY + loopRadius}
-            Q ${centerX - stemWidth / 2 - loopRadius} ${loopY + loopRadius} ${centerX - stemWidth / 2 - loopRadius} ${loopY}
-            A ${loopRadius} ${loopRadius} 0 1 1 ${centerX - stemWidth / 2} ${loopY - loopRadius}
-            L ${centerX - loopRadius / 2} ${loopY - loopRadius}
-            A ${loopRadius} ${loopRadius * 0.8} 0 1 1 ${centerX + loopRadius / 2} ${loopY - loopRadius}
-            L ${centerX + stemWidth / 2} ${loopY - loopRadius}
-            A ${loopRadius} ${loopRadius} 0 1 1 ${centerX + stemWidth / 2 + loopRadius} ${loopY}
-            Q ${centerX + stemWidth / 2 + loopRadius} ${loopY + loopRadius} ${centerX + stemWidth / 2} ${loopY + loopRadius}
-            L ${centerX + stemWidth / 2} ${height}
-            Z
-        `;
-
-        path.setAttribute('d', pathData);
-        path.setAttribute('fill', fillColor);
-        path.setAttribute('stroke', strokeColor);
-        path.setAttribute('stroke-width', strokeWidth.toString());
-        path.setAttribute('stroke-linejoin', 'round');
-        group.appendChild(path);
 
         return group;
     }
 
     /**
-     * Create rRNA shape - wavy ribbon/helix-inspired design
-     * Design: A distinctive wavy ribbon shape representing ribosomal RNA
+     * Create rRNA shape - elegant capsule/pill design with decorative stripes
+     * Design: A professional-looking rounded capsule that clearly differentiates rRNA
      * @param {number} strokeWidth - Zoom-based stroke width for consistent borders
      */
     createRRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward, strokeWidth = 1) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `gene-rrna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
 
-        // Use rRNA-specific colors (darker green tones to differentiate from tRNA)
-        const fillColor = '#16a34a'; // Darker green for rRNA
-        const strokeColor = '#14532d'; // Even darker green stroke
+        // Use rRNA-specific colors - elegant emerald green
+        const fillColor = '#059669'; // Emerald green for rRNA
+        const fillColorLight = '#34d399'; // Lighter emerald for gradient
+        const strokeColor = '#047857'; // Darker emerald stroke
+        const stripeColor = '#10b981'; // Stripe accent color
 
-        // Use zoom-based stroke width (passed as parameter)
+        // Create gradient definition for depth
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        const gradId = `rrna-grad-${Math.random().toString(36).substr(2, 9)}`;
+        const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        gradient.setAttribute('id', gradId);
+        gradient.setAttribute('x1', '0%');
+        gradient.setAttribute('y1', '0%');
+        gradient.setAttribute('x2', '0%');
+        gradient.setAttribute('y2', '100%');
 
-        // Legacy jagged RNA path logic removed - now using standard arrow logic below for consistency
-        // Use geometric ellipse shape as requested by user
-        const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+        const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop1.setAttribute('offset', '0%');
+        stop1.setAttribute('stop-color', fillColorLight);
 
-        ellipse.setAttribute('cx', width / 2);
-        ellipse.setAttribute('cy', height / 2);
-        ellipse.setAttribute('rx', width / 2);
-        // Use slightly shorter height for the ellipse to make it look distinct and not touch borders
-        ellipse.setAttribute('ry', (height * 0.8) / 2);
+        const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop2.setAttribute('offset', '100%');
+        stop2.setAttribute('stop-color', fillColor);
 
-        ellipse.setAttribute('fill', fillColor);
-        ellipse.setAttribute('stroke', strokeColor);
-        ellipse.setAttribute('stroke-width', strokeWidth.toString());
+        gradient.appendChild(stop1);
+        gradient.appendChild(stop2);
+        defs.appendChild(gradient);
+        group.appendChild(defs);
 
-        group.appendChild(ellipse);
+        // Calculate capsule dimensions with proper padding
+        const verticalPadding = height * 0.1;
+        const capsuleHeight = height - (verticalPadding * 2);
+        const capsuleY = verticalPadding;
+        const cornerRadius = Math.min(capsuleHeight / 2, 8);
+
+        if (isLeftTruncated || isRightTruncated) {
+            // For truncated rRNA, use clean zigzag edges instead of ugly jagged
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const zigzagDepth = Math.min(3, height * 0.12);
+            const zigzagCount = 3;
+            const zigzagStep = capsuleHeight / zigzagCount;
+
+            let pathData;
+            if (isLeftTruncated) {
+                // Left edge has clean zigzag, right edge is rounded
+                pathData = `M ${zigzagDepth} ${capsuleY}`;
+                for (let i = 0; i < zigzagCount; i++) {
+                    const y = capsuleY + zigzagStep * i;
+                    pathData += ` L 0 ${y + zigzagStep / 2}`;
+                    pathData += ` L ${zigzagDepth} ${y + zigzagStep}`;
+                }
+                pathData += ` L ${width - cornerRadius} ${capsuleY + capsuleHeight}`;
+                pathData += ` Q ${width} ${capsuleY + capsuleHeight} ${width} ${capsuleY + capsuleHeight - cornerRadius}`;
+                pathData += ` L ${width} ${capsuleY + cornerRadius}`;
+                pathData += ` Q ${width} ${capsuleY} ${width - cornerRadius} ${capsuleY}`;
+                pathData += ` Z`;
+            } else {
+                // Right edge has clean zigzag, left edge is rounded
+                pathData = `M ${cornerRadius} ${capsuleY}`;
+                pathData += ` L ${width - zigzagDepth} ${capsuleY}`;
+                for (let i = 0; i < zigzagCount; i++) {
+                    const y = capsuleY + zigzagStep * i;
+                    pathData += ` L ${width} ${y + zigzagStep / 2}`;
+                    pathData += ` L ${width - zigzagDepth} ${y + zigzagStep}`;
+                }
+                pathData += ` L ${cornerRadius} ${capsuleY + capsuleHeight}`;
+                pathData += ` Q 0 ${capsuleY + capsuleHeight} 0 ${capsuleY + capsuleHeight - cornerRadius}`;
+                pathData += ` L 0 ${capsuleY + cornerRadius}`;
+                pathData += ` Q 0 ${capsuleY} ${cornerRadius} ${capsuleY}`;
+                pathData += ` Z`;
+            }
+
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', `url(#${gradId})`);
+            path.setAttribute('stroke', strokeColor);
+            path.setAttribute('stroke-width', strokeWidth.toString());
+            group.appendChild(path);
+        } else {
+            // Full capsule/pill shape with rounded ends
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', '0');
+            rect.setAttribute('y', capsuleY.toString());
+            rect.setAttribute('width', width.toString());
+            rect.setAttribute('height', capsuleHeight.toString());
+            rect.setAttribute('rx', cornerRadius.toString());
+            rect.setAttribute('ry', cornerRadius.toString());
+            rect.setAttribute('fill', `url(#${gradId})`);
+            rect.setAttribute('stroke', strokeColor);
+            rect.setAttribute('stroke-width', strokeWidth.toString());
+            group.appendChild(rect);
+        }
+
+        // Add decorative horizontal stripes for visual distinction (if wide enough)
+        if (width > 30 && height > 8) {
+            const stripeCount = 2;
+            const stripeSpacing = capsuleHeight / (stripeCount + 1);
+            const stripeWidth = Math.min(width * 0.7, width - 10);
+            const stripeX = (width - stripeWidth) / 2;
+
+            for (let i = 1; i <= stripeCount; i++) {
+                const stripe = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                const stripeY = capsuleY + stripeSpacing * i;
+                stripe.setAttribute('x1', stripeX.toString());
+                stripe.setAttribute('y1', stripeY.toString());
+                stripe.setAttribute('x2', (stripeX + stripeWidth).toString());
+                stripe.setAttribute('y2', stripeY.toString());
+                stripe.setAttribute('stroke', stripeColor);
+                stripe.setAttribute('stroke-width', Math.max(1, height * 0.08).toString());
+                stripe.setAttribute('stroke-linecap', 'round');
+                stripe.setAttribute('opacity', '0.4');
+                group.appendChild(stripe);
+            }
+        }
 
         return group;
     }
