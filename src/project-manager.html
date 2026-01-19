@@ -1345,8 +1345,9 @@
             overflow: hidden;
             text-overflow: ellipsis;
             margin-right: 20px;
-            min-width: 0;
-            /* Allow shrinking below content size */
+            min-width: 100px;
+            flex: 1 100 auto;
+            /* Grow 1, Shrink 100 (aggressively), Auto basis */
         }
 
         .toolbar {
