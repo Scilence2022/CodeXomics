@@ -807,7 +807,7 @@ class ProjectManagerWindow {
         const container = document.getElementById('fileGrid');
         if (!container) return;
 
-        container.style.display = 'block'; // Ensure grid is visible
+        container.style.display = 'grid'; // Ensure grid is visible
 
         const files = this.getCurrentFolderFiles();
         const filteredFiles = this.filterFiles(files);
