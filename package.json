@@ -170,7 +170,7 @@
           "path": "/Applications"
         }
       ],
-      "background": "build/background.tiff",
+      "background": "build/background.png",
       "format": "UDZO",
       "writeUpdateInfo": false,
       "artifactName": "${productName}-${version}-${arch}.${ext}"

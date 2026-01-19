@@ -3,7 +3,8 @@
 /**
  * SVG to PNG Converter for DMG Background
  * 
- * Simple and reliable SVG to PNG conversion using sharp
+ * Converts SVG to PNG format for maximum DMG compatibility
+ * PNG format has better universal support than TIFF on modern macOS
  * 
  * @author CodeXomics Team
  */
@@ -13,23 +14,23 @@ const fs = require('fs');
 const path = require('path');
 
 const SVG_PATH = path.join(__dirname, '../build/dmg-background.svg');
-const TIFF_PATH = path.join(__dirname, '../build/background.tiff');
-const TIFF_RETINA_PATH = path.join(__dirname, '../build/background@2x.tiff');
+const PNG_PATH = path.join(__dirname, '../build/background.png');
+const PNG_RETINA_PATH = path.join(__dirname, '../build/background@2x.png');
 
 /**
- * Convert SVG to TIFF for DMG Background (Native Format)
+ * Convert SVG to PNG for DMG Background
  */
-async function convertSVGToTIFF() {
+async function convertSVGToPNG() {
     try {
-        console.log('🔄 Converting SVG to TIFF for maximum DMG compatibility...');
+        console.log('🔄 Converting SVG to PNG for maximum DMG compatibility...');
 
         // Check if SVG file exists
         if (!fs.existsSync(SVG_PATH)) {
             throw new Error(`SVG file not found: ${SVG_PATH}`);
         }
 
-        // Function to generate TIFF at specific size
-        const generateTIFF = async (outputPath, width, height, density) => {
+        // Function to generate PNG at specific size
+        const generatePNG = async (outputPath, width, height, density) => {
             await sharp(SVG_PATH, {
                 density: density
             })
@@ -39,10 +40,9 @@ async function convertSVGToTIFF() {
                     position: 'center',
                     background: { r: 46, g: 79, b: 140 }
                 })
-                .tiff({
-                    compression: 'lzw',
-                    xres: 72,
-                    yres: 72
+                .png({
+                    compressionLevel: 9,
+                    quality: 100
                 })
                 .toFile(outputPath);
 
@@ -51,22 +51,22 @@ async function convertSVGToTIFF() {
         };
 
         // Generate 1x version (standard)
-        await generateTIFF(TIFF_PATH, 660, 420, 72);
+        await generatePNG(PNG_PATH, 660, 420, 72);
 
         // Generate 2x version (retina)
-        await generateTIFF(TIFF_RETINA_PATH, 1320, 840, 144);
+        await generatePNG(PNG_RETINA_PATH, 1320, 840, 144);
 
-        console.log('🎉 TIFF conversion completed successfully!');
+        console.log('🎉 PNG conversion completed successfully!');
 
     } catch (error) {
-        console.error('❌ SVG to TIFF conversion failed:', error.message);
+        console.error('❌ SVG to PNG conversion failed:', error.message);
         throw error;
     }
 }
 
 // Run conversion if called directly
 if (require.main === module) {
-    convertSVGToTIFF()
+    convertSVGToPNG()
         .then(() => {
             process.exit(0);
         })
@@ -76,4 +76,4 @@ if (require.main === module) {
         });
 }
 
-module.exports = { convertSVGToTIFF };
+module.exports = { convertSVGToPNG };
