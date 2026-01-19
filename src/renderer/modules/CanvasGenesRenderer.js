@@ -362,8 +362,15 @@ class CanvasGenesRenderer {
         const isForward = gene.strand != -1; // Use loose equality to handle string "-1"
         const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
 
-        if (width < 8) {
-            // Triangle shape for small genes
+        // Zigzag parameters
+        const zDepth = 4; // Depth of the zigzag notch
+        const numZigzags = 3;
+        const zStep = height / numZigzags;
+
+        // If gene is very small AND NOT truncated, draw simple triangle
+        // If it is truncated, we treat it as a bar/arrow regardless of width to maintain continuity
+        if (width < 8 && !isLeftTruncated && !isRightTruncated) {
+            // Triangle shape for small genes (only when fully visible)
             if (isForward) {
                 // Forward Triangle
                 this.ctx.moveTo(0, 0);
@@ -376,21 +383,89 @@ class CanvasGenesRenderer {
                 this.ctx.lineTo(width, height);
             }
         } else {
-            // Arrow shape
+            // Arrow / Bar shape with potential zigzags
             if (isForward) {
-                // Forward Arrow
-                this.ctx.moveTo(0, 0);
-                this.ctx.lineTo(width - arrowSize, 0);
-                this.ctx.lineTo(width, height / 2);
-                this.ctx.lineTo(width - arrowSize, height);
+                // === Forward Gene ===
+
+                // 1. Start / Left Edge
+                if (isLeftTruncated) {
+                    this.ctx.moveTo(0, 0);
+                } else {
+                    this.ctx.moveTo(0, 0);
+                }
+
+                // 2. Top Edge -> Right Edge
+                if (isRightTruncated) {
+                    this.ctx.lineTo(width, 0);
+                    // Zigzag Down on Right Edge
+                    for (let i = 0; i < numZigzags; i++) {
+                        const yTop = i * zStep;
+                        this.ctx.lineTo(width - zDepth, yTop + (zStep / 2)); // Notch In
+                        this.ctx.lineTo(width, (i + 1) * zStep);           // Point Out
+                    }
+                } else {
+                    // Standard Arrow Head
+                    this.ctx.lineTo(width - arrowSize, 0);
+                    this.ctx.lineTo(width, height / 2);
+                    this.ctx.lineTo(width - arrowSize, height);
+                }
+
+                // 3. Bottom Edge -> Left Edge
                 this.ctx.lineTo(0, height);
+
+                if (isLeftTruncated) {
+                    // Zigzag Up on Left Edge
+                    for (let i = 0; i < numZigzags; i++) {
+                        // Going UP from bottom
+                        const yBottom = height - (i * zStep);
+                        this.ctx.lineTo(zDepth, yBottom - (zStep / 2)); // Notch In
+                        this.ctx.lineTo(0, yBottom - zStep);            // Point Out
+                    }
+                } else {
+                    // Close back to top-left
+                    this.ctx.lineTo(0, 0);
+                }
+
             } else {
-                // Reverse Arrow
-                this.ctx.moveTo(arrowSize, 0);
+                // === Reverse Gene ===
+
+                // 1. Start / Left Edge (Arrow Head or Zigzag)
+                if (isLeftTruncated) {
+                    this.ctx.moveTo(0, 0);
+                } else {
+                    this.ctx.moveTo(arrowSize, 0);
+                }
+
+                // 2. Top Edge -> Right Edge
                 this.ctx.lineTo(width, 0);
-                this.ctx.lineTo(width, height);
-                this.ctx.lineTo(arrowSize, height);
-                this.ctx.lineTo(0, height / 2);
+
+                if (isRightTruncated) {
+                    // Zigzag Down on Right Edge
+                    for (let i = 0; i < numZigzags; i++) {
+                        const yTop = i * zStep;
+                        this.ctx.lineTo(width - zDepth, yTop + (zStep / 2)); // Notch In
+                        this.ctx.lineTo(width, (i + 1) * zStep);           // Point Out
+                    }
+                } else {
+                    // Flat Right Edge
+                    this.ctx.lineTo(width, height);
+                }
+
+                // 3. Bottom Edge -> Left Edge
+                if (isLeftTruncated) {
+                    this.ctx.lineTo(0, height);
+                    // Zigzag Up on Left Edge
+                    for (let i = 0; i < numZigzags; i++) {
+                        const yBottom = height - (i * zStep);
+                        this.ctx.lineTo(zDepth, yBottom - (zStep / 2)); // Notch In
+                        this.ctx.lineTo(0, yBottom - zStep);            // Point Out
+                    }
+                } else {
+                    this.ctx.lineTo(arrowSize, height);
+                    // Arrow Head Pointing Left
+                    this.ctx.lineTo(0, height / 2);
+                    this.ctx.lineTo(arrowSize, 0);
+                }
             }
         }
 
