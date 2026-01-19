@@ -20,6 +20,9 @@
             font-size: 14px;
             line-height: 1.6;
             letter-spacing: -0.01em;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
 
         .header {
@@ -451,14 +454,16 @@
 
         .main-container {
             display: flex;
-            height: calc(100vh - 80px);
-            margin: 20px;
-            border-radius: 20px;
+            flex: 1;
+            margin: 0;
+            width: 100%;
+            border-radius: 0;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            box-shadow: none;
             backdrop-filter: blur(20px);
             background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .sidebar {
