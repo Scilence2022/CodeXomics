@@ -49,6 +49,18 @@ class AdvancedSearchManager {
 
         this.modal = document.getElementById('advancedSearchModal');
         this.attachEventListeners();
+
+        // Make modal draggable using ModalDragManager
+        if (window.modalDragManager) {
+            window.modalDragManager.makeDraggable('#advancedSearchModal');
+        } else if (typeof ModalDragManager !== 'undefined') {
+            // Fallback: create new instance if global not available
+            setTimeout(() => {
+                if (window.modalDragManager) {
+                    window.modalDragManager.makeDraggable('#advancedSearchModal');
+                }
+            }, 200);
+        }
     }
 
     /**

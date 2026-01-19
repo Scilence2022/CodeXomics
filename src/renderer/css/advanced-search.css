@@ -32,13 +32,29 @@
     max-width: 800px;
     width: 95%;
     min-height: 500px;
+    height: 600px;
+    /* Fixed height to prevent jitter */
+}
+
+#advancedSearchModal .modal-content.draggable {
+    position: relative;
+}
+
+#advancedSearchModal .modal-header {
+    cursor: move;
+    user-select: none;
+}
+
+#advancedSearchModal .modal-header.draggable-handle:active {
+    cursor: grabbing;
 }
 
 #advancedSearchModal .modal-body {
     padding: 0;
-    max-height: calc(90vh - 120px);
+    flex: 1;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* Search Tabs Navigation */

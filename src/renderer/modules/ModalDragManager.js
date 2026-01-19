@@ -9,7 +9,7 @@ class ModalDragManager {
         this.offsetX = 0;
         this.offsetY = 0;
         this.isDragging = false;
-        
+
         this.initializeEventListeners();
         console.log('ModalDragManager initialized');
     }
@@ -19,7 +19,7 @@ class ModalDragManager {
         document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        
+
         // Prevent text selection during drag
         document.addEventListener('selectstart', (e) => {
             if (this.isDragging) {
@@ -40,7 +40,7 @@ class ModalDragManager {
 
         const modalContent = modal.querySelector('.modal-content');
         const modalHeader = modal.querySelector('.modal-header');
-        
+
         if (!modalContent || !modalHeader) {
             console.warn(`Modal structure incomplete for: ${modalSelector}`);
             return;
@@ -55,7 +55,7 @@ class ModalDragManager {
 
         // Store reference for dragging
         modalHeader.setAttribute('data-modal-content', modalSelector);
-        
+
         console.log(`Made modal draggable: ${modalSelector}`);
     }
 
@@ -92,7 +92,7 @@ class ModalDragManager {
 
         const modal = document.querySelector(modalSelector);
         const modalContent = modal?.querySelector('.modal-content');
-        
+
         if (!modalContent || !modalContent.classList.contains('draggable')) return;
 
         // Don't start drag if clicking on buttons or inputs in the header
@@ -136,11 +136,11 @@ class ModalDragManager {
         const viewportHeight = window.innerHeight;
 
         const constrainedX = Math.max(
-            0, 
+            0,
             Math.min(newX, viewportWidth - modalRect.width)
         );
         const constrainedY = Math.max(
-            0, 
+            0,
             Math.min(newY, viewportHeight - modalRect.height)
         );
 
@@ -173,7 +173,7 @@ class ModalDragManager {
     resetPosition(modalSelector) {
         const modal = document.querySelector(modalSelector);
         const modalContent = modal?.querySelector('.modal-content');
-        
+
         if (!modalContent) return;
 
         modalContent.style.position = '';
@@ -189,7 +189,7 @@ class ModalDragManager {
     initializeAllModals() {
         const managementModals = [
             '#pluginManagementModal',
-            '#mcpSettingsModal', 
+            '#mcpSettingsModal',
             '#llmConfigModal',
             '#blastModal',
             '#blastSearchModal',
@@ -201,7 +201,8 @@ class ModalDragManager {
             '#actionListModal',
             '#tabSettingsModal',
             '#multiAgentSettingsModal',
-            '#chatboxSettingsModal'
+            '#chatboxSettingsModal',
+            '#advancedSearchModal'
         ];
 
         managementModals.forEach(selector => {
@@ -218,7 +219,7 @@ class ModalDragManager {
     addResetButton(modalSelector) {
         const modal = document.querySelector(modalSelector);
         const modalHeader = modal?.querySelector('.modal-header');
-        
+
         if (!modalHeader || modalHeader.querySelector('.reset-position-btn')) return;
 
         const resetBtn = document.createElement('button');
