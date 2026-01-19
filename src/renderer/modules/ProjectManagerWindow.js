@@ -4192,12 +4192,53 @@ Built with ❤️ for the bioinformatics community.
         const file = this.findFileById(fileId);
         if (!file) return;
 
-        const newName = prompt(`Rename file "${file.name}" to:`, file.name);
-        if (!newName || newName.trim() === file.name) return;
+        // Store the file ID and file reference for later use in confirmRenameFile
+        this.currentRenameFileId = fileId;
+        this.currentRenameFile = file;
+
+        // Update modal with current file name
+        const currentFileNameDisplay = document.getElementById('currentFileName');
+        const renameFileNameInput = document.getElementById('renameFileName');
+
+        if (currentFileNameDisplay) {
+            currentFileNameDisplay.textContent = file.name;
+        }
+
+        if (renameFileNameInput) {
+            renameFileNameInput.value = file.name;
+        }
+
+        // Show the modal
+        document.getElementById('renameFileModal').style.display = 'block';
+
+        // Focus on the input field after a short delay
+        setTimeout(() => {
+            if (renameFileNameInput) {
+                renameFileNameInput.focus();
+                renameFileNameInput.select();
+            }
+        }, 100);
+    }
+
+    /**
+     * Confirm rename file from modal
+     */
+    async confirmRenameFile() {
+        const newName = document.getElementById('renameFileName').value.trim();
+
+        if (!newName) {
+            this.showNotification('Please enter a file name', 'warning');
+            return;
+        }
+
+        if (!this.currentRenameFile || newName === this.currentRenameFile.name) {
+            this.closeModal('renameFileModal');
+            return;
+        }
 
         try {
-            file.name = newName.trim();
-            file.modified = new Date().toISOString();
+            this.currentRenameFile.name = newName;
+            this.currentRenameFile.modified = new Date().toISOString();
 
             this.currentProject.modified = new Date().toISOString();
             await this.saveProjects();
@@ -4210,6 +4251,11 @@ Built with ❤️ for the bioinformatics community.
             this.renderProjectTree();
             this.renderProjectContent();
             this.showNotification(`File renamed to "${newName}"`, 'success');
+
+            // Close the modal and clean up
+            this.closeModal('renameFileModal');
+            this.currentRenameFileId = null;
+            this.currentRenameFile = null;
 
         } catch (error) {
             console.error('Error renaming file:', error);

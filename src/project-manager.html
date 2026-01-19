@@ -2871,6 +2871,35 @@
         </div>
     </div>
 
+    <!-- Rename File Modal -->
+    <div id="renameFileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Rename File</h3>
+                <span class="close" onclick="projectManagerWindow.closeModal('renameFileModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="renameFileName">New File Name:</label>
+                    <input type="text" id="renameFileName" placeholder="Enter new file name..."
+                        onkeypress="if(event.key === 'Enter') projectManagerWindow.confirmRenameFile()" />
+                </div>
+                <div class="form-group">
+                    <label>Current Name:</label>
+                    <div id="currentFileName"
+                        style="padding: 8px; background: #f8f9fa; border-radius: 4px; font-family: monospace; font-size: 12px; color: #6c757d;">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                    onclick="projectManagerWindow.closeModal('renameFileModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="projectManagerWindow.confirmRenameFile()">Rename</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 全局项目管理器实例
         let projectManager = null;
