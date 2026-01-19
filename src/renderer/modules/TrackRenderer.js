@@ -11448,31 +11448,31 @@ This action cannot be undone.`;
             {
                 name: 'mRNA',
                 type: 'mRNA',
-                description: 'Messenger RNA transcripts with specialized sine wave shape.',
+                description: 'Messenger RNA transcripts displayed as directional arrows.',
                 svg: this.createExampleSVG('mRNA', 1, '#10b981', 140)
             },
             {
                 name: 'tRNA',
                 type: 'tRNA',
-                description: 'Transfer RNA genes with rounded rectangle shape.',
-                svg: this.createExampleSVG('tRNA', 1, '#10b981', 80)
+                description: 'Transfer RNA genes with cloverleaf structure (stem and three loops).',
+                svg: this.createExampleSVG('tRNA', 1, '#10b981', 100)
             },
             {
                 name: 'rRNA',
                 type: 'rRNA',
-                description: 'Ribosomal RNA genes with elliptical shape.',
-                svg: this.createExampleSVG('rRNA', 1, '#10b981', 90)
+                description: 'Ribosomal RNA genes displayed as capsule/pill shape.',
+                svg: this.createExampleSVG('rRNA', 1, '#10b981', 120)
             },
             {
                 name: 'Promoter',
                 type: 'promoter',
-                description: 'Promoter regions with vertical line and directional horizontal arrow.',
+                description: 'Promoter regions shown as bent arrow (L-shape) with directional tip.',
                 svg: this.createExampleSVG('promoter', 1, '#3b82f6', 120)
             },
             {
                 name: 'Terminator',
                 type: 'terminator',
-                description: 'Terminator regions with double vertical lines and open circle.',
+                description: 'Terminator regions displayed as T-shape (stem with horizontal bar).',
                 svg: this.createExampleSVG('terminator', 1, '#8b5cf6', 120)
             },
             {
@@ -11484,19 +11484,19 @@ This action cannot be undone.`;
             {
                 name: 'Repeat Region',
                 type: 'repeat_region',
-                description: 'Repeat regions with wavy top and bottom edges.',
+                description: 'Repeat regions shown as stacked horizontal capsules.',
                 svg: this.createExampleSVG('repeat_region', 1, '#f59e0b', 140)
             },
             {
                 name: 'Comment',
                 type: 'comment',
-                description: 'Comment features with rounded rectangle and diagonal line.',
+                description: 'Comment features with rounded rectangle and diagonal stripe pattern.',
                 svg: this.createExampleSVG('comment', 1, '#6b7280', 120)
             },
             {
                 name: 'Misc Feature',
                 type: 'misc_feature',
-                description: 'Miscellaneous features with rounded rectangle and diagonal line.',
+                description: 'Miscellaneous features with rounded rectangle and diagonal stripe pattern.',
                 svg: this.createExampleSVG('misc_feature', 1, '#6b7280', 120)
             },
             {
@@ -11617,13 +11617,14 @@ This action cannot be undone.`;
 
     /**
      * Create example SVG for a feature type
+     * IMPORTANT: These shapes MUST match the actual rendering in CanvasGenesRenderer
      */
     createExampleSVG(featureType, strand, color, width) {
         const height = 40;
         const darkColor = this.darkenColor(color, 20);
         const isForward = strand !== -1;
 
-        // Create SVG based on actual rendering logic
+        // Create SVG based on actual CanvasGenesRenderer logic
         let svgContent = '';
 
         // Add gradient definition
@@ -11637,52 +11638,48 @@ This action cannot be undone.`;
 
         switch (featureType.toLowerCase()) {
             case 'promoter': {
-                // Promoter: vertical line + horizontal arrow
-                const strokeWidth = Math.max(1, Math.min(2, height / 12));
-                const arrowLength = Math.min(width * 0.8, height * 2);
-                const arrowHeight = Math.max(4, height * 0.2);
-                const verticalLineX = width * 0.3;
-                const horizontalY = isForward ? 0 : height;
-                const arrowStartX = verticalLineX;
-                const arrowEndX = isForward ? Math.min(width - arrowHeight, arrowStartX + arrowLength) : Math.max(arrowHeight, arrowStartX - arrowLength);
-
-                svgContent += `<line x1="${verticalLineX}" y1="0" x2="${verticalLineX}" y2="${height}" 
-                            stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
-                svgContent += `<line x1="${arrowStartX}" y1="${horizontalY}" x2="${arrowEndX}" y2="${horizontalY}" 
-                            stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
-                const arrowDirection = isForward ? 1 : -1;
-                svgContent += `<path d="M ${arrowEndX} ${horizontalY} 
-                            L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY - arrowHeight / 2} 
-                            L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY + arrowHeight / 2} Z" 
-                            fill="${darkColor}" stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
+                // Promoter: Bent arrow shape (L-shape with arrow) - matches CanvasGenesRenderer.drawPromoterPath
+                if (isForward) {
+                    // Forward: vertical line from bottom, bend right, arrow pointing right
+                    svgContent += `<path d="M 0 ${height} 
+                                L 0 ${height * 0.3} 
+                                L ${width * 0.7} ${height * 0.3} 
+                                L ${width * 0.7} 0 
+                                L ${width} ${height * 0.3} 
+                                L ${width * 0.7} ${height * 0.6} 
+                                L ${width * 0.7} ${height * 0.3} Z" 
+                                fill="url(#example-gradient-${featureType}-${strand})" 
+                                stroke="${darkColor}" stroke-width="1.5" />`;
+                } else {
+                    // Reverse: vertical line from bottom-right, bend left, arrow pointing left
+                    svgContent += `<path d="M ${width} ${height} 
+                                L ${width} ${height * 0.3} 
+                                L ${width * 0.3} ${height * 0.3} 
+                                L ${width * 0.3} 0 
+                                L 0 ${height * 0.3} 
+                                L ${width * 0.3} ${height * 0.6} 
+                                L ${width * 0.3} ${height * 0.3} Z" 
+                                fill="url(#example-gradient-${featureType}-${strand})" 
+                                stroke="${darkColor}" stroke-width="1.5" />`;
+                }
                 break;
             }
 
             case 'terminator': {
-                // Terminator: double vertical lines + open circle
-                const strokeWidth = Math.max(1, Math.min(2, height / 12));
-                const lineSpacing = Math.max(3, width * 0.1);
-                const circleRadius = Math.min(height * 0.15, width * 0.15);
-                const longLineX = width * 0.7;
-                const shortLineX = longLineX - lineSpacing;
-                const shortLineHeight = height * 0.6;
-                const shortLineY = (height - shortLineHeight) / 2;
-                const circleX = (longLineX + shortLineX) / 2;
-                const circleY = circleRadius + 2;
-                const gapAngle = Math.PI * 0.3;
-                const startAngle = Math.PI / 2 - gapAngle / 2;
-                const endAngle = Math.PI / 2 + gapAngle / 2;
-                const startX = circleX + circleRadius * Math.cos(startAngle);
-                const startY = circleY + circleRadius * Math.sin(startAngle);
-                const endX = circleX + circleRadius * Math.cos(endAngle);
-                const endY = circleY + circleRadius * Math.sin(endAngle);
+                // Terminator: T-shape - matches CanvasGenesRenderer.drawTerminatorPath
+                const stemWidth = Math.max(4, width * 0.2);
+                const centerX = width / 2;
 
-                svgContent += `<line x1="${longLineX}" y1="0" x2="${longLineX}" y2="${height}" 
-                            stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
-                svgContent += `<line x1="${shortLineX}" y1="${shortLineY}" x2="${shortLineX}" y2="${shortLineY + shortLineHeight}" 
-                            stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
-                svgContent += `<path d="M ${startX} ${startY} A ${circleRadius} ${circleRadius} 0 1 1 ${endX} ${endY}" 
-                            fill="none" stroke="${darkColor}" stroke-width="${strokeWidth}" />`;
+                svgContent += `<path d="M ${centerX - stemWidth / 2} ${height} 
+                            L ${centerX - stemWidth / 2} ${height * 0.3} 
+                            L 0 ${height * 0.3} 
+                            L 0 0 
+                            L ${width} 0 
+                            L ${width} ${height * 0.3} 
+                            L ${centerX + stemWidth / 2} ${height * 0.3} 
+                            L ${centerX + stemWidth / 2} ${height} Z" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
                 break;
             }
 
@@ -11698,116 +11695,129 @@ This action cannot be undone.`;
             }
 
             case 'repeat_region': {
-                // Repeat region: wavy top and bottom edges
-                const waveCount = Math.max(2, Math.floor(width / 8));
-                const waveHeight = height * 0.1;
-                let topWave = `M 0 ${waveHeight}`;
-                let bottomWave = `L 0 ${height - waveHeight}`;
+                // Repeat region: Stacked capsules - matches CanvasGenesRenderer.drawSpecializedShapePath
+                const capsuleCount = 3;
+                const spacing = 3;
+                const totalSpacing = spacing * (capsuleCount - 1);
+                const capsuleHeight = (height - totalSpacing) / capsuleCount;
+                const rx = capsuleHeight / 2;
 
-                for (let i = 0; i <= waveCount; i++) {
-                    const x = (i / waveCount) * width;
-                    const topY = i % 2 === 0 ? waveHeight : 0;
-                    const bottomY = i % 2 === 0 ? height - waveHeight : height;
-                    topWave += ` L ${x} ${topY}`;
-                    bottomWave = `L ${x} ${bottomY} ` + bottomWave;
+                for (let i = 0; i < capsuleCount; i++) {
+                    const y = i * (capsuleHeight + spacing);
+                    svgContent += `<rect x="0" y="${y}" width="${width}" height="${capsuleHeight}" 
+                                rx="${rx}" ry="${rx}" 
+                                fill="url(#example-gradient-${featureType}-${strand})" 
+                                stroke="${darkColor}" stroke-width="1" />`;
                 }
-
-                svgContent += `<path d="${topWave} L ${width} ${height - waveHeight} ${bottomWave} Z" 
-                            fill="url(#example-gradient-${featureType}-${strand})" 
-                            stroke="${darkColor}" stroke-width="1" />`;
                 break;
             }
 
             case 'trna': {
-                // tRNA: rounded rectangle
-                svgContent += `<rect x="0" y="0" width="${width}" height="${height}" 
-                            rx="${Math.min(height * 0.3, 4)}" ry="${Math.min(height * 0.3, 4)}" 
+                // tRNA: Cloverleaf shape - matches CanvasGenesRenderer.drawSpecializedShapePath
+                // Simplified cloverleaf representation
+                const centerX = width / 2;
+                const loopRadius = Math.min(height * 0.15, width * 0.12);
+                const stemWidth = Math.max(4, width * 0.2);
+                const loopY = height * 0.4;
+
+                // Stem (bottom part)
+                svgContent += `<rect x="${centerX - stemWidth / 2}" y="${loopY}" 
+                            width="${stemWidth}" height="${height - loopY}" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
+
+                // Left loop
+                svgContent += `<circle cx="${centerX - loopRadius * 2}" cy="${loopY}" r="${loopRadius}" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
+
+                // Top loop
+                svgContent += `<circle cx="${centerX}" cy="${loopY - loopRadius * 1.5}" r="${loopRadius}" 
+                            fill="url(#example-gradient-${featureType}-${strand})" 
+                            stroke="${darkColor}" stroke-width="1" />`;
+
+                // Right loop
+                svgContent += `<circle cx="${centerX + loopRadius * 2}" cy="${loopY}" r="${loopRadius}" 
                             fill="url(#example-gradient-${featureType}-${strand})" 
                             stroke="${darkColor}" stroke-width="1" />`;
                 break;
             }
 
             case 'rrna': {
-                // rRNA: ellipse
-                svgContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width / 2}" ry="${height / 2}" 
+                // rRNA: Capsule/pill shape - elongated with rounded ends
+                const ry = height * 0.4;  // Vertical radius (slightly shorter for capsule look)
+                const rx = Math.min(width / 2, ry);  // Horizontal radius
+                svgContent += `<rect x="0" y="${height / 2 - ry}" width="${width}" height="${ry * 2}" 
+                            rx="${rx}" ry="${ry}" 
                             fill="url(#example-gradient-${featureType}-${strand})" 
                             stroke="${darkColor}" stroke-width="1" />`;
                 break;
             }
 
             case 'mrna': {
-                // mRNA: sine wave shape
-                const waveCount = Math.max(2, Math.floor(width / 10));
-                const waveHeight = height * 0.3;
-                const centerY = height / 2;
-
-                let pathData = `M 0 ${centerY}`;
-                for (let i = 0; i <= waveCount * 4; i++) {
-                    const x = (i / (waveCount * 4)) * width;
-                    const y = centerY + Math.sin((i / waveCount) * Math.PI) * waveHeight;
-                    pathData += ` L ${x} ${y}`;
+                // mRNA: Uses standard arrow shape in actual rendering (falls through to default)
+                // Show as arrow with direction indicator
+                const arrowSize = Math.max(4, Math.min(width * 0.25, 12));
+                if (isForward) {
+                    svgContent += `<path d="M 0 ${height * 0.2} 
+                                L ${width - arrowSize} ${height * 0.2} 
+                                L ${width - arrowSize} 0 
+                                L ${width} ${height / 2} 
+                                L ${width - arrowSize} ${height} 
+                                L ${width - arrowSize} ${height * 0.8} 
+                                L 0 ${height * 0.8} Z" 
+                                fill="url(#example-gradient-${featureType}-${strand})" 
+                                stroke="${darkColor}" stroke-width="1" />`;
+                } else {
+                    svgContent += `<path d="M ${width} ${height * 0.2} 
+                                L ${arrowSize} ${height * 0.2} 
+                                L ${arrowSize} 0 
+                                L 0 ${height / 2} 
+                                L ${arrowSize} ${height} 
+                                L ${arrowSize} ${height * 0.8} 
+                                L ${width} ${height * 0.8} Z" 
+                                fill="url(#example-gradient-${featureType}-${strand})" 
+                                stroke="${darkColor}" stroke-width="1" />`;
                 }
-                pathData += ` L ${width} ${centerY + waveHeight * 0.5}`;
-                for (let i = waveCount * 4; i >= 0; i--) {
-                    const x = (i / (waveCount * 4)) * width;
-                    const y = centerY + Math.sin((i / waveCount) * Math.PI) * waveHeight * 0.5 + waveHeight * 0.25;
-                    pathData += ` L ${x} ${y}`;
-                }
-                pathData += ` Z`;
-
-                svgContent += `<path d="${pathData}" 
-                            fill="url(#example-gradient-${featureType}-${strand})" 
-                            stroke="${darkColor}" stroke-width="1" />`;
                 break;
             }
 
             case 'comment':
             case 'note':
             case 'misc_feature': {
-                // Comment: rounded rectangle with diagonal line
+                // Comment/Misc: rounded rectangle with diagonal line pattern
                 svgContent += `<rect x="0" y="0" width="${width}" height="${height}" 
-                            rx="${Math.min(height * 0.2, 3)}" ry="${Math.min(height * 0.2, 3)}" 
+                            rx="${Math.min(height * 0.15, 4)}" ry="${Math.min(height * 0.15, 4)}" 
                             fill="url(#example-gradient-${featureType}-${strand})" 
                             stroke="${darkColor}" stroke-width="1" />`;
-                svgContent += `<line x1="0" y1="0" x2="${width}" y2="${height}" 
-                            stroke="${darkColor}" stroke-width="1" stroke-dasharray="2,2" />`;
+                // Add diagonal stripes pattern
+                for (let i = -height; i < width; i += 8) {
+                    svgContent += `<line x1="${i}" y1="${height}" x2="${i + height}" y2="0" 
+                                stroke="${darkColor}" stroke-width="0.5" stroke-opacity="0.3" />`;
+                }
                 break;
             }
 
             default: {
-                // Standard genes: triangle or arrow based on size
-                if (width < 8) {
-                    // Triangle for small genes
-                    if (isForward) {
-                        svgContent += `<path d="M 0 0 L ${width} ${height / 2} L 0 ${height} Z" 
-                                    fill="url(#example-gradient-${featureType}-${strand})" 
-                                    stroke="${darkColor}" stroke-width="1" />`;
-                    } else {
-                        svgContent += `<path d="M ${width} 0 L 0 ${height / 2} L ${width} ${height} Z" 
-                                    fill="url(#example-gradient-${featureType}-${strand})" 
-                                    stroke="${darkColor}" stroke-width="1" />`;
-                    }
+                // Standard genes: arrow shape
+                const arrowSize = Math.max(4, Math.min(width * 0.25, 15));
+                if (isForward) {
+                    svgContent += `<path d="M 0 0 L ${width - arrowSize} 0 L ${width} ${height / 2} L ${width - arrowSize} ${height} L 0 ${height} Z" 
+                                fill="url(#example-gradient-${featureType}-${strand})" 
+                                stroke="${darkColor}" stroke-width="1" />`;
                 } else {
-                    // Arrow for larger genes
-                    const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
-                    if (isForward) {
-                        svgContent += `<path d="M 0 0 L ${width - arrowSize} 0 L ${width} ${height / 2} L ${width - arrowSize} ${height} L 0 ${height} Z" 
-                                    fill="url(#example-gradient-${featureType}-${strand})" 
-                                    stroke="${darkColor}" stroke-width="1" />`;
-                    } else {
-                        svgContent += `<path d="M ${arrowSize} 0 L ${width} 0 L ${width} ${height} L ${arrowSize} ${height} L 0 ${height / 2} Z" 
-                                    fill="url(#example-gradient-${featureType}-${strand})" 
-                                    stroke="${darkColor}" stroke-width="1" />`;
-                    }
+                    svgContent += `<path d="M ${arrowSize} 0 L ${width} 0 L ${width} ${height} L ${arrowSize} ${height} L 0 ${height / 2} Z" 
+                                fill="url(#example-gradient-${featureType}-${strand})" 
+                                stroke="${darkColor}" stroke-width="1" />`;
                 }
                 break;
             }
         }
 
-        // Add strand indicator if needed
+        // Add strand indicator for standard genes
         if (featureType.toLowerCase() === 'gene' || featureType.toLowerCase() === 'cds') {
-            svgContent += `${isForward ? `<text x="${width / 2}" y="${height / 2 + 5}" text-anchor="middle" font-size="10" fill="#666">→</text>` : ''}`;
-            svgContent += `${!isForward ? `<text x="${width / 2}" y="${height / 2 + 5}" text-anchor="middle" font-size="10" fill="#666">←</text>` : ''}`;
+            svgContent += `${isForward ? `<text x="${width / 2}" y="${height / 2 + 5}" text-anchor="middle" font-size="10" fill="white" font-weight="bold">→</text>` : ''}`;
+            svgContent += `${!isForward ? `<text x="${width / 2}" y="${height / 2 + 5}" text-anchor="middle" font-size="10" fill="white" font-weight="bold">←</text>` : ''}`;
         }
 
         svgContent += `</svg>`;
