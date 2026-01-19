@@ -1,5 +1,3 @@
-
-
 .header-left {
     flex: 0 0 auto;
 }
@@ -43,7 +41,7 @@
 .position-container {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 12px;
 }
 
 .search-input,
@@ -75,7 +73,8 @@
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-    position: relative; /* Added for dropdown positioning */
+    position: relative;
+    /* Added for dropdown positioning */
 }
 
 .toolbar-section label {
@@ -137,8 +136,15 @@
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 /* Responsive adjustments for header MCP controls */
