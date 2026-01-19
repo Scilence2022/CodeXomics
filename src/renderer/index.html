@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="css/chatbox-enhancements.css">
     <link rel="stylesheet" href="css/chatbox-markdown.css">
     <link rel="stylesheet" href="css/llm-config.css">
+    <link rel="stylesheet" href="css/advanced-search.css">
     <link rel="stylesheet" href="styles.css">
 
     <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"> -->
@@ -56,6 +57,12 @@
                         class="search-input">
                     <button id="searchBtn" class="search-btn" title="Search">
                         <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div class="advanced-search-container">
+                    <button id="advancedSearchBtn" class="btn btn-secondary" title="Advanced Search (Ctrl+Shift+F)">
+                        <i class="fas fa-search-plus"></i>
+                        Advanced
                     </button>
                 </div>
                 <div class="position-container">
@@ -4446,6 +4453,7 @@ Supported formats:
     <script src="modules/TrackRenderer.js"></script>
     <script src="modules/VariantAnalyzer.js"></script>
     <script src="modules/NavigationManager.js"></script>
+    <script src="modules/AdvancedSearchManager.js"></script>
     <script src="modules/GenomeNavigationBar.js"></script>
     <script src="modules/UIManager.js"></script>
     <!-- VSCodeSequenceEditor.js and SequenceEditor.js removed - only using view mode -->

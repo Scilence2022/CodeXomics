@@ -473,9 +473,23 @@ class GenomeBrowser {
             console.error('❌ Error initializing ExternalToolsManager:', error);
         }
 
+        // Step 5.8: Initialize Advanced Search Manager
+        console.log('🔍 About to initialize AdvancedSearchManager...');
+        try {
+            if (typeof AdvancedSearchManager !== 'undefined') {
+                this.advancedSearchManager = new AdvancedSearchManager(this);
+                window.advancedSearchManager = this.advancedSearchManager;
+                console.log('✅ AdvancedSearchManager initialized successfully');
+            } else {
+                console.warn('⚠️ AdvancedSearchManager class not found');
+                this.advancedSearchManager = null;
+            }
+        } catch (error) {
+            console.error('❌ Error initializing AdvancedSearchManager:', error);
+            this.advancedSearchManager = null;
+        }
 
-
-        // Step 5.8: Removed Conversation Evolution System (cleanup completed)
+        // Step 5.9: Removed Conversation Evolution System (cleanup completed)
 
         // Add global tool validation function for debugging
         window.validateAllTools = () => {
@@ -826,6 +840,18 @@ class GenomeBrowser {
         document.getElementById('searchInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.navigationManager.quickSearch();
         });
+
+        // Advanced Search button
+        const advancedSearchBtn = document.getElementById('advancedSearchBtn');
+        if (advancedSearchBtn) {
+            advancedSearchBtn.addEventListener('click', () => {
+                if (this.advancedSearchManager) {
+                    this.advancedSearchManager.showModal();
+                } else {
+                    console.warn('AdvancedSearchManager not initialized');
+                }
+            });
+        }
 
         // Position navigation
         document.getElementById('goToBtn').addEventListener('click', () => this.navigationManager.goToPosition());
