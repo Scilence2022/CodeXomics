@@ -43,6 +43,23 @@
             gap: 15px;
             flex-direction: column;
             align-items: flex-start;
+            flex-shrink: 0;
+        }
+
+        .header-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .header-center .search-box {
+            width: 100%;
+            max-width: 400px;
+            background: #f8f9fa;
+            border: 1px solid #e2e8f0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
         /* Toggle Switch 样式 */
@@ -2418,6 +2435,9 @@
                 </label>
             </div>
         </div>
+        <div class="header-center">
+            <input type="text" class="search-box" placeholder="Search files..." id="searchBox">
+        </div>
         <div class="header-actions" id="headerActions">
             <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()">
                 📂 New Project
@@ -2504,17 +2524,7 @@
             <div class="content-header">
                 <div class="content-title" id="contentTitle"></div>
                 <div class="toolbar">
-                    <input type="text" class="search-box" placeholder="Search files..." id="searchBox">
 
-                    <!-- Toggle Switch for Details Panel -->
-                    <div class="toggle-switch-container">
-                        <label class="toggle-switch" title="Toggle Details Panel (F9)">
-                            <input type="checkbox" id="detailsPanelToggle"
-                                onchange="projectManagerWindow.toggleDetailsPanel()">
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">Details Panel</span>
-                        </label>
-                    </div>
 
                     <!-- View Mode Selector -->
                     <div class="view-mode-selector">
@@ -2539,6 +2549,16 @@
                         title="Create new data type folder">
                         🗂️ New Data Folder
                     </button>
+
+                    <!-- Toggle Switch for Details Panel -->
+                    <div class="toggle-switch-container" style="margin-left: auto;">
+                        <label class="toggle-switch" title="Toggle Details Panel (F9)">
+                            <input type="checkbox" id="detailsPanelToggle"
+                                onchange="projectManagerWindow.toggleDetailsPanel()">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Details Panel</span>
+                        </label>
+                    </div>
 
                 </div>
             </div>
