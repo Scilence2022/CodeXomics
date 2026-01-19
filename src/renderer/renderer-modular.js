@@ -3503,41 +3503,57 @@ class GenomeBrowser {
 
                     switch (topTrackType) {
                         case 'genes':
-                            const geneElements = topContent.querySelectorAll('.gene-element');
-                            if (geneElements.length > 0) {
-                                let maxRow = 0;
-                                let elementHeight = 23;
-                                geneElements.forEach(gene => {
-                                    const top = parseInt(gene.style.top) || 0;
-                                    const height = parseInt(gene.style.height) || elementHeight;
-                                    maxRow = Math.max(maxRow, top + height);
-                                });
-                                optimalHeight = Math.max(100, maxRow + 60);
+                            // Use TrackRenderer's layout data for accurate height calculation
+                            // Genes are rendered via canvas, not DOM elements
+                            if (this.trackRenderer) {
+                                const settings = this.trackRenderer.getGeneTrackSettings?.() || {};
+                                const layoutMode = settings.layoutMode || 'expanded';
+                                const isCompact = layoutMode === 'compact';
+                                const geneHeight = settings.geneHeight || (isCompact ? 8 : 12);
+                                const rowSpacing = isCompact ? 2 : 6;
+                                const rulerHeight = 35;
+                                const maxRows = settings.maxRows || 6;
+
+                                // Get actual canvas element to determine if there's content
+                                const canvas = topContent.querySelector('canvas');
+                                if (canvas && canvas.height > 0) {
+                                    // Use canvas height as a reference, but apply minimum
+                                    optimalHeight = Math.max(120, canvas.height);
+                                } else {
+                                    // Calculate based on maxRows setting
+                                    optimalHeight = rulerHeight + 10 + (maxRows * (geneHeight + rowSpacing));
+                                }
+
+                                // Ensure reasonable bounds
+                                optimalHeight = Math.max(100, Math.min(optimalHeight, 400));
                             } else {
-                                optimalHeight = 100;
+                                // Fallback: reasonable default for genes track
+                                optimalHeight = 160;
                             }
                             break;
                         case 'reads':
-                            const readElements = topContent.querySelectorAll('.read-element');
-                            if (readElements.length > 0) {
-                                let maxRow = 0;
-                                let elementHeight = 12;
-                                readElements.forEach(read => {
-                                    const top = parseInt(read.style.top) || 0;
-                                    const height = parseInt(read.style.height) || elementHeight;
-                                    maxRow = Math.max(maxRow, top + height);
-                                });
-                                optimalHeight = Math.max(80, maxRow + 40);
+                            // Reads are also canvas-rendered
+                            if (this.trackRenderer) {
+                                const canvas = topContent.querySelector('canvas');
+                                if (canvas && canvas.height > 0) {
+                                    optimalHeight = Math.max(100, Math.min(canvas.height, 300));
+                                } else {
+                                    optimalHeight = 150;
+                                }
                             } else {
-                                optimalHeight = 80;
+                                optimalHeight = 150;
                             }
                             break;
                         case 'gc':
-                            optimalHeight = 120; // Updated for enhanced GC Content & Skew track
+                            optimalHeight = 120; // Fixed height for GC Content & Skew track
                             break;
                         case 'variants':
-                            const variantElements = topContent.querySelectorAll('.variant-element');
-                            if (variantElements.length > 0) {
+                            // Check for canvas-based variants or SVG elements
+                            const canvas = topContent.querySelector('canvas');
+                            const variantSvg = topContent.querySelector('svg');
+                            if (canvas && canvas.height > 0) {
+                                optimalHeight = Math.max(60, Math.min(canvas.height, 150));
+                            } else if (variantSvg) {
                                 optimalHeight = 80;
                             } else {
                                 optimalHeight = 60;
@@ -3547,8 +3563,17 @@ class GenomeBrowser {
                             optimalHeight = 90;
                             break;
                         case 'wigTracks':
-                            // For WIG tracks, use a default optimal height
+                            // WIG tracks typically use fixed height
                             optimalHeight = 120;
+                            break;
+                        case 'blast':
+                            optimalHeight = 100;
+                            break;
+                        case 'actions':
+                            optimalHeight = 60;
+                            break;
+                        case 'sequenceLine':
+                            optimalHeight = 40;
                             break;
                         default:
                             optimalHeight = 80;
