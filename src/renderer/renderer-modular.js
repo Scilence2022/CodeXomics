@@ -189,6 +189,12 @@ class GenomeBrowser {
         // Initialize ConfigManager first
         this.configManager = new ConfigManager();
 
+        // Initialize SidecarManager for per-file metadata (notes, attachments)
+        this.sidecarManager = typeof SidecarManager !== 'undefined' ? new SidecarManager() : null;
+        if (this.sidecarManager) {
+            console.log('✅ SidecarManager initialized');
+        }
+
         this.fileManager = new FileManager(this);
         this.trackRenderer = new TrackRenderer(this);
         this.navigationManager = new NavigationManager(this);
@@ -430,7 +436,7 @@ class GenomeBrowser {
         console.log('📎 About to initialize GeneAttachmentsManager...');
         try {
             if (typeof GeneAttachmentsManager !== 'undefined') {
-                this.geneAttachmentsManager = new GeneAttachmentsManager(this, this.configManager);
+                this.geneAttachmentsManager = new GeneAttachmentsManager(this, this.configManager, this.sidecarManager);
                 window.geneAttachmentsManager = this.geneAttachmentsManager;
                 console.log('✅ GeneAttachmentsManager initialized successfully');
             } else {
@@ -446,7 +452,7 @@ class GenomeBrowser {
         console.log('📝 About to initialize GeneNotesManager...');
         try {
             if (typeof GeneNotesManager !== 'undefined') {
-                this.geneNotesManager = new GeneNotesManager(this, this.configManager);
+                this.geneNotesManager = new GeneNotesManager(this, this.configManager, this.sidecarManager);
                 window.geneNotesManager = this.geneNotesManager;
                 console.log('✅ GeneNotesManager initialized successfully');
             } else {

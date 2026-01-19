@@ -22,10 +22,10 @@ class FileManager {
     openSpecificFileType(fileType, options = {}) {
         // Close the dropdown menu before opening file dialog
         this.genomeBrowser.uiManager.closeFileDropdown();
-        
+
         const input = document.createElement('input');
         input.type = 'file';
-        
+
         // Set specific file filters based on type
         switch (fileType) {
             case 'genome':
@@ -55,7 +55,7 @@ class FileManager {
                 input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig,.bw,.bigwig,.json,.csv,.tsv,.txt,.operon';
                 break;
         }
-        
+
         input.onchange = (e) => {
             if (e.target.files.length > 0) {
                 if (fileType === 'tracks' && e.target.files.length > 1) {
@@ -92,7 +92,7 @@ class FileManager {
             }
 
             console.log('📄 Blast results file content loaded successfully');
-            
+
             // Parse JSON data
             let blastResults;
             try {
@@ -144,7 +144,7 @@ class FileManager {
             const extension = fileInfo.info.extension.toLowerCase();
             console.log('📄 File extension:', extension);
             let operonData;
-            
+
             switch (extension) {
                 case '.json':
                     operonData = this.parseOperonJSON(fileContent.data);
@@ -165,12 +165,12 @@ class FileManager {
 
             // Store operon data in genome browser
             this.genomeBrowser.loadedOperons = operonData;
-            
+
             // Clear operon mapping cache to force re-mapping with new operons
             this.genomeBrowser.mappedOperons = null;
             this.genomeBrowser.operonMappingChromosome = null;
             console.log('🗑️ Cleared operon mapping cache');
-            
+
             this.genomeBrowser.currentFile = {
                 path: filePath,
                 info: fileInfo.info,
@@ -187,7 +187,7 @@ class FileManager {
             if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
                 // If genome is loaded, refresh the view to show operons
                 const sequence = this.genomeBrowser.currentSequence[currentChr];
-                
+
                 // Validate sequence is a string (defensive programming)
                 if (typeof sequence !== 'string') {
                     console.warn('⚠️ Sequence is not a string type:', typeof sequence);
@@ -214,7 +214,7 @@ class FileManager {
     parseOperonJSON(content) {
         try {
             const data = JSON.parse(content);
-            
+
             // Handle different JSON formats
             if (Array.isArray(data)) {
                 return data.map(operon => this.normalizeOperonData(operon));
@@ -233,7 +233,7 @@ class FileManager {
     parseOperonCSV(content) {
         const lines = content.split('\n').filter(line => line.trim());
         const operons = [];
-        
+
         // Skip header if present
         let startIndex = 0;
         if (lines.length > 0 && lines[0].toLowerCase().includes('operon')) {
@@ -245,7 +245,7 @@ class FileManager {
             if (!line) continue;
 
             const columns = line.split(',').map(col => col.trim().replace(/^["']|["']$/g, ''));
-            
+
             if (columns.length < 4) {
                 console.warn(`Skipping invalid operon line ${i + 1}: insufficient columns`);
                 continue;
@@ -269,48 +269,48 @@ class FileManager {
     parseOperonTSV(content) {
         console.log('📝 Parsing TSV operon file (RegulonDB format)...');
         console.log('Content preview:', content.substring(0, 200));
-        
+
         if (!content || typeof content !== 'string') {
             console.error('❌ Invalid content for TSV parsing');
             return [];
         }
-        
+
         const lines = content.split('\n');
         const operons = [];
         let headerLine = null;
-        
+
         console.log(`📊 Total lines: ${lines.length}`);
-        
+
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            
+
             // Skip empty lines
             if (!line || !line.trim()) {
                 continue;
             }
-            
+
             const trimmedLine = line.trim();
-            
+
             // Skip comment lines (starting with #)
             if (trimmedLine.startsWith('#')) {
                 continue;
             }
-            
+
             // Detect header line (contains column numbers like "1)" or field names)
             if (trimmedLine.includes('operonId') || trimmedLine.includes('1)operonId')) {
                 headerLine = trimmedLine;
                 console.log(`📋 Found header line at line ${i + 1}`);
                 continue;
             }
-            
+
             // Parse data line
             const columns = trimmedLine.split('\t');
-            
+
             if (columns.length < 7) {
                 console.warn(`⚠️ Skipping line ${i + 1}: insufficient columns (${columns.length})`);
                 continue;
             }
-            
+
             // RegulonDB TSV format:
             // Column 0: operonId (e.g., RDBECOLIOPC00001)
             // Column 1: operonName (e.g., ispDF)
@@ -321,7 +321,7 @@ class FileManager {
             // Column 6: operonGenes (semicolon-separated gene names)
             // Column 7: operonEvidence (optional)
             // Column 8: confidenceLevel (optional: W/S/C)
-            
+
             const operonId = columns[0].trim();
             const operonName = columns[1].trim();
             const start = parseInt(columns[2]);
@@ -331,16 +331,16 @@ class FileManager {
             const genesStr = columns[6].trim();
             const evidence = columns[7] ? columns[7].trim() : '';
             const confidenceLevelStr = columns[8] ? columns[8].trim() : 'W';
-            
+
             // Parse strand (forward = 1, reverse = -1)
             let strand = 1;
             if (strandStr === 'reverse' || strandStr === '-') {
                 strand = -1;
             }
-            
+
             // Parse genes (semicolon-separated)
             const genes = genesStr ? genesStr.split(';').map(g => g.trim()).filter(g => g) : [];
-            
+
             // Map confidence level to numeric score
             let confidence = 0.5; // default for W (Weak)
             if (confidenceLevelStr === 'C') {
@@ -348,7 +348,7 @@ class FileManager {
             } else if (confidenceLevelStr === 'S') {
                 confidence = 0.8; // Strong
             }
-            
+
             const operon = {
                 id: operonId,
                 name: operonName,
@@ -363,9 +363,9 @@ class FileManager {
                 source: 'RegulonDB',
                 chromosome: this.genomeBrowser.currentChromosome || 'unknown'
             };
-            
+
             operons.push(this.normalizeOperonData(operon));
-            
+
             if (operons.length <= 5) {
                 console.log(`✅ Parsed operon: ${operonName} (${genes.length} genes, ${strandStr}, confidence: ${confidenceLevelStr})`);
             }
@@ -378,36 +378,36 @@ class FileManager {
     parseOperonTXT(content) {
         console.log('📝 Parsing TXT operon file...');
         console.log('Content preview:', content.substring(0, 200));
-        
+
         if (!content || typeof content !== 'string') {
             console.error('❌ Invalid content for TXT parsing');
             return [];
         }
-        
+
         const lines = content.split('\n');
         const operons = [];
-        
+
         console.log(`📊 Total lines: ${lines.length}`);
-        
+
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            
+
             // Skip empty lines and comments
             if (!line || !line.trim() || line.trim().startsWith('#')) {
                 continue;
             }
-            
+
             const trimmedLine = line.trim();
             console.log(`🔍 Processing line ${i + 1}: ${trimmedLine.substring(0, 50)}...`);
 
             // Try different text formats
             let operon;
-            
+
             // Check if line contains tabs (tab-separated format)
             if (trimmedLine.includes('\t')) {
                 const tabSeparated = trimmedLine.split('\t');
                 console.log(`📋 Tab-separated fields: ${tabSeparated.length}`);
-                
+
                 if (tabSeparated.length >= 4) {
                     operon = {
                         name: tabSeparated[0].trim(),
@@ -427,7 +427,7 @@ class FileManager {
             else if (trimmedLine.includes(' ')) {
                 const spaceSeparated = trimmedLine.split(/\s+/);
                 console.log(`📋 Space-separated fields: ${spaceSeparated.length}`);
-                
+
                 if (spaceSeparated.length >= 4) {
                     operon = {
                         name: spaceSeparated[0],
@@ -509,14 +509,14 @@ class FileManager {
             // Check file size and warn for very large files (excluding SAM/BAM which use dynamic loading)
             const fileSizeMB = fileInfo.info.size / (1024 * 1024);
             const extension = fileInfo.info.extension.toLowerCase();
-            
+
             // Get streaming threshold from track settings for consistent behavior
             const readsSettings = this.genomeBrowser.trackRenderer.getTrackSettings('reads');
             const streamingThreshold = readsSettings.streamingThreshold || 50;
-            
+
             // Skip warning for SAM/BAM files since they use dynamic loading and can handle large files efficiently
             const usesDynamicLoading = extension === '.sam' || extension === '.bam';
-            
+
             if (fileSizeMB > streamingThreshold && !usesDynamicLoading) {
                 const proceed = confirm(
                     `This file is ${fileSizeMB.toFixed(1)} MB. Large files may take time to load and parse. Continue?`
@@ -537,7 +537,7 @@ class FileManager {
             // BAM files should always use loadFileRegular() -> parseBAM() -> BamReader
             // SAM files can be extremely large and benefit from streaming even at smaller sizes
             const shouldUseStreaming = (extension === '.sam' && fileSizeMB > streamingThreshold);
-            
+
             if (shouldUseStreaming) {
                 console.log(`Using streaming mode for large SAM file: ${fileSizeMB.toFixed(1)} MB`);
                 await this.loadFileStream(filePath);
@@ -545,7 +545,7 @@ class FileManager {
                 console.log(`Using regular loading for ${extension} file: ${fileSizeMB.toFixed(1)} MB`);
                 await this.loadFileRegular(filePath, options);
             }
-            
+
             // Update UI
             this.genomeBrowser.updateFileInfo();
             this.genomeBrowser.hideWelcomeScreen();
@@ -554,12 +554,22 @@ class FileManager {
             // Auto-enable tracks for the loaded file type
             this.autoEnableTracksForFileType(extension);
 
+            // Reload gene notes and attachments from sidecar file for the newly loaded file
+            if (this.genomeBrowser.geneNotesManager && typeof this.genomeBrowser.geneNotesManager.reloadForFile === 'function') {
+                await this.genomeBrowser.geneNotesManager.reloadForFile();
+                console.log('📝 Gene notes reloaded for new file');
+            }
+            if (this.genomeBrowser.geneAttachmentsManager && typeof this.genomeBrowser.geneAttachmentsManager.reloadForFile === 'function') {
+                await this.genomeBrowser.geneAttachmentsManager.reloadForFile();
+                console.log('📎 Gene attachments reloaded for new file');
+            }
+
         } catch (error) {
             console.error('Error loading file:', error);
-            
+
             // Provide more helpful error messages for common issues
             let errorMessage = error.message;
-            
+
             if (error.message.includes('Cannot create a string longer than')) {
                 errorMessage = `File is too large to load into memory (JavaScript string limit exceeded). 
                 
@@ -579,12 +589,12 @@ The file is too large for the available system memory. Please try:
 
 File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024)).toFixed(1) + ' MB' : 'Unknown'}`;
             }
-            
+
             this.genomeBrowser.updateStatus(`Error: ${errorMessage}`);
-            
+
             // Show a more user-friendly alert for memory-related errors
-            if (error.message.includes('Cannot create a string longer than') || 
-                error.message.includes('out of memory') || 
+            if (error.message.includes('Cannot create a string longer than') ||
+                error.message.includes('out of memory') ||
                 error.message.includes('Maximum call stack')) {
                 alert(`Failed to load file due to size/memory limitations:\n\n${errorMessage}`);
             } else {
@@ -603,23 +613,23 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             const totalMB = (fileSize / (1024 * 1024)).toFixed(1);
             this.genomeBrowser.updateStatus(`Reading file... ${progress}% (${readMB}/${totalMB} MB)`);
         };
-        
+
         ipcRenderer.on('file-read-progress', progressHandler);
 
         // Read file content
         this.genomeBrowser.updateStatus('Reading file content...');
         const fileData = await ipcRenderer.invoke('read-file', filePath);
-        
+
         // Remove progress listener
         ipcRenderer.removeListener('file-read-progress', progressHandler);
-        
+
         // Check if this is a BigWig file by extension
         const isBigWigFile = filePath.toLowerCase().endsWith('.bw') || filePath.toLowerCase().endsWith('.bigwig');
-        
+
         if (isBigWigFile) {
             this.genomeBrowser.updateStatus('BigWig file detected, switching to BigWig parsing mode...');
             console.log(`BigWig file detected: ${filePath}`);
-            
+
             // Skip regular text file reading for BigWig files - they're binary
             this.currentFile.data = null; // BigWig files don't use text data
             await this.parseFile(options);
@@ -629,23 +639,23 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             if (fileData.isBamFile) {
                 this.genomeBrowser.updateStatus('BAM file detected, switching to BAM parsing mode...');
                 console.log(`BAM file detected: ${(fileData.fileSize / (1024 * 1024)).toFixed(1)} MB`);
-                
+
                 // Skip regular file reading for BAM files - they'll be handled by BAM parser
                 this.currentFile.data = null; // BAM files don't use text data
                 await this.parseFile(options);
                 return;
             }
-            
+
             // Check if the error is due to file being too large for memory
             if (fileData.requiresStreaming) {
                 this.genomeBrowser.updateStatus('File too large for memory loading, switching to streaming...');
                 console.log(`File is too large (${(fileData.fileSize / (1024 * 1024)).toFixed(1)} MB), using streaming mode`);
-                
+
                 // Automatically switch to streaming mode
                 await this.loadFileStream(filePath);
                 return;
             }
-            
+
             throw new Error(fileData.error);
         }
 
@@ -659,47 +669,47 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         // Skip full file analysis for SAM files - initialize streaming mode directly
         try {
             console.log('🚀 Initializing large SAM file in streaming mode (skipping full analysis)...');
-            
+
             // Get basic file information without reading content
             const fileStats = await ipcRenderer.invoke('get-file-info', filePath);
             if (!fileStats.success) {
                 throw new Error(fileStats.error);
             }
-            
+
             const fileSizeMB = (fileStats.info.size / (1024 * 1024)).toFixed(1);
-            
+
             this.genomeBrowser.updateStatus(`🧬 Initializing large SAM file (${fileSizeMB} MB) in streaming mode...`);
-            
+
             // Don't store the data - just set up streaming mode
             this.currentFile.data = null; // Explicitly set to null to save memory
-            
+
             // Initialize ReadsManager in streaming mode without pre-analysis
             console.log(`[FileManager] Initializing ReadsManager with streaming SAM: ${filePath}`);
             await this.genomeBrowser.readsManager.initializeWithStreamingSAM(filePath);
-            
+
             // Provide a rough estimate based on file size for UI purposes
             const estimatedReads = Math.floor(fileStats.info.size / 200); // Rough estimate: ~200 bytes per SAM line
             this.genomeBrowser.readsManager.stats.totalReads = estimatedReads;
-            
+
             // Clear old reads to save memory
             this.genomeBrowser.currentReads = {};
-            
+
             console.log(`✅ Large SAM file ready for on-demand streaming queries`);
             console.log(`   📁 File: ${fileSizeMB} MB`);
             console.log(`   📊 Estimated reads: ${estimatedReads.toLocaleString()}`);
             console.log(`   🔍 Mode: On-demand streaming (no pre-loading)`);
-            
+
             this.genomeBrowser.updateStatus(`✅ SAM file ready: ${fileSizeMB} MB (streaming mode - reads loaded on-demand)`);
-            
+
             // Auto-enable reads track
             this.autoEnableTracksForFileType('.sam');
-            
+
             // If we already have sequence data, refresh the view
             const currentChr = document.getElementById('chromosomeSelect').value;
             if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
                 this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             }
-            
+
         } catch (error) {
             throw new Error(`Failed to initialize streaming SAM file: ${error.message}`);
         }
@@ -708,7 +718,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     async parseFile(options = {}) {
         const extension = this.currentFile.info.extension.toLowerCase();
         console.log('🔍 parseFile() called with extension:', extension, 'and options:', options);
-        
+
         switch (extension) {
             case '.fasta':
             case '.fa':
@@ -756,7 +766,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             const path = require('path');
             const fileDir = path.dirname(this.currentFile.path);
             console.log(`📁 Auto-setting working directory to: ${fileDir}`);
-            
+
             // Call set_working_directory through ChatManager if available
             if (this.genomeBrowser?.chatManager) {
                 try {
@@ -767,7 +777,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 }
             }
         }
-        
+
         const lines = this.currentFile.data.split('\n');
         const sequences = {};
         let currentSeq = null;
@@ -795,30 +805,30 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
         this.genomeBrowser.currentSequence = sequences;
         this.genomeBrowser.populateChromosomeSelect();
-        
+
         // Update export menu state
         if (this.genomeBrowser.exportManager) {
             this.genomeBrowser.exportManager.updateExportMenuState();
         }
-        
+
         // Update all tabs with loaded genome data
         if (this.genomeBrowser.tabManager) {
             this.genomeBrowser.tabManager.onGenomeLoaded(sequences, this.currentFile?.path);
         }
-        
+
         // Show notification about working directory
         if (this.currentFile?.path) {
             const path = require('path');
             const fileDir = path.dirname(this.currentFile.path);
             this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
         }
-        
+
         // Select first chromosome by default
         const firstChr = Object.keys(sequences)[0];
         if (firstChr) {
             this.genomeBrowser.selectChromosome(firstChr);
         }
-        
+
         // Update loaded files list
         this.updateLoadedFilesList();
     }
@@ -829,13 +839,13 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         if (!this.currentFile?.data) {
             throw new Error('No file data available for GenBank parsing');
         }
-        
+
         // Auto-set working directory to the GBK file's directory
         if (this.currentFile?.path) {
             const path = require('path');
             const fileDir = path.dirname(this.currentFile.path);
             console.log(`📁 Auto-setting working directory to: ${fileDir}`);
-            
+
             // Call set_working_directory through ChatManager if available
             if (this.genomeBrowser?.chatManager) {
                 try {
@@ -846,10 +856,10 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 }
             }
         }
-        
+
         const lines = this.currentFile.data.split('\n');
         console.log(`📄 Total lines to parse: ${lines.length}`);
-        
+
         const sequences = {};
         const annotations = {};
         let currentSeq = null;
@@ -858,24 +868,24 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         let features = [];
         let currentFeature = null;
         let currentQualifierKey = null;
-        
+
         // Progress tracking for large files
         const totalLines = lines.length;
         let processedLines = 0;
         const updateInterval = Math.max(1000, Math.floor(totalLines / 100)); // Update every 1% or 1000 lines
-        
+
         this.genomeBrowser.updateStatus('Parsing GenBank file...');
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const trimmed = line.trim();
-            
+
             // Update progress for large files
             processedLines++;
             if (processedLines % updateInterval === 0) {
                 const progress = Math.round((processedLines / totalLines) * 100);
                 this.genomeBrowser.updateStatus(`Parsing GenBank file... ${progress}%`);
-                
+
                 // Allow UI to update for large files
                 if (totalLines > 50000) {
                     await new Promise(resolve => setTimeout(resolve, 0));
@@ -906,12 +916,12 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 const featureMatch = line.match(/^\s{5}(\w+)\s+(.+)/);
                 if (featureMatch) {
                     const [, type, location] = featureMatch;
-                    
+
                     // Save previous feature if it exists
                     if (currentFeature) {
                         this.finalizeFeature(currentFeature);
                     }
-                    
+
                     currentFeature = {
                         type: type,
                         location: location,
@@ -923,9 +933,9 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                         product: null,
                         note: null
                     };
-                    
+
                     currentQualifierKey = null;
-                    
+
                     // Parse location
                     this.parseGenBankLocation(currentFeature, location);
                     features.push(currentFeature);
@@ -939,17 +949,17 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 if (qualMatch) {
                     const [, key, value] = qualMatch;
                     currentQualifierKey = key;
-                    
+
                     if (value !== undefined) {
                         // Handle quoted values and start of multi-line values
                         let cleanValue = value.replace(/^"/, '').replace(/"$/, '');
-                        
+
                         // For very long qualifiers like translation, limit initial storage
                         if (key === 'translation' && cleanValue.length > 1000) {
                             // Store only first part for memory efficiency
                             cleanValue = cleanValue.substring(0, 100) + '...';
                         }
-                        
+
                         // Support multiple values for the same qualifier key
                         if (currentFeature.qualifiers[key]) {
                             // If key already exists, convert to array or append to existing array
@@ -979,19 +989,19 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 }
                 continue;
             }
-            
+
             // Handle multi-line qualifier values - improved efficiency
             if (line.match(/^\s{21}[^\/]/) && currentFeature && currentQualifierKey) {
                 const continuationValue = line.trim().replace(/^"/, '').replace(/"$/, '');
-                
+
                 // Get the current qualifier value (handle both single values and arrays)
                 let currentValue = currentFeature.qualifiers[currentQualifierKey];
-                
+
                 // If it's an array, work with the last element
                 if (Array.isArray(currentValue)) {
                     const lastIndex = currentValue.length - 1;
                     currentValue = currentValue[lastIndex];
-                    
+
                     // For translation qualifiers, skip most of the content to save memory
                     if (currentQualifierKey === 'translation') {
                         // Only keep the first part, ignore the rest
@@ -1046,12 +1056,12 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             if (line.startsWith('ORIGIN')) {
                 inOrigin = true;
                 console.log(`Found ORIGIN section, parsed ${features.length} features`);
-                
+
                 // Process the last feature
                 if (currentFeature) {
                     this.finalizeFeature(currentFeature);
                 }
-                
+
                 annotations[currentSeq] = features;
                 this.genomeBrowser.updateStatus(`Parsed ${features.length} features, reading sequence...`);
                 continue;
@@ -1080,43 +1090,43 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
         console.log(`Final results: ${Object.keys(sequences).length} sequences, ${Object.keys(annotations).length} annotation sets`);
         console.log('Sequences:', Object.keys(sequences));
-        
+
         // Extract and store source feature information separately for metadata
         this.extractSourceFeatures(annotations);
-        
+
         this.genomeBrowser.currentSequence = sequences;
         this.genomeBrowser.currentAnnotations = annotations;
-        
+
         // Log parsing results
         const totalFeatures = Object.values(annotations).reduce((sum, feats) => sum + feats.length, 0);
         console.log(`GenBank parsing complete: ${Object.keys(sequences).length} sequence(s), ${totalFeatures} features`);
-        
+
         this.genomeBrowser.populateChromosomeSelect();
-        
+
         // Update export menu state
         if (this.genomeBrowser.exportManager) {
             this.genomeBrowser.exportManager.updateExportMenuState();
         }
-        
+
         // Update all tabs with loaded genome data
         if (this.genomeBrowser.tabManager) {
             this.genomeBrowser.tabManager.onGenomeLoaded(sequences, this.currentFile?.path);
         }
-        
+
         // Show notification about working directory
         if (this.currentFile?.path) {
             const path = require('path');
             const fileDir = path.dirname(this.currentFile.path);
             this.genomeBrowser.showNotification(`Working directory set to: ${path.basename(fileDir)}`, 'info');
         }
-        
+
         // Select first chromosome by default
         const firstChr = Object.keys(sequences)[0];
         if (firstChr) {
             console.log(`Selecting first chromosome: ${firstChr}`);
             this.genomeBrowser.selectChromosome(firstChr);
         }
-        
+
         // Update loaded files list
         this.updateLoadedFilesList();
     }
@@ -1126,20 +1136,20 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
      */
     getQualifierValue(qualifiers, key) {
         if (!qualifiers || !qualifiers[key]) return null;
-        
+
         const value = qualifiers[key];
         if (Array.isArray(value)) {
             return value.length > 0 ? value[0] : null;
         }
         return value;
     }
-    
+
     /**
      * Helper function to get all values from a qualifier as an array
      */
     getAllQualifierValues(qualifiers, key) {
         if (!qualifiers || !qualifiers[key]) return [];
-        
+
         const value = qualifiers[key];
         if (Array.isArray(value)) {
             return value;
@@ -1152,7 +1162,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         const geneName = this.getQualifierValue(feature.qualifiers, 'gene');
         const locusTag = this.getQualifierValue(feature.qualifiers, 'locus_tag');
         const product = this.getQualifierValue(feature.qualifiers, 'product');
-        
+
         if (geneName) {
             feature.name = geneName;
         } else if (locusTag) {
@@ -1160,12 +1170,12 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         } else if (product) {
             feature.name = product;
         }
-        
+
         // Add product information
         if (product) {
             feature.product = product;
         }
-        
+
         // Add note information
         const note = this.getQualifierValue(feature.qualifiers, 'note');
         if (note) {
@@ -1178,7 +1188,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
      */
     extractSourceFeatures(annotations) {
         const sourceFeatures = {};
-        
+
         for (const [chromosome, features] of Object.entries(annotations)) {
             const sourceFeature = features.find(feature => feature.type.toLowerCase() === 'source');
             if (sourceFeature) {
@@ -1200,7 +1210,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 };
             }
         }
-        
+
         // Store source features in genome browser for later access
         this.genomeBrowser.sourceFeatures = sourceFeatures;
         console.log('📋 Extracted source features:', sourceFeatures);
@@ -1266,34 +1276,34 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 this.currentFile.path || this.currentFile.info.path,
                 this.currentFile.data
             );
-            
+
             console.log(`✅ VCF file added to multi-file manager: ${result.fileId}`);
-            
+
             // For backward compatibility, also update currentVariants if this is the first VCF file
             const vcfFiles = this.genomeBrowser.multiFileManager.getVcfFiles();
             if (vcfFiles.length === 1) {
                 this.genomeBrowser.currentVariants = vcfFiles[0].data;
             }
-            
+
             this.genomeBrowser.updateStatus(`✅ VCF file loaded: ${result.metadata.name} (${result.metadata.variantCount} variants)`);
-        
-        // Update all tabs with new VCF data
-        if (this.genomeBrowser.tabManager) {
-            this.genomeBrowser.tabManager.onAdditionalFileLoaded('vcf', this.genomeBrowser.currentVariants, this.currentFile?.path);
-        }
-        
-        // Auto-enable variants track
-        this.autoEnableTracksForFileType('.vcf');
-        
-        // If we already have sequence data, refresh the view
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-            this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+
+            // Update all tabs with new VCF data
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.onAdditionalFileLoaded('vcf', this.genomeBrowser.currentVariants, this.currentFile?.path);
             }
-            
+
+            // Auto-enable variants track
+            this.autoEnableTracksForFileType('.vcf');
+
+            // If we already have sequence data, refresh the view
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            }
+
             // Update loaded files list
             this.updateLoadedFilesList();
-            
+
         } catch (error) {
             console.error('❌ VCF parsing failed:', error);
             this.genomeBrowser.updateStatus(`Failed to load VCF file: ${error.message}`, 'error');
@@ -1304,25 +1314,25 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     async parseSAM() {
         // Initialize the reads manager with the SAM data instead of parsing all reads into memory
         await this.genomeBrowser.readsManager.initializeWithSAMData(this.currentFile.data, this.currentFile.info.path);
-        
+
         // Clear the old currentReads to save memory - ReadsManager will handle reads dynamically
         this.genomeBrowser.currentReads = {};
-        
+
         // Log initialization
         const stats = this.genomeBrowser.readsManager.getCacheStats();
         console.log(`SAM file initialized with ReadsManager - estimated ${stats.totalReads} reads`);
-        
+
         this.genomeBrowser.updateStatus(`Initialized SAM file with dynamic loading (${stats.totalReads} reads estimated)`);
-        
+
         // Auto-enable reads track
         this.autoEnableTracksForFileType('.sam');
-        
+
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
         }
-        
+
         // Update loaded files list
         this.updateLoadedFilesList();
     }
@@ -1332,19 +1342,19 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             // Import BamReader module (ES6 module)
             if (typeof BamReader === 'undefined') {
                 console.log('Loading BamReader module...');
-                
+
                 // Load BamReader as a regular script (not ES6 module) for Electron compatibility
                 try {
                     const script = document.createElement('script');
                     script.src = './modules/BamReader.js';
                     document.head.appendChild(script);
-                    
+
                     // Wait for BamReader to be available
                     await new Promise((resolve, reject) => {
                         const timeout = setTimeout(() => {
                             reject(new Error('BamReader loading timeout'));
                         }, 10000);
-                        
+
                         script.onload = () => {
                             clearTimeout(timeout);
                             // Wait a bit more for the class to be available
@@ -1368,42 +1378,42 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             }
 
             this.genomeBrowser.updateStatus('🧬 Initializing BAM file with multi-file support...');
-            
+
             // Add to multi-file manager
             const result = await this.genomeBrowser.multiFileManager.addBamFile(this.currentFile.path);
-            
+
             console.log(`✅ BAM file added to multi-file manager: ${result.fileId}`);
-            
+
             // For backward compatibility, also initialize single-file mode if this is the first BAM file
             const bamFiles = this.genomeBrowser.multiFileManager.getBamFiles();
             if (bamFiles.length === 1) {
                 // Store BAM reader for backward compatibility
                 this.genomeBrowser.bamReader = bamFiles[0].reader;
-            
+
                 // Initialize ReadsManager with first BAM file
                 await this.genomeBrowser.readsManager.initializeWithBAMReader(bamFiles[0].reader);
-            
-            // Clear old reads to save memory
-            this.genomeBrowser.currentReads = {};
+
+                // Clear old reads to save memory
+                this.genomeBrowser.currentReads = {};
             }
-            
+
             // Create informative status message
             const stats = result.metadata.stats;
-            const statusMessage = stats.hasIndex ? 
+            const statusMessage = stats.hasIndex ?
                 `✅ BAM file loaded: ${result.metadata.name} (${stats.references.length} chromosomes, indexed)` :
                 `⚠️ BAM file loaded: ${result.metadata.name} (${stats.references.length} chromosomes, no index)`;
-            
+
             this.genomeBrowser.updateStatus(statusMessage);
-            
+
             // Auto-enable reads track when BAM file is loaded
             console.log('🔧 [FileManager] Auto-enabling reads track after BAM file load');
             if (!this.genomeBrowser.visibleTracks.has('reads')) {
                 this.genomeBrowser.visibleTracks.add('reads');
-                
+
                 // Update UI checkboxes to reflect this change
                 const trackReadsCheckbox = document.getElementById('trackReads');
                 const sidebarTrackReadsCheckbox = document.getElementById('sidebarTrackReads');
-                
+
                 if (trackReadsCheckbox) {
                     trackReadsCheckbox.checked = true;
                     console.log('🔧 [FileManager] Updated toolbar reads checkbox');
@@ -1412,7 +1422,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                     sidebarTrackReadsCheckbox.checked = true;
                     console.log('🔧 [FileManager] Updated sidebar reads checkbox');
                 }
-                
+
                 // Trigger view refresh to show the reads track
                 if (this.genomeBrowser.currentChromosome && this.genomeBrowser.currentSequence) {
                     console.log('🔧 [FileManager] Refreshing view to show reads track');
@@ -1424,28 +1434,28 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                     }, 100); // Small delay to ensure everything is properly initialized
                 }
             }
-            
+
             // Update all tabs with new BAM data
             if (this.genomeBrowser.tabManager) {
                 this.genomeBrowser.tabManager.onAdditionalFileLoaded('bam', null, this.currentFile?.path);
             }
-            
+
             // Show index recommendation if no index found
             if (!stats.hasIndex) {
                 console.warn('💡 Recommendation: Create an index for faster queries:');
                 console.warn('   samtools index your_file.bam');
             }
-            
+
             // Update loaded files list
             this.updateLoadedFilesList();
-            
+
         } catch (error) {
             console.error('❌ Error parsing BAM file:', error);
-            
+
             // Provide helpful error message
             let errorMessage = error.message;
-            
-            if (error.message.includes('Cannot resolve module') || 
+
+            if (error.message.includes('Cannot resolve module') ||
                 error.message.includes('BamReader is not defined') ||
                 error.message.includes('Failed to load BamReader') ||
                 error.message.includes('@gmod/bam')) {
@@ -1471,7 +1481,7 @@ The BAM file will still work but may be slower for large files.
 
 Original error: ${error.message}`;
             }
-            
+
             throw new Error(errorMessage);
         }
     }
@@ -1481,22 +1491,22 @@ Original error: ${error.message}`;
         const lines = this.currentFile.data.split('\n');
         const newAnnotations = {};
         let featureCount = 0;
-        
+
         for (const line of lines) {
             const trimmed = line.trim();
-            
+
             // Skip header lines and empty lines
             if (trimmed.startsWith('#') || !trimmed) continue;
-            
+
             const fields = trimmed.split('\t');
             if (fields.length < 9) continue;
-            
+
             const [seqname, source, feature, start, end, score, strand, frame, attribute] = fields;
-            
+
             if (!newAnnotations[seqname]) {
                 newAnnotations[seqname] = [];
             }
-            
+
             // Parse attributes
             const qualifiers = {};
             const attrs = attribute.split(';');
@@ -1506,7 +1516,7 @@ Original error: ${error.message}`;
                     qualifiers[key.trim()] = value.trim().replace(/"/g, '');
                 }
             }
-            
+
             const annotation = {
                 type: feature,
                 start: parseInt(start),
@@ -1516,22 +1526,22 @@ Original error: ${error.message}`;
                 source: source,
                 qualifiers: qualifiers
             };
-            
+
             newAnnotations[seqname].push(annotation);
             featureCount++;
         }
-        
+
         // Use mergeWithExisting option if provided, otherwise show dialog
         const mergeWithExisting = options.mergeWithExisting;
         let userChoice;
-        
+
         if (mergeWithExisting !== undefined) {
             userChoice = mergeWithExisting ? 'merge' : 'new';
         } else {
             // Fallback to original behavior if no option provided
             userChoice = this.showAnnotationLoadDialog(featureCount);
         }
-        
+
         if (userChoice === 'merge') {
             // Merge with existing annotations instead of replacing
             this.mergeAnnotations(newAnnotations);
@@ -1542,7 +1552,7 @@ Original error: ${error.message}`;
             this.createNewAnnotationTrack(newAnnotations, trackName, 'gff');
             this.genomeBrowser.updateStatus(`Loaded GFF file with ${featureCount} features for ${Object.keys(newAnnotations).length} sequence(s). Created new track: ${trackName}`);
         }
-        
+
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
@@ -1555,32 +1565,32 @@ Original error: ${error.message}`;
         const newAnnotations = {};
         let featureCount = 0;
         let trackInfo = null;
-        
+
         for (const line of lines) {
             const trimmed = line.trim();
-            
+
             // Skip empty lines
             if (!trimmed) continue;
-            
+
             // Parse track header line
             if (trimmed.startsWith('track')) {
                 trackInfo = this.parseBEDTrackHeader(trimmed);
                 continue;
             }
-            
+
             // Skip comment lines
             if (trimmed.startsWith('#')) continue;
-            
+
             const fields = trimmed.split('\t');
             if (fields.length < 3) continue;
-            
+
             const chrom = fields[0];
             const start = parseInt(fields[1]);
             const end = parseInt(fields[2]);
             const name = fields[3] || `BED_feature_${featureCount + 1}`;
             const score = fields[4] ? parseFloat(fields[4]) : 1000;
             const strand = fields[5] === '-' ? -1 : 1;
-            
+
             // Parse additional BED fields if present
             const thickStart = fields[6] ? parseInt(fields[6]) : start;
             const thickEnd = fields[7] ? parseInt(fields[7]) : end;
@@ -1588,11 +1598,11 @@ Original error: ${error.message}`;
             const blockCount = fields[9] ? parseInt(fields[9]) : 1;
             const blockSizes = fields[10] ? fields[10].split(',').map(s => parseInt(s)) : [end - start];
             const blockStarts = fields[11] ? fields[11].split(',').map(s => parseInt(s)) : [0];
-            
+
             if (!newAnnotations[chrom]) {
                 newAnnotations[chrom] = [];
             }
-            
+
             const annotation = {
                 type: 'BED_feature',
                 start: start + 1, // Convert to 1-based
@@ -1612,22 +1622,22 @@ Original error: ${error.message}`;
                     description: trackInfo?.description || 'BED annotation'
                 }
             };
-            
+
             newAnnotations[chrom].push(annotation);
             featureCount++;
         }
-        
+
         // Use mergeWithExisting option if provided, otherwise show dialog
         const mergeWithExisting = options.mergeWithExisting;
         let userChoice;
-        
+
         if (mergeWithExisting !== undefined) {
             userChoice = mergeWithExisting ? 'merge' : 'new';
         } else {
             // Fallback to original behavior if no option provided
             userChoice = this.showAnnotationLoadDialog(featureCount);
         }
-        
+
         if (userChoice === 'merge') {
             // Merge with existing annotations instead of replacing
             this.mergeAnnotations(newAnnotations);
@@ -1638,29 +1648,29 @@ Original error: ${error.message}`;
             this.createNewAnnotationTrack(newAnnotations, trackName, 'bed');
             this.genomeBrowser.updateStatus(`Loaded BED file with ${featureCount} features for ${Object.keys(newAnnotations).length} chromosome(s). Created new track: ${trackName}`);
         }
-        
+
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
         }
     }
-    
+
     parseBEDTrackHeader(headerLine) {
         // Parse track header line: track name=CHOPCHOP description=lysC visibility="pack" itemRgb="On"
         const trackInfo = {};
         const matches = headerLine.match(/(\w+)="?([^"\s]+)"?/g);
-        
+
         if (matches) {
             matches.forEach(match => {
                 const [key, value] = match.split('=');
                 trackInfo[key] = value.replace(/"/g, '');
             });
         }
-        
+
         return trackInfo;
     }
-    
+
     /**
      * Merge new annotations with existing annotations
      * @param {Object} newAnnotations - New annotations to merge
@@ -1670,31 +1680,31 @@ Original error: ${error.message}`;
         if (!this.genomeBrowser.currentAnnotations) {
             this.genomeBrowser.currentAnnotations = {};
         }
-        
+
         // Merge annotations for each chromosome
         Object.keys(newAnnotations).forEach(chromosome => {
             if (!this.genomeBrowser.currentAnnotations[chromosome]) {
                 this.genomeBrowser.currentAnnotations[chromosome] = [];
             }
-            
+
             // Add new annotations to existing ones
             const existingCount = this.genomeBrowser.currentAnnotations[chromosome].length;
             this.genomeBrowser.currentAnnotations[chromosome].push(...newAnnotations[chromosome]);
             const newCount = this.genomeBrowser.currentAnnotations[chromosome].length;
-            
+
             console.log(`Merged ${newCount - existingCount} new annotations for chromosome ${chromosome} (total: ${newCount})`);
         });
-        
+
         // Update loaded files list
         if (!this.genomeBrowser.loadedFiles) {
             this.genomeBrowser.loadedFiles = [];
         }
-        
+
         // Add file to loaded files if not already present
         const fileName = this.currentFile.info.name;
         const fileExtension = this.currentFile.info.extension.toLowerCase();
         const fileType = this.getFileTypeFromExtension(fileExtension);
-        
+
         const existingFile = this.genomeBrowser.loadedFiles.find(file => file.name === fileName);
         if (!existingFile) {
             this.genomeBrowser.loadedFiles.push({
@@ -1706,7 +1716,7 @@ Original error: ${error.message}`;
             });
         }
     }
-    
+
     /**
      * Update the loaded files list in the genome browser
      * This method adds the current file to the loaded files array if not already present
@@ -1716,18 +1726,18 @@ Original error: ${error.message}`;
         if (!this.genomeBrowser.loadedFiles) {
             this.genomeBrowser.loadedFiles = [];
         }
-        
+
         // Ensure current file exists
         if (!this.currentFile || !this.currentFile.info) {
             console.warn('⚠️ Cannot update loaded files list: no current file');
             return;
         }
-        
+
         // Add file to loaded files if not already present
         const fileName = this.currentFile.info.name;
         const fileExtension = this.currentFile.info.extension.toLowerCase();
         const fileType = this.getFileTypeFromExtension(fileExtension);
-        
+
         const existingFile = this.genomeBrowser.loadedFiles.find(file => file.name === fileName);
         if (!existingFile) {
             this.genomeBrowser.loadedFiles.push({
@@ -1742,7 +1752,7 @@ Original error: ${error.message}`;
             console.log(`📋 File ${fileName} already in loaded files list`);
         }
     }
-    
+
     /**
      * Get file type from extension
      * @param {string} extension - File extension
@@ -1758,7 +1768,7 @@ Original error: ${error.message}`;
         const userChoice = confirm(`${message}\n\nClick OK to merge with existing Genes & Features track\nClick Cancel to create a new independent track`);
         return userChoice ? 'merge' : 'new';
     }
-    
+
     /**
      * Create a new annotation track with the given annotations
      * @param {Object} annotations - Annotations organized by chromosome
@@ -1770,7 +1780,7 @@ Original error: ${error.message}`;
         if (!this.genomeBrowser.annotationTracks) {
             this.genomeBrowser.annotationTracks = [];
         }
-        
+
         // Create a new track object
         const newTrack = {
             id: `annotation_track_${Date.now()}`,
@@ -1780,14 +1790,14 @@ Original error: ${error.message}`;
             color: this.generateRandomColor(),
             visible: true
         };
-        
+
         // Add the new track to the annotation tracks list
         this.genomeBrowser.annotationTracks.push(newTrack);
-        
+
         // Add file to loaded files list
         this.updateLoadedFilesList();
     }
-    
+
     /**
      * Generate a random color for a new annotation track
      * @returns {string} Random hex color
@@ -1799,7 +1809,7 @@ Original error: ${error.message}`;
         ];
         return colors[Math.floor(Math.random() * colors.length)];
     }
-    
+
     getFileTypeFromExtension(extension) {
         const typeMap = {
             '.bed': 'BED',
@@ -1818,7 +1828,7 @@ Original error: ${error.message}`;
             '.gbk': 'GenBank',
             '.gbff': 'GenBank'
         };
-        
+
         return typeMap[extension] || 'Unknown';
     }
 
@@ -1826,7 +1836,7 @@ Original error: ${error.message}`;
         console.log('Starting WIG parsing...');
         const lines = this.currentFile.data.split('\n');
         console.log(`Total lines to parse: ${lines.length}`);
-        
+
         const wigTracks = {};
         let currentTrack = null;
         let currentChromosome = null;
@@ -1835,32 +1845,32 @@ Original error: ${error.message}`;
         let currentSpan = 1;
         let isFixedStep = false;
         let isVariableStep = false;
-        
+
         // Progress tracking for large files
         const totalLines = lines.length;
         let processedLines = 0;
         const updateInterval = Math.max(1000, Math.floor(totalLines / 100));
-        
+
         this.genomeBrowser.updateStatus('Parsing WIG file...');
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
-            
+
             // Update progress for large files
             processedLines++;
             if (processedLines % updateInterval === 0) {
                 const progress = Math.round((processedLines / totalLines) * 100);
                 this.genomeBrowser.updateStatus(`Parsing WIG file... ${progress}%`);
-                
+
                 // Allow UI to update for large files
                 if (totalLines > 10000) {
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
             }
-            
+
             // Skip empty lines and comments
             if (!line || line.startsWith('#')) continue;
-            
+
             // Parse track definition line
             if (line.startsWith('track')) {
                 const trackParams = this.parseWIGTrackLine(line);
@@ -1879,7 +1889,7 @@ Original error: ${error.message}`;
                 console.log(`Created WIG track: ${currentTrack.name}`);
                 continue;
             }
-            
+
             // Parse declaration lines
             if (line.startsWith('fixedStep')) {
                 const params = this.parseWIGDeclarationLine(line);
@@ -1889,7 +1899,7 @@ Original error: ${error.message}`;
                 currentSpan = params.span || 1;
                 isFixedStep = true;
                 isVariableStep = false;
-                
+
                 // Ensure track exists
                 if (!currentTrack) {
                     currentTrack = {
@@ -1905,21 +1915,21 @@ Original error: ${error.message}`;
                     };
                     wigTracks[currentTrack.name] = currentTrack;
                 }
-                
+
                 // Initialize chromosome data
                 if (!currentTrack.data[currentChromosome]) {
                     currentTrack.data[currentChromosome] = [];
                 }
                 continue;
             }
-            
+
             if (line.startsWith('variableStep')) {
                 const params = this.parseWIGDeclarationLine(line);
                 currentChromosome = params.chrom;
                 currentSpan = params.span || 1;
                 isFixedStep = false;
                 isVariableStep = true;
-                
+
                 // Ensure track exists
                 if (!currentTrack) {
                     currentTrack = {
@@ -1935,14 +1945,14 @@ Original error: ${error.message}`;
                     };
                     wigTracks[currentTrack.name] = currentTrack;
                 }
-                
+
                 // Initialize chromosome data
                 if (!currentTrack.data[currentChromosome]) {
                     currentTrack.data[currentChromosome] = [];
                 }
                 continue;
             }
-            
+
             // Parse data lines
             if (currentTrack && currentChromosome) {
                 if (isFixedStep) {
@@ -1973,21 +1983,21 @@ Original error: ${error.message}`;
                 }
             }
         }
-        
+
         // Store WIG tracks data - merge with existing tracks instead of replacing
         const existingWIGTracks = this.genomeBrowser.currentWIGTracks || {};
-        
+
         // Handle track name conflicts by renaming duplicates
         Object.keys(wigTracks).forEach(trackName => {
             let finalTrackName = trackName;
             let counter = 1;
-            
+
             // If track name already exists, add a number suffix
             while (existingWIGTracks[finalTrackName]) {
                 finalTrackName = `${trackName}_${counter}`;
                 counter++;
             }
-            
+
             // If we had to rename, update the track name
             if (finalTrackName !== trackName) {
                 wigTracks[finalTrackName] = wigTracks[trackName];
@@ -1996,34 +2006,34 @@ Original error: ${error.message}`;
                 console.log(`Renamed duplicate track "${trackName}" to "${finalTrackName}"`);
             }
         });
-        
+
         // Merge new tracks with existing tracks
         this.genomeBrowser.currentWIGTracks = { ...existingWIGTracks, ...wigTracks };
-        
+
         const totalTracksAfterMerge = Object.keys(this.genomeBrowser.currentWIGTracks).length;
         const newTracksCount = Object.keys(wigTracks).length;
-        
+
         console.log(`Merged ${newTracksCount} new WIG tracks. Total tracks: ${totalTracksAfterMerge}`);
-        
+
         // Log track statistics
         Object.entries(wigTracks).forEach(([trackName, track]) => {
             const totalDataPoints = Object.values(track.data).reduce((sum, chrData) => sum + chrData.length, 0);
             console.log(`WIG Track "${trackName}": ${totalDataPoints} data points across ${Object.keys(track.data).length} chromosomes`);
         });
-        
+
         this.genomeBrowser.updateStatus(`Added ${newTracksCount} WIG track(s). Total: ${totalTracksAfterMerge} tracks`);
-        
+
         // Update all tabs with new WIG data
         if (this.genomeBrowser.tabManager) {
             this.genomeBrowser.tabManager.onAdditionalFileLoaded('wig', this.genomeBrowser.currentWIGTracks, this.currentFile?.path);
         }
-        
+
         // Only auto-enable WIG tracks if this is not part of a multiple file loading operation
         // (to avoid multiple calls that cause duplication)
         if (!this._isLoadingMultipleWIGFiles) {
             this.autoEnableTracksForFileType('.wig');
         }
-        
+
         // If we already have sequence data, refresh the view (only for single file loading)
         if (!this._isLoadingMultipleWIGFiles) {
             const currentChr = document.getElementById('chromosomeSelect').value;
@@ -2031,35 +2041,35 @@ Original error: ${error.message}`;
                 this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             }
         }
-        
+
         // Update loaded files list
         this.updateLoadedFilesList();
     }
-    
+
     async parseBigWig() {
         console.log('Starting BigWig parsing...');
         const filePath = this.currentFile.path;
-        
+
         try {
             // Import the BigWig parser and file handle
             const { BigWig } = require('@gmod/bbi');
             const { LocalFile } = require('generic-filehandle2');
-            
+
             this.genomeBrowser.updateStatus('Loading BigWig file...');
-            
+
             // Initialize the BigWig file
             const file = new BigWig({
                 filehandle: new LocalFile(filePath),
             });
-            
+
             // Get header info to check available chromosomes
             const header = await file.getHeader();
             console.log('BigWig Header:', header);
-            
+
             // Create a new track for this BigWig file
             const fileName = this.currentFile.info.name.replace(/\.(bw|bigwig)$/i, '');
             const wigTracks = {};
-            
+
             // Create track object
             const trackName = fileName;
             const currentTrack = {
@@ -2074,26 +2084,26 @@ Original error: ${error.message}`;
                 data: {},
                 bigWigFile: filePath // Store the file path for on-demand loading
             };
-            
+
             wigTracks[currentTrack.name] = currentTrack;
-            
+
             // For BigWig, we don't load all data upfront - we'll load it on demand
             // So we just initialize the track structure
-            
+
             // Store WIG tracks data - merge with existing tracks instead of replacing
             const existingWIGTracks = this.genomeBrowser.currentWIGTracks || {};
-            
+
             // Handle track name conflicts by renaming duplicates
             Object.keys(wigTracks).forEach(trackName => {
                 let finalTrackName = trackName;
                 let counter = 1;
-                
+
                 // If track name already exists, add a number suffix
                 while (existingWIGTracks[finalTrackName]) {
                     finalTrackName = `${trackName}_${counter}`;
                     counter++;
                 }
-                
+
                 // If we had to rename, update the track name
                 if (finalTrackName !== trackName) {
                     wigTracks[finalTrackName] = wigTracks[trackName];
@@ -2102,27 +2112,27 @@ Original error: ${error.message}`;
                     console.log(`Renamed duplicate track "${trackName}" to "${finalTrackName}"`);
                 }
             });
-            
+
             // Merge new tracks with existing tracks
             this.genomeBrowser.currentWIGTracks = { ...existingWIGTracks, ...wigTracks };
-            
+
             const totalTracksAfterMerge = Object.keys(this.genomeBrowser.currentWIGTracks).length;
             const newTracksCount = Object.keys(wigTracks).length;
-            
+
             console.log(`Merged ${newTracksCount} new BigWig tracks. Total tracks: ${totalTracksAfterMerge}`);
-            
+
             this.genomeBrowser.updateStatus(`Added ${newTracksCount} BigWig track(s). Total: ${totalTracksAfterMerge} tracks`);
-            
+
             // Update all tabs with new BigWig data
             if (this.genomeBrowser.tabManager) {
                 this.genomeBrowser.tabManager.onAdditionalFileLoaded('wig', this.genomeBrowser.currentWIGTracks, this.currentFile?.path);
             }
-            
+
             // Only auto-enable BigWig tracks if this is not part of a multiple file loading operation
             if (!this._isLoadingMultipleWIGFiles) {
                 this.autoEnableTracksForFileType('.bw');
             }
-            
+
             // If we already have sequence data, refresh the view (only for single file loading)
             if (!this._isLoadingMultipleWIGFiles) {
                 const currentChr = document.getElementById('chromosomeSelect').value;
@@ -2130,19 +2140,19 @@ Original error: ${error.message}`;
                     this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
                 }
             }
-            
+
             // Update loaded files list
             this.updateLoadedFilesList();
-            
+
         } catch (error) {
             console.error('Error parsing BigWig file:', error);
             throw new Error(`Failed to parse BigWig file: ${error.message}`);
         }
     }
-    
+
     parseWIGTrackLine(line) {
         const params = {};
-        
+
         // Extract parameters from track line
         // Format: track type=wiggle_0 name="Track Name" description="Description" visibility=full
         const matches = line.match(/(\w+)=(?:"([^"]*)"|(\S+))/g);
@@ -2152,13 +2162,13 @@ Original error: ${error.message}`;
                 params[key] = quotedValue || unquotedValue;
             });
         }
-        
+
         return params;
     }
-    
+
     parseWIGDeclarationLine(line) {
         const params = {};
-        
+
         // Extract parameters from declaration line
         // Format: fixedStep chrom=chr1 start=1 step=1 span=1
         const matches = line.match(/(\w+)=(\S+)/g);
@@ -2172,7 +2182,7 @@ Original error: ${error.message}`;
                 }
             });
         }
-        
+
         return params;
     }
 
@@ -2246,16 +2256,16 @@ Original error: ${error.message}`;
         // Check if tracks need to be enabled (avoid duplicate enabling)
         let tracksAlreadyEnabled = true;
         let enabledAnyTrack = false;
-        
+
         tracksToEnable.forEach(trackType => {
             // Check if track is already enabled
             const toolbarChecked = trackCheckboxes.toolbar[trackType] && trackCheckboxes.toolbar[trackType].checked;
             const sidebarChecked = trackCheckboxes.sidebar[trackType] && trackCheckboxes.sidebar[trackType].checked;
             const inVisibleTracks = this.genomeBrowser.visibleTracks.has(trackType);
-            
+
             if (!toolbarChecked || !sidebarChecked || !inVisibleTracks) {
                 tracksAlreadyEnabled = false;
-                
+
                 // Enable in toolbar
                 if (trackCheckboxes.toolbar[trackType] && !trackCheckboxes.toolbar[trackType].checked) {
                     trackCheckboxes.toolbar[trackType].checked = true;
@@ -2276,7 +2286,7 @@ Original error: ${error.message}`;
         if (enabledAnyTrack && !tracksAlreadyEnabled) {
             // Update the genome view to show the new tracks
             this.genomeBrowser.updateVisibleTracks();
-            
+
             // Show status message
             this.genomeBrowser.updateStatus(statusMessage);
         } else if (tracksToEnable.length > 0 && tracksAlreadyEnabled) {
@@ -2301,10 +2311,10 @@ Original error: ${error.message}`;
             for (let i = 0; i < filePaths.length; i++) {
                 const filePath = filePaths[i];
                 const fileName = filePath.split('/').pop();
-                
+
                 try {
                     this.genomeBrowser.updateStatus(`Processing WIG file ${i + 1}/${filePaths.length}: ${fileName}`);
-                    
+
                     // Get file info
                     const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
                     if (!fileInfo.success) {
@@ -2334,14 +2344,14 @@ Original error: ${error.message}`;
                     }
                     const tracksAfter = Object.keys(this.genomeBrowser.currentWIGTracks || {}).length;
                     const newTracksFromThisFile = tracksAfter - tracksBefore;
-                    
+
                     results.push({
                         file: fileName,
                         status: 'success',
                         tracks: newTracksFromThisFile
                     });
                     successCount++;
-                    
+
                 } catch (error) {
                     console.error(`Error loading WIG file ${fileName}:`, error);
                     results.push({
@@ -2359,7 +2369,7 @@ Original error: ${error.message}`;
             // Update UI
             this.genomeBrowser.updateFileInfo();
             this.genomeBrowser.hideWelcomeScreen();
-            
+
             // Auto-enable WIG tracks only once for all loaded files
             if (successCount > 0) {
                 this.autoEnableTracksForFileType('.wig');
@@ -2374,7 +2384,7 @@ Original error: ${error.message}`;
             // Show summary
             const summary = this.createMultipleWIGLoadSummary(results, successCount, errorCount);
             this.genomeBrowser.updateStatus(summary.statusText);
-            
+
             // Show detailed results if there were any errors
             if (errorCount > 0) {
                 this.showMultipleWIGLoadResults(results);

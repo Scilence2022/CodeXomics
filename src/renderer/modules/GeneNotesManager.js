@@ -4,9 +4,10 @@
  */
 
 class GeneNotesManager {
-    constructor(genomeBrowser, configManager) {
+    constructor(genomeBrowser, configManager, sidecarManager = null) {
         this.genomeBrowser = genomeBrowser;
         this.configManager = configManager;
+        this.sidecarManager = sidecarManager;
         this.notes = new Map(); // geneId -> note object
         this.currentGeneId = null;
         this.isNotesVisible = false;
@@ -99,33 +100,49 @@ class GeneNotesManager {
     }
 
     /**
-     * Persist notes to ConfigManager
+     * Persist notes to sidecar file (or fallback to ConfigManager)
      */
     async persistNotes() {
-        if (!this.configManager) return;
-
         try {
             const data = {};
             for (const [geneId, note] of this.notes) {
                 data[geneId] = note;
             }
-            this.configManager.set('geneNotes.data', data);
-            console.log('💾 Notes saved');
+
+            // Use sidecar manager if available and file is loaded
+            const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
+            if (this.sidecarManager && currentFilePath) {
+                await this.sidecarManager.set(currentFilePath, 'geneNotes', data);
+                console.log('💾 Notes saved to sidecar file');
+            } else if (this.configManager) {
+                // Fallback to ConfigManager (legacy behavior)
+                this.configManager.set('geneNotes.data', data);
+                console.log('💾 Notes saved to config (fallback)');
+            }
         } catch (error) {
             console.error('Error persisting notes:', error);
         }
     }
 
     /**
-     * Load notes from ConfigManager
+     * Load notes from sidecar file (or fallback to ConfigManager)
      */
     async loadNotes() {
-        if (!this.configManager) return;
-
         try {
-            const data = this.configManager.get('geneNotes.data', {});
-            this.notes.clear();
+            let data = {};
 
+            // Use sidecar manager if available and file is loaded
+            const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
+            if (this.sidecarManager && currentFilePath) {
+                data = await this.sidecarManager.get(currentFilePath, 'geneNotes') || {};
+                console.log(`📂 Loading notes from sidecar file: ${currentFilePath}`);
+            } else if (this.configManager) {
+                // Fallback to ConfigManager (legacy behavior)
+                data = this.configManager.get('geneNotes.data', {});
+                console.log('📂 Loading notes from config (fallback)');
+            }
+
+            this.notes.clear();
             for (const [geneId, note] of Object.entries(data)) {
                 if (note && note.content) {
                     this.notes.set(geneId, note);
@@ -136,6 +153,13 @@ class GeneNotesManager {
         } catch (error) {
             console.error('Error loading notes:', error);
         }
+    }
+
+    /**
+     * Reload notes for the current file (call when file changes)
+     */
+    async reloadForFile() {
+        await this.loadNotes();
     }
 
     /**

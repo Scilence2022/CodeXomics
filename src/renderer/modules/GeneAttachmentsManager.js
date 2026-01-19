@@ -4,9 +4,10 @@
  */
 
 class GeneAttachmentsManager {
-    constructor(genomeBrowser, configManager) {
+    constructor(genomeBrowser, configManager, sidecarManager = null) {
         this.genomeBrowser = genomeBrowser;
         this.configManager = configManager;
+        this.sidecarManager = sidecarManager;
         this.attachments = new Map(); // geneId -> [attachment objects]
         this.settings = {
             maxFileSizeMB: 50,
@@ -388,11 +389,9 @@ class GeneAttachmentsManager {
     }
 
     /**
-     * Save attachment metadata to ConfigManager
+     * Save attachment metadata to sidecar file (or fallback to ConfigManager)
      */
     async saveAttachmentMetadata() {
-        if (!this.configManager) return;
-
         try {
             // Convert Map to plain object for storage
             const metadata = {};
@@ -400,21 +399,38 @@ class GeneAttachmentsManager {
                 metadata[geneId] = attachments;
             }
 
-            this.configManager.set('geneAttachments.metadata', metadata);
-            console.log('💾 Saved attachment metadata');
+            // Use sidecar manager if available and file is loaded
+            const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
+            if (this.sidecarManager && currentFilePath) {
+                await this.sidecarManager.set(currentFilePath, 'geneAttachments', metadata);
+                console.log('💾 Saved attachment metadata to sidecar file');
+            } else if (this.configManager) {
+                // Fallback to ConfigManager (legacy behavior)
+                this.configManager.set('geneAttachments.metadata', metadata);
+                console.log('💾 Saved attachment metadata to config (fallback)');
+            }
         } catch (error) {
             console.error('Error saving attachment metadata:', error);
         }
     }
 
     /**
-     * Load attachment metadata from ConfigManager
+     * Load attachment metadata from sidecar file (or fallback to ConfigManager)
      */
     async loadAttachmentMetadata() {
-        if (!this.configManager) return;
-
         try {
-            const metadata = this.configManager.get('geneAttachments.metadata', {});
+            let metadata = {};
+
+            // Use sidecar manager if available and file is loaded
+            const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
+            if (this.sidecarManager && currentFilePath) {
+                metadata = await this.sidecarManager.get(currentFilePath, 'geneAttachments') || {};
+                console.log(`📂 Loading attachment metadata from sidecar file: ${currentFilePath}`);
+            } else if (this.configManager) {
+                // Fallback to ConfigManager (legacy behavior)
+                metadata = this.configManager.get('geneAttachments.metadata', {});
+                console.log('📂 Loading attachment metadata from config (fallback)');
+            }
 
             // Convert plain object back to Map
             this.attachments.clear();
@@ -446,6 +462,13 @@ class GeneAttachmentsManager {
         } catch (error) {
             console.error('Error loading attachment metadata:', error);
         }
+    }
+
+    /**
+     * Reload attachments for the current file (call when file changes)
+     */
+    async reloadForFile() {
+        await this.loadAttachmentMetadata();
     }
 
     /**
