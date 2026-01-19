@@ -1,6 +1,6 @@
 # CodeXomics Documentation Index
 
-**Version**: v0.528beta | **Last Updated**: January 2026
+**Version**: v0.529beta | **Last Updated**: January 2026
 
 ---
 

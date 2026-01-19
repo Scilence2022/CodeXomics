@@ -5,12 +5,12 @@
  * across the application. All other files should import from this file.
  * 
  * @author CodeXomics Team
- * @version 0.528
+ * @version 0.529
  */
 
 // Core application version
 const VERSION_MAJOR = 0;
-const VERSION_MINOR = 528;
+const VERSION_MINOR = 529;
 const VERSION_PATCH = 0;
 const VERSION_PRERELEASE = 'beta';
 

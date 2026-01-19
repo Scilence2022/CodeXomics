@@ -5,6 +5,14 @@ All notable changes to CodeXomics will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.529.0-beta] - 2026-01-19 - BETA UPDATE
+
+**🔧 Milestone: UI Improvements for Gene Details**
+
+### ✅ Changes
+- Updated version to v0.529beta
+- Modified Gene Details sidebar attachment button to default to "All Files" filter instead of "Genome Files"
+
 ## [0.528.0-beta] - 2026-01-01 - BETA UPDATE
 
 **🔧 Milestone: Version Update and Build**

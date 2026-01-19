@@ -1,6 +1,6 @@
 # Getting Started with CodeXomics
 
-Welcome to **CodeXomics v0.528beta**! This guide will help you get up and running with the platform quickly and efficiently.
+Welcome to **CodeXomics v0.529beta**! This guide will help you get up and running with the platform quickly and efficiently.
 
 ## 📋 Prerequisites
 
@@ -258,4 +258,4 @@ We'd love to hear about your experience! Please:
 
 **Happy analyzing!** 🧬
 
-*This guide covers CodeXomics v0.528beta. For the latest updates, check the [project repository](https://github.com/Scilence2022/CodeXomics).* 
+*This guide covers CodeXomics v0.529beta. For the latest updates, check the [project repository](https://github.com/Scilence2022/CodeXomics).* 

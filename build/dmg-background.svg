@@ -24,7 +24,7 @@
   <!-- Header text - Using simple styling for maximum compatibility -->
   <text x="330" y="85" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="36" font-weight="bold">CodeXomics</text>
   
-  <text x="330" y="110" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" opacity="0.9">v0.528beta Beta</text>
+  <text x="330" y="110" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" opacity="0.9">v0.529beta Beta</text>
   
   <text x="330" y="130" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="14" opacity="0.8">AI-Powered Bioinformatics Platform</text>
   

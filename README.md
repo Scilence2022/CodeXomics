@@ -8,11 +8,11 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![Electron](https://img.shields.io/badge/Electron-27.3.11-47848f.svg)](https://www.electronjs.org/)
-[![First Release](https://img.shields.io/badge/🧪%20Latest%20Beta-v0.528beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.528beta)
+[![First Release](https://img.shields.io/badge/🧪%20Latest%20Beta-v0.529beta-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.529beta)
 
 A modern, cross-platform bioinformatics analysis platform built with Electron, featuring **multi-agent AI collaboration**, advanced plugin system, MCP integration, and comprehensive biological data analysis tools for exploring genomic, proteomic, and other omics data.
 
-🧪 **[Latest Beta Release - v0.528beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.528beta)** 🧪
+🧪 **[Latest Beta Release - v0.529beta Now Available!](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.529beta)** 🧪
 
 [Features](#-key-features) •
 [Installation](#-installation) •
@@ -105,22 +105,22 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 
 ### **Download Pre-built Releases**
 
-Download the latest version (v0.528beta) for your platform:
+Download the latest version (v0.529beta) for your platform:
 
 #### macOS
-- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.528beta/CodeXomics-0.527.0-beta-x64.dmg)**: `CodeXomics-0.527.0-beta-x64.dmg`
-- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.528beta/CodeXomics-0.527.0-beta-arm64.dmg)**: `CodeXomics-0.527.0-beta-arm64.dmg`
+- **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics-0.529.0-beta-x64.dmg)**: `CodeXomics-0.529.0-beta-x64.dmg`
+- **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics-0.529.0-beta-arm64.dmg)**: `CodeXomics-0.529.0-beta-arm64.dmg`
 
 #### Windows  
-- **[Installer](https://github.com/Scilence2022/CodeXomics/releases/download/v0.528beta/CodeXomics%20Setup%200.527.0-beta.exe)**: `CodeXomics Setup 0.527.0-beta.exe`
-- **[Portable](https://github.com/Scilence2022/CodeXomics/releases/download/v0.528beta/CodeXomics%200.527.0-beta.exe)**: `CodeXomics 0.527.0-beta.exe`
+- **[Installer](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics%20Setup%200.529.0-beta.exe)**: `CodeXomics Setup 0.529.0-beta.exe`
+- **[Portable](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics%200.529.0-beta.exe)**: `CodeXomics 0.529.0-beta.exe`
 
 #### Linux
-- **[AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.528beta/CodeXomics-0.527.0-beta.AppImage)**: `CodeXomics-0.527.0-beta.AppImage`
-- **[Debian](https://github.com/Scilence2022/CodeXomics/releases/download/v0.528beta/codexomics_0.527.0-beta_amd64.deb)**: `codexomics_0.527.0-beta_amd64.deb`
-- **[Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.528beta/codexomics_0.527.0-beta_amd64.snap)**: `codexomics_0.527.0-beta_amd64.snap`
+- **[AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics-0.529.0-beta.AppImage)**: `CodeXomics-0.529.0-beta.AppImage`
+- **[Debian](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/codexomics_0.529.0-beta_amd64.deb)**: `codexomics_0.529.0-beta_amd64.deb`
+- **[Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/codexomics_0.529.0-beta_amd64.snap)**: `codexomics_0.529.0-beta_amd64.snap`
 
-**📋 All Downloads**: [GitHub Releases Page](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.528beta)
+**📋 All Downloads**: [GitHub Releases Page](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.529beta)
 
 ### **Build from Source**
 ```bash
@@ -638,7 +638,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**CodeXomics v0.528beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
+**CodeXomics v0.529beta** - Intelligent Bioinformatics Analysis with Multi-Agent AI
 
 Made with ❤️ by the CodeXomics Team
 
