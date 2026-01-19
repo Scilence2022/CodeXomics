@@ -283,84 +283,44 @@ class TrackRenderer {
         const buttonsContainer = document.createElement('div');
         buttonsContainer.className = 'track-buttons';
 
-        // Add sequence selection button for Genes & Features track
+        // ============================================================
+        // BUTTON ORDER (optimized for usability):
+        // 1. View/Info buttons (gallery, layout, ruler) - leftmost
+        // 2. Action buttons (selection, settings)
+        // 3. Control buttons (lock, hide header)
+        // 4. Close/Hide button - rightmost (standard UI pattern)
+        // ============================================================
+
+        // === GROUP 1: View/Info buttons (track-specific, leftmost) ===
+
+        // Add gallery button for Genes & Features track
         if (trackType === 'genes') {
-            const selectionBtn = document.createElement('button');
-            selectionBtn.className = 'track-btn track-selection-btn';
-            selectionBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i>';
-            selectionBtn.title = 'Toggle sequence selection mode on secondary ruler';
-            selectionBtn.addEventListener('click', (e) => {
+            const galleryBtn = document.createElement('button');
+            galleryBtn.className = 'track-btn track-gallery-btn';
+            galleryBtn.innerHTML = '<i class="fas fa-images"></i>';
+            galleryBtn.title = 'Feature Visualization Examples';
+            galleryBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.toggleSecondaryRulerSelection(trackType);
+                this.openFeatureGallery();
             });
-            buttonsContainer.appendChild(selectionBtn);
-        }
+            buttonsContainer.appendChild(galleryBtn);
 
-        // Settings button
-        const settingsBtn = document.createElement('button');
-        settingsBtn.className = 'track-btn track-settings-btn';
-        settingsBtn.innerHTML = '<i class="fas fa-cog"></i>';
-        settingsBtn.title = 'Track Settings';
-        settingsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.openTrackSettings(trackType);
-        });
+            // Add layout mode toggle button
+            const layoutBtn = document.createElement('button');
+            layoutBtn.className = 'track-btn track-layout-btn';
+            // Set initial icon based on current settings
+            const currentLayout = this.getTrackSettings('genes').layoutMode || 'expanded';
+            layoutBtn.innerHTML = currentLayout === 'compact' ?
+                '<i class="fas fa-compress-alt"></i>' :
+                '<i class="fas fa-expand-alt"></i>';
+            layoutBtn.title = `Switch to ${currentLayout === 'compact' ? 'Expanded' : 'Compact'} Layout`;
 
-        // Toggle controls button
-        const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'track-btn track-toggle-btn';
-        toggleBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
-        toggleBtn.title = 'Toggle Track Controls (Lock/Unlock)';
-        toggleBtn.dataset.locked = 'false';
-        toggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            console.log('Toggle button clicked for track:', trackType);
-            try {
-                this.toggleTrackControls(trackType, toggleBtn);
-            } catch (error) {
-                console.error('Error in toggleTrackControls:', error);
-            }
-        });
-
-        // Hide header button (available for all tracks)
-        const hideHeaderBtn = document.createElement('button');
-        hideHeaderBtn.className = 'track-btn track-hide-header-btn';
-        hideHeaderBtn.innerHTML = '<i class="fas fa-minus"></i>';
-        hideHeaderBtn.title = 'Hide Track Header';
-        hideHeaderBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.toggleTrackHeader(trackType, hideHeaderBtn);
-        });
-
-        // Close button
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'track-btn track-close-btn';
-
-        if (fileId) {
-            // File-specific track - show remove icon and update functionality
-            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-            closeBtn.title = 'Remove Track and File';
-            closeBtn.addEventListener('click', (e) => {
+            layoutBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.removeFileTrack(fileId, trackType);
+                this.toggleTrackLayout(trackType, layoutBtn);
             });
-        } else {
-            // Regular track - show hide icon
-            closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
-            closeBtn.title = 'Hide Track';
-            closeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.closeTrack(trackType);
-            });
-        }
+            buttonsContainer.appendChild(layoutBtn);
 
-        buttonsContainer.appendChild(settingsBtn);
-        buttonsContainer.appendChild(toggleBtn);
-        buttonsContainer.appendChild(hideHeaderBtn);
-        buttonsContainer.appendChild(closeBtn);
-
-        // Add gallery button for Genes & Features track (top-right corner - last button)
-        if (trackType === 'genes') {
             // Add ruler toggle button
             const rulerBtn = document.createElement('button');
             rulerBtn.className = 'track-btn track-ruler-btn';
@@ -369,7 +329,7 @@ class TrackRenderer {
 
             // Set initial state based on persistent storage
             if (!this.elementVisibilityStates.genesRuler) {
-                rulerBtn.classList.add('active'); // active here means hidden/dimmed based on previous logic
+                rulerBtn.classList.add('active');
                 rulerBtn.style.color = '#ccc';
             }
 
@@ -395,35 +355,7 @@ class TrackRenderer {
                 }
             });
             buttonsContainer.appendChild(rulerBtn);
-
-            // Add layout mode toggle button
-            const layoutBtn = document.createElement('button');
-            layoutBtn.className = 'track-btn track-layout-btn';
-            // Set initial icon based on current settings
-            const currentLayout = this.getTrackSettings('genes').layoutMode || 'expanded';
-            layoutBtn.innerHTML = currentLayout === 'compact' ?
-                '<i class="fas fa-compress-alt"></i>' :
-                '<i class="fas fa-expand-alt"></i>';
-            layoutBtn.title = `Switch to ${currentLayout === 'compact' ? 'Expanded' : 'Compact'} Layout`;
-
-            layoutBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleTrackLayout(trackType, layoutBtn);
-            });
-            buttonsContainer.appendChild(layoutBtn);
-
-            const galleryBtn = document.createElement('button');
-            galleryBtn.className = 'track-btn track-gallery-btn';
-            galleryBtn.innerHTML = '<i class="fas fa-images"></i>';
-            galleryBtn.title = 'View visualization examples gallery';
-            galleryBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.openFeatureGallery();
-            });
-            buttonsContainer.appendChild(galleryBtn);
         }
-
-
 
         // Add WIG Track Management toggle button
         if (trackType === 'wigTracks') {
@@ -462,6 +394,86 @@ class TrackRenderer {
             });
             buttonsContainer.appendChild(wiggleBtn);
         }
+
+        // === GROUP 2: Action buttons ===
+
+        // Add sequence selection button for Genes & Features track
+        if (trackType === 'genes') {
+            const selectionBtn = document.createElement('button');
+            selectionBtn.className = 'track-btn track-selection-btn';
+            selectionBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i>';
+            selectionBtn.title = 'Toggle sequence selection mode';
+            selectionBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleSecondaryRulerSelection(trackType);
+            });
+            buttonsContainer.appendChild(selectionBtn);
+        }
+
+        // Settings button
+        const settingsBtn = document.createElement('button');
+        settingsBtn.className = 'track-btn track-settings-btn';
+        settingsBtn.innerHTML = '<i class="fas fa-cog"></i>';
+        settingsBtn.title = 'Track Settings';
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openTrackSettings(trackType);
+        });
+        buttonsContainer.appendChild(settingsBtn);
+
+        // === GROUP 3: Control buttons ===
+
+        // Toggle controls button
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'track-btn track-toggle-btn';
+        toggleBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
+        toggleBtn.title = 'Lock/Unlock Track Controls';
+        toggleBtn.dataset.locked = 'false';
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('Toggle button clicked for track:', trackType);
+            try {
+                this.toggleTrackControls(trackType, toggleBtn);
+            } catch (error) {
+                console.error('Error in toggleTrackControls:', error);
+            }
+        });
+        buttonsContainer.appendChild(toggleBtn);
+
+        // Hide header button
+        const hideHeaderBtn = document.createElement('button');
+        hideHeaderBtn.className = 'track-btn track-hide-header-btn';
+        hideHeaderBtn.innerHTML = '<i class="fas fa-minus"></i>';
+        hideHeaderBtn.title = 'Minimize Track Header';
+        hideHeaderBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleTrackHeader(trackType, hideHeaderBtn);
+        });
+        buttonsContainer.appendChild(hideHeaderBtn);
+
+        // === GROUP 4: Close/Hide button (rightmost - standard UI pattern) ===
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'track-btn track-close-btn';
+
+        if (fileId) {
+            // File-specific track - show remove icon and update functionality
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            closeBtn.title = 'Remove Track';
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeFileTrack(fileId, trackType);
+            });
+        } else {
+            // Regular track - show hide icon
+            closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            closeBtn.title = 'Hide Track';
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.closeTrack(trackType);
+            });
+        }
+        buttonsContainer.appendChild(closeBtn);
 
         trackHeader.appendChild(buttonsContainer);
 

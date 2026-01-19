@@ -328,6 +328,7 @@
     0% {
         transform: rotate(0deg);
     }
+
     100% {
         transform: rotate(360deg);
     }
@@ -520,7 +521,29 @@
     color: #495057;
     border-color: #adb5bd;
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* View/Info buttons - purple/blue tones */
+.track-gallery-btn:hover {
+    color: #9333ea;
+    border-color: #9333ea;
+}
+
+.track-layout-btn:hover {
+    color: #6366f1;
+    border-color: #6366f1;
+}
+
+.track-ruler-btn:hover {
+    color: #0ea5e9;
+    border-color: #0ea5e9;
+}
+
+/* Action buttons - blue tones */
+.track-selection-btn:hover {
+    color: #3b82f6;
+    border-color: #3b82f6;
 }
 
 .track-settings-btn:hover {
@@ -528,6 +551,7 @@
     border-color: #3b82f6;
 }
 
+/* Control buttons - green/amber tones */
 .track-toggle-btn:hover {
     color: #10b981;
     border-color: #10b981;
@@ -539,14 +563,15 @@
     border-color: #f59e0b;
 }
 
+.track-hide-header-btn:hover {
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+/* Close button - red (danger) */
 .track-close-btn:hover {
     color: #ef4444;
     border-color: #ef4444;
-}
-
-.track-gallery-btn:hover {
-    color: #9333ea;
-    border-color: #9333ea;
 }
 
 /* Reset Position Button for Modals */
@@ -582,15 +607,15 @@
     padding: 15px 30px;
     font-size: 1.1rem;
     border-radius: 8px;
-    background: rgba(255,255,255,0.2);
-    border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     color: white;
     transition: all 0.3s ease;
 }
 
 .btn-large:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: rgba(255,255,255,0.5);
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
     transform: translateY(-2px);
 }
 
@@ -623,43 +648,44 @@
 @media (max-width: 768px) {
     .btn {
         padding: 12px 16px;
-        font-size: 16px; /* Prevent zoom on iOS */
+        font-size: 16px;
+        /* Prevent zoom on iOS */
     }
-    
+
     .btn-sm {
         padding: 8px 12px;
         font-size: 14px;
     }
-    
+
     .btn-lg {
         padding: 16px 20px;
         font-size: 18px;
     }
-    
+
     .btn-group {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .btn-group .btn {
         border-radius: 0;
         margin: -1px 0 0 0;
         width: 100%;
     }
-    
+
     .btn-group .btn:first-child {
         border-radius: var(--radius-md) var(--radius-md) 0 0;
         margin-top: 0;
     }
-    
+
     .btn-group .btn:last-child {
         border-radius: 0 0 var(--radius-md) var(--radius-md);
     }
-    
+
     .btn-group .btn:only-child {
         border-radius: var(--radius-md);
     }
-    
+
     .btn-fab {
         bottom: 16px;
         right: 16px;
