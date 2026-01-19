@@ -7390,8 +7390,8 @@ ipcMain.handle('selectMultipleFiles', async () => {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openFile', 'multiSelections'],
       filters: [
-        { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] },
-        { name: 'All Files', extensions: ['*'] }
+        { name: 'All Files', extensions: ['*'] },
+        { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] }
       ],
       title: 'Select Files to Add'
     });
