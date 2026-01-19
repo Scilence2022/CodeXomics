@@ -346,7 +346,8 @@ class CanvasGenesRenderer {
         }
 
         this.ctx.font = `500 ${fontSize}px ${this.settings.fontFamily}`;
-        this.ctx.fillStyle = '#333';
+        this.ctx.font = `500 ${fontSize}px ${this.settings.fontFamily}`;
+        this.ctx.fillStyle = this.settings.geneNameColor || '#333333';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
 

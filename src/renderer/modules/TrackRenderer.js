@@ -2729,7 +2729,7 @@ class TrackRenderer {
         text.setAttribute('font-size', `${fontSize}px`); // Use px for consistent sizing
         text.setAttribute('font-family', settings?.fontFamily || 'Arial, sans-serif');
         text.setAttribute('font-weight', '500'); // Slightly bold for better readability
-        text.setAttribute('fill', '#333');
+        text.setAttribute('fill', settings?.geneNameColor || '#333333');
         text.setAttribute('pointer-events', 'none');
 
         // Enhanced protection against stretching
@@ -10736,6 +10736,11 @@ This action cannot be undone.`;
                     <div class="help-text">Font size for gene names and labels.</div>
                 </div>
                 <div class="form-group">
+                    <label for="genesGeneNameColor">Gene Name Color:</label>
+                    <input type="color" id="genesGeneNameColor" value="${settings.geneNameColor || '#333333'}">
+                    <div class="help-text">Color of the gene name text labels.</div>
+                </div>
+                <div class="form-group">
                     <label for="genesMaxBorderWidth">Maximum Border Width (px):</label>
                     <input type="number" id="genesMaxBorderWidth" min="0.5" max="5" step="0.1" value="${settings.maxBorderWidth !== undefined ? settings.maxBorderWidth : 1}">
                     <div class="help-text">Maximum thickness of gene borders when zoomed in.</div>
@@ -11254,6 +11259,7 @@ This action cannot be undone.`;
                 geneHeight: 24, // Updated default to 24px as requested
                 displayType: 'standard',
                 fontSize: 24, // Updated default to 24px as requested
+                geneNameColor: '#333333', // Default gene name color
                 fontFamily: 'Arial, sans-serif',
                 layoutMode: 'compact', // 'compact' or 'groupByType'
                 enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false, // Inherit from global setting, default to true
@@ -11901,6 +11907,7 @@ This action cannot be undone.`;
                 const heightElement = modal.querySelector('#genesTrackHeight');
                 const geneHeightElement = modal.querySelector('#genesGeneHeight');
                 const fontSizeElement = modal.querySelector('#genesFontSize');
+                const geneNameColorElement = modal.querySelector('#genesGeneNameColor');
                 const fontFamilyElement = modal.querySelector('#genesFontFamily');
                 const layoutModeElement = modal.querySelector('#genesLayoutMode');
                 const enableGlobalDraggingElement = modal.querySelector('#genesEnableGlobalDragging');
@@ -11930,7 +11937,9 @@ This action cannot be undone.`;
                 settings.showOperonsSameRow = showOperonsElement?.checked || false;
                 settings.height = parseInt(heightElement?.value) || 120;
                 settings.geneHeight = parseInt(geneHeightElement?.value) || 12;
+                settings.geneHeight = parseInt(geneHeightElement?.value) || 12;
                 settings.fontSize = parseInt(fontSizeElement?.value) || 11;
+                settings.geneNameColor = geneNameColorElement?.value || '#333333';
                 settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
                 settings.layoutMode = layoutModeElement?.value || 'expanded';
                 settings.enableGlobalDragging = enableGlobalDraggingElement?.checked !== false; // Default to true
