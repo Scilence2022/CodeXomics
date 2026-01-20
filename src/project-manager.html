@@ -1160,6 +1160,8 @@
         /* List View Styles */
         .file-list {
             display: block;
+            overflow-y: auto;
+            max-height: 100%;
         }
 
         .file-list-item {
@@ -1225,6 +1227,11 @@
         }
 
         /* Details View Styles */
+        .file-details {
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
         .file-details-table {
             width: 100%;
             border-collapse: collapse;
@@ -1583,6 +1590,8 @@
 
         .modal-body {
             padding: 25px;
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
         }
 
         .modal-footer {
@@ -2427,6 +2436,46 @@
             max-height: 120px;
             /* 优化flexbox性能 */
             flex-shrink: 0;
+        }
+
+        /* ===== Custom Scrollbar Styling ===== */
+        *::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 4px;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.5) 0%, rgba(118, 75, 162, 0.5) 100%);
+        }
+
+        *::-webkit-scrollbar-thumb:active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.7) 0%, rgba(118, 75, 162, 0.7) 100%);
+        }
+
+        /* ===== Container Constraints for Proper Scrolling ===== */
+        .file-view-container {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-grid,
+        .file-list,
+        .file-details {
+            flex: 1;
+            overflow-y: auto;
         }
     </style>
 </head>
