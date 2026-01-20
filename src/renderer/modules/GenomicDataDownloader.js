@@ -11,7 +11,7 @@ class GenomicDataDownloader {
         this.downloadQueue = [];
         this.isDownloading = false;
         this.currentProject = null;
-        
+
         // API配置
         this.apiConfig = {
             'ncbi-unified': {
@@ -95,16 +95,16 @@ class GenomicDataDownloader {
                 retmax: 50
             }
         };
-        
+
         this.initialize();
     }
-    
+
     initialize() {
         console.log('🧬 Initializing Genomic Data Downloader...');
         this.setupEventListeners();
         this.setupIpcListeners();
     }
-    
+
     setupEventListeners() {
         // 搜索表单
         const searchForm = document.getElementById('searchForm');
@@ -114,44 +114,44 @@ class GenomicDataDownloader {
                 this.performSearch();
             });
         }
-        
+
         // 清除按钮
         const clearBtn = document.getElementById('clearBtn');
         if (clearBtn) {
             clearBtn.addEventListener('click', () => this.clearSearch());
         }
-        
+
         // 目录选择
         const selectDirBtn = document.getElementById('selectDirBtn');
         if (selectDirBtn) {
             selectDirBtn.addEventListener('click', () => this.selectOutputDirectory());
         }
-        
+
         // 文件格式选择 - 实时更新类别预览
         const fileFormatSelect = document.getElementById('fileFormat');
         if (fileFormatSelect) {
             fileFormatSelect.addEventListener('change', () => this.updateCategoryPreviews());
         }
-        
+
         // 下载按钮
         const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
         if (downloadSelectedBtn) {
             downloadSelectedBtn.addEventListener('click', () => this.downloadSelected());
         }
-        
+
         const downloadAllBtn = document.getElementById('downloadAllBtn');
         if (downloadAllBtn) {
             downloadAllBtn.addEventListener('click', () => this.downloadAll());
         }
     }
-    
+
     // Update category previews when file format changes
     updateCategoryPreviews() {
         if (this.searchResults.length > 0) {
             this.displayResults(this.searchResults);
         }
     }
-    
+
     setupIpcListeners() {
         if (window.electronAPI) {
             // 监听下载类型设置
@@ -159,13 +159,13 @@ class GenomicDataDownloader {
                 console.log('📥 Received download type:', downloadType);
                 this.setDownloadType(downloadType);
             });
-            
+
             // 监听当前项目设置
             window.electronAPI.onSetActiveProject((projectInfo) => {
                 console.log('📥 Received project info:', projectInfo);
                 this.setActiveProject(projectInfo);
             });
-            
+
             // Listen for menu actions (Copy, Paste, Cut, Select All)
             if (window.electronAPI.ipcRenderer) {
                 window.electronAPI.ipcRenderer.on('tool-menu-action', (event, action, ...args) => {
@@ -173,18 +173,18 @@ class GenomicDataDownloader {
                     this.handleMenuAction(action, ...args);
                 });
             }
-            
+
             // 获取当前项目信息
             this.getCurrentProject();
         }
     }
-    
+
     /**
      * Handle menu actions from Edit menu (Copy, Paste, Cut, Select All)
      */
     handleMenuAction(action, ...args) {
         const activeElement = document.activeElement;
-        
+
         switch (action) {
             case 'copy':
                 // If focused on input/textarea, let browser handle it
@@ -199,7 +199,7 @@ class GenomicDataDownloader {
                     }
                 }
                 break;
-                
+
             case 'paste':
                 // Only paste to input/textarea elements
                 if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
@@ -211,14 +211,14 @@ class GenomicDataDownloader {
                     });
                 }
                 break;
-                
+
             case 'cut':
                 // If focused on input/textarea, let browser handle it
                 if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
                     document.execCommand('cut');
                 }
                 break;
-                
+
             case 'select-all':
                 // If focused on input/textarea, select all in that field
                 if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
@@ -232,12 +232,12 @@ class GenomicDataDownloader {
                     selection.addRange(range);
                 }
                 break;
-                
+
             default:
                 console.log('Unhandled menu action:', action);
         }
     }
-    
+
     async getCurrentProject() {
         if (window.electronAPI && window.electronAPI.getCurrentProject) {
             try {
@@ -250,14 +250,14 @@ class GenomicDataDownloader {
             }
         }
     }
-    
+
     setActiveProject(projectInfo) {
         this.currentProject = projectInfo;
         console.log('🗂️ Active project set:', projectInfo);
-        
+
         // Clear any existing project status banners first
         this.clearProjectStatusBanner();
-        
+
         // Update default output directory to project folder or show default options
         if (projectInfo && projectInfo.dataFolderPath) {
             const genomesDir = `${projectInfo.dataFolderPath}/genomes`;
@@ -267,7 +267,7 @@ class GenomicDataDownloader {
                 outputDirElement.value = genomesDir;
                 outputDirElement.placeholder = 'Project genomes folder';
             }
-            
+
             // Show project info in UI
             this.showProjectInfo(projectInfo);
         } else {
@@ -277,12 +277,12 @@ class GenomicDataDownloader {
                 outputDirElement.value = '';
                 outputDirElement.placeholder = 'Click "Select Directory" to choose download location';
             }
-            
+
             // Show no project info
             this.showNoProjectInfo();
         }
     }
-    
+
     clearProjectStatusBanner() {
         const databaseInfo = document.getElementById('databaseInfo');
         if (databaseInfo) {
@@ -291,7 +291,7 @@ class GenomicDataDownloader {
             existingBanners.forEach(banner => banner.remove());
         }
     }
-    
+
     showProjectInfo(projectInfo) {
         const databaseInfo = document.getElementById('databaseInfo');
         if (databaseInfo && projectInfo) {
@@ -320,12 +320,12 @@ class GenomicDataDownloader {
                     </div>
                 </div>
             `;
-            
+
             // Insert project info at the beginning
             databaseInfo.insertAdjacentHTML('afterbegin', projectInfoHtml);
         }
     }
-    
+
     showNoProjectInfo() {
         const databaseInfo = document.getElementById('databaseInfo');
         if (databaseInfo) {
@@ -337,37 +337,37 @@ class GenomicDataDownloader {
                     <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 14px;">Select a download directory manually using the "Select Directory" button below.</p>
                 </div>
             `;
-            
+
             // Insert no project info at the beginning
             databaseInfo.insertAdjacentHTML('afterbegin', noProjectInfoHtml);
         }
     }
-    
+
     setDownloadType(downloadType) {
         console.log('🔧 Setting download type:', downloadType);
         this.currentDownloadType = downloadType;
         const config = this.apiConfig[downloadType];
-        
+
         if (config) {
             console.log('✅ Found config for download type:', config.name);
             // 更新标题和描述
             const titleElement = document.getElementById('downloadTitle');
             const descElement = document.getElementById('downloadDescription');
             const databaseInfo = document.getElementById('databaseInfo');
-            
+
             if (titleElement) {
                 titleElement.textContent = `🧬 ${config.name} Download`;
             }
-            
+
             if (descElement) {
                 descElement.textContent = config.description;
             }
-            
+
             if (databaseInfo) {
                 // Save existing project status banner before updating
                 const existingBanner = databaseInfo.querySelector('[data-project-status-banner]');
                 const bannerHTML = existingBanner ? existingBanner.outerHTML : '';
-                
+
                 // Update database info
                 const dbInfoHTML = `
                     <h3>${config.name}</h3>
@@ -375,27 +375,27 @@ class GenomicDataDownloader {
                     <p><strong>API Endpoint:</strong> ${config.baseUrl}</p>
                     <p><strong>Max Results:</strong> ${config.retmax}</p>
                 `;
-                
+
                 // Restore project status banner + new database info
                 databaseInfo.innerHTML = bannerHTML + dbInfoHTML;
             }
-            
+
             // 设置数据库特定选项
             this.setupDatabaseSpecificOptions(downloadType);
-            
+
             console.log(`✅ Set download type to: ${config.name}`);
         } else {
             console.error('❌ No config found for download type:', downloadType);
             console.log('Available configs:', Object.keys(this.apiConfig));
         }
     }
-    
+
     setupDatabaseSpecificOptions(downloadType) {
         const optionsContainer = document.getElementById('databaseSpecificOptions');
         if (!optionsContainer) return;
-        
+
         let optionsHTML = '';
-        
+
         switch (downloadType) {
             case 'ncbi-unified':
                 optionsHTML = `
@@ -429,7 +429,7 @@ class GenomicDataDownloader {
                     </select>
                 `;
                 break;
-                
+
             case 'embl-unified':
                 optionsHTML = `
                     <label class="form-label">Database Type</label>
@@ -457,7 +457,7 @@ class GenomicDataDownloader {
                     </select>
                 `;
                 break;
-                
+
             case 'ncbi-genbank':
             case 'ncbi-refseq':
                 optionsHTML = `
@@ -472,7 +472,7 @@ class GenomicDataDownloader {
                     </div>
                 `;
                 break;
-                
+
             case 'ncbi-sra':
                 optionsHTML = `
                     <label class="form-label">Platform</label>
@@ -494,7 +494,7 @@ class GenomicDataDownloader {
                     </select>
                 `;
                 break;
-                
+
             case 'ensembl-genomes':
                 optionsHTML = `
                     <label class="form-label">Species Division</label>
@@ -515,7 +515,7 @@ class GenomicDataDownloader {
                     </select>
                 `;
                 break;
-                
+
             case 'uniprot-proteins':
                 optionsHTML = `
                     <label class="form-label">Reviewed Status</label>
@@ -534,96 +534,96 @@ class GenomicDataDownloader {
                     </select>
                 `;
                 break;
-                
+
             default:
                 optionsHTML = `
                     <label class="form-label">Additional Filters</label>
                     <input type="text" id="additionalFilters" class="form-input" placeholder="Enter additional search filters">
                 `;
         }
-        
+
         optionsContainer.innerHTML = optionsHTML;
     }
-    
+
     async performSearch() {
         const searchTerm = document.getElementById('searchTerm').value.trim();
         if (!searchTerm) {
             this.showStatusMessage('Please enter a search term', 'error');
             return;
         }
-        
+
         console.log('🔍 Starting search with download type:', this.currentDownloadType);
-        
+
         // Check if download type is set
         if (!this.currentDownloadType) {
             this.showStatusMessage('Download type not set. Please close and reopen the window.', 'error');
             console.error('❌ No download type set. Available types:', Object.keys(this.apiConfig));
             return;
         }
-        
+
         this.showStatusMessage('Searching database...', 'info');
         this.clearResults();
-        
+
         try {
             let results = [];
-            
+
             switch (this.currentDownloadType) {
                 case 'ncbi-unified':
                     // Get the selected database type from the UI
                     const ncbiDb = document.getElementById('ncbiDatabase')?.value || 'nucleotide';
                     results = await this.searchNCBIUnified(searchTerm, ncbiDb);
                     break;
-                    
+
                 case 'embl-unified':
                     // Get the selected database type from the UI
                     const emblDb = document.getElementById('emblDatabase')?.value || 'embl-sequences';
                     results = await this.searchEMBLUnified(searchTerm, emblDb);
                     break;
-                    
+
                 case 'ncbi-genbank':
                 case 'ncbi-refseq':
                 case 'ncbi-sra':
                 case 'ncbi-assembly':
                     results = await this.searchNCBI(searchTerm);
                     break;
-                    
+
                 case 'embl-sequences':
                     results = await this.searchEMBL(searchTerm);
                     break;
-                    
+
                 case 'ensembl-genomes':
                     results = await this.searchEnsembl(searchTerm);
                     break;
-                    
+
                 case 'ena-archive':
                     results = await this.searchENA(searchTerm);
                     break;
-                    
+
                 case 'uniprot-proteins':
                     results = await this.searchUniProt(searchTerm);
                     break;
-                    
+
                 case 'kegg-pathways':
                     results = await this.searchKEGG(searchTerm);
                     break;
-                    
+
                 default:
                     throw new Error('Unsupported download type');
             }
-            
+
             this.searchResults = results;
             this.displayResults(results);
-            
+
             if (results.length > 0) {
                 this.showStatusMessage(`Found ${results.length} results`, 'success');
                 this.enableDownloadButtons();
             } else {
                 // Provide helpful suggestions based on download type and search term
                 let helpMessage = 'No results found. ';
-                
+
                 if (this.currentDownloadType === 'ncbi-unified') {
                     const ncbiDb = document.getElementById('ncbiDatabase')?.value;
-                    
+
                     if (ncbiDb === 'genome' && /^\d+$/.test(searchTerm.trim())) {
                         helpMessage += 'Try: (1) Switch to "RefSeq Genomes" database, or (2) Search "Escherichia coli" instead of strain number.';
                     } else if (/^\d+$/.test(searchTerm.trim())) {
@@ -634,43 +634,43 @@ class GenomicDataDownloader {
                 } else {
                     helpMessage += 'Try using different search terms or check your query.';
                 }
-                
+
                 this.showStatusMessage(helpMessage, 'info');
             }
-            
+
         } catch (error) {
             console.error('Search error:', error);
             this.showStatusMessage(`Search failed: ${error.message}`, 'error');
         }
     }
-    
+
     async searchNCBI(searchTerm) {
         const config = this.apiConfig[this.currentDownloadType];
         const resultsLimit = document.getElementById('resultsLimit').value;
-        
+
         // 构建搜索查询
         let query = searchTerm;
-        
+
         // 添加特定过滤器
         const organism = document.getElementById('organism')?.value;
         if (organism) {
             query += ` AND "${organism}"[Organism]`;
         }
-        
+
         const minLength = document.getElementById('minLength')?.value;
         const maxLength = document.getElementById('maxLength')?.value;
         if (minLength && maxLength) {
             query += ` AND ${minLength}:${maxLength}[SLEN]`;
         }
-        
+
         // Special handling for genome database
         if (config.searchDb === 'genome') {
             console.warn('⚠️ NCBI Genome database in E-utilities is deprecated. Switching to NCBI Datasets API...');
-            
+
             // Use the new NCBI Datasets API instead of E-utilities
             return await this.searchNCBIDatasets(searchTerm, resultsLimit);
         }
-        
+
         // Special handling for assembly database (RefSeq genomes)
         if (config.searchDb === 'assembly') {
             // Optimize query for assembly database
@@ -681,7 +681,7 @@ class GenomicDataDownloader {
             // Add RefSeq filter for assembly database
             query += ' AND ("latest refseq"[Filter] OR "refseq"[Filter])';
         }
-        
+
         // Special handling for nucleotide database with numeric-only searches
         if (config.searchDb === 'nucleotide' && /^\d+$/.test(searchTerm.trim())) {
             // Could be an accession number, GI, or taxonomy ID
@@ -689,18 +689,18 @@ class GenomicDataDownloader {
             // Search in multiple fields
             query = `${searchTerm}[Accession] OR ${searchTerm}[GI] OR txid${searchTerm}[Organism]`;
         }
-        
+
         // NCBI E-utilities搜索
         const searchUrl = `${config.baseUrl}esearch.fcgi?db=${config.searchDb}&term=${encodeURIComponent(query)}&retmax=${resultsLimit}&retmode=json`;
-        
+
         console.log('NCBI Search URL:', searchUrl); // Debug logging
         console.log('NCBI Search Query:', query); // Debug logging
-        
+
         const searchResponse = await fetch(searchUrl);
         const searchData = await searchResponse.json();
-        
+
         console.log('NCBI Search Response:', searchData); // Debug logging
-        
+
         if (!searchData.esearchresult?.idlist?.length) {
             // Provide helpful error message
             if (config.searchDb === 'genome' && /^\d+$/.test(searchTerm.trim())) {
@@ -708,16 +708,16 @@ class GenomicDataDownloader {
             }
             return [];
         }
-        
+
         // 获取详细信息
         const ids = searchData.esearchresult.idlist.join(',');
         const summaryUrl = `${config.baseUrl}esummary.fcgi?db=${config.searchDb}&id=${ids}&retmode=json`;
-        
+
         const summaryResponse = await fetch(summaryUrl);
         const summaryData = await summaryResponse.json();
-        
+
         console.log('NCBI Summary Response:', summaryData); // Debug logging
-        
+
         const results = [];
         for (const id of searchData.esearchresult.idlist) {
             const summary = summaryData.result[id];
@@ -727,10 +727,10 @@ class GenomicDataDownloader {
                 results.push(result);
             }
         }
-        
+
         return results;
     }
-    
+
     processNCBIResult(summary, id, database) {
         // Base result structure
         const baseResult = {
@@ -750,15 +750,15 @@ class GenomicDataDownloader {
                 return {
                     ...baseResult,
                     accession: summary.assemblyaccession || summary.caption || id,
-                    title: summary.title || summary.assemblydescription || 'No title available',
-                    organism: summary.organism || summary.infraspecificname || 'Unknown',
-                    length: summary.totallength || summary.slen || 0,
-                    description: `Assembly: ${summary.assemblyaccession || 'Unknown'} | Status: ${summary.assemblystatus || 'Unknown'} | Level: ${summary.assemblylevel || 'Unknown'}`,
-                    assemblyLevel: summary.assemblylevel || 'Unknown',
-                    assemblyStatus: summary.assemblystatus || 'Unknown',
-                    submitter: summary.submitterorganization || 'Unknown'
+                    title: summary.assemblyname || summary.title || summary.assemblydescription || 'No title available',
+                    organism: summary.speciesname || summary.organism || summary.infraspecificname || 'Unknown',
+                    length: parseInt(summary.totallength) || parseInt(summary.total_length) || parseInt(summary.slen) || 0,
+                    description: `Assembly: ${summary.assemblyaccession || 'Unknown'} | Status: ${summary.assemblystatus || summary.status || 'Unknown'} | Level: ${summary.assemblylevel || summary.level || 'Unknown'}`,
+                    assemblyLevel: summary.assemblylevel || summary.level || 'Unknown',
+                    assemblyStatus: summary.assemblystatus || summary.status || 'Unknown',
+                    submitter: summary.submitterorganization || summary.submitter || 'Unknown'
                 };
-                
+
             case 'genome':
                 return {
                     ...baseResult,
@@ -766,21 +766,21 @@ class GenomicDataDownloader {
                     description: `Genome: ${summary.defline || summary.title || 'Unknown'} | Size: ${summary.total_length ? (summary.total_length / 1000000).toFixed(2) + ' Mb' : 'Unknown'}`,
                     genomeSize: summary.total_length || 0
                 };
-                
+
             case 'nucleotide':
                 return {
                     ...baseResult,
                     description: `${summary.extra || summary.title || 'No description'} | GI: ${summary.gi || 'N/A'}`,
                     gi: summary.gi || null
                 };
-                
+
             case 'protein':
                 return {
                     ...baseResult,
                     description: `${summary.extra || summary.title || 'No description'} | Length: ${summary.slen || 0} aa`,
                     aaLength: summary.slen || 0
                 };
-                
+
             case 'sra':
                 return {
                     ...baseResult,
@@ -789,23 +789,23 @@ class GenomicDataDownloader {
                     platform: summary.platform || 'Unknown',
                     runs: summary.runs || 'Unknown'
                 };
-                
+
             default:
                 return baseResult;
         }
     }
-    
+
     /**
      * Search using NCBI Datasets API v2 (modern API for genomes)
      * This replaces the deprecated E-utilities genome database
      */
     async searchNCBIDatasets(searchTerm, resultsLimit = 25) {
         console.log('🆕 Using NCBI Datasets API v2 for genome search...');
-        
+
         try {
             let apiUrl;
             let taxonId = null;
-            
+
             // Detect if search term is a taxonomy ID (numeric only)
             if (/^\d+$/.test(searchTerm.trim())) {
                 taxonId = searchTerm.trim();
@@ -816,16 +816,16 @@ class GenomicDataDownloader {
                 // Search by organism name - first get taxonomy ID
                 console.log(`🔍 Searching for organism: ${searchTerm}`);
                 const taxonSearchUrl = `https://api.ncbi.nlm.nih.gov/datasets/v2alpha/taxonomy/taxon_suggest/${encodeURIComponent(searchTerm)}`;
-                
+
                 const taxonResponse = await fetch(taxonSearchUrl);
                 if (!taxonResponse.ok) {
                     console.error('❌ Failed to search taxonomy:', taxonResponse.statusText);
                     throw new Error(`Taxonomy search failed: ${taxonResponse.statusText}`);
                 }
-                
+
                 const taxonData = await taxonResponse.json();
                 console.log('Taxonomy search results:', taxonData);
-                
+
                 if (taxonData.sci_name_and_ids && taxonData.sci_name_and_ids.length > 0) {
                     taxonId = taxonData.sci_name_and_ids[0].tax_id;
                     console.log(`✅ Found taxonomy ID: ${taxonId} for ${taxonData.sci_name_and_ids[0].sci_name}`);
@@ -835,31 +835,31 @@ class GenomicDataDownloader {
                     return [];
                 }
             }
-            
+
             // Fetch genome data from Datasets API
             console.log('Datasets API URL:', apiUrl);
             const response = await fetch(apiUrl);
-            
+
             if (!response.ok) {
                 console.error('❌ Datasets API request failed:', response.statusText);
                 throw new Error(`Datasets API failed: ${response.statusText}`);
             }
-            
+
             const data = await response.json();
             console.log('Datasets API Response:', data);
-            
+
             if (!data.reports || data.reports.length === 0) {
                 console.log('⚠️ No genome data found for this taxon');
                 return [];
             }
-            
+
             // Process results
             const results = [];
             for (const report of data.reports.slice(0, resultsLimit)) {
                 const assembly = report.assembly_info || {};
                 const organism = report.organism || {};
                 const accession = assembly.assembly_accession || 'Unknown';
-                
+
                 results.push({
                     id: accession,
                     accession: accession,
@@ -876,27 +876,27 @@ class GenomicDataDownloader {
                     downloadUrl: `https://api.ncbi.nlm.nih.gov/datasets/v2alpha/genome/accession/${accession}/download?include_annotation_type=GENOME_FASTA&include_annotation_type=GENOME_GFF&include_annotation_type=RNA_FASTA&include_annotation_type=CDS_FASTA&include_annotation_type=PROT_FASTA&include_annotation_type=SEQUENCE_REPORT&filename=${accession}.zip`
                 });
             }
-            
+
             console.log(`✅ Found ${results.length} genome(s) using Datasets API`);
             return results;
-            
+
         } catch (error) {
             console.error('Error searching NCBI Datasets API:', error);
             throw new Error(`Datasets API search failed: ${error.message}`);
         }
     }
-    
+
     async searchNCBIUnified(searchTerm, database) {
         // Use the existing searchNCBI method but override the database
         const originalDownloadType = this.currentDownloadType;
-        
+
         // Temporarily set the config to use the selected database
-        const config = {...this.apiConfig['ncbi-unified']};
+        const config = { ...this.apiConfig['ncbi-unified'] };
         config.searchDb = database;
-        
+
         // Temporarily update the current download type config
         this.apiConfig[this.currentDownloadType] = config;
-        
+
         try {
             const results = await this.searchNCBI(searchTerm);
             return results;
@@ -905,7 +905,7 @@ class GenomicDataDownloader {
             this.apiConfig[originalDownloadType] = this.apiConfig['ncbi-unified'];
         }
     }
-    
+
     async searchEMBLUnified(searchTerm, database) {
         switch (database) {
             case 'embl-sequences':
@@ -918,14 +918,14 @@ class GenomicDataDownloader {
                 return await this.searchEMBL(searchTerm);
         }
     }
-    
+
     async searchEMBL(searchTerm) {
         // EMBL-EBI API搜索实现
         const url = `https://www.ebi.ac.uk/ena/portal/api/search?result=sequence&query=${encodeURIComponent(searchTerm)}&format=json&limit=${document.getElementById('resultsLimit').value}`;
-        
+
         const response = await fetch(url);
         const data = await response.json();
-        
+
         return data.map(item => ({
             id: item.accession,
             accession: item.accession,
@@ -937,15 +937,15 @@ class GenomicDataDownloader {
             downloadUrl: `https://www.ebi.ac.uk/ena/browser/api/fasta/${item.accession}`
         }));
     }
-    
+
     async searchEnsembl(searchTerm) {
         // Ensembl REST API搜索
         const division = document.getElementById('division')?.value || 'vertebrates';
         const url = `https://rest.ensembl.org/taxonomy/name/${encodeURIComponent(searchTerm)}?content-type=application/json`;
-        
+
         const response = await fetch(url);
         const data = await response.json();
-        
+
         const results = [];
         if (Array.isArray(data)) {
             for (const item of data.slice(0, parseInt(document.getElementById('resultsLimit').value))) {
@@ -961,17 +961,17 @@ class GenomicDataDownloader {
                 });
             }
         }
-        
+
         return results;
     }
-    
+
     async searchENA(searchTerm) {
         // ENA Portal API搜索
         const url = `https://www.ebi.ac.uk/ena/portal/api/search?result=read_run&query=${encodeURIComponent(searchTerm)}&format=json&limit=${document.getElementById('resultsLimit').value}`;
-        
+
         const response = await fetch(url);
         const data = await response.json();
-        
+
         return data.map(item => ({
             id: item.run_accession,
             accession: item.run_accession,
@@ -983,23 +983,23 @@ class GenomicDataDownloader {
             downloadUrl: item.fastq_ftp ? `ftp://${item.fastq_ftp.split(';')[0]}` : null
         }));
     }
-    
+
     async searchUniProt(searchTerm) {
         // UniProt REST API搜索
         const reviewed = document.getElementById('reviewed')?.value;
         let query = searchTerm;
-        
+
         if (reviewed === 'true') {
             query += ' AND reviewed:true';
         } else if (reviewed === 'false') {
             query += ' AND reviewed:false';
         }
-        
+
         const url = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(query)}&format=json&size=${document.getElementById('resultsLimit').value}`;
-        
+
         const response = await fetch(url);
         const data = await response.json();
-        
+
         return data.results.map(item => ({
             id: item.primaryAccession,
             accession: item.primaryAccession,
@@ -1011,23 +1011,23 @@ class GenomicDataDownloader {
             downloadUrl: `https://rest.uniprot.org/uniprotkb/${item.primaryAccession}.fasta`
         }));
     }
-    
+
     async searchKEGG(searchTerm) {
         // KEGG REST API搜索
         const url = `https://rest.kegg.jp/find/genome/${encodeURIComponent(searchTerm)}`;
-        
+
         const response = await fetch(url);
         const text = await response.text();
-        
+
         const results = [];
         const lines = text.split('\n').filter(line => line.trim());
-        
+
         for (const line of lines.slice(0, parseInt(document.getElementById('resultsLimit').value))) {
             const parts = line.split('\t');
             if (parts.length >= 2) {
                 const id = parts[0];
                 const description = parts[1];
-                
+
                 results.push({
                     id: id,
                     accession: id,
@@ -1040,10 +1040,10 @@ class GenomicDataDownloader {
                 });
             }
         }
-        
+
         return results;
     }
-    
+
     getNCBIDownloadUrl(id, database) {
         const formatMap = {
             'nucleotide': 'fasta',
@@ -1052,27 +1052,27 @@ class GenomicDataDownloader {
             'protein': 'fasta',
             'sra': 'runinfo'
         };
-        
+
         const format = formatMap[database] || 'fasta';
-        
+
         // Special handling for assembly database
         if (database === 'assembly') {
             // Return assembly summary URL which contains FTP download links
             return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=${database}&id=${id}&retmode=json`;
         }
-        
+
         return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${database}&id=${id}&rettype=${format}&retmode=text`;
     }
-    
+
     // Helper function to get file category preview
     getCategoryPreview(result) {
         const fileFormat = document.getElementById('fileFormat').value;
         const extension = this.getFileExtension(fileFormat);
         const mockFilePath = `${result.accession}${extension}`;
-        
+
         // Simulate the categorization logic from main.js
         const database = result.database;
-        
+
         // Database-specific categorization (highest priority)
         if (database) {
             switch (database) {
@@ -1090,7 +1090,7 @@ class GenomicDataDownloader {
                     break;
             }
         }
-        
+
         // Extension-based categorization
         switch (extension.toLowerCase()) {
             case '.fasta':
@@ -1122,24 +1122,24 @@ class GenomicDataDownloader {
     displayResults(results) {
         const resultsContainer = document.getElementById('searchResults');
         if (!resultsContainer) return;
-        
+
         if (results.length === 0) {
             resultsContainer.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 50px;">No results found</p>';
             return;
         }
-        
+
         // Generate category distribution summary
         const categoryDistribution = {};
         results.forEach(result => {
             const categoryInfo = this.getCategoryPreview(result);
             categoryDistribution[categoryInfo.category] = (categoryDistribution[categoryInfo.category] || 0) + 1;
         });
-        
+
         // Create category summary HTML
         let categorySummaryHtml = '<div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px;">';
         categorySummaryHtml += '<h4 style="margin: 0 0 10px 0; color: #495057;">📊 File Organization Preview</h4>';
         categorySummaryHtml += '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
-        
+
         Object.entries(categoryDistribution).forEach(([category, count]) => {
             const categoryInfo = this.getCategoryPreview({ database: null }); // Get default info
             // Find the actual category info
@@ -1151,16 +1151,16 @@ class GenomicDataDownloader {
                     break;
                 }
             }
-            
+
             categorySummaryHtml += `
                 <span style="display: inline-block; padding: 6px 12px; background: ${actualInfo.color}20; color: ${actualInfo.color}; border-radius: 16px; font-size: 13px; font-weight: bold;">
                     ${actualInfo.icon} ${category}: ${count} file${count > 1 ? 's' : ''}
                 </span>
             `;
         });
-        
+
         categorySummaryHtml += '</div></div>';
-        
+
         let html = categorySummaryHtml;
         results.forEach((result, index) => {
             // Format length based on database type
@@ -1220,44 +1220,44 @@ class GenomicDataDownloader {
                 </div>
             `;
         });
-        
+
         resultsContainer.innerHTML = html;
     }
-    
+
     toggleResultSelection(index) {
         if (this.selectedResults.has(index)) {
             this.selectedResults.delete(index);
         } else {
             this.selectedResults.add(index);
         }
-        
+
         this.updateDownloadButtons();
     }
-    
+
     updateDownloadButtons() {
         const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
         const downloadAllBtn = document.getElementById('downloadAllBtn');
-        
+
         if (downloadSelectedBtn) {
             downloadSelectedBtn.disabled = this.selectedResults.size === 0;
         }
-        
+
         if (downloadAllBtn) {
             downloadAllBtn.disabled = this.searchResults.length === 0;
         }
     }
-    
+
     enableDownloadButtons() {
         const downloadAllBtn = document.getElementById('downloadAllBtn');
         if (downloadAllBtn) {
             downloadAllBtn.disabled = false;
         }
     }
-    
+
     async previewResult(index) {
         const result = this.searchResults[index];
         if (!result) return;
-        
+
         try {
             // 添加CSS样式（如果不存在）
             if (!document.querySelector('#modal-styles')) {
@@ -1301,7 +1301,7 @@ class GenomicDataDownloader {
                 `;
                 document.head.appendChild(style);
             }
-            
+
             // 显示预览模态框
             const modal = document.createElement('div');
             modal.className = 'modal';
@@ -1333,22 +1333,22 @@ class GenomicDataDownloader {
                     </div>
                 </div>
             `;
-            
+
             document.body.appendChild(modal);
-            
+
             // 点击外部关闭模态框
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     modal.remove();
                 }
             });
-            
+
         } catch (error) {
             console.error('Error previewing result:', error);
             this.showStatusMessage('Failed to preview result', 'error');
         }
     }
-    
+
     async selectOutputDirectory() {
         if (window.electronAPI && window.electronAPI.selectDirectory) {
             try {
@@ -1365,87 +1365,87 @@ class GenomicDataDownloader {
             this.showStatusMessage('Directory selection requires Electron environment', 'error');
         }
     }
-    
+
     async downloadSelected() {
         if (this.selectedResults.size === 0) {
             this.showStatusMessage('Please select items to download', 'warning');
             return;
         }
-        
+
         const selectedItems = Array.from(this.selectedResults).map(index => this.searchResults[index]);
         await this.startDownload(selectedItems);
     }
-    
+
     async downloadAll() {
         if (this.searchResults.length === 0) {
             this.showStatusMessage('No results available for download', 'warning');
             return;
         }
-        
+
         await this.startDownload(this.searchResults);
     }
-    
+
     async downloadSingle(index) {
         const result = this.searchResults[index];
         if (!result) return;
-        
+
         await this.startDownload([result]);
     }
-    
+
     async startDownload(items) {
         if (this.isDownloading) {
             this.showStatusMessage('Download already in progress', 'warning');
             return;
         }
-        
+
         if (!this.outputDirectory) {
             this.showStatusMessage('Please select an output directory', 'warning');
             return;
         }
-        
+
         this.isDownloading = true;
         this.downloadQueue = [...items];
-        
+
         const progressElement = document.getElementById('downloadProgress');
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
-        
+
         if (progressElement) progressElement.style.display = 'block';
-        
+
         this.showStatusMessage(`Starting download of ${items.length} item(s)...`, 'info');
-        
+
         let completed = 0;
         const total = items.length;
-        
+
         for (const item of items) {
             try {
                 // Get category preview for progress display
                 const categoryInfo = this.getCategoryPreview(item);
-                
+
                 if (progressText) {
                     progressText.innerHTML = `${categoryInfo.icon} Downloading ${item.accession} to ${categoryInfo.category}/... (${completed + 1}/${total})`;
                 }
-                
+
                 await this.downloadItem(item);
                 completed++;
-                
+
                 const progress = (completed / total) * 100;
                 if (progressBar) {
                     progressBar.style.width = `${progress}%`;
                 }
-                
+
                 this.showStatusMessage(`✅ Downloaded & categorized ${item.accession} → ${categoryInfo.category}/ (${completed}/${total})`, 'success');
-                
+
             } catch (error) {
                 console.error(`Failed to download ${item.accession}:`, error);
                 this.showStatusMessage(`Failed to download ${item.accession}: ${error.message}`, 'error');
             }
         }
-        
+
         this.isDownloading = false;
-        
+
         if (progressElement) progressElement.style.display = 'none';
-        
+
         // Generate download completion summary with project integration stats
         if (this.currentProject && completed > 0) {
             // Create detailed completion summary
@@ -1456,7 +1456,7 @@ class GenomicDataDownloader {
                     categoryStats[categoryInfo.category] = (categoryStats[categoryInfo.category] || 0) + 1;
                 }
             }
-            
+
             let summaryHtml = `
                 <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 10px 0;">
                     <h4 style="margin: 0 0 10px 0; color: #155724;">🎉 Download Complete - Project Integration Summary</h4>
@@ -1464,7 +1464,7 @@ class GenomicDataDownloader {
                     <p style="margin: 0 0 10px 0; color: #155724;"><strong>File organization:</strong></p>
                     <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
             `;
-            
+
             Object.entries(categoryStats).forEach(([category, count]) => {
                 const categoryInfo = this.getCategoryPreview(items.find(item => this.getCategoryPreview(item).category === category));
                 summaryHtml += `
@@ -1473,19 +1473,19 @@ class GenomicDataDownloader {
                     </span>
                 `;
             });
-            
+
             summaryHtml += `
                     </div>
                     <p style="margin: 10px 0 0 0; color: #155724; font-size: 14px;">Files have been automatically indexed in your project and are ready to use!</p>
                 </div>
             `;
-            
+
             const statusContainer = document.getElementById('statusMessages');
             if (statusContainer) {
                 const summaryElement = document.createElement('div');
                 summaryElement.innerHTML = summaryHtml;
                 statusContainer.appendChild(summaryElement);
-                
+
                 // Auto-remove summary after 10 seconds
                 setTimeout(() => {
                     if (summaryElement.parentNode) {
@@ -1494,29 +1494,29 @@ class GenomicDataDownloader {
                 }, 10000);
             }
         }
-        
+
         this.showStatusMessage(`🎉 Download completed! Downloaded & intelligently categorized ${completed}/${total} items into project folders.`, 'success');
     }
-    
+
     async downloadItem(item) {
         if (!window.electronAPI || !window.electronAPI.downloadFile) {
             throw new Error('Download functionality requires Electron environment');
         }
-        
+
         const fileFormat = document.getElementById('fileFormat').value;
         const extension = this.getFileExtension(fileFormat);
         const filename = `${item.accession}${extension}`;
         const outputPath = `${this.outputDirectory}/${filename}`;
-        
+
         // Generate the correct download URL based on selected file format
         let downloadUrl = item.downloadUrl;
-        
+
         // For NCBI databases, regenerate URL with correct format (except genome-datasets which uses package downloads)
         if ((item.database === 'nucleotide' || item.database === 'protein' || item.database === 'genome') && item.database !== 'genome-datasets') {
             downloadUrl = this.getNCBIDownloadUrlWithFormat(item.id, item.database, fileFormat);
             console.log(`🔄 Regenerated download URL for ${fileFormat} format:`, downloadUrl);
         }
-        
+
         // Enhance project info with database context for better categorization
         const enhancedProjectInfo = {
             ...this.currentProject,
@@ -1527,24 +1527,24 @@ class GenomicDataDownloader {
                 sourceUrl: downloadUrl
             }
         };
-        
+
         // 使用Electron的下载API，传递增强的项目信息
         const result = await window.electronAPI.downloadFile(downloadUrl, outputPath, enhancedProjectInfo);
-        
+
         if (!result.success) {
             throw new Error(result.error || 'Download failed');
         }
-        
+
         return result;
     }
-    
+
     /**
      * Get NCBI download URL with specific format
      * This method generates the correct efetch URL based on user-selected file format
      */
     getNCBIDownloadUrlWithFormat(id, database, fileFormat) {
         const baseUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
-        
+
         // Map user-selected format to NCBI rettype parameter
         const formatToRettype = {
             'fasta': 'fasta',
@@ -1552,24 +1552,24 @@ class GenomicDataDownloader {
             'gff': 'gff3',        // GFF3 format
             'embl': 'embl'        // EMBL format
         };
-        
+
         const rettype = formatToRettype[fileFormat] || 'fasta';
-        
+
         // For some databases and formats, we need different parameters
         let retmode = 'text';
-        
+
         // Assembly database doesn't support efetch, return FTP link instead
         if (database === 'assembly') {
             console.warn('⚠️ Assembly database requires FTP download, format may not be changeable');
             return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=${database}&id=${id}&retmode=json`;
         }
-        
+
         const url = `${baseUrl}?db=${database}&id=${id}&rettype=${rettype}&retmode=${retmode}`;
         console.log(`🎯 Generated ${fileFormat} download URL:`, url);
-        
+
         return url;
     }
-    
+
     getFileExtension(format) {
         const extensions = {
             'fasta': '.fasta',
@@ -1577,10 +1577,10 @@ class GenomicDataDownloader {
             'gff': '.gff',
             'embl': '.embl'
         };
-        
+
         return extensions[format] || '.txt';
     }
-    
+
     clearSearch() {
         document.getElementById('searchTerm').value = '';
         const additionalInputs = document.querySelectorAll('#databaseSpecificOptions input, #databaseSpecificOptions select');
@@ -1591,39 +1591,39 @@ class GenomicDataDownloader {
                 input.value = '';
             }
         });
-        
+
         this.clearResults();
     }
-    
+
     clearResults() {
         this.searchResults = [];
         this.selectedResults.clear();
-        
+
         const resultsContainer = document.getElementById('searchResults');
         if (resultsContainer) {
             resultsContainer.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 50px;">🔍 Enter search terms and click "Search Database" to find genomic data</p>';
         }
-        
+
         this.updateDownloadButtons();
     }
-    
+
     showStatusMessage(message, type = 'info') {
         const statusContainer = document.getElementById('statusMessages');
         if (!statusContainer) return;
-        
+
         const messageElement = document.createElement('div');
         messageElement.className = `status-message status-${type}`;
         messageElement.textContent = message;
-        
+
         statusContainer.appendChild(messageElement);
-        
+
         // 自动移除旧消息
         setTimeout(() => {
             if (messageElement.parentNode) {
                 messageElement.parentNode.removeChild(messageElement);
             }
         }, 5000);
-        
+
         console.log(`[${type.toUpperCase()}] ${message}`);
     }
 }
@@ -1634,4 +1634,3 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
     window.GenomicDataDownloader = GenomicDataDownloader;
 }
- 
