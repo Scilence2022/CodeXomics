@@ -1654,6 +1654,11 @@
             display: flex;
             gap: 24px;
             margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .project-stats.hidden {
+            display: none !important;
         }
 
         .stat-card {
@@ -2612,8 +2617,18 @@
                         🗂️ New Data Folder
                     </button>
 
-                    <!-- Toggle Switch for Details Panel -->
+                    <!-- Toggle Switch for Statistics Panel -->
                     <div class="toggle-switch-container" style="margin-left: auto;">
+                        <label class="toggle-switch" title="Toggle Statistics Panel">
+                            <input type="checkbox" id="statsPanelToggle" checked
+                                onchange="projectManagerWindow.toggleStatsPanel()">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Statistics</span>
+                        </label>
+                    </div>
+
+                    <!-- Toggle Switch for Details Panel -->
+                    <div class="toggle-switch-container">
                         <label class="toggle-switch" title="Toggle Details Panel (F9)">
                             <input type="checkbox" id="detailsPanelToggle"
                                 onchange="projectManagerWindow.toggleDetailsPanel()">

@@ -17,6 +17,7 @@ class ProjectManagerWindow {
         this.ultraCompactMode = false;
         this.headerCollapsed = false;
         this.detailsOpen = false;
+        this.statsVisible = true; // Track statistics panel visibility
         this.currentViewMode = 'grid'; // Add view mode tracking
         this.viewMode = 'grid'; // For compatibility
 
@@ -5041,6 +5042,35 @@ To view this file, click "Open in Main Window".`;
 
         // 加载保存的设置
         this.loadHeaderCollapsePreference();
+        this.loadStatsPanelPreference();
+    }
+
+    /**
+     * Load statistics panel visibility preference from localStorage
+     */
+    loadStatsPanelPreference() {
+        const saved = localStorage.getItem('projectManager-statsPanel');
+        const statsPanel = document.getElementById('projectStats');
+        const toggle = document.getElementById('statsPanelToggle');
+
+        if (saved === 'hidden') {
+            this.statsVisible = false;
+            if (statsPanel) {
+                statsPanel.classList.add('hidden');
+            }
+            if (toggle) {
+                toggle.checked = false;
+            }
+        } else {
+            // Default to visible
+            this.statsVisible = true;
+            if (statsPanel) {
+                statsPanel.classList.remove('hidden');
+            }
+            if (toggle) {
+                toggle.checked = true;
+            }
+        }
     }
 
     /**
@@ -5071,6 +5101,33 @@ To view this file, click "Open in Main Window".`;
             this.showNotification(`Details panel ${!isVisible ? 'opened' : 'closed'}`, 'info');
         } else {
             console.log('toggleDetailsPanel called - details panel elements not found');
+        }
+    }
+
+    /**
+     * Toggle statistics panel
+     */
+    toggleStatsPanel() {
+        const statsPanel = document.getElementById('projectStats');
+        const toggle = document.getElementById('statsPanelToggle');
+
+        if (statsPanel && toggle) {
+            this.statsVisible = !this.statsVisible;
+
+            if (this.statsVisible) {
+                statsPanel.classList.remove('hidden');
+            } else {
+                statsPanel.classList.add('hidden');
+            }
+
+            toggle.checked = this.statsVisible;
+
+            // Save preference
+            localStorage.setItem('projectManager-statsPanel', this.statsVisible ? 'visible' : 'hidden');
+
+            this.showNotification(`Statistics panel ${this.statsVisible ? 'shown' : 'hidden'}`, 'info');
+        } else {
+            console.log('toggleStatsPanel called - statistics panel elements not found');
         }
     }
 
