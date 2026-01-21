@@ -747,16 +747,35 @@ class GenomicDataDownloader {
         // Database-specific processing
         switch (database) {
             case 'assembly':
+                // Extract FTP paths for actual file downloads
+                const ftpPathRefSeq = summary.ftppath_refseq || '';
+                const ftpPathGenBank = summary.ftppath_genbank || '';
+                const assemblyAccession = summary.assemblyaccession || summary.caption || id;
+                const assemblyName = summary.assemblyname || 'assembly';
+
+                // Parse total_length from meta XML if not directly available
+                let totalLength = parseInt(summary.totallength) || 0;
+                if (!totalLength && summary.meta) {
+                    const lengthMatch = summary.meta.match(/category="total_length"[^>]*>([\d]+)</i);
+                    if (lengthMatch) {
+                        totalLength = parseInt(lengthMatch[1]);
+                    }
+                }
+
                 return {
                     ...baseResult,
-                    accession: summary.assemblyaccession || summary.caption || id,
-                    title: summary.assemblyname || summary.title || summary.assemblydescription || 'No title available',
+                    accession: assemblyAccession,
+                    title: assemblyName || summary.title || summary.assemblydescription || 'No title available',
                     organism: summary.speciesname || summary.organism || summary.infraspecificname || 'Unknown',
-                    length: parseInt(summary.totallength) || parseInt(summary.total_length) || parseInt(summary.slen) || 0,
-                    description: `Assembly: ${summary.assemblyaccession || 'Unknown'} | Status: ${summary.assemblystatus || summary.status || 'Unknown'} | Level: ${summary.assemblylevel || summary.level || 'Unknown'}`,
+                    length: totalLength,
+                    description: `Assembly: ${assemblyAccession} | Status: ${summary.assemblystatus || 'Unknown'} | Level: ${summary.assemblylevel || 'Unknown'}`,
                     assemblyLevel: summary.assemblylevel || summary.level || 'Unknown',
                     assemblyStatus: summary.assemblystatus || summary.status || 'Unknown',
-                    submitter: summary.submitterorganization || summary.submitter || 'Unknown'
+                    submitter: summary.submitterorganization || summary.submitter || 'Unknown',
+                    // Store FTP paths for download
+                    ftpPathRefSeq: ftpPathRefSeq,
+                    ftpPathGenBank: ftpPathGenBank,
+                    assemblyName: assemblyName
                 };
 
             case 'genome':
@@ -1504,16 +1523,26 @@ class GenomicDataDownloader {
         }
 
         const fileFormat = document.getElementById('fileFormat').value;
-        const extension = this.getFileExtension(fileFormat);
+        let extension = this.getFileExtension(fileFormat);
+
+        // For assembly downloads, files are gzipped
+        if (item.database === 'assembly') {
+            extension = extension + '.gz';
+        }
+
         const filename = `${item.accession}${extension}`;
         const outputPath = `${this.outputDirectory}/${filename}`;
 
         // Generate the correct download URL based on selected file format
         let downloadUrl = item.downloadUrl;
 
-        // For NCBI databases, regenerate URL with correct format (except genome-datasets which uses package downloads)
-        if ((item.database === 'nucleotide' || item.database === 'protein' || item.database === 'genome') && item.database !== 'genome-datasets') {
-            downloadUrl = this.getNCBIDownloadUrlWithFormat(item.id, item.database, fileFormat);
+        // For NCBI databases, regenerate URL with correct format
+        if (item.database === 'assembly') {
+            // Assembly requires special handling with FTP paths
+            downloadUrl = this.getNCBIDownloadUrlWithFormat(item.id, item.database, fileFormat, item);
+            console.log(`🔄 Generated assembly download URL for ${fileFormat} format:`, downloadUrl);
+        } else if ((item.database === 'nucleotide' || item.database === 'protein' || item.database === 'genome') && item.database !== 'genome-datasets') {
+            downloadUrl = this.getNCBIDownloadUrlWithFormat(item.id, item.database, fileFormat, item);
             console.log(`🔄 Regenerated download URL for ${fileFormat} format:`, downloadUrl);
         }
 
@@ -1542,7 +1571,7 @@ class GenomicDataDownloader {
      * Get NCBI download URL with specific format
      * This method generates the correct efetch URL based on user-selected file format
      */
-    getNCBIDownloadUrlWithFormat(id, database, fileFormat) {
+    getNCBIDownloadUrlWithFormat(id, database, fileFormat, item = null) {
         const baseUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
 
         // Map user-selected format to NCBI rettype parameter
@@ -1558,16 +1587,63 @@ class GenomicDataDownloader {
         // For some databases and formats, we need different parameters
         let retmode = 'text';
 
-        // Assembly database doesn't support efetch, return FTP link instead
+        // Assembly database requires FTP/HTTPS download, not efetch
         if (database === 'assembly') {
-            console.warn('⚠️ Assembly database requires FTP download, format may not be changeable');
-            return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=${database}&id=${id}&retmode=json`;
+            return this.getAssemblyDownloadUrl(item, fileFormat);
         }
 
         const url = `${baseUrl}?db=${database}&id=${id}&rettype=${rettype}&retmode=${retmode}`;
         console.log(`🎯 Generated ${fileFormat} download URL:`, url);
 
         return url;
+    }
+
+    /**
+     * Get assembly download URL from FTP path
+     * Constructs proper HTTPS URL for downloading assembly files
+     */
+    getAssemblyDownloadUrl(item, fileFormat) {
+        if (!item) {
+            console.error('❌ Cannot generate assembly download URL without item data');
+            return null;
+        }
+
+        // Prefer RefSeq path, fallback to GenBank
+        const ftpPath = item.ftpPathRefSeq || item.ftpPathGenBank;
+
+        if (!ftpPath) {
+            console.error('❌ No FTP path available for assembly:', item.accession);
+            return null;
+        }
+
+        // Convert FTP URL to HTTPS
+        // ftp://ftp.ncbi.nlm.nih.gov/genomes/... -> https://ftp.ncbi.nlm.nih.gov/genomes/...
+        const httpsPath = ftpPath.replace('ftp://', 'https://');
+
+        // Get the assembly name from the path (last component)
+        const pathParts = ftpPath.split('/');
+        const assemblyDir = pathParts[pathParts.length - 1];
+
+        // Construct filename based on format
+        let filename;
+        switch (fileFormat) {
+            case 'fasta':
+                filename = `${assemblyDir}_genomic.fna.gz`;
+                break;
+            case 'genbank':
+                filename = `${assemblyDir}_genomic.gbff.gz`;
+                break;
+            case 'gff':
+                filename = `${assemblyDir}_genomic.gff.gz`;
+                break;
+            default:
+                filename = `${assemblyDir}_genomic.fna.gz`;
+        }
+
+        const downloadUrl = `${httpsPath}/${filename}`;
+        console.log(`🎯 Generated assembly ${fileFormat} download URL:`, downloadUrl);
+
+        return downloadUrl;
     }
 
     getFileExtension(format) {
