@@ -747,35 +747,26 @@ class GenomicDataDownloader {
         // Database-specific processing
         switch (database) {
             case 'assembly':
-                // Extract FTP paths for actual file downloads
-                const ftpPathRefSeq = summary.ftppath_refseq || '';
-                const ftpPathGenBank = summary.ftppath_genbank || '';
+                // Store FTP paths for proper file downloads
+                const ftpPath = summary.ftppath_refseq || summary.ftppath_genbank;
                 const assemblyAccession = summary.assemblyaccession || summary.caption || id;
-                const assemblyName = summary.assemblyname || 'assembly';
-
-                // Parse total_length from meta XML if not directly available
-                let totalLength = parseInt(summary.totallength) || 0;
-                if (!totalLength && summary.meta) {
-                    const lengthMatch = summary.meta.match(/category="total_length"[^>]*>([\d]+)</i);
-                    if (lengthMatch) {
-                        totalLength = parseInt(lengthMatch[1]);
-                    }
-                }
 
                 return {
                     ...baseResult,
                     accession: assemblyAccession,
-                    title: assemblyName || summary.title || summary.assemblydescription || 'No title available',
+                    title: summary.assemblyname || summary.title || summary.assemblydescription || 'No title available',
                     organism: summary.speciesname || summary.organism || summary.infraspecificname || 'Unknown',
-                    length: totalLength,
-                    description: `Assembly: ${assemblyAccession} | Status: ${summary.assemblystatus || 'Unknown'} | Level: ${summary.assemblylevel || 'Unknown'}`,
+                    length: parseInt(summary.totallength) || parseInt(summary.total_length) || parseInt(summary.slen) || 0,
+                    description: `Assembly: ${assemblyAccession} | Status: ${summary.assemblystatus || summary.status || 'Unknown'} | Level: ${summary.assemblylevel || summary.level || 'Unknown'}`,
                     assemblyLevel: summary.assemblylevel || summary.level || 'Unknown',
                     assemblyStatus: summary.assemblystatus || summary.status || 'Unknown',
                     submitter: summary.submitterorganization || summary.submitter || 'Unknown',
                     // Store FTP paths for download
-                    ftpPathRefSeq: ftpPathRefSeq,
-                    ftpPathGenBank: ftpPathGenBank,
-                    assemblyName: assemblyName
+                    ftpPath_refseq: summary.ftppath_refseq || null,
+                    ftpPath_genbank: summary.ftppath_genbank || null,
+                    ftpPath: ftpPath || null,
+                    // Construct direct download URL for assembly
+                    downloadUrl: ftpPath ? this.constructAssemblyDownloadUrl(ftpPath, assemblyAccession, 'genbank') : baseResult.downloadUrl
                 };
 
             case 'genome':
@@ -1081,6 +1072,55 @@ class GenomicDataDownloader {
         }
 
         return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${database}&id=${id}&rettype=${format}&retmode=text`;
+    }
+
+    /**
+     * Construct proper download URL for assembly files from FTP path
+     * @param {string} ftpPath - FTP path from NCBI (e.g., ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/...)
+     * @param {string} accession - Assembly accession (e.g., GCF_033344675.1)
+     * @param {string} format - Desired format: 'genbank', 'fasta', 'gff'
+     * @returns {string} HTTPS download URL
+     */
+    constructAssemblyDownloadUrl(ftpPath, accession, format = 'genbank') {
+        if (!ftpPath) {
+            console.warn('⚠️ No FTP path available for assembly download');
+            return null;
+        }
+
+        // Convert FTP to HTTPS URL
+        const httpsPath = ftpPath.replace('ftp://', 'https://');
+
+        // Extract assembly name from FTP path (last part after the accession)
+        // Example: ftp://...GCF_033344675.1_ASM3334467v1 -> ASM3334467v1
+        const pathParts = ftpPath.split('/');
+        const assemblyDir = pathParts[pathParts.length - 1]; // e.g., GCF_033344675.1_ASM3334467v1
+
+        // File naming convention: {assemblyDir}_genomic.{extension}
+        let filename;
+        switch (format) {
+            case 'genbank':
+                filename = `${assemblyDir}_genomic.gbff.gz`;
+                break;
+            case 'fasta':
+                filename = `${assemblyDir}_genomic.fna.gz`;
+                break;
+            case 'gff':
+                filename = `${assemblyDir}_genomic.gff.gz`;
+                break;
+            case 'protein':
+                filename = `${assemblyDir}_protein.faa.gz`;
+                break;
+            case 'cds':
+                filename = `${assemblyDir}_cds_from_genomic.fna.gz`;
+                break;
+            default:
+                filename = `${assemblyDir}_genomic.gbff.gz`;
+        }
+
+        const downloadUrl = `${httpsPath}/${filename}`;
+        console.log(`🔗 Constructed assembly download URL: ${downloadUrl}`);
+
+        return downloadUrl;
     }
 
     // Helper function to get file category preview
@@ -1524,25 +1564,24 @@ class GenomicDataDownloader {
 
         const fileFormat = document.getElementById('fileFormat').value;
         let extension = this.getFileExtension(fileFormat);
-
-        // For assembly downloads, files are gzipped
-        if (item.database === 'assembly') {
-            extension = extension + '.gz';
-        }
-
-        const filename = `${item.accession}${extension}`;
-        const outputPath = `${this.outputDirectory}/${filename}`;
+        let filename = `${item.accession}${extension}`;
+        let outputPath = `${this.outputDirectory}/${filename}`;
 
         // Generate the correct download URL based on selected file format
         let downloadUrl = item.downloadUrl;
 
-        // For NCBI databases, regenerate URL with correct format
-        if (item.database === 'assembly') {
-            // Assembly requires special handling with FTP paths
-            downloadUrl = this.getNCBIDownloadUrlWithFormat(item.id, item.database, fileFormat, item);
-            console.log(`🔄 Generated assembly download URL for ${fileFormat} format:`, downloadUrl);
-        } else if ((item.database === 'nucleotide' || item.database === 'protein' || item.database === 'genome') && item.database !== 'genome-datasets') {
-            downloadUrl = this.getNCBIDownloadUrlWithFormat(item.id, item.database, fileFormat, item);
+        // Special handling for assembly database - use FTP paths
+        if (item.database === 'assembly' && item.ftpPath) {
+            downloadUrl = this.constructAssemblyDownloadUrl(item.ftpPath, item.accession, fileFormat);
+            // Assembly files are gzipped, update filename
+            extension = this.getFileExtension(fileFormat) + '.gz';
+            filename = `${item.accession}${extension}`;
+            outputPath = `${this.outputDirectory}/${filename}`;
+            console.log(`🔄 Using FTP path for assembly download: ${downloadUrl}`);
+        }
+        // For other NCBI databases, regenerate URL with correct format
+        else if ((item.database === 'nucleotide' || item.database === 'protein' || item.database === 'genome') && item.database !== 'genome-datasets') {
+            downloadUrl = this.getNCBIDownloadUrlWithFormat(item.id, item.database, fileFormat);
             console.log(`🔄 Regenerated download URL for ${fileFormat} format:`, downloadUrl);
         }
 
@@ -1571,7 +1610,7 @@ class GenomicDataDownloader {
      * Get NCBI download URL with specific format
      * This method generates the correct efetch URL based on user-selected file format
      */
-    getNCBIDownloadUrlWithFormat(id, database, fileFormat, item = null) {
+    getNCBIDownloadUrlWithFormat(id, database, fileFormat) {
         const baseUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
 
         // Map user-selected format to NCBI rettype parameter
@@ -1587,63 +1626,16 @@ class GenomicDataDownloader {
         // For some databases and formats, we need different parameters
         let retmode = 'text';
 
-        // Assembly database requires FTP/HTTPS download, not efetch
+        // Assembly database doesn't support efetch, return FTP link instead
         if (database === 'assembly') {
-            return this.getAssemblyDownloadUrl(item, fileFormat);
+            console.warn('⚠️ Assembly database requires FTP download, format may not be changeable');
+            return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=${database}&id=${id}&retmode=json`;
         }
 
         const url = `${baseUrl}?db=${database}&id=${id}&rettype=${rettype}&retmode=${retmode}`;
         console.log(`🎯 Generated ${fileFormat} download URL:`, url);
 
         return url;
-    }
-
-    /**
-     * Get assembly download URL from FTP path
-     * Constructs proper HTTPS URL for downloading assembly files
-     */
-    getAssemblyDownloadUrl(item, fileFormat) {
-        if (!item) {
-            console.error('❌ Cannot generate assembly download URL without item data');
-            return null;
-        }
-
-        // Prefer RefSeq path, fallback to GenBank
-        const ftpPath = item.ftpPathRefSeq || item.ftpPathGenBank;
-
-        if (!ftpPath) {
-            console.error('❌ No FTP path available for assembly:', item.accession);
-            return null;
-        }
-
-        // Convert FTP URL to HTTPS
-        // ftp://ftp.ncbi.nlm.nih.gov/genomes/... -> https://ftp.ncbi.nlm.nih.gov/genomes/...
-        const httpsPath = ftpPath.replace('ftp://', 'https://');
-
-        // Get the assembly name from the path (last component)
-        const pathParts = ftpPath.split('/');
-        const assemblyDir = pathParts[pathParts.length - 1];
-
-        // Construct filename based on format
-        let filename;
-        switch (fileFormat) {
-            case 'fasta':
-                filename = `${assemblyDir}_genomic.fna.gz`;
-                break;
-            case 'genbank':
-                filename = `${assemblyDir}_genomic.gbff.gz`;
-                break;
-            case 'gff':
-                filename = `${assemblyDir}_genomic.gff.gz`;
-                break;
-            default:
-                filename = `${assemblyDir}_genomic.fna.gz`;
-        }
-
-        const downloadUrl = `${httpsPath}/${filename}`;
-        console.log(`🎯 Generated assembly ${fileFormat} download URL:`, downloadUrl);
-
-        return downloadUrl;
     }
 
     getFileExtension(format) {
