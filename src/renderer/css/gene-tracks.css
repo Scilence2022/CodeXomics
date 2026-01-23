@@ -20,7 +20,8 @@
     align-items: center;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-bottom: 1px solid #dee2e6;
-    padding: 4px 12px; /* Reduced from 8px to 4px to minimize vertical spacing */
+    padding: 4px 12px;
+    /* Reduced from 8px to 4px to minimize vertical spacing */
     font-size: 14px;
     font-weight: 600;
     color: #495057;
@@ -29,7 +30,8 @@
     position: relative;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-top: 0; /* Ensure no top margin */
+    margin-top: 0;
+    /* Ensure no top margin */
 }
 
 .track-title {
@@ -47,13 +49,15 @@
     position: relative;
     background: #fafafa;
     border-radius: 0 0 var(--radius-md) var(--radius-md);
-    min-height: 80px; /* Minimum height for adaptive sizing */
+    min-height: 80px;
+    /* Minimum height for adaptive sizing */
 }
 
 .track-content {
     position: relative;
     height: 80px;
-    padding: 2px 0; /* Reduced from 10px to 2px to minimize gap between header and content */
+    padding: 2px 0;
+    /* Reduced from 10px to 2px to minimize gap between header and content */
     background: #fafafa;
     transition: background-color 0.2s ease;
 }
@@ -70,18 +74,22 @@
 /* Visual dragging optimization */
 .visual-dragging {
     cursor: grabbing !important;
-    pointer-events: none; /* Prevent interference during drag */
+    pointer-events: none;
+    /* Prevent interference during drag */
 }
 
 .visual-dragging .track-content {
-    transition: none !important; /* Disable transitions during drag for better performance */
+    transition: none !important;
+    /* Disable transitions during drag for better performance */
 }
 
 .visual-dragging .gene-element,
 .visual-dragging .ruler,
 .visual-dragging svg {
-    transition: none !important; /* Disable transitions during drag */
-    will-change: transform; /* Optimize for transform changes */
+    transition: none !important;
+    /* Disable transitions during drag */
+    will-change: transform;
+    /* Optimize for transform changes */
 }
 
 /* Smooth transitions when drag ends */
@@ -155,15 +163,16 @@ svg {
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: 12px;
-    border: 2px solid rgba(0,0,0,0.3);
+    border: 2px solid rgba(0, 0, 0, 0.3);
     font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    z-index: 10; /* Ensure genes appear above ruler */
+    z-index: 10;
+    /* Ensure genes appear above ruler */
 }
 
 /* Triangle shape for very small genes */
@@ -211,7 +220,7 @@ svg {
 
 .gene-element:hover {
     transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
     z-index: 10;
     border-width: 3px;
 }
@@ -234,12 +243,12 @@ svg {
 .gene-element[style*="width: 0.5%"] {
     min-width: 12px !important;
     border-width: 3px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* No genes message styling */
 .no-genes-message {
-    background: rgba(255,255,255,0.9);
+    background: rgba(255, 255, 255, 0.9);
     padding: 8px 12px;
     border-radius: 4px;
     border: 1px dashed #ccc;
@@ -257,13 +266,11 @@ svg {
     left: 0;
     right: 0;
     bottom: 0;
-    background: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 3px,
-        rgba(255,255,255,0.3) 3px,
-        rgba(255,255,255,0.3) 6px
-    );
+    background: repeating-linear-gradient(-45deg,
+            transparent,
+            transparent 3px,
+            rgba(255, 255, 255, 0.3) 3px,
+            rgba(255, 255, 255, 0.3) 6px);
     pointer-events: none;
     border-radius: 2px;
 }
@@ -400,19 +407,19 @@ svg {
     .track-buttons {
         gap: 2px;
     }
-    
+
     .track-header {
         padding: 6px 8px;
         font-size: 13px;
     }
-    
+
     .track-control-item,
     .feature-control-item {
         padding: 10px 12px;
         min-height: 48px;
         align-items: center;
     }
-    
+
     .track-checkboxes {
         position: relative;
         top: auto;
@@ -425,13 +432,13 @@ svg {
         justify-content: flex-start;
         gap: 8px;
     }
-    
+
     .track-checkbox {
         padding: 8px 12px;
         min-height: 44px;
         align-items: center;
     }
-    
+
     .feature-filter-checkboxes {
         position: relative;
         top: auto;
@@ -442,7 +449,7 @@ svg {
         padding: 0;
         grid-template-columns: 1fr;
     }
-    
+
     .feature-checkbox {
         padding: 8px 4px;
         min-height: 44px;
@@ -455,35 +462,74 @@ svg {
         background: var(--bg-tertiary);
         border-color: var(--border-color);
     }
-    
+
     .track-header {
         background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
         border-bottom-color: var(--border-color);
         color: var(--text-primary);
     }
-    
+
     .track-content {
         background: var(--bg-secondary);
     }
-    
+
     .track-content:hover {
         background: var(--bg-tertiary);
     }
-    
+
     .track-checkboxes,
     .feature-filter-checkboxes {
         background: var(--bg-secondary);
         border-color: var(--border-color);
     }
-    
+
     .track-checkbox:hover,
     .feature-checkbox:hover {
         background-color: var(--bg-tertiary);
     }
-    
+
     .no-genes-message {
         background: rgba(31, 41, 55, 0.9);
         border-color: var(--border-color);
         color: var(--text-primary);
     }
+}
+
+/* Circular Mode Toggle Button */
+.track-circular-btn {
+    transition: all 0.2s ease;
+}
+
+.track-circular-btn.active {
+    color: #10b981;
+    /* Green when active */
+    background: rgba(16, 185, 129, 0.15);
+    border-radius: 4px;
+}
+
+.track-circular-btn.active i {
+    animation: circular-spin 2s linear infinite;
+}
+
+@keyframes circular-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Circular mode indicator in track title */
+.track-circular-indicator {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
 }

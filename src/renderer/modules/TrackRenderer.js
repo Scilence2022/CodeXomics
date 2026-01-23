@@ -355,7 +355,28 @@ class TrackRenderer {
                 }
             });
             buttonsContainer.appendChild(rulerBtn);
+
+            // Add circular mode toggle button
+            const circularBtn = document.createElement('button');
+            circularBtn.className = 'track-btn track-circular-btn';
+            const isCircular = this.getTrackSettings('genes').circularMode || false;
+            circularBtn.innerHTML = isCircular ?
+                '<i class="fas fa-circle-notch"></i>' :
+                '<i class="fas fa-minus"></i>';
+            circularBtn.title = isCircular ?
+                'Circular Mode: ON (click to disable)' :
+                'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+            if (isCircular) {
+                circularBtn.classList.add('active');
+            }
+
+            circularBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleCircularMode(circularBtn);
+            });
+            buttonsContainer.appendChild(circularBtn);
         }
+
 
         // Add WIG Track Management toggle button
         if (trackType === 'wigTracks') {
@@ -1257,16 +1278,58 @@ class TrackRenderer {
 
     /**
      * Filter gene annotations with type validation
+     * Supports circular mode where viewport can wrap around sequence boundary
      */
     filterGeneAnnotations(annotations, viewport) {
         const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature',
             'regulatory', 'promoter', 'terminator', 'repeat_region', 'comment', 'note', 'BED_feature'];
 
+        const settings = this.getTrackSettings('genes');
+        const isCircular = settings.circularMode || false;
+
         return annotations.filter(feature => {
             return (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&
                 this.genomeBrowser.shouldShowGeneType(feature.type);
-        }).filter(gene => this.filterFeaturesByViewport([gene], viewport).length > 0);
+        }).filter(gene => {
+            if (isCircular) {
+                return this.isFeatureVisibleCircular(gene, viewport);
+            }
+            return this.filterFeaturesByViewport([gene], viewport).length > 0;
+        });
     }
+
+    /**
+     * Check if a feature is visible in circular mode
+     * Handles wrapped viewport (when viewport.end > sequenceLength)
+     */
+    isFeatureVisibleCircular(gene, viewport) {
+        const chromosome = this.genomeBrowser.currentChromosome;
+        const sequence = this.genomeBrowser.currentSequence[chromosome];
+        const seqLen = sequence ? sequence.length : 0;
+
+        if (seqLen === 0) {
+            return false;
+        }
+
+        // Unwrapped (normal) case - viewport doesn't cross origin
+        if (viewport.end <= seqLen && viewport.start >= 0) {
+            return gene.start <= viewport.end && gene.end >= viewport.start;
+        }
+
+        // Wrapped viewport: viewport spans from start to (end % seqLen) via origin
+        // This happens when we've scrolled past the end or before the start
+        const wrappedEnd = viewport.end % seqLen;
+        const wrappedStart = viewport.start < 0 ? seqLen + viewport.start : viewport.start;
+
+        // Feature visible if it's in the pre-origin region OR post-origin region
+        // Pre-origin: gene overlaps with [wrappedStart, seqLen)
+        const visibleInPreOrigin = gene.end >= wrappedStart && gene.start < seqLen;
+        // Post-origin: gene overlaps with [0, wrappedEnd]
+        const visibleInPostOrigin = gene.start <= wrappedEnd && gene.end >= 0;
+
+        return visibleInPreOrigin || visibleInPostOrigin;
+    }
+
 
     /**
      * Render gene elements with improved organization and unified dragging
@@ -1402,13 +1465,45 @@ class TrackRenderer {
      * Create individual SVG gene element
      */
     createSVGGeneElement(gene, viewport, operons, rowIndex, layout, settings, defs, containerWidth) {
-        // Calculate position and dimensions
-        const geneStart = Math.max(gene.start, viewport.start);
-        const geneEnd = Math.min(gene.end, viewport.end);
+        // Handle circular mode positioning
+        const isCircular = settings.circularMode || false;
+        const chromosome = this.genomeBrowser.currentChromosome;
+        const sequence = this.genomeBrowser.currentSequence[chromosome];
+        const seqLen = sequence ? sequence.length : 0;
+
+        let adjustedGeneStart = gene.start;
+        let adjustedGeneEnd = gene.end;
+
+        // In circular mode, adjust gene positions for viewport that wraps around
+        if (isCircular && seqLen > 0) {
+            // Check if viewport wraps around (end > seqLen or start < 0)
+            if (viewport.end > seqLen) {
+                // Viewport wraps from end to start
+                // If gene is in the post-origin portion (0 to wrappedEnd), shift it
+                const wrappedEnd = viewport.end % seqLen;
+                if (gene.end <= wrappedEnd) {
+                    // Gene is entirely in post-origin region - shift by seqLen
+                    adjustedGeneStart = gene.start + seqLen;
+                    adjustedGeneEnd = gene.end + seqLen;
+                }
+            } else if (viewport.start < 0) {
+                // Viewport wraps from start to end (scrolling left past origin)
+                // If gene is in the pre-origin portion (wrappedStart to seqLen), shift it left
+                if (gene.start >= seqLen + viewport.start) {
+                    adjustedGeneStart = gene.start - seqLen;
+                    adjustedGeneEnd = gene.end - seqLen;
+                }
+            }
+        }
+
+        // Calculate position and dimensions using adjusted coordinates
+        const geneStart = Math.max(adjustedGeneStart, viewport.start);
+        const geneEnd = Math.min(adjustedGeneEnd, viewport.end);
         const left = ((geneStart - viewport.start) / (viewport.end - viewport.start)) * 100;
         const width = ((geneEnd - geneStart) / (viewport.end - viewport.start)) * 100;
 
         if (width <= 0) return null;
+
 
         // Get positioning parameters - use accurate container width (no ruler offset in SVG)
         const y = layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing);
@@ -2903,6 +2998,51 @@ class TrackRenderer {
         // Refresh the track to apply changes
         this.refreshTrack(trackType);
     }
+
+    /**
+     * Toggle circular browsing mode for genes track
+     * When enabled, navigation wraps around from end to start and vice versa
+     */
+    toggleCircularMode(button) {
+        const currentSettings = this.getTrackSettings('genes');
+        const newCircularMode = !currentSettings.circularMode;
+
+        console.log(`🔄 Toggling circular mode: ${currentSettings.circularMode} → ${newCircularMode}`);
+
+        // Update settings
+        this.trackSettings = this.trackSettings || {};
+        this.trackSettings.genes = { ...currentSettings, circularMode: newCircularMode };
+
+        // Save to config
+        if (this.genomeBrowser.configManager) {
+            this.genomeBrowser.configManager.set('tracks.genes.settings.circularMode', newCircularMode);
+        }
+
+        // Update button appearance
+        button.innerHTML = newCircularMode ?
+            '<i class="fas fa-circle-notch"></i>' :
+            '<i class="fas fa-minus"></i>';
+        button.title = newCircularMode ?
+            'Circular Mode: ON (click to disable)' :
+            'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+        button.classList.toggle('active', newCircularMode);
+
+        // Update navigation manager with circular mode state
+        if (this.genomeBrowser.navigationManager) {
+            this.genomeBrowser.navigationManager.setCircularMode(newCircularMode);
+        }
+
+        // Refresh the current view to apply changes
+        if (this.genomeBrowser.refreshCurrentView) {
+            this.genomeBrowser.refreshCurrentView();
+        } else {
+            // Fallback: refresh the genes track directly
+            this.refreshTrack('genes');
+        }
+
+        console.log(`🔄 Circular mode ${newCircularMode ? 'enabled' : 'disabled'}`);
+    }
+
 
     /**
      * Update the layout toggle button appearance based on mode
@@ -7735,6 +7875,12 @@ class TrackRenderer {
 
         if (range <= 0 || width <= 0) return;
 
+        // Get circular mode state
+        const settings = this.getTrackSettings('genes');
+        const isCircular = settings.circularMode || false;
+        const sequence = this.genomeBrowser.currentSequence[chromosome];
+        const seqLen = sequence ? sequence.length : 0;
+
         // Clear canvas
         ctx.clearRect(0, 0, width, 35);
 
@@ -7771,8 +7917,14 @@ class TrackRenderer {
                 ctx.lineTo(x, 19);
                 ctx.stroke();
 
+                // In circular mode, normalize the position for display
+                let displayPos = pos;
+                if (isCircular && seqLen > 0) {
+                    displayPos = ((pos % seqLen) + seqLen) % seqLen;
+                }
+
                 // Draw label with minimum spacing check - moved up from 32 to 28
-                const label = this.formatDetailedPosition(pos);
+                const label = this.formatDetailedPosition(displayPos);
                 const labelWidth = ctx.measureText(label).width;
 
                 // Check if there's enough space for this label
@@ -7790,6 +7942,40 @@ class TrackRenderer {
                 if (canDrawLabel) {
                     ctx.fillText(label, x, 28);
                 }
+            }
+        }
+
+        // In circular mode, draw origin marker if visible
+        if (isCircular && seqLen > 0) {
+            // Check if origin (position 0/seqLen) is in view
+            let originInView = false;
+            let originX = -1;
+
+            if (start < 0) {
+                // Viewport wraps left - origin is at position 0 in the adjusted space
+                originX = ((0 - start) / range) * width;
+                originInView = originX >= 0 && originX <= width;
+            } else if (end > seqLen) {
+                // Viewport wraps right - origin is at seqLen position
+                originX = ((seqLen - start) / range) * width;
+                originInView = originX >= 0 && originX <= width;
+            }
+
+            if (originInView && originX >= 0) {
+                // Draw origin indicator (vertical line with label)
+                ctx.save();
+                ctx.strokeStyle = '#10b981'; // Green for origin
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(originX, 0);
+                ctx.lineTo(originX, 35);
+                ctx.stroke();
+
+                // Draw origin label
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.fillText('Origin', originX, 10);
+                ctx.restore();
             }
         }
 
@@ -7818,6 +8004,7 @@ class TrackRenderer {
         ctx.lineTo(width, 34.5);
         ctx.stroke();
     }
+
 
     // Calculate intelligent tick spacing for detailed view
     calculateDetailedTickSpacing(range, width) {
@@ -11267,8 +11454,10 @@ This action cannot be undone.`;
                 autoHighlightSequence: false, // Auto-highlight sequence region when gene is selected
                 showSequence: false, // Show reference sequence
                 sequenceHeight: 25, // Height of reference sequence display
-                renderingMode: 'svg' // 'svg' or 'canvas'
+                renderingMode: 'svg', // 'svg' or 'canvas'
+                circularMode: false // Circular browsing mode for wraparound navigation
             },
+
             sequence: {
                 visible: true,
                 height: 60,
