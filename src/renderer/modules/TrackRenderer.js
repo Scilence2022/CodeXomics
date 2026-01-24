@@ -1479,20 +1479,37 @@ class TrackRenderer {
             // Check if viewport wraps around (end > seqLen or start < 0)
             if (viewport.end > seqLen) {
                 // Viewport wraps from end to start
-                // If gene is in the post-origin portion (0 to wrappedEnd), shift it
                 const wrappedEnd = viewport.end % seqLen;
-                if (gene.end <= wrappedEnd) {
-                    // Gene is entirely in post-origin region - shift by seqLen
+
+                // Case 1: Gene entirely in post-origin region [0, wrappedEnd]
+                if (gene.start < wrappedEnd && gene.end <= wrappedEnd) {
                     adjustedGeneStart = gene.start + seqLen;
                     adjustedGeneEnd = gene.end + seqLen;
                 }
+                // Case 2: Gene spans origin (start > wrappedEnd, end <= wrappedEnd)
+                // This means gene.start is near seqLen and gene.end is near 0
+                else if (gene.start > wrappedEnd && gene.end <= wrappedEnd) {
+                    // Gene spans origin - shift the end portion to come after start
+                    adjustedGeneStart = gene.start;
+                    adjustedGeneEnd = gene.end + seqLen;
+                }
+                // Otherwise: Gene is entirely in pre-origin region, no adjustment needed
             } else if (viewport.start < 0) {
                 // Viewport wraps from start to end (scrolling left past origin)
-                // If gene is in the pre-origin portion (wrappedStart to seqLen), shift it left
-                if (gene.start >= seqLen + viewport.start) {
+                const wrappedStart = seqLen + viewport.start; // Convert negative to positive position
+
+                // Case 1: Gene entirely in pre-origin region [wrappedStart, seqLen)
+                if (gene.start >= wrappedStart && gene.end > wrappedStart) {
                     adjustedGeneStart = gene.start - seqLen;
                     adjustedGeneEnd = gene.end - seqLen;
                 }
+                // Case 2: Gene spans origin (start >= wrappedStart, end < wrappedStart)
+                else if (gene.start >= wrappedStart && gene.end < wrappedStart) {
+                    // Gene spans origin - shift the start portion to come before end
+                    adjustedGeneStart = gene.start - seqLen;
+                    adjustedGeneEnd = gene.end;
+                }
+                // Otherwise: Gene is entirely in post-origin region, no adjustment needed
             }
         }
 
