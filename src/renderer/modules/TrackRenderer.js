@@ -362,7 +362,7 @@ class TrackRenderer {
             const isCircular = this.getTrackSettings('genes').circularMode || false;
             circularBtn.innerHTML = isCircular ?
                 '<i class="fas fa-circle-notch"></i>' :
-                '<i class="fas fa-minus"></i>';
+                '<i class="fas fa-long-arrow-alt-right"></i>';
             circularBtn.title = isCircular ?
                 'Circular Mode: ON (click to disable)' :
                 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
@@ -1177,19 +1177,19 @@ class TrackRenderer {
 
                 if (isForward) {
                     // Forward arrow (pointing right)
-                    pathData = `M ${x} ${y} 
-                               L ${x + width - arrowSize} ${y} 
-                               L ${x + width} ${y + height / 2} 
-                               L ${x + width - arrowSize} ${y + height} 
-                               L ${x} ${y + height} 
+                    pathData = `M ${x} ${y}
+                               L ${x + width - arrowSize} ${y}
+                               L ${x + width} ${y + height / 2}
+                               L ${x + width - arrowSize} ${y + height}
+                               L ${x} ${y + height}
                                Z`;
                 } else {
                     // Reverse arrow (pointing left)
-                    pathData = `M ${x + arrowSize} ${y} 
-                               L ${x + width} ${y} 
-                               L ${x + width} ${y + height} 
-                               L ${x + arrowSize} ${y + height} 
-                               L ${x} ${y + height / 2} 
+                    pathData = `M ${x + arrowSize} ${y}
+                               L ${x + width} ${y}
+                               L ${x + width} ${y + height}
+                               L ${x + arrowSize} ${y + height}
+                               L ${x} ${y + height / 2}
                                Z`;
                 }
 
@@ -1205,15 +1205,15 @@ class TrackRenderer {
 
                 if (isForward) {
                     // Forward triangle (pointing right)
-                    pathData = `M ${x} ${y} 
-                               L ${x + width} ${y + height / 2} 
-                               L ${x} ${y + height} 
+                    pathData = `M ${x} ${y}
+                               L ${x + width} ${y + height / 2}
+                               L ${x} ${y + height}
                                Z`;
                 } else {
                     // Reverse triangle (pointing left)
-                    pathData = `M ${x + width} ${y} 
-                               L ${x} ${y + height / 2} 
-                               L ${x + width} ${y + height} 
+                    pathData = `M ${x + width} ${y}
+                               L ${x} ${y + height / 2}
+                               L ${x + width} ${y + height}
                                Z`;
                 }
 
@@ -1393,7 +1393,7 @@ class TrackRenderer {
             this.genomeBrowser
         );
 
-        // Store reference if needed for cleanup, though in this architecture 
+        // Store reference if needed for cleanup, though in this architecture
         // the renderer is often recreated with the track content
         // We could store it in a map using the track or container ID if we wanted to reuse it more aggressively
     }
@@ -1429,7 +1429,7 @@ class TrackRenderer {
         const svgContentHeight = layout.totalHeight - layout.rulerHeight;
 
         // Use 100% width to ensure it always fills the available space (User Request)
-        // We use preserveAspectRatio="none" to allow exact fitting, but we rely on 
+        // We use preserveAspectRatio="none" to allow exact fitting, but we rely on
         // accurate containerWidth for the viewBox to minimize distortion.
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', svgContentHeight);
@@ -1657,9 +1657,9 @@ class TrackRenderer {
                     pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
                 } else {
                     // Normal triangle - exact width match
-                    pathData = `M 0 0 
-                               L ${width} ${height / 2} 
-                               L 0 ${height} 
+                    pathData = `M 0 0
+                               L ${width} ${height / 2}
+                               L 0 ${height}
                                Z`;
                 }
             } else {
@@ -1672,9 +1672,9 @@ class TrackRenderer {
                     pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
                 } else {
                     // Normal triangle - exact width match
-                    pathData = `M ${width} 0 
-                               L 0 ${height / 2} 
-                               L ${width} ${height} 
+                    pathData = `M ${width} 0
+                               L 0 ${height / 2}
+                               L ${width} ${height}
                                Z`;
                 }
             }
@@ -1694,11 +1694,11 @@ class TrackRenderer {
                     pathData = this.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
                 } else {
                     // Normal forward arrow
-                    pathData = `M 0 0 
-                               L ${width - arrowSize} 0 
-                               L ${width} ${height / 2} 
-                               L ${width - arrowSize} ${height} 
-                               L 0 ${height} 
+                    pathData = `M 0 0
+                               L ${width - arrowSize} 0
+                               L ${width} ${height / 2}
+                               L ${width - arrowSize} ${height}
+                               L 0 ${height}
                                Z`;
                 }
             } else {
@@ -1711,11 +1711,11 @@ class TrackRenderer {
                     pathData = this.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
                 } else {
                     // Normal reverse arrow
-                    pathData = `M ${arrowSize} 0 
-                               L ${width} 0 
-                               L ${width} ${height} 
-                               L ${arrowSize} ${height} 
-                               L 0 ${height / 2} 
+                    pathData = `M ${arrowSize} 0
+                               L ${width} 0
+                               L ${width} ${height}
+                               L ${arrowSize} ${height}
+                               L 0 ${height / 2}
                                Z`;
                 }
             }
@@ -1795,9 +1795,9 @@ class TrackRenderer {
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             let pathData;
             if (isLeftTruncated) {
-                pathData = this.createJaggedPromoterPath(width, height, true, false, isForward);
+                pathData = this.createJaggedPromoterPath(width, height, true, false);
             } else {
-                pathData = this.createJaggedPromoterPath(width, height, false, true, isForward);
+                pathData = this.createJaggedPromoterPath(width, height, false, true);
             }
             path.setAttribute('d', pathData);
             path.setAttribute('fill', fillColor);
@@ -1963,9 +1963,9 @@ class TrackRenderer {
             pathData = this.createJaggedRegulatoryPath(width, height, false, true);
         } else {
             // Diamond shape
-            pathData = `M ${width / 2} 0 
-                       L ${width} ${height / 2} 
-                       L ${width / 2} ${height} 
+            pathData = `M ${width / 2} 0
+                       L ${width} ${height / 2}
+                       L ${width / 2} ${height}
                        L 0 ${height / 2} Z`;
         }
 
@@ -2143,7 +2143,7 @@ class TrackRenderer {
             path.setAttribute('stroke-linejoin', 'round');
             group.appendChild(path);
         } else {
-            // Full chevron/hexagon shape 
+            // Full chevron/hexagon shape
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 
             // Create a hexagon-like chevron shape (pointed on both ends if wide enough)
@@ -2444,8 +2444,8 @@ class TrackRenderer {
             const tail = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             const tailX = width * 0.75;
             const tailY = bubbleY + bubbleHeight;
-            const tailPath = `M ${tailX} ${tailY} 
-                             L ${tailX + tailSize} ${tailY + tailSize} 
+            const tailPath = `M ${tailX} ${tailY}
+                             L ${tailX + tailSize} ${tailY + tailSize}
                              L ${tailX + tailSize * 0.5} ${tailY} Z`;
             tail.setAttribute('d', tailPath);
             tail.setAttribute('fill', `url(#${gradientId})`);
@@ -2485,51 +2485,51 @@ class TrackRenderer {
             // Forward triangle (pointing right)
             if (isLeftJagged) {
                 // Left edge (截断面) is jagged - vertical jagged line
-                return `M ${jaggedDepth} 0 
-                       L 0 ${jaggedStep} 
-                       L ${jaggedDepth} ${jaggedStep * 2} 
-                       L 0 ${jaggedStep * 3} 
-                       L ${jaggedDepth} ${jaggedStep * 4} 
-                       L 0 ${height} 
-                       L ${width} ${height / 2} 
-                       L ${jaggedDepth} 0 
+                return `M ${jaggedDepth} 0
+                       L 0 ${jaggedStep}
+                       L ${jaggedDepth} ${jaggedStep * 2}
+                       L 0 ${jaggedStep * 3}
+                       L ${jaggedDepth} ${jaggedStep * 4}
+                       L 0 ${height}
+                       L ${width} ${height / 2}
+                       L ${jaggedDepth} 0
                        Z`;
             } else if (isRightJagged) {
-                // Right edge (截断面) is jagged - vertical jagged line  
-                return `M 0 0 
-                       L ${width - jaggedDepth} ${jaggedStep} 
-                       L ${width} 0 
-                       L ${width - jaggedDepth} ${jaggedStep * 2} 
-                       L ${width} ${jaggedStep * 3} 
-                       L ${width - jaggedDepth} ${jaggedStep * 4} 
-                       L ${width} ${height} 
-                       L 0 ${height} 
+                // Right edge (截断面) is jagged - vertical jagged line
+                return `M 0 0
+                       L ${width - jaggedDepth} ${jaggedStep}
+                       L ${width} 0
+                       L ${width - jaggedDepth} ${jaggedStep * 2}
+                       L ${width} ${jaggedStep * 3}
+                       L ${width - jaggedDepth} ${jaggedStep * 4}
+                       L ${width} ${height}
+                       L 0 ${height}
                        Z`;
             }
         } else {
             // Reverse triangle (pointing left)
             if (isLeftJagged) {
                 // Left edge (截断面) is jagged - vertical jagged line
-                return `M ${jaggedDepth} 0 
-                       L 0 ${jaggedStep} 
-                       L ${jaggedDepth} ${jaggedStep * 2} 
-                       L 0 ${jaggedStep * 3} 
-                       L ${jaggedDepth} ${jaggedStep * 4} 
-                       L 0 ${height} 
-                       L ${width} ${height} 
-                       L ${width} 0 
+                return `M ${jaggedDepth} 0
+                       L 0 ${jaggedStep}
+                       L ${jaggedDepth} ${jaggedStep * 2}
+                       L 0 ${jaggedStep * 3}
+                       L ${jaggedDepth} ${jaggedStep * 4}
+                       L 0 ${height}
+                       L ${width} ${height}
+                       L ${width} 0
                        Z`;
             } else if (isRightJagged) {
                 // Right edge (截断面) is jagged - vertical jagged line
-                return `M ${arrowSize} 0 
-                       L ${width - jaggedDepth} 0 
-                       L ${width} ${jaggedStep} 
-                       L ${width - jaggedDepth} ${jaggedStep * 2} 
-                       L ${width} ${jaggedStep * 3} 
-                       L ${width - jaggedDepth} ${jaggedStep * 4} 
-                       L ${width} ${height} 
-                       L ${arrowSize} ${height} 
-                       L 0 ${height / 2} 
+                return `M ${arrowSize} 0
+                       L ${width - jaggedDepth} 0
+                       L ${width} ${jaggedStep}
+                       L ${width - jaggedDepth} ${jaggedStep * 2}
+                       L ${width} ${jaggedStep * 3}
+                       L ${width - jaggedDepth} ${jaggedStep * 4}
+                       L ${width} ${height}
+                       L ${arrowSize} ${height}
+                       L 0 ${height / 2}
                        Z`;
             }
         }
@@ -2553,53 +2553,53 @@ class TrackRenderer {
             // Forward arrow (pointing right)
             if (isLeftJagged) {
                 // Left edge is jagged
-                return `M ${jaggedDepth} 0 
-                       L 0 ${jaggedStep} 
-                       L ${jaggedDepth} ${jaggedStep * 2} 
-                       L 0 ${jaggedStep * 3} 
-                       L ${jaggedDepth} ${jaggedStep * 4} 
-                       L 0 ${height} 
-                       L ${width - arrowSize} ${height} 
-                       L ${width} ${height / 2} 
-                       L ${width - arrowSize} 0 
-                       L ${jaggedDepth} 0 
+                return `M ${jaggedDepth} 0
+                       L 0 ${jaggedStep}
+                       L ${jaggedDepth} ${jaggedStep * 2}
+                       L 0 ${jaggedStep * 3}
+                       L ${jaggedDepth} ${jaggedStep * 4}
+                       L 0 ${height}
+                       L ${width - arrowSize} ${height}
+                       L ${width} ${height / 2}
+                       L ${width - arrowSize} 0
+                       L ${jaggedDepth} 0
                        Z`;
             } else if (isRightJagged) {
                 // Right edge is completely jagged (no arrow tip for truncated genes)
-                return `M 0 0 
-                       L ${width - jaggedDepth} 0 
-                       L ${width} ${jaggedStep} 
-                       L ${width - jaggedDepth} ${jaggedStep * 2} 
-                       L ${width} ${jaggedStep * 3} 
-                       L ${width - jaggedDepth} ${jaggedStep * 4} 
-                       L ${width} ${height} 
-                       L 0 ${height} 
+                return `M 0 0
+                       L ${width - jaggedDepth} 0
+                       L ${width} ${jaggedStep}
+                       L ${width - jaggedDepth} ${jaggedStep * 2}
+                       L ${width} ${jaggedStep * 3}
+                       L ${width - jaggedDepth} ${jaggedStep * 4}
+                       L ${width} ${height}
+                       L 0 ${height}
                        Z`;
             }
         } else {
             // Reverse arrow (pointing left)
             if (isLeftJagged) {
                 // Left edge is completely jagged (no arrow tip for truncated genes)
-                return `M ${jaggedDepth} 0 
-                       L 0 ${jaggedStep} 
-                       L ${jaggedDepth} ${jaggedStep * 2} 
-                       L 0 ${jaggedStep * 3} 
-                       L ${jaggedDepth} ${jaggedStep * 4} 
-                       L 0 ${height} 
-                       L ${width} ${height} 
-                       L ${width} 0 
+                return `M ${jaggedDepth} 0
+                       L 0 ${jaggedStep}
+                       L ${jaggedDepth} ${jaggedStep * 2}
+                       L 0 ${jaggedStep * 3}
+                       L ${jaggedDepth} ${jaggedStep * 4}
+                       L 0 ${height}
+                       L ${width} ${height}
+                       L ${width} 0
                        Z`;
             } else if (isRightJagged) {
                 // Right edge is jagged
-                return `M ${arrowSize} 0 
-                       L ${width - jaggedDepth} 0 
-                       L ${width} ${jaggedStep} 
-                       L ${width - jaggedDepth} ${jaggedStep * 2} 
-                       L ${width} ${jaggedStep * 3} 
-                       L ${width - jaggedDepth} ${jaggedStep * 4} 
-                       L ${width} ${height} 
-                       L ${arrowSize} ${height} 
-                       L 0 ${height / 2} 
+                return `M ${arrowSize} 0
+                       L ${width - jaggedDepth} 0
+                       L ${width} ${jaggedStep}
+                       L ${width - jaggedDepth} ${jaggedStep * 2}
+                       L ${width} ${jaggedStep * 3}
+                       L ${width - jaggedDepth} ${jaggedStep * 4}
+                       L ${width} ${height}
+                       L ${arrowSize} ${height}
+                       L 0 ${height / 2}
                        Z`;
             }
         }
@@ -2621,23 +2621,23 @@ class TrackRenderer {
         const flagHeight = height * 0.6;
 
         if (isLeftJagged) {
-            return `M ${jaggedDepth} ${height} 
-                   L 0 ${height - jaggedStep} 
-                   L ${jaggedDepth} ${height - jaggedStep * 2} 
-                   L 0 ${height - jaggedStep * 3} 
-                   L ${jaggedDepth} ${height - flagHeight} 
-                   L ${width * 0.8} ${height - flagHeight} 
-                   L ${width} ${height - flagHeight + height * 0.15} 
-                   L ${width * 0.8} ${height - flagHeight + height * 0.3} 
-                   L ${jaggedDepth} ${height - flagHeight + height * 0.3} 
+            return `M ${jaggedDepth} ${height}
+                   L 0 ${height - jaggedStep}
+                   L ${jaggedDepth} ${height - jaggedStep * 2}
+                   L 0 ${height - jaggedStep * 3}
+                   L ${jaggedDepth} ${height - flagHeight}
+                   L ${width * 0.8} ${height - flagHeight}
+                   L ${width} ${height - flagHeight + height * 0.15}
+                   L ${width * 0.8} ${height - flagHeight + height * 0.3}
+                   L ${jaggedDepth} ${height - flagHeight + height * 0.3}
                    L ${jaggedDepth} ${height} Z`;
         } else {
-            return `M 0 ${height} 
-                   L 0 ${height - flagHeight} 
-                   L ${width * 0.8} ${height - flagHeight} 
-                   L ${width} ${height - flagHeight + height * 0.15} 
-                   L ${width * 0.8} ${height - flagHeight + height * 0.3} 
-                   L 0 ${height - flagHeight + height * 0.3} 
+            return `M 0 ${height}
+                   L 0 ${height - flagHeight}
+                   L ${width * 0.8} ${height - flagHeight}
+                   L ${width} ${height - flagHeight + height * 0.15}
+                   L ${width * 0.8} ${height - flagHeight + height * 0.3}
+                   L 0 ${height - flagHeight + height * 0.3}
                    L 0 ${height} Z`;
         }
     }
@@ -2649,29 +2649,29 @@ class TrackRenderer {
         const barHeight = height * 0.3;
 
         if (isLeftJagged) {
-            return `M ${jaggedDepth} 0 
-                   L 0 ${jaggedStep} 
-                   L ${jaggedDepth} ${jaggedStep * 2} 
-                   L 0 ${jaggedStep * 3} 
-                   L ${jaggedDepth} ${barHeight} 
-                   L ${width / 2 - stemWidth / 2} ${barHeight} 
-                   L ${width / 2 - stemWidth / 2} ${height} 
-                   L ${width / 2 + stemWidth / 2} ${height} 
-                   L ${width / 2 + stemWidth / 2} ${barHeight} 
-                   L ${width} ${barHeight} 
-                   L ${width} 0 
+            return `M ${jaggedDepth} 0
+                   L 0 ${jaggedStep}
+                   L ${jaggedDepth} ${jaggedStep * 2}
+                   L 0 ${jaggedStep * 3}
+                   L ${jaggedDepth} ${barHeight}
+                   L ${width / 2 - stemWidth / 2} ${barHeight}
+                   L ${width / 2 - stemWidth / 2} ${height}
+                   L ${width / 2 + stemWidth / 2} ${height}
+                   L ${width / 2 + stemWidth / 2} ${barHeight}
+                   L ${width} ${barHeight}
+                   L ${width} 0
                    L ${jaggedDepth} 0 Z`;
         } else {
-            return `M 0 0 
-                   L ${width - jaggedDepth} 0 
-                   L ${width} ${jaggedStep} 
-                   L ${width - jaggedDepth} ${jaggedStep * 2} 
-                   L ${width} ${jaggedStep * 3} 
-                   L ${width - jaggedDepth} ${barHeight} 
-                   L ${width / 2 + stemWidth / 2} ${barHeight} 
-                   L ${width / 2 + stemWidth / 2} ${height} 
-                   L ${width / 2 - stemWidth / 2} ${height} 
-                   L ${width / 2 - stemWidth / 2} ${barHeight} 
+            return `M 0 0
+                   L ${width - jaggedDepth} 0
+                   L ${width} ${jaggedStep}
+                   L ${width - jaggedDepth} ${jaggedStep * 2}
+                   L ${width} ${jaggedStep * 3}
+                   L ${width - jaggedDepth} ${barHeight}
+                   L ${width / 2 + stemWidth / 2} ${barHeight}
+                   L ${width / 2 + stemWidth / 2} ${height}
+                   L ${width / 2 - stemWidth / 2} ${height}
+                   L ${width / 2 - stemWidth / 2} ${barHeight}
                    L 0 ${barHeight} Z`;
         }
     }
@@ -2681,23 +2681,23 @@ class TrackRenderer {
         const jaggedStep = Math.max(2, height / 6);
 
         if (isLeftJagged) {
-            return `M ${jaggedDepth} ${height * 0.2} 
-                   L 0 ${jaggedStep} 
-                   L ${jaggedDepth} ${jaggedStep * 2} 
-                   L 0 ${jaggedStep * 3} 
-                   L ${jaggedDepth} ${height * 0.8} 
-                   L ${width / 2} ${height} 
-                   L ${width} ${height / 2} 
-                   L ${width / 2} 0 
+            return `M ${jaggedDepth} ${height * 0.2}
+                   L 0 ${jaggedStep}
+                   L ${jaggedDepth} ${jaggedStep * 2}
+                   L 0 ${jaggedStep * 3}
+                   L ${jaggedDepth} ${height * 0.8}
+                   L ${width / 2} ${height}
+                   L ${width} ${height / 2}
+                   L ${width / 2} 0
                    L ${jaggedDepth} ${height * 0.2} Z`;
         } else {
-            return `M ${width / 2} 0 
-                   L ${width - jaggedDepth} ${height * 0.2} 
-                   L ${width} ${jaggedStep} 
-                   L ${width - jaggedDepth} ${jaggedStep * 2} 
-                   L ${width} ${jaggedStep * 3} 
-                   L ${width - jaggedDepth} ${height * 0.8} 
-                   L ${width / 2} ${height} 
+            return `M ${width / 2} 0
+                   L ${width - jaggedDepth} ${height * 0.2}
+                   L ${width} ${jaggedStep}
+                   L ${width - jaggedDepth} ${jaggedStep * 2}
+                   L ${width} ${jaggedStep * 3}
+                   L ${width - jaggedDepth} ${height * 0.8}
+                   L ${width / 2} ${height}
                    L 0 ${height / 2} Z`;
         }
     }
@@ -2707,23 +2707,23 @@ class TrackRenderer {
         const jaggedStep = Math.max(2, height / 6);
 
         if (isLeftJagged) {
-            return `M ${jaggedDepth} 0 
-                   L 0 ${jaggedStep} 
-                   L ${jaggedDepth} ${jaggedStep * 2} 
-                   L 0 ${jaggedStep * 3} 
-                   L ${jaggedDepth} ${jaggedStep * 4} 
-                   L 0 ${height} 
-                   L ${width} ${height} 
-                   L ${width} 0 
+            return `M ${jaggedDepth} 0
+                   L 0 ${jaggedStep}
+                   L ${jaggedDepth} ${jaggedStep * 2}
+                   L 0 ${jaggedStep * 3}
+                   L ${jaggedDepth} ${jaggedStep * 4}
+                   L 0 ${height}
+                   L ${width} ${height}
+                   L ${width} 0
                    L ${jaggedDepth} 0 Z`;
         } else {
-            return `M 0 0 
-                   L ${width - jaggedDepth} 0 
-                   L ${width} ${jaggedStep} 
-                   L ${width - jaggedDepth} ${jaggedStep * 2} 
-                   L ${width} ${jaggedStep * 3} 
-                   L ${width - jaggedDepth} ${jaggedStep * 4} 
-                   L ${width} ${height} 
+            return `M 0 0
+                   L ${width - jaggedDepth} 0
+                   L ${width} ${jaggedStep}
+                   L ${width - jaggedDepth} ${jaggedStep * 2}
+                   L ${width} ${jaggedStep * 3}
+                   L ${width - jaggedDepth} ${jaggedStep * 4}
+                   L ${width} ${height}
                    L 0 ${height} Z`;
         }
     }
@@ -2733,23 +2733,23 @@ class TrackRenderer {
         const jaggedStep = Math.max(2, height / 6);
 
         if (isLeftJagged) {
-            return `M ${jaggedDepth} 0 
-                   L 0 ${jaggedStep} 
-                   L ${jaggedDepth} ${jaggedStep * 2} 
-                   L 0 ${jaggedStep * 3} 
-                   L ${jaggedDepth} ${jaggedStep * 4} 
-                   L 0 ${height} 
-                   L ${width} ${height} 
-                   L ${width} 0 
+            return `M ${jaggedDepth} 0
+                   L 0 ${jaggedStep}
+                   L ${jaggedDepth} ${jaggedStep * 2}
+                   L 0 ${jaggedStep * 3}
+                   L ${jaggedDepth} ${jaggedStep * 4}
+                   L 0 ${height}
+                   L ${width} ${height}
+                   L ${width} 0
                    L ${jaggedDepth} 0 Z`;
         } else {
-            return `M 0 0 
-                   L ${width - jaggedDepth} 0 
-                   L ${width} ${jaggedStep} 
-                   L ${width - jaggedDepth} ${jaggedStep * 2} 
-                   L ${width} ${jaggedStep * 3} 
-                   L ${width - jaggedDepth} ${jaggedStep * 4} 
-                   L ${width} ${height} 
+            return `M 0 0
+                   L ${width - jaggedDepth} 0
+                   L ${width} ${jaggedStep}
+                   L ${width - jaggedDepth} ${jaggedStep * 2}
+                   L ${width} ${jaggedStep * 3}
+                   L ${width - jaggedDepth} ${jaggedStep * 4}
+                   L ${width} ${height}
                    L 0 ${height} Z`;
         }
     }
@@ -2761,22 +2761,22 @@ class TrackRenderer {
         const bubbleY = height * 0.1;
 
         if (isLeftJagged) {
-            return `M ${jaggedDepth} ${bubbleY} 
-                   L 0 ${bubbleY + jaggedStep} 
-                   L ${jaggedDepth} ${bubbleY + jaggedStep * 2} 
-                   L 0 ${bubbleY + jaggedStep * 3} 
-                   L ${jaggedDepth} ${bubbleY + bubbleHeight} 
-                   L ${width * 0.85} ${bubbleY + bubbleHeight} 
-                   L ${width * 0.85} ${bubbleY} 
+            return `M ${jaggedDepth} ${bubbleY}
+                   L 0 ${bubbleY + jaggedStep}
+                   L ${jaggedDepth} ${bubbleY + jaggedStep * 2}
+                   L 0 ${bubbleY + jaggedStep * 3}
+                   L ${jaggedDepth} ${bubbleY + bubbleHeight}
+                   L ${width * 0.85} ${bubbleY + bubbleHeight}
+                   L ${width * 0.85} ${bubbleY}
                    L ${jaggedDepth} ${bubbleY} Z`;
         } else {
-            return `M 0 ${bubbleY} 
-                   L ${width * 0.85 - jaggedDepth} ${bubbleY} 
-                   L ${width * 0.85} ${bubbleY + jaggedStep} 
-                   L ${width * 0.85 - jaggedDepth} ${bubbleY + jaggedStep * 2} 
-                   L ${width * 0.85} ${bubbleY + jaggedStep * 3} 
-                   L ${width * 0.85 - jaggedDepth} ${bubbleY + bubbleHeight} 
-                   L 0 ${bubbleY + bubbleHeight} 
+            return `M 0 ${bubbleY}
+                   L ${width * 0.85 - jaggedDepth} ${bubbleY}
+                   L ${width * 0.85} ${bubbleY + jaggedStep}
+                   L ${width * 0.85 - jaggedDepth} ${bubbleY + jaggedStep * 2}
+                   L ${width * 0.85} ${bubbleY + jaggedStep * 3}
+                   L ${width * 0.85 - jaggedDepth} ${bubbleY + bubbleHeight}
+                   L 0 ${bubbleY + bubbleHeight}
                    L 0 ${bubbleY} Z`;
         }
     }
@@ -3021,7 +3021,7 @@ class TrackRenderer {
         // Update button appearance
         button.innerHTML = newCircularMode ?
             '<i class="fas fa-circle-notch"></i>' :
-            '<i class="fas fa-minus"></i>';
+            '<i class="fas fa-long-arrow-alt-right"></i>';
         button.title = newCircularMode ?
             'Circular Mode: ON (click to disable)' :
             'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
