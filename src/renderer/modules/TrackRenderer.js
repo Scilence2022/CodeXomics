@@ -1523,8 +1523,9 @@ class TrackRenderer {
         const elementHeight = layout.geneHeight;
 
         // Check if gene is partially visible (truncated at left or right edges)
-        const isLeftTruncated = gene.start < viewport.start;
-        const isRightTruncated = gene.end > viewport.end;
+        // Use adjusted coordinates to properly handle circular mode wrapping
+        const isLeftTruncated = adjustedGeneStart < viewport.start;
+        const isRightTruncated = adjustedGeneEnd > viewport.end;
 
         // Create SVG group for the gene
         const geneGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
