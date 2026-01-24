@@ -1313,7 +1313,7 @@ class TrackRenderer {
 
         // Unwrapped (normal) case - viewport doesn't cross origin
         if (viewport.end <= seqLen && viewport.start >= 0) {
-            return gene.start <= viewport.end && gene.end >= viewport.start;
+            return gene.start < viewport.end && gene.end > viewport.start;
         }
 
         // Wrapped viewport: viewport spans from start to (end % seqLen) via origin
@@ -1321,11 +1321,10 @@ class TrackRenderer {
         const wrappedEnd = viewport.end % seqLen;
         const wrappedStart = viewport.start < 0 ? seqLen + viewport.start : viewport.start;
 
-        // Feature visible if it's in the pre-origin region OR post-origin region
-        // Pre-origin: gene overlaps with [wrappedStart, seqLen)
-        const visibleInPreOrigin = gene.end >= wrappedStart && gene.start < seqLen;
+        // Feature visible if it's in the pre-origin region OR post-origin region        // Pre-origin: gene overlaps with [wrappedStart, seqLen)
+        const visibleInPreOrigin = gene.start < seqLen && gene.end > wrappedStart;
         // Post-origin: gene overlaps with [0, wrappedEnd]
-        const visibleInPostOrigin = gene.start <= wrappedEnd && gene.end >= 0;
+        const visibleInPostOrigin = gene.start < wrappedEnd && gene.end > 0;
 
         return visibleInPreOrigin || visibleInPostOrigin;
     }
@@ -1519,7 +1518,9 @@ class TrackRenderer {
         const left = ((geneStart - viewport.start) / (viewport.end - viewport.start)) * 100;
         const width = ((geneEnd - geneStart) / (viewport.end - viewport.start)) * 100;
 
-        if (width <= 0) return null;
+        // Check for meaningful overlap (allow small tolerance for floating-point precision)
+        // Genes with width very close to 0 due to rounding should still be visible
+        if (width < -0.001) return null;
 
 
         // Get positioning parameters - use accurate container width (no ruler offset in SVG)
