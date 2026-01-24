@@ -1321,8 +1321,9 @@ class TrackRenderer {
         const wrappedEnd = viewport.end % seqLen;
         const wrappedStart = viewport.start < 0 ? seqLen + viewport.start : viewport.start;
 
-        // Feature visible if it's in the pre-origin region OR post-origin region        // Pre-origin: gene overlaps with [wrappedStart, seqLen)
-        const visibleInPreOrigin = gene.start < seqLen && gene.end > wrappedStart;
+        // Feature visible if it's in the pre-origin region OR post-origin region
+        // Pre-origin: gene overlaps with [wrappedStart, seqLen)
+        const visibleInPreOrigin = gene.start < seqLen && gene.end >= wrappedStart;
         // Post-origin: gene overlaps with [0, wrappedEnd]
         const visibleInPostOrigin = gene.start < wrappedEnd && gene.end > 0;
 
