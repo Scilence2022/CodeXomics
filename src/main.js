@@ -26,6 +26,9 @@ let unifiedServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopp
 let toolMenuTemplates = new Map();
 let currentActiveWindow = null;
 
+// Queue for files opened before app is ready (e.g., via file association)
+let fileOpenQueue = [];
+
 // 为 Circos Genome Plotter 创建专门的菜单系统
 function createCircosPlotterMenu(circosWindow) {
   const template = [
@@ -1420,6 +1423,11 @@ function createWindow() {
     // Initialize RPC interface after window is ready
     genomeStudioRPC.setMainWindow(mainWindow);
     genomeStudioRPC.initialize();
+
+    // Process any files that were queued before window was ready
+    setTimeout(() => {
+      processFileQueue();
+    }, 500);
   });
 
   // Open DevTools for debugging (can be disabled in production)
@@ -2273,6 +2281,78 @@ app.whenReady().then(() => {
     }
   });
 });
+
+// ===== File Association Handlers =====
+/**
+ * Helper function to open a GenBank file in the main window
+ * @param {string} filePath - Path to the GenBank file to open
+ */
+function openGenBankFile(filePath) {
+  console.log('📄 Opening GenBank file:', filePath);
+
+  // Validate file extension
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext !== '.gbk' && ext !== '.gb' && ext !== '.genbank' && ext !== '.gbff') {
+    console.warn('⚠️ File is not a GenBank file:', filePath);
+    return;
+  }
+
+  // Check if file exists
+  if (!fs.existsSync(filePath)) {
+    console.error('❌ File not found:', filePath);
+    dialog.showErrorBox('File Not Found', `The file "${filePath}" could not be found.`);
+    return;
+  }
+
+  // If main window exists and is ready, send file directly
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+    mainWindow.webContents.send('file-opened', filePath);
+    mainWindow.show();
+    mainWindow.focus();
+    console.log('✅ Sent file to main window:', filePath);
+  } else {
+    // Queue the file to be opened when window is ready
+    console.log('⏳ Queuing file for later:', filePath);
+    fileOpenQueue.push(filePath);
+  }
+}
+
+/**
+ * Process any queued files that were opened before the app was ready
+ */
+function processFileQueue() {
+  if (fileOpenQueue.length > 0 && mainWindow && !mainWindow.isDestroyed()) {
+    console.log(`📋 Processing ${fileOpenQueue.length} queued file(s)`);
+    fileOpenQueue.forEach(filePath => {
+      mainWindow.webContents.send('file-opened', filePath);
+    });
+    fileOpenQueue = [];
+  }
+}
+
+// Handle files opened via OS file association on macOS
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  console.log('🍎 macOS open-file event:', filePath);
+  openGenBankFile(filePath);
+});
+
+// Handle files passed as command-line arguments on Windows/Linux
+// This needs to be set up before app.whenReady() but we'll check in whenReady too
+const commandLineFiles = process.argv.slice(1).filter(arg => {
+  // Filter out electron executable and flags
+  return !arg.startsWith('--') &&
+    !arg.includes('electron') &&
+    arg !== '.' &&
+    (arg.endsWith('.gbk') || arg.endsWith('.gb') || arg.endsWith('.genbank') || arg.endsWith('.gbff'));
+});
+
+if (commandLineFiles.length > 0) {
+  console.log('💻 Command-line GenBank files:', commandLineFiles);
+  commandLineFiles.forEach(filePath => {
+    fileOpenQueue.push(filePath);
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

@@ -123,6 +123,24 @@
         ]
       }
     ],
+    "fileAssociations": [
+      {
+        "ext": "gbk",
+        "name": "GenBank Sequence File",
+        "description": "GenBank genome sequence file",
+        "role": "Editor",
+        "icon": "build/icons/512x512.png",
+        "mimeType": "chemical/x-genbank"
+      },
+      {
+        "ext": "gb",
+        "name": "GenBank Sequence File",
+        "description": "GenBank genome sequence file",
+        "role": "Editor",
+        "icon": "build/icons/512x512.png",
+        "mimeType": "chemical/x-genbank"
+      }
+    ],
     "mac": {
       "category": "public.app-category.education",
       "icon": "build/icon.icns",
@@ -176,6 +194,7 @@
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "win": {
+      "icon": "build/icons/512x512.png",
       "target": [
         {
           "target": "nsis",
@@ -198,7 +217,9 @@
       "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "${productName}"
+      "shortcutName": "${productName}",
+      "perMachine": true,
+      "deleteAppDataOnUninstall": false
     },
     "linux": {
       "target": [
