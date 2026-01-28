@@ -198,6 +198,7 @@ class ModalDragManager {
             '#gotoModal',
             '#addFeatureModal',
             '#generalSettingsModal',
+            '#externalToolsModal',
             '#actionListModal',
             '#tabSettingsModal',
             '#multiAgentSettingsModal',
