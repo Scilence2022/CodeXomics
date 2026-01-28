@@ -10,6 +10,7 @@ const fs = require('fs');
 const UnifiedClaudeMCPServer = require('./mcp-server-claude-unified');
 const genomeStudioRPC = require('./genome-studio-rpc');
 const VERSION_INFO = require('./version');
+const i18n = require('./i18n/i18n-main');
 
 // Application constants
 const APP_NAME = VERSION_INFO.appName;
@@ -2245,9 +2246,27 @@ function setupEnvironmentVariables() {
 }
 
 // App event listeners
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set up environment variables for system command execution
   setupEnvironmentVariables();
+
+  // Initialize i18n system before creating windows
+  try {
+    await i18n.init();
+    // Setup IPC handlers for language change events
+    i18n.setupIPC((newLang) => {
+      // Notify all windows about language change
+      BrowserWindow.getAllWindows().forEach(win => {
+        win.webContents.send('language-changed', newLang);
+      });
+      // Rebuild menus with new language
+      createMenu();
+      console.log(`[Main] Menus rebuilt for language: ${newLang}`);
+    });
+    console.log('[Main] i18n system initialized');
+  } catch (error) {
+    console.error('[Main] i18n initialization failed:', error);
+  }
 
   // Check if app was launched with --open-project argument
   const args = process.argv.slice(1);

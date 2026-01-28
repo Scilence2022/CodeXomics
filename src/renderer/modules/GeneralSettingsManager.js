@@ -7,7 +7,7 @@ class GeneralSettingsManager {
         this.configManager = configManager;
         this.currentTab = 'appearance';
         this.isInitialized = false;
-        
+
         // Default settings
         this.defaultSettings = {
             // Appearance
@@ -19,7 +19,7 @@ class GeneralSettingsManager {
             compactMode: false,
             showWelcomeScreen: true,
             minLineSpacing: 12, // Minimum line spacing for sequence display
-            
+
             // Performance
             maxSequenceLength: 5000000,
             renderingMode: 'adaptive',
@@ -29,14 +29,14 @@ class GeneralSettingsManager {
             enableFileCache: true,
             cacheSize: 500,
             enableGlobalDragging: true, // Enable dynamic viewport updates for all tracks during dragging
-            
+
             // Wheel Zoom
             enableWheelZoom: true,
             wheelZoomSensitivity: 0.1,
             wheelZoomToCursor: true,
             wheelZoomMinRange: 100,
             wheelZoomMaxRange: 1000000,
-            
+
             // Features
             enableGCContent: true,
             enableProteinTranslation: true,
@@ -46,7 +46,7 @@ class GeneralSettingsManager {
             autoSaveInterval: 300,
             enableNotifications: true,
             enableKeyboardShortcuts: true,
-            
+
             // Export/Import
             defaultExportFormat: 'fasta',
             includeMetadata: true,
@@ -54,11 +54,11 @@ class GeneralSettingsManager {
             autoBackup: true,
             backupInterval: 24,
             maxBackups: 10,
-            
-        // External Tools
-        deepGeneResearchUrl: 'http://43.196.74.134:3000/',
-        chopchopUrl: 'https://chopchop.cbu.uib.no/',
-        progenFixerUrl: 'https://progenfixer.biodesign.ac.cn'
+
+            // External Tools
+            deepGeneResearchUrl: 'http://43.196.74.134:3000/',
+            chopchopUrl: 'https://chopchop.cbu.uib.no/',
+            progenFixerUrl: 'https://progenfixer.biodesign.ac.cn'
         };
     }
 
@@ -71,7 +71,7 @@ class GeneralSettingsManager {
         try {
             // Initialize UI elements and event handlers
             this.initializeUI();
-            
+
             await this.loadSettings();
             this.applySettings();
             this.isInitialized = true;
@@ -89,7 +89,7 @@ class GeneralSettingsManager {
     initializeUI() {
         // Setup event listeners
         this.setupEventListeners();
-        
+
         console.log('✅ [GeneralSettings] UI initialized');
     }
 
@@ -98,50 +98,50 @@ class GeneralSettingsManager {
      */
     initializeTabs() {
         console.log('🔄 [GeneralSettings] Initializing tabs');
-        
+
         // Use a more robust approach with multiple attempts
         const initializeTabsWithRetry = (attempts = 0, maxAttempts = 5) => {
             // Ensure the first tab is active by default
             const firstTab = document.querySelector('#generalSettingsModal .settings-tabs .tab-btn[data-tab="appearance"]');
             const firstContent = document.getElementById('appearance-tab');
-            
+
             console.log(`🔍 [GeneralSettings] Attempt ${attempts + 1}: Found first tab:`, !!firstTab);
             console.log('🔍 [GeneralSettings] Found first content:', !!firstContent);
-            
+
             if (firstTab && firstContent) {
                 // Remove active from all tabs first
                 const allTabButtons = document.querySelectorAll('#generalSettingsModal .settings-tabs .tab-btn');
                 const allTabContents = document.querySelectorAll('#generalSettingsModal .tab-content');
-                
+
                 console.log(`🔍 [GeneralSettings] Found ${allTabButtons.length} tab buttons`);
                 console.log(`🔍 [GeneralSettings] Found ${allTabContents.length} tab contents`);
-                
+
                 allTabButtons.forEach(btn => {
                     btn.classList.remove('active');
                     console.log(`🔄 [GeneralSettings] Removed active from button: ${btn.dataset.tab}`);
                 });
-                
+
                 allTabContents.forEach(content => {
                     content.classList.remove('active');
                     console.log(`🔄 [GeneralSettings] Removed active from content: ${content.id}`);
                 });
-                
+
                 // Set first tab as active
                 firstTab.classList.add('active');
                 firstContent.classList.add('active');
                 this.currentTab = 'appearance';
-                
+
                 console.log('✅ [GeneralSettings] Default tab (appearance) activated');
                 console.log('🔍 [GeneralSettings] First tab classes:', firstTab.className);
                 console.log('🔍 [GeneralSettings] First content classes:', firstContent.className);
-                
+
                 // Setup tab event listeners after ensuring elements exist
                 this.setupTabHandlers();
-                
+
                 return true;
             } else {
                 console.warn(`❌ [GeneralSettings] Attempt ${attempts + 1}: Could not find default tab elements`);
-                
+
                 if (attempts < maxAttempts) {
                     console.log(`🔄 [GeneralSettings] Retrying in ${(attempts + 1) * 100}ms...`);
                     setTimeout(() => {
@@ -149,19 +149,19 @@ class GeneralSettingsManager {
                     }, (attempts + 1) * 100);
                 } else {
                     console.error('❌ [GeneralSettings] Failed to initialize tabs after all attempts');
-                    
+
                     // Debug: List all available elements
                     const allTabs = document.querySelectorAll('#generalSettingsModal .tab-btn');
                     const allContents = document.querySelectorAll('#generalSettingsModal .tab-content');
-                    console.log('🔍 [GeneralSettings] All tab buttons found:', 
+                    console.log('🔍 [GeneralSettings] All tab buttons found:',
                         Array.from(allTabs).map(t => t.dataset.tab));
-                    console.log('🔍 [GeneralSettings] All tab contents found:', 
+                    console.log('🔍 [GeneralSettings] All tab contents found:',
                         Array.from(allContents).map(c => c.id));
                 }
                 return false;
             }
         };
-        
+
         // Start the initialization process
         initializeTabsWithRetry();
     }
@@ -180,6 +180,25 @@ class GeneralSettingsManager {
             themeSelect.addEventListener('change', (e) => {
                 this.updateSetting('themeMode', e.target.value);
                 this.applyTheme(e.target.value);
+            });
+        }
+
+        // Language change handler
+        const languageSelect = document.getElementById('languageSelect');
+        if (languageSelect) {
+            languageSelect.addEventListener('change', async (e) => {
+                const newLang = e.target.value;
+                console.log(`🌐 [GeneralSettings] Language changed to: ${newLang}`);
+
+                // Update I18nManager if available
+                if (window.i18nManager) {
+                    await window.i18nManager.changeLanguage(newLang);
+                } else if (window.ipcRenderer) {
+                    // Fallback: notify main process directly
+                    await window.ipcRenderer.invoke('i18n:changeLanguage', newLang);
+                }
+
+                this.showNotification(`Language changed to ${e.target.options[e.target.selectedIndex].text}. Some changes may require a restart.`, 'success');
             });
         }
 
@@ -264,7 +283,7 @@ class GeneralSettingsManager {
         const maxSequenceLengthSelect = document.getElementById('maxSequenceLength');
         if (maxSequenceLengthSelect) {
             maxSequenceLengthSelect.addEventListener('change', (e) => {
-                this.updateSetting('maxSequenceLength', 
+                this.updateSetting('maxSequenceLength',
                     e.target.value === 'unlimited' ? -1 : parseInt(e.target.value));
             });
         }
@@ -298,7 +317,7 @@ class GeneralSettingsManager {
                 const value = parseFloat(e.target.value);
                 this.updateSetting('wheelZoomSensitivity', value);
                 this.applyFeatureSetting('wheelZoomSensitivity', value);
-                
+
                 // Update display value
                 const displayElement = document.getElementById('wheelZoomSensitivityValue');
                 if (displayElement) {
@@ -306,7 +325,7 @@ class GeneralSettingsManager {
                 }
             });
         }
-        
+
         const wheelZoomMinRangeInput = document.getElementById('wheelZoomMinRange');
         if (wheelZoomMinRangeInput) {
             wheelZoomMinRangeInput.addEventListener('change', (e) => {
@@ -315,7 +334,7 @@ class GeneralSettingsManager {
                 this.applyFeatureSetting('wheelZoomMinRange', value);
             });
         }
-        
+
         const wheelZoomMaxRangeInput = document.getElementById('wheelZoomMaxRange');
         if (wheelZoomMaxRangeInput) {
             wheelZoomMaxRangeInput.addEventListener('change', (e) => {
@@ -427,7 +446,7 @@ class GeneralSettingsManager {
         if (window.resizableModalManager) {
             window.resizableModalManager.makeResizable('#generalSettingsModal');
         }
-        
+
         // Add reset to defaults button handler
         const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
         if (resetDefaultsBtn) {
@@ -456,37 +475,37 @@ class GeneralSettingsManager {
      */
     setupTabHandlers() {
         console.log('🔄 [GeneralSettings] Setting up tab handlers');
-        
+
         const tabButtons = document.querySelectorAll('.settings-tabs .tab-btn');
         console.log(`🔍 [GeneralSettings] Found ${tabButtons.length} tab buttons to bind events to`);
-        
+
         if (tabButtons.length === 0) {
             console.error('❌ [GeneralSettings] No tab buttons found for event binding');
             return;
         }
-        
+
         tabButtons.forEach((btn, index) => {
             // Remove any existing event listeners to prevent duplicates
             const newBtn = btn.cloneNode(true);
             btn.parentNode.replaceChild(newBtn, btn);
-            
+
             newBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 const tabName = newBtn.dataset.tab;
                 console.log(`🔄 [GeneralSettings] Tab button clicked: ${tabName}`);
-                
+
                 if (tabName) {
                     this.switchTab(tabName);
                 } else {
                     console.error('❌ [GeneralSettings] Tab button has no data-tab attribute');
                 }
             });
-            
+
             console.log(`✅ [GeneralSettings] Event listener bound to tab button ${index + 1}: ${newBtn.dataset.tab}`);
         });
-        
+
         console.log('✅ [GeneralSettings] Tab handlers setup completed');
     }
 
@@ -496,26 +515,26 @@ class GeneralSettingsManager {
     switchTab(tabName) {
         try {
             console.log(`🔄 [GeneralSettings] Switching to tab: ${tabName}`);
-            
+
             if (!tabName) {
                 console.error('❌ [GeneralSettings] No tab name provided for switching');
                 return;
             }
-            
+
             // Update tab buttons
             const tabButtons = document.querySelectorAll('.settings-tabs .tab-btn');
             console.log(`🔍 [GeneralSettings] Found ${tabButtons.length} tab buttons to update`);
-            
+
             tabButtons.forEach(btn => {
                 const isActive = btn.dataset.tab === tabName;
                 btn.classList.toggle('active', isActive);
                 console.log(`🔄 [GeneralSettings] Tab button ${btn.dataset.tab}: ${isActive ? 'activated' : 'deactivated'}`);
             });
-            
+
             // Update tab content
             const tabContents = document.querySelectorAll('.settings-tabs .tab-content');
             console.log(`🔍 [GeneralSettings] Found ${tabContents.length} tab contents to update`);
-            
+
             const targetContentId = `${tabName}-tab`;
             tabContents.forEach(content => {
                 const isActive = content.id === targetContentId;
@@ -525,14 +544,14 @@ class GeneralSettingsManager {
 
             this.currentTab = tabName;
             console.log(`✅ [GeneralSettings] Successfully switched to tab: ${tabName}`);
-            
+
             // Verify the switch worked
             const activeButton = document.querySelector('.settings-tabs .tab-btn.active');
             const activeContent = document.querySelector('.settings-tabs .tab-content.active');
-            
+
             console.log(`🔍 [GeneralSettings] Verification - Active button: ${activeButton?.dataset.tab}`);
             console.log(`🔍 [GeneralSettings] Verification - Active content: ${activeContent?.id}`);
-            
+
         } catch (error) {
             console.error(`❌ [GeneralSettings] Error switching tabs:`, error);
             console.error(`❌ [GeneralSettings] Error stack:`, error.stack);
@@ -547,13 +566,13 @@ class GeneralSettingsManager {
 
         try {
             const settings = this.configManager.get('generalSettings', {});
-            
+
             // Merge with defaults
             this.settings = { ...this.defaultSettings, ...settings };
-            
+
             // Update UI elements
             this.updateUIFromSettings();
-            
+
         } catch (error) {
             console.error('Failed to load general settings:', error);
             this.settings = { ...this.defaultSettings };
@@ -622,10 +641,10 @@ class GeneralSettingsManager {
                 displayElement.textContent = this.settings.wheelZoomSensitivity;
             }
         }
-        
+
         const wheelZoomMinRangeInput = document.getElementById('wheelZoomMinRange');
         if (wheelZoomMinRangeInput) wheelZoomMinRangeInput.value = this.settings.wheelZoomMinRange;
-        
+
         const wheelZoomMaxRangeInput = document.getElementById('wheelZoomMaxRange');
         if (wheelZoomMaxRangeInput) wheelZoomMaxRangeInput.value = this.settings.wheelZoomMaxRange;
 
@@ -662,7 +681,7 @@ class GeneralSettingsManager {
      */
     async updateSetting(key, value) {
         this.settings[key] = value;
-        
+
         if (this.configManager) {
             try {
                 await this.configManager.set(`generalSettings.${key}`, value);
@@ -680,22 +699,22 @@ class GeneralSettingsManager {
         try {
             // Apply all current settings
             this.applySettings();
-            
+
             // Save to config manager
             if (this.configManager) {
                 await this.configManager.set('generalSettings', this.settings);
                 await this.configManager.saveConfig();
             }
-            
+
             // Close modal
             const modal = document.getElementById('generalSettingsModal');
             if (modal) {
                 modal.classList.remove('show');
             }
-            
+
             // Show success notification
             this.showNotification('Settings saved successfully!', 'success');
-            
+
             console.log('✅ [GeneralSettings] All settings saved successfully');
         } catch (error) {
             console.error('❌ [GeneralSettings] Failed to save settings:', error);
@@ -716,7 +735,7 @@ class GeneralSettingsManager {
         this.applyTrackHeight(this.settings.trackHeight);
         this.applyAnimations(this.settings.enableAnimations);
         this.applyMinLineSpacing(this.settings.minLineSpacing);
-        
+
         // Apply feature settings
         this.applyFeatureSetting('enableGlobalDragging', this.settings.enableGlobalDragging);
     }
@@ -727,7 +746,7 @@ class GeneralSettingsManager {
     applyTheme(theme) {
         const body = document.body;
         body.classList.remove('theme-light', 'theme-dark');
-        
+
         if (theme === 'light') {
             body.classList.add('theme-light');
         } else if (theme === 'dark') {
@@ -819,10 +838,10 @@ class GeneralSettingsManager {
                 console.log(`🔧 [GeneralSettings] Applied minimum line spacing: ${minSpacing}px`);
             }
         }
-        
+
         // Also set CSS custom property for immediate effect
         document.documentElement.style.setProperty('--min-sequence-line-spacing', `${minSpacing}px`);
-        
+
         // Update all existing sequence lines
         const sequenceLines = document.querySelectorAll('.sequence-line');
         sequenceLines.forEach(line => {
@@ -874,7 +893,7 @@ class GeneralSettingsManager {
                 // Notify the genome browser about the global dragging setting change
                 if (window.genomeBrowser) {
                     window.genomeBrowser.setGlobalDragging(enabled);
-                    
+
                     // Also update individual track settings to inherit the global setting
                     if (window.genomeBrowser.trackRenderer) {
                         if (window.genomeBrowser.trackRenderer.trackSettings) {
@@ -908,7 +927,7 @@ class GeneralSettingsManager {
                 }
                 break;
         }
-        
+
         // Emit event for other components to listen to
         window.dispatchEvent(new CustomEvent('settingChanged', {
             detail: { feature, enabled }
@@ -979,7 +998,7 @@ class GeneralSettingsManager {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
-        
+
         input.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -987,22 +1006,22 @@ class GeneralSettingsManager {
             try {
                 const text = await file.text();
                 const data = JSON.parse(text);
-                
+
                 if (data.settings) {
                     // Validate and merge settings
                     const validatedSettings = this.validateSettings(data.settings);
                     this.settings = { ...this.defaultSettings, ...validatedSettings };
-                    
+
                     // Save to config
                     if (this.configManager) {
                         await this.configManager.set('generalSettings', this.settings);
                         await this.configManager.saveConfig();
                     }
-                    
+
                     // Update UI and apply settings
                     this.updateUIFromSettings();
                     this.applySettings();
-                    
+
                     this.showNotification('Settings imported successfully', 'success');
                 } else {
                     throw new Error('Invalid settings file format');
@@ -1012,7 +1031,7 @@ class GeneralSettingsManager {
                 this.showNotification('Failed to import settings: ' + error.message, 'error');
             }
         };
-        
+
         input.click();
     }
 
@@ -1026,15 +1045,15 @@ class GeneralSettingsManager {
 
         try {
             this.settings = { ...this.defaultSettings };
-            
+
             if (this.configManager) {
                 await this.configManager.set('generalSettings', this.settings);
                 await this.configManager.saveConfig();
             }
-            
+
             this.updateUIFromSettings();
             this.applySettings();
-            
+
             this.showNotification('All settings reset to defaults', 'success');
         } catch (error) {
             console.error('Failed to reset settings:', error);
@@ -1047,12 +1066,12 @@ class GeneralSettingsManager {
      */
     validateSettings(settings) {
         const validated = {};
-        
+
         for (const [key, defaultValue] of Object.entries(this.defaultSettings)) {
             if (key in settings) {
                 const value = settings[key];
                 const defaultType = typeof defaultValue;
-                
+
                 if (typeof value === defaultType) {
                     validated[key] = value;
                 } else {
@@ -1063,7 +1082,7 @@ class GeneralSettingsManager {
                 validated[key] = defaultValue;
             }
         }
-        
+
         return validated;
     }
 
@@ -1076,7 +1095,7 @@ class GeneralSettingsManager {
         const memory = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Unknown';
         const cores = navigator.hardwareConcurrency || 'Unknown';
         const language = navigator.language;
-        
+
         const systemInfo = document.querySelector('.system-info');
         if (systemInfo) {
             systemInfo.innerHTML = `
@@ -1113,13 +1132,13 @@ class GeneralSettingsManager {
      */
     getBrowserName() {
         const userAgent = navigator.userAgent;
-        
+
         if (userAgent.includes('Chrome')) return 'Chrome';
         if (userAgent.includes('Firefox')) return 'Firefox';
         if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
         if (userAgent.includes('Edge')) return 'Edge';
         if (userAgent.includes('Opera')) return 'Opera';
-        
+
         return 'Unknown';
     }
 
@@ -1132,7 +1151,7 @@ class GeneralSettingsManager {
         const R = (num >> 16) + amt;
         const G = (num >> 8 & 0x00FF) + amt;
         const B = (num & 0x0000FF) + amt;
-        
+
         return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
             (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
             (B < 255 ? B < 1 ? 0 : B : 255))
@@ -1147,7 +1166,7 @@ class GeneralSettingsManager {
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.textContent = message;
-        
+
         // Style the notification
         Object.assign(notification.style, {
             position: 'fixed',
@@ -1163,9 +1182,9 @@ class GeneralSettingsManager {
             wordWrap: 'break-word',
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         });
-        
+
         document.body.appendChild(notification);
-        
+
         // Remove after 3 seconds
         setTimeout(() => {
             if (notification.parentNode) {
@@ -1193,10 +1212,10 @@ class GeneralSettingsManager {
      */
     testTabSwitching() {
         console.log('🧪 [GeneralSettings] Testing tab switching...');
-        
+
         const tabs = ['appearance', 'performance', 'features', 'export', 'about'];
         let currentIndex = 0;
-        
+
         const testNext = () => {
             if (currentIndex < tabs.length) {
                 const tabName = tabs[currentIndex];
@@ -1208,7 +1227,7 @@ class GeneralSettingsManager {
                 console.log('🧪 [GeneralSettings] Tab switching test completed');
             }
         };
-        
+
         testNext();
     }
 
@@ -1240,16 +1259,16 @@ class GeneralSettingsManager {
                     enablePlugins: true
                 }
             };
-            
+
             // Update the UI
             this.loadSettingsIntoUI();
-            
+
             // Save to config
             if (this.configManager) {
                 this.configManager.set('generalSettings', this.settings);
                 this.configManager.saveConfig();
             }
-            
+
             this.showNotification('Settings reset to defaults successfully!', 'success');
         }
     }
@@ -1260,4 +1279,3 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = GeneralSettingsManager;
 }
 
- 
