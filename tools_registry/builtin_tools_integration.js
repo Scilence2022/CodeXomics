@@ -343,6 +343,14 @@ class BuiltInToolsIntegration {
             priority: 2
         });
 
+        // System Tools - List Available Tools
+        this.builtInToolsMap.set('list_available_tools', {
+            method: 'listAvailableTools',
+            category: 'system',
+            type: 'built-in',
+            priority: 1
+        });
+
         console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
     }
 

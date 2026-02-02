@@ -141,7 +141,7 @@ categories:
       - "directory_management"
       - "environment_setup"
       - "system_configuration"
-    tools_count: 1
+    tools_count: 2
 
   plugin_management:
     name: "Plugin Management"

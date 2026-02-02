@@ -1493,6 +1493,191 @@ class ChatManager {
     }
 
     /**
+     * List all available tools in the system
+     * @param {Object} parameters - Optional parameters
+     * @param {string} parameters.category - Optional category filter
+     * @param {boolean} parameters.include_details - Include detailed descriptions
+     * @param {string} parameters.format - 'summary' or 'detailed'
+     * @returns {Object} List of available tools organized by category
+     */
+    async listAvailableTools(parameters = {}) {
+        const { category = null, include_details = false, format = 'summary' } = parameters;
+
+        console.log('📋 [ChatManager] Listing available tools', { category, include_details, format });
+
+        try {
+            const result = {
+                success: true,
+                tool: 'list_available_tools',
+                timestamp: new Date().toISOString(),
+                total_tools: 0,
+                categories: {},
+                tools: [],
+                filtered_category: category
+            };
+
+            // Get tools from dynamic tools registry if available
+            if (this.dynamicToolsEnabled && this.dynamicTools) {
+                try {
+                    const allTools = await this.dynamicTools.getAllTools();
+
+                    // Organize by category
+                    for (const tool of allTools) {
+                        const cat = tool.category || 'uncategorized';
+
+                        // Skip if category filter is set and doesn't match
+                        if (category && cat !== category) continue;
+
+                        if (!result.categories[cat]) {
+                            result.categories[cat] = {
+                                name: cat,
+                                count: 0,
+                                tools: []
+                            };
+                        }
+
+                        const toolInfo = {
+                            name: tool.name,
+                            description: tool.description || 'No description available'
+                        };
+
+                        if (include_details || format === 'detailed') {
+                            toolInfo.keywords = tool.keywords || [];
+                            toolInfo.parameters = tool.parameters || {};
+                        }
+
+                        result.categories[cat].tools.push(toolInfo);
+                        result.categories[cat].count++;
+                        result.tools.push(toolInfo);
+                        result.total_tools++;
+                    }
+
+                    console.log(`✅ [ChatManager] Listed ${result.total_tools} tools from dynamic registry`);
+                } catch (error) {
+                    console.warn('⚠️ [ChatManager] Error getting dynamic tools, using fallback:', error);
+                }
+            }
+
+            // Fallback or supplement with core tools from getCoreToolsByCategory
+            if (result.total_tools === 0) {
+                const coreTools = this.getCoreToolsInfo(category, include_details);
+                result.categories = coreTools.categories;
+                result.tools = coreTools.tools;
+                result.total_tools = coreTools.total;
+                console.log(`✅ [ChatManager] Listed ${result.total_tools} tools from core tools`);
+            }
+
+            // Format message based on format type
+            if (format === 'summary') {
+                result.message = this.formatToolsSummary(result);
+            } else {
+                result.message = this.formatToolsDetailed(result);
+            }
+
+            return result;
+
+        } catch (error) {
+            console.error('❌ [ChatManager] Error listing available tools:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'list_available_tools',
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Get core tools information
+     */
+    getCoreToolsInfo(category = null, includeDetails = false) {
+        const coreCategories = {
+            'navigation': {
+                name: 'Navigation & State Management',
+                tools: ['navigate_to_position', 'jump_to_gene', 'search_gene_by_name', 'open_new_tab', 'zoom_in', 'zoom_out', 'get_current_state']
+            },
+            'sequence': {
+                name: 'Sequence Analysis',
+                tools: ['get_sequence', 'translate_dna', 'reverse_complement', 'compute_gc', 'get_coding_sequence']
+            },
+            'database': {
+                name: 'Database Integration',
+                tools: ['search_uniprot_database', 'get_uniprot_entry', 'analyze_interpro_domains', 'search_interpro_entry']
+            },
+            'protein': {
+                name: 'Protein Structure',
+                tools: ['search_pdb_structures', 'fetch_protein_structure', 'search_alphafold_by_gene', 'open_alphafold_viewer']
+            },
+            'file_loading': {
+                name: 'File Loading',
+                tools: ['load_genome_file', 'load_annotation_file', 'load_variant_file', 'load_reads_file']
+            },
+            'system': {
+                name: 'System Management',
+                tools: ['set_working_directory', 'list_available_tools']
+            },
+            'sequence_editing': {
+                name: 'Sequence Editing',
+                tools: ['copy_sequence', 'paste_sequence', 'insert_sequence', 'delete_sequence', 'execute_actions']
+            }
+        };
+
+        const result = { categories: {}, tools: [], total: 0 };
+
+        for (const [catKey, catInfo] of Object.entries(coreCategories)) {
+            if (category && catKey !== category) continue;
+
+            result.categories[catKey] = {
+                name: catInfo.name,
+                count: catInfo.tools.length,
+                tools: catInfo.tools.map(name => ({
+                    name,
+                    description: `${catInfo.name} tool`
+                }))
+            };
+
+            result.tools.push(...result.categories[catKey].tools);
+            result.total += catInfo.tools.length;
+        }
+
+        return result;
+    }
+
+    /**
+     * Format tools list as summary
+     */
+    formatToolsSummary(result) {
+        let message = `📋 **Available Tools Summary**\n\n`;
+        message += `**Total Tools:** ${result.total_tools}\n\n`;
+
+        for (const [catKey, catInfo] of Object.entries(result.categories)) {
+            message += `### ${catInfo.name || catKey} (${catInfo.count} tools)\n`;
+            message += catInfo.tools.map(t => `- ${t.name}`).join('\n');
+            message += '\n\n';
+        }
+
+        return message;
+    }
+
+    /**
+     * Format tools list with details
+     */
+    formatToolsDetailed(result) {
+        let message = `📋 **Available Tools (Detailed)**\n\n`;
+        message += `**Total Tools:** ${result.total_tools}\n\n`;
+
+        for (const [catKey, catInfo] of Object.entries(result.categories)) {
+            message += `### ${catInfo.name || catKey}\n`;
+            for (const tool of catInfo.tools) {
+                message += `- **${tool.name}**: ${tool.description}\n`;
+            }
+            message += '\n';
+        }
+
+        return message;
+    }
+
+    /**
      * Connect PluginManager to Dynamic Tools Registry
      * This enables plugin tools to be discovered and included in the LLM system prompt
      */
@@ -8792,6 +8977,7 @@ ${coreTools}
             'get_chromosome_list': () => this.getChromosomeList(),
             'export_data': () => this.exportData(parameters),
             'set_working_directory': () => this.setWorkingDirectory(parameters),
+            'list_available_tools': () => this.listAvailableTools(parameters),
 
             // Action system tools (if available)
             'copy_sequence': () => this.executeActionTool('copy_sequence', parameters),
@@ -10380,6 +10566,10 @@ ${this.getPluginSystemInfo()}`;
                 // System Management Tools (Built-in) - CRITICAL FIX FOR set_working_directory
                 case 'set_working_directory':
                     result = await this.setWorkingDirectory(parameters);
+                    break;
+
+                case 'list_available_tools':
+                    result = await this.listAvailableTools(parameters);
                     break;
 
                 case 'load_wig_tracks':
