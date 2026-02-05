@@ -2183,6 +2183,11 @@ class NavigationManager {
         if (modal) {
             this.loadSearchSettings();
             modal.classList.add('show');
+
+            // Make modal draggable using ModalDragManager
+            if (window.modalDragManager) {
+                window.modalDragManager.makeDraggable('#searchSettingsModal');
+            }
         }
     }
 

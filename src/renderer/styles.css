@@ -125,6 +125,12 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* Search Settings Modal - wider default width */
+#searchSettingsModal .modal-content {
+  max-width: 700px;
+  min-width: 500px;
+}
+
 /* Allow overflow for resizable modals */
 
 
@@ -14439,7 +14445,7 @@ input:checked+.slider:before {
   /* Search Settings Modal Styles */
   .search-settings-modal {
     width: 90%;
-    max-width: 800px;
+    max-width: 1400px;
     max-height: 85vh;
     overflow: hidden;
   }
