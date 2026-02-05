@@ -939,139 +939,159 @@
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Tab Navigation -->
+                <div class="search-settings-tabs">
+                    <button class="tab-button active" data-tab="basic"><i class="fas fa-search"></i> Basic</button>
+                    <button class="tab-button" data-tab="scope"><i class="fas fa-globe"></i> Scope</button>
+                    <button class="tab-button" data-tab="advanced"><i class="fas fa-cogs"></i> Advanced</button>
+                    <button class="tab-button" data-tab="display"><i class="fas fa-eye"></i> Display</button>
+                    <button class="tab-button" data-tab="history"><i class="fas fa-history"></i> History</button>
+                </div>
+
                 <div class="search-settings-container">
-                    <!-- Basic Search Options -->
-                    <div class="settings-group">
-                        <h4><i class="fas fa-search"></i> Basic Search Options</h4>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchCaseSensitive" class="setting-checkbox">
-                                <span class="setting-label">Case Sensitive</span>
-                                <span class="setting-description">Match exact case when searching</span>
-                            </label>
-                        </div>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchReverseComplement" class="setting-checkbox">
-                                <span class="setting-label">Include Reverse Complement</span>
-                                <span class="setting-description">Search both forward and reverse complement
-                                    sequences</span>
-                            </label>
-                        </div>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchPartialMatches" class="setting-checkbox">
-                                <span class="setting-label">Allow Partial Matches</span>
-                                <span class="setting-description">Find sequences that contain the search term</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Search Scope -->
-                    <div class="settings-group">
-                        <h4><i class="fas fa-globe"></i> Search Scope</h4>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchGeneNames" class="setting-checkbox" checked>
-                                <span class="setting-label">Gene Names</span>
-                                <span class="setting-description">Search in gene annotations and names</span>
-                            </label>
-                        </div>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchSequence" class="setting-checkbox" checked>
-                                <span class="setting-label">DNA/RNA Sequence</span>
-                                <span class="setting-description">Search in actual sequence data</span>
-                            </label>
-                        </div>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchFeatures" class="setting-checkbox" checked>
-                                <span class="setting-label">Feature Annotations</span>
-                                <span class="setting-description">Search in feature descriptions and notes</span>
-                            </label>
-                        </div>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchProtein" class="setting-checkbox">
-                                <span class="setting-label">Protein Sequences</span>
-                                <span class="setting-description">Search in translated protein sequences</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Advanced Options -->
-                    <div class="settings-group">
-                        <h4><i class="fas fa-cogs"></i> Advanced Options</h4>
-                        <div class="settings-row">
-                            <div class="setting-item">
-                                <label class="setting-label">Minimum Match Length</label>
-                                <input type="number" id="searchMinLength" class="setting-input" value="3" min="1"
-                                    max="100">
-                                <span class="setting-description">Minimum length for sequence matches</span>
+                    <!-- Basic Search Options Tab -->
+                    <div class="search-settings-tab-content active" data-tab="basic">
+                        <div class="settings-group">
+                            <h4><i class="fas fa-search"></i> Basic Search Options</h4>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchCaseSensitive" class="setting-checkbox">
+                                    <span class="setting-label">Case Sensitive</span>
+                                    <span class="setting-description">Match exact case when searching</span>
+                                </label>
                             </div>
-                        </div>
-                        <div class="settings-row">
-                            <div class="setting-item">
-                                <label class="setting-label">Maximum Results</label>
-                                <input type="number" id="searchMaxResults" class="setting-input" value="100" min="10"
-                                    max="1000">
-                                <span class="setting-description">Maximum number of results to display</span>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchReverseComplement" class="setting-checkbox">
+                                    <span class="setting-label">Include Reverse Complement</span>
+                                    <span class="setting-description">Search both forward and reverse complement
+                                        sequences</span>
+                                </label>
                             </div>
-                        </div>
-                        <div class="settings-row">
-                            <div class="setting-item">
-                                <label class="setting-label">Search Timeout (seconds)</label>
-                                <input type="number" id="searchTimeout" class="setting-input" value="30" min="5"
-                                    max="300">
-                                <span class="setting-description">Maximum time to spend searching</span>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchPartialMatches" class="setting-checkbox">
+                                    <span class="setting-label">Allow Partial Matches</span>
+                                    <span class="setting-description">Find sequences that contain the search term</span>
+                                </label>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Display Options -->
-                    <div class="settings-group">
-                        <h4><i class="fas fa-eye"></i> Display Options</h4>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchHighlightMatches" class="setting-checkbox" checked>
-                                <span class="setting-label">Highlight Matches</span>
-                                <span class="setting-description">Highlight matching sequences in the genome view</span>
-                            </label>
-                        </div>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchShowContext" class="setting-checkbox" checked>
-                                <span class="setting-label">Show Context</span>
-                                <span class="setting-description">Display surrounding sequence context</span>
-                            </label>
-                        </div>
-                        <div class="settings-row">
-                            <div class="setting-item">
-                                <label class="setting-label">Context Length</label>
-                                <input type="number" id="searchContextLength" class="setting-input" value="50" min="0"
-                                    max="500">
-                                <span class="setting-description">Number of bases to show around matches</span>
+                    <!-- Search Scope Tab -->
+                    <div class="search-settings-tab-content" data-tab="scope">
+                        <div class="settings-group">
+                            <h4><i class="fas fa-globe"></i> Search Scope</h4>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchGeneNames" class="setting-checkbox" checked>
+                                    <span class="setting-label">Gene Names</span>
+                                    <span class="setting-description">Search in gene annotations and names</span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchSequence" class="setting-checkbox" checked>
+                                    <span class="setting-label">DNA/RNA Sequence</span>
+                                    <span class="setting-description">Search in actual sequence data</span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchFeatures" class="setting-checkbox" checked>
+                                    <span class="setting-label">Feature Annotations</span>
+                                    <span class="setting-description">Search in feature descriptions and notes</span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchProtein" class="setting-checkbox">
+                                    <span class="setting-label">Protein Sequences</span>
+                                    <span class="setting-description">Search in translated protein sequences</span>
+                                </label>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Search History -->
-                    <div class="settings-group">
-                        <h4><i class="fas fa-history"></i> Search History</h4>
-                        <div class="settings-row">
-                            <label class="setting-item">
-                                <input type="checkbox" id="searchSaveHistory" class="setting-checkbox" checked>
-                                <span class="setting-label">Save Search History</span>
-                                <span class="setting-description">Remember previous searches</span>
-                            </label>
+                    <!-- Advanced Options Tab -->
+                    <div class="search-settings-tab-content" data-tab="advanced">
+                        <div class="settings-group">
+                            <h4><i class="fas fa-cogs"></i> Advanced Options</h4>
+                            <div class="settings-row">
+                                <div class="setting-item">
+                                    <label class="setting-label">Minimum Match Length</label>
+                                    <input type="number" id="searchMinLength" class="setting-input" value="3" min="1"
+                                        max="100">
+                                    <span class="setting-description">Minimum length for sequence matches</span>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="setting-item">
+                                    <label class="setting-label">Maximum Results</label>
+                                    <input type="number" id="searchMaxResults" class="setting-input" value="100"
+                                        min="10" max="1000">
+                                    <span class="setting-description">Maximum number of results to display</span>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="setting-item">
+                                    <label class="setting-label">Search Timeout (seconds)</label>
+                                    <input type="number" id="searchTimeout" class="setting-input" value="30" min="5"
+                                        max="300">
+                                    <span class="setting-description">Maximum time to spend searching</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="settings-row">
-                            <div class="setting-item">
-                                <label class="setting-label">History Limit</label>
-                                <input type="number" id="searchHistoryLimit" class="setting-input" value="50" min="10"
-                                    max="200">
-                                <span class="setting-description">Maximum number of searches to remember</span>
+                    </div>
+
+                    <!-- Display Options Tab -->
+                    <div class="search-settings-tab-content" data-tab="display">
+                        <div class="settings-group">
+                            <h4><i class="fas fa-eye"></i> Display Options</h4>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchHighlightMatches" class="setting-checkbox" checked>
+                                    <span class="setting-label">Highlight Matches</span>
+                                    <span class="setting-description">Highlight matching sequences in the genome
+                                        view</span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchShowContext" class="setting-checkbox" checked>
+                                    <span class="setting-label">Show Context</span>
+                                    <span class="setting-description">Display surrounding sequence context</span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <div class="setting-item">
+                                    <label class="setting-label">Context Length</label>
+                                    <input type="number" id="searchContextLength" class="setting-input" value="50"
+                                        min="0" max="500">
+                                    <span class="setting-description">Number of bases to show around matches</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search History Tab -->
+                    <div class="search-settings-tab-content" data-tab="history">
+                        <div class="settings-group">
+                            <h4><i class="fas fa-history"></i> Search History</h4>
+                            <div class="settings-row">
+                                <label class="setting-item">
+                                    <input type="checkbox" id="searchSaveHistory" class="setting-checkbox" checked>
+                                    <span class="setting-label">Save Search History</span>
+                                    <span class="setting-description">Remember previous searches</span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <div class="setting-item">
+                                    <label class="setting-label">History Limit</label>
+                                    <input type="number" id="searchHistoryLimit" class="setting-input" value="50"
+                                        min="10" max="200">
+                                    <span class="setting-description">Maximum number of searches to remember</span>
+                                </div>
                             </div>
                         </div>
                     </div>

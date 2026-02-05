@@ -2188,7 +2188,51 @@ class NavigationManager {
             if (window.modalDragManager) {
                 window.modalDragManager.makeDraggable('#searchSettingsModal');
             }
+
+            // Initialize search settings tabs
+            this.initializeSearchSettingsTabs();
         }
+    }
+
+    /**
+     * Initialize search settings tab functionality
+     */
+    initializeSearchSettingsTabs() {
+        const modal = document.getElementById('searchSettingsModal');
+        if (!modal) return;
+
+        const tabButtons = modal.querySelectorAll('.search-settings-tabs .tab-button');
+        tabButtons.forEach(button => {
+            // Remove existing listeners to prevent duplicates
+            button.replaceWith(button.cloneNode(true));
+        });
+
+        // Re-select buttons after replacing
+        modal.querySelectorAll('.search-settings-tabs .tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                this.switchSearchSettingsTab(button.dataset.tab);
+            });
+        });
+    }
+
+    /**
+     * Switch to a specific search settings tab
+     * @param {string} tabName - The name of the tab to switch to
+     */
+    switchSearchSettingsTab(tabName) {
+        const modal = document.getElementById('searchSettingsModal');
+        if (!modal) return;
+
+        // Update tab buttons
+        modal.querySelectorAll('.search-settings-tabs .tab-button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
+            btn.blur();
+        });
+
+        // Update tab content panels
+        modal.querySelectorAll('.search-settings-tab-content').forEach(panel => {
+            panel.classList.toggle('active', panel.dataset.tab === tabName);
+        });
     }
 
     /**
