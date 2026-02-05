@@ -1137,25 +1137,16 @@ class NavigationManager {
         let newStart, newEnd;
 
         if (this.circularMode) {
-            // Circular mode: allow positions to wrap around
+            // Circular mode: wrap positions around using modulo arithmetic
             const rawNewStart = startPosition - positionChange;
             const seqLen = sequence.length;
 
-            // Wrap the position using modulo arithmetic
-            // This allows newStart to be negative (wrapping left) or > seqLen (wrapping right)
-            // The actual wrapping is handled in the rendering code
-            newStart = rawNewStart;
+            // Use modulo to wrap position into [0, seqLen) range
+            // JavaScript modulo can return negative, so we use ((n % m) + m) % m pattern
+            // This ensures newStart is always non-negative, preventing issues with
+            // sequence.substring() calls in GC and sequence rendering
+            newStart = ((rawNewStart % seqLen) + seqLen) % seqLen;
             newEnd = newStart + currentRange;
-
-            // Normalize to keep start within [-seqLen, 2*seqLen] range for display logic
-            while (newStart < -seqLen) {
-                newStart += seqLen;
-                newEnd += seqLen;
-            }
-            while (newStart >= seqLen) {
-                newStart -= seqLen;
-                newEnd -= seqLen;
-            }
         } else {
             // Linear mode: clamp to sequence boundaries
             newStart = Math.max(0, Math.min(
@@ -1470,10 +1461,8 @@ class NavigationManager {
                 case 'ArrowLeft':
                     if (this.circularMode) {
                         newStart = this.genomeBrowser.currentPosition.start - step;
-                        // Allow negative values for circular wrapping
-                        if (newStart < 0) {
-                            newStart = sequence.length + newStart;
-                        }
+                        // Wrap to non-negative using modulo arithmetic
+                        newStart = ((newStart % sequence.length) + sequence.length) % sequence.length;
                     } else {
                         newStart = Math.max(0, this.genomeBrowser.currentPosition.start - step);
                     }
@@ -1481,10 +1470,8 @@ class NavigationManager {
                 case 'ArrowRight':
                     if (this.circularMode) {
                         newStart = this.genomeBrowser.currentPosition.start + step;
-                        // Wrap around if past sequence end
-                        if (newStart >= sequence.length) {
-                            newStart = newStart - sequence.length;
-                        }
+                        // Wrap around using modulo
+                        newStart = newStart % sequence.length;
                     } else {
                         newStart = Math.min(sequence.length - currentRange, this.genomeBrowser.currentPosition.start + step);
                     }
