@@ -7921,16 +7921,14 @@ class TrackRenderer {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Major ticks - ensure we don't draw overlapping labels
+        // Major ticks - track drawn X positions for spacing checks (not sequence positions)
         const firstMajorTick = Math.ceil(start / majorInterval) * majorInterval;
-        const drawnPositions = new Set(); // Track drawn positions to avoid duplicates
+        const drawnXPositions = []; // Track X positions to avoid label overlap
 
         for (let pos = firstMajorTick; pos <= end; pos += majorInterval) {
             const x = ((pos - start) / range) * width;
 
-            if (x >= 0 && x <= width && !drawnPositions.has(pos)) {
-                drawnPositions.add(pos);
-
+            if (x >= 0 && x <= width) {
                 // Draw major tick - reduced height from 22 to 16
                 ctx.beginPath();
                 ctx.moveTo(x, 3);
@@ -7947,25 +7945,48 @@ class TrackRenderer {
                 const label = this.formatDetailedPosition(displayPos);
                 const labelWidth = ctx.measureText(label).width;
 
-                // Check if there's enough space for this label
+                // Check if there's enough space using X positions (works correctly in circular mode)
                 let canDrawLabel = true;
-                for (const drawnPos of drawnPositions) {
-                    if (drawnPos !== pos) {
-                        const drawnX = ((drawnPos - start) / range) * width;
-                        if (Math.abs(x - drawnX) < labelWidth + 10) { // 10px minimum spacing
-                            canDrawLabel = false;
-                            break;
-                        }
+                for (const prevX of drawnXPositions) {
+                    if (Math.abs(x - prevX) < labelWidth + 10) { // 10px minimum spacing
+                        canDrawLabel = false;
+                        break;
                     }
                 }
 
                 if (canDrawLabel) {
                     ctx.fillText(label, x, 28);
+                    drawnXPositions.push(x);
                 }
             }
         }
 
-        // In circular mode, draw origin marker if visible
+        // Minor ticks (if there's enough space) - reduced height from 10 to 7
+        if (width / (range / minorInterval) > 8) { // Only show if ticks are spaced enough
+            ctx.strokeStyle = '#adb5bd';
+            const firstMinorTick = Math.ceil(start / minorInterval) * minorInterval;
+            for (let pos = firstMinorTick; pos <= end; pos += minorInterval) {
+                // Normalize position for major interval check in circular mode
+                let checkPos = pos;
+                if (isCircular && seqLen > 0) {
+                    checkPos = ((pos % seqLen) + seqLen) % seqLen;
+                }
+
+                // Skip positions that have major ticks (using normalized position)
+                if (checkPos % majorInterval !== 0) {
+                    const x = ((pos - start) / range) * width;
+
+                    if (x >= 0 && x <= width) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, 3);
+                        ctx.lineTo(x, 10);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        // In circular mode, draw origin marker LAST (after all ticks for higher z-order)
         if (isCircular && seqLen > 0) {
             // Check if origin (position 0/seqLen) is in view
             let originInView = false;
@@ -7996,24 +8017,6 @@ class TrackRenderer {
                 ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
                 ctx.fillText('Origin', originX, 10);
                 ctx.restore();
-            }
-        }
-
-        // Minor ticks (if there's enough space) - reduced height from 10 to 7
-        if (width / (range / minorInterval) > 8) { // Only show if ticks are spaced enough
-            ctx.strokeStyle = '#adb5bd';
-            const firstMinorTick = Math.ceil(start / minorInterval) * minorInterval;
-            for (let pos = firstMinorTick; pos <= end; pos += minorInterval) {
-                if (pos % majorInterval !== 0) { // Skip positions that have major ticks
-                    const x = ((pos - start) / range) * width;
-
-                    if (x >= 0 && x <= width) {
-                        ctx.beginPath();
-                        ctx.moveTo(x, 3);
-                        ctx.lineTo(x, 10);
-                        ctx.stroke();
-                    }
-                }
             }
         }
 
