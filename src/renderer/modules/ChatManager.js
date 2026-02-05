@@ -4384,7 +4384,7 @@ class ChatManager {
                             <i class="fas fa-minus"></i>
                         </button>
                         <button id="closeChatBtn" class="btn btn-sm chat-btn">
-                            <i class="fas fa-times"></i>
+                            <i class="fas fa-eye-slash"></i>
                         </button>
                     </div>
                 </div>
