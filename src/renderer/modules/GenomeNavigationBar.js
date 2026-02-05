@@ -14,7 +14,7 @@ class GenomeNavigationBar {
         this.labelOffset = 35;
         this.currentChromosome = null;
         this.sequenceLength = 0;
-        
+
         // Range interaction state
         this.isDragging = false;
         this.isResizing = false;
@@ -23,13 +23,13 @@ class GenomeNavigationBar {
         this.dragStartRange = { start: 0, end: 0 };
         this.tempRange = null; // Temporary range during drag/resize operations
         this.handleWidth = 8; // Width of resize handles
-        
+
         // Sequence selection state
         this.isSelecting = false;
         this.selectionStart = null;
         this.selectionEnd = null;
         this.selectionMode = false; // Toggle for selection mode vs navigation mode
-        
+
         this.initialize();
     }
 
@@ -44,26 +44,26 @@ class GenomeNavigationBar {
         this.container.id = 'genomeNavigationBar';
         this.container.className = 'genome-navigation-bar';
         this.container.style.display = 'none'; // Initially hidden
-        
+
         // Create canvas for drawing the ruler
         this.canvas = document.createElement('canvas');
         this.canvas.className = 'navigation-canvas';
         this.ctx = this.canvas.getContext('2d');
-        
+
         // Set up canvas styling
         this.canvas.style.cursor = 'crosshair';
         this.canvas.style.display = 'block';
         this.canvas.style.width = '100%';
         this.canvas.style.height = `${this.height}px`;
-        
+
         // Create position indicator
         this.positionIndicator = document.createElement('div');
         this.positionIndicator.className = 'position-indicator';
-        
+
         // Create range indicator (shows current view)
         this.rangeIndicator = document.createElement('div');
         this.rangeIndicator.className = 'range-indicator';
-        
+
         // Create selection mode toggle button
         this.selectionToggle = document.createElement('button');
         this.selectionToggle.className = 'selection-toggle-btn';
@@ -87,25 +87,25 @@ class GenomeNavigationBar {
             color: #64748b;
             transition: all 0.2s ease;
         `;
-        
+
         // Add tooltip for position display
         this.tooltip = document.createElement('div');
         this.tooltip.className = 'navigation-tooltip';
         this.tooltip.style.display = 'none';
-        
+
         // Assemble the navigation bar
         this.container.appendChild(this.canvas);
         this.container.appendChild(this.positionIndicator);
         this.container.appendChild(this.rangeIndicator);
         this.container.appendChild(this.selectionToggle);
         this.container.appendChild(this.tooltip);
-        
+
         // Insert the navigation bar above the genome viewer
         const genomeViewerSection = document.getElementById('genomeViewerSection');
         if (genomeViewerSection) {
             genomeViewerSection.insertBefore(this.container, genomeViewerSection.firstChild);
         }
-        
+
         console.log('GenomeNavigationBar: Navigation bar created and inserted');
     }
 
@@ -125,24 +125,24 @@ class GenomeNavigationBar {
         this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.canvas.addEventListener('mouseleave', (e) => this.handleMouseLeave(e));
         this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
-        
+
         // Selection mode toggle
         this.selectionToggle.addEventListener('click', (e) => this.toggleSelectionMode(e));
-        
+
         // Keyboard navigation
         this.canvas.addEventListener('keydown', (e) => this.handleKeyDown(e));
         this.canvas.setAttribute('tabindex', '0');
-        
+
         console.log('GenomeNavigationBar: Event listeners set up');
     }
 
     resizeCanvas() {
         const rect = this.container.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
-        
+
         this.canvas.width = rect.width * dpr;
         this.canvas.height = this.height * dpr;
-        
+
         this.ctx.scale(dpr, dpr);
         this.canvas.style.width = rect.width + 'px';
         this.canvas.style.height = this.height + 'px';
@@ -152,11 +152,11 @@ class GenomeNavigationBar {
         this.currentChromosome = chromosome;
         this.sequenceLength = sequenceLength;
         this.isVisible = true;
-        
+
         this.container.style.display = 'block';
         this.resizeCanvas();
         this.draw();
-        
+
         console.log(`GenomeNavigationBar: Showing navigation for ${chromosome} (${sequenceLength} bp)`);
     }
 
@@ -174,28 +174,28 @@ class GenomeNavigationBar {
 
     draw() {
         if (!this.ctx || !this.isVisible || this.sequenceLength === 0) return;
-        
+
         const width = this.canvas.width / (window.devicePixelRatio || 1);
         const height = this.height;
-        
+
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
         // Set font and styles
         this.ctx.font = '11px Inter, sans-serif';
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = '#64748b';
         this.ctx.fillStyle = '#334155';
         this.ctx.lineWidth = 1;
-        
+
         // Draw background
         this.ctx.fillStyle = '#f8fafc';
         this.ctx.fillRect(0, 0, width, height);
-        
+
         // Calculate scale and tick intervals
         const scale = width / this.sequenceLength;
         const { majorInterval, minorInterval } = this.calculateTickIntervals();
-        
+
         // Draw minor ticks
         this.ctx.strokeStyle = '#cbd5e1';
         this.ctx.lineWidth = 0.5;
@@ -206,35 +206,40 @@ class GenomeNavigationBar {
             this.ctx.lineTo(x, height);
             this.ctx.stroke();
         }
-        
+
         // Draw major ticks and labels
         this.ctx.strokeStyle = '#64748b';
         this.ctx.fillStyle = '#334155';
         this.ctx.lineWidth = 1;
-        
+
         for (let pos = 0; pos <= this.sequenceLength; pos += majorInterval) {
             const x = pos * scale;
-            
+
             // Draw major tick
             this.ctx.beginPath();
             this.ctx.moveTo(x, height - this.majorTickHeight);
             this.ctx.lineTo(x, height);
             this.ctx.stroke();
-            
+
             // Draw label
             const label = this.formatPosition(pos);
             this.ctx.fillText(label, x, this.labelOffset);
         }
-        
+
+        // Draw origin marker in circular mode
+        if (this.isCircularModeEnabled()) {
+            this.drawOriginMarker();
+        }
+
         // Draw current view range indicator
         this.drawRangeIndicator();
-        
+
         // Draw sequence selection if in selection mode or has final selection
         if ((this.selectionMode && this.selectionStart !== null && this.selectionEnd !== null) ||
             (this.finalSelectionStart && this.finalSelectionEnd)) {
             this.drawSelectionIndicator();
         }
-        
+
         // Draw ruler border
         this.ctx.strokeStyle = '#cbd5e1';
         this.ctx.lineWidth = 1;
@@ -244,37 +249,37 @@ class GenomeNavigationBar {
     calculateTickIntervals() {
         const width = this.canvas.width / (window.devicePixelRatio || 1);
         const pixelsPerBp = width / this.sequenceLength;
-        
+
         // Aim for ticks every 50-100 pixels
         const targetMajorPixels = 80;
         const targetMinorPixels = 20;
-        
+
         const baseMajorInterval = targetMajorPixels / pixelsPerBp;
         const baseMinorInterval = targetMinorPixels / pixelsPerBp;
-        
+
         // Round to nice numbers (powers of 10 * 1, 2, or 5)
         const majorInterval = this.roundToNiceNumber(baseMajorInterval);
         const minorInterval = this.roundToNiceNumber(baseMinorInterval);
-        
+
         return { majorInterval, minorInterval };
     }
 
     roundToNiceNumber(value) {
         const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
         const normalized = value / magnitude;
-        
+
         let nice;
         if (normalized <= 1) nice = 1;
         else if (normalized <= 2) nice = 2;
         else if (normalized <= 5) nice = 5;
         else nice = 10;
-        
+
         return nice * magnitude;
     }
 
     formatPosition(position) {
         if (position === 0) return '0';
-        
+
         if (position >= 1000000) {
             return (position / 1000000).toFixed(1) + 'M';
         } else if (position >= 1000) {
@@ -284,22 +289,122 @@ class GenomeNavigationBar {
         }
     }
 
-    drawRangeIndicator() {
-        if (!this.genomeBrowser.currentPosition) return;
-        
+    /**
+     * Check if circular browsing mode is enabled
+     * @returns {boolean} True if circular mode is active
+     */
+    isCircularModeEnabled() {
+        return this.genomeBrowser?.navigationManager?.circularMode || false;
+    }
+
+    /**
+     * Draw origin marker at position 0 when in circular mode
+     */
+    drawOriginMarker() {
         const width = this.canvas.width / (window.devicePixelRatio || 1);
         const scale = width / this.sequenceLength;
-        
+        const originX = 0; // Origin is always at position 0
+
+        // Draw dashed vertical line at origin
+        this.ctx.save();
+        this.ctx.strokeStyle = '#22c55e'; // Green color for origin
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([4, 4]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(originX, 0);
+        this.ctx.lineTo(originX, this.height);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+
+        // Draw "Origin" label
+        this.ctx.fillStyle = '#22c55e';
+        this.ctx.font = 'bold 9px Inter, sans-serif';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText('Origin', originX + 4, 12);
+        this.ctx.restore();
+    }
+
+    drawRangeIndicator() {
+        if (!this.genomeBrowser.currentPosition) return;
+
+        const width = this.canvas.width / (window.devicePixelRatio || 1);
+        const scale = width / this.sequenceLength;
+        const isCircular = this.isCircularModeEnabled();
+
         // Use temporary range if dragging/resizing, otherwise use current position
         const range = this.tempRange || this.genomeBrowser.currentPosition;
-        const startX = range.start * scale;
-        const endX = range.end * scale;
+
+        // Check if viewport wraps around in circular mode
+        const wrapsRight = isCircular && range.end > this.sequenceLength;
+        const wrapsLeft = isCircular && range.start < 0;
+
+        if (wrapsRight) {
+            // Viewport wraps: draw two segments (start to seqLen, 0 to wrappedEnd)
+            const wrappedEnd = range.end % this.sequenceLength;
+
+            // First segment: from start to sequence end
+            const startX1 = range.start * scale;
+            const endX1 = this.sequenceLength * scale;
+            this.drawRangeSegment(startX1, endX1);
+
+            // Second segment: from 0 to wrapped end
+            const startX2 = 0;
+            const endX2 = wrappedEnd * scale;
+            this.drawRangeSegment(startX2, endX2);
+
+            // Draw resize handles at the actual visual positions
+            this.drawResizeHandles(startX1, endX2);
+        } else if (wrapsLeft) {
+            // Left wrap: viewport.start < 0
+            const normalizedStart = this.sequenceLength + range.start; // e.g., -1000 -> seqLen - 1000
+
+            // First segment: from normalizedStart to sequence end
+            const startX1 = normalizedStart * scale;
+            const endX1 = this.sequenceLength * scale;
+            this.drawRangeSegment(startX1, endX1);
+
+            // Second segment: from 0 to end
+            const startX2 = 0;
+            const endX2 = range.end * scale;
+            this.drawRangeSegment(startX2, endX2);
+
+            // Draw resize handles
+            this.drawResizeHandles(startX1, endX2);
+        } else {
+            // Normal case: no wrapping
+            const startX = range.start * scale;
+            const endX = range.end * scale;
+            const rangeWidth = endX - startX;
+
+            // Draw highlighted range
+            this.ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+            this.ctx.fillRect(startX, 0, rangeWidth, this.height);
+
+            // Draw range borders
+            this.ctx.strokeStyle = '#3b82f6';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(startX, 0);
+            this.ctx.lineTo(startX, this.height);
+            this.ctx.moveTo(endX, 0);
+            this.ctx.lineTo(endX, this.height);
+            this.ctx.stroke();
+
+            // Draw resize handles
+            this.drawResizeHandles(startX, endX);
+        }
+    }
+
+    /**
+     * Draw a single range segment (used for circular wrapping)
+     */
+    drawRangeSegment(startX, endX) {
         const rangeWidth = endX - startX;
-        
+
         // Draw highlighted range
         this.ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
         this.ctx.fillRect(startX, 0, rangeWidth, this.height);
-        
+
         // Draw range borders
         this.ctx.strokeStyle = '#3b82f6';
         this.ctx.lineWidth = 2;
@@ -309,27 +414,24 @@ class GenomeNavigationBar {
         this.ctx.moveTo(endX, 0);
         this.ctx.lineTo(endX, this.height);
         this.ctx.stroke();
-        
-        // Draw resize handles
-        this.drawResizeHandles(startX, endX);
     }
 
     drawResizeHandles(startX, endX) {
         const handleHeight = this.height;
-        
+
         // Left handle
         this.ctx.fillStyle = '#3b82f6';
         this.ctx.fillRect(startX - this.handleWidth / 2, 0, this.handleWidth, handleHeight);
-        
+
         // Right handle
         this.ctx.fillRect(endX - this.handleWidth / 2, 0, this.handleWidth, handleHeight);
-        
+
         // Handle highlights for better visibility
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         this.ctx.fillRect(startX - this.handleWidth / 2 + 1, 2, this.handleWidth - 2, handleHeight - 4);
         this.ctx.fillRect(endX - this.handleWidth / 2 + 1, 2, this.handleWidth - 2, handleHeight - 4);
     }
-    
+
     /**
      * Draw sequence selection indicator
      */
@@ -347,54 +449,54 @@ class GenomeNavigationBar {
         } else {
             return; // No selection to draw
         }
-        
+
         const width = this.canvas.width / (window.devicePixelRatio || 1);
         const height = this.height;
         const scale = width / this.sequenceLength;
-        
+
         const startX = start * scale;
         const endX = end * scale;
         const selectionWidth = endX - startX;
-        
+
         // Draw selection background
         this.ctx.fillStyle = 'rgba(59, 130, 246, 0.3)';
         this.ctx.fillRect(startX, 0, selectionWidth, height);
-        
+
         // Draw selection border
         this.ctx.strokeStyle = '#3b82f6';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(startX, 0, selectionWidth, height);
-        
+
         // Draw selection handles
         const handleWidth = 6;
         this.ctx.fillStyle = '#3b82f6';
-        this.ctx.fillRect(startX - handleWidth/2, height - 20, handleWidth, 20);
-        this.ctx.fillRect(endX - handleWidth/2, height - 20, handleWidth, 20);
-        
+        this.ctx.fillRect(startX - handleWidth / 2, height - 20, handleWidth, 20);
+        this.ctx.fillRect(endX - handleWidth / 2, height - 20, handleWidth, 20);
+
         // Draw handle borders
         this.ctx.strokeStyle = '#1d4ed8';
         this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(startX - handleWidth/2, height - 20, handleWidth, 20);
-        this.ctx.strokeRect(endX - handleWidth/2, height - 20, handleWidth, 20);
-        
+        this.ctx.strokeRect(startX - handleWidth / 2, height - 20, handleWidth, 20);
+        this.ctx.strokeRect(endX - handleWidth / 2, height - 20, handleWidth, 20);
+
         // Draw selection label
         const length = end - start + 1;
         this.ctx.fillStyle = '#1d4ed8';
         this.ctx.font = 'bold 10px Inter, sans-serif';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(`${length.toLocaleString()} bp`, startX + selectionWidth/2, 15);
+        this.ctx.fillText(`${length.toLocaleString()} bp`, startX + selectionWidth / 2, 15);
     }
 
     getInteractionType(x) {
         if (!this.genomeBrowser.currentPosition) return 'none';
-        
+
         const width = this.canvas.width / (window.devicePixelRatio || 1);
         const scale = width / this.sequenceLength;
-        
+
         const range = this.tempRange || this.genomeBrowser.currentPosition;
         const startX = range.start * scale;
         const endX = range.end * scale;
-        
+
         // Check for resize handles
         if (Math.abs(x - startX) <= this.handleWidth / 2) {
             return 'resize-left';
@@ -402,12 +504,12 @@ class GenomeNavigationBar {
         if (Math.abs(x - endX) <= this.handleWidth / 2) {
             return 'resize-right';
         }
-        
+
         // Check if inside range for dragging
         if (x >= startX && x <= endX) {
             return 'drag';
         }
-        
+
         return 'navigate';
     }
 
@@ -429,17 +531,17 @@ class GenomeNavigationBar {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const interactionType = this.getInteractionType(x);
-        
+
         if (this.selectionMode) {
             // Handle sequence selection mode
             this.isSelecting = true;
             this.selectionStart = this.getPositionFromEvent(e);
             this.selectionEnd = this.selectionStart;
-            
+
             // Clear previous final selection when starting new selection
             this.finalSelectionStart = null;
             this.finalSelectionEnd = null;
-            
+
             this.canvas.style.cursor = 'crosshair';
             this.container.classList.add('selecting');
             this.canvas.classList.add('selecting');
@@ -480,7 +582,7 @@ class GenomeNavigationBar {
     handleMouseMove(e) {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        
+
         if (this.isSelecting && this.selectionStart !== null) {
             // Handle sequence selection mode
             this.selectionEnd = this.getPositionFromEvent(e);
@@ -493,7 +595,7 @@ class GenomeNavigationBar {
             const scale = this.sequenceLength / width;
             const deltaX = x - this.dragStartX;
             const deltaPosition = deltaX * scale;
-            
+
             if (this.resizeHandle === 'left') {
                 const newStart = Math.max(0, this.dragStartRange.start + deltaPosition);
                 const newEnd = this.dragStartRange.end;
@@ -507,7 +609,7 @@ class GenomeNavigationBar {
                     this.tempRange = { start: newStart, end: newEnd };
                 }
             }
-            
+
             this.draw();
             this.showRangeTooltip(e, this.tempRange.start, this.tempRange.end);
         } else if (this.isDragging && this.tempRange) {
@@ -515,11 +617,11 @@ class GenomeNavigationBar {
             const scale = this.sequenceLength / width;
             const deltaX = x - this.dragStartX;
             const deltaPosition = deltaX * scale;
-            
+
             const rangeSize = this.dragStartRange.end - this.dragStartRange.start;
             let newStart = this.dragStartRange.start + deltaPosition;
             let newEnd = this.dragStartRange.end + deltaPosition;
-            
+
             // Keep within bounds
             if (newStart < 0) {
                 newStart = 0;
@@ -529,7 +631,7 @@ class GenomeNavigationBar {
                 newEnd = this.sequenceLength;
                 newStart = this.sequenceLength - rangeSize;
             }
-            
+
             this.tempRange = { start: newStart, end: newEnd };
             this.draw();
             this.showRangeTooltip(e, this.tempRange.start, this.tempRange.end);
@@ -537,7 +639,7 @@ class GenomeNavigationBar {
             // Update cursor based on hover state
             const interactionType = this.getInteractionType(x);
             this.updateCursor(interactionType);
-            
+
             // Add CSS classes for hover states
             this.canvas.classList.remove('hovering-handle', 'hovering-range');
             if (interactionType === 'resize-left' || interactionType === 'resize-right') {
@@ -545,7 +647,7 @@ class GenomeNavigationBar {
             } else if (interactionType === 'drag') {
                 this.canvas.classList.add('hovering-range');
             }
-            
+
             // Show position tooltip
             const position = this.getPositionFromEvent(e);
             if (position !== null) {
@@ -560,26 +662,26 @@ class GenomeNavigationBar {
             if (this.selectionStart !== null && this.selectionEnd !== null) {
                 const startPos = Math.min(this.selectionStart, this.selectionEnd);
                 const endPos = Math.max(this.selectionStart, this.selectionEnd);
-                
+
                 // Apply sequence selection to the genome browser
                 this.applySequenceSelection(startPos, endPos);
-                
+
                 // Keep the selection indicator visible after selection
                 this.finalSelectionStart = startPos;
                 this.finalSelectionEnd = endPos;
-                
+
                 console.log(`GenomeNavigationBar: Sequence selected ${startPos}-${endPos} (${endPos - startPos + 1} bp)`);
             }
-            
+
             // Reset selection state but keep final selection for display
             this.isSelecting = false;
             this.selectionStart = null;
             this.selectionEnd = null;
-            
+
             // Remove visual feedback classes
             this.container.classList.remove('selecting');
             this.canvas.classList.remove('selecting');
-            
+
             this.draw();
         } else if (this.isResizing || this.isDragging) {
             // Apply the temporary range to the CodeXomics
@@ -588,50 +690,50 @@ class GenomeNavigationBar {
                     start: Math.round(this.tempRange.start),
                     end: Math.round(this.tempRange.end)
                 };
-                
+
                 // Update the CodeXomics display
                 const sequence = this.genomeBrowser.currentSequence[this.currentChromosome];
                 this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
                 this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
-                
+
                 // Update current tab title with new position (from drag/resize)
                 if (this.genomeBrowser.tabManager) {
                     this.genomeBrowser.tabManager.updateCurrentTabPosition(
-                        this.currentChromosome, 
-                        this.genomeBrowser.currentPosition.start + 1, 
+                        this.currentChromosome,
+                        this.genomeBrowser.currentPosition.start + 1,
                         this.genomeBrowser.currentPosition.end
                     );
                 }
-                
+
                 console.log(`GenomeNavigationBar: Range updated to ${this.genomeBrowser.currentPosition.start}-${this.genomeBrowser.currentPosition.end}`);
             }
-            
+
             // Reset interaction state and remove visual feedback
             this.isResizing = false;
             this.isDragging = false;
             this.resizeHandle = null;
             this.tempRange = null;
-            
+
             // Remove visual feedback classes
             this.container.classList.remove('resizing', 'dragging', 'active-resize', 'active-drag');
             this.canvas.classList.remove('resizing', 'dragging');
-            
+
             // Update cursor
             const rect = this.canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const interactionType = this.getInteractionType(x);
             this.updateCursor(interactionType);
-            
+
             this.draw();
         }
     }
 
     handleMouseLeave(e) {
         this.tooltip.style.display = 'none';
-        
+
         // Remove hover state classes
         this.canvas.classList.remove('hovering-handle', 'hovering-range');
-        
+
         // If we're in the middle of an operation, don't reset cursor
         if (!this.isResizing && !this.isDragging) {
             this.canvas.style.cursor = 'crosshair';
@@ -648,10 +750,10 @@ class GenomeNavigationBar {
     handleKeyDown(e) {
         const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
         const step = Math.max(1, Math.floor(currentRange * 0.1));
-        
+
         let newStart = this.genomeBrowser.currentPosition.start;
-        
-        switch(e.key) {
+
+        switch (e.key) {
             case 'ArrowLeft':
                 newStart = Math.max(0, this.genomeBrowser.currentPosition.start - step);
                 break;
@@ -667,9 +769,9 @@ class GenomeNavigationBar {
             default:
                 return;
         }
-        
+
         e.preventDefault();
-        
+
         const newEnd = newStart + currentRange;
         this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
         this.genomeBrowser.updateStatistics(this.currentChromosome, this.genomeBrowser.currentSequence[this.currentChromosome]);
@@ -680,9 +782,9 @@ class GenomeNavigationBar {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const width = rect.width;
-        
+
         if (x < 0 || x > width) return null;
-        
+
         const position = Math.round((x / width) * this.sequenceLength);
         return Math.max(0, Math.min(this.sequenceLength, position));
     }
@@ -690,11 +792,11 @@ class GenomeNavigationBar {
     showTooltip(e, startPos, endPos = null) {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        
+
         this.tooltip.style.left = `${x}px`;
         this.tooltip.style.top = `${this.height + 5}px`;
         this.tooltip.style.display = 'block';
-        
+
         if (endPos !== null) {
             // Show range tooltip with special styling
             const rangeSize = Math.round(endPos - startPos);
@@ -710,11 +812,11 @@ class GenomeNavigationBar {
     showRangeTooltip(e, startPos, endPos) {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        
+
         this.tooltip.style.left = `${x}px`;
         this.tooltip.style.top = `${this.height + 5}px`;
         this.tooltip.style.display = 'block';
-        
+
         const rangeSize = Math.round(endPos - startPos);
         this.tooltip.textContent = `Range: ${Math.round(startPos).toLocaleString()}-${Math.round(endPos).toLocaleString()} bp (${rangeSize.toLocaleString()} bp)`;
         this.tooltip.classList.add('range-tooltip');
@@ -722,65 +824,65 @@ class GenomeNavigationBar {
 
     navigateToPosition(position) {
         // Center the view on the clicked position
-        const currentRange = this.genomeBrowser.currentPosition ? 
-            (this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start) : 
+        const currentRange = this.genomeBrowser.currentPosition ?
+            (this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start) :
             Math.min(10000, this.sequenceLength);
-        
+
         const newStart = Math.max(0, position - Math.floor(currentRange / 2));
         const newEnd = Math.min(this.sequenceLength, newStart + currentRange);
-        
+
         this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
-        
+
         // Update the display
         const sequence = this.genomeBrowser.currentSequence[this.currentChromosome];
         this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
         this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
-        
+
         // Update current tab title with new position (from ruler navigation)
         if (this.genomeBrowser.tabManager) {
             this.genomeBrowser.tabManager.updateCurrentTabPosition(
-                this.currentChromosome, 
-                newStart + 1, 
+                this.currentChromosome,
+                newStart + 1,
                 newEnd
             );
         }
-        
+
         console.log(`GenomeNavigationBar: Navigated to position ${position}`);
     }
 
     navigateToPositionAndZoom(position) {
         // Double-click zooms in and centers on position
         const zoomRange = Math.max(1000, this.sequenceLength * 0.01); // 1% of sequence or 1kb minimum
-        
+
         const newStart = Math.max(0, position - Math.floor(zoomRange / 2));
         const newEnd = Math.min(this.sequenceLength, newStart + zoomRange);
-        
+
         this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
-        
+
         // Update the display
         const sequence = this.genomeBrowser.currentSequence[this.currentChromosome];
         this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
         this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
-        
+
         // Update current tab title with new position (from zoom)
         if (this.genomeBrowser.tabManager) {
             this.genomeBrowser.tabManager.updateCurrentTabPosition(
-                this.currentChromosome, 
-                newStart + 1, 
+                this.currentChromosome,
+                newStart + 1,
                 newEnd
             );
         }
-        
+
         console.log(`GenomeNavigationBar: Zoomed to position ${position} with range ${zoomRange}`);
     }
-    
+
     /**
      * Toggle sequence selection mode
      */
     toggleSelectionMode(e) {
         e.preventDefault();
         this.selectionMode = !this.selectionMode;
-        
+
         if (this.selectionMode) {
             this.selectionToggle.style.background = '#3b82f6';
             this.selectionToggle.style.color = '#ffffff';
@@ -793,30 +895,30 @@ class GenomeNavigationBar {
             this.selectionToggle.style.borderColor = '#cbd5e1';
             this.canvas.style.cursor = 'crosshair';
             this.genomeBrowser.showNotification('Navigation mode enabled.', 'info');
-            
+
             // Clear final selection when exiting selection mode
             this.finalSelectionStart = null;
             this.finalSelectionEnd = null;
             this.draw(); // Redraw to remove selection indicator
         }
-        
+
         console.log(`GenomeNavigationBar: Selection mode ${this.selectionMode ? 'enabled' : 'disabled'}`);
     }
-    
+
     /**
      * Apply sequence selection to genome browser
      */
     applySequenceSelection(startPos, endPos) {
         // Clear any existing selection
         this.genomeBrowser.clearSequenceSelection();
-        
+
         // Set the sequence selection
         this.genomeBrowser.currentSequenceSelection = {
             chromosome: this.currentChromosome,
             start: startPos,
             end: endPos
         };
-        
+
         // Update sequence selection state
         this.genomeBrowser.sequenceSelection = {
             start: startPos,
@@ -824,23 +926,23 @@ class GenomeNavigationBar {
             active: true,
             source: 'ruler'
         };
-        
+
         // Highlight the selected region in Genes & Features track
         this.highlightSelectedRegion(startPos, endPos);
-        
+
         // Update copy button state
         this.genomeBrowser.updateCopyButtonState();
-        
+
         // Show notification
         this.genomeBrowser.showNotification(
             `Sequence selected: ${this.currentChromosome}:${startPos}-${endPos} (${endPos - startPos + 1} bp)`,
             'success'
         );
-        
+
         // Update status bar with selection information
         const selectionLength = endPos - startPos + 1;
         const statusMessage = `🔵 Sequence Selected: ${this.currentChromosome}:${startPos.toLocaleString()}-${endPos.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
-        
+
         if (this.genomeBrowser.uiManager) {
             this.genomeBrowser.uiManager.updateStatus(statusMessage);
         } else {
@@ -849,7 +951,7 @@ class GenomeNavigationBar {
                 statusElement.textContent = statusMessage;
                 statusElement.style.color = '#3b82f6';
                 statusElement.style.fontWeight = 'bold';
-                
+
                 // Reset to normal after 5 seconds
                 setTimeout(() => {
                     statusElement.style.color = '';
@@ -859,7 +961,7 @@ class GenomeNavigationBar {
             }
         }
     }
-    
+
     /**
      * Highlight selected region in Genes & Features track
      */
@@ -867,15 +969,15 @@ class GenomeNavigationBar {
         // Find features that overlap with the selection
         if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[this.currentChromosome]) {
             const annotations = this.genomeBrowser.currentAnnotations[this.currentChromosome];
-            const overlappingFeatures = annotations.filter(feature => 
+            const overlappingFeatures = annotations.filter(feature =>
                 feature.start <= endPos && feature.end >= startPos
             );
-            
+
             // Clear previous highlights
             document.querySelectorAll('.feature-highlighted').forEach(el => {
                 el.classList.remove('feature-highlighted');
             });
-            
+
             // Highlight overlapping features
             overlappingFeatures.forEach(feature => {
                 const featureElements = document.querySelectorAll(`[data-feature-id="${feature.id}"]`);
@@ -883,32 +985,32 @@ class GenomeNavigationBar {
                     el.classList.add('feature-highlighted');
                 });
             });
-            
+
             console.log(`GenomeNavigationBar: Highlighted ${overlappingFeatures.length} features in selected region`);
         }
     }
-    
+
     /**
      * Show selection tooltip
      */
     showSelectionTooltip(e, startPos, endPos) {
         if (!startPos || !endPos) return;
-        
+
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        
+
         const start = Math.min(startPos, endPos);
         const end = Math.max(startPos, endPos);
         const length = end - start + 1;
-        
+
         this.tooltip.innerHTML = `
             <div style="font-weight: bold; margin-bottom: 4px;">Sequence Selection</div>
             <div>Start: ${start.toLocaleString()}</div>
             <div>End: ${end.toLocaleString()}</div>
             <div>Length: ${length.toLocaleString()} bp</div>
         `;
-        
+
         this.tooltip.style.left = (x + 10) + 'px';
         this.tooltip.style.top = (y - 60) + 'px';
         this.tooltip.style.display = 'block';
