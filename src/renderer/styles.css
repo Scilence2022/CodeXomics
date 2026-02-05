@@ -5211,6 +5211,16 @@ path.svg-gene-element.selected.border-highlight text {
   transform: scale(0.95);
 }
 
+.ruler-visibility-toggle-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background: #f1f5f9;
+}
+
+.ruler-visibility-toggle-btn:active {
+  transform: scale(0.95);
+}
+
 .track-splitter.resizing * {
   transition: none !important;
 }

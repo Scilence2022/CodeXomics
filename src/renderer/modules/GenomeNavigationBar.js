@@ -8,7 +8,9 @@ class GenomeNavigationBar {
         this.canvas = null;
         this.ctx = null;
         this.isVisible = false;
+        this.isRulerCollapsed = false; // Track if ruler is collapsed (hidden)
         this.height = 60; // Height of the navigation bar
+        this.collapsedHeight = 28; // Height when collapsed
         this.majorTickHeight = 20;
         this.minorTickHeight = 10;
         this.labelOffset = 35;
@@ -72,6 +74,30 @@ class GenomeNavigationBar {
         this.selectionToggle.style.cssText = `
             position: absolute;
             top: 2px;
+            right: 28px;
+            width: 24px;
+            height: 24px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: #ffffff;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #64748b;
+            transition: all 0.2s ease;
+        `;
+
+        // Create ruler visibility toggle button
+        this.visibilityToggle = document.createElement('button');
+        this.visibilityToggle.className = 'ruler-visibility-toggle-btn';
+        this.visibilityToggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
+        this.visibilityToggle.title = 'Hide ruler';
+        this.visibilityToggle.style.cssText = `
+            position: absolute;
+            top: 2px;
             right: 2px;
             width: 24px;
             height: 24px;
@@ -98,6 +124,7 @@ class GenomeNavigationBar {
         this.container.appendChild(this.positionIndicator);
         this.container.appendChild(this.rangeIndicator);
         this.container.appendChild(this.selectionToggle);
+        this.container.appendChild(this.visibilityToggle);
         this.container.appendChild(this.tooltip);
 
         // Insert the navigation bar above the genome viewer
@@ -129,6 +156,9 @@ class GenomeNavigationBar {
         // Selection mode toggle
         this.selectionToggle.addEventListener('click', (e) => this.toggleSelectionMode(e));
 
+        // Visibility toggle
+        this.visibilityToggle.addEventListener('click', (e) => this.toggleRulerVisibility(e));
+
         // Keyboard navigation
         this.canvas.addEventListener('keydown', (e) => this.handleKeyDown(e));
         this.canvas.setAttribute('tabindex', '0');
@@ -139,13 +169,14 @@ class GenomeNavigationBar {
     resizeCanvas() {
         const rect = this.container.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
+        const currentHeight = this.isRulerCollapsed ? this.collapsedHeight : this.height;
 
         this.canvas.width = rect.width * dpr;
-        this.canvas.height = this.height * dpr;
+        this.canvas.height = currentHeight * dpr;
 
         this.ctx.scale(dpr, dpr);
         this.canvas.style.width = rect.width + 'px';
-        this.canvas.style.height = this.height + 'px';
+        this.canvas.style.height = currentHeight + 'px';
     }
 
     show(chromosome, sequenceLength) {
@@ -176,7 +207,24 @@ class GenomeNavigationBar {
         if (!this.ctx || !this.isVisible || this.sequenceLength === 0) return;
 
         const width = this.canvas.width / (window.devicePixelRatio || 1);
-        const height = this.height;
+        const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
+
+        // If collapsed, only draw a minimal background
+        if (this.isRulerCollapsed) {
+            // Clear canvas
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Draw background
+            this.ctx.fillStyle = '#f8fafc';
+            this.ctx.fillRect(0, 0, width, height);
+
+            // Draw border
+            this.ctx.strokeStyle = '#cbd5e1';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(0, 0, width, height);
+
+            return;
+        }
 
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -903,6 +951,32 @@ class GenomeNavigationBar {
         }
 
         console.log(`GenomeNavigationBar: Selection mode ${this.selectionMode ? 'enabled' : 'disabled'}`);
+    }
+
+    /**
+     * Toggle ruler visibility (collapse/expand)
+     */
+    toggleRulerVisibility(e) {
+        e.preventDefault();
+        this.isRulerCollapsed = !this.isRulerCollapsed;
+
+        if (this.isRulerCollapsed) {
+            // Update toggle button to "show" state
+            this.visibilityToggle.innerHTML = '<i class="fas fa-chevron-down"></i>';
+            this.visibilityToggle.title = 'Show ruler';
+            this.container.style.height = this.collapsedHeight + 'px';
+        } else {
+            // Update toggle button to "hide" state
+            this.visibilityToggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
+            this.visibilityToggle.title = 'Hide ruler';
+            this.container.style.height = this.height + 'px';
+        }
+
+        // Resize the canvas and redraw
+        this.resizeCanvas();
+        this.draw();
+
+        console.log(`GenomeNavigationBar: Ruler ${this.isRulerCollapsed ? 'collapsed' : 'expanded'}`);
     }
 
     /**
