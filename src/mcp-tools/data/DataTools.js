@@ -85,7 +85,12 @@ class DataTools {
     }
 
     async analyzeCodonUsage(parameters) {
-        return await this.server.analyzeCodonUsage(parameters);
+        // Use local implementation instead of broken this.server.* delegation
+        return this.analyzeCodonUsageLocal(
+            parameters.sequence,
+            parameters.geneName,
+            parameters.organism || 'E. coli'
+        );
     }
 
     calculateCodonBias(rscu) {
@@ -136,7 +141,7 @@ class DataTools {
         const cleanSequence = sequence.replace(/[^ATCG]/gi, '').toUpperCase();
         const codonCounts = {};
         const aminoAcidCounts = {};
-        
+
         // Count codons and amino acids
         for (let i = 0; i < cleanSequence.length - 2; i += 3) {
             const codon = cleanSequence.slice(i, i + 3);
@@ -152,7 +157,7 @@ class DataTools {
         // Calculate RSCU (Relative Synonymous Codon Usage)
         const rscu = {};
         const synonymousCodons = this.getSynonymousCodons();
-        
+
         for (const [aa, codons] of Object.entries(synonymousCodons)) {
             const totalAA = aminoAcidCounts[aa] || 0;
             if (totalAA > 0) {
@@ -168,7 +173,7 @@ class DataTools {
         const totalCodons = Object.values(codonCounts).reduce((sum, count) => sum + count, 0);
         const gcContent = this.calculateGCContent(cleanSequence);
         const gc3 = this.calculateGC3Content(cleanSequence);
-        
+
         return {
             geneName: geneName || 'Unknown',
             organism: organism,
@@ -224,10 +229,10 @@ class DataTools {
     calculateCodonBiasLocal(rscu) {
         const values = Object.values(rscu).filter(v => v > 0);
         if (values.length === 0) return 0;
-        
+
         const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
         const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
-        
+
         return Math.sqrt(variance).toFixed(3);
     }
 
@@ -249,7 +254,7 @@ class DataTools {
     getOptimizationSuggestionsLocal(rscu, organism) {
         const suggestions = [];
         const preferredCodons = this.getPreferredCodons(organism);
-        
+
         for (const [codon, rscuValue] of Object.entries(rscu)) {
             if (rscuValue < 0.3 && preferredCodons[codon]) {
                 suggestions.push({
@@ -260,7 +265,7 @@ class DataTools {
                 });
             }
         }
-        
+
         return suggestions;
     }
 
@@ -273,7 +278,7 @@ class DataTools {
             'TCA': 'TCG', 'TCC': 'TCG', 'TCT': 'TCG', 'AGT': 'TCG', 'AGC': 'TCG',
             'CCA': 'CCG', 'CCC': 'CCG', 'CCT': 'CCG'
         };
-        
+
         return organism.toLowerCase().includes('coli') ? ecoliPreferred : ecoliPreferred;
     }
 
@@ -286,7 +291,7 @@ class DataTools {
     calculateGC3Content(sequence) {
         let gc3Count = 0;
         let total3rdPositions = 0;
-        
+
         for (let i = 2; i < sequence.length; i += 3) {
             const nucleotide = sequence[i];
             if (nucleotide === 'G' || nucleotide === 'C') {
@@ -294,7 +299,7 @@ class DataTools {
             }
             total3rdPositions++;
         }
-        
+
         return total3rdPositions > 0 ? ((gc3Count / total3rdPositions) * 100).toFixed(2) : 0;
     }
 }

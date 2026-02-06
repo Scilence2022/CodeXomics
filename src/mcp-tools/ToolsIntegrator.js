@@ -91,42 +91,18 @@ class ToolsIntegrator {
                 }
             }
 
-            // Protein tools (server-side only)
-            if (this.proteinTools.getTools()[toolName] && toolName !== 'search_alphafold_by_gene') {
-                switch (toolName) {
-                    case 'fetch_protein_structure':
-                        return await this.proteinTools.fetchProteinStructure(parameters);
-                    case 'search_pdb_structures':
-                        return await this.proteinTools.searchPDBStructures(parameters);
-                    case 'fetch_alphafold_structure':
-                        return await this.proteinTools.fetchAlphaFoldStructure(parameters);
-                    case 'search_alphafold_by_sequence':
-                        return await this.proteinTools.searchAlphaFoldBySequence(parameters);
-                    case 'open_alphafold_viewer':
-                        return await this.proteinTools.openAlphaFoldViewer(parameters, clientId);
-                    default:
-                        return await this.proteinTools.executeClientTool(toolName, parameters, clientId);
-                }
+            // Protein tools - delegate all to client (ChatManager has working implementations)
+            if (this.proteinTools.getTools()[toolName]) {
+                // All protein structure tools require client-side execution
+                // as ChatManager handles PDB/AlphaFold API calls
+                return await this.proteinTools.executeClientTool(toolName, parameters, clientId);
             }
 
-            // Database tools
+            // Database tools - delegate all to client (ChatManager has working implementations)
             if (this.databaseTools.getTools()[toolName]) {
-                switch (toolName) {
-                    case 'search_uniprot_database':
-                        return await this.databaseTools.searchUniProtDatabase(parameters);
-                    case 'advanced_uniprot_search':
-                        return await this.databaseTools.advancedUniProtSearch(parameters);
-                    case 'get_uniprot_entry':
-                        return await this.databaseTools.getUniProtEntry(parameters);
-                    case 'analyze_interpro_domains':
-                        return await this.databaseTools.analyzeInterProDomains(parameters);
-                    case 'search_interpro_entry':
-                        return await this.databaseTools.searchInterProEntry(parameters);
-                    case 'get_interpro_entry_details':
-                        return await this.databaseTools.getInterProEntryDetails(parameters);
-                    default:
-                        return await this.databaseTools.executeClientTool(toolName, parameters, clientId);
-                }
+                // All database tools (UniProt, InterPro) require client-side execution
+                // as ChatManager.searchUniProtDatabase etc. have full implementations
+                return await this.databaseTools.executeClientTool(toolName, parameters, clientId);
             }
 
 
@@ -204,11 +180,6 @@ class ToolsIntegrator {
                     default:
                         return await this.utilityTools.executeClientTool(toolName, parameters, clientId);
                 }
-            }
-
-            // Special client-side tools that need browser execution
-            if (toolName === 'search_alphafold_by_gene') {
-                return await this.executeClientSideTool(toolName, parameters, clientId);
             }
 
             throw new Error(`Tool execution handler not found for '${toolName}'`);
