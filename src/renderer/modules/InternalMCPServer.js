@@ -34,20 +34,20 @@ class InternalMCPServer {
     setupIPCHandlers() {
         mcpServerIpc.on('mcp-tool-call', async (event, request) => {
             const { requestId, method, parameters } = request;
-            
+
             try {
                 const result = await this.executeMethod(method, parameters);
-                
+
                 // Send success response back to main process
                 mcpServerIpc.send('mcp-tool-response', {
                     requestId,
                     success: true,
                     result
                 });
-                
+
             } catch (error) {
                 console.error(`🚨 MCP Tool Error for method ${method}:`, error);
-                
+
                 // Send error response back to main process
                 mcpServerIpc.send('mcp-tool-response', {
                     requestId,
@@ -59,29 +59,57 @@ class InternalMCPServer {
     }
 
     // Execute the requested method
+    // Uses dynamic routing to support all 40+ tools via ChatManager delegation
     async executeMethod(method, parameters) {
         if (!this.genomeStudio) {
             throw new Error('Genome Studio instance not available');
         }
 
+        console.log(`🔧 [InternalMCPServer] Executing method: ${method}`);
+
+        // Convert camelCase method name back to snake_case tool name for ChatManager
+        const toolName = method.replace(/([A-Z])/g, '_$1').toLowerCase();
+
+        // First, try to delegate to ChatManager for comprehensive tool support
+        // ChatManager.executeToolWithPriority() handles 70+ tools with priority routing
+        if (this.genomeStudio.chatManager) {
+            try {
+                console.log(`📡 [InternalMCPServer] Delegating '${toolName}' to ChatManager`);
+                const result = await this.genomeStudio.chatManager.executeToolWithPriority(toolName, parameters);
+                if (result !== undefined) {
+                    console.log(`✅ [InternalMCPServer] Tool '${toolName}' executed via ChatManager`);
+                    return {
+                        success: true,
+                        result,
+                        executedVia: 'ChatManager'
+                    };
+                }
+            } catch (error) {
+                console.warn(`⚠️ [InternalMCPServer] ChatManager execution failed for '${toolName}':`, error.message);
+                // Fall through to direct handlers
+            }
+        }
+
+        // Fallback: Direct handlers for core methods that may not be in ChatManager
+        // These are kept for backward compatibility and as fallback
         switch (method) {
             // Navigation methods
             case 'navigateToPosition':
                 return await this.navigateToPosition(parameters);
-            
+
             case 'searchFeatures':
                 return await this.searchFeatures(parameters);
-            
+
             case 'jumpToGene':
                 return await this.jumpToGene(parameters);
-            
+
             case 'searchGeneByName':
                 return await this.searchGeneByName(parameters);
 
             // State management
             case 'getCurrentState':
                 return await this.getCurrentState(parameters);
-            
+
             case 'getGenomeInfo':
                 return await this.getGenomeInfo(parameters);
 
@@ -92,31 +120,152 @@ class InternalMCPServer {
             // Sequence analysis
             case 'getCodingSequence':
                 return await this.getCodingSequence(parameters);
-            
+
             case 'getSequenceRegion':
                 return await this.getSequenceRegion(parameters);
 
             // Protein structure analysis
-            case 'search_alphafold_by_gene':
+            case 'searchAlphafoldByGene':
                 return await this.searchAlphaFoldByGene(parameters);
 
             // Utility methods
             case 'ping':
                 return this.ping();
 
+            // New navigation methods
+            case 'openNewTab':
+                return await this.openNewTab(parameters);
+
+            case 'switchToTab':
+                return await this.switchToTab(parameters);
+
+            case 'zoomIn':
+                return await this.zoom(parameters, 'in');
+
+            case 'zoomOut':
+                return await this.zoom(parameters, 'out');
+
             default:
-                throw new Error(`Unknown method: ${method}`);
+                // If method is not found in fallback handlers, try snake_case version
+                // This handles cases where the method name format doesn't match
+                console.warn(`⚠️ [InternalMCPServer] Method '${method}' not found in fallback handlers`);
+                throw new Error(`Unknown method: ${method}. Tool '${toolName}' was not found in ChatManager or fallback handlers.`);
         }
     }
 
-    // Navigation implementations
-    async navigateToPosition({ chromosome, start, end }) {
+    // New helper methods for additional navigation tools
+    async openNewTab(parameters) {
         if (!this.genomeStudio.navigationManager) {
             throw new Error('NavigationManager not available');
         }
-        
-        await this.genomeStudio.navigationManager.navigateToPosition(chromosome, start, end);
-        
+
+        // Delegate to TabManager if available
+        if (this.genomeStudio.tabManager && this.genomeStudio.tabManager.openNewTab) {
+            const result = await this.genomeStudio.tabManager.openNewTab(parameters);
+            return {
+                success: true,
+                tabId: result?.tabId,
+                message: `Opened new tab${parameters.geneName ? ` for gene ${parameters.geneName}` : ''}`
+            };
+        }
+
+        throw new Error('Tab management not available');
+    }
+
+    async switchToTab(parameters) {
+        if (!this.genomeStudio.tabManager) {
+            throw new Error('TabManager not available');
+        }
+
+        const { tab_id, tab_name, tab_index } = parameters;
+        let result;
+
+        if (tab_id) {
+            result = await this.genomeStudio.tabManager.switchToTabById(tab_id);
+        } else if (tab_name) {
+            result = await this.genomeStudio.tabManager.switchToTabByName(tab_name);
+        } else if (tab_index !== undefined) {
+            result = await this.genomeStudio.tabManager.switchToTabByIndex(tab_index);
+        } else {
+            throw new Error('Must provide tab_id, tab_name, or tab_index');
+        }
+
+        return {
+            success: true,
+            activeTab: result?.activeTab,
+            message: `Switched to tab`
+        };
+    }
+
+    async zoom(parameters, direction) {
+        if (!this.genomeStudio.navigationManager) {
+            throw new Error('NavigationManager not available');
+        }
+
+        const factor = parameters.factor || 2;
+
+        if (direction === 'in') {
+            await this.genomeStudio.navigationManager.zoomIn(factor);
+        } else {
+            await this.genomeStudio.navigationManager.zoomOut(factor);
+        }
+
+        return {
+            success: true,
+            direction,
+            factor,
+            message: `Zoomed ${direction} by factor ${factor}`
+        };
+    }
+
+
+    // Navigation implementations
+    async navigateToPosition({ chromosome, start, end, position }) {
+        // Auto-detect chromosome if not provided
+        if (!chromosome) {
+            const chromosomeSelect = document.getElementById('chromosomeSelect');
+            if (chromosomeSelect && chromosomeSelect.value) {
+                chromosome = chromosomeSelect.value;
+            } else if (this.genomeStudio.currentSequence) {
+                const availableChromosomes = Object.keys(this.genomeStudio.currentSequence);
+                if (availableChromosomes.length > 0) {
+                    chromosome = availableChromosomes[0];
+                }
+            }
+        }
+
+        if (!chromosome) {
+            throw new Error('No chromosome specified and unable to auto-detect');
+        }
+
+        // Handle position parameter with default 2000bp range
+        if (position !== undefined && (start === undefined || end === undefined)) {
+            const defaultRange = 2000;
+            start = Math.max(1, position - Math.floor(defaultRange / 2));
+            end = position + Math.floor(defaultRange / 2);
+        }
+
+        const sequence = this.genomeStudio.currentSequence[chromosome];
+        if (!sequence) {
+            throw new Error(`Chromosome ${chromosome} not found in loaded data`);
+        }
+
+        // Validate and adjust bounds (convert to 0-based)
+        const validatedStart = Math.max(0, start - 1);
+        const validatedEnd = Math.min(sequence.length, end);
+
+        // Set position directly
+        this.genomeStudio.currentPosition = { start: validatedStart, end: validatedEnd };
+        this.genomeStudio.currentChromosome = chromosome;
+
+        // Update view
+        this.genomeStudio.updateStatistics(chromosome, sequence);
+        this.genomeStudio.displayGenomeView(chromosome, sequence);
+
+        if (this.genomeStudio.genomeNavigationBar) {
+            this.genomeStudio.genomeNavigationBar.update();
+        }
+
         return {
             success: true,
             chromosome,
@@ -130,9 +279,9 @@ class InternalMCPServer {
         if (!this.genomeStudio.navigationManager) {
             throw new Error('NavigationManager not available');
         }
-        
+
         const results = await this.genomeStudio.navigationManager.searchFeatures(query, featureType);
-        
+
         return {
             success: true,
             query,
@@ -146,9 +295,9 @@ class InternalMCPServer {
         if (!this.genomeStudio.navigationManager) {
             throw new Error('NavigationManager not available');
         }
-        
+
         const result = await this.genomeStudio.navigationManager.jumpToGene(geneName);
-        
+
         return {
             success: true,
             geneName,
@@ -160,9 +309,9 @@ class InternalMCPServer {
         if (!this.genomeStudio.navigationManager) {
             throw new Error('NavigationManager not available');
         }
-        
+
         const results = await this.genomeStudio.navigationManager.searchGeneByName(name);
-        
+
         return {
             success: true,
             geneName: name,
@@ -249,7 +398,7 @@ class InternalMCPServer {
             throw new Error('SequenceUtils not available');
         }
 
-        const sequence = this.genomeStudio.sequenceUtils.getCodingSequence ? 
+        const sequence = this.genomeStudio.sequenceUtils.getCodingSequence ?
             await this.genomeStudio.sequenceUtils.getCodingSequence(geneName, includeUtrs) :
             '';
 
@@ -322,7 +471,7 @@ class InternalMCPServer {
     start() {
         this.isRunning = true;
         console.log('✅ Internal MCP Server started');
-        
+
         // Notify main process that internal server is ready
         mcpServerIpc.send('internal-mcp-server-ready');
     }
@@ -331,7 +480,7 @@ class InternalMCPServer {
     stop() {
         this.isRunning = false;
         console.log('🛑 Internal MCP Server stopped');
-        
+
         // Notify main process that internal server is stopped
         mcpServerIpc.send('internal-mcp-server-stopped');
     }

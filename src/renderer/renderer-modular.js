@@ -614,6 +614,9 @@ class GenomeBrowser {
 
                     window.internalMCPServer = this.internalMCPServer; // Keep for debugging
                     console.log('✅ Internal MCP Server initialized and started');
+
+                    // Initialize MCPBridge for auto-connect to standalone MCP server
+                    this.initializeMCPBridge();
                 } else {
                     console.warn('⚠️ InternalMCPServer class not available');
                 }
@@ -621,6 +624,42 @@ class GenomeBrowser {
                 console.error('❌ Failed to initialize Internal MCP Server:', error);
             }
         }, 200); // Small delay to ensure modules are ready
+    }
+
+    /**
+     * Initialize MCPBridge for auto-connection to standalone MCP server
+     * This enables CodeXomics to receive tool execution requests from external AI agents
+     */
+    initializeMCPBridge() {
+        try {
+            if (typeof MCPBridge !== 'undefined') {
+                this.mcpBridge = new MCPBridge();
+                this.mcpBridge.setInternalMCPServer(this.internalMCPServer);
+                this.mcpBridge.start();
+
+                window.mcpBridge = this.mcpBridge; // For debugging
+                console.log('✅ MCPBridge initialized - will auto-connect to MCP server if running');
+            } else {
+                // MCPBridge module not loaded, load it dynamically
+                const script = document.createElement('script');
+                script.src = 'modules/MCPBridge.js';
+                script.onload = () => {
+                    if (typeof MCPBridge !== 'undefined') {
+                        this.mcpBridge = new MCPBridge();
+                        this.mcpBridge.setInternalMCPServer(this.internalMCPServer);
+                        this.mcpBridge.start();
+                        window.mcpBridge = this.mcpBridge;
+                        console.log('✅ MCPBridge loaded and initialized');
+                    }
+                };
+                script.onerror = (error) => {
+                    console.warn('⚠️ MCPBridge module not available:', error);
+                };
+                document.head.appendChild(script);
+            }
+        } catch (error) {
+            console.error('❌ Failed to initialize MCPBridge:', error);
+        }
     }
 
     /**

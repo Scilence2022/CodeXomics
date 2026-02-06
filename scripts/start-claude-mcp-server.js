@@ -46,7 +46,7 @@ process.stderr.write('🔧 Claude Desktop Configuration:\n');
 process.stderr.write('Add this to your Claude Desktop MCP settings:\n');
 process.stderr.write('{\n');
 process.stderr.write('  "mcpServers": {\n');
-process.stderr.write('    "genome-ai-studio": {\n');
+process.stderr.write('    "CodeXomics": {\n');
 process.stderr.write('      "command": "node",\n');
 process.stderr.write('      "args": ["' + __filename + '"],\n');
 process.stderr.write('      "env": {}\n');

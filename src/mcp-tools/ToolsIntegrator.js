@@ -241,11 +241,8 @@ class ToolsIntegrator {
                 description: 'Tools for accessing biological databases',
                 tools: Object.keys(this.databaseTools.getTools())
             },
-            evo2: {
-                name: 'AI-Powered Analysis (EVO2)',
-                description: 'NVIDIA EVO2 AI tools for sequence generation and analysis',
-                tools: Object.keys(this.evo2Tools.getTools())
-            },
+            // Note: Evo2Tools category removed - NVIDIA EVO2 integration not yet implemented
+            // To add back, import Evo2Tools module and initialize in constructor
             data: {
                 name: 'Data Management',
                 description: 'Tools for data annotation, export, and analysis',
