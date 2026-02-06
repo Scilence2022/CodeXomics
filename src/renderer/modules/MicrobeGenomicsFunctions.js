@@ -38,7 +38,7 @@ class MicrobeGenomicsFunctions {
      */
     static parseZoomFactor(value) {
         let factor = 2; // Default value
-        
+
         if (typeof value === 'number' && isFinite(value) && value > 0) {
             factor = value;
         } else if (typeof value === 'string') {
@@ -50,7 +50,7 @@ class MicrobeGenomicsFunctions {
                 factor = numeric;
             }
         }
-        
+
         // Enforce maximum zoom factor of 10x
         return Math.min(factor, 10);
     }
@@ -64,17 +64,17 @@ class MicrobeGenomicsFunctions {
     static navigateTo(chromosome, start, end) {
         const gb = window.genomeBrowser;
         if (!gb) throw new Error('GenomeBrowser not initialised');
-        
+
         // Set the position first
         gb.currentPosition = { start, end };
         gb.currentChromosome = chromosome;
-        
+
         // Update chromosome select if different
         const chrSelect = document.getElementById('chromosomeSelect');
         if (chrSelect && chrSelect.value !== chromosome) {
             chrSelect.value = chromosome;
         }
-        
+
         // Trigger view refresh to show the new position
         if (gb.currentSequence && gb.currentSequence[chromosome]) {
             gb.displayGenomeView(chromosome, gb.currentSequence[chromosome]);
@@ -174,7 +174,7 @@ class MicrobeGenomicsFunctions {
             const result = window.UnifiedSequenceProcessing.legacyComputeGC(dna);
             return result;
         }
-        
+
         // Fallback to original implementation if unified module not available
         if (!dna) return 0;
         const g = (dna.match(/G/gi) || []).length;
@@ -194,7 +194,7 @@ class MicrobeGenomicsFunctions {
             const result = window.UnifiedSequenceProcessing.legacyReverseComplement(dna);
             return result;
         }
-        
+
         // Fallback to original implementation if unified module not available
         const complement = { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G', 'N': 'N' };
         return dna.toUpperCase().split('').reverse().map(base => complement[base] || 'N').join('');
@@ -212,7 +212,7 @@ class MicrobeGenomicsFunctions {
             const result = window.UnifiedDNATranslation.legacyTranslateDNA(dna, frame);
             return result;
         }
-        
+
         // Fallback to original implementation if unified module not available
         const codonTable = {
             'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
@@ -252,15 +252,15 @@ class MicrobeGenomicsFunctions {
         const orfs = [];
         const startCodons = ['ATG'];
         const stopCodons = ['TAA', 'TAG', 'TGA'];
-        
+
         // Check all 6 reading frames (3 forward, 3 reverse)
         for (let strand = 0; strand < 2; strand++) {
             const seq = strand === 0 ? dna.toUpperCase() : this.reverseComplement(dna);
-            
+
             for (let frame = 0; frame < 3; frame++) {
                 for (let i = frame; i < seq.length - 2; i += 3) {
                     const codon = seq.substr(i, 3);
-                    
+
                     if (startCodons.includes(codon)) {
                         // Found start codon, look for stop codon
                         for (let j = i + 3; j < seq.length - 2; j += 3) {
@@ -296,7 +296,7 @@ class MicrobeGenomicsFunctions {
         for (const base of sequence.toUpperCase()) {
             counts[base] = (counts[base] || 0) + 1;
         }
-        
+
         const length = sequence.length;
         let entropy = 0;
         for (const count of Object.values(counts)) {
@@ -364,20 +364,20 @@ class MicrobeGenomicsFunctions {
     static analyzeCodonUsage(dna) {
         const codonCounts = {};
         const sequence = dna.toUpperCase();
-        
+
         for (let i = 0; i < sequence.length - 2; i += 3) {
             const codon = sequence.substr(i, 3);
             if (codon.length === 3 && !/N/.test(codon)) {
                 codonCounts[codon] = (codonCounts[codon] || 0) + 1;
             }
         }
-        
+
         const totalCodons = Object.values(codonCounts).reduce((a, b) => a + b, 0);
         const codonFreqs = {};
         for (const [codon, count] of Object.entries(codonCounts)) {
             codonFreqs[codon] = count / totalCodons;
         }
-        
+
         return { counts: codonCounts, frequencies: codonFreqs, total: totalCodons };
     }
 
@@ -404,7 +404,7 @@ class MicrobeGenomicsFunctions {
     static predictRBS(seq) {
         const sdMotifs = [/AGGAGG/gi, /AGGAG/gi, /GGAGG/gi];
         const sites = [];
-        
+
         for (const motif of sdMotifs) {
             let match;
             while ((match = motif.exec(seq)) !== null) {
@@ -429,17 +429,17 @@ class MicrobeGenomicsFunctions {
         const terminators = [];
         const minStemLength = 4;
         const maxLoopSize = 10;
-        
+
         // Simple hairpin detection
         for (let i = 0; i < seq.length - 20; i++) {
             for (let stemLen = minStemLength; stemLen <= 8; stemLen++) {
                 const stem1 = seq.substr(i, stemLen);
                 const stem2Rev = this.reverseComplement(stem1);
-                
+
                 for (let loopSize = 3; loopSize <= maxLoopSize; loopSize++) {
                     const stem2Start = i + stemLen + loopSize;
                     if (stem2Start + stemLen > seq.length) break;
-                    
+
                     const stem2 = seq.substr(stem2Start, stemLen);
                     if (stem2 === stem2Rev) {
                         terminators.push({
@@ -473,7 +473,7 @@ class MicrobeGenomicsFunctions {
             const result = window.UnifiedSequenceProcessing.legacySearchGeneByName(name);
             return result;
         }
-        
+
         // Fallback to original implementation if unified module not available
         const gb = window.genomeBrowser;
         if (!gb) throw new Error('GenomeBrowser not initialised');
@@ -482,7 +482,7 @@ class MicrobeGenomicsFunctions {
             const hit = feats.find(f => {
                 const q = f.qualifiers || {};
                 return (q.gene && q.gene.toLowerCase() === name) ||
-                       (q.locus_tag && q.locus_tag.toLowerCase() === name);
+                    (q.locus_tag && q.locus_tag.toLowerCase() === name);
             });
             if (hit) return { chromosome: chr, feature: hit };
         }
@@ -498,16 +498,16 @@ class MicrobeGenomicsFunctions {
     static searchSequenceMotif(pattern, chromosome = null) {
         const gb = window.genomeBrowser;
         if (!gb) throw new Error('GenomeBrowser not initialised');
-        
+
         const regex = typeof pattern === 'string' ? new RegExp(pattern, 'gi') : pattern;
         const matches = [];
-        
+
         const chromosomes = chromosome ? [chromosome] : Object.keys(gb.currentSequence || {});
-        
+
         for (const chr of chromosomes) {
             const seq = gb.currentSequence[chr];
             if (!seq) continue;
-            
+
             let match;
             while ((match = regex.exec(seq)) !== null) {
                 matches.push({
@@ -530,8 +530,8 @@ class MicrobeGenomicsFunctions {
     static searchByPosition(chromosome, position) {
         const gb = window.genomeBrowser;
         if (!gb || !gb.currentAnnotations[chromosome]) return [];
-        
-        return gb.currentAnnotations[chromosome].filter(feature => 
+
+        return gb.currentAnnotations[chromosome].filter(feature =>
             position >= feature.start && position <= feature.end
         );
     }
@@ -545,11 +545,11 @@ class MicrobeGenomicsFunctions {
     static searchIntergenicRegions(chromosome, minLength = 50) {
         const gb = window.genomeBrowser;
         if (!gb || !gb.currentAnnotations[chromosome]) return [];
-        
+
         const genes = gb.currentAnnotations[chromosome]
             .filter(f => f.type === 'CDS' || f.type === 'gene')
             .sort((a, b) => a.start - b.start);
-        
+
         const intergenic = [];
         for (let i = 0; i < genes.length - 1; i++) {
             const gap = genes[i + 1].start - genes[i].end - 1;
@@ -612,9 +612,9 @@ class MicrobeGenomicsFunctions {
         const feats = gb.currentAnnotations[chromosome] || [];
         const feat1 = feats.find(f => f.id === id1);
         const feat2 = feats.find(f => f.id === id2);
-        
+
         if (!feat1 || !feat2) return null;
-        
+
         const merged = {
             id: `merged_${id1}_${id2}`,
             type: feat1.type,
@@ -622,12 +622,12 @@ class MicrobeGenomicsFunctions {
             end: Math.max(feat1.end, feat2.end),
             qualifiers: { ...feat1.qualifiers, ...feat2.qualifiers }
         };
-        
+
         // Remove original features and add merged
         this.deleteAnnotation(chromosome, id1);
         this.deleteAnnotation(chromosome, id2);
         this.addAnnotation(chromosome, merged);
-        
+
         return merged;
     }
 
@@ -645,11 +645,11 @@ class MicrobeGenomicsFunctions {
         const gb = window.genomeBrowser;
         if (!gb) throw new Error('GenomeBrowser not initialised');
         if (!gb.currentAnnotations[chromosome]) gb.currentAnnotations[chromosome] = [];
-        
+
         // Ensure feature has required properties
         if (!feature.id) feature.id = `feature_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         if (!feature.type) feature.type = 'misc_feature';
-        
+
         gb.currentAnnotations[chromosome].push(feature);
         return feature;
     }
@@ -695,14 +695,14 @@ class MicrobeGenomicsFunctions {
     static addTrack(trackName, data, trackType = 'line') {
         const gb = window.genomeBrowser;
         if (!gb.customTracks) gb.customTracks = {};
-        
+
         const track = {
             name: trackName,
             type: trackType,
             data: data,
             created: new Date().toISOString()
         };
-        
+
         gb.customTracks[trackName] = track;
         return track;
     }
@@ -720,7 +720,7 @@ class MicrobeGenomicsFunctions {
         const gb = window.genomeBrowser;
         if (!gb.variants) gb.variants = {};
         if (!gb.variants[chromosome]) gb.variants[chromosome] = [];
-        
+
         const variant = {
             chromosome,
             position,
@@ -730,7 +730,7 @@ class MicrobeGenomicsFunctions {
             info,
             added: new Date().toISOString()
         };
-        
+
         gb.variants[chromosome].push(variant);
         return variant;
     }
@@ -747,14 +747,14 @@ class MicrobeGenomicsFunctions {
     static getCodingSequence(identifier) {
         const gb = window.genomeBrowser;
         if (!gb) throw new Error('GenomeBrowser not initialised');
-        
+
         // First, find the gene by name or locus tag
         const geneResult = this.searchGeneByName(identifier);
         if (!geneResult) {
             // Provide more helpful error information
             const availableGenes = this.getAvailableGeneNames();
             const suggestions = this.generateGeneSuggestions(identifier, availableGenes);
-            
+
             return {
                 success: false,
                 error: `Gene "${identifier}" not found`,
@@ -765,9 +765,9 @@ class MicrobeGenomicsFunctions {
                 message: `Gene "${identifier}" not found in the current genome. ${suggestions.length > 0 ? 'Try one of these similar genes: ' + suggestions.join(', ') : 'No similar genes found.'}`
             };
         }
-        
+
         const { chromosome, feature } = geneResult;
-        
+
         // Check if we have sequence data for this chromosome
         if (!gb.currentSequence || !gb.currentSequence[chromosome]) {
             return {
@@ -777,28 +777,28 @@ class MicrobeGenomicsFunctions {
                 chromosome: chromosome
             };
         }
-        
+
         // Get the genomic DNA sequence for the gene region
         const fullSequence = gb.currentSequence[chromosome];
         let geneSequence = fullSequence.substring(feature.start - 1, feature.end);
-        
+
         // Determine gene name and locus tag for result
         const geneName = gb.getQualifierValue(feature.qualifiers, 'gene') || identifier;
         const locusTag = gb.getQualifierValue(feature.qualifiers, 'locus_tag') || identifier;
-        
+
         // Handle strand direction
         let codingSequence = geneSequence;
         const isReverse = feature.strand === -1 || feature.strand === '-';
-        
+
         if (isReverse) {
             // For reverse strand genes, get reverse complement
             codingSequence = this.reverseComplement(geneSequence);
         }
-        
+
         // Calculate additional information
         const gcContent = this.computeGC(codingSequence);
         const proteinSequence = this.translateDNA(codingSequence);
-        
+
         return {
             success: true,
             identifier: identifier,
@@ -825,9 +825,9 @@ class MicrobeGenomicsFunctions {
     static getAvailableGeneNames() {
         const gb = window.genomeBrowser;
         if (!gb || !gb.currentAnnotations) return [];
-        
+
         const geneNames = new Set();
-        
+
         for (const [chr, features] of Object.entries(gb.currentAnnotations)) {
             features.forEach(feature => {
                 const qualifiers = feature.qualifiers || {};
@@ -839,7 +839,7 @@ class MicrobeGenomicsFunctions {
                 }
             });
         }
-        
+
         return Array.from(geneNames).sort();
     }
 
@@ -862,11 +862,11 @@ class MicrobeGenomicsFunctions {
     static searchGenesByPartialName(partialName, maxResults = 10) {
         const availableGenes = this.getAvailableGeneNames();
         const partialLower = partialName.toLowerCase();
-        
-        const matches = availableGenes.filter(gene => 
+
+        const matches = availableGenes.filter(gene =>
             gene.toLowerCase().includes(partialLower)
         );
-        
+
         return matches.slice(0, maxResults);
     }
 
@@ -878,23 +878,23 @@ class MicrobeGenomicsFunctions {
      */
     static generateGeneSuggestions(input, availableGenes) {
         if (!input || !availableGenes.length) return [];
-        
+
         const inputLower = input.toLowerCase();
         const suggestions = [];
-        
+
         // Exact prefix matches
-        const prefixMatches = availableGenes.filter(gene => 
+        const prefixMatches = availableGenes.filter(gene =>
             gene.toLowerCase().startsWith(inputLower)
         );
         suggestions.push(...prefixMatches.slice(0, 5));
-        
+
         // Contains matches
-        const containsMatches = availableGenes.filter(gene => 
-            gene.toLowerCase().includes(inputLower) && 
+        const containsMatches = availableGenes.filter(gene =>
+            gene.toLowerCase().includes(inputLower) &&
             !prefixMatches.includes(gene)
         );
         suggestions.push(...containsMatches.slice(0, 3));
-        
+
         // Fuzzy matches (simple similarity)
         const fuzzyMatches = availableGenes.filter(gene => {
             const geneLower = gene.toLowerCase();
@@ -902,7 +902,7 @@ class MicrobeGenomicsFunctions {
             return similarity > 0.3 && !suggestions.includes(gene);
         });
         suggestions.push(...fuzzyMatches.slice(0, 2));
-        
+
         return suggestions.slice(0, 10); // Limit to 10 suggestions
     }
 
@@ -915,10 +915,10 @@ class MicrobeGenomicsFunctions {
     static calculateStringSimilarity(str1, str2) {
         if (str1 === str2) return 1;
         if (str1.length === 0 || str2.length === 0) return 0;
-        
+
         const longer = str1.length > str2.length ? str1 : str2;
         const shorter = str1.length > str2.length ? str2 : str1;
-        
+
         const editDistance = this.levenshteinDistance(str1, str2);
         return 1 - (editDistance / longer.length);
     }
@@ -931,15 +931,15 @@ class MicrobeGenomicsFunctions {
      */
     static levenshteinDistance(str1, str2) {
         const matrix = [];
-        
+
         for (let i = 0; i <= str2.length; i++) {
             matrix[i] = [i];
         }
-        
+
         for (let j = 0; j <= str1.length; j++) {
             matrix[0][j] = j;
         }
-        
+
         for (let i = 1; i <= str2.length; i++) {
             for (let j = 1; j <= str1.length; j++) {
                 if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
@@ -953,7 +953,7 @@ class MicrobeGenomicsFunctions {
                 }
             }
         }
-        
+
         return matrix[str2.length][str1.length];
     }
 
@@ -966,7 +966,7 @@ class MicrobeGenomicsFunctions {
         if (!Array.isArray(identifiers)) {
             throw new Error('Identifiers must be an array');
         }
-        
+
         return identifiers.map(identifier => this.getCodingSequence(identifier));
     }
 
@@ -978,23 +978,23 @@ class MicrobeGenomicsFunctions {
      */
     static exportCodingSequenceFasta(identifier, includeProtein = false) {
         const result = this.getCodingSequence(identifier);
-        
+
         if (!result.success) {
             throw new Error(result.error);
         }
-        
+
         let fasta = '';
-        
+
         // DNA sequence
         const dnaHeader = `>${result.geneName || result.locusTag}_CDS ${result.chromosome}:${result.start}-${result.end} (${result.strand} strand) [${result.length} bp]`;
         fasta += `${dnaHeader}\n${result.codingSequence}\n`;
-        
+
         // Protein sequence if requested
         if (includeProtein) {
             const proteinHeader = `>${result.geneName || result.locusTag}_PROTEIN translated from ${result.chromosome}:${result.start}-${result.end} (${result.strand} strand) [${result.proteinLength} aa]`;
             fasta += `\n${proteinHeader}\n${result.proteinSequence}\n`;
         }
-        
+
         return fasta;
     }
 
@@ -1013,7 +1013,7 @@ class MicrobeGenomicsFunctions {
                 functions: ['navigateTo', 'jumpToGene', 'getCurrentRegion', 'scrollLeft', 'scrollRight', 'zoomIn', 'zoomOut']
             },
             analysis: {
-                description: "Functions to analyze sequence properties and features", 
+                description: "Functions to analyze sequence properties and features",
                 functions: ['computeGC', 'reverseComplement', 'translateDNA', 'findORFs', 'calculateEntropy']
             },
             calculation: {
@@ -1060,18 +1060,18 @@ class MicrobeGenomicsFunctions {
         if (!gb || !gb.actionManager) {
             throw new Error('ActionManager not available');
         }
-        
+
         const target = `${chromosome}:${start}-${end}(${strand})`;
         const length = end - start + 1;
         const metadata = { chromosome, start, end, strand, selectionSource: 'function_call' };
-        
+
         const actionId = gb.actionManager.addAction(
             gb.actionManager.ACTION_TYPES.COPY_SEQUENCE,
             target,
             `Copy ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
             metadata
         );
-        
+
         return {
             success: true,
             actionId: actionId,
@@ -1095,18 +1095,18 @@ class MicrobeGenomicsFunctions {
         if (!gb || !gb.actionManager) {
             throw new Error('ActionManager not available');
         }
-        
+
         const target = `${chromosome}:${start}-${end}(${strand})`;
         const length = end - start + 1;
         const metadata = { chromosome, start, end, strand, selectionSource: 'function_call' };
-        
+
         const actionId = gb.actionManager.addAction(
             gb.actionManager.ACTION_TYPES.CUT_SEQUENCE,
             target,
             `Cut ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
             metadata
         );
-        
+
         return {
             success: true,
             actionId: actionId,
@@ -1128,29 +1128,29 @@ class MicrobeGenomicsFunctions {
         if (!gb || !gb.actionManager) {
             throw new Error('ActionManager not available');
         }
-        
+
         if (!gb.actionManager.clipboard || !gb.actionManager.clipboard.sequence) {
             throw new Error('No sequence in clipboard to paste');
         }
-        
+
         const target = `${chromosome}:${position}`;
         const clipboardLength = gb.actionManager.clipboard.sequence.length;
-        const metadata = { 
-            chromosome, 
-            start: position, 
-            end: position, 
+        const metadata = {
+            chromosome,
+            start: position,
+            end: position,
             strand: '+',
             clipboardData: gb.actionManager.clipboard,
             selectionSource: 'function_call'
         };
-        
+
         const actionId = gb.actionManager.addAction(
             gb.actionManager.ACTION_TYPES.PASTE_SEQUENCE,
             target,
             `Paste ${clipboardLength.toLocaleString()} bp at ${chromosome}:${position}`,
             metadata
         );
-        
+
         return {
             success: true,
             actionId: actionId,
@@ -1173,18 +1173,18 @@ class MicrobeGenomicsFunctions {
         if (!gb || !gb.actionManager) {
             throw new Error('ActionManager not available');
         }
-        
+
         const target = `${chromosome}:${start}-${end}`;
         const length = end - start + 1;
         const metadata = { chromosome, start, end, strand: '+', selectionSource: 'function_call' };
-        
+
         const actionId = gb.actionManager.addAction(
             gb.actionManager.ACTION_TYPES.DELETE_SEQUENCE,
             target,
             `Delete ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
             metadata
         );
-        
+
         return {
             success: true,
             actionId: actionId,
@@ -1207,24 +1207,24 @@ class MicrobeGenomicsFunctions {
         if (!gb || !gb.actionManager) {
             throw new Error('ActionManager not available');
         }
-        
+
         const target = `${chromosome}:${position}`;
-        const metadata = { 
-            chromosome, 
-            start: position, 
-            end: position, 
+        const metadata = {
+            chromosome,
+            start: position,
+            end: position,
             strand: '+',
             insertSequence: sequence,
             selectionSource: 'function_call'
         };
-        
+
         const actionId = gb.actionManager.addAction(
             gb.actionManager.ACTION_TYPES.INSERT_SEQUENCE,
             target,
             `Insert ${sequence.length.toLocaleString()} bp at ${chromosome}:${position}`,
             metadata
         );
-        
+
         return {
             success: true,
             actionId: actionId,
@@ -1248,25 +1248,25 @@ class MicrobeGenomicsFunctions {
         if (!gb || !gb.actionManager) {
             throw new Error('ActionManager not available');
         }
-        
+
         const target = `${chromosome}:${start}-${end}`;
         const originalLength = end - start + 1;
-        const metadata = { 
-            chromosome, 
-            start, 
-            end, 
+        const metadata = {
+            chromosome,
+            start,
+            end,
             strand: '+',
             newSequence: newSequence,
             selectionSource: 'function_call'
         };
-        
+
         const actionId = gb.actionManager.addAction(
             gb.actionManager.ACTION_TYPES.REPLACE_SEQUENCE,
             target,
             `Replace ${originalLength.toLocaleString()} bp with ${newSequence.length.toLocaleString()} bp at ${chromosome}:${start}-${end}`,
             metadata
         );
-        
+
         return {
             success: true,
             actionId: actionId,
@@ -1288,7 +1288,7 @@ class MicrobeGenomicsFunctions {
                 task: "Analyze promoter region of a gene",
                 steps: [
                     "const gene = MicrobeFns.searchGeneByName('dnaA');",
-                    "const upstream = MicrobeFns.getUpstreamRegion(gene, 200);", 
+                    "const upstream = MicrobeFns.getUpstreamRegion(gene, 200);",
                     "const gcContent = MicrobeFns.computeGC(upstream.sequence);",
                     "const promoter = MicrobeFns.predictPromoter(upstream.sequence);",
                     "MicrobeFns.navigateTo(upstream.chromosome, upstream.start, upstream.end);"
@@ -1323,6 +1323,7 @@ class MicrobeGenomicsFunctions {
 // Expose globally & via module export
 if (typeof window !== 'undefined') {
     window.MicrobeFns = MicrobeGenomicsFunctions;
+    window.MicrobeGenomicsFunctions = MicrobeGenomicsFunctions; // Also expose under full name
 }
 
 if (typeof module !== 'undefined' && module.exports) {

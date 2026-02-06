@@ -77,15 +77,16 @@ class ToolsIntegrator {
 
             // Sequence tools
             if (this.sequenceTools.getTools()[toolName]) {
-                if (toolName === 'get_coding_sequence') {
-                    return await this.sequenceTools.getCodingSequence(parameters, clientId);
-                } else if (toolName === 'compute_gc') {
+                // Pure server-side computations
+                if (toolName === 'compute_gc') {
                     return { gcContent: this.sequenceTools.calculateGCContent(parameters.sequence) };
                 } else if (toolName === 'translate_dna') {
                     return { protein: this.sequenceTools.translateDNA(parameters.dna, parameters.frame) };
                 } else if (toolName === 'reverse_complement') {
                     return { reverseComplement: this.sequenceTools.reverseComplement(parameters.dna) };
                 } else {
+                    // All other sequence tools (get_sequence, search_sequence_motif, get_coding_sequence)
+                    // require client-side access to genome data
                     return await this.sequenceTools.executeClientTool(toolName, parameters, clientId);
                 }
             }

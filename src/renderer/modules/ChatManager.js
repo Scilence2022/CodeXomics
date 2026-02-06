@@ -9016,12 +9016,13 @@ ${coreTools}
             return undefined;
         }
 
+        // Tool-specific parameter extraction - MicrobeGenomicsFunctions methods expect specific arguments
         const genomicsTools = {
-            'search_gene_by_name': () => window.MicrobeGenomicsFunctions.searchGeneByName(parameters),
-            'get_coding_sequence': () => window.MicrobeGenomicsFunctions.getCodingSequence(parameters),
-            'jump_to_gene': () => window.MicrobeGenomicsFunctions.jumpToGene(parameters),
-            'delete_gene': () => window.MicrobeGenomicsFunctions.deleteGene(parameters),
-            'search_gene_by_locus_tag': () => window.MicrobeGenomicsFunctions.searchGeneByLocusTag(parameters)
+            'search_gene_by_name': () => window.MicrobeGenomicsFunctions.searchGeneByName(parameters.name || parameters.geneName || parameters.identifier),
+            'get_coding_sequence': () => window.MicrobeGenomicsFunctions.getCodingSequence(parameters.identifier || parameters.geneName || parameters.gene_name),
+            'jump_to_gene': () => window.MicrobeGenomicsFunctions.jumpToGene(parameters.geneName || parameters.identifier || parameters.name),
+            'delete_gene': () => window.MicrobeGenomicsFunctions.deleteGene(parameters.geneName || parameters.identifier),
+            'search_gene_by_locus_tag': () => window.MicrobeGenomicsFunctions.searchGeneByLocusTag(parameters.locusTag || parameters.locus_tag || parameters.identifier)
         };
 
         if (genomicsTools[toolName]) {

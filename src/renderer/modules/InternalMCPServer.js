@@ -393,22 +393,55 @@ class InternalMCPServer {
     }
 
     // Sequence analysis implementations
-    async getCodingSequence({ geneName, includeUtrs = false }) {
-        if (!this.genomeStudio.sequenceUtils) {
-            throw new Error('SequenceUtils not available');
+    async getCodingSequence({ identifier, geneName, gene_name, includeUtrs = false }) {
+        // Support multiple parameter names for compatibility
+        const geneId = identifier || geneName || gene_name;
+
+        if (!geneId) {
+            throw new Error('Gene identifier is required (identifier, geneName, or gene_name)');
         }
 
-        const sequence = this.genomeStudio.sequenceUtils.getCodingSequence ?
-            await this.genomeStudio.sequenceUtils.getCodingSequence(geneName, includeUtrs) :
-            '';
+        // Use MicrobeGenomicsFunctions if available (preferred - has full implementation)
+        if (window.MicrobeGenomicsFunctions) {
+            const result = window.MicrobeGenomicsFunctions.getCodingSequence(geneId);
+            if (result && result.success) {
+                return {
+                    success: true,
+                    identifier: geneId,
+                    geneName: result.geneName,
+                    locusTag: result.locusTag,
+                    chromosome: result.chromosome,
+                    position: `${result.start}-${result.end}`,
+                    strand: result.strand,
+                    length: result.length,
+                    gcContent: result.gcContent,
+                    codingSequence: result.codingSequence,
+                    proteinSequence: result.proteinSequence,
+                    proteinLength: result.proteinLength
+                };
+            } else {
+                return {
+                    success: false,
+                    identifier: geneId,
+                    error: result?.error || `Gene '${geneId}' not found`,
+                    suggestions: result?.suggestions || []
+                };
+            }
+        }
 
-        return {
-            success: true,
-            geneName,
-            includeUtrs,
-            sequence: sequence || '',
-            length: sequence ? sequence.length : 0
-        };
+        // Fallback to sequenceUtils if available
+        if (this.genomeStudio.sequenceUtils?.getCodingSequence) {
+            const sequence = await this.genomeStudio.sequenceUtils.getCodingSequence(geneId, includeUtrs);
+            return {
+                success: true,
+                identifier: geneId,
+                includeUtrs,
+                sequence: sequence || '',
+                length: sequence ? sequence.length : 0
+            };
+        }
+
+        throw new Error('No sequence extraction method available');
     }
 
     async getSequenceRegion({ chromosome, start, end }) {
