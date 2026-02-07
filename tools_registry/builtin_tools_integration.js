@@ -90,6 +90,13 @@ class BuiltInToolsIntegration {
             priority: 1
         });
 
+        this.builtInToolsMap.set('close_tab', {
+            method: 'closeTab',
+            category: 'navigation',
+            type: 'built-in',
+            priority: 1
+        });
+
         this.builtInToolsMap.set('get_current_state', {
             method: 'getCurrentState',
             category: 'navigation',
@@ -590,6 +597,16 @@ class BuiltInToolsIntegration {
             });
         }
 
+        // Check for close tab patterns
+        if (/\b(close|remove|delete|dismiss)\s+(tab|window)\b/i.test(query) ||
+            /\b(tab\s+(close|remove|delete|dismiss))\b/i.test(query)) {
+            relevantTools.push({
+                name: 'close_tab',
+                confidence: 0.85,
+                reason: 'Close tab keywords detected'
+            });
+        }
+
         // Check for sequence analysis patterns
         if (/\b(sequence|gc|content|analyze)\b/i.test(query)) {
             relevantTools.push({
@@ -762,6 +779,7 @@ ${navigationTools.map(tool => `- **${tool.name}**: Built-in ${tool.category} too
 **Tab Management Instructions:**
 - Use open_new_tab to create new analysis tabs for parallel workflows
 - Use switch_to_tab to navigate between existing tabs by ID, name, or index
+- Use close_tab to close tabs by ID, name, or index (cannot close the last remaining tab)
 - Use navigate_to_position to move within the current tab to specific genomic locations
 
 ## 🧬 Built-in Sequence Analysis Tools

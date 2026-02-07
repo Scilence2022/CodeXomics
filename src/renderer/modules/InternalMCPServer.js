@@ -139,6 +139,9 @@ class InternalMCPServer {
             case 'switchToTab':
                 return await this.switchToTab(parameters);
 
+            case 'closeTab':
+                return await this.closeTab(parameters);
+
             case 'zoomIn':
                 return await this.zoom(parameters, 'in');
 
@@ -228,6 +231,71 @@ class InternalMCPServer {
             tab_id: targetTabId,
             tab_title: targetTabTitle,
             message: `Switched to tab: ${targetTabTitle}`
+        };
+    }
+
+    async closeTab(parameters) {
+        if (!this.genomeStudio.tabManager) {
+            throw new Error('TabManager not available');
+        }
+
+        const { tab_id, tab_name, tab_index } = parameters;
+        const tabManager = this.genomeStudio.tabManager;
+        let targetTabId = null;
+        let targetTabTitle = null;
+
+        // Prevent closing the last tab
+        if (tabManager.tabs.size <= 1) {
+            throw new Error('Cannot close the last remaining tab');
+        }
+
+        // Strategy 1: Close by specific tab ID
+        if (tab_id) {
+            if (tabManager.tabs.has(tab_id)) {
+                targetTabId = tab_id;
+                const tabState = tabManager.tabStates?.get(tab_id);
+                targetTabTitle = tabState?.title || `Tab ${tab_id}`;
+            } else {
+                throw new Error(`Tab with ID '${tab_id}' not found`);
+            }
+        }
+        // Strategy 2: Close by tab name/title (case-insensitive partial matching)
+        else if (tab_name) {
+            const tabEntries = Array.from(tabManager.tabStates?.entries() || []);
+            const foundTab = tabEntries.find(([id, state]) => {
+                return state.title && state.title.toLowerCase().includes(tab_name.toLowerCase());
+            });
+            if (foundTab) {
+                targetTabId = foundTab[0];
+                targetTabTitle = foundTab[1].title;
+            } else {
+                throw new Error(`No tab found matching name '${tab_name}'`);
+            }
+        }
+        // Strategy 3: Close by tab index (zero-based)
+        else if (tab_index !== undefined) {
+            const tabIds = Array.from(tabManager.tabs.keys());
+            if (tab_index >= 0 && tab_index < tabIds.length) {
+                targetTabId = tabIds[tab_index];
+                const tabState = tabManager.tabStates?.get(targetTabId);
+                targetTabTitle = tabState?.title || `Tab ${targetTabId}`;
+            } else {
+                throw new Error(`Tab index ${tab_index} is out of range (0-${tabIds.length - 1})`);
+            }
+        }
+        else {
+            throw new Error('Must provide tab_id, tab_name, or tab_index');
+        }
+
+        // Perform the tab close using the correct method
+        tabManager.closeTab(targetTabId);
+
+        return {
+            success: true,
+            closed_tab_id: targetTabId,
+            closed_tab_title: targetTabTitle,
+            remaining_tabs: tabManager.tabs.size,
+            message: `Closed tab: ${targetTabTitle}`
         };
     }
 

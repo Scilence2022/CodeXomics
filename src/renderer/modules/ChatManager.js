@@ -2739,6 +2739,109 @@ class ChatManager {
     }
 
     /**
+     * Close a specific tab by ID, name, or index - Built-in function tool
+     * @param {Object} params - Tool parameters
+     * @param {string} params.tab_id - Specific tab ID to close
+     * @param {string} params.tab_name - Tab name/title to search for (partial matching)
+     * @param {number} params.tab_index - Zero-based index of tab to close
+     * @param {string} params.clientId - Optional client identifier
+     * @returns {Object} Close result
+     */
+    async closeTab(params) {
+        const { tab_id, tab_name, tab_index, clientId } = params;
+
+        console.log('🔧 [ChatManager] closeTab called with params:', params);
+
+        try {
+            const genomeBrowser = this.app;
+
+            // Wait for tabManager to be available
+            if (!genomeBrowser.tabManager) {
+                throw new Error('TabManager not available');
+            }
+
+            const tabManager = genomeBrowser.tabManager;
+
+            // Prevent closing the last tab
+            if (tabManager.tabs.size <= 1) {
+                throw new Error('Cannot close the last remaining tab');
+            }
+
+            let targetTabId = null;
+            let targetTabTitle = null;
+            const tabEntries = Array.from(tabManager.tabs.entries());
+
+            // Strategy 1: Close by specific tab ID
+            if (tab_id) {
+                if (tabManager.tabs.has(tab_id)) {
+                    targetTabId = tab_id;
+                    const tabState = tabManager.tabStates?.get(tab_id);
+                    targetTabTitle = tabState?.title || `Tab ${tab_id}`;
+                } else {
+                    throw new Error(`Tab with ID '${tab_id}' not found`);
+                }
+            }
+            // Strategy 2: Close by tab name/title (case-insensitive partial matching)
+            else if (tab_name) {
+                const foundTab = tabEntries.find(([tabId, tabElement]) => {
+                    const tabState = tabManager.tabStates?.get(tabId);
+                    if (tabState?.title) {
+                        return tabState.title.toLowerCase().includes(tab_name.toLowerCase());
+                    }
+                    return false;
+                });
+
+                if (foundTab) {
+                    targetTabId = foundTab[0];
+                    targetTabTitle = tabManager.tabStates?.get(targetTabId)?.title;
+                } else {
+                    throw new Error(`No tab found matching name '${tab_name}'`);
+                }
+            }
+            // Strategy 3: Close by tab index (zero-based)
+            else if (tab_index !== undefined) {
+                const tabIds = Array.from(tabManager.tabs.keys());
+                if (tab_index >= 0 && tab_index < tabIds.length) {
+                    targetTabId = tabIds[tab_index];
+                    const tabState = tabManager.tabStates?.get(targetTabId);
+                    targetTabTitle = tabState?.title || `Tab ${targetTabId}`;
+                } else {
+                    throw new Error(`Tab index ${tab_index} is out of range (0-${tabIds.length - 1})`);
+                }
+            }
+            else {
+                throw new Error('At least one parameter (tab_id, tab_name, or tab_index) must be provided');
+            }
+
+            // Perform the tab close
+            if (targetTabId) {
+                tabManager.closeTab(targetTabId);
+
+                console.log(`✅ [ChatManager] Successfully closed tab: ${targetTabId} - ${targetTabTitle}`);
+
+                return {
+                    success: true,
+                    closed_tab_id: targetTabId,
+                    closed_tab_title: targetTabTitle,
+                    remaining_tabs: tabManager.tabs.size,
+                    message: `Closed tab: ${targetTabTitle}`,
+                    clientId: clientId
+                };
+            } else {
+                throw new Error('Failed to identify target tab');
+            }
+
+        } catch (error) {
+            console.error('❌ [ChatManager] Error closing tab:', error);
+            return {
+                success: false,
+                error: error.message,
+                clientId: clientId
+            };
+        }
+    }
+
+    /**
      * Switch to a specific tab by ID, name, or index
      */
     async switchToTab(params) {
@@ -5725,6 +5828,9 @@ class ChatManager {
 
             case 'switch_to_tab':
                 return `🗂️ Switched to tab: ${result.tab_title || result.message}`;
+
+            case 'close_tab':
+                return `🗂️ Closed tab: ${result.closed_tab_title || result.message} (${result.remaining_tabs} tabs remaining)`;
 
             case 'search_features':
                 if (result.count > 0) {
@@ -10975,6 +11081,10 @@ ${this.getPluginSystemInfo()}`;
 
                 case 'switch_to_tab':
                     result = await this.switchToTab(parameters);
+                    break;
+
+                case 'close_tab':
+                    result = await this.closeTab(parameters);
                     break;
 
                 // Legacy camelCase support for backward compatibility
