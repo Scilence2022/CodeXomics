@@ -178,22 +178,56 @@ class InternalMCPServer {
         }
 
         const { tab_id, tab_name, tab_index } = parameters;
-        let result;
+        const tabManager = this.genomeStudio.tabManager;
+        let targetTabId = null;
+        let targetTabTitle = null;
 
+        // Strategy 1: Switch by specific tab ID
         if (tab_id) {
-            result = await this.genomeStudio.tabManager.switchToTabById(tab_id);
-        } else if (tab_name) {
-            result = await this.genomeStudio.tabManager.switchToTabByName(tab_name);
-        } else if (tab_index !== undefined) {
-            result = await this.genomeStudio.tabManager.switchToTabByIndex(tab_index);
-        } else {
+            if (tabManager.tabs.has(tab_id)) {
+                targetTabId = tab_id;
+                const tabState = tabManager.tabs.get(tab_id);
+                targetTabTitle = tabState.title || `Tab ${tab_id}`;
+            } else {
+                throw new Error(`Tab with ID '${tab_id}' not found`);
+            }
+        }
+        // Strategy 2: Switch by tab name/title (case-insensitive partial matching)
+        else if (tab_name) {
+            const tabEntries = Array.from(tabManager.tabs.entries());
+            const foundTab = tabEntries.find(([id, state]) => {
+                return state.title && state.title.toLowerCase().includes(tab_name.toLowerCase());
+            });
+            if (foundTab) {
+                targetTabId = foundTab[0];
+                targetTabTitle = foundTab[1].title;
+            } else {
+                throw new Error(`No tab found matching name '${tab_name}'`);
+            }
+        }
+        // Strategy 3: Switch by tab index (zero-based)
+        else if (tab_index !== undefined) {
+            const tabIds = Array.from(tabManager.tabs.keys());
+            if (tab_index >= 0 && tab_index < tabIds.length) {
+                targetTabId = tabIds[tab_index];
+                const tabState = tabManager.tabs.get(targetTabId);
+                targetTabTitle = tabState.title || `Tab ${targetTabId}`;
+            } else {
+                throw new Error(`Tab index ${tab_index} is out of range (0-${tabIds.length - 1})`);
+            }
+        }
+        else {
             throw new Error('Must provide tab_id, tab_name, or tab_index');
         }
 
+        // Perform the tab switch using the correct method
+        tabManager.switchToTab(targetTabId);
+
         return {
             success: true,
-            activeTab: result?.activeTab,
-            message: `Switched to tab`
+            tab_id: targetTabId,
+            tab_title: targetTabTitle,
+            message: `Switched to tab: ${targetTabTitle}`
         };
     }
 
