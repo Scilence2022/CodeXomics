@@ -3231,11 +3231,48 @@ class ChatManager {
                 end: this.app.currentPosition.end,
                 length: this.app.currentPosition.end - this.app.currentPosition.start + 1,
                 centerPosition: Math.floor((this.app.currentPosition.start + this.app.currentPosition.end) / 2)
-            } : null
+            } : null,
+
+            // Enhanced: Add open tabs information
+            openTabs: this.getOpenTabsInfo()
         };
 
         console.log('ChatManager getCurrentState - final state:', state);
         return state;
+    }
+
+    /**
+     * Get information about all open tabs
+     * @returns {Array} Array of tab objects with id, title, position, chromosome, and isActive
+     */
+    getOpenTabsInfo() {
+        try {
+            if (!this.app?.tabManager?.tabs) {
+                return [];
+            }
+
+            const activeTabId = this.app.tabManager.activeTabId;
+            const tabs = [];
+
+            for (const [tabId, tabState] of this.app.tabManager.tabs.entries()) {
+                tabs.push({
+                    id: tabId,
+                    title: tabState.title || `Tab ${tabId}`,
+                    chromosome: tabState.chromosome || this.app.currentChromosome,
+                    position: tabState.position ? {
+                        start: tabState.position.start,
+                        end: tabState.position.end
+                    } : null,
+                    isActive: tabId === activeTabId,
+                    index: tabs.length
+                });
+            }
+
+            return tabs;
+        } catch (error) {
+            console.warn('Error getting open tabs info:', error);
+            return [];
+        }
     }
 
     async getSequence(params) {
