@@ -3063,6 +3063,24 @@ class TrackRenderer {
         console.log(`🔄 Circular mode ${newCircularMode ? 'enabled' : 'disabled'}`);
     }
 
+    /**
+     * Update circular mode button display to match current trackSettings
+     * Called when switching tabs to sync button UI with restored settings
+     */
+    updateCircularModeButton() {
+        const circularBtn = document.querySelector('.track-circular-btn');
+        if (!circularBtn) return;
+
+        const isCircular = this.getTrackSettings('genes').circularMode || false;
+        circularBtn.innerHTML = isCircular ?
+            '<i class="fas fa-circle-notch"></i>' :
+            '<i class="fas fa-long-arrow-alt-right"></i>';
+        circularBtn.title = isCircular ?
+            'Circular Mode: ON (click to disable)' :
+            'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+        circularBtn.classList.toggle('active', isCircular);
+    }
+
 
     /**
      * Update the layout toggle button appearance based on mode

@@ -687,6 +687,12 @@ class TabManager {
                         this.genomeBrowser.trackRenderer.headerStates = new Map(Object.entries(tabState.headerStates));
                     }
                 }
+
+                // Sync circular mode to NavigationManager for proper tab isolation
+                const circularMode = tabState.trackSettings?.genes?.circularMode || false;
+                if (this.genomeBrowser.navigationManager) {
+                    this.genomeBrowser.navigationManager.setCircularMode(circularMode);
+                }
             }
 
             // Restore selected items (unique per tab)
@@ -716,6 +722,14 @@ class TabManager {
             // Refresh the display if there's genome data
             if (tabState.currentSequence && tabState.currentChromosome) {
                 this.genomeBrowser.refreshCurrentView();
+
+                // Update circular mode button after view refresh rebuilds the DOM
+                // Use setTimeout to ensure the DOM is fully updated
+                setTimeout(() => {
+                    if (this.genomeBrowser.trackRenderer?.updateCircularModeButton) {
+                        this.genomeBrowser.trackRenderer.updateCircularModeButton();
+                    }
+                }, 50);
             }
 
             console.log(`Restored state for tab: ${tabId} at position ${tabState.currentChromosome}:${tabState.currentPosition.start}-${tabState.currentPosition.end}`);
