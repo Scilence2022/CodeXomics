@@ -11,6 +11,7 @@ const DataTools = require('./data/DataTools');
 const PathwayTools = require('./pathway/PathwayTools');
 const ActionTools = require('./action/ActionTools');
 const UtilityTools = require('./utility/UtilityTools');
+const FileTools = require('./file/FileTools');
 
 class ToolsIntegrator {
     constructor(server) {
@@ -25,6 +26,7 @@ class ToolsIntegrator {
         this.pathwayTools = new PathwayTools(server);
         this.actionTools = new ActionTools(server);
         this.utilityTools = new UtilityTools(server);
+        this.fileTools = new FileTools(server);
 
         // Combine all tools
         this.allTools = this.combineAllTools();
@@ -39,7 +41,8 @@ class ToolsIntegrator {
             ...this.dataTools.getTools(),
             ...this.pathwayTools.getTools(),
             ...this.actionTools.getTools(),
-            ...this.utilityTools.getTools()
+            ...this.utilityTools.getTools(),
+            ...this.fileTools.getTools()
         };
     }
 
@@ -114,6 +117,11 @@ class ToolsIntegrator {
                 } else {
                     return await this.dataTools.executeClientTool(toolName, parameters, clientId);
                 }
+            }
+
+            // File tools - delegate all to client (ChatManager has file loading implementations)
+            if (this.fileTools.getTools()[toolName]) {
+                return await this.fileTools.executeClientTool(toolName, parameters, clientId);
             }
 
             // Pathway tools
