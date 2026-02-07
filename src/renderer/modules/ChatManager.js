@@ -14074,6 +14074,20 @@ ${this.getPluginSystemInfo()}`;
 
         console.log(`✅ [ChatManager] Genome-wide codon usage analysis complete: ${totalGenes} genes, ${totalCodons} codons`);
 
+        // Truncate analyzedGenes to prevent huge response (keep only first 20 as sample)
+        const sampleGenes = geneResults.slice(0, 20);
+
+        // Truncate codonPreferences - only include top amino acids with significant bias
+        const truncatedPreferences = {};
+        const sortedAAs = Object.entries(genomeCodonPreferences)
+            .filter(([aa]) => aa !== '*') // Exclude stop codons
+            .sort((a, b) => (b[1].statistics?.biasStrength || 0) - (a[1].statistics?.biasStrength || 0))
+            .slice(0, 10); // Top 10 amino acids with most bias
+
+        for (const [aa, pref] of sortedAAs) {
+            truncatedPreferences[aa] = pref;
+        }
+
         return {
             success: true,
             analysisType: 'genome-wide',
@@ -14084,13 +14098,17 @@ ${this.getPluginSystemInfo()}`;
             featureType: featureType,
             minLength: minLength,
             uniqueCodons: Object.keys(genomeCodonCounts).length,
-            codonUsage: genomeCodonUsage,
-            aminoAcidComposition: genomeAminoAcidCounts,
-            codonPreferences: genomeCodonPreferences,
+            // Only include top/bottom codons, not full array
             mostFrequentCodons: genomeCodonUsage.slice(0, 10),
             leastFrequentCodons: genomeCodonUsage.slice(-10).reverse(),
+            aminoAcidComposition: genomeAminoAcidCounts,
+            // Truncated preferences (top 10 by bias strength)
+            codonPreferences: truncatedPreferences,
             gcContent: gcContent,
-            analyzedGenes: geneResults
+            // Sample of analyzed genes (first 20 only)
+            analyzedGenesSample: sampleGenes,
+            totalGenesAnalyzed: geneResults.length,
+            note: `Showing sample of ${sampleGenes.length} genes out of ${geneResults.length} total. Full data available via ChatBox.`
         };
     }
 
