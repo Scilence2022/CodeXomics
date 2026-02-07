@@ -148,6 +148,13 @@ class InternalMCPServer {
             case 'zoomOut':
                 return await this.zoom(parameters, 'out');
 
+            // Codon usage analysis tools
+            case 'codonUsageAnalysis':
+                return await this.codonUsageAnalysis(parameters);
+
+            case 'genomeCodonUsageAnalysis':
+                return await this.genomeCodonUsageAnalysis(parameters);
+
             default:
                 // If method is not found in fallback handlers, try snake_case version
                 // This handles cases where the method name format doesn't match
@@ -320,6 +327,27 @@ class InternalMCPServer {
         };
     }
 
+    // Codon usage analysis - delegates to ChatManager
+    async codonUsageAnalysis(parameters) {
+        if (!this.genomeStudio.chatManager) {
+            throw new Error('ChatManager not available');
+        }
+
+        console.log('🧬 [InternalMCPServer] Delegating codonUsageAnalysis to ChatManager');
+        const result = await this.genomeStudio.chatManager.codonUsageAnalysis(parameters);
+        return result;
+    }
+
+    // Genome-wide codon usage analysis - delegates to ChatManager
+    async genomeCodonUsageAnalysis(parameters) {
+        if (!this.genomeStudio.chatManager) {
+            throw new Error('ChatManager not available');
+        }
+
+        console.log('🧬 [InternalMCPServer] Delegating genomeCodonUsageAnalysis to ChatManager');
+        const result = await this.genomeStudio.chatManager.genomeCodonUsageAnalysis(parameters);
+        return result;
+    }
 
     // Navigation implementations
     async navigateToPosition({ chromosome, start, end, position }) {

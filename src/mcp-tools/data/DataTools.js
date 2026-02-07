@@ -76,6 +76,22 @@ class DataTools {
                     },
                     required: ['sequence']
                 }
+            },
+
+            genome_codon_usage_analysis: {
+                name: 'genome_codon_usage_analysis',
+                description: 'Perform comprehensive genome-wide codon usage analysis across all CDS features to identify codon preferences and biases at the organism level. Analyzes synonymous codon preferences, calculates RSCU values, and provides detailed statistical analysis.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        chromosome: { type: 'string', description: 'Specific chromosome/contig to analyze (optional, analyzes all if not specified)' },
+                        featureType: { type: 'string', description: 'Type of features to analyze (default CDS)', default: 'CDS', enum: ['CDS', 'gene', 'mRNA'] },
+                        minLength: { type: 'integer', description: 'Minimum feature length in base pairs (default 300)', default: 300 },
+                        maxGenes: { type: 'integer', description: 'Maximum number of genes to analyze (optional)' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: []
+                }
             }
         };
     }
