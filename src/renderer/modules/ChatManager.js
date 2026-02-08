@@ -9107,6 +9107,17 @@ ${coreTools}
             'find_restriction_sites': () => this.findRestrictionSites(parameters),
             'virtual_digest': () => this.virtualDigest(parameters),
 
+            // AlphaFold and protein structure tools
+            'search_alphafold_by_gene': () => this.searchAlphaFoldByGene(parameters),
+            'fetch_alphafold_structure': () => this.fetchAlphaFoldStructure(parameters),
+            'open_alphafold_viewer': () => this.openAlphaFoldViewer(parameters),
+            'search_pdb_structures': () => this.searchPdbStructures(parameters),
+            'fetch_protein_structure': () => this.fetchProteinStructure(parameters),
+            'search_alphafold_by_sequence': () => this.searchAlphaFoldBySequence(parameters),
+
+            // Genome-wide analysis tools  
+            'genome_codon_usage_analysis': () => this.genomeCodonUsageAnalysis(parameters),
+
             // Export tools - built-in equivalents for Export As dropdown menu
             'export_fasta_sequence': () => this.exportFastaSequence(parameters),
             'export_genbank_format': () => this.exportGenBankFormat(parameters),
@@ -15984,6 +15995,170 @@ ${this.getPluginSystemInfo()}`;
                 error: error.message,
                 tool: 'open_alphafold_viewer',
                 parameters: parameters,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Search PDB database for protein structures
+     */
+    async searchPdbStructures(parameters) {
+        const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
+        const organism = parameters.organism || 'Escherichia coli';
+        const maxResults = parameters.maxResults || 10;
+
+        try {
+            console.log(`Searching PDB for gene: ${geneName}, organism: ${organism}`);
+
+            // Search RCSB PDB API
+            const searchUrl = `https://search.rcsb.org/rcsbsearch/v2/query?json=${encodeURIComponent(JSON.stringify({
+                query: {
+                    type: 'terminal',
+                    service: 'full_text',
+                    parameters: { value: `${geneName} ${organism}` }
+                },
+                return_type: 'entry',
+                request_options: { paginate: { start: 0, rows: maxResults } }
+            }))}`;
+
+            const response = await fetch(searchUrl);
+            if (!response.ok) {
+                throw new Error(`PDB search failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const results = (data.result_set || []).map(entry => ({
+                pdbId: entry.identifier,
+                pdbUrl: `https://www.rcsb.org/structure/${entry.identifier}`,
+                downloadUrl: `https://files.rcsb.org/download/${entry.identifier}.pdb`
+            }));
+
+            return {
+                success: true,
+                tool: 'search_pdb_structures',
+                parameters: parameters,
+                results: results,
+                count: results.length,
+                timestamp: new Date().toISOString(),
+                message: results.length > 0 ?
+                    `Found ${results.length} PDB structure(s) for ${geneName}` :
+                    `No PDB structures found for ${geneName}`
+            };
+
+        } catch (error) {
+            console.error('PDB search error:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'search_pdb_structures',
+                parameters: parameters,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Fetch protein structure data (from PDB or AlphaFold)
+     */
+    async fetchProteinStructure(parameters) {
+        const pdbId = parameters.pdbId || parameters.pdb_id;
+        const uniprotId = parameters.uniprotId || parameters.uniprot_id;
+        const geneName = parameters.geneName || parameters.gene_name;
+
+        try {
+            console.log(`Fetching protein structure: PDB=${pdbId}, UniProt=${uniprotId}, gene=${geneName}`);
+
+            // If PDB ID provided, fetch from RCSB
+            if (pdbId) {
+                const pdbUrl = `https://files.rcsb.org/download/${pdbId}.pdb`;
+                const response = await fetch(pdbUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch PDB structure ${pdbId}: ${response.status}`);
+                }
+                const pdbData = await response.text();
+
+                return {
+                    success: true,
+                    tool: 'fetch_protein_structure',
+                    pdbId: pdbId,
+                    pdbData: pdbData,
+                    source: 'RCSB PDB',
+                    timestamp: new Date().toISOString()
+                };
+            }
+
+            // If UniProt ID provided, fetch from AlphaFold
+            if (uniprotId) {
+                return await this.fetchAlphaFoldStructure({ uniprotId, geneName });
+            }
+
+            throw new Error('Either pdbId or uniprotId must be provided');
+
+        } catch (error) {
+            console.error('Protein structure fetch error:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'fetch_protein_structure',
+                parameters: parameters,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Search AlphaFold by protein sequence
+     */
+    async searchAlphaFoldBySequence(parameters) {
+        const sequence = parameters.sequence;
+        const maxResults = parameters.maxResults || 10;
+
+        try {
+            console.log(`Searching AlphaFold by sequence (length: ${sequence?.length})`);
+
+            if (!sequence || sequence.length < 10) {
+                throw new Error('Protein sequence must be at least 10 amino acids');
+            }
+
+            // Use UniProt BLAST search
+            const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${sequence.substring(0, 50)}&format=json&size=${maxResults}`;
+
+            const response = await fetch(searchUrl, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!response.ok) {
+                throw new Error(`UniProt sequence search failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const results = (data.results || []).map(protein => ({
+                uniprotId: protein.primaryAccession,
+                proteinName: protein.proteinDescription?.recommendedName?.fullName?.value || 'Unknown',
+                organism: protein.organism?.scientificName,
+                alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${protein.primaryAccession}`
+            }));
+
+            return {
+                success: true,
+                tool: 'search_alphafold_by_sequence',
+                parameters: { sequenceLength: sequence.length, maxResults },
+                results: results,
+                count: results.length,
+                timestamp: new Date().toISOString(),
+                message: results.length > 0 ?
+                    `Found ${results.length} potential AlphaFold match(es)` :
+                    'No AlphaFold matches found for sequence'
+            };
+
+        } catch (error) {
+            console.error('AlphaFold sequence search error:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'search_alphafold_by_sequence',
+                parameters: { sequenceLength: sequence?.length },
                 timestamp: new Date().toISOString()
             };
         }
