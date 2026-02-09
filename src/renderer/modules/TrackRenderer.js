@@ -4667,13 +4667,12 @@ class TrackRenderer {
                         }
                     }
                 }
+                // Add file-specific statistics
+                const statsText = `${bamFile.metadata.name}: ${reads.length} reads, ${readRows.length} rows`;
+                console.log(`📊 [TrackRenderer] ${statsText}`);
+                const statsElement = this.createStatsElement(statsText, 'reads-track-stats');
+                trackContent.appendChild(statsElement);
             }
-
-            // Add file-specific statistics
-            const statsText = `${bamFile.metadata.name}: ${reads.length} reads, ${readRows.length} rows`;
-            console.log(`📊 [TrackRenderer] ${statsText}`);
-            const statsElement = this.createStatsElement(statsText, 'reads-track-stats');
-            trackContent.appendChild(statsElement);
 
         } catch (error) {
             console.error('🔍 [TrackRenderer] Error creating reads track content:', error);
