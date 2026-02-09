@@ -505,9 +505,60 @@ class InternalMCPServer {
             throw new Error('TrackRenderer not available');
         }
 
+        // Normalize track name (handle snake_case and variations)
+        const trackMapping = {
+            'genes': 'genes',
+            'gc': 'gc',
+            'variants': 'variants',
+            'reads': 'reads',
+            'proteins': 'proteins',
+            'wigTracks': 'wigTracks',
+            'wig': 'wigTracks',
+            'sequence': 'sequence',
+            'sequenceLine': 'sequenceLine',
+            'actions': 'actions',
+            'action': 'actions',
+            'blast': 'blast',
+            'blast_results': 'blast'
+        };
+
+        const normalizedTrackName = trackMapping[trackName] || trackName;
+
         // Update track visibility
         this.genomeStudio.trackVisibility = this.genomeStudio.trackVisibility || {};
-        this.genomeStudio.trackVisibility[trackName] = visible;
+        this.genomeStudio.trackVisibility[normalizedTrackName] = visible;
+
+        // Also update the UI checkboxes to reflect the state change
+        // This ensures UI stays in sync with internal state
+        const checkboxMapping = {
+            'genes': 'trackGenes',
+            'gc': 'trackGC',
+            'variants': 'trackVariants',
+            'reads': 'trackReads',
+            'proteins': 'trackProteins',
+            'wigTracks': 'trackWIG',
+            'sequence': 'trackSequence',
+            'sequenceLine': 'trackSequenceLine',
+            'actions': 'trackActions',
+            'blast': 'trackBlast'
+        };
+
+        const checkboxId = checkboxMapping[normalizedTrackName];
+        if (checkboxId) {
+            const checkbox = document.getElementById(checkboxId);
+            if (checkbox) {
+                checkbox.checked = visible;
+                // Trigger change event to ensure any listeners are notified
+                checkbox.dispatchEvent(new Event('change'));
+            }
+
+            // Also sync sidebar checkbox if it exists
+            const sidebarCheckboxId = 'sidebar' + checkboxId.charAt(0).toUpperCase() + checkboxId.slice(1);
+            const sidebarCheckbox = document.getElementById(sidebarCheckboxId);
+            if (sidebarCheckbox) {
+                sidebarCheckbox.checked = visible;
+            }
+        }
 
         // Trigger track re-rendering
         if (this.genomeStudio.trackRenderer.render) {
@@ -516,9 +567,10 @@ class InternalMCPServer {
 
         return {
             success: true,
-            trackName,
+            trackName: normalizedTrackName,
+            originalTrackName: trackName,
             visible,
-            message: `Track ${trackName} ${visible ? 'shown' : 'hidden'}`
+            message: `Track ${normalizedTrackName} ${visible ? 'shown' : 'hidden'}`
         };
     }
 
