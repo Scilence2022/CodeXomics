@@ -4049,6 +4049,87 @@ class TrackRenderer {
         return track;
     }
 
+    /**
+     * Create variant track content without header (for zoom updates)
+     */
+    createVariantTrackContent(chromosome, vcfFile, viewport = null) {
+        viewport = viewport || this.getCurrentViewport();
+        const trackContent = this.createTrackContent(this.trackConfig.variants?.defaultHeight || 80, chromosome);
+
+        try {
+            // Get variants for this specific file
+            const variants = vcfFile.data[chromosome] || [];
+            const visibleVariants = this.filterFeaturesByViewport(variants, viewport);
+
+            console.log(`[createVariantTrackContent] Displaying ${visibleVariants.length} variants from ${vcfFile.metadata.name} in region ${viewport.start}-${viewport.end}`);
+
+            if (visibleVariants.length === 0) {
+                const noVariantsMsg = this.createNoDataMessage(
+                    `No variants found in this region for ${vcfFile.metadata.name}`,
+                    'no-variants-message'
+                );
+                trackContent.appendChild(noVariantsMsg);
+            } else {
+                this.renderVariantElements(trackContent, visibleVariants, viewport);
+
+                // Add file-specific statistics
+                const statsText = `${vcfFile.metadata.name}: ${visibleVariants.length} variants`;
+                const statsElement = this.createStatsElement(statsText, 'variant-track-stats');
+                trackContent.appendChild(statsElement);
+            }
+        } catch (error) {
+            console.error(`Error loading variants for ${vcfFile.metadata.name}:`, error);
+            const errorMsg = this.createNoDataMessage(
+                `Error loading variants: ${error.message}`,
+                'variant-error-message'
+            );
+            trackContent.appendChild(errorMsg);
+        }
+
+        return trackContent;
+    }
+
+    /**
+     * Create legacy variant track content without header (for zoom updates)
+     */
+    createLegacyVariantTrackContent(chromosome, viewport = null) {
+        viewport = viewport || this.getCurrentViewport();
+        const trackContent = this.createTrackContent(this.trackConfig.variants?.defaultHeight || 80, chromosome);
+
+        // Check if we have any variant data at all
+        if (!this.genomeBrowser.currentVariants || Object.keys(this.genomeBrowser.currentVariants).length === 0) {
+            const noDataMsg = this.createNoDataMessage(
+                'No VCF file loaded. Load a VCF file to see variants.',
+                'no-variants-message'
+            );
+            trackContent.appendChild(noDataMsg);
+            return trackContent;
+        }
+
+        // Get and filter variants
+        const variants = this.genomeBrowser.currentVariants[chromosome] || [];
+        const visibleVariants = this.filterFeaturesByViewport(variants, viewport);
+
+        console.log(`[createLegacyVariantTrackContent] Displaying ${visibleVariants.length} variants in region ${viewport.start}-${viewport.end}`);
+
+        if (visibleVariants.length === 0) {
+            const noVariantsMsg = this.createNoDataMessage(
+                'No variants in this region',
+                'no-variants-message'
+            );
+            trackContent.appendChild(noVariantsMsg);
+        } else {
+            this.renderVariantElements(trackContent, visibleVariants, viewport);
+
+            // Add statistics
+            const statsText = `${visibleVariants.length} variants`;
+            const statsElement = this.createStatsElement(statsText, 'variant-track-stats');
+            trackContent.appendChild(statsElement);
+        }
+
+        return trackContent;
+    }
+
     async createReadsTrack(chromosome) {
         console.log('🔧 [DEBUG] [createReadsTrack] Entry point called for chromosome:', chromosome);
         // Check if we have multiple BAM files

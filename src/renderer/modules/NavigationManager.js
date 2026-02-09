@@ -387,6 +387,43 @@ class NavigationManager {
                 }
             }
 
+            // Update variant tracks
+            const variantTracks = document.querySelectorAll('.variant-track');
+            variantTracks.forEach((variantTrack, index) => {
+                try {
+                    const trackContent = variantTrack.querySelector('.track-content');
+                    if (!trackContent) return;
+
+                    const fileId = variantTrack.dataset.fileId;
+                    let newTrackContent;
+
+                    if (fileId) {
+                        // Multi-file mode: find the specific VCF file
+                        const vcfFiles = this.genomeBrowser.multiFileManager.getVcfFiles();
+                        const vcfFile = vcfFiles.find(f => f.metadata.id === fileId);
+
+                        if (vcfFile) {
+                            newTrackContent = this.genomeBrowser.trackRenderer.createVariantTrackContent(currentChr, vcfFile, viewport);
+                        }
+                    }
+
+                    if (!newTrackContent) {
+                        // Legacy mode or fallback
+                        newTrackContent = this.genomeBrowser.trackRenderer.createLegacyVariantTrackContent(currentChr, viewport);
+                    }
+
+                    if (newTrackContent) {
+                        trackContent.innerHTML = '';
+                        while (newTrackContent.firstChild) {
+                            trackContent.appendChild(newTrackContent.firstChild);
+                        }
+                        trackContent.style.height = newTrackContent.style.height || '80px';
+                    }
+                } catch (error) {
+                    console.error(`🔍 [WHEEL-ZOOM] Error updating variant track ${index + 1}:`, error);
+                }
+            });
+
             console.log('🔍 [WHEEL-ZOOM] Updated non-reads tracks immediately');
         } catch (error) {
             console.error('🔍 [WHEEL-ZOOM] Error updating non-reads tracks:', error);
