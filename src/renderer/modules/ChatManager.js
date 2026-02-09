@@ -9135,15 +9135,25 @@ ${coreTools}
 
             // Action system tools (if available)
             'copy_sequence': () => this.executeActionTool('copy_sequence', parameters),
+            'action_copy_sequence': () => this.executeActionTool('copy_sequence', parameters),
             'cut_sequence': () => this.executeActionTool('cut_sequence', parameters),
+            'action_cut_sequence': () => this.executeActionTool('cut_sequence', parameters),
             'paste_sequence': () => this.executeActionTool('paste_sequence', parameters),
+            'action_paste_sequence': () => this.executeActionTool('paste_sequence', parameters),
             'delete_sequence': () => this.executeActionTool('delete_sequence', parameters),
+            'action_delete_sequence': () => this.executeActionTool('delete_sequence', parameters),
             'insert_sequence': () => this.executeActionTool('insert_sequence', parameters),
+            'action_insert_sequence': () => this.executeActionTool('insert_sequence', parameters),
             'replace_sequence': () => this.executeActionTool('replace_sequence', parameters),
+            'action_replace_sequence': () => this.executeActionTool('replace_sequence', parameters),
             'execute_actions': () => this.executeActionTool('execute_actions', parameters),
+            'action_execute_actions': () => this.executeActionTool('execute_actions', parameters),
             'get_action_list': () => this.executeActionTool('get_action_list', parameters),
+            'action_get_action_list': () => this.executeActionTool('get_action_list', parameters),
             'clear_actions': () => this.executeActionTool('clear_actions', parameters),
-            'get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters)
+            'action_clear_actions': () => this.executeActionTool('clear_actions', parameters),
+            'get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters),
+            'action_get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters)
         };
 
         if (localTools[toolName]) {
