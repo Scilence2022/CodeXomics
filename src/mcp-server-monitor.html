@@ -13,74 +13,92 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #1e1e1e;
-            color: #e0e0e0;
+            background: #0d1117;
+            color: #c9d1d9;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
         .header {
-            background: #2d2d2d;
-            padding: 20px;
-            border-bottom: 1px solid #3d3d3d;
+            background: #161b22;
+            padding: 16px 24px;
+            border-bottom: 1px solid #30363d;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .header h1 {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 600;
-            color: #fff;
+            color: #f0f6fc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-icon {
+            font-size: 24px;
         }
 
         .status-badge {
-            padding: 8px 16px;
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 12px;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            border: 1px solid transparent;
         }
 
         .status-badge.running {
-            background: #4caf50;
+            background: #238636;
             color: #fff;
+            border-color: #2ea043;
         }
 
         .status-badge.stopped {
-            background: #f44336;
+            background: #da3633;
             color: #fff;
+            border-color: #f85149;
         }
 
         .status-badge.starting {
-            background: #ff9800;
+            background: #9e6a03;
             color: #fff;
+            border-color: #d29922;
         }
 
         .status-badge.stopping {
-            background: #ff5722;
+            background: #bc4c00;
             color: #fff;
+            border-color: #e16f24;
         }
 
         .main-content {
             flex: 1;
-            padding: 20px;
+            padding: 24px;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
         .control-panel {
-            background: #2d2d2d;
+            background: #161b22;
             border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
+            padding: 20px;
+            border: 1px solid #30363d;
         }
 
         .control-panel h2 {
-            font-size: 18px;
+            font-size: 14px;
             margin-bottom: 16px;
-            color: #fff;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
         }
 
         .button-group {
@@ -90,13 +108,13 @@
         }
 
         .btn {
-            padding: 12px 24px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -108,169 +126,92 @@
         }
 
         .btn-primary {
-            background: #4caf50;
+            background: #238636;
             color: #fff;
         }
 
         .btn-primary:hover:not(:disabled) {
-            background: #45a049;
+            background: #2ea043;
         }
 
         .btn-danger {
-            background: #f44336;
+            background: #da3633;
             color: #fff;
         }
 
         .btn-danger:hover:not(:disabled) {
-            background: #da190b;
+            background: #f85149;
         }
 
         .btn-secondary {
-            background: #607d8b;
-            color: #fff;
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
         }
 
         .btn-secondary:hover:not(:disabled) {
-            background: #546e7a;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .info-card {
-            background: #2d2d2d;
-            border-radius: 12px;
-            padding: 20px;
-            border-left: 4px solid #2196f3;
-        }
-
-        .info-card h3 {
-            font-size: 14px;
-            color: #aaa;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .info-card .value {
-            font-size: 24px;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .info-card .sub-value {
-            font-size: 14px;
-            color: #888;
-            margin-top: 4px;
-        }
-
-        .log-panel {
-            background: #2d2d2d;
-            border-radius: 12px;
-            padding: 20px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .log-panel h2 {
-            font-size: 18px;
-            margin-bottom: 16px;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .log-container {
-            background: #1a1a1a;
-            border-radius: 8px;
-            padding: 16px;
-            flex: 1;
-            overflow-y: auto;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.6;
-            max-height: 300px;
-        }
-
-        .log-entry {
-            margin-bottom: 8px;
-            padding: 8px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .log-entry .timestamp {
-            color: #888;
-            margin-right: 12px;
-        }
-
-        .log-entry .level {
-            font-weight: 600;
-            margin-right: 12px;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 11px;
-        }
-
-        .log-entry .level.info {
-            background: #2196f3;
-            color: #fff;
-        }
-
-        .log-entry .level.success {
-            background: #4caf50;
-            color: #fff;
-        }
-
-        .log-entry .level.error {
-            background: #f44336;
-            color: #fff;
-        }
-
-        .log-entry .level.warning {
-            background: #ff9800;
-            color: #fff;
-        }
-
-        .log-entry .message {
-            color: #e0e0e0;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
+            background: #30363d;
+            border-color: #8b949e;
         }
 
         .stats-row {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
+        }
+
+        @media (max-width: 900px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
         }
 
         .stat-item {
-            background: #2d2d2d;
-            padding: 16px 24px;
-            border-radius: 8px;
+            background: #161b22;
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid #30363d;
             display: flex;
             align-items: center;
             gap: 12px;
+            transition: border-color 0.2s;
         }
 
-        .stat-item .icon {
-            font-size: 24px;
+        .stat-item:hover {
+            border-color: #58a6ff;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            background: #21262d;
+        }
+
+        .stat-icon.http {
+            background: rgba(88, 166, 255, 0.15);
+        }
+
+        .stat-icon.ws {
+            background: rgba(139, 148, 158, 0.15);
+        }
+
+        .stat-icon.clients {
+            background: rgba(35, 134, 54, 0.15);
+        }
+
+        .stat-icon.uptime {
+            background: rgba(210, 153, 34, 0.15);
         }
 
         .stat-item .content {
@@ -279,38 +220,98 @@
         }
 
         .stat-item .label {
-            font-size: 12px;
-            color: #888;
+            font-size: 11px;
+            color: #8b949e;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
         }
 
         .stat-item .value {
             font-size: 20px;
             font-weight: 600;
-            color: #fff;
+            color: #f0f6fc;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-card {
+            background: #161b22;
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid #30363d;
+            border-left: 3px solid #58a6ff;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+            border-color: #58a6ff;
+        }
+
+        .info-card h3 {
+            font-size: 11px;
+            color: #8b949e;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .info-card .value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #f0f6fc;
+            margin-bottom: 4px;
+        }
+
+        .info-card .sub-value {
+            font-size: 12px;
+            color: #6e7681;
         }
 
         .connection-list {
-            background: #2d2d2d;
+            background: #161b22;
             border-radius: 12px;
             padding: 20px;
-            margin-bottom: 24px;
+            border: 1px solid #30363d;
+            flex: 1;
+            min-height: 200px;
         }
 
         .connection-list h2 {
-            font-size: 18px;
+            font-size: 14px;
             margin-bottom: 16px;
-            color: #fff;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
         }
 
         .connection-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px;
-            background: #1a1a1a;
+            padding: 12px 16px;
+            background: #0d1117;
             border-radius: 8px;
             margin-bottom: 8px;
+            border: 1px solid #21262d;
+            transition: border-color 0.2s;
+        }
+
+        .connection-item:hover {
+            border-color: #30363d;
         }
 
         .connection-item:last-child {
@@ -324,51 +325,193 @@
 
         .connection-name {
             font-weight: 500;
-            color: #fff;
+            color: #f0f6fc;
+            font-size: 14px;
         }
 
         .connection-detail {
             font-size: 12px;
-            color: #888;
+            color: #6e7681;
             margin-top: 2px;
         }
 
         .connection-status {
-            padding: 4px 12px;
+            padding: 4px 10px;
             border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
         }
 
         .connection-status.connected {
-            background: #4caf50;
-            color: #fff;
+            background: rgba(35, 134, 54, 0.2);
+            color: #3fb950;
         }
 
         .connection-status.disconnected {
-            background: #666;
-            color: #ccc;
+            background: rgba(110, 118, 129, 0.2);
+            color: #8b949e;
+        }
+
+        .log-panel {
+            background: #161b22;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+            min-height: 280px;
+        }
+
+        .log-panel h2 {
+            font-size: 14px;
+            margin-bottom: 16px;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .log-container {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            border: 1px solid #21262d;
+        }
+
+        .log-entry {
+            margin-bottom: 6px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .log-entry .timestamp {
+            color: #6e7681;
+            white-space: nowrap;
+            font-size: 11px;
+        }
+
+        .log-entry .level {
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .log-entry .level.info {
+            background: rgba(88, 166, 255, 0.15);
+            color: #58a6ff;
+        }
+
+        .log-entry .level.success {
+            background: rgba(35, 134, 54, 0.15);
+            color: #3fb950;
+        }
+
+        .log-entry .level.error {
+            background: rgba(248, 81, 73, 0.15);
+            color: #f85149;
+        }
+
+        .log-entry .level.warning {
+            background: rgba(210, 153, 34, 0.15);
+            color: #d29922;
+        }
+
+        .log-entry .message {
+            color: #c9d1d9;
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: #6e7681;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            margin: 0;
+        }
+
+        .empty-state p:first-of-type {
+            font-size: 14px;
+            color: #8b949e;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p:last-of-type {
+            font-size: 12px;
+            color: #6e7681;
         }
 
         .clear-logs-btn {
             background: transparent;
-            border: 1px solid #666;
-            color: #aaa;
+            border: 1px solid #30363d;
+            color: #8b949e;
             padding: 6px 12px;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
+            transition: all 0.2s;
         }
 
         .clear-logs-btn:hover {
-            background: #444;
-            color: #fff;
+            background: #21262d;
+            border-color: #8b949e;
+            color: #f0f6fc;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🔌 MCP Server Monitor</h1>
+        <h1><span class="header-icon">🛰️</span> MCP Server Monitor</h1>
         <span id="status-badge" class="status-badge stopped">Stopped</span>
     </div>
 
@@ -384,7 +527,7 @@
                     <span>⏹</span> Stop Server
                 </button>
                 <button id="refresh-btn" class="btn btn-secondary">
-                    <span>🔄</span> Refresh Status
+                    <span>⟳</span> Refresh Status
                 </button>
             </div>
         </div>
@@ -392,28 +535,28 @@
         <!-- Stats Row -->
         <div class="stats-row">
             <div class="stat-item">
-                <span class="icon">🌐</span>
+                <div class="stat-icon http">🌐</div>
                 <div class="content">
                     <span class="label">HTTP Port</span>
                     <span id="http-port" class="value">-</span>
                 </div>
             </div>
             <div class="stat-item">
-                <span class="icon">🔌</span>
+                <div class="stat-icon ws">🔌</div>
                 <div class="content">
                     <span class="label">WebSocket Port</span>
                     <span id="ws-port" class="value">-</span>
                 </div>
             </div>
             <div class="stat-item">
-                <span class="icon">👥</span>
+                <div class="stat-icon clients">👥</div>
                 <div class="content">
                     <span class="label">Connected Clients</span>
                     <span id="client-count" class="value">0</span>
                 </div>
             </div>
             <div class="stat-item">
-                <span class="icon">⏱️</span>
+                <div class="stat-icon uptime">⏱️</div>
                 <div class="content">
                     <span class="label">Uptime</span>
                     <span id="uptime" class="value">-</span>
@@ -447,7 +590,7 @@
                 <div class="empty-state">
                     <div class="empty-state-icon">📡</div>
                     <p>No active connections</p>
-                    <p style="font-size: 12px; margin-top: 8px;">Start the server to accept connections</p>
+                    <p>Start the server to accept connections</p>
                 </div>
             </div>
         </div>
@@ -462,7 +605,7 @@
                 <div class="empty-state">
                     <div class="empty-state-icon">📝</div>
                     <p>No logs yet</p>
-                    <p style="font-size: 12px; margin-top: 8px;">Server activity will appear here</p>
+                    <p>Server activity will appear here</p>
                 </div>
             </div>
         </div>
@@ -533,7 +676,7 @@
                     <div class="empty-state">
                         <div class="empty-state-icon">📡</div>
                         <p>No active connections</p>
-                        <p style="font-size: 12px; margin-top: 8px;">Start the server to accept connections</p>
+                        <p>Start the server to accept connections</p>
                     </div>
                 `;
                 return;
@@ -574,7 +717,7 @@
                     <div class="empty-state">
                         <div class="empty-state-icon">📝</div>
                         <p>No logs yet</p>
-                        <p style="font-size: 12px; margin-top: 8px;">Server activity will appear here</p>
+                        <p>Server activity will appear here</p>
                     </div>
                 `;
                 return;
@@ -583,7 +726,7 @@
             logContainer.innerHTML = logs.map(log => `
                 <div class="log-entry">
                     <span class="timestamp">${log.timestamp}</span>
-                    <span class="level ${log.level}">${log.level.toUpperCase()}</span>
+                    <span class="level ${log.level}">${log.level}</span>
                     <span class="message">${log.message}</span>
                 </div>
             `).join('');
