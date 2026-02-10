@@ -173,6 +173,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openAttachmentFile: (filePath) => ipcRenderer.invoke('open-attachment-file', filePath),
   getAttachmentsStoragePath: () => ipcRenderer.invoke('get-attachments-storage-path'),
 
+  // MCP Server APIs
+  invoke: (channel, ...args) => {
+    const validChannels = ['mcp-server-start', 'mcp-server-stop', 'mcp-server-status'];
+    if (validChannels.includes(channel)) {
+      return ipcRenderer.invoke(channel, ...args);
+    }
+  },
+  on: (channel, callback) => {
+    const validChannels = ['mcp-server-status-update', 'mcp-server-status-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (event, ...args) => callback(...args));
+    }
+  },
 
   // Event listener for markdown viewer content loading
   onLoadMarkdown: (callback) => {
@@ -204,7 +217,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         'menu-open-external-editor', 'menu-open-file-explorer', 'menu-preferences',
         'menu-help', 'menu-keyboard-shortcuts', 'menu-user-guide', 'menu-file-formats',
         'menu-best-practices', 'menu-report-issue', 'menu-send-feedback', 'menu-about',
-        'request-current-project-for-download', 'tool-menu-action'
+        'request-current-project-for-download', 'tool-menu-action',
+        'mcp-server-status-update', 'mcp-server-status-changed'
       ];
 
       if (validChannels.includes(channel)) {
