@@ -6784,9 +6784,14 @@ class TrackRenderer {
     createEnhancedGCVisualization(sequence, viewStart, viewEnd) {
         const container = document.createElement('div');
         container.className = 'gc-content-skew-display';
+
+        // Get GC track settings
+        const settings = this.getTrackSettings('gc');
+        const trackHeight = settings.height || 140;
+
         container.style.cssText = `
             position: relative;
-            height: 100px;
+            height: ${trackHeight}px;
             background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
             border: 1px solid #dee2e6;
             border-radius: 6px;
@@ -6806,7 +6811,7 @@ class TrackRenderer {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', '100%');
-        svg.setAttribute('viewBox', `0 0 ${containerWidth} 100`);
+        svg.setAttribute('viewBox', `0 0 ${containerWidth} ${trackHeight}`);
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.style.cssText = `
             position: absolute;
@@ -6862,8 +6867,8 @@ class TrackRenderer {
             return container;
         }
 
-        // Create SVG visualization
-        this.renderSVGGCVisualization(svg, analysisData, containerWidth);
+        // Create SVG visualization with settings
+        this.renderSVGGCVisualization(svg, analysisData, containerWidth, settings);
 
         // Add interactive tooltip
         this.addSVGGCTooltip(container, svg, analysisData, viewStart, windowSize);
@@ -6975,15 +6980,22 @@ class TrackRenderer {
         };
     }
 
-    renderSVGGCVisualization(svg, data, containerWidth = 800) {
+    renderSVGGCVisualization(svg, data, containerWidth = 800, settings = {}) {
         const { gcData, skewData, positions, gcMin, gcMax, skewMin, skewMax, sequenceLength } = data;
+
+        // Get settings with defaults
+        const contentColor = settings.contentColor || '#3b82f6';
+        const skewPositiveColor = settings.skewPositiveColor || '#10b981';
+        const skewNegativeColor = settings.skewNegativeColor || '#ef4444';
+        const lineWidth = settings.lineWidth || 2;
+        const trackHeight = settings.height || 140;
 
         // Clear any existing content
         svg.innerHTML = '';
 
         // Define dimensions and layout with minimal padding
         const viewWidth = containerWidth; // Use dynamic container width
-        const viewHeight = 100;
+        const viewHeight = trackHeight;
         const padding = 2; // Reduced from 20 to 2 for minimal padding
         const plotWidth = viewWidth - 2 * padding;
         const plotHeight = viewHeight - 2 * padding;
@@ -7004,12 +7016,12 @@ class TrackRenderer {
 
         const gcStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         gcStop1.setAttribute('offset', '0%');
-        gcStop1.setAttribute('stop-color', '#28a745');
+        gcStop1.setAttribute('stop-color', contentColor);
         gcStop1.setAttribute('stop-opacity', '0.8');
 
         const gcStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         gcStop2.setAttribute('offset', '100%');
-        gcStop2.setAttribute('stop-color', '#28a745');
+        gcStop2.setAttribute('stop-color', contentColor);
         gcStop2.setAttribute('stop-opacity', '0.2');
 
         gcGradient.appendChild(gcStop1);
@@ -7025,12 +7037,12 @@ class TrackRenderer {
 
         const skewPosStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         skewPosStop1.setAttribute('offset', '0%');
-        skewPosStop1.setAttribute('stop-color', '#ffc107');
+        skewPosStop1.setAttribute('stop-color', skewPositiveColor);
         skewPosStop1.setAttribute('stop-opacity', '0.8');
 
         const skewPosStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         skewPosStop2.setAttribute('offset', '100%');
-        skewPosStop2.setAttribute('stop-color', '#ffc107');
+        skewPosStop2.setAttribute('stop-color', skewPositiveColor);
         skewPosStop2.setAttribute('stop-opacity', '0.2');
 
         skewPosGradient.appendChild(skewPosStop1);
@@ -7045,12 +7057,12 @@ class TrackRenderer {
 
         const skewNegStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         skewNegStop1.setAttribute('offset', '0%');
-        skewNegStop1.setAttribute('stop-color', '#dc3545');
+        skewNegStop1.setAttribute('stop-color', skewNegativeColor);
         skewNegStop1.setAttribute('stop-opacity', '0.2');
 
         const skewNegStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         skewNegStop2.setAttribute('offset', '100%');
-        skewNegStop2.setAttribute('stop-color', '#dc3545');
+        skewNegStop2.setAttribute('stop-color', skewNegativeColor);
         skewNegStop2.setAttribute('stop-opacity', '0.8');
 
         skewNegGradient.appendChild(skewNegStop1);
@@ -7064,14 +7076,14 @@ class TrackRenderer {
         // Draw background grid
         this.drawSVGGrid(svg, padding, plotWidth, plotHeight, centerY);
 
-        // Draw GC content area and line
-        this.drawSVGGCContent(svg, gcData, positions, sequenceLength, padding, plotWidth, gcHeight, gcMin, gcMax);
+        // Draw GC content area and line with settings
+        this.drawSVGGCContent(svg, gcData, positions, sequenceLength, padding, plotWidth, gcHeight, gcMin, gcMax, contentColor, lineWidth);
 
-        // Draw GC skew areas and line
-        this.drawSVGGCSkew(svg, skewData, positions, sequenceLength, padding, plotWidth, centerY, plotHeight, skewMin, skewMax);
+        // Draw GC skew areas and line with settings
+        this.drawSVGGCSkew(svg, skewData, positions, sequenceLength, padding, plotWidth, centerY, plotHeight, skewMin, skewMax, skewPositiveColor, skewNegativeColor, lineWidth);
 
-        // Draw axis labels
-        this.drawSVGAxisLabels(svg, viewWidth, viewHeight, gcMin, gcMax, skewMin, skewMax);
+        // Draw axis labels with custom colors
+        this.drawSVGAxisLabels(svg, viewWidth, viewHeight, gcMin, gcMax, skewMin, skewMax, contentColor, skewPositiveColor, skewNegativeColor);
     }
 
     drawSVGGrid(svg, padding, plotWidth, plotHeight, centerY) {
@@ -7117,7 +7129,7 @@ class TrackRenderer {
         svg.appendChild(gridGroup);
     }
 
-    drawSVGGCContent(svg, gcData, positions, sequenceLength, padding, plotWidth, maxHeight, gcMin, gcMax) {
+    drawSVGGCContent(svg, gcData, positions, sequenceLength, padding, plotWidth, maxHeight, gcMin, gcMax, contentColor = '#3b82f6', lineWidth = 2) {
         if (gcData.length < 2) return;
 
         const gcRange = gcMax - gcMin;
@@ -7159,14 +7171,14 @@ class TrackRenderer {
 
         linePath.setAttribute('d', lineData);
         linePath.setAttribute('fill', 'none');
-        linePath.setAttribute('stroke', '#28a745');
-        linePath.setAttribute('stroke-width', '2');
+        linePath.setAttribute('stroke', contentColor);
+        linePath.setAttribute('stroke-width', lineWidth);
         linePath.setAttribute('stroke-linecap', 'round');
         linePath.setAttribute('stroke-linejoin', 'round');
         svg.appendChild(linePath);
     }
 
-    drawSVGGCSkew(svg, skewData, positions, sequenceLength, padding, plotWidth, centerY, plotHeight, skewMin, skewMax) {
+    drawSVGGCSkew(svg, skewData, positions, sequenceLength, padding, plotWidth, centerY, plotHeight, skewMin, skewMax, skewPositiveColor = '#10b981', skewNegativeColor = '#ef4444', lineWidth = 2) {
         if (skewData.length < 2) return;
 
         const skewRange = skewMax - skewMin;
@@ -7243,32 +7255,32 @@ class TrackRenderer {
 
         linePath.setAttribute('d', lineData);
         linePath.setAttribute('fill', 'none');
-        linePath.setAttribute('stroke', '#495057');
-        linePath.setAttribute('stroke-width', '1.5');
+        linePath.setAttribute('stroke', skewPositiveColor);
+        linePath.setAttribute('stroke-width', lineWidth);
         linePath.setAttribute('stroke-linecap', 'round');
         linePath.setAttribute('stroke-linejoin', 'round');
         svg.appendChild(linePath);
     }
 
-    drawSVGAxisLabels(svg, viewWidth, viewHeight, gcMin, gcMax, skewMin, skewMax) {
+    drawSVGAxisLabels(svg, viewWidth, viewHeight, gcMin, gcMax, skewMin, skewMax, contentColor = '#3b82f6', skewPositiveColor = '#10b981', skewNegativeColor = '#ef4444') {
         const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         labelGroup.setAttribute('class', 'axis-labels');
 
-        const labelStyle = 'font-family: Inter, sans-serif; font-size: 10px; fill: #495057;';
+        const labelStyle = 'font-family: Inter, sans-serif; font-size: 10px;';
 
         // Track labels (right side) - adjusted for reduced padding
         const gcLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         gcLabel.setAttribute('x', viewWidth - 25); // Moved further right to account for reduced padding
         gcLabel.setAttribute('y', '15');
         gcLabel.setAttribute('text-anchor', 'start');
-        gcLabel.setAttribute('style', labelStyle + ' fill: #28a745; font-weight: 600;');
+        gcLabel.setAttribute('style', labelStyle + ` fill: ${contentColor}; font-weight: 600;`);
         gcLabel.textContent = 'GC%';
 
         const skewLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         skewLabel.setAttribute('x', viewWidth - 25); // Moved further right to account for reduced padding
         skewLabel.setAttribute('y', viewHeight - 5);
         skewLabel.setAttribute('text-anchor', 'start');
-        skewLabel.setAttribute('style', labelStyle + ' font-weight: 600;');
+        skewLabel.setAttribute('style', labelStyle + ` fill: ${skewPositiveColor}; font-weight: 600;`);
         skewLabel.textContent = 'Skew';
 
         labelGroup.appendChild(gcLabel);
