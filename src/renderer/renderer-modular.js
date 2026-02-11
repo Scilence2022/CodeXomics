@@ -3093,12 +3093,11 @@ class GenomeBrowser {
                     });
                 }
                 else {
-                    // Not a known function, send error
-                    ipcRenderer.send('mcp-tool-response', {
-                        requestId,
-                        success: false,
-                        error: `Unknown MCP tool method: ${method}`
-                    });
+                    // Not an action_ or utility_ function - let InternalMCPServer handle it
+                    // InternalMCPServer also listens to 'mcp-tool-call' and handles other methods
+                    // like openNewTab, navigateToPosition, etc.
+                    console.log(`📥 [Renderer] Method '${method}' not handled by renderer-modular, letting InternalMCPServer handle it`);
+                    return;
                 }
             } catch (error) {
                 console.error('Error handling MCP tool call:', error);
