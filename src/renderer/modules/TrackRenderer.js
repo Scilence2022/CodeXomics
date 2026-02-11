@@ -3729,6 +3729,9 @@ class TrackRenderer {
         const { track, trackContent } = this.createTrackBase('variants', chromosome);
         const viewport = this.getCurrentViewport();
 
+        // Get variant track settings
+        const settings = this.getTrackSettings('variants');
+
         // Check if we have any variant data at all
         if (!this.genomeBrowser.currentVariants || Object.keys(this.genomeBrowser.currentVariants).length === 0) {
             const noDataMsg = this.createNoDataMessage(
@@ -3752,7 +3755,7 @@ class TrackRenderer {
             );
             trackContent.appendChild(noVariantsMsg);
         } else {
-            this.renderVariantElements(trackContent, visibleVariants, viewport);
+            this.renderVariantElements(trackContent, visibleVariants, viewport, settings);
         }
 
         // Restore header state if it was previously hidden
@@ -3764,17 +3767,69 @@ class TrackRenderer {
     /**
      * Render variant elements
      */
-    renderVariantElements(trackContent, visibleVariants, viewport) {
-        visibleVariants.forEach((variant, index) => {
-            const variantElement = this.createVariantElement(variant, viewport);
+    renderVariantElements(trackContent, visibleVariants, viewport, settings = {}) {
+        // Apply quality filter if set
+        let filteredVariants = visibleVariants;
+        if (settings.minQuality > 0) {
+            filteredVariants = visibleVariants.filter(v => (v.quality || 0) >= settings.minQuality);
+        }
+
+        // Apply max display count limit
+        const maxDisplayCount = settings.maxDisplayCount || 200;
+        if (filteredVariants.length > maxDisplayCount) {
+            filteredVariants = filteredVariants.slice(0, maxDisplayCount);
+        }
+
+        // Assign row indices for vertical stacking if needed
+        filteredVariants = this.assignVariantRowIndices(filteredVariants, viewport);
+
+        filteredVariants.forEach((variant, index) => {
+            const variantElement = this.createVariantElement(variant, viewport, settings);
             trackContent.appendChild(variantElement);
         });
     }
 
     /**
+     * Assign row indices to variants for vertical stacking
+     */
+    assignVariantRowIndices(variants, viewport) {
+        // Simple row assignment - variants that overlap get different rows
+        const rows = [];
+
+        variants.forEach(variant => {
+            let assignedRow = 0;
+
+            // Find a row where this variant doesn't overlap with existing variants
+            for (let i = 0; i < rows.length; i++) {
+                const canFit = !rows[i].some(existingVariant => {
+                    return !(variant.end < existingVariant.start || variant.start > existingVariant.end);
+                });
+
+                if (canFit) {
+                    assignedRow = i;
+                    break;
+                }
+
+                // If can't fit in this row, try next row
+                assignedRow = i + 1;
+            }
+
+            // Initialize row if needed
+            if (!rows[assignedRow]) {
+                rows[assignedRow] = [];
+            }
+
+            rows[assignedRow].push(variant);
+            variant.rowIndex = assignedRow;
+        });
+
+        return variants;
+    }
+
+    /**
      * Create individual variant element
      */
-    createVariantElement(variant, viewport) {
+    createVariantElement(variant, viewport, settings = {}) {
         const variantElement = document.createElement('div');
         variantElement.className = 'variant-element';
 
@@ -3784,13 +3839,20 @@ class TrackRenderer {
         const left = ((variantStart - viewport.start) / (viewport.end - viewport.start)) * 100;
         const width = Math.max(((variantEnd - variantStart) / (viewport.end - viewport.start)) * 100, 0.2);
 
+        // Get variant color based on settings
+        const variantColor = this.getVariantColor(variant, settings);
+
+        // Get dimensions from settings
+        const elementHeight = settings.elementHeight || 12;
+        const rowSpacing = settings.rowSpacing || 8;
+
         variantElement.style.cssText = `
             left: ${left}%;
             width: ${width}%;
-            height: 12px;
-            top: 20px;
+            height: ${elementHeight}px;
+            top: ${20 + (variant.rowIndex || 0) * (elementHeight + rowSpacing)}px;
             position: absolute;
-            background: #e74c3c;
+            background: ${variantColor};
             border-radius: 2px;
             cursor: pointer;
         `;
@@ -3799,6 +3861,85 @@ class TrackRenderer {
         this.addVariantInteraction(variantElement, variant);
 
         return variantElement;
+    }
+
+    /**
+     * Get variant color based on settings
+     */
+    getVariantColor(variant, settings = {}) {
+        const colorMode = settings.colorMode || 'type';
+
+        switch (colorMode) {
+            case 'type':
+                return this.getVariantColorByType(variant, settings);
+            case 'impact':
+                return this.getVariantColorByImpact(variant, settings);
+            case 'quality':
+                return this.getVariantColorByQuality(variant, settings);
+            case 'custom':
+                return settings.customColor || '#e74c3c';
+            default:
+                return '#e74c3c';
+        }
+    }
+
+    /**
+     * Get variant color by type (SNP/INDEL/SV)
+     */
+    getVariantColorByType(variant, settings = {}) {
+        const type = this.classifyVariantType(variant);
+
+        switch (type) {
+            case 'SNP':
+                return settings.snpColor || '#e74c3c';
+            case 'INDEL':
+                return settings.indelColor || '#3498db';
+            case 'SV':
+                return settings.svColor || '#9b59b6';
+            default:
+                return '#e74c3c';
+        }
+    }
+
+    /**
+     * Get variant color by impact severity
+     */
+    getVariantColorByImpact(variant, settings = {}) {
+        // Try to get impact from variant info or analysis
+        const impact = variant.impact || variant.severity || 'MODIFIER';
+
+        switch (impact.toUpperCase()) {
+            case 'HIGH':
+                return settings.highImpactColor || '#e74c3c';
+            case 'MODERATE':
+                return settings.moderateImpactColor || '#f39c12';
+            case 'LOW':
+                return settings.lowImpactColor || '#2ecc71';
+            case 'MODIFIER':
+            default:
+                return settings.modifierImpactColor || '#95a5a6';
+        }
+    }
+
+    /**
+     * Get variant color by quality score
+     */
+    getVariantColorByQuality(variant, settings = {}) {
+        const quality = parseFloat(variant.quality) || 0;
+        const minQuality = settings.minQuality || 0;
+        const maxQuality = 100; // Assume max quality is 100
+
+        if (quality < minQuality) {
+            return '#cccccc'; // Gray for low quality
+        }
+
+        // Gradient from red (low) to green (high)
+        const ratio = Math.min(quality / maxQuality, 1);
+        const r = Math.floor(255 * (1 - ratio));
+        const g = Math.floor(255 * ratio);
+        const b = 0;
+
+        return `rgb(${r}, ${g}, ${b})`;
     }
 
     /**
@@ -3994,6 +4135,9 @@ class TrackRenderer {
     createSingleVariantTrack(chromosome, vcfFile) {
         const viewport = this.getCurrentViewport();
 
+        // Get variant track settings
+        const settings = this.getTrackSettings('variants');
+
         // Create track base
         const track = document.createElement('div');
         track.className = 'variant-track';
@@ -4009,7 +4153,7 @@ class TrackRenderer {
         track.appendChild(trackHeader);
 
         // Create track content
-        const trackContent = this.createTrackContent(this.trackConfig.variants?.defaultHeight || 80, chromosome);
+        const trackContent = this.createTrackContent(settings.height || 80, chromosome);
         track.appendChild(trackContent);
 
         try {
@@ -4026,7 +4170,7 @@ class TrackRenderer {
                 );
                 trackContent.appendChild(noVariantsMsg);
             } else {
-                this.renderVariantElements(trackContent, visibleVariants, viewport);
+                this.renderVariantElements(trackContent, visibleVariants, viewport, settings);
 
                 // Add file-specific statistics
                 const statsText = `${vcfFile.metadata.name}: ${visibleVariants.length} variants`;
@@ -4054,7 +4198,11 @@ class TrackRenderer {
      */
     createVariantTrackContent(chromosome, vcfFile, viewport = null) {
         viewport = viewport || this.getCurrentViewport();
-        const trackContent = this.createTrackContent(this.trackConfig.variants?.defaultHeight || 80, chromosome);
+
+        // Get variant track settings
+        const settings = this.getTrackSettings('variants');
+
+        const trackContent = this.createTrackContent(settings.height || 80, chromosome);
 
         try {
             // Get variants for this specific file
@@ -4070,7 +4218,7 @@ class TrackRenderer {
                 );
                 trackContent.appendChild(noVariantsMsg);
             } else {
-                this.renderVariantElements(trackContent, visibleVariants, viewport);
+                this.renderVariantElements(trackContent, visibleVariants, viewport, settings);
 
                 // Add file-specific statistics
                 const statsText = `${vcfFile.metadata.name}: ${visibleVariants.length} variants`;
@@ -4094,7 +4242,11 @@ class TrackRenderer {
      */
     createLegacyVariantTrackContent(chromosome, viewport = null) {
         viewport = viewport || this.getCurrentViewport();
-        const trackContent = this.createTrackContent(this.trackConfig.variants?.defaultHeight || 80, chromosome);
+
+        // Get variant track settings
+        const settings = this.getTrackSettings('variants');
+
+        const trackContent = this.createTrackContent(settings.height || 80, chromosome);
 
         // Check if we have any variant data at all
         if (!this.genomeBrowser.currentVariants || Object.keys(this.genomeBrowser.currentVariants).length === 0) {
@@ -4119,7 +4271,7 @@ class TrackRenderer {
             );
             trackContent.appendChild(noVariantsMsg);
         } else {
-            this.renderVariantElements(trackContent, visibleVariants, viewport);
+            this.renderVariantElements(trackContent, visibleVariants, viewport, settings);
 
             // Add statistics
             const statsText = `${visibleVariants.length} variants`;
@@ -10940,6 +11092,16 @@ This action cannot be undone.`;
                 bodyElement.innerHTML = this.createWIGTracksSettingsContent(currentSettings);
                 break;
 
+            case 'variants':
+                titleElement.textContent = 'Variants Track Settings';
+                bodyElement.innerHTML = this.createVariantsSettingsContent(currentSettings);
+
+                // Add event listeners for variants settings
+                setTimeout(() => {
+                    this.setupVariantsSettingsEventListeners(bodyElement);
+                }, 100);
+                break;
+
             default:
                 titleElement.textContent = `${trackType} Track Settings`;
                 bodyElement.innerHTML = this.createDefaultSettingsContent(trackType, currentSettings);
@@ -11182,6 +11344,133 @@ This action cannot be undone.`;
         `;
 
         return html;
+    }
+
+    /**
+     * Create variants track settings content
+     */
+    createVariantsSettingsContent(settings) {
+        return `
+            <div class="settings-section">
+                <h4>Display Options</h4>
+                <div class="form-group">
+                    <label for="variantsHeight">Track Height (px):</label>
+                    <input type="number" id="variantsHeight" min="50" max="300" value="${settings.height || 80}">
+                    <div class="help-text">Total height of the variants track container.</div>
+                </div>
+                <div class="form-group">
+                    <label for="variantsElementHeight">Variant Element Height (px):</label>
+                    <input type="number" id="variantsElementHeight" min="8" max="30" value="${settings.elementHeight || 12}">
+                    <div class="help-text">Height of individual variant bars.</div>
+                </div>
+                <div class="form-group">
+                    <label for="variantsRowSpacing">Row Spacing (px):</label>
+                    <input type="number" id="variantsRowSpacing" min="2" max="20" value="${settings.rowSpacing || 8}">
+                    <div class="help-text">Vertical spacing between variant rows.</div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Color Scheme</h4>
+                <div class="form-group">
+                    <label for="variantsColorMode">Color by:</label>
+                    <select id="variantsColorMode">
+                        <option value="type" ${settings.colorMode === 'type' || !settings.colorMode ? 'selected' : ''}>Variant Type</option>
+                        <option value="impact" ${settings.colorMode === 'impact' ? 'selected' : ''}>Impact Severity</option>
+                        <option value="quality" ${settings.colorMode === 'quality' ? 'selected' : ''}>Quality Score</option>
+                        <option value="custom" ${settings.colorMode === 'custom' ? 'selected' : ''}>Custom Color</option>
+                    </select>
+                    <div class="help-text">Choose how variants are colored. Type: SNP/INDEL/SV. Impact: HIGH/MODERATE/LOW. Quality: Based on VCF quality score.</div>
+                </div>
+                <div id="customColorGroup" style="display: ${settings.colorMode === 'custom' ? 'block' : 'none'};">
+                    <div class="form-group">
+                        <label for="variantsCustomColor">Custom Variant Color:</label>
+                        <input type="color" id="variantsCustomColor" value="${settings.customColor || '#e74c3c'}">
+                        <div class="help-text">Custom color for all variants when 'Custom Color' mode is selected.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Type Colors (when Color by Type)</h4>
+                <div class="form-group">
+                    <label for="variantsSNPColor">SNP Color:</label>
+                    <input type="color" id="variantsSNPColor" value="${settings.snpColor || '#e74c3c'}">
+                </div>
+                <div class="form-group">
+                    <label for="variantsINDELColor">INDEL Color:</label>
+                    <input type="color" id="variantsINDELColor" value="${settings.indelColor || '#3498db'}">
+                </div>
+                <div class="form-group">
+                    <label for="variantsSVColor">Structural Variant Color:</label>
+                    <input type="color" id="variantsSVColor" value="${settings.svColor || '#9b59b6'}">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Impact Colors (when Color by Impact)</h4>
+                <div class="form-group">
+                    <label for="variantsHighImpactColor">HIGH Impact:</label>
+                    <input type="color" id="variantsHighImpactColor" value="${settings.highImpactColor || '#e74c3c'}">
+                </div>
+                <div class="form-group">
+                    <label for="variantsModerateImpactColor">MODERATE Impact:</label>
+                    <input type="color" id="variantsModerateImpactColor" value="${settings.moderateImpactColor || '#f39c12'}">
+                </div>
+                <div class="form-group">
+                    <label for="variantsLowImpactColor">LOW Impact:</label>
+                    <input type="color" id="variantsLowImpactColor" value="${settings.lowImpactColor || '#2ecc71'}">
+                </div>
+                <div class="form-group">
+                    <label for="variantsModifierImpactColor">MODIFIER Impact:</label>
+                    <input type="color" id="variantsModifierImpactColor" value="${settings.modifierImpactColor || '#95a5a6'}">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Filtering Options</h4>
+                <div class="form-group">
+                    <label for="variantsMinQuality">Minimum Quality Score:</label>
+                    <input type="number" id="variantsMinQuality" min="0" max="1000" value="${settings.minQuality || 0}">
+                    <div class="help-text">Filter out variants with quality score below this value. Set to 0 to show all variants.</div>
+                </div>
+                <div class="form-group">
+                    <label for="variantsMaxDisplayCount">Maximum Display Count:</label>
+                    <input type="number" id="variantsMaxDisplayCount" min="10" max="1000" value="${settings.maxDisplayCount || 200}">
+                    <div class="help-text">Maximum number of variants to display. Higher values may impact performance.</div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Label Options</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="variantsShowLabels" ${settings.showLabels !== false ? 'checked' : ''}>
+                        Show Variant Labels
+                    </label>
+                    <div class="help-text">Display variant IDs or gene names above variants when space permits.</div>
+                </div>
+                <div class="form-group">
+                    <label for="variantsLabelFontSize">Label Font Size (px):</label>
+                    <input type="number" id="variantsLabelFontSize" min="8" max="16" value="${settings.labelFontSize || 10}">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Multi-VCF Options</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="variantsGroupByFile" ${settings.groupByFile ? 'checked' : ''}>
+                        Group Variants by VCF File
+                    </label>
+                    <div class="help-text">When multiple VCF files are loaded, group variants by source file.</div>
+                </div>
+                <div class="form-group">
+                    <label for="variantsFileSpacing">Spacing Between Files (px):</label>
+                    <input type="number" id="variantsFileSpacing" min="0" max="30" value="${settings.fileSpacing || 10}">
+                </div>
+            </div>
+        `;
     }
 
     /**
@@ -11617,6 +11906,31 @@ This action cannot be undone.`;
                 skewNegativeColor: '#ef4444',
                 lineWidth: 2,
                 height: 140
+            },
+            variants: {
+                height: 80,
+                elementHeight: 12,
+                rowSpacing: 8,
+                colorMode: 'type', // 'type', 'impact', 'quality', 'custom'
+                customColor: '#e74c3c',
+                // Type colors
+                snpColor: '#e74c3c',
+                indelColor: '#3498db',
+                svColor: '#9b59b6',
+                // Impact colors
+                highImpactColor: '#e74c3c',
+                moderateImpactColor: '#f39c12',
+                lowImpactColor: '#2ecc71',
+                modifierImpactColor: '#95a5a6',
+                // Filtering
+                minQuality: 0,
+                maxDisplayCount: 200,
+                // Labels
+                showLabels: true,
+                labelFontSize: 10,
+                // Multi-VCF
+                groupByFile: false,
+                fileSpacing: 10
             },
             reads: {
                 readHeight: 4,
@@ -12503,6 +12817,40 @@ This action cannot be undone.`;
                 settings.showRuler = modal.querySelector('#blastShowRuler').checked;
                 settings.resultHeight = parseInt(modal.querySelector('#blastResultHeight').value) || 12;
                 settings.resultSpacing = parseInt(modal.querySelector('#blastResultSpacing').value) || 14;
+                break;
+
+            case 'variants':
+                // Display options
+                settings.height = parseInt(modal.querySelector('#variantsHeight').value) || 80;
+                settings.elementHeight = parseInt(modal.querySelector('#variantsElementHeight').value) || 12;
+                settings.rowSpacing = parseInt(modal.querySelector('#variantsRowSpacing').value) || 8;
+
+                // Color scheme
+                settings.colorMode = modal.querySelector('#variantsColorMode').value || 'type';
+                settings.customColor = modal.querySelector('#variantsCustomColor')?.value || '#e74c3c';
+
+                // Type colors
+                settings.snpColor = modal.querySelector('#variantsSNPColor').value || '#e74c3c';
+                settings.indelColor = modal.querySelector('#variantsINDELColor').value || '#3498db';
+                settings.svColor = modal.querySelector('#variantsSVColor').value || '#9b59b6';
+
+                // Impact colors
+                settings.highImpactColor = modal.querySelector('#variantsHighImpactColor').value || '#e74c3c';
+                settings.moderateImpactColor = modal.querySelector('#variantsModerateImpactColor').value || '#f39c12';
+                settings.lowImpactColor = modal.querySelector('#variantsLowImpactColor').value || '#2ecc71';
+                settings.modifierImpactColor = modal.querySelector('#variantsModifierImpactColor').value || '#95a5a6';
+
+                // Filtering options
+                settings.minQuality = parseInt(modal.querySelector('#variantsMinQuality').value) || 0;
+                settings.maxDisplayCount = parseInt(modal.querySelector('#variantsMaxDisplayCount').value) || 200;
+
+                // Label options
+                settings.showLabels = modal.querySelector('#variantsShowLabels').checked;
+                settings.labelFontSize = parseInt(modal.querySelector('#variantsLabelFontSize').value) || 10;
+
+                // Multi-VCF options
+                settings.groupByFile = modal.querySelector('#variantsGroupByFile').checked;
+                settings.fileSpacing = parseInt(modal.querySelector('#variantsFileSpacing').value) || 10;
                 break;
 
             default:
@@ -14315,6 +14663,25 @@ This action cannot be undone.`;
 
             referenceFontCheckbox.addEventListener('change', toggleReferenceFontSettings);
             toggleReferenceFontSettings(); // Initial state
+        }
+    }
+
+    /**
+     * Setup event listeners for variants track settings
+     */
+    setupVariantsSettingsEventListeners(bodyElement) {
+        // Color mode selection - show/hide custom color group
+        const colorModeSelect = bodyElement.querySelector('#variantsColorMode');
+        const customColorGroup = bodyElement.querySelector('#customColorGroup');
+
+        if (colorModeSelect && customColorGroup) {
+            const toggleCustomColor = () => {
+                const isCustom = colorModeSelect.value === 'custom';
+                customColorGroup.style.display = isCustom ? 'block' : 'none';
+            };
+
+            colorModeSelect.addEventListener('change', toggleCustomColor);
+            toggleCustomColor(); // Initial state
         }
     }
 
