@@ -78,7 +78,8 @@ class CanvasReadsRenderer {
 
         // Add space for coverage if enabled (top-most)
         if (this.options.showCoverage) {
-            totalHeight += 55; // Coverage height (50) + spacing (5)
+            const coverageHeight = this.options.coverageHeight || 50;
+            totalHeight += coverageHeight + 5; // Coverage height + spacing (5)
         }
 
         // Add space for reference sequence if enabled
@@ -156,7 +157,8 @@ class CanvasReadsRenderer {
 
         // Add space for coverage if enabled (top-most)
         if (this.options.showCoverage) {
-            totalHeight += 55; // Coverage height (50) + spacing (5)
+            const coverageHeight = this.options.coverageHeight || 50;
+            totalHeight += coverageHeight + 5; // Coverage height + spacing (5)
         }
 
         // Add space for reference sequence if enabled
@@ -325,7 +327,8 @@ class CanvasReadsRenderer {
         // Position reference below coverage if enabled
         let y = this.options.topPadding || 10;
         if (this.options.showCoverage) {
-            y += 55; // Coverage height (50) + spacing (5)
+            const coverageHeight = this.options.coverageHeight || 50;
+            y += coverageHeight + 5; // Coverage height + spacing (5)
         }
 
         // Draw background
@@ -378,7 +381,7 @@ class CanvasReadsRenderer {
     renderCoverage() {
         if (!this.options.showCoverage) return;
 
-        const coverageHeight = 50;
+        const coverageHeight = this.options.coverageHeight || 50;
         // Position coverage at the top (respecting top padding) - draw ABOVE reference
         const y = this.options.topPadding || 10;
 
@@ -420,9 +423,14 @@ class CanvasReadsRenderer {
 
         if (maxCoverage === 0) return;
 
+        // Get coverage color from options (with alpha for fill)
+        const coverageColor = this.options.coverageColor || '#4a90e2';
+        // Create a lighter version of the color for fill (with alpha)
+        const coverageFillColor = this.hexToRgba(coverageColor, 0.4);
+
         // Draw the histogram
-        this.ctx.fillStyle = '#a0c4ff'; // Light blue fill
-        this.ctx.strokeStyle = '#4a90e2'; // Darker blue stroke
+        this.ctx.fillStyle = coverageFillColor;
+        this.ctx.strokeStyle = coverageColor;
         this.ctx.lineWidth = 1;
 
         this.ctx.beginPath();
@@ -488,7 +496,8 @@ class CanvasReadsRenderer {
 
         // Coverage is now top-most (if enabled)
         if (this.options.showCoverage) {
-            yOffset += 55; // Coverage height (50) + spacing (5)
+            const coverageHeight = this.options.coverageHeight || 50;
+            yOffset += coverageHeight + 5; // Coverage height + spacing (5)
         }
 
         // Reference sequence follows coverage (if enabled)
@@ -845,6 +854,21 @@ class CanvasReadsRenderer {
             return `rgb(${Math.floor(r * (1 - factor))}, ${Math.floor(g * (1 - factor))}, ${Math.floor(b * (1 - factor))})`;
         }
         return color;
+    }
+
+    hexToRgba(hex, alpha) {
+        // Convert hex color to rgba string
+        if (hex.startsWith('#')) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        // If already rgb/rgba, return as is or handle conversion
+        if (hex.startsWith('rgb')) {
+            return hex;
+        }
+        return hex;
     }
 
     handleCanvasClick(event) {

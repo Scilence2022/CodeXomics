@@ -5714,6 +5714,8 @@ class TrackRenderer {
             strandColoring: !settings.showQualityColors, // Use strand coloring when not using quality
             mismatchHighlight: settings.highlightMismatches !== false,
             showCoverage: settings.showCoverage !== false,
+            coverageHeight: settings.coverageHeight || 50,
+            coverageColor: settings.coverageColor || '#4a90e2',
             backgroundColor: 'transparent',
             // Color settings from track settings
             forwardColor: settings.forwardColor || '#00b894',
