@@ -258,7 +258,21 @@ class SequenceUtils {
     getCursorPosition() {
         return this.cursor.visible ? this.cursor.position : -1;
     }
-    
+
+    /**
+     * Set cursor color
+     * @param {string} color - CSS color value (e.g., '#007bff', 'red', 'rgb(0,0,255)')
+     */
+    setCursorColor(color) {
+        console.log('🎨 [SequenceUtils] Setting cursor color:', color);
+        this.cursor.color = color;
+
+        // Re-render cursor if visible to apply new color
+        if (this.cursor.visible && this.cursor.element) {
+            this.renderCursor();
+        }
+    }
+
     /**
      * Clear cursor from display
      */
