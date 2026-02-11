@@ -3943,6 +3943,56 @@ class TrackRenderer {
     }
 
     /**
+     * Classify variant type based on ref and alt alleles
+     */
+    classifyVariantType(variant) {
+        const ref = (variant.ref || '').toUpperCase();
+        const alt = (variant.alt || '').toUpperCase();
+
+        // Check for structural variants
+        if (variant.type) {
+            const type = variant.type.toUpperCase();
+            if (type.includes('SV') || type.includes('DEL') || type.includes('DUP') ||
+                type.includes('INV') || type.includes('BND') || type.includes('CNV')) {
+                return 'SV';
+            }
+            if (type.includes('SNP') || type.includes('SNV')) {
+                return 'SNP';
+            }
+            if (type.includes('INDEL') || type.includes('INS') || type.includes('DEL')) {
+                return 'INDEL';
+            }
+        }
+
+        // Classify based on allele lengths
+        const refLen = ref.length;
+        const altLen = alt.length;
+
+        // SNP: single nucleotide substitution
+        if (refLen === 1 && altLen === 1 && ref !== alt) {
+            return 'SNP';
+        }
+
+        // INDEL: insertion or deletion
+        if (refLen !== altLen) {
+            return 'INDEL';
+        }
+
+        // Multi-nucleotide substitution (MNP)
+        if (refLen > 1 && refLen === altLen) {
+            return 'SNP'; // Treat as SNP for coloring purposes
+        }
+
+        // Structural variant: large changes
+        if (Math.abs(refLen - altLen) > 50 || refLen > 50 || altLen > 50) {
+            return 'SV';
+        }
+
+        // Default to SNP
+        return 'SNP';
+    }
+
+    /**
      * Add interaction handlers to variant element
      */
     addVariantInteraction(variantElement, variant) {
