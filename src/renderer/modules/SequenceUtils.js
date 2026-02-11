@@ -1028,8 +1028,11 @@ class SequenceUtils {
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
         const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations, chromosome) : [];
 
+        // Get sequence track settings
+        const sequenceSettings = this.getSequenceTrackSettings();
+
         // Check if we should invalidate cache
-        if (this.shouldInvalidateCache(chromosome, viewStart, viewEnd, annotations)) {
+        if (this.shouldInvalidateCache(chromosome, viewStart, viewEnd, annotations, sequenceSettings)) {
             this.clearRenderCache();
             console.log('🔧 [SequenceUtils] Cache invalidated due to parameter changes');
         }
@@ -1086,10 +1089,7 @@ class SequenceUtils {
                 optimalLineLength = newOptimalLength;
             }
         }
-        
-        // Get sequence track settings
-        const sequenceSettings = this.getSequenceTrackSettings();
-        
+
         // Pre-compute feature lookups for better performance
         const featureLookup = this.buildFeatureLookup(annotations, viewStart, viewEnd);
         
@@ -1107,7 +1107,7 @@ class SequenceUtils {
         }
         
         // Update render parameters
-        this.updateLastRenderParams(chromosome, viewStart, viewEnd, annotations);
+        this.updateLastRenderParams(chromosome, viewStart, viewEnd, annotations, sequenceSettings);
         
         // Log performance stats
         this.performanceStats.renderTime = performance.now() - this.performanceStats.lastRenderStart;
@@ -1398,9 +1398,11 @@ class SequenceUtils {
         if (settings.showIndicators === false) {
             return '<div style="height: 0px;"></div>';
         }
-        
-        const cacheKey = `indicator:${lineStartAbs}:${sequence.length}:${this.getAnnotationHash(annotations)}`;
-        
+
+        // Include settings hash in cache key to ensure cache is invalidated when settings change
+        const settingsHash = settings ? this.getSettingsHash(settings) : '';
+        const cacheKey = `indicator:${lineStartAbs}:${sequence.length}:${this.getAnnotationHash(annotations)}:${settingsHash}`;
+
         if (this.svgCache.has(cacheKey)) {
             this.performanceStats.cacheHits++;
             return this.svgCache.get(cacheKey);
@@ -2507,17 +2509,62 @@ class SequenceUtils {
     /**
      * Check if render parameters have changed significantly
      */
-    shouldInvalidateCache(chromosome, viewStart, viewEnd, annotations) {
+    shouldInvalidateCache(chromosome, viewStart, viewEnd, annotations, settings) {
         if (!this.lastRenderParams) return true;
-        
+
         const params = this.lastRenderParams;
+
+        // Check if settings have changed
+        let settingsChanged = false;
+        if (settings && params.settingsHash) {
+            const currentSettingsHash = this.getSettingsHash(settings);
+            settingsChanged = params.settingsHash !== currentSettingsHash;
+        } else if (settings || params.settingsHash) {
+            // One has settings, the other doesn't
+            settingsChanged = true;
+        }
+
         return (
             params.chromosome !== chromosome ||
             params.viewStart !== viewStart ||
             params.viewEnd !== viewEnd ||
             params.annotationCount !== annotations.length ||
-            params.annotationHash !== this.getAnnotationHash(annotations)
+            params.annotationHash !== this.getAnnotationHash(annotations) ||
+            settingsChanged
         );
+    }
+
+    /**
+     * Get hash for settings to detect changes
+     */
+    getSettingsHash(settings) {
+        if (!settings) return '';
+        // Create a simple hash of key settings that affect rendering
+        const keySettings = [
+            settings.showIndicators,
+            settings.indicatorHeight,
+            settings.indicatorOpacity,
+            settings.showStartMarkers,
+            settings.showEndArrows,
+            settings.startMarkerWidth,
+            settings.startMarkerHeight,
+            settings.arrowSize,
+            settings.arrowHeight,
+            settings.showCDS,
+            settings.showRNA,
+            settings.showPromoter,
+            settings.showTerminator,
+            settings.showRegulatory,
+            settings.showSource,
+            settings.showTooltips,
+            settings.showHoverEffects,
+            settings.cursorColor,
+            settings.horizontalOffset,
+            settings.verticalOffset,
+            settings.heightCorrection,
+            settings.widthCorrection
+        ];
+        return keySettings.join('|');
     }
     
     /**
@@ -2531,13 +2578,14 @@ class SequenceUtils {
     /**
      * Update last render parameters
      */
-    updateLastRenderParams(chromosome, viewStart, viewEnd, annotations) {
+    updateLastRenderParams(chromosome, viewStart, viewEnd, annotations, settings) {
         this.lastRenderParams = {
             chromosome,
             viewStart,
             viewEnd,
             annotationCount: annotations.length,
             annotationHash: this.getAnnotationHash(annotations),
+            settingsHash: settings ? this.getSettingsHash(settings) : '',
             timestamp: Date.now()
         };
     }
