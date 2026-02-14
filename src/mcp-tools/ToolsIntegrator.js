@@ -12,6 +12,7 @@ const PathwayTools = require('./pathway/PathwayTools');
 const ActionTools = require('./action/ActionTools');
 const UtilityTools = require('./utility/UtilityTools');
 const FileTools = require('./file/FileTools');
+const TrackSettingsTools = require('./track/TrackSettingsTools');
 
 class ToolsIntegrator {
     constructor(server) {
@@ -27,6 +28,7 @@ class ToolsIntegrator {
         this.actionTools = new ActionTools(server);
         this.utilityTools = new UtilityTools(server);
         this.fileTools = new FileTools(server);
+        this.trackSettingsTools = new TrackSettingsTools(server);
 
         // Combine all tools
         this.allTools = this.combineAllTools();
@@ -42,7 +44,8 @@ class ToolsIntegrator {
             ...this.pathwayTools.getTools(),
             ...this.actionTools.getTools(),
             ...this.utilityTools.getTools(),
-            ...this.fileTools.getTools()
+            ...this.fileTools.getTools(),
+            ...this.trackSettingsTools.getTools()
         };
     }
 
@@ -187,6 +190,29 @@ class ToolsIntegrator {
                         return await this.utilityTools.view_markdown_file(parameters, clientId);
                     default:
                         return await this.utilityTools.executeClientTool(toolName, parameters, clientId);
+                }
+            }
+
+            // Track settings tools
+            if (this.trackSettingsTools.getTools()[toolName]) {
+                switch (toolName) {
+                    case 'get_track_settings':
+                        return await this.trackSettingsTools.executeClientTool('getTrackSettings', parameters, clientId);
+                    case 'set_track_settings':
+                        return await this.trackSettingsTools.executeClientTool('setTrackSettings', parameters, clientId);
+                    case 'get_all_track_settings':
+                        return await this.trackSettingsTools.executeClientTool('getAllTrackSettings', parameters, clientId);
+                    case 'reset_track_settings':
+                        return await this.trackSettingsTools.executeClientTool('resetTrackSettings', parameters, clientId);
+                    case 'get_track_settings_schema':
+                        return {
+                            schema: this.trackSettingsTools.getDefaultSettingsSchema(),
+                            description: 'Complete schema of available track settings'
+                        };
+                    case 'batch_set_track_settings':
+                        return await this.trackSettingsTools.executeClientTool('batchSetTrackSettings', parameters, clientId);
+                    default:
+                        return await this.trackSettingsTools.executeClientTool(toolName, parameters, clientId);
                 }
             }
 

@@ -11303,6 +11303,11 @@ This action cannot be undone.`;
                 }, 100);
                 break;
 
+            case 'actions':
+                titleElement.textContent = 'Actions Track Settings';
+                bodyElement.innerHTML = this.createActionsSettingsContent(currentSettings);
+                break;
+
             default:
                 titleElement.textContent = `${trackType} Track Settings`;
                 bodyElement.innerHTML = this.createDefaultSettingsContent(trackType, currentSettings);
@@ -11360,6 +11365,13 @@ This action cannot be undone.`;
                     <label for="genesSequenceHeight">Reference Sequence Height (px):</label>
                     <input type="number" id="genesSequenceHeight" min="15" max="50" value="${settings.sequenceHeight || 25}" ${settings.showSequence ? '' : 'disabled'}>
                     <div class="help-text">Height of the reference sequence display area.</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="genesCircularMode" ${settings.circularMode ? 'checked' : ''}>
+                        Enable circular browsing mode
+                    </label>
+                    <div class="help-text">When enabled, enables wraparound navigation for circular genomes (e.g., plasmids, bacterial chromosomes).</div>
                 </div>
             </div>
             <div class="settings-section">
@@ -11470,6 +11482,62 @@ This action cannot be undone.`;
                 <div class="form-group">
                     <label for="gcTrackHeight">Track Height (px):</label>
                     <input type="number" id="gcTrackHeight" min="80" max="300" value="${settings.height || 140}">
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Create actions track settings content
+     */
+    createActionsSettingsContent(settings) {
+        return `
+            <div class="settings-section">
+                <h4>Display Options</h4>
+                <div class="form-group">
+                    <label for="actionsTrackHeight">Track Height (px):</label>
+                    <input type="number" id="actionsTrackHeight" min="60" max="300" value="${settings.height || 120}">
+                    <div class="help-text">Total height of the actions track container.</div>
+                </div>
+                <div class="form-group">
+                    <label for="actionsActionHeight">Action Element Height (px):</label>
+                    <input type="number" id="actionsActionHeight" min="5" max="30" value="${settings.actionHeight || 10}">
+                    <div class="help-text">Height of each individual action element (marker/arrow).</div>
+                </div>
+                <div class="form-group">
+                    <label for="actionsRowSpacing">Row Spacing (px):</label>
+                    <input type="number" id="actionsRowSpacing" min="0" max="10" value="${settings.rowSpacing || 2}">
+                    <div class="help-text">Vertical spacing between action rows.</div>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4>Padding & Layout</h4>
+                <div class="form-group">
+                    <label for="actionsTopPadding">Top Padding (px):</label>
+                    <input type="number" id="actionsTopPadding" min="0" max="20" value="${settings.topPadding || 5}">
+                    <div class="help-text">Padding at the top of the track.</div>
+                </div>
+                <div class="form-group">
+                    <label for="actionsBottomPadding">Bottom Padding (px):</label>
+                    <input type="number" id="actionsBottomPadding" min="0" max="20" value="${settings.bottomPadding || 5}">
+                    <div class="help-text">Padding at the bottom of the track.</div>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4>Text Settings</h4>
+                <div class="form-group">
+                    <label for="actionsFontSize">Font Size (px):</label>
+                    <input type="number" id="actionsFontSize" min="8" max="16" value="${settings.fontSize || 10}">
+                    <div class="help-text">Font size for action labels and text.</div>
+                </div>
+                <div class="form-group">
+                    <label for="actionsFontFamily">Font Family:</label>
+                    <select id="actionsFontFamily">
+                        <option value="Arial, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
+                        <option value="Helvetica, sans-serif" ${settings.fontFamily === 'Helvetica, sans-serif' ? 'selected' : ''}>Helvetica</option>
+                        <option value="monospace" ${settings.fontFamily === 'monospace' ? 'selected' : ''}>Monospace</option>
+                    </select>
+                    <div class="help-text">Font family for action text display.</div>
                 </div>
             </div>
         `;
@@ -11698,6 +11766,11 @@ This action cannot be undone.`;
                     <input type="color" id="coverageColor" value="${settings.coverageColor || '#4a90e2'}">
                     <div class="help-text">Color for the coverage visualization area.</div>
                 </div>
+                <div class="form-group" id="coverageStrokeColorGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
+                    <label for="coverageStrokeColor">Coverage stroke color:</label>
+                    <input type="color" id="coverageStrokeColor" value="${settings.coverageStrokeColor || '#2c5aa0'}">
+                    <div class="help-text">Stroke/border color for the coverage area outline.</div>
+                </div>
             </div>
             <div class="settings-section">
                 <h4>Reference Sequence</h4>
@@ -11712,6 +11785,20 @@ This action cannot be undone.`;
                     <label for="referenceHeight">Reference sequence height (px):</label>
                     <input type="number" id="referenceHeight" min="15" max="50" value="${settings.referenceHeight || 25}">
                     <div class="help-text">Height of the reference sequence visualization.</div>
+                </div>
+                <div class="form-group" id="referenceFontSizeGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
+                    <label for="referenceFontSize">Reference font size (px):</label>
+                    <input type="number" id="referenceFontSize" min="8" max="20" value="${settings.referenceFontSize || 12}">
+                    <div class="help-text">Font size for reference sequence text.</div>
+                </div>
+                <div class="form-group" id="referenceFontFamilyGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
+                    <label for="referenceFontFamily">Reference font family:</label>
+                    <select id="referenceFontFamily">
+                        <option value="monospace" ${(settings.referenceFontFamily || 'monospace') === 'monospace' ? 'selected' : ''}>Monospace</option>
+                        <option value="Courier New, monospace" ${settings.referenceFontFamily === 'Courier New, monospace' ? 'selected' : ''}>Courier New</option>
+                        <option value="Consolas, monospace" ${settings.referenceFontFamily === 'Consolas, monospace' ? 'selected' : ''}>Consolas</option>
+                    </select>
+                    <div class="help-text">Font family for reference sequence display.</div>
                 </div>
             </div>
             <div class="settings-section">
@@ -12080,7 +12167,10 @@ This action cannot be undone.`;
                 showSequence: false, // Show reference sequence
                 sequenceHeight: 25, // Height of reference sequence display
                 renderingMode: 'svg', // 'svg' or 'canvas'
-                circularMode: false // Circular browsing mode for wraparound navigation
+                circularMode: false, // Circular browsing mode for wraparound navigation
+                wheelZoomSensitivity: 0.1, // Mouse wheel zoom sensitivity
+                overrideGlobalZoom: false, // Override global zoom settings
+                maxBorderWidth: 1 // Maximum border width for gene elements
             },
 
             sequence: {
@@ -12792,6 +12882,9 @@ This action cannot be undone.`;
                 const maxBorderWidthElement = modal.querySelector('#genesMaxBorderWidth');
                 settings.maxBorderWidth = parseFloat(maxBorderWidthElement?.value) || 1;
 
+                const circularModeElement = modal.querySelector('#genesCircularMode');
+                settings.circularMode = circularModeElement?.checked || false;
+
                 console.log('Collected gene settings from form:', settings);
                 break;
 
@@ -12812,9 +12905,12 @@ This action cannot be undone.`;
                 settings.showCoverage = modal.querySelector('#readsShowCoverage').checked;
                 settings.coverageHeight = parseInt(modal.querySelector('#coverageHeight').value) || 50;
                 settings.coverageColor = modal.querySelector('#coverageColor').value || '#4a90e2';
+                settings.coverageStrokeColor = modal.querySelector('#coverageStrokeColor')?.value || '#2c5aa0';
 
                 // Reference sequence settings
                 settings.showReference = modal.querySelector('#readsShowReference').checked;
+                settings.referenceFontSize = parseInt(modal.querySelector('#referenceFontSize')?.value) || 12;
+                settings.referenceFontFamily = modal.querySelector('#referenceFontFamily')?.value || 'monospace';
                 console.log(`🔍 [collectSettingsFromModal] Collected showReference: ${settings.showReference} from checkbox checked: ${modal.querySelector('#readsShowReference').checked}`);
                 settings.referenceHeight = parseInt(modal.querySelector('#referenceHeight').value) || 25;
 
@@ -12860,6 +12956,7 @@ This action cannot be undone.`;
                 settings.sequenceFontSize = parseInt(modal.querySelector('#readsSequenceFontSize').value) || 10;
                 settings.sequenceHeight = parseInt(modal.querySelector('#readsSequenceHeight').value) || 14;
                 settings.highlightMismatches = modal.querySelector('#readsHighlightMismatches').checked;
+                settings.showMismatches = modal.querySelector('#readsHighlightMismatches').checked; // Alias for compatibility
                 settings.mismatchColor = modal.querySelector('#readsMismatchColor').value;
                 break;
 
@@ -13018,6 +13115,17 @@ This action cannot be undone.`;
                 settings.showRuler = modal.querySelector('#blastShowRuler').checked;
                 settings.resultHeight = parseInt(modal.querySelector('#blastResultHeight').value) || 12;
                 settings.resultSpacing = parseInt(modal.querySelector('#blastResultSpacing').value) || 14;
+                break;
+
+            case 'actions':
+                // Actions track settings collection
+                settings.height = parseInt(modal.querySelector('#actionsTrackHeight')?.value) || 120;
+                settings.actionHeight = parseInt(modal.querySelector('#actionsActionHeight')?.value) || 10;
+                settings.rowSpacing = parseInt(modal.querySelector('#actionsRowSpacing')?.value) || 2;
+                settings.topPadding = parseInt(modal.querySelector('#actionsTopPadding')?.value) || 5;
+                settings.bottomPadding = parseInt(modal.querySelector('#actionsBottomPadding')?.value) || 5;
+                settings.fontSize = parseInt(modal.querySelector('#actionsFontSize')?.value) || 10;
+                settings.fontFamily = modal.querySelector('#actionsFontFamily')?.value || 'Arial, sans-serif';
                 break;
 
             case 'variants':

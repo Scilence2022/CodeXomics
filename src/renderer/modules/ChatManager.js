@@ -9153,7 +9153,15 @@ ${coreTools}
             'clear_actions': () => this.executeActionTool('clear_actions', parameters),
             'action_clear_actions': () => this.executeActionTool('clear_actions', parameters),
             'get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters),
-            'action_get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters)
+            'action_get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters),
+
+            // Track settings tools
+            'get_track_settings': () => this.getTrackSettings(parameters),
+            'set_track_settings': () => this.setTrackSettings(parameters),
+            'get_all_track_settings': () => this.getAllTrackSettings(parameters),
+            'reset_track_settings': () => this.resetTrackSettings(parameters),
+            'get_track_settings_schema': () => this.getTrackSettingsSchema(parameters),
+            'batch_set_track_settings': () => this.batchSetTrackSettings(parameters)
         };
 
         if (localTools[toolName]) {
@@ -19931,6 +19939,238 @@ ${this.getPluginSystemInfo()}`;
             status: 'Evolution integration test completed',
             summary: updatedSummary,
             testEventAdded: true
+        };
+    }
+
+    // ==================== Track Settings Tools ====================
+
+    /**
+     * Get settings for a specific track type
+     */
+    async getTrackSettings(parameters) {
+        const { track_type } = parameters;
+
+        if (!track_type) {
+            throw new Error('track_type parameter is required');
+        }
+
+        const validTrackTypes = ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'];
+        if (!validTrackTypes.includes(track_type)) {
+            throw new Error(`Invalid track_type: ${track_type}. Valid types: ${validTrackTypes.join(', ')}`);
+        }
+
+        if (!this.genomeBrowser?.trackRenderer) {
+            throw new Error('TrackRenderer not available');
+        }
+
+        const settings = this.genomeBrowser.trackRenderer.getTrackSettings(track_type);
+
+        return {
+            success: true,
+            track_type,
+            settings,
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    /**
+     * Set settings for a specific track type
+     */
+    async setTrackSettings(parameters) {
+        const { track_type, settings } = parameters;
+
+        if (!track_type) {
+            throw new Error('track_type parameter is required');
+        }
+
+        if (!settings || typeof settings !== 'object') {
+            throw new Error('settings parameter must be an object');
+        }
+
+        const validTrackTypes = ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'];
+        if (!validTrackTypes.includes(track_type)) {
+            throw new Error(`Invalid track_type: ${track_type}. Valid types: ${validTrackTypes.join(', ')}`);
+        }
+
+        if (!this.genomeBrowser?.trackRenderer) {
+            throw new Error('TrackRenderer not available');
+        }
+
+        // Get current settings and merge with new settings
+        const currentSettings = this.genomeBrowser.trackRenderer.getTrackSettings(track_type);
+        const mergedSettings = { ...currentSettings, ...settings };
+
+        // Save and apply settings
+        this.genomeBrowser.trackRenderer.saveTrackSettings(track_type, mergedSettings);
+        this.genomeBrowser.trackRenderer.applySettingsToTrack(track_type, mergedSettings);
+
+        return {
+            success: true,
+            track_type,
+            updated_settings: settings,
+            applied_settings: mergedSettings,
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    /**
+     * Get all track settings
+     */
+    async getAllTrackSettings(parameters = {}) {
+        if (!this.genomeBrowser?.trackRenderer) {
+            throw new Error('TrackRenderer not available');
+        }
+
+        const trackTypes = ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'];
+        const allSettings = {};
+
+        for (const trackType of trackTypes) {
+            try {
+                allSettings[trackType] = this.genomeBrowser.trackRenderer.getTrackSettings(trackType);
+            } catch (error) {
+                console.warn(`Failed to get settings for ${trackType}:`, error.message);
+                allSettings[trackType] = { error: error.message };
+            }
+        }
+
+        return {
+            success: true,
+            settings: allSettings,
+            track_count: trackTypes.length,
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    /**
+     * Reset track settings to defaults
+     */
+    async resetTrackSettings(parameters) {
+        const { track_type } = parameters;
+
+        if (!track_type) {
+            throw new Error('track_type parameter is required');
+        }
+
+        if (!this.genomeBrowser?.trackRenderer) {
+            throw new Error('TrackRenderer not available');
+        }
+
+        if (track_type === 'all') {
+            // Reset all tracks
+            const trackTypes = ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'];
+            const results = {};
+
+            for (const type of trackTypes) {
+                try {
+                    // Clear saved settings from storage
+                    if (this.genomeBrowser.configManager) {
+                        this.genomeBrowser.configManager.set(`tracks.${type}.settings`, {});
+                    }
+                    localStorage.removeItem(`trackSettings_${type}`);
+
+                    // Get fresh default settings
+                    const defaultSettings = this.genomeBrowser.trackRenderer.getTrackSettings(type);
+                    this.genomeBrowser.trackRenderer.applySettingsToTrack(type, defaultSettings);
+
+                    results[type] = { success: true };
+                } catch (error) {
+                    results[type] = { success: false, error: error.message };
+                }
+            }
+
+            // Save config changes
+            if (this.genomeBrowser.configManager) {
+                this.genomeBrowser.configManager.saveConfig();
+            }
+
+            return {
+                success: true,
+                track_type: 'all',
+                results,
+                timestamp: new Date().toISOString()
+            };
+        } else {
+            // Reset specific track
+            const validTrackTypes = ['genes', 'reads', 'sequence', 'gc', 'variants', 'actions', 'blast', 'wigTracks', 'sequenceLine'];
+            if (!validTrackTypes.includes(track_type)) {
+                throw new Error(`Invalid track_type: ${track_type}`);
+            }
+
+            // Clear saved settings from storage
+            if (this.genomeBrowser.configManager) {
+                this.genomeBrowser.configManager.set(`tracks.${track_type}.settings`, {});
+            }
+            localStorage.removeItem(`trackSettings_${track_type}`);
+
+            // Get fresh default settings
+            const defaultSettings = this.genomeBrowser.trackRenderer.getTrackSettings(track_type);
+            this.genomeBrowser.trackRenderer.applySettingsToTrack(track_type, defaultSettings);
+
+            // Save config changes
+            if (this.genomeBrowser.configManager) {
+                this.genomeBrowser.configManager.saveConfig();
+            }
+
+            return {
+                success: true,
+                track_type,
+                default_settings: defaultSettings,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Get track settings schema
+     */
+    async getTrackSettingsSchema(parameters = {}) {
+        // Import the schema from TrackSettingsTools
+        const TrackSettingsTools = require('../../mcp-tools/track/TrackSettingsTools');
+        const tools = new TrackSettingsTools();
+        const schema = tools.getDefaultSettingsSchema();
+
+        return {
+            success: true,
+            schema,
+            description: 'Complete schema of available track settings with types, defaults, and validation rules',
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    /**
+     * Batch set track settings for multiple tracks
+     */
+    async batchSetTrackSettings(parameters) {
+        const { settings_map } = parameters;
+
+        if (!settings_map || typeof settings_map !== 'object') {
+            throw new Error('settings_map parameter must be an object');
+        }
+
+        const results = {};
+        const errors = [];
+
+        for (const [trackType, settings] of Object.entries(settings_map)) {
+            try {
+                const result = await this.setTrackSettings({
+                    track_type: trackType,
+                    settings: settings
+                });
+                results[trackType] = result;
+            } catch (error) {
+                results[trackType] = { success: false, error: error.message };
+                errors.push(`${trackType}: ${error.message}`);
+            }
+        }
+
+        return {
+            success: errors.length === 0,
+            track_count: Object.keys(settings_map).length,
+            successful_updates: Object.keys(settings_map).length - errors.length,
+            failed_updates: errors.length,
+            results,
+            errors: errors.length > 0 ? errors : undefined,
+            timestamp: new Date().toISOString()
         };
     }
 }
