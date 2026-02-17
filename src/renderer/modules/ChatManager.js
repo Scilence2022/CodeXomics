@@ -8796,6 +8796,14 @@ Annotation & Data:
   - export_data: Export in various formats
   - get_genome_info: Get genome metadata
 
+Track Settings:
+  - get_track_settings: Get current settings for a specific track type
+  - set_track_settings: Update settings for a specific track type
+  - get_all_track_settings: Get all track settings at once
+  - reset_track_settings: Reset track settings to defaults (single or all tracks)
+  - get_track_settings_schema: Get complete settings schema with types and defaults
+  - batch_set_track_settings: Batch update multiple track settings at once
+
 Protein Structure:
   - open_protein_viewer: Display 3D protein structures
   - fetch_protein_structure: Get PDB structure data
@@ -8832,7 +8840,15 @@ Protein Structure:
 
 Data Management:
   {"tool_name": "create_annotation", "parameters": {"type": "gene", "name": "test_gene", "chromosome": "chr1", "start": 1000, "end": 2000}}
-  {"tool_name": "export_data", "parameters": {"format": "fasta", "chromosome": "chr1", "start": 1000, "end": 2000}}`;
+  {"tool_name": "export_data", "parameters": {"format": "fasta", "chromosome": "chr1", "start": 1000, "end": 2000}}
+
+Track Settings:
+  {"tool_name": "get_track_settings", "parameters": {"track_type": "genes"}}
+  {"tool_name": "set_track_settings", "parameters": {"track_type": "reads", "settings": {"readHeight": 8, "showMismatches": true}}}
+  {"tool_name": "get_all_track_settings", "parameters": {}}
+  {"tool_name": "reset_track_settings", "parameters": {"track_type": "all"}}
+  {"tool_name": "get_track_settings_schema", "parameters": {}}
+  {"tool_name": "batch_set_track_settings", "parameters": {"settings_map": {"genes": {"height": 200}, "reads": {"readHeight": 6}}}}`;
 
         return toolsInfo;
     }
@@ -8916,6 +8932,10 @@ Data Management:
             'SEQUENCE EDITING': [
                 'copy_sequence', 'cut_sequence', 'paste_sequence', 'delete_sequence', 'delete_gene',
                 'insert_sequence', 'replace_sequence', 'execute_actions', 'get_action_list'
+            ],
+            'TRACK SETTINGS': [
+                'get_track_settings', 'set_track_settings', 'get_all_track_settings',
+                'reset_track_settings', 'get_track_settings_schema', 'batch_set_track_settings'
             ]
         };
 
@@ -9418,6 +9438,8 @@ COMMON TASK PATTERNS:
 • Gene Deletion: search_gene_by_name → deleteSequence → execute_actions
 • Sequence Insertion: insertSequence → execute_actions
 • Copy/Paste: copy_sequence → paste_sequence → execute_actions
+• Track Settings: get_track_settings → set_track_settings or batch_set_track_settings
+• Track Configuration: get_track_settings_schema → set_track_settings (use schema to know valid settings)
 
 ===CRITICAL DOMAIN ANALYSIS INSTRUCTIONS===
 For protein domain analysis requests:
