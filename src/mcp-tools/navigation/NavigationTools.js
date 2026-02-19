@@ -162,6 +162,58 @@ class NavigationTools {
                         { required: ['track_name', 'action'] }
                     ]
                 }
+            },
+
+            zoom_in: {
+                name: 'zoom_in',
+                description: 'Zoom in the current genome view by a specified factor to see more sequence detail.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        factor: { type: 'number', description: 'Zoom factor to apply (default 2x, range 1.1–10)', default: 2, minimum: 1.1, maximum: 10 },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: []
+                }
+            },
+
+            zoom_out: {
+                name: 'zoom_out',
+                description: 'Zoom out the current genome view by a specified factor to see broader genomic context.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        factor: { type: 'number', description: 'Zoom factor to apply (default 2x, range 1.1–10)', default: 2, minimum: 1.1, maximum: 10 },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: []
+                }
+            },
+
+            pan_left: {
+                name: 'pan_left',
+                description: 'Pan the genome view to the left (towards earlier positions).',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        amount: { type: 'number', description: 'Number of base pairs to pan left (default: 10% of current view width)' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: []
+                }
+            },
+
+            pan_right: {
+                name: 'pan_right',
+                description: 'Pan the genome view to the right (towards later positions).',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        amount: { type: 'number', description: 'Number of base pairs to pan right (default: 10% of current view width)' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: []
+                }
             }
         };
     }

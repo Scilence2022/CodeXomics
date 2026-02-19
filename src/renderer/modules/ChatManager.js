@@ -9183,7 +9183,13 @@ ${coreTools}
             'get_all_track_settings': () => this.getAllTrackSettings(parameters),
             'reset_track_settings': () => this.resetTrackSettings(parameters),
             'get_track_settings_schema': () => this.getTrackSettingsSchema(parameters),
-            'batch_set_track_settings': () => this.batchSetTrackSettings(parameters)
+            'batch_set_track_settings': () => this.batchSetTrackSettings(parameters),
+
+            // View control tools
+            'zoom_in': () => this.zoomIn(parameters),
+            'zoom_out': () => this.zoomOut(parameters),
+            'pan_left': () => this.panLeft(parameters),
+            'pan_right': () => this.panRight(parameters)
         };
 
         if (localTools[toolName]) {
@@ -9198,6 +9204,64 @@ ${coreTools}
         }
 
         return undefined; // Tool not found in local tools
+    }
+
+    /**
+     * Zoom in the current genome view
+     */
+    async zoomIn(parameters = {}) {
+        const factor = parameters.factor || 2;
+        if (!this.app.navigationManager) throw new Error('NavigationManager not available');
+        for (let i = 0; i < Math.log2(factor); i++) {
+            this.app.navigationManager.zoomIn();
+        }
+        const state = this.getCurrentState();
+        return {
+            success: true,
+            factor,
+            message: `Zoomed in by ${factor}x`,
+            newRange: state.viewingRegion
+        };
+    }
+
+    /**
+     * Zoom out the current genome view
+     */
+    async zoomOut(parameters = {}) {
+        const factor = parameters.factor || 2;
+        if (!this.app.navigationManager) throw new Error('NavigationManager not available');
+        for (let i = 0; i < Math.log2(factor); i++) {
+            this.app.navigationManager.zoomOut();
+        }
+        const state = this.getCurrentState();
+        return {
+            success: true,
+            factor,
+            message: `Zoomed out by ${factor}x`,
+            newRange: state.viewingRegion
+        };
+    }
+
+    /**
+     * Pan the view left
+     */
+    async panLeft(parameters = {}) {
+        if (!this.app.navigationManager) throw new Error('NavigationManager not available');
+        const amount = parameters.amount || null; // NavigationManager handles default
+        this.app.navigationManager.navigatePrevious(amount);
+        const state = this.getCurrentState();
+        return { success: true, message: 'Panned left', newRange: state.viewingRegion };
+    }
+
+    /**
+     * Pan the view right
+     */
+    async panRight(parameters = {}) {
+        if (!this.app.navigationManager) throw new Error('NavigationManager not available');
+        const amount = parameters.amount || null;
+        this.app.navigationManager.navigateNext(amount);
+        const state = this.getCurrentState();
+        return { success: true, message: 'Panned right', newRange: state.viewingRegion };
     }
 
     /**
