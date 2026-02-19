@@ -2,673 +2,672 @@
 
 /* Base Sequence Track */
 .sequence-track {
-    margin-bottom: 10px;
-    position: relative; /* Establish stacking context */
-    z-index: 1; /* Base layer for sequence tracks */
+  margin-bottom: 10px;
+  position: relative; /* Establish stacking context */
+  z-index: 1; /* Base layer for sequence tracks */
 }
 
 /* Sequence Single Line Display */
 .sequence-single-line {
-    position: relative; /* Changed from default to establish stacking context */
-    min-height: 20px; /* Minimum height for readability */
-    height: auto; /* Auto-adaptive height */
-    max-height: 50px; /* Maximum height to prevent overflow */
-    width: 100%; /* FIX: Ensure full width usage */
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    background: none; /* Remove background for cleaner look */
-    border: none; /* Remove border for cleaner look */
-    border-radius: 0; /* Remove border radius for cleaner look */ 
-    z-index: 1; /* Base layer for sequence line */
-    box-sizing: border-box; /* FIX: Include borders in width calculation */
-    padding: 2px 0; /* Add some vertical padding for better appearance */
+  position: relative; /* Changed from default to establish stacking context */
+  min-height: 20px; /* Minimum height for readability */
+  height: auto; /* Auto-adaptive height */
+  max-height: 50px; /* Maximum height to prevent overflow */
+  width: 100%; /* FIX: Ensure full width usage */
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  background: none; /* Remove background for cleaner look */
+  border: none; /* Remove border for cleaner look */
+  border-radius: 0; /* Remove border radius for cleaner look */
+  z-index: 1; /* Base layer for sequence line */
+  box-sizing: border-box; /* FIX: Include borders in width calculation */
+  padding: 2px 0; /* Add some vertical padding for better appearance */
 }
 
 /* Inline Sequence Bases */
 .sequence-base-inline {
-    position: absolute;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-    text-align: center;
-    line-height: 1.2; /* Adaptive line height based on font size */
-    user-select: none; /* Changed from text to none to prevent interference with dragging */
-    cursor: inherit; /* Changed from text to inherit the cursor from parent */
-    transition: font-size 0.2s ease, line-height 0.2s ease;
-    z-index: 1; /* Base z-index for sequence bases */
-    pointer-events: none; /* Prevent sequence bases from interfering with track dragging */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: absolute;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.2; /* Adaptive line height based on font size */
+  user-select: none; /* Changed from text to none to prevent interference with dragging */
+  cursor: inherit; /* Changed from text to inherit the cursor from parent */
+  transition:
+    font-size 0.2s ease,
+    line-height 0.2s ease;
+  z-index: 1; /* Base z-index for sequence bases */
+  pointer-events: none; /* Prevent sequence bases from interfering with track dragging */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sequence-base-inline:hover {
-    background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Base colors for inline sequence - NO BACKGROUNDS for single-line track */
-.sequence-base-inline.base-a { 
-    color: #e74c3c; 
-    font-weight: bold;
-    background: none !important; /* Remove background for single-line track */
-    padding: 0 !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
+.sequence-base-inline.base-a {
+  color: #e74c3c;
+  font-weight: bold;
+  background: none !important; /* Remove background for single-line track */
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
 
-.sequence-base-inline.base-t { 
-    color: #3498db; 
-    font-weight: bold;
-    background: none !important; /* Remove background for single-line track */
-    padding: 0 !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
+.sequence-base-inline.base-t {
+  color: #3498db;
+  font-weight: bold;
+  background: none !important; /* Remove background for single-line track */
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
 
-.sequence-base-inline.base-g { 
-    color: #2ecc71; 
-    font-weight: bold;
-    background: none !important; /* Remove background for single-line track */
-    padding: 0 !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
+.sequence-base-inline.base-g {
+  color: #2ecc71;
+  font-weight: bold;
+  background: none !important; /* Remove background for single-line track */
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
 
-.sequence-base-inline.base-c { 
-    color: #f39c12; 
-    font-weight: bold;
-    background: none !important; /* Remove background for single-line track */
-    padding: 0 !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
+.sequence-base-inline.base-c {
+  color: #f39c12;
+  font-weight: bold;
+  background: none !important; /* Remove background for single-line track */
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
 
-.sequence-base-inline.base-n { 
-    color: #95a5a6; 
-    font-weight: bold;
-    background: none !important; /* Remove background for single-line track */
-    padding: 0 !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
+.sequence-base-inline.base-n {
+  color: #95a5a6;
+  font-weight: bold;
+  background: none !important; /* Remove background for single-line track */
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
 
 /* Enhanced Sequence Display */
 .sequence-content {
-    flex: 1; /* Fill all available vertical space */
-    height: 100%; /* Ensure it takes full height of parent */
-    overflow-y: auto;
-    background: rgba(255, 255, 255, 0.9); /* More opaque for better readability */
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    position: relative; /* Establish stacking context */
-    z-index: 1; /* Stay within sequence display section */
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    padding: 15px;
+  flex: 1; /* Fill all available vertical space */
+  height: 100%; /* Ensure it takes full height of parent */
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.9); /* More opaque for better readability */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  position: relative; /* Establish stacking context */
+  z-index: 1; /* Stay within sequence display section */
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 15px;
 }
 
 .sequence-line {
-    display: flex;
-    margin-bottom: 8px;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.6;
+  display: flex;
+  margin-bottom: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .sequence-position {
-    width: 100px;
-    color: #6c757d;
-    font-weight: 600;
-    margin-right: 15px;
-    text-align: right;
-    flex-shrink: 0;
+  width: 100px;
+  color: #6c757d;
+  font-weight: 600;
+  margin-right: 15px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .sequence-bases {
-    flex: 1;
-    word-break: break-all;
+  flex: 1;
+  word-break: break-all;
 }
 
 /* Enhanced Base Colors */
-.base-a { 
-    color: #dc3545; 
-    font-weight: 600;
-    background: rgba(220, 53, 69, 0.1);
-    padding: 1px 2px;
-    border-radius: 2px;
+.base-a {
+  color: #dc3545;
+  font-weight: 600;
+  background: rgba(220, 53, 69, 0.1);
+  padding: 1px 2px;
+  border-radius: 2px;
 }
 
-.base-t { 
-    color: #007bff; 
-    font-weight: 600;
-    background: rgba(0, 123, 255, 0.1);
-    padding: 1px 2px;
-    border-radius: 2px;
+.base-t {
+  color: #007bff;
+  font-weight: 600;
+  background: rgba(0, 123, 255, 0.1);
+  padding: 1px 2px;
+  border-radius: 2px;
 }
 
-.base-g { 
-    color: #28a745; 
-    font-weight: 600;
-    background: rgba(40, 167, 69, 0.1);
-    padding: 1px 2px;
-    border-radius: 2px;
+.base-g {
+  color: #28a745;
+  font-weight: 600;
+  background: rgba(40, 167, 69, 0.1);
+  padding: 1px 2px;
+  border-radius: 2px;
 }
 
-.base-c { 
-    color: #fd7e14; 
-    font-weight: 600;
-    background: rgba(253, 126, 20, 0.1);
-    padding: 1px 2px;
-    border-radius: 2px;
+.base-c {
+  color: #fd7e14;
+  font-weight: 600;
+  background: rgba(253, 126, 20, 0.1);
+  padding: 1px 2px;
+  border-radius: 2px;
 }
 
-.base-n { 
-    color: #6c757d; 
-    font-weight: 400;
-    background: rgba(108, 117, 125, 0.1);
-    padding: 1px 2px;
-    border-radius: 2px;
+.base-n {
+  color: #6c757d;
+  font-weight: 400;
+  background: rgba(108, 117, 125, 0.1);
+  padding: 1px 2px;
+  border-radius: 2px;
 }
 
 /* Sequence Visualization */
 .sequence-visualization {
-    height: 80px;
-    padding: 10px;
+  height: 80px;
+  padding: 10px;
 }
 
 .sequence-bases-display {
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    line-height: 1.4;
-    word-break: break-all;
-    background: #f8f9fa;
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-all;
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
 }
 
 /* GC Content Visualization */
 .gc-content-visualization {
-    display: flex;
-    height: 60px;
-    align-items: flex-end;
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    padding: 5px;
+  display: flex;
+  height: 60px;
+  align-items: flex-end;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 5px;
 }
 
 .gc-bar {
-    flex: 1;
-    margin: 0 1px;
-    min-height: 2px;
-    border-radius: 1px;
-    cursor: pointer;
-    transition: opacity 0.2s ease;
+  flex: 1;
+  margin: 0 1px;
+  min-height: 2px;
+  border-radius: 1px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
 }
 
 .gc-bar:hover {
-    opacity: 0.8;
+  opacity: 0.8;
 }
 
 /* Splitter Styles for Sequence Sections */
 .splitter {
-    background: var(--border-color);
-    cursor: row-resize;
-    height: 8px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    z-index: 5; /* Below ruler (z-index: 15) but above base content */
+  background: var(--border-color);
+  cursor: row-resize;
+  height: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 5; /* Below ruler (z-index: 15) but above base content */
 }
 
 .splitter:hover {
-    background: var(--border-hover);
-    height: 10px;
+  background: var(--border-hover);
+  height: 10px;
 }
 
 .splitter::before {
-    content: '';
-    width: 40px;
-    height: 3px;
-    background: var(--text-muted);
-    border-radius: 2px;
-    opacity: 0.6;
-    transition: all 0.2s ease;
+  content: '';
+  width: 40px;
+  height: 3px;
+  background: var(--text-muted);
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: all 0.2s ease;
 }
 
 .splitter:hover::before {
-    opacity: 1;
-    width: 50px;
+  opacity: 1;
+  width: 50px;
 }
 
 /* Horizontal Splitter for Layout */
 .horizontal-splitter {
-    width: 100%;
-    height: 8px;
-    background: var(--border-color);
-    cursor: row-resize;
-    position: relative;
-    z-index: 100;
-    transition: all 0.2s ease;
+  width: 100%;
+  height: 8px;
+  background: var(--border-color);
+  cursor: row-resize;
+  position: relative;
+  z-index: 100;
+  transition: all 0.2s ease;
 }
 
 .horizontal-splitter:hover {
-    background: var(--border-hover);
-    height: 10px;
+  background: var(--border-hover);
+  height: 10px;
 }
 
 .horizontal-splitter::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 40px;
-    height: 3px;
-    background: var(--text-muted);
-    border-radius: 2px;
-    opacity: 0.6;
-    transition: all 0.2s ease;
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 3px;
+  background: var(--text-muted);
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: all 0.2s ease;
 }
 
 .horizontal-splitter:hover::before {
-    opacity: 1;
-    width: 50px;
+  opacity: 1;
+  width: 50px;
 }
 
 /* Sequence Editor Styles */
 .sequence-editor {
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.4;
-    padding: 16px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    resize: vertical;
-    min-height: 200px;
-    width: 100%;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  resize: vertical;
+  min-height: 200px;
+  width: 100%;
 }
 
 .sequence-editor:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* Sequence Analysis Results */
 .sequence-analysis {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    margin-top: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-top: 16px;
 }
 
 .sequence-analysis h4 {
-    margin: 0 0 12px 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .analysis-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
 }
 
 .analysis-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px;
-    background: var(--bg-primary);
-    border-radius: var(--radius-sm);
-    font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
 }
 
 .analysis-label {
-    color: var(--text-secondary);
-    font-weight: 500;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .analysis-value {
-    color: var(--text-primary);
-    font-weight: 600;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* Sequence Translation Display */
 .translation-display {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    margin-top: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-top: 12px;
 }
 
 .translation-frame {
-    margin-bottom: 12px;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
+  margin-bottom: 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
 }
 
 .translation-frame:last-child {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 .frame-label {
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
 }
 
 .frame-sequence {
-    background: var(--bg-primary);
-    padding: 8px;
-    border-radius: var(--radius-sm);
-    word-break: break-all;
-    line-height: 1.4;
+  background: var(--bg-primary);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  word-break: break-all;
+  line-height: 1.4;
 }
 
 /* Amino Acid Colors */
 .aa-hydrophobic {
-    background-color: #ffeb3b;
-    color: #333;
+  background-color: #ffeb3b;
+  color: #333;
 }
 
 .aa-polar {
-    background-color: #4caf50;
-    color: white;
+  background-color: #4caf50;
+  color: white;
 }
 
 .aa-charged {
-    background-color: #f44336;
-    color: white;
+  background-color: #f44336;
+  color: white;
 }
 
 .aa-aromatic {
-    background-color: #9c27b0;
-    color: white;
+  background-color: #9c27b0;
+  color: white;
 }
 
 .aa-stop {
-    background-color: #000;
-    color: white;
-    font-weight: bold;
+  background-color: #000;
+  color: white;
+  font-weight: bold;
 }
 
 /* Responsive adjustments for sequence tracks */
 @media (max-width: 768px) {
-    .sequence-single-line {
-        min-height: 18px; /* Smaller minimum height on mobile */
-        max-height: 40px; /* Smaller maximum height on mobile */
-    }
-    
-    .sequence-base-inline {
-        line-height: 1.1; /* Tighter line height on mobile */
-    }
-    
-    .sequence-line {
-        font-size: 12px;
-        margin-bottom: 6px;
-    }
-    
-    .sequence-position {
-        width: 80px;
-        margin-right: 10px;
-    }
-    
-    .sequence-content {
-        padding: 12px;
-    }
-    
-    .splitter {
-        height: 12px;
-    }
-    
-    .splitter:hover {
-        height: 14px;
-    }
-    
-    .splitter::before {
-        width: 60px;
-        height: 4px;
-    }
-    
-    .sequence-editor {
-        font-size: 12px;
-        padding: 12px;
-    }
-    
-    .analysis-grid {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-    
-    .translation-frame {
-        font-size: 11px;
-    }
+  .sequence-single-line {
+    min-height: 18px; /* Smaller minimum height on mobile */
+    max-height: 40px; /* Smaller maximum height on mobile */
+  }
+
+  .sequence-base-inline {
+    line-height: 1.1; /* Tighter line height on mobile */
+  }
+
+  .sequence-line {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .sequence-position {
+    width: 80px;
+    margin-right: 10px;
+  }
+
+  .sequence-content {
+    padding: 12px;
+  }
+
+  .splitter {
+    height: 12px;
+  }
+
+  .splitter:hover {
+    height: 14px;
+  }
+
+  .splitter::before {
+    width: 60px;
+    height: 4px;
+  }
+
+  .sequence-editor {
+    font-size: 12px;
+    padding: 12px;
+  }
+
+  .analysis-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .translation-frame {
+    font-size: 11px;
+  }
 }
 
 /* Dark theme adaptations for sequence tracks */
 @media (prefers-color-scheme: dark) {
-    .sequence-single-line {
-        background: rgba(31, 41, 55, 0.3);
-        border-color: var(--border-color);
-    }
-    
-    .sequence-bases-display {
-        background: var(--bg-secondary);
-        border-color: var(--border-color);
-        color: var(--text-primary);
-    }
-    
-    .gc-content-visualization {
-        background: var(--bg-secondary);
-        border-color: var(--border-color);
-    }
-    
-    .sequence-editor {
-        background: var(--bg-secondary);
-        border-color: var(--border-color);
-        color: var(--text-primary);
-    }
-    
-    .sequence-analysis {
-        background: var(--bg-tertiary);
-        border-color: var(--border-color);
-    }
-    
-    .analysis-item {
-        background: var(--bg-secondary);
-    }
-    
-    .translation-display {
-        background: var(--bg-tertiary);
-        border-color: var(--border-color);
-    }
-    
-    .frame-sequence {
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-    }
+  .sequence-single-line {
+    background: rgba(31, 41, 55, 0.3);
+    border-color: var(--border-color);
+  }
+
+  .sequence-bases-display {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .gc-content-visualization {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
+
+  .sequence-editor {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .sequence-analysis {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+  }
+
+  .analysis-item {
+    background: var(--bg-secondary);
+  }
+
+  .translation-display {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+  }
+
+  .frame-sequence {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
 }
-
-
-
 
 /* =====================================================
    SEQUENCE TRACK SETTINGS STYLES
    ===================================================== */
 
-   .sequence-settings-tabs {
-    margin-top: 10px;
+.sequence-settings-tabs {
+  margin-top: 10px;
 }
 
 .sequence-settings-tabs .tab-buttons {
-    display: flex;
-    border-bottom: 2px solid #e9ecef;
-    margin-bottom: 20px;
+  display: flex;
+  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 20px;
 }
 
 .sequence-settings-tabs .tab-button {
-    background: #f8f9fa;
-    border: none;
-    padding: 12px 20px;
-    cursor: pointer;
-    border-radius: 6px 6px 0 0;
-    margin-right: 4px;
-    color: #6c757d;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  background: #f8f9fa;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  margin-right: 4px;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .sequence-settings-tabs .tab-button:hover {
-    background: #e9ecef;
-    color: #495057;
+  background: #e9ecef;
+  color: #495057;
 }
 
 .sequence-settings-tabs .tab-button.active {
-    background: #007bff;
-    color: white;
-    border-bottom: 2px solid #007bff;
+  background: #007bff;
+  color: white;
+  border-bottom: 2px solid #007bff;
 }
 
 .sequence-settings-tabs .tab-panel {
-    display: none;
-    min-height: 300px;
-    padding: 15px;
+  display: none;
+  min-height: 300px;
+  padding: 15px;
 }
 
 .sequence-settings-tabs .tab-panel.active {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    height: auto !important;
-    min-height: 300px !important;
-    overflow: visible !important;
-    position: static !important;
-    left: auto !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  min-height: 300px !important;
+  overflow: visible !important;
+  position: static !important;
+  left: auto !important;
 }
 
 /* Ensure tab content container is properly sized */
 .sequence-settings-tabs .tab-content {
-    display: block !important;
-    min-height: 300px;
-    overflow: visible;
+  display: block !important;
+  min-height: 300px;
+  overflow: visible;
 }
 
 .sequence-settings-tabs .mode-indicator {
-    background: #e3f2fd;
-    border: 1px solid #bbdefb;
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 20px;
-    font-size: 13px;
-    color: #1565c0;
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #1565c0;
 }
 
 .sequence-settings-tabs .mode-indicator i {
-    margin-right: 8px;
+  margin-right: 8px;
 }
 
 .sequence-settings-tabs .settings-section {
-    margin-bottom: 25px;
-    padding: 15px;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    background: #f8f9fa;
+  margin-bottom: 25px;
+  padding: 15px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  background: #f8f9fa;
 }
 
 .sequence-settings-tabs .settings-section h4 {
-    margin: 0 0 15px 0;
-    color: #495057;
-    font-size: 16px;
-    font-weight: 600;
+  margin: 0 0 15px 0;
+  color: #495057;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .sequence-settings-tabs .form-group {
-    margin-bottom: 15px;
+  margin-bottom: 15px;
 }
 
 .sequence-settings-tabs .form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-    color: #495057;
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #495057;
 }
 
 .sequence-settings-tabs .form-group input,
 .sequence-settings-tabs .form-group select {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 14px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
-.sequence-settings-tabs .form-group input[type="checkbox"] {
-    width: auto;
-    margin-right: 8px;
+.sequence-settings-tabs .form-group input[type='checkbox'] {
+  width: auto;
+  margin-right: 8px;
 }
 
-.sequence-settings-tabs .form-group input[type="color"] {
-    width: 60px;
-    height: 40px;
-    padding: 0;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+.sequence-settings-tabs .form-group input[type='color'] {
+  width: 60px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .sequence-settings-tabs .help-text {
-    font-size: 12px;
-    color: #6c757d;
-    margin-top: 4px;
-    font-style: italic;
+  font-size: 12px;
+  color: #6c757d;
+  margin-top: 4px;
+  font-style: italic;
 }
 
 /* Color mode settings specific styles */
 .sequence-settings-tabs .color-mode-settings {
-    margin-left: 20px;
-    padding: 10px;
-    border-left: 3px solid #007bff;
-    background: #f8f9fa;
-    border-radius: 0 4px 4px 0;
-    margin-top: 10px;
+  margin-left: 20px;
+  padding: 10px;
+  border-left: 3px solid #007bff;
+  background: #f8f9fa;
+  border-radius: 0 4px 4px 0;
+  margin-top: 10px;
 }
 
 .sequence-settings-tabs .color-mode-settings .help-text i {
-    color: #17a2b8;
-    margin-right: 5px;
+  color: #17a2b8;
+  margin-right: 5px;
 }
 
-.sequence-settings-tabs .form-group input[type="color"] {
-    width: 60px;
-    height: 40px;
-    padding: 0;
-    border: 2px solid #ced4da;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
+.sequence-settings-tabs .form-group input[type='color'] {
+  width: 60px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid #ced4da;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
 }
 
-.sequence-settings-tabs .form-group input[type="color"]:hover {
-    border-color: #007bff;
+.sequence-settings-tabs .form-group input[type='color']:hover {
+  border-color: #007bff;
 }
 
-.sequence-settings-tabs .form-group input[type="color"]:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-    outline: none;
+.sequence-settings-tabs .form-group input[type='color']:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  outline: none;
 }
 
 /* =====================================================
@@ -677,77 +676,98 @@
 
 /* Enhanced Sequence Line Height Support - Added for configurable line heights */
 .sequence-line {
-    display: flex !important;
-    align-items: flex-start !important;
-    flex-shrink: 0 !important;
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
-    padding: 4px 0 !important;
-    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
-    font-family: 'Courier New', monospace !important;
-    font-size: 14px !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  flex-shrink: 0 !important;
+  min-height: var(--sequence-line-height, 28px) !important;
+  line-height: var(--sequence-line-ratio, 1.8) !important;
+  padding: 4px 0 !important;
+  margin-bottom: max(
+    var(--sequence-line-spacing, 8px),
+    var(--min-sequence-line-spacing, 12px)
+  ) !important; /* 最小间隙12px */
+  font-family: 'Courier New', monospace !important;
+  font-size: 14px !important;
 }
 
 .detailed-sequence-view .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
-    flex-shrink: 0 !important;
-    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+  min-height: var(--sequence-line-height, 28px) !important;
+  line-height: var(--sequence-line-ratio, 1.8) !important;
+  flex-shrink: 0 !important;
+  margin-bottom: max(
+    var(--sequence-line-spacing, 8px),
+    var(--min-sequence-line-spacing, 12px)
+  ) !important; /* 最小间隙12px */
 }
 
 .protein-only-mode .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
-    flex-shrink: 0 !important;
-    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+  min-height: var(--sequence-line-height, 28px) !important;
+  line-height: var(--sequence-line-ratio, 1.8) !important;
+  flex-shrink: 0 !important;
+  margin-bottom: max(
+    var(--sequence-line-spacing, 8px),
+    var(--min-sequence-line-spacing, 12px)
+  ) !important; /* 最小间隙12px */
 }
 
 .sequence-line-group {
-    flex-shrink: 0 !important;
-    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+  flex-shrink: 0 !important;
+  margin-bottom: max(
+    var(--sequence-line-spacing, 8px),
+    var(--min-sequence-line-spacing, 12px)
+  ) !important; /* 最小间隙12px */
 }
 
 .sequence-line-group .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
-    flex-shrink: 0 !important;
-    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+  min-height: var(--sequence-line-height, 28px) !important;
+  line-height: var(--sequence-line-ratio, 1.8) !important;
+  flex-shrink: 0 !important;
+  margin-bottom: max(
+    var(--sequence-line-spacing, 8px),
+    var(--min-sequence-line-spacing, 12px)
+  ) !important; /* 最小间隙12px */
 }
 
 /* Ensure position labels maintain consistent width */
 .sequence-position {
-    width: 100px !important;
-    flex-shrink: 0 !important;
-    margin-right: 15px !important;
-    text-align: right !important;
+  width: 100px !important;
+  flex-shrink: 0 !important;
+  margin-right: 15px !important;
+  text-align: right !important;
 }
 
 /* Ensure sequence bases container doesn't compress */
 .sequence-bases {
-    flex: 1 !important;
-    word-break: break-all !important;
-    line-height: 1.6 !important;
+  flex: 1 !important;
+  word-break: break-all !important;
+  line-height: 1.6 !important;
 }
 
 /* Gene indicator alignment support - margins controlled by JavaScript */
 .gene-indicator-line {
-    height: 12px;
-    /* margin-top and margin-bottom controlled by JavaScript for dynamic positioning */
-    flex-shrink: 0;
+  height: 12px;
+  /* margin-top and margin-bottom controlled by JavaScript for dynamic positioning */
+  flex-shrink: 0;
 }
 
 /* Virtual scrolling container support */
 .virtualized .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
-    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+  min-height: var(--sequence-line-height, 28px) !important;
+  line-height: var(--sequence-line-ratio, 1.8) !important;
+  margin-bottom: max(
+    var(--sequence-line-spacing, 8px),
+    var(--min-sequence-line-spacing, 12px)
+  ) !important; /* 最小间隙12px */
 }
 
 /* Protein sequence section support */
 .protein-sequence-section .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
-    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+  min-height: var(--sequence-line-height, 28px) !important;
+  line-height: var(--sequence-line-ratio, 1.8) !important;
+  margin-bottom: max(
+    var(--sequence-line-spacing, 8px),
+    var(--min-sequence-line-spacing, 12px)
+  ) !important; /* 最小间隙12px */
 }
 
 /* Prevent flexbox compression at all levels */
@@ -755,7 +775,7 @@
 .protein-only-mode,
 .sequence-line-group,
 .sequence-line {
-    flex-shrink: 0 !important;
+  flex-shrink: 0 !important;
 }
 
 /* =====================================================
@@ -765,76 +785,79 @@
 
 /* View Mode Style Protection - Ensure View Mode styles are preserved */
 .sequence-content:not(.vscode-sequence-editor) {
-    /* Force View Mode specific styles */
-    font-family: 'Courier New', monospace !important;
-    font-size: 14px !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
-    background: rgba(255, 255, 255, 0.9) !important;
-    color: inherit !important;
-    overflow-y: auto !important;
-    position: relative !important;
+  /* Force View Mode specific styles */
+  font-family: 'Courier New', monospace !important;
+  font-size: 14px !important;
+  line-height: var(--sequence-line-ratio, 1.8) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: inherit !important;
+  overflow-y: auto !important;
+  position: relative !important;
 }
 
 /* Edit Mode Style Isolation - Prevent Edit Mode styles from bleeding into View Mode */
 .sequence-content.vscode-sequence-editor {
-    /* Allow VS Code editor to override all styles */
-    font-family: inherit;
-    font-size: inherit;
-    line-height: inherit;
-    background: inherit;
-    color: inherit;
-    overflow: inherit;
-    position: inherit;
+  /* Allow VS Code editor to override all styles */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  background: inherit;
+  color: inherit;
+  overflow: inherit;
+  position: inherit;
 }
 
 /* Sequence Line Style Enforcement for View Mode */
 .sequence-content:not(.vscode-sequence-editor) .sequence-line {
-    display: flex !important;
-    align-items: flex-start !important;
-    flex-shrink: 0 !important;
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
-    padding: 4px 0 !important;
-    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
-    font-family: 'Courier New', monospace !important;
-    font-size: 14px !important;
-    box-sizing: border-box !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  flex-shrink: 0 !important;
+  min-height: var(--sequence-line-height, 28px) !important;
+  line-height: var(--sequence-line-ratio, 1.8) !important;
+  padding: 4px 0 !important;
+  margin-bottom: max(
+    var(--sequence-line-spacing, 8px),
+    var(--min-sequence-line-spacing, 12px)
+  ) !important; /* 最小间隙12px */
+  font-family: 'Courier New', monospace !important;
+  font-size: 14px !important;
+  box-sizing: border-box !important;
 }
 
 /* Enhanced View Mode Container Protection */
 .sequence-content:not(.vscode-sequence-editor) .sequence-position {
-    width: 100px !important;
-    flex-shrink: 0 !important;
-    margin-right: 15px !important;
-    text-align: right !important;
-    color: #6c757d !important;
-    font-weight: 600 !important;
+  width: 100px !important;
+  flex-shrink: 0 !important;
+  margin-right: 15px !important;
+  text-align: right !important;
+  color: #6c757d !important;
+  font-weight: 600 !important;
 }
 
 .sequence-content:not(.vscode-sequence-editor) .sequence-bases {
-    flex: 1 !important;
-    word-break: break-all !important;
-    line-height: 1.6 !important;
+  flex: 1 !important;
+  word-break: break-all !important;
+  line-height: 1.6 !important;
 }
 
 /* Edit Mode CSS Variable Reset - Prevent View Mode variables from affecting Edit Mode */
 .sequence-content.vscode-sequence-editor {
-    --sequence-line-height: initial;
-    --sequence-line-ratio: initial; 
-    --sequence-line-spacing: initial;
+  --sequence-line-height: initial;
+  --sequence-line-ratio: initial;
+  --sequence-line-spacing: initial;
 }
 
 /* Transition management during mode switches */
 .sequence-content.mode-switching {
-    opacity: 0.8;
-    pointer-events: none;
+  opacity: 0.8;
+  pointer-events: none;
 }
 
 /* Cursor status styles */
 .status-center {
-    flex: 1;
-    text-align: center;
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-    font-size: 13px;
-    color: var(--text-muted);
+  flex: 1;
+  text-align: center;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 13px;
+  color: var(--text-muted);
 }

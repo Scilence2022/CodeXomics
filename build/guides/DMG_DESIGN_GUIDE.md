@@ -3,16 +3,19 @@
 ## Design Philosophy
 
 ### 1. Clean and Elegant
+
 - **Modern Gradient Background**: Uses brand blue-purple tones, professional yet gentle
 - **Clean Layout**: Clear information hierarchy, avoiding visual distractions
 - **Apple Design Language**: Follows native macOS design standards
 
 ### 2. Brand Consistency
+
 - **Color System**: Maintains consistency with CodeXomics main brand colors
 - **Font Selection**: Uses system font SF Pro Display
 - **Icon Style**: Clean scientific element decorations
 
 ### 3. User Experience
+
 - **Clear Guidance**: Explicit drag-and-drop installation instructions
 - **Visual Guidance**: Arrows and dotted connection lines guide operations
 - **Version Information**: Dynamically displays current version number
@@ -20,6 +23,7 @@
 ## Design Specifications
 
 ### Size Parameters
+
 - **Window Size**: 660 x 420 pixels
 - **Icon Positions**:
   - App Icon: (180, 210)
@@ -27,9 +31,10 @@
 - **Icon Size**: 90 pixels
 
 ### Color Scheme
+
 ```css
 /* Main gradient background */
-background: linear-gradient(135deg, 
+background: linear-gradient(135deg,
     #4A90E2 0%,     /* Professional Blue */
     #7B68EE 30%,    /* Medium Slate Blue */
     #9370DB 70%,    /* Medium Purple */
@@ -44,6 +49,7 @@ Instruction Text: rgba(255,255,255,0.9)
 ```
 
 ### Font Specifications
+
 ```css
 /* Main Title - CodeXomics */
 font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display'
@@ -67,11 +73,13 @@ font-weight: 400
 ## Automatic Version Update Mechanism
 
 ### Implementation Principle
+
 1. **Version Source**: Reads version information from `src/version.js`
 2. **Dynamic Generation**: Automatically generates background with current version during build
 3. **Build Integration**: Integrated into npm build scripts
 
 ### Build Process
+
 ```bash
 # Generate DMG background template
 npm run generate-dmg-bg
@@ -84,6 +92,7 @@ npm run build:all
 ```
 
 ### Version Information Display
+
 - **Main Version**: v0.522beta
 - **Full Version**: 0.522.0-beta
 - **Auto Sync**: Stays consistent with package.json and version.js
@@ -91,17 +100,20 @@ npm run build:all
 ## Decorative Elements
 
 ### DNA Helix Decoration
+
 - **Position**: Top-right and bottom-left corners
 - **Style**: Semi-transparent white lines
 - **Animation**: Subtle floating effects
 - **Meaning**: Reflects bioinformatics characteristics
 
 ### Texture Effects
+
 - **Noise Texture**: Adds subtle grain texture
 - **Transparency**: Very low transparency for premium feel
 - **Distribution**: Random dot distribution
 
 ### Visual Guidance
+
 - **Drag Arrows**: Bidirectional arrows + dotted connections
 - **Icon Placeholders**: Dashed circles mark positions
 - **Text Shadows**: Enhance readability
@@ -124,6 +136,7 @@ scripts/
 ## Generation Steps
 
 ### 1. Automatic Generation (Recommended)
+
 ```bash
 # Generate HTML template
 npm run generate-dmg-bg
@@ -133,12 +146,14 @@ npm run build:mac
 ```
 
 ### 2. Manual Generation
+
 1. Run script to generate HTML template
 2. Open template file in browser
 3. Adjust window size to 660x420 pixels
 4. Screenshot and save as `build/dmg-background.png`
 
 ### 3. Tool-based Generation
+
 ```bash
 # Using Puppeteer (requires installation)
 npm install puppeteer
@@ -152,21 +167,25 @@ brew install wkhtmltopdf
 ## Design Principles
 
 ### 1. Simplicity
+
 - Avoid excessive decorative elements
 - Clear information hierarchy
 - Prominent visual focus
 
 ### 2. Professionalism
+
 - Professional feel for scientific research field
 - Modern software quality
 - Consistent brand image
 
 ### 3. Usability
+
 - Installation steps at a glance
 - Clear visual guidance
 - Simple user operations
 
 ### 4. Maintainability
+
 - Automatic version information updates
 - Automated build process
 - Configurable design parameters
@@ -181,12 +200,14 @@ brew install wkhtmltopdf
 ## Technical Implementation
 
 ### HTML + CSS Solution
+
 - Uses modern CSS features
 - Supports gradients and shadow effects
 - Responsive fonts and layouts
 - Automatically reads version information
 
 ### Build Integration
+
 - Integrated into electron-builder workflow
 - Automatically triggers background generation
 - Version information synchronized updates

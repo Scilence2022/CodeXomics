@@ -5,276 +5,276 @@
 
 /* Message text container enhancements */
 .message-text {
-    line-height: 1.5;
-    color: #374151;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    margin: 0;
+  line-height: 1.5;
+  color: #374151;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  margin: 0;
 }
 
 /* Headers */
 .message-text h1 {
-    font-size: 1.5em;
-    font-weight: 700;
-    margin: 0.4em 0 0.2em 0;
-    color: #1f2937;
-    border-bottom: 2px solid #e5e7eb;
-    padding-bottom: 0.2em;
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 0.4em 0 0.2em 0;
+  color: #1f2937;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0.2em;
 }
 
 .message-text h2 {
-    font-size: 1.3em;
-    font-weight: 600;
-    margin: 0.35em 0 0.15em 0;
-    color: #1f2937;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 0.15em;
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 0.35em 0 0.15em 0;
+  color: #1f2937;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.15em;
 }
 
 .message-text h3 {
-    font-size: 1.15em;
-    font-weight: 600;
-    margin: 0.3em 0 0.1em 0;
-    color: #374151;
+  font-size: 1.15em;
+  font-weight: 600;
+  margin: 0.3em 0 0.1em 0;
+  color: #374151;
 }
 
 .message-text h4 {
-    font-size: 1.05em;
-    font-weight: 600;
-    margin: 0.25em 0 0.1em 0;
-    color: #374151;
+  font-size: 1.05em;
+  font-weight: 600;
+  margin: 0.25em 0 0.1em 0;
+  color: #374151;
 }
 
 .message-text h5,
 .message-text h6 {
-    font-size: 1em;
-    font-weight: 600;
-    margin: 0.2em 0 0.05em 0;
-    color: #4b5563;
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.2em 0 0.05em 0;
+  color: #4b5563;
 }
 
 /* Paragraphs */
 .message-text p {
-    margin: 0 !important;
-    color: #374151;
-    line-height: 1.4 !important;
-    padding: 0 !important;
+  margin: 0 !important;
+  color: #374151;
+  line-height: 1.4 !important;
+  padding: 0 !important;
 }
 
 .message-text p + p {
-    margin-top: 6px !important;
+  margin-top: 6px !important;
 }
 
 /* Code blocks */
 .message-text pre {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-left: 4px solid #667eea;
-    border-radius: 6px;
-    padding: 10px 2px;
-    margin: 2px 0;
-    overflow-x: auto;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9em;
-    line-height: 1.4;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #667eea;
+  border-radius: 6px;
+  padding: 10px 2px;
+  margin: 2px 0;
+  overflow-x: auto;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+  line-height: 1.4;
 }
 
 .message-text pre code {
-    background: transparent;
-    border: none;
-    padding: 0;
-    font-size: inherit;
-    color: #1f2937;
-    display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: #1f2937;
+  display: block;
 }
 
 /* Inline code */
 .message-text code {
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9em;
-    color: #be185d;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #be185d;
 }
 
 /* Strong/Bold */
 .message-text strong,
 .message-text b {
-    font-weight: 700;
-    color: #1f2937;
+  font-weight: 700;
+  color: #1f2937;
 }
 
 /* Emphasis/Italic */
 .message-text em,
 .message-text i {
-    font-style: italic;
-    color: #4b5563;
+  font-style: italic;
+  color: #4b5563;
 }
 
 /* Links */
 .message-text a {
-    color: #667eea;
-    text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: all 0.2s ease;
+  color: #667eea;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
 .message-text a:hover {
-    color: #5a67d8;
-    border-bottom-color: #5a67d8;
+  color: #5a67d8;
+  border-bottom-color: #5a67d8;
 }
 
 .message-text a:visited {
-    color: #764ba2;
+  color: #764ba2;
 }
 
 /* Lists */
 .message-text ul,
 .message-text ol {
-    margin: 0.4em 0;
-    padding-left: 1.6em;
+  margin: 0.4em 0;
+  padding-left: 1.6em;
 }
 
 .message-text ul {
-    list-style-type: disc;
+  list-style-type: disc;
 }
 
 .message-text ul ul {
-    list-style-type: circle;
-    margin: 0.15em 0;
+  list-style-type: circle;
+  margin: 0.15em 0;
 }
 
 .message-text ul ul ul {
-    list-style-type: square;
+  list-style-type: square;
 }
 
 .message-text ol {
-    list-style-type: decimal;
+  list-style-type: decimal;
 }
 
 .message-text ol ol {
-    list-style-type: lower-alpha;
-    margin: 0.15em 0;
+  list-style-type: lower-alpha;
+  margin: 0.15em 0;
 }
 
 .message-text ol ol ol {
-    list-style-type: lower-roman;
+  list-style-type: lower-roman;
 }
 
 .message-text li {
-    margin: 0.2em 0;
-    line-height: 1.45;
+  margin: 0.2em 0;
+  line-height: 1.45;
 }
 
 .message-text li > p {
-    margin: 0.15em 0;
+  margin: 0.15em 0;
 }
 
 .message-text li:first-child {
-    margin-top: 0;
+  margin-top: 0;
 }
 
 .message-text li:last-child {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 /* Blockquotes */
 .message-text blockquote {
-    margin: 0.6em 0;
-    padding: 0.4em 0.8em;
-    border-left: 4px solid #667eea;
-    background: #f9fafb;
-    color: #4b5563;
-    font-style: italic;
+  margin: 0.6em 0;
+  padding: 0.4em 0.8em;
+  border-left: 4px solid #667eea;
+  background: #f9fafb;
+  color: #4b5563;
+  font-style: italic;
 }
 
 .message-text blockquote p {
-    margin: 0.3em 0;
+  margin: 0.3em 0;
 }
 
 .message-text blockquote p:first-child {
-    margin-top: 0;
+  margin-top: 0;
 }
 
 .message-text blockquote p:last-child {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 /* Horizontal rules */
 .message-text hr {
-    border: none;
-    border-top: 2px solid #e5e7eb;
-    margin: 1em 0;
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 1em 0;
 }
 
 /* Tables */
 .message-text table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 0.6em 0;
-    font-size: 0.95em;
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.6em 0;
+  font-size: 0.95em;
 }
 
 .message-text table th,
 .message-text table td {
-    border: 1px solid #e5e7eb;
-    padding: 6px 10px;
-    text-align: left;
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  text-align: left;
 }
 
 .message-text table th {
-    background: #f9fafb;
-    font-weight: 600;
-    color: #1f2937;
+  background: #f9fafb;
+  font-weight: 600;
+  color: #1f2937;
 }
 
 .message-text table tr:nth-child(even) {
-    background: #fafafa;
+  background: #fafafa;
 }
 
 .message-text table tr:hover {
-    background: #f3f4f6;
+  background: #f3f4f6;
 }
 
 /* Images */
 .message-text img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 6px;
-    margin: 0.5em 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 0.5em 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Strikethrough */
 .message-text del {
-    text-decoration: line-through;
-    color: #9ca3af;
+  text-decoration: line-through;
+  color: #9ca3af;
 }
 
 /* Underline */
 .message-text ins,
 .message-text u {
-    text-decoration: underline;
-    color: #374151;
+  text-decoration: underline;
+  color: #374151;
 }
 
 /* Superscript and Subscript */
 .message-text sup {
-    vertical-align: super;
-    font-size: 0.75em;
+  vertical-align: super;
+  font-size: 0.75em;
 }
 
 .message-text sub {
-    vertical-align: sub;
-    font-size: 0.75em;
+  vertical-align: sub;
+  font-size: 0.75em;
 }
 
 /* Task lists (GitHub Flavored Markdown) */
-.message-text input[type="checkbox"] {
-    margin-right: 0.5em;
-    cursor: pointer;
+.message-text input[type='checkbox'] {
+  margin-right: 0.5em;
+  cursor: pointer;
 }
 
 /* Nested list spacing */
@@ -282,78 +282,78 @@
 .message-text ul ol,
 .message-text ol ul,
 .message-text ol ol {
-    margin-top: 0.1em;
-    margin-bottom: 0.1em;
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
 }
 
 /* Code language indicator (if present) */
-.message-text pre[class*="language-"] {
-    position: relative;
+.message-text pre[class*='language-'] {
+  position: relative;
 }
 
-.message-text pre[class*="language-"]::before {
-    content: attr(class);
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: #667eea;
-    color: white;
-    padding: 2px 8px;
-    font-size: 0.75em;
-    border-radius: 0 6px 0 6px;
+.message-text pre[class*='language-']::before {
+  content: attr(class);
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #667eea;
+  color: white;
+  padding: 2px 8px;
+  font-size: 0.75em;
+  border-radius: 0 6px 0 6px;
 }
 
 /* Emoji support */
 .message-text img.emoji {
-    display: inline-block;
-    width: 1.2em;
-    height: 1.2em;
-    margin: 0 0.1em;
-    vertical-align: -0.2em;
-    box-shadow: none;
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  margin: 0 0.1em;
+  vertical-align: -0.2em;
+  box-shadow: none;
 }
 
 /* Special formatting for tool execution results */
 .message-text .tool-result {
-    background: #f0fdf4;
-    border: 1px solid #86efac;
-    border-left: 4px solid #22c55e;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin: 8px 0;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-left: 4px solid #22c55e;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 8px 0;
 }
 
 .message-text .tool-error {
-    background: #fef2f2;
-    border: 1px solid #fca5a5;
-    border-left: 4px solid #ef4444;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin: 8px 0;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-left: 4px solid #ef4444;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 8px 0;
 }
 
 /* Scrollbar styling for code blocks */
 .message-text pre::-webkit-scrollbar {
-    height: 8px;
+  height: 8px;
 }
 
 .message-text pre::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
+  background: #f1f1f1;
+  border-radius: 4px;
 }
 
 .message-text pre::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 .message-text pre::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+  background: #94a3b8;
 }
 
 /* User message markdown styling - Enhanced for better readability */
 .user-message .message-text {
-    color: #000000;
+  color: #000000;
 }
 
 .user-message .message-text h1,
@@ -362,183 +362,183 @@
 .user-message .message-text h4,
 .user-message .message-text h5,
 .user-message .message-text h6 {
-    color: #000000;
-    border-bottom-color: rgba(0, 0, 0, 0.2);
-    text-shadow: none;
+  color: #000000;
+  border-bottom-color: rgba(0, 0, 0, 0.2);
+  text-shadow: none;
 }
 
 .user-message .message-text p {
-    color: #000000;
+  color: #000000;
 }
 
 .user-message .message-text a {
-    color: #1e40af;
-    border-bottom-color: rgba(30, 64, 175, 0.5);
-    font-weight: 600;
+  color: #1e40af;
+  border-bottom-color: rgba(30, 64, 175, 0.5);
+  font-weight: 600;
 }
 
 .user-message .message-text a:hover {
-    color: #ffffff;
-    background: #1e40af;
-    padding: 2px 4px;
-    border-radius: 3px;
-    text-decoration: none;
-    border-bottom: none;
+  color: #ffffff;
+  background: #1e40af;
+  padding: 2px 4px;
+  border-radius: 3px;
+  text-decoration: none;
+  border-bottom: none;
 }
 
 .user-message .message-text code {
-    background: rgba(0, 0, 0, 0.1);
-    border-color: rgba(0, 0, 0, 0.2);
-    color: #000000;
-    text-shadow: none;
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #000000;
+  text-shadow: none;
 }
 
 .user-message .message-text pre {
-    background: #f8fafc;
-    border-color: #e2e8f0;
-    border-left-color: #667eea;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  border-left-color: #667eea;
 }
 
 .user-message .message-text pre code {
-    color: #000000;
-    background: transparent;
-    text-shadow: none;
+  color: #000000;
+  background: transparent;
+  text-shadow: none;
 }
 
 .user-message .message-text blockquote {
-    background: rgba(0, 0, 0, 0.05);
-    border-left-color: #667eea;
-    color: #000000;
+  background: rgba(0, 0, 0, 0.05);
+  border-left-color: #667eea;
+  color: #000000;
 }
 
 .user-message .message-text strong,
 .user-message .message-text b {
-    color: #000000;
-    font-weight: 700;
+  color: #000000;
+  font-weight: 700;
 }
 
 .user-message .message-text em,
 .user-message .message-text i {
-    color: #000000;
+  color: #000000;
 }
 
 .user-message .message-text hr {
-    border-top-color: rgba(0, 0, 0, 0.2);
+  border-top-color: rgba(0, 0, 0, 0.2);
 }
 
 .user-message .message-text table {
-    border-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(0, 0, 0, 0.2);
 }
 
 .user-message .message-text table th,
 .user-message .message-text table td {
-    border-color: rgba(0, 0, 0, 0.2);
-    color: #000000;
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #000000;
 }
 
 .user-message .message-text table th {
-    background: rgba(0, 0, 0, 0.05);
-    font-weight: 600;
+  background: rgba(0, 0, 0, 0.05);
+  font-weight: 600;
 }
 
 .user-message .message-text table tr:nth-child(even) {
-    background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .user-message .message-text table tr:hover {
-    background: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .user-message .message-text ul,
 .user-message .message-text ol {
-    color: #ffffff;
+  color: #ffffff;
 }
 
 .user-message .message-text li {
-    color: #ffffff;
+  color: #ffffff;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .message-text {
-        font-size: 0.95em;
-    }
-    
-    .message-text h1 {
-        font-size: 1.5em;
-    }
-    
-    .message-text h2 {
-        font-size: 1.3em;
-    }
-    
-    .message-text h3 {
-        font-size: 1.15em;
-    }
-    
-    .message-text pre {
-        font-size: 0.85em;
-        padding: 10px 12px;
-    }
-    
-    .message-text table {
-        font-size: 0.85em;
-    }
-    
-    .message-text table th,
-    .message-text table td {
-        padding: 6px 8px;
-    }
+  .message-text {
+    font-size: 0.95em;
+  }
+
+  .message-text h1 {
+    font-size: 1.5em;
+  }
+
+  .message-text h2 {
+    font-size: 1.3em;
+  }
+
+  .message-text h3 {
+    font-size: 1.15em;
+  }
+
+  .message-text pre {
+    font-size: 0.85em;
+    padding: 10px 12px;
+  }
+
+  .message-text table {
+    font-size: 0.85em;
+  }
+
+  .message-text table th,
+  .message-text table td {
+    padding: 6px 8px;
+  }
 }
 
 /* Dark theme support (if implemented in future) */
 @media (prefers-color-scheme: dark) {
-    .message-text {
-        color: #e5e7eb;
-    }
-    
-    .message-text h1,
-    .message-text h2,
-    .message-text h3 {
-        color: #f9fafb;
-        border-bottom-color: #374151;
-    }
-    
-    .message-text pre {
-        background: #1f2937;
-        border-color: #374151;
-    }
-    
-    .message-text pre code {
-        color: #f9fafb;
-    }
-    
-    .message-text code {
-        background: #374151;
-        border-color: #4b5563;
-        color: #fbbf24;
-    }
-    
-    .message-text blockquote {
-        background: #1f2937;
-        color: #d1d5db;
-    }
-    
-    .message-text table th {
-        background: #1f2937;
-        color: #f9fafb;
-    }
-    
-    .message-text table th,
-    .message-text table td {
-        border-color: #374151;
-    }
-    
-    .message-text table tr:nth-child(even) {
-        background: #111827;
-    }
-    
-    .message-text table tr:hover {
-        background: #1f2937;
-    }
+  .message-text {
+    color: #e5e7eb;
+  }
+
+  .message-text h1,
+  .message-text h2,
+  .message-text h3 {
+    color: #f9fafb;
+    border-bottom-color: #374151;
+  }
+
+  .message-text pre {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .message-text pre code {
+    color: #f9fafb;
+  }
+
+  .message-text code {
+    background: #374151;
+    border-color: #4b5563;
+    color: #fbbf24;
+  }
+
+  .message-text blockquote {
+    background: #1f2937;
+    color: #d1d5db;
+  }
+
+  .message-text table th {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+
+  .message-text table th,
+  .message-text table td {
+    border-color: #374151;
+  }
+
+  .message-text table tr:nth-child(even) {
+    background: #111827;
+  }
+
+  .message-text table tr:hover {
+    background: #1f2937;
+  }
 }

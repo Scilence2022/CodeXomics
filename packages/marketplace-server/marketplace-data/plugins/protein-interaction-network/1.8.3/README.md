@@ -29,12 +29,12 @@ const networkData = {
   nodes: [
     { id: 'P1', name: 'Protein A', type: 'protein' },
     { id: 'P2', name: 'Protein B', type: 'enzyme' },
-    { id: 'P3', name: 'Protein C', type: 'receptor' }
+    { id: 'P3', name: 'Protein C', type: 'receptor' },
   ],
   edges: [
     { source: 'P1', target: 'P2', confidence: 0.9 },
-    { source: 'P2', target: 'P3', confidence: 0.75 }
-  ]
+    { source: 'P2', target: 'P3', confidence: 0.75 },
+  ],
 };
 
 // Visualize the network
@@ -59,27 +59,35 @@ plugin.changeLayout('circular');
 ### Methods
 
 #### `activate(context)`
+
 Activates the plugin and registers commands and visualizations.
 
 #### `deactivate()`
+
 Deactivates the plugin and cleans up resources.
 
 #### `visualizeNetwork(data)`
+
 Creates an interactive visualization of the protein network.
 
 **Parameters:**
+
 - `data` (Object|String): Network data containing nodes and edges
 
 **Returns:**
+
 - Promise<Object>: Visualization result with networkId and statistics
 
 #### `changeLayout(layoutType)`
+
 Changes the network layout algorithm.
 
 **Parameters:**
+
 - `layoutType` (String): One of 'force-directed', 'circular', 'hierarchical', 'grid'
 
 **Returns:**
+
 - Object: Success status and selected layout
 
 ### Data Format
@@ -119,16 +127,19 @@ No additional configuration required. The plugin works out of the box.
 ## Changelog
 
 ### 1.8.3 (Current)
+
 - Performance improvements for large networks (1000+ nodes)
 - Optimized rendering engine
 - Improved memory management
 
 ### 1.8.2
+
 - Added circular and hierarchical layout algorithms
 - Enhanced edge confidence visualization
 - Bug fixes for node positioning
 
 ### 1.8.0
+
 - Interactive filtering and search
 - Node type classification
 - Tooltip information display
@@ -144,6 +155,7 @@ NetworkBioLab
 ## Support
 
 For issues, questions, or contributions:
+
 - GitHub: https://github.com/genomeexplorer/protein-networks
 - Email: support@networkbiolab.org
 

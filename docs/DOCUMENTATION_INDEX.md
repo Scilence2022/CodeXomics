@@ -9,18 +9,21 @@
 ### By Audience
 
 **👤 Users**
+
 - [Getting Started](user-guides/GETTING_STARTED.md) - First-time setup
 - [User Guide](user-guides/USER_GUIDE.md) - Complete manual
 - [FAQ](user-guides/FAQ.md) - Common questions
 - [Troubleshooting](user-guides/TROUBLESHOOTING_GUIDE.md) - Problem resolution
 
 **👨‍💻 Developers**
+
 - [Developer Guide](developer-guides/DEVELOPER_GUIDE.md) - Development setup
 - [Plugin Development](developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md) - Build plugins
 - [Build Instructions](developer-guides/build-instructions.md) - Compile from source
 - [Testing Guide](developer-guides/TESTING_GUIDE.md) - Test procedures
 
 **🔬 Researchers**
+
 - [BLAST Guide](reference/BLAST_GUIDE.md) - Sequence search
 - [Smart Execution](reference/SMART_EXECUTION_GUIDE.md) - AI tool usage
 - [Benchmark Methods](reference/BENCHMARK_METHODS.md) - Performance testing
@@ -47,14 +50,14 @@ docs/
 
 ## 🏗️ Architecture Documents
 
-| Document | Purpose |
-|----------|---------|
+| Document                                                                                    | Purpose                 |
+| ------------------------------------------------------------------------------------------- | ----------------------- |
 | [Multi-Agent System](architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md) | AI collaboration system |
-| [Agents & Smart Execution](architecture/AGENTS_AND_SMART_EXECUTION_SYSTEM_DOCUMENTATION.md) | Agent implementation |
-| [Plugin System Analysis](architecture/PLUGIN_SYSTEM_DEEP_ANALYSIS.md) | Plugin architecture |
-| [Dynamic Tools Registry](architecture/DYNAMIC_TOOLS_REGISTRY_ANALYSIS.md) | Tool selection system |
-| [Track System](architecture/TRACK_SYSTEM_ANALYSIS.md) | Genome visualization |
-| [Workspace Architecture](architecture/WORKSPACE_ARCHITECTURE.md) | Project management |
+| [Agents & Smart Execution](architecture/AGENTS_AND_SMART_EXECUTION_SYSTEM_DOCUMENTATION.md) | Agent implementation    |
+| [Plugin System Analysis](architecture/PLUGIN_SYSTEM_DEEP_ANALYSIS.md)                       | Plugin architecture     |
+| [Dynamic Tools Registry](architecture/DYNAMIC_TOOLS_REGISTRY_ANALYSIS.md)                   | Tool selection system   |
+| [Track System](architecture/TRACK_SYSTEM_ANALYSIS.md)                                       | Genome visualization    |
+| [Workspace Architecture](architecture/WORKSPACE_ARCHITECTURE.md)                            | Project management      |
 
 ---
 
@@ -68,8 +71,9 @@ docs/
 ## 🗂️ Archive
 
 The `_archive/` directory contains historical documentation:
+
 - **implementation-summaries/**: 202 development implementation notes
-- **fix-summaries/**: 43 bug fix documentation files  
+- **fix-summaries/**: 43 bug fix documentation files
 - **project-guides/**: 20 archived project guides
 - **internal-reports/**: Development analysis reports
 

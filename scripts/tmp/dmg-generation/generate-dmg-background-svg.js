@@ -2,10 +2,10 @@
 
 /**
  * SVG-based DMG Background Generator for CodeXomics
- * 
+ *
  * This script generates a modern, clean DMG background as SVG
  * with automatically updated version information from version.js
- * 
+ *
  * @author CodeXomics Team
  */
 
@@ -22,9 +22,9 @@ const DMG_HEIGHT = 420;
  * Generate modern SVG DMG background with dynamic version info
  */
 function generateSVGBackground() {
-    console.log('🎨 Generating SVG DMG background for CodeXomics', VERSION_INFO.displayVersion);
-    
-    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+  console.log('🎨 Generating SVG DMG background for CodeXomics', VERSION_INFO.displayVersion);
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${DMG_WIDTH}" height="${DMG_HEIGHT}" viewBox="0 0 ${DMG_WIDTH} ${DMG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
     <defs>
         <!-- Modern gradient background -->
@@ -127,51 +127,50 @@ function generateSVGBackground() {
     </g>
 </svg>`;
 
-    // Save the SVG
-    const svgPath = path.join(__dirname, '../build/dmg-background.svg');
-    fs.writeFileSync(svgPath, svg);
-    
-    console.log('✅ SVG DMG background generated successfully:', svgPath);
-    console.log('📐 Dimensions:', DMG_WIDTH, 'x', DMG_HEIGHT);
-    console.log('📝 Version:', VERSION_INFO.displayVersion);
-    
-    return svgPath;
+  // Save the SVG
+  const svgPath = path.join(__dirname, '../build/dmg-background.svg');
+  fs.writeFileSync(svgPath, svg);
+
+  console.log('✅ SVG DMG background generated successfully:', svgPath);
+  console.log('📐 Dimensions:', DMG_WIDTH, 'x', DMG_HEIGHT);
+  console.log('📝 Version:', VERSION_INFO.displayVersion);
+
+  return svgPath;
 }
 
 /**
  * Convert SVG to PNG using built-in tools (requires conversion)
  */
 function convertSVGToPNG() {
-    const svgPath = path.join(__dirname, '../build/dmg-background.svg');
-    const pngPath = path.join(__dirname, '../build/dmg-background.png');
-    
-    console.log('🔄 Converting SVG to PNG...');
-    console.log('📝 Note: You may need to manually convert SVG to PNG for DMG compatibility');
-    console.log('📝 SVG file ready at:', svgPath);
-    console.log('📝 Convert using: rsvg-convert -w 660 -h 420 dmg-background.svg > dmg-background.png');
-    
-    return { svgPath, pngPath };
+  const svgPath = path.join(__dirname, '../build/dmg-background.svg');
+  const pngPath = path.join(__dirname, '../build/dmg-background.png');
+
+  console.log('🔄 Converting SVG to PNG...');
+  console.log('📝 Note: You may need to manually convert SVG to PNG for DMG compatibility');
+  console.log('📝 SVG file ready at:', svgPath);
+  console.log('📝 Convert using: rsvg-convert -w 660 -h 420 dmg-background.svg > dmg-background.png');
+
+  return { svgPath, pngPath };
 }
 
 // Run the generator if called directly
 if (require.main === module) {
-    try {
-        const svgPath = generateSVGBackground();
-        const { pngPath } = convertSVGToPNG();
-        
-        console.log('\n🎨 DMG Background Generation Complete!');
-        console.log('📂 Files generated:');
-        console.log('   SVG:', svgPath);
-        console.log('   PNG:', pngPath, '(manual conversion may be needed)');
-        console.log('\n💡 To convert SVG to PNG automatically, install rsvg-convert:');
-        console.log('   macOS: brew install librsvg');
-        console.log('   Ubuntu: sudo apt-get install librsvg2-bin');
-        console.log('   Then run: rsvg-convert -w 660 -h 420 build/dmg-background.svg > build/dmg-background.png');
-        
-    } catch (error) {
-        console.error('❌ Error generating DMG background:', error.message);
-        process.exit(1);
-    }
+  try {
+    const svgPath = generateSVGBackground();
+    const { pngPath } = convertSVGToPNG();
+
+    console.log('\n🎨 DMG Background Generation Complete!');
+    console.log('📂 Files generated:');
+    console.log('   SVG:', svgPath);
+    console.log('   PNG:', pngPath, '(manual conversion may be needed)');
+    console.log('\n💡 To convert SVG to PNG automatically, install rsvg-convert:');
+    console.log('   macOS: brew install librsvg');
+    console.log('   Ubuntu: sudo apt-get install librsvg2-bin');
+    console.log('   Then run: rsvg-convert -w 660 -h 420 build/dmg-background.svg > build/dmg-background.png');
+  } catch (error) {
+    console.error('❌ Error generating DMG background:', error.message);
+    process.exit(1);
+  }
 }
 
 module.exports = { generateSVGBackground, convertSVGToPNG };

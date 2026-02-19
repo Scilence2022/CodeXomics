@@ -5,6 +5,7 @@
 ### Issue: "No Plugins Available" Despite Successful Connection
 
 **Symptoms:**
+
 - Marketplace UI loads successfully
 - Connection test shows "✅ Connection successful"
 - Plugin list displays "No Plugins Available"
@@ -17,11 +18,13 @@ The marketplace server filters plugins by `status: 'published'` by default. If t
 **Verification:**
 
 1. Check server API response:
+
    ```bash
    curl http://localhost:3001/api/v1/plugins
    ```
-   
+
    If you see:
+
    ```json
    {
      "success": true,
@@ -33,10 +36,11 @@ The marketplace server filters plugins by `status: 'published'` by default. If t
    ```
 
 2. Check metadata file has status field:
+
    ```bash
    cat packages/marketplace-server/marketplace-data/metadata.json | grep "status"
    ```
-   
+
    If no results, the schema is outdated.
 
 **Solution:**
@@ -56,6 +60,7 @@ npm run marketplace:start
 ```
 
 The server will automatically create fresh sample plugins with the complete schema including:
+
 - `status: 'published'`
 - `submittedBy: 'admin'`
 - `submittedAt: '2024-...'`
@@ -76,6 +81,7 @@ curl http://localhost:3001/api/v1/plugins
 ### Issue: Port Already in Use
 
 **Symptoms:**
+
 ```
 Error: listen EADDRINUSE: address already in use :::3001
 ```
@@ -99,6 +105,7 @@ npm run marketplace:start
 ### Issue: Workspace Not Detected
 
 **Symptoms:**
+
 ```bash
 npm run marketplace:start
 # Error: missing script: marketplace:start
@@ -121,6 +128,7 @@ grep -A 2 "workspaces" package.json
 ### Issue: Dependencies Not Installing
 
 **Symptoms:**
+
 - `npm install` completes but marketplace server has missing dependencies
 - Error: `Cannot find module 'express'`
 
@@ -138,6 +146,7 @@ npm install
 ### Issue: Server Starts But API Returns 404
 
 **Symptoms:**
+
 - Server logs show successful startup
 - `curl http://localhost:3001/api/v1/health` returns 404
 
@@ -166,6 +175,7 @@ curl -v http://localhost:3001/api/v1/health
 ### Issue: Metadata Corruption
 
 **Symptoms:**
+
 - Server crashes on startup
 - Error: `SyntaxError: Unexpected token in JSON`
 
@@ -183,10 +193,12 @@ npm run marketplace:start
 ### Issue: Plugins Not Persisting
 
 **Symptoms:**
+
 - Plugins disappear after server restart
 - New submissions lost
 
 **Possible Causes:**
+
 - metadata.json file permissions
 - Directory permissions
 
@@ -205,12 +217,14 @@ chmod 755 packages/marketplace-server/marketplace-data/uploads/
 ### Issue: Connection Test Fails in UI
 
 **Symptoms:**
+
 - UI shows "🔴 Disconnected"
 - Connection test returns error
 
 **Checklist:**
 
 1. Server is running:
+
    ```bash
    curl http://localhost:3001/api/v1/health
    ```
@@ -288,6 +302,7 @@ cat packages/marketplace-server/marketplace-data/metadata.json | python3 -m json
 ## Prevention Best Practices
 
 1. **Always use workspace commands:**
+
    ```bash
    npm run marketplace:start  # Not: node plugin-marketplace-server.js
    ```
@@ -297,6 +312,7 @@ cat packages/marketplace-server/marketplace-data/metadata.json | python3 -m json
    - Use admin endpoints for approvals
 
 3. **Keep backups:**
+
    ```bash
    cp packages/marketplace-server/marketplace-data/metadata.json /path/to/backups/
    ```

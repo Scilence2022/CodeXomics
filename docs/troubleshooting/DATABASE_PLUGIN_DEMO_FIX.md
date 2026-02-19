@@ -22,6 +22,7 @@ When a plugin is installed, the [PluginMarketplace.js](file:///Users/song/Github
 4. Stores `_instance` and `_commandHandlers` in the plugin definition
 
 **If you see this error**, it means:
+
 - The plugin was installed before this storage mechanism was implemented, OR
 - The plugin installation didn't complete successfully, OR
 - The plugin manager didn't capture the instance/handlers during activation
@@ -33,20 +34,20 @@ The demo tries three methods to access the search function (in order):
 ```javascript
 // Method 1: Use stored command handler (PREFERRED)
 if (stringPlugin._commandHandlers && stringPlugin._commandHandlers.has('string-explorer.search')) {
-    const commandHandler = stringPlugin._commandHandlers.get('string-explorer.search');
-    searchResult = await commandHandler(demo.searchConfig);
+  const commandHandler = stringPlugin._commandHandlers.get('string-explorer.search');
+  searchResult = await commandHandler(demo.searchConfig);
 }
 // Method 2: Use plugin instance method directly
 else if (stringPlugin._instance && typeof stringPlugin._instance.searchProteinInteractions === 'function') {
-    searchResult = await stringPlugin._instance.searchProteinInteractions(demo.searchConfig);
+  searchResult = await stringPlugin._instance.searchProteinInteractions(demo.searchConfig);
 }
 // Method 3: Fallback - try to find instance anywhere
 else if (pluginInstance && typeof pluginInstance.searchProteinInteractions === 'function') {
-    searchResult = await pluginInstance.searchProteinInteractions(demo.searchConfig);
+  searchResult = await pluginInstance.searchProteinInteractions(demo.searchConfig);
 }
 // ERROR: None of the above worked
 else {
-    throw new Error('STRING search method not accessible...');
+  throw new Error('STRING search method not accessible...');
 }
 ```
 
@@ -118,16 +119,20 @@ If you still see the error after reinstalling, check:
    - Copy the JSON output showing available keys
 
 2. **Check Plugin Files**
+
    ```bash
    ls -la /Users/song/.genome-browser/plugins/string-network-explorer/1.0.0/
    ```
+
    Should show: `index.js`, `manifest.json`, `README.md`
 
 3. **Verify Plugin Registry**
    - In browser console, type:
+
    ```javascript
-   window.pluginManagerV2.pluginRegistry.visualization.get('string-network-explorer')
+   window.pluginManagerV2.pluginRegistry.visualization.get('string-network-explorer');
    ```
+
    - Check the output for `_instance` and `_commandHandlers` properties
 
 4. **Check Installation Logs**
@@ -174,17 +179,17 @@ During activation, the mock context captures registrations:
 
 ```javascript
 const mockContext = {
-    subscriptions: [],
-    commandHandlers: new Map(),  // ← Stores command handlers here
-    registerCommand: function(command, handler) {
-        this.subscriptions.push({ type: 'command', command, handler });
-        this.commandHandlers.set(command, handler);  // ← Saves for later
-        return { dispose: () => {} };
-    },
-    registerVisualization: function(vizDef) {
-        this.visualizationDef = vizDef;
-        return { dispose: () => {} };
-    }
+  subscriptions: [],
+  commandHandlers: new Map(), // ← Stores command handlers here
+  registerCommand: function (command, handler) {
+    this.subscriptions.push({ type: 'command', command, handler });
+    this.commandHandlers.set(command, handler); // ← Saves for later
+    return { dispose: () => {} };
+  },
+  registerVisualization: function (vizDef) {
+    this.visualizationDef = vizDef;
+    return { dispose: () => {} };
+  },
 };
 ```
 
@@ -199,11 +204,11 @@ After activation, the plugin definition looks like:
     version: '1.0.0',
     type: 'visualization',
     category: 'database-integration',
-    
+
     // Core functionality
     executor: [Function: bound renderNetwork],
     supportedDataTypes: ['protein-interaction', 'string-network', 'ppi-network', 'generic'],
-    
+
     // CRITICAL: These must be present for demo to work
     _instance: STRINGNetworkExplorer {
         id: 'string-network-explorer',
@@ -229,17 +234,23 @@ The latest version of [PluginRealTestDemonstrator.js](file:///Users/song/Github-
 ```javascript
 // Debug: Log plugin structure
 log('🔧 Plugin structure:', 'info');
-log('  - Has _instance: ' + (!!stringPlugin._instance), 'info');
-log('  - Has _commandHandlers: ' + (!!stringPlugin._commandHandlers), 'info');
-log('  - Has executor: ' + (!!stringPlugin.executor), 'info');
+log('  - Has _instance: ' + !!stringPlugin._instance, 'info');
+log('  - Has _commandHandlers: ' + !!stringPlugin._commandHandlers, 'info');
+log('  - Has executor: ' + !!stringPlugin.executor, 'info');
 
 if (stringPlugin._commandHandlers) {
-    log('  - Command handlers count: ' + stringPlugin._commandHandlers.size, 'info');
-    log('  - Commands: ' + Array.from(stringPlugin._commandHandlers.keys()).join(', '), 'info');
+  log('  - Command handlers count: ' + stringPlugin._commandHandlers.size, 'info');
+  log('  - Commands: ' + Array.from(stringPlugin._commandHandlers.keys()).join(', '), 'info');
 }
 
 if (stringPlugin._instance) {
-    log('  - Instance methods: ' + Object.getOwnPropertyNames(Object.getPrototypeOf(stringPlugin._instance)).filter(m => m !== 'constructor').join(', '), 'info');
+  log(
+    '  - Instance methods: ' +
+      Object.getOwnPropertyNames(Object.getPrototypeOf(stringPlugin._instance))
+        .filter(m => m !== 'constructor')
+        .join(', '),
+    'info'
+  );
 }
 ```
 
@@ -255,9 +266,9 @@ If reinstalling doesn't work, you can manually execute commands via the Command 
 // In browser console
 const commandRegistry = window.commandRegistry;
 const result = await commandRegistry.executeCommand('string-explorer.search', {
-    proteins: ['TP53', 'MDM2', 'ATM'],
-    species: '9606',
-    requiredScore: 400
+  proteins: ['TP53', 'MDM2', 'ATM'],
+  species: '9606',
+  requiredScore: 400,
 });
 console.log(result);
 ```
@@ -270,12 +281,12 @@ const pm = window.pluginManagerV2;
 const plugin = pm.pluginRegistry.visualization.get('string-network-explorer');
 
 if (plugin._instance) {
-    const result = await plugin._instance.searchProteinInteractions({
-        proteins: ['TP53', 'MDM2', 'ATM'],
-        species: '9606',
-        requiredScore: 400
-    });
-    console.log(result);
+  const result = await plugin._instance.searchProteinInteractions({
+    proteins: ['TP53', 'MDM2', 'ATM'],
+    species: '9606',
+    requiredScore: 400,
+  });
+  console.log(result);
 }
 ```
 
@@ -286,15 +297,15 @@ When developing new plugins, ensure the `activate()` method properly registers c
 ```javascript
 activate(context) {
     console.log(`🔌 Activating ${this.name} v${this.version}`);
-    
+
     this.context = context;
-    
+
     // ✅ REQUIRED: Register commands with proper binding
     context.subscriptions.push(
         context.registerCommand('my-plugin.search', this.searchMethod.bind(this)),
         context.registerCommand('my-plugin.analyze', this.analyzeMethod.bind(this))
     );
-    
+
     // ✅ REQUIRED: Register visualization executor
     context.registerVisualization({
         id: 'my-plugin-viz',
@@ -302,12 +313,13 @@ activate(context) {
         supportedDataTypes: ['my-data-type'],
         executor: this.renderMethod.bind(this)
     });
-    
+
     console.log(`✅ ${this.name} activated successfully`);
 }
 ```
 
 **Key Points**:
+
 1. Always use `.bind(this)` when passing methods
 2. Store all subscriptions in `context.subscriptions`
 3. Register visualization with `context.registerVisualization()`
@@ -325,6 +337,6 @@ activate(context) {
 
 **Root Cause**: Plugin needs `_instance` and `_commandHandlers` stored during installation
 
-**Verification**: Check debug logs show "Has _instance: true" and "Has _commandHandlers: true"
+**Verification**: Check debug logs show "Has \_instance: true" and "Has \_commandHandlers: true"
 
 **Prevention**: Ensure all plugins properly implement `activate()` method with command registration

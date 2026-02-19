@@ -3,168 +3,167 @@
  * Handles server settings, source management, and configuration UI
  */
 class PluginMarketplaceConfig {
-    constructor(configManager) {
-        this.configManager = configManager;
-        this.defaultConfig = {
-            sources: [
-                {
-                    id: 'localhost',
-                    name: 'Local Development Server',
-                    url: 'http://localhost:3001/api/v1',
-                    priority: 0,
-                    trusted: true,
-                    enabled: true,
-                    description: 'Local development server for testing'
-                },
-                {
-                    id: 'official',
-                    name: 'GenomeExplorer Official Repository',
-                    url: 'https://plugins.genomeexplorer.org/api/v1',
-                    priority: 1,
-                    trusted: true,
-                    enabled: false,
-                    description: 'Official plugin repository'
-                }
-            ],
-            settings: {
-                autoUpdate: true,
-                checkInterval: 3600000,
-                maxConcurrentDownloads: 3,
-                enableSecurityValidation: true,
-                cacheTimeout: 3600000,
-                defaultPort: 3001,
-                mcpServerPort: 3000
-            },
-            submission: {
-                enabled: true,
-                maxFileSize: '50MB',
-                allowedFileTypes: ['.zip', '.tar.gz', '.json', '.js', '.md'],
-                requiredFields: ['name', 'description', 'version', 'author', 'category', 'type']
-            }
+  constructor(configManager) {
+    this.configManager = configManager;
+    this.defaultConfig = {
+      sources: [
+        {
+          id: 'localhost',
+          name: 'Local Development Server',
+          url: 'http://localhost:3001/api/v1',
+          priority: 0,
+          trusted: true,
+          enabled: true,
+          description: 'Local development server for testing',
+        },
+        {
+          id: 'official',
+          name: 'GenomeExplorer Official Repository',
+          url: 'https://plugins.genomeexplorer.org/api/v1',
+          priority: 1,
+          trusted: true,
+          enabled: false,
+          description: 'Official plugin repository',
+        },
+      ],
+      settings: {
+        autoUpdate: true,
+        checkInterval: 3600000,
+        maxConcurrentDownloads: 3,
+        enableSecurityValidation: true,
+        cacheTimeout: 3600000,
+        defaultPort: 3001,
+        mcpServerPort: 3000,
+      },
+      submission: {
+        enabled: true,
+        maxFileSize: '50MB',
+        allowedFileTypes: ['.zip', '.tar.gz', '.json', '.js', '.md'],
+        requiredFields: ['name', 'description', 'version', 'author', 'category', 'type'],
+      },
+    };
+
+    this.currentConfig = null;
+    this.initialize();
+  }
+
+  initialize() {
+    this.currentConfig = this.loadConfig();
+    console.log('🔧 PluginMarketplaceConfig initialized');
+  }
+
+  loadConfig() {
+    try {
+      const stored = this.configManager?.get('marketplace') || {};
+      return this.mergeConfig(this.defaultConfig, stored);
+    } catch (error) {
+      console.error('❌ Failed to load marketplace config:', error);
+      return { ...this.defaultConfig };
+    }
+  }
+
+  saveConfig() {
+    try {
+      this.configManager?.set('marketplace', this.currentConfig);
+      console.log('✅ Marketplace configuration saved');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to save marketplace config:', error);
+      return false;
+    }
+  }
+
+  mergeConfig(defaultConfig, storedConfig) {
+    const merged = JSON.parse(JSON.stringify(defaultConfig));
+
+    if (storedConfig.sources) {
+      merged.sources = merged.sources.map(defaultSource => {
+        const storedSource = storedConfig.sources.find(s => s.id === defaultSource.id);
+        return storedSource ? { ...defaultSource, ...storedSource } : defaultSource;
+      });
+    }
+
+    if (storedConfig.settings) {
+      merged.settings = { ...merged.settings, ...storedConfig.settings };
+    }
+
+    if (storedConfig.submission) {
+      merged.submission = { ...merged.submission, ...storedConfig.submission };
+    }
+
+    return merged;
+  }
+
+  getSources() {
+    return this.currentConfig.sources || [];
+  }
+
+  getEnabledSources() {
+    return this.getSources().filter(source => source.enabled);
+  }
+
+  getSettings() {
+    return this.currentConfig.settings || {};
+  }
+
+  updateSettings(newSettings) {
+    this.currentConfig.settings = { ...this.currentConfig.settings, ...newSettings };
+    return this.saveConfig();
+  }
+
+  getSubmissionConfig() {
+    return this.currentConfig.submission || {};
+  }
+
+  updateSubmissionConfig(newSubmissionConfig) {
+    this.currentConfig.submission = { ...this.currentConfig.submission, ...newSubmissionConfig };
+    return this.saveConfig();
+  }
+
+  async testSource(source) {
+    try {
+      console.log(`🔍 Testing connection to ${source.name}...`);
+
+      const startTime = Date.now();
+      const response = await fetch(`${source.url}/health`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'GenomeExplorer/2.0.0',
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      const responseTime = Date.now() - startTime;
+
+      if (response.ok) {
+        return {
+          success: true,
+          message: `Connection successful (${responseTime}ms)`,
+          responseTime,
         };
-        
-        this.currentConfig = null;
-        this.initialize();
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error(`❌ Connection test failed for ${source.name}:`, error);
+      return {
+        success: false,
+        message: error.message,
+      };
     }
+  }
 
-    initialize() {
-        this.currentConfig = this.loadConfig();
-        console.log('🔧 PluginMarketplaceConfig initialized');
-    }
+  showConfiguration() {
+    const modal = this.createConfigurationModal();
+    document.body.appendChild(modal);
+    return modal;
+  }
 
-    loadConfig() {
-        try {
-            const stored = this.configManager?.get('marketplace') || {};
-            return this.mergeConfig(this.defaultConfig, stored);
-        } catch (error) {
-            console.error('❌ Failed to load marketplace config:', error);
-            return { ...this.defaultConfig };
-        }
-    }
-
-    saveConfig() {
-        try {
-            this.configManager?.set('marketplace', this.currentConfig);
-            console.log('✅ Marketplace configuration saved');
-            return true;
-        } catch (error) {
-            console.error('❌ Failed to save marketplace config:', error);
-            return false;
-        }
-    }
-
-    mergeConfig(defaultConfig, storedConfig) {
-        const merged = JSON.parse(JSON.stringify(defaultConfig));
-        
-        if (storedConfig.sources) {
-            merged.sources = merged.sources.map(defaultSource => {
-                const storedSource = storedConfig.sources.find(s => s.id === defaultSource.id);
-                return storedSource ? { ...defaultSource, ...storedSource } : defaultSource;
-            });
-        }
-        
-        if (storedConfig.settings) {
-            merged.settings = { ...merged.settings, ...storedConfig.settings };
-        }
-        
-        if (storedConfig.submission) {
-            merged.submission = { ...merged.submission, ...storedConfig.submission };
-        }
-        
-        return merged;
-    }
-
-    getSources() {
-        return this.currentConfig.sources || [];
-    }
-
-    getEnabledSources() {
-        return this.getSources().filter(source => source.enabled);
-    }
-
-    getSettings() {
-        return this.currentConfig.settings || {};
-    }
-
-    updateSettings(newSettings) {
-        this.currentConfig.settings = { ...this.currentConfig.settings, ...newSettings };
-        return this.saveConfig();
-    }
-
-    getSubmissionConfig() {
-        return this.currentConfig.submission || {};
-    }
-
-    updateSubmissionConfig(newSubmissionConfig) {
-        this.currentConfig.submission = { ...this.currentConfig.submission, ...newSubmissionConfig };
-        return this.saveConfig();
-    }
-
-    async testSource(source) {
-        try {
-            console.log(`🔍 Testing connection to ${source.name}...`);
-            
-            const startTime = Date.now();
-            const response = await fetch(`${source.url}/health`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'GenomeExplorer/2.0.0'
-                },
-                signal: AbortSignal.timeout(10000)
-            });
-            
-            const responseTime = Date.now() - startTime;
-            
-            if (response.ok) {
-                return {
-                    success: true,
-                    message: `Connection successful (${responseTime}ms)`,
-                    responseTime
-                };
-            } else {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-        } catch (error) {
-            console.error(`❌ Connection test failed for ${source.name}:`, error);
-            return {
-                success: false,
-                message: error.message
-            };
-        }
-    }
-
-    showConfiguration() {
-        const modal = this.createConfigurationModal();
-        document.body.appendChild(modal);
-        return modal;
-    }
-
-    createConfigurationModal() {
-        const modal = document.createElement('div');
-        modal.className = 'marketplace-config-modal';
-        modal.innerHTML = `
+  createConfigurationModal() {
+    const modal = document.createElement('div');
+    modal.className = 'marketplace-config-modal';
+    modal.innerHTML = `
             <div class="marketplace-config-overlay">
                 <div class="marketplace-config-dialog">
                     <div class="marketplace-config-header">
@@ -220,19 +219,19 @@ class PluginMarketplaceConfig {
             </div>
         `;
 
-        this.addConfigStyles();
-        this.attachConfigHandlers(modal);
-        this.populateConfigUI(modal);
-        
-        return modal;
-    }
+    this.addConfigStyles();
+    this.attachConfigHandlers(modal);
+    this.populateConfigUI(modal);
 
-    addConfigStyles() {
-        if (document.getElementById('marketplace-config-styles')) return;
-        
-        const styles = document.createElement('style');
-        styles.id = 'marketplace-config-styles';
-        styles.textContent = `
+    return modal;
+  }
+
+  addConfigStyles() {
+    if (document.getElementById('marketplace-config-styles')) return;
+
+    const styles = document.createElement('style');
+    styles.id = 'marketplace-config-styles';
+    styles.textContent = `
             .marketplace-config-modal {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 z-index: 10000; font-family: 'Segoe UI', sans-serif;
@@ -291,62 +290,64 @@ class PluginMarketplaceConfig {
             .config-btn.primary { background: #4a90e2; color: white; border-color: #4a90e2; }
             .config-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         `;
-        document.head.appendChild(styles);
-    }
+    document.head.appendChild(styles);
+  }
 
-    attachConfigHandlers(modal) {
-        modal.querySelector('.marketplace-config-close').addEventListener('click', () => modal.remove());
-        modal.querySelector('#cancel-config-btn').addEventListener('click', () => modal.remove());
-        
-        modal.querySelector('#save-config-btn').addEventListener('click', () => {
-            this.saveConfigFromUI(modal);
-            modal.remove();
-        });
+  attachConfigHandlers(modal) {
+    modal.querySelector('.marketplace-config-close').addEventListener('click', () => modal.remove());
+    modal.querySelector('#cancel-config-btn').addEventListener('click', () => modal.remove());
 
-        const mcpPortInput = modal.querySelector('#mcp-port');
-        const marketplacePortInput = modal.querySelector('#marketplace-port');
-        
-        mcpPortInput.addEventListener('input', () => {
-            const mcpPort = parseInt(mcpPortInput.value);
-            if (!isNaN(mcpPort)) {
-                marketplacePortInput.value = mcpPort + 1;
-            }
-        });
+    modal.querySelector('#save-config-btn').addEventListener('click', () => {
+      this.saveConfigFromUI(modal);
+      modal.remove();
+    });
 
-        modal.querySelector('#test-connection-btn').addEventListener('click', async () => {
-            const sources = this.getEnabledSources();
-            const btn = modal.querySelector('#test-connection-btn');
-            btn.disabled = true;
-            btn.textContent = 'Testing...';
-            
-            for (const source of sources) {
-                const result = await this.testSource(source);
-                console.log(`Test result for ${source.name}:`, result);
-            }
-            
-            btn.disabled = false;
-            btn.textContent = 'Test Connection';
-            alert('Connection tests completed. Check console for details.');
-        });
-    }
+    const mcpPortInput = modal.querySelector('#mcp-port');
+    const marketplacePortInput = modal.querySelector('#marketplace-port');
 
-    populateConfigUI(modal) {
-        const settings = this.getSettings();
-        const submissionConfig = this.getSubmissionConfig();
-        
-        modal.querySelector('#mcp-port').value = settings.mcpServerPort;
-        modal.querySelector('#marketplace-port').value = settings.defaultPort;
-        modal.querySelector('#submission-enabled').checked = submissionConfig.enabled;
-        modal.querySelector('#max-file-size').value = submissionConfig.maxFileSize;
-        
-        this.populateSourcesList(modal);
-    }
+    mcpPortInput.addEventListener('input', () => {
+      const mcpPort = parseInt(mcpPortInput.value);
+      if (!isNaN(mcpPort)) {
+        marketplacePortInput.value = mcpPort + 1;
+      }
+    });
 
-    populateSourcesList(modal) {
-        const sourcesList = modal.querySelector('#sources-list');
-        const sources = this.getSources();
-        
-        sourcesList.innerHTML = sources.map(source => `
+    modal.querySelector('#test-connection-btn').addEventListener('click', async () => {
+      const sources = this.getEnabledSources();
+      const btn = modal.querySelector('#test-connection-btn');
+      btn.disabled = true;
+      btn.textContent = 'Testing...';
+
+      for (const source of sources) {
+        const result = await this.testSource(source);
+        console.log(`Test result for ${source.name}:`, result);
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Test Connection';
+      alert('Connection tests completed. Check console for details.');
+    });
+  }
+
+  populateConfigUI(modal) {
+    const settings = this.getSettings();
+    const submissionConfig = this.getSubmissionConfig();
+
+    modal.querySelector('#mcp-port').value = settings.mcpServerPort;
+    modal.querySelector('#marketplace-port').value = settings.defaultPort;
+    modal.querySelector('#submission-enabled').checked = submissionConfig.enabled;
+    modal.querySelector('#max-file-size').value = submissionConfig.maxFileSize;
+
+    this.populateSourcesList(modal);
+  }
+
+  populateSourcesList(modal) {
+    const sourcesList = modal.querySelector('#sources-list');
+    const sources = this.getSources();
+
+    sourcesList.innerHTML = sources
+      .map(
+        source => `
             <div class="source-item">
                 <div class="source-info">
                     <div class="source-name">${source.name}</div>
@@ -356,27 +357,29 @@ class PluginMarketplaceConfig {
                     ${source.enabled ? 'Enabled' : 'Disabled'}
                 </div>
             </div>
-        `).join('');
-    }
+        `
+      )
+      .join('');
+  }
 
-    saveConfigFromUI(modal) {
-        const newSettings = {
-            mcpServerPort: parseInt(modal.querySelector('#mcp-port').value),
-            defaultPort: parseInt(modal.querySelector('#marketplace-port').value)
-        };
-        
-        const newSubmissionConfig = {
-            enabled: modal.querySelector('#submission-enabled').checked,
-            maxFileSize: modal.querySelector('#max-file-size').value
-        };
-        
-        this.updateSettings(newSettings);
-        this.updateSubmissionConfig(newSubmissionConfig);
-        
-        console.log('✅ Configuration saved');
-    }
+  saveConfigFromUI(modal) {
+    const newSettings = {
+      mcpServerPort: parseInt(modal.querySelector('#mcp-port').value),
+      defaultPort: parseInt(modal.querySelector('#marketplace-port').value),
+    };
+
+    const newSubmissionConfig = {
+      enabled: modal.querySelector('#submission-enabled').checked,
+      maxFileSize: modal.querySelector('#max-file-size').value,
+    };
+
+    this.updateSettings(newSettings);
+    this.updateSubmissionConfig(newSubmissionConfig);
+
+    console.log('✅ Configuration saved');
+  }
 }
 
 if (typeof window !== 'undefined') {
-    window.PluginMarketplaceConfig = PluginMarketplaceConfig;
-} 
+  window.PluginMarketplaceConfig = PluginMarketplaceConfig;
+}

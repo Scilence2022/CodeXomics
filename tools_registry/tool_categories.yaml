@@ -3,237 +3,237 @@
 
 categories:
   file_loading:
-    name: "File Loading Operations"
-    description: "Built-in tools for loading genomic files directly with path specification or file dialogs"
-    icon: "📁"
+    name: 'File Loading Operations'
+    description: 'Built-in tools for loading genomic files directly with path specification or file dialogs'
+    icon: '📁'
     priority: 1
-    color: "#FF6B35"
+    color: '#FF6B35'
     subcategories:
-      - "genome_loading"
-      - "annotation_loading"
-      - "variant_loading"
-      - "reads_loading"
-      - "tracks_loading"
-      - "operon_loading"
+      - 'genome_loading'
+      - 'annotation_loading'
+      - 'variant_loading'
+      - 'reads_loading'
+      - 'tracks_loading'
+      - 'operon_loading'
     tools_count: 6
 
   navigation:
-    name: "Navigation & State Management"
-    description: "Tools for genome browser navigation, state management, and track control"
-    icon: "🧭"
+    name: 'Navigation & State Management'
+    description: 'Tools for genome browser navigation, state management, and track control'
+    icon: '🧭'
     priority: 1
-    color: "#4CAF50"
+    color: '#4CAF50'
     subcategories:
-      - "browser_navigation"
-      - "state_management"
-      - "track_control"
+      - 'browser_navigation'
+      - 'state_management'
+      - 'track_control'
     tools_count: 8
 
   sequence:
-    name: "Sequence Analysis"
-    description: "Tools for DNA/RNA sequence analysis, motif searching, and basic bioinformatics"
-    icon: "🧬"
+    name: 'Sequence Analysis'
+    description: 'Tools for DNA/RNA sequence analysis, motif searching, and basic bioinformatics'
+    icon: '🧬'
     priority: 1
-    color: "#2196F3"
+    color: '#2196F3'
     subcategories:
-      - "sequence_retrieval"
-      - "sequence_analysis"
-      - "motif_search"
-      - "prediction"
+      - 'sequence_retrieval'
+      - 'sequence_analysis'
+      - 'motif_search'
+      - 'prediction'
     tools_count: 8
 
   protein:
-    name: "Protein Structure"
-    description: "Tools for protein structure analysis, PDB searches, and AlphaFold integration"
-    icon: "🔬"
+    name: 'Protein Structure'
+    description: 'Tools for protein structure analysis, PDB searches, and AlphaFold integration'
+    icon: '🔬'
     priority: 1
-    color: "#FF9800"
+    color: '#FF9800'
     subcategories:
-      - "structure_retrieval"
-      - "structure_visualization"
-      - "alphafold_integration"
-      - "pdb_search"
+      - 'structure_retrieval'
+      - 'structure_visualization'
+      - 'alphafold_integration'
+      - 'pdb_search'
     tools_count: 6
 
   database:
-    name: "Database Integration"
-    description: "Tools for accessing biological databases (UniProt, InterPro, etc.)"
-    icon: "🗄️"
+    name: 'Database Integration'
+    description: 'Tools for accessing biological databases (UniProt, InterPro, etc.)'
+    icon: '🗄️'
     priority: 2
-    color: "#9C27B0"
+    color: '#9C27B0'
     subcategories:
-      - "uniprot_search"
-      - "interpro_analysis"
-      - "database_queries"
-      - "cross_references"
+      - 'uniprot_search'
+      - 'interpro_analysis'
+      - 'database_queries'
+      - 'cross_references'
     tools_count: 6
 
   ai_analysis:
-    name: "AI-Powered Analysis"
-    description: "NVIDIA EVO2 AI tools for sequence generation, function prediction, and CRISPR design"
-    icon: "🤖"
+    name: 'AI-Powered Analysis'
+    description: 'NVIDIA EVO2 AI tools for sequence generation, function prediction, and CRISPR design'
+    icon: '🤖'
     priority: 1
-    color: "#E91E63"
+    color: '#E91E63'
     subcategories:
-      - "sequence_generation"
-      - "function_prediction"
-      - "crispr_design"
-      - "sequence_optimization"
+      - 'sequence_generation'
+      - 'function_prediction'
+      - 'crispr_design'
+      - 'sequence_optimization'
     tools_count: 5
 
   data_management:
-    name: "Data Management"
-    description: "Tools for data annotation, export, and codon usage analysis"
-    icon: "📊"
+    name: 'Data Management'
+    description: 'Tools for data annotation, export, and codon usage analysis'
+    icon: '📊'
     priority: 2
-    color: "#607D8B"
+    color: '#607D8B'
     subcategories:
-      - "annotation_management"
-      - "data_export"
-      - "codon_analysis"
-      - "region_analysis"
+      - 'annotation_management'
+      - 'data_export'
+      - 'codon_analysis'
+      - 'region_analysis'
     tools_count: 3
 
   file_operations:
-    name: "File Operations"
-    description: "Tools for file input/output operations including data export and file format conversion"
-    icon: "💾"
+    name: 'File Operations'
+    description: 'Tools for file input/output operations including data export and file format conversion'
+    icon: '💾'
     priority: 2
-    color: "#FF6B35"
+    color: '#FF6B35'
     subcategories:
-      - "export"
-      - "import"
-      - "conversion"
-      - "validation"
+      - 'export'
+      - 'import'
+      - 'conversion'
+      - 'validation'
     tools_count: 7
 
   pathway:
-    name: "Pathway & BLAST"
-    description: "Tools for metabolic pathway visualization and BLAST sequence searches"
-    icon: "🔄"
+    name: 'Pathway & BLAST'
+    description: 'Tools for metabolic pathway visualization and BLAST sequence searches'
+    icon: '🔄'
     priority: 2
-    color: "#795548"
+    color: '#795548'
     subcategories:
-      - "pathway_visualization"
-      - "blast_search"
-      - "metabolic_analysis"
+      - 'pathway_visualization'
+      - 'blast_search'
+      - 'metabolic_analysis'
     tools_count: 3
 
   sequence_editing:
-    name: "Sequence Editing"
-    description: "Tools for sequence manipulation, editing, and action management"
-    icon: "✏️"
+    name: 'Sequence Editing'
+    description: 'Tools for sequence manipulation, editing, and action management'
+    icon: '✏️'
     priority: 1
-    color: "#FF5722"
+    color: '#FF5722'
     subcategories:
-      - "sequence_manipulation"
-      - "action_management"
-      - "clipboard_operations"
+      - 'sequence_manipulation'
+      - 'action_management'
+      - 'clipboard_operations'
     tools_count: 10
 
   system:
-    name: "System Management"
-    description: "Tools for system operations, working directory management, and environment setup"
-    icon: "⚙️"
+    name: 'System Management'
+    description: 'Tools for system operations, working directory management, and environment setup'
+    icon: '⚙️'
     priority: 1
-    color: "#795548"
+    color: '#795548'
     subcategories:
-      - "directory_management"
-      - "environment_setup"
-      - "system_configuration"
+      - 'directory_management'
+      - 'environment_setup'
+      - 'system_configuration'
     tools_count: 2
 
   plugin_management:
-    name: "Plugin Management"
-    description: "Tools for plugin installation, execution, and development"
-    icon: "🔌"
+    name: 'Plugin Management'
+    description: 'Tools for plugin installation, execution, and development'
+    icon: '🔌'
     priority: 3
-    color: "#3F51B5"
+    color: '#3F51B5'
     subcategories:
-      - "plugin_installation"
-      - "plugin_execution"
-      - "plugin_development"
-      - "plugin_marketplace"
+      - 'plugin_installation'
+      - 'plugin_execution'
+      - 'plugin_development'
+      - 'plugin_marketplace'
     tools_count: 12
 
   coordination:
-    name: "Multi-Agent Coordination"
-    description: "Tools for coordinating multiple AI agents and workflow management"
-    icon: "🎯"
+    name: 'Multi-Agent Coordination'
+    description: 'Tools for coordinating multiple AI agents and workflow management'
+    icon: '🎯'
     priority: 2
-    color: "#00BCD4"
+    color: '#00BCD4'
     subcategories:
-      - "task_coordination"
-      - "workflow_management"
-      - "agent_management"
-      - "error_recovery"
+      - 'task_coordination'
+      - 'workflow_management'
+      - 'agent_management'
+      - 'error_recovery'
     tools_count: 15
 
   external_apis:
-    name: "External API Integration"
-    description: "Tools for integrating with external biological databases and APIs"
-    icon: "🌐"
+    name: 'External API Integration'
+    description: 'Tools for integrating with external biological databases and APIs'
+    icon: '🌐'
     priority: 2
-    color: "#8BC34A"
+    color: '#8BC34A'
     subcategories:
-      - "blast_apis"
-      - "uniprot_apis"
-      - "alphafold_apis"
-      - "evo2_apis"
+      - 'blast_apis'
+      - 'uniprot_apis'
+      - 'alphafold_apis'
+      - 'evo2_apis'
     tools_count: 12
 
   utility:
-    name: "Utility Tools"
-    description: "General utility tools for file downloads, document viewing, and other helper functions"
-    icon: "🛠️"
+    name: 'Utility Tools'
+    description: 'General utility tools for file downloads, document viewing, and other helper functions'
+    icon: '🛠️'
     priority: 2
-    color: "#78909C"
+    color: '#78909C'
     subcategories:
-      - "file_download"
-      - "document_viewer"
-      - "helper_functions"
+      - 'file_download'
+      - 'document_viewer'
+      - 'helper_functions'
     tools_count: 2
 
 # Tool priority levels
 priority_levels:
-  1: "Critical - Core functionality tools"
-  2: "Important - Enhanced functionality tools"
-  3: "Optional - Specialized or advanced tools"
+  1: 'Critical - Core functionality tools'
+  2: 'Important - Enhanced functionality tools'
+  3: 'Optional - Specialized or advanced tools'
 
 # Tool execution types
 execution_types:
-  client: "Executed in the browser/client"
-  server: "Executed on the server"
-  hybrid: "Combines client and server execution"
+  client: 'Executed in the browser/client'
+  server: 'Executed on the server'
+  hybrid: 'Combines client and server execution'
 
 # Tool relationship types
 relationship_types:
-  depends_on: "This tool requires another tool to function"
-  conflicts_with: "This tool cannot be used with another tool"
+  depends_on: 'This tool requires another tool to function'
+  conflicts_with: 'This tool cannot be used with another tool'
   enhances: "This tool improves another tool's functionality"
-  alternatives: "This tool can be used instead of another tool"
-  prerequisites: "This tool should be used before another tool"
-  follow_up: "This tool is commonly used after another tool"
+  alternatives: 'This tool can be used instead of another tool'
+  prerequisites: 'This tool should be used before another tool'
+  follow_up: 'This tool is commonly used after another tool'
 
 # Usage patterns
 usage_patterns:
-  frequent: "Used in >50% of sessions"
-  common: "Used in 20-50% of sessions"
-  occasional: "Used in 5-20% of sessions"
-  rare: "Used in <5% of sessions"
+  frequent: 'Used in >50% of sessions'
+  common: 'Used in 20-50% of sessions'
+  occasional: 'Used in 5-20% of sessions'
+  rare: 'Used in <5% of sessions'
 
 # Tool complexity levels
 complexity_levels:
-  simple: "Single operation, minimal parameters"
-  moderate: "Multiple operations, several parameters"
-  complex: "Complex workflows, many parameters"
-  expert: "Advanced functionality, requires expertise"
+  simple: 'Single operation, minimal parameters'
+  moderate: 'Multiple operations, several parameters'
+  complex: 'Complex workflows, many parameters'
+  expert: 'Advanced functionality, requires expertise'
 
 # Integration requirements
 integration_requirements:
-  none: "No special requirements"
-  auth: "Requires authentication"
-  network: "Requires network connection"
-  data: "Requires loaded genome data"
-  plugin: "Requires specific plugin"
-  api_key: "Requires API key"
+  none: 'No special requirements'
+  auth: 'Requires authentication'
+  network: 'Requires network connection'
+  data: 'Requires loaded genome data'
+  plugin: 'Requires specific plugin'
+  api_key: 'Requires API key'

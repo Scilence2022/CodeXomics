@@ -36,14 +36,14 @@ parameters:
   required:
     - results
 sample_usages:
-  - user_query: "Show only BLAST hits with >95% identity"
-    tool_call: "blast_filter_results(results=<blast_results>, minIdentity=95)"
-    thought: "User wants highly similar matches only"
-    expected_result: "Filtered results with identity ≥95%"
-  - user_query: "Filter BLAST results to top 10 hits with E-value < 1e-50"
-    tool_call: "blast_filter_results(results=<blast_results>, maxEvalue=1e-50, maxHits=10)"
-    thought: "User wants significant hits only"
-    expected_result: "Top 10 most significant hits"
+  - user_query: 'Show only BLAST hits with >95% identity'
+    tool_call: 'blast_filter_results(results=<blast_results>, minIdentity=95)'
+    thought: 'User wants highly similar matches only'
+    expected_result: 'Filtered results with identity ≥95%'
+  - user_query: 'Filter BLAST results to top 10 hits with E-value < 1e-50'
+    tool_call: 'blast_filter_results(results=<blast_results>, maxEvalue=1e-50, maxHits=10)'
+    thought: 'User wants significant hits only'
+    expected_result: 'Top 10 most significant hits'
 relationships:
   depends_on:
     - blast_search_local

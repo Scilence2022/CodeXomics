@@ -7,6 +7,7 @@ This document provides comprehensive instructions for building CodeXomics with a
 ## 🆕 Recent Updates
 
 ### **Enhanced Features**
+
 - **Fixed AI Search Function Calling** - Corrected search behavior for better accuracy
 - **SVG-based GC Content Visualization** - Crisp, scalable graphics with dynamic calculations
 - **Improved Modular Architecture** - Better code organization and maintainability
@@ -14,6 +15,7 @@ This document provides comprehensive instructions for building CodeXomics with a
 - **Better Error Handling** - Graceful degradation and user feedback
 
 ### **New Dependencies**
+
 - **Enhanced AI Integration** - Updated LLM provider support
 - **SVG Graphics** - Native SVG support for better visualization
 - **Configuration Persistence** - File-based configuration management
@@ -21,19 +23,22 @@ This document provides comprehensive instructions for building CodeXomics with a
 ## 📋 Prerequisites
 
 ### **System Requirements**
+
 - **Node.js**: Version 18.0.0 or higher (LTS recommended)
 - **npm**: Version 8.0.0 or higher (included with Node.js)
-- **Operating System**: 
+- **Operating System**:
   - macOS 10.15 (Catalina) or higher
   - Windows 10 version 1903 or higher
   - Linux Ubuntu 18.04 or equivalent
 
 ### **Development Tools**
+
 - **Git**: For version control and repository management
 - **Code Editor**: VS Code, Atom, or similar (VS Code recommended)
 - **Terminal/Command Prompt**: For running build commands
 
 ### **Optional Tools**
+
 - **Electron Forge CLI**: For advanced building and packaging
 - **Node Version Manager (nvm)**: For managing Node.js versions
 - **Yarn**: Alternative package manager (optional)
@@ -41,6 +46,7 @@ This document provides comprehensive instructions for building CodeXomics with a
 ## 🛠️ Installation Steps
 
 ### **1. Clone the Repository**
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/electron-GenomeViewer.git
@@ -52,6 +58,7 @@ git log --oneline -10  # View recent commits
 ```
 
 ### **2. Install Dependencies**
+
 ```bash
 # Install all required packages
 npm install
@@ -61,17 +68,20 @@ npm list --depth=0
 ```
 
 **Core Dependencies:**
+
 - `electron`: ^27.0.0 - Main Electron framework
 - `electron-builder`: ^24.6.4 - Building and packaging
 - `fs-extra`: ^11.1.1 - Enhanced file system operations
 - `path`: Native Node.js module for path operations
 
 **Development Dependencies:**
+
 - `electron-rebuild`: For native module compatibility
 - `concurrently`: For running multiple scripts simultaneously
 - `wait-on`: For waiting on services during development
 
 ### **3. Verify Installation**
+
 ```bash
 # Check Node.js and npm versions
 node --version
@@ -87,6 +97,7 @@ npm test
 ## 🔨 Build Process
 
 ### **Development Build**
+
 ```bash
 # Start development server with hot reload
 npm run dev
@@ -99,6 +110,7 @@ npm run debug
 ```
 
 ### **Production Build**
+
 ```bash
 # Build for current platform
 npm run build
@@ -113,6 +125,7 @@ npm run build:all
 ```
 
 ### **Advanced Build Options**
+
 ```bash
 # Build with specific Electron version
 npm run build -- --electron-version=27.0.0
@@ -130,6 +143,7 @@ npm run dist
 ## ⚙️ Configuration
 
 ### **Application Configuration**
+
 The application uses a centralized configuration system with the following structure:
 
 ```javascript
@@ -142,6 +156,7 @@ The application uses a centralized configuration system with the following struc
 ```
 
 ### **Build Configuration**
+
 Edit `package.json` to customize build settings:
 
 ```json
@@ -153,12 +168,7 @@ Edit `package.json` to customize build settings:
       "output": "dist",
       "buildResources": "build"
     },
-    "files": [
-      "src/**/*",
-      "package.json",
-      "!src/**/*.md",
-      "!**/node_modules/**"
-    ],
+    "files": ["src/**/*", "package.json", "!src/**/*.md", "!**/node_modules/**"],
     "mac": {
       "category": "public.app-category.education",
       "target": [
@@ -181,6 +191,7 @@ Edit `package.json` to customize build settings:
 ```
 
 ### **Environment Variables**
+
 Set up environment variables for development:
 
 ```bash
@@ -196,6 +207,7 @@ export NODE_ENV=production
 ## 🔧 Development Workflow
 
 ### **File Structure**
+
 ```
 GenomeAIStudio/
 ├── src/
@@ -222,6 +234,7 @@ GenomeAIStudio/
 ```
 
 ### **Code Style and Standards**
+
 ```bash
 # Install linting tools (optional)
 npm install --save-dev eslint prettier
@@ -234,6 +247,7 @@ npx prettier --write src/
 ```
 
 **Coding Standards:**
+
 - Use ES6+ features consistently
 - Follow modular architecture patterns
 - Add JSDoc comments for functions
@@ -241,6 +255,7 @@ npx prettier --write src/
 - Handle errors gracefully
 
 ### **Testing**
+
 ```bash
 # Run unit tests (if implemented)
 npm test
@@ -258,6 +273,7 @@ npm run test:coverage
 ## 📦 Packaging and Distribution
 
 ### **Create Distribution Packages**
+
 ```bash
 # Create installers for all platforms
 npm run dist
@@ -269,7 +285,9 @@ npm run dist:linux  # Creates .AppImage file
 ```
 
 ### **Output Files**
+
 After successful build, find distribution files in:
+
 ```
 dist/
 ├── mac/
@@ -281,6 +299,7 @@ dist/
 ```
 
 ### **Code Signing (Production)**
+
 For production releases, configure code signing:
 
 ```json
@@ -303,6 +322,7 @@ For production releases, configure code signing:
 ### **Common Build Issues**
 
 **Node.js Version Conflicts:**
+
 ```bash
 # Use Node Version Manager
 nvm install 18
@@ -313,6 +333,7 @@ node --version
 ```
 
 **Native Module Compilation:**
+
 ```bash
 # Rebuild native modules
 npm run electron-rebuild
@@ -323,6 +344,7 @@ npm install
 ```
 
 **Permission Issues (macOS/Linux):**
+
 ```bash
 # Fix npm permissions
 sudo chown -R $(whoami) ~/.npm
@@ -330,6 +352,7 @@ sudo chown -R $(whoami) /usr/local/lib/node_modules
 ```
 
 **Memory Issues During Build:**
+
 ```bash
 # Increase Node.js memory limit
 export NODE_OPTIONS="--max-old-space-size=4096"
@@ -339,6 +362,7 @@ npm run build
 ### **Platform-Specific Issues**
 
 **macOS:**
+
 ```bash
 # Install Xcode Command Line Tools if needed
 xcode-select --install
@@ -348,6 +372,7 @@ security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain 
 ```
 
 **Windows:**
+
 ```bash
 # Install Windows Build Tools
 npm install --global windows-build-tools
@@ -356,6 +381,7 @@ npm install --global windows-build-tools
 ```
 
 **Linux:**
+
 ```bash
 # Install required libraries
 sudo apt-get install build-essential libnss3-dev libgconf-2-4
@@ -364,16 +390,19 @@ sudo apt-get install build-essential libnss3-dev libgconf-2-4
 ### **Runtime Issues**
 
 **Configuration Problems:**
+
 - Check configuration file permissions
 - Verify configuration directory exists: `~/.genome-ai-studio/`
 - Reset configuration: Delete config directory and restart
 
 **AI Integration Issues:**
+
 - Verify API keys are properly configured
 - Check network connectivity for LLM providers
 - Review LLM provider configuration in settings
 
 **File Loading Problems:**
+
 - Ensure sample data files are accessible
 - Check file permissions and format compatibility
 - Verify file paths in error messages
@@ -381,6 +410,7 @@ sudo apt-get install build-essential libnss3-dev libgconf-2-4
 ## 🚀 Performance Optimization
 
 ### **Build Optimization**
+
 ```json
 // Optimize build performance in package.json
 {
@@ -395,6 +425,7 @@ sudo apt-get install build-essential libnss3-dev libgconf-2-4
 ```
 
 ### **Runtime Optimization**
+
 - Enable hardware acceleration for SVG rendering
 - Use efficient data structures for large genomic files
 - Implement lazy loading for visualization components
@@ -403,16 +434,19 @@ sudo apt-get install build-essential libnss3-dev libgconf-2-4
 ## 📚 Additional Resources
 
 ### **Documentation**
+
 - [Electron Documentation](https://www.electronjs.org/docs)
 - [Electron Builder Guide](https://www.electron.build/)
 - [Node.js Documentation](https://nodejs.org/docs/)
 
 ### **Community Support**
+
 - [Electron Discord](https://discord.gg/electron)
 - [GitHub Issues](https://github.com/your-repo/issues)
 - [Stack Overflow](https://stackoverflow.com/questions/tagged/electron)
 
 ### **Development Tools**
+
 - [Electron DevTools Extension](https://github.com/MarshallOfSound/electron-devtools-installer)
 - [Electron Fiddle](https://www.electronjs.org/fiddle) - For testing Electron code
 - [Spectron](https://github.com/electron-userland/spectron) - For testing Electron apps
@@ -420,6 +454,7 @@ sudo apt-get install build-essential libnss3-dev libgconf-2-4
 ## 🔄 Continuous Integration
 
 ### **GitHub Actions Example**
+
 ```yaml
 # .github/workflows/build.yml
 name: Build and Release
@@ -435,29 +470,30 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-    
+
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'npm'
-    
-    - run: npm ci
-    - run: npm run build
-    - run: npm run dist
-    
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ matrix.os }}-build
-        path: dist/
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run dist
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.os }}-build
+          path: dist/
 ```
 
 ## 📝 Release Process
 
 ### **Version Management**
+
 ```bash
 # Update version
 npm version patch  # 1.0.0 -> 1.0.1
@@ -470,6 +506,7 @@ git push origin v1.0.0
 ```
 
 ### **Release Checklist**
+
 - [ ] Update version numbers in package.json
 - [ ] Update CHANGELOG.md with new features
 - [ ] Test on all target platforms
@@ -480,4 +517,4 @@ git push origin v1.0.0
 - [ ] Update download links
 - [ ] Announce release
 
-This comprehensive build guide ensures successful compilation and distribution of CodeXomics with all its advanced features and improvements. 
+This comprehensive build guide ensures successful compilation and distribution of CodeXomics with all its advanced features and improvements.

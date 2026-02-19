@@ -13,12 +13,12 @@
 const actionManager = new ActionManager(genomeBrowser);
 
 // Add a copy action
-actionManager.addAction(
-    actionManager.ACTION_TYPES.COPY_SEQUENCE,
-    'chr1:1000-2000(+)',
-    'Copy promoter region',
-    { chromosome: 'chr1', start: 1000, end: 2000, strand: '+' }
-);
+actionManager.addAction(actionManager.ACTION_TYPES.COPY_SEQUENCE, 'chr1:1000-2000(+)', 'Copy promoter region', {
+  chromosome: 'chr1',
+  start: 1000,
+  end: 2000,
+  strand: '+',
+});
 
 // Execute all pending actions
 await actionManager.executeAllActions();
@@ -35,19 +35,19 @@ await actionManager.executeAllActions();
 actionManager.handleCopySequence(); // Interactive (shows modal)
 // OR
 await actionManager.executeActionFunction('copySequence', {
-    chromosome: 'chr1',
-    start: 1000,
-    end: 2000,
-    strand: '+'
+  chromosome: 'chr1',
+  start: 1000,
+  end: 2000,
+  strand: '+',
 });
 
 // Paste
 actionManager.handlePasteSequence(); // Interactive (shows modal)
 // OR
 await actionManager.executeActionFunction('pasteSequence', {
-    chromosome: 'chr2',
-    start: 5000,
-    end: 5000
+  chromosome: 'chr2',
+  start: 5000,
+  end: 5000,
 });
 
 // Execute
@@ -58,12 +58,12 @@ await actionManager.executeAllActions();
 
 ```javascript
 // Add delete action
-actionManager.addAction(
-    actionManager.ACTION_TYPES.DELETE_SEQUENCE,
-    'chr1:1000-2000(+)',
-    'Delete 1kb region',
-    { chromosome: 'chr1', start: 1000, end: 2000, strand: '+' }
-);
+actionManager.addAction(actionManager.ACTION_TYPES.DELETE_SEQUENCE, 'chr1:1000-2000(+)', 'Delete 1kb region', {
+  chromosome: 'chr1',
+  start: 1000,
+  end: 2000,
+  strand: '+',
+});
 
 // Execute
 await actionManager.executeAllActions();
@@ -73,18 +73,13 @@ await actionManager.executeAllActions();
 
 ```javascript
 // Add insert action
-actionManager.addAction(
-    actionManager.ACTION_TYPES.INSERT_SEQUENCE,
-    'chr1:1000',
-    'Insert restriction site',
-    {
-        chromosome: 'chr1',
-        start: 1000,
-        end: 1000,
-        insertSequence: 'GAATTC',
-        strand: '+'
-    }
-);
+actionManager.addAction(actionManager.ACTION_TYPES.INSERT_SEQUENCE, 'chr1:1000', 'Insert restriction site', {
+  chromosome: 'chr1',
+  start: 1000,
+  end: 1000,
+  insertSequence: 'GAATTC',
+  strand: '+',
+});
 
 // Execute
 await actionManager.executeAllActions();
@@ -95,16 +90,16 @@ await actionManager.executeAllActions();
 ```javascript
 // Add replace action
 actionManager.addAction(
-    actionManager.ACTION_TYPES.REPLACE_SEQUENCE,
-    'chr1:1000-1006(+)',
-    'Replace with optimized codon',
-    {
-        chromosome: 'chr1',
-        start: 1000,
-        end: 1006,
-        newSequence: 'ATGATG',
-        strand: '+'
-    }
+  actionManager.ACTION_TYPES.REPLACE_SEQUENCE,
+  'chr1:1000-1006(+)',
+  'Replace with optimized codon',
+  {
+    chromosome: 'chr1',
+    start: 1000,
+    end: 1006,
+    newSequence: 'ATGATG',
+    strand: '+',
+  }
 );
 
 // Execute
@@ -120,25 +115,25 @@ await actionManager.executeAllActions();
 ```javascript
 // Copy sequence (MCP)
 const result = await actionManager.executeActionFunction('copySequence', {
-    chromosome: 'chr1',
-    start: 1000,
-    end: 2000,
-    strand: '+'
+  chromosome: 'chr1',
+  start: 1000,
+  end: 2000,
+  strand: '+',
 });
 
 // Get action list
 const actions = actionManager.executeActionFunction('getActionList', {
-    status: 'pending' // or 'all', 'completed', 'failed'
+  status: 'pending', // or 'all', 'completed', 'failed'
 });
 
 // Execute actions
 const execResult = await actionManager.executeActionFunction('executeActions', {
-    confirm: true
+  confirm: true,
 });
 
 // Clear actions
 actionManager.executeActionFunction('clearActions', {
-    status: 'completed'
+  status: 'completed',
 });
 
 // Get clipboard
@@ -179,11 +174,11 @@ await actionManager.executeActionFunction('undoLastAction', {});
 
 ```javascript
 actionManager.STATUS = {
-    PENDING: 'pending',       // Waiting to execute
-    EXECUTING: 'executing',   // Currently running
-    COMPLETED: 'completed',   // Successfully finished
-    FAILED: 'failed'          // Execution failed
-}
+  PENDING: 'pending', // Waiting to execute
+  EXECUTING: 'executing', // Currently running
+  COMPLETED: 'completed', // Successfully finished
+  FAILED: 'failed', // Execution failed
+};
 ```
 
 ---
@@ -192,14 +187,14 @@ actionManager.STATUS = {
 
 ```javascript
 actionManager.ACTION_TYPES = {
-    COPY_SEQUENCE: 'copy_sequence',       // Copy to clipboard
-    CUT_SEQUENCE: 'cut_sequence',         // Cut to clipboard
-    PASTE_SEQUENCE: 'paste_sequence',     // Paste from clipboard
-    DELETE_SEQUENCE: 'delete_sequence',   // Delete region
-    INSERT_SEQUENCE: 'insert_sequence',   // Insert new sequence
-    REPLACE_SEQUENCE: 'replace_sequence', // Replace region
-    SEQUENCE_EDIT: 'sequence_edit'        // Generic edit
-}
+  COPY_SEQUENCE: 'copy_sequence', // Copy to clipboard
+  CUT_SEQUENCE: 'cut_sequence', // Cut to clipboard
+  PASTE_SEQUENCE: 'paste_sequence', // Paste from clipboard
+  DELETE_SEQUENCE: 'delete_sequence', // Delete region
+  INSERT_SEQUENCE: 'insert_sequence', // Insert new sequence
+  REPLACE_SEQUENCE: 'replace_sequence', // Replace region
+  SEQUENCE_EDIT: 'sequence_edit', // Generic edit
+};
 ```
 
 ---
@@ -212,11 +207,11 @@ actionManager.ACTION_TYPES = {
 const clipboard = actionManager.clipboard;
 
 if (clipboard) {
-    console.log('Type:', clipboard.type);                    // 'copy' or 'cut'
-    console.log('Sequence:', clipboard.sequence);            // DNA string
-    console.log('Source:', clipboard.source);                // 'chr1:1000-2000(+)'
-    console.log('Length:', clipboard.sequence.length);       // Number of bp
-    console.log('Features:', clipboard.comprehensiveData.features); // Array
+  console.log('Type:', clipboard.type); // 'copy' or 'cut'
+  console.log('Sequence:', clipboard.sequence); // DNA string
+  console.log('Source:', clipboard.source); // 'chr1:1000-2000(+)'
+  console.log('Length:', clipboard.sequence.length); // Number of bp
+  console.log('Features:', clipboard.comprehensiveData.features); // Array
 }
 ```
 
@@ -224,11 +219,11 @@ if (clipboard) {
 
 ```javascript
 if (actionManager.clipboard && actionManager.clipboard.sequence) {
-    // Clipboard has data
-    console.log(`Clipboard contains ${actionManager.clipboard.sequence.length} bp`);
+  // Clipboard has data
+  console.log(`Clipboard contains ${actionManager.clipboard.sequence.length} bp`);
 } else {
-    // Clipboard empty
-    console.log('Clipboard is empty');
+  // Clipboard empty
+  console.log('Clipboard is empty');
 }
 ```
 
@@ -242,14 +237,14 @@ if (actionManager.clipboard && actionManager.clipboard.sequence) {
 const selection = actionManager.getActiveSelection();
 
 if (selection.hasSelection) {
-    console.log('Chromosome:', selection.chromosome);
-    console.log('Start:', selection.start);
-    console.log('End:', selection.end);
-    console.log('Strand:', selection.strand);
-    console.log('Source:', selection.source);      // 'manual', 'gene', 'selectedGene'
-    console.log('Name:', selection.name);
+  console.log('Chromosome:', selection.chromosome);
+  console.log('Start:', selection.start);
+  console.log('End:', selection.end);
+  console.log('Strand:', selection.strand);
+  console.log('Source:', selection.source); // 'manual', 'gene', 'selectedGene'
+  console.log('Name:', selection.name);
 } else {
-    console.log('No active selection');
+  console.log('No active selection');
 }
 ```
 
@@ -272,7 +267,9 @@ const completed = actionManager.actions.filter(a => a.status === 'completed');
 // Get failed actions
 const failed = actionManager.actions.filter(a => a.status === 'failed');
 
-console.log(`Total: ${allActions.length}, Pending: ${pending.length}, Completed: ${completed.length}, Failed: ${failed.length}`);
+console.log(
+  `Total: ${allActions.length}, Pending: ${pending.length}, Completed: ${completed.length}, Failed: ${failed.length}`
+);
 ```
 
 ### Clear Queue
@@ -310,10 +307,10 @@ actionManager.updateActionListUI();
 
 ```javascript
 const data = await actionManager.collectComprehensiveData(
-    'chr1',    // chromosome
-    1000,      // start
-    2000,      // end
-    '+'        // strand
+  'chr1', // chromosome
+  1000, // start
+  2000, // end
+  '+' // strand
 );
 
 console.log('Region:', data.region);
@@ -327,10 +324,10 @@ console.log('GC%:', data.metadata.gcContent);
 
 ```javascript
 const sequence = await actionManager.getSequenceForRegion(
-    'chr1',    // chromosome
-    1000,      // start
-    2000,      // end
-    '+'        // strand ('+' or '-')
+  'chr1', // chromosome
+  1000, // start
+  2000, // end
+  '+' // strand ('+' or '-')
 );
 
 console.log('Sequence:', sequence);
@@ -348,16 +345,16 @@ const pending = actionManager.actions.filter(a => a.status === 'pending');
 const analysis = actionManager.checkActionConflicts(pending);
 
 if (analysis.hasConflicts) {
-    console.log(`Found ${analysis.conflicts.length} conflicts`);
-    
-    analysis.conflicts.forEach(conflict => {
-        console.log(`Conflict: ${conflict.description}`);
-        console.log(`  Severity: ${conflict.severity}`);
-        console.log(`  Chromosome: ${conflict.chromosome}`);
-        console.log(`  Overlap: ${conflict.overlapStart}-${conflict.overlapEnd}`);
-    });
+  console.log(`Found ${analysis.conflicts.length} conflicts`);
+
+  analysis.conflicts.forEach(conflict => {
+    console.log(`Conflict: ${conflict.description}`);
+    console.log(`  Severity: ${conflict.severity}`);
+    console.log(`  Chromosome: ${conflict.chromosome}`);
+    console.log(`  Overlap: ${conflict.overlapStart}-${conflict.overlapEnd}`);
+  });
 } else {
-    console.log('No conflicts detected');
+  console.log('No conflicts detected');
 }
 ```
 
@@ -377,11 +374,7 @@ const executionActionsCopy = [...actionManager.actions];
 const executionGenomeData = actionManager.createGenomeDataCopy(originalData);
 const executionId = `manual_${Date.now()}`;
 
-await actionManager.generateComprehensiveGBK(
-    executionActionsCopy,
-    executionGenomeData,
-    executionId
-);
+await actionManager.generateComprehensiveGBK(executionActionsCopy, executionGenomeData, executionId);
 ```
 
 ---
@@ -392,16 +385,16 @@ await actionManager.generateComprehensiveGBK(
 
 ```javascript
 try {
-    await actionManager.executeAllActions();
-    console.log('✅ Actions executed successfully');
+  await actionManager.executeAllActions();
+  console.log('✅ Actions executed successfully');
 } catch (error) {
-    console.error('❌ Execution failed:', error);
-    
-    // Check failed actions
-    const failed = actionManager.actions.filter(a => a.status === 'failed');
-    failed.forEach(action => {
-        console.error(`Failed action ${action.id}:`, action.error);
-    });
+  console.error('❌ Execution failed:', error);
+
+  // Check failed actions
+  const failed = actionManager.actions.filter(a => a.status === 'failed');
+  failed.forEach(action => {
+    console.error(`Failed action ${action.id}:`, action.error);
+  });
 }
 ```
 
@@ -412,18 +405,18 @@ try {
 const pending = actionManager.actions.filter(a => a.status === 'pending');
 
 if (pending.length === 0) {
-    console.log('No pending actions to execute');
+  console.log('No pending actions to execute');
 } else {
-    // Check conflicts
-    const analysis = actionManager.checkActionConflicts(pending);
-    
-    if (analysis.hasConflicts) {
-        console.warn('Conflicts detected!');
-        // Show conflict dialog or handle
-    } else {
-        // Safe to execute
-        await actionManager.executeAllActions();
-    }
+  // Check conflicts
+  const analysis = actionManager.checkActionConflicts(pending);
+
+  if (analysis.hasConflicts) {
+    console.warn('Conflicts detected!');
+    // Show conflict dialog or handle
+  } else {
+    // Safe to execute
+    await actionManager.executeAllActions();
+  }
 }
 ```
 
@@ -455,7 +448,7 @@ const trackActionsCheckbox = document.getElementById('trackActions');
 const isVisible = trackActionsCheckbox && trackActionsCheckbox.checked;
 
 if (isVisible) {
-    genomeBrowser.trackRenderer.updateActionsTrack();
+  genomeBrowser.trackRenderer.updateActionsTrack();
 }
 ```
 
@@ -466,23 +459,18 @@ if (isVisible) {
 ### Custom Action Metadata
 
 ```javascript
-actionManager.addAction(
-    actionManager.ACTION_TYPES.COPY_SEQUENCE,
-    'chr1:1000-2000(+)',
-    'Copy for analysis',
-    {
-        chromosome: 'chr1',
-        start: 1000,
-        end: 2000,
-        strand: '+',
-        // Custom metadata
-        experimentId: 'EXP001',
-        researcher: 'John Doe',
-        purpose: 'Promoter analysis',
-        tags: ['promoter', 'essential'],
-        notes: 'Region of interest for transcription factor binding'
-    }
-);
+actionManager.addAction(actionManager.ACTION_TYPES.COPY_SEQUENCE, 'chr1:1000-2000(+)', 'Copy for analysis', {
+  chromosome: 'chr1',
+  start: 1000,
+  end: 2000,
+  strand: '+',
+  // Custom metadata
+  experimentId: 'EXP001',
+  researcher: 'John Doe',
+  purpose: 'Promoter analysis',
+  tags: ['promoter', 'essential'],
+  notes: 'Region of interest for transcription factor binding',
+});
 ```
 
 ### Programmatic Action Creation
@@ -490,23 +478,23 @@ actionManager.addAction(
 ```javascript
 // Create multiple actions programmatically
 const regions = [
-    { chr: 'chr1', start: 1000, end: 2000 },
-    { chr: 'chr2', start: 3000, end: 4000 },
-    { chr: 'chr3', start: 5000, end: 6000 }
+  { chr: 'chr1', start: 1000, end: 2000 },
+  { chr: 'chr2', start: 3000, end: 4000 },
+  { chr: 'chr3', start: 5000, end: 6000 },
 ];
 
 regions.forEach(region => {
-    actionManager.addAction(
-        actionManager.ACTION_TYPES.COPY_SEQUENCE,
-        `${region.chr}:${region.start}-${region.end}(+)`,
-        `Copy ${region.chr} region`,
-        {
-            chromosome: region.chr,
-            start: region.start,
-            end: region.end,
-            strand: '+'
-        }
-    );
+  actionManager.addAction(
+    actionManager.ACTION_TYPES.COPY_SEQUENCE,
+    `${region.chr}:${region.start}-${region.end}(+)`,
+    `Copy ${region.chr} region`,
+    {
+      chromosome: region.chr,
+      start: region.start,
+      end: region.end,
+      strand: '+',
+    }
+  );
 });
 
 console.log(`Created ${regions.length} actions`);
@@ -521,20 +509,18 @@ const totalActions = actionManager.actions.filter(a => a.status === 'pending').l
 
 // Poll status during execution
 const progressInterval = setInterval(() => {
-    const completed = actionManager.actions.filter(a => 
-        a.status === 'completed' || a.status === 'failed'
-    ).length;
-    
-    if (completed > executedCount) {
-        executedCount = completed;
-        const progress = (executedCount / totalActions * 100).toFixed(1);
-        console.log(`Progress: ${progress}% (${executedCount}/${totalActions})`);
-    }
-    
-    if (executedCount >= totalActions || !actionManager.isExecuting) {
-        clearInterval(progressInterval);
-        console.log('Execution complete');
-    }
+  const completed = actionManager.actions.filter(a => a.status === 'completed' || a.status === 'failed').length;
+
+  if (completed > executedCount) {
+    executedCount = completed;
+    const progress = ((executedCount / totalActions) * 100).toFixed(1);
+    console.log(`Progress: ${progress}% (${executedCount}/${totalActions})`);
+  }
+
+  if (executedCount >= totalActions || !actionManager.isExecuting) {
+    clearInterval(progressInterval);
+    console.log('Execution complete');
+  }
 }, 100);
 
 await actionManager.executeAllActions();
@@ -555,13 +541,13 @@ console.log('Modifications:', actionManager.sequenceModifications);
 
 // Log all actions
 actionManager.actions.forEach((action, index) => {
-    console.log(`Action ${index + 1}:`, {
-        id: action.id,
-        type: action.type,
-        target: action.target,
-        status: action.status,
-        metadata: action.metadata
-    });
+  console.log(`Action ${index + 1}:`, {
+    id: action.id,
+    type: action.type,
+    target: action.target,
+    status: action.status,
+    metadata: action.metadata,
+  });
 });
 ```
 
@@ -572,12 +558,12 @@ actionManager.actions.forEach((action, index) => {
 const chrModifications = actionManager.sequenceModifications.get('chr1');
 
 if (chrModifications) {
-    console.log(`Modifications on chr1:`, chrModifications);
-    chrModifications.forEach((mod, index) => {
-        console.log(`  ${index + 1}. ${mod.type} at position ${mod.position}`);
-    });
+  console.log(`Modifications on chr1:`, chrModifications);
+  chrModifications.forEach((mod, index) => {
+    console.log(`  ${index + 1}. ${mod.type} at position ${mod.position}`);
+  });
 } else {
-    console.log('No modifications on chr1');
+  console.log('No modifications on chr1');
 }
 ```
 
@@ -586,20 +572,20 @@ if (chrModifications) {
 ```javascript
 // Check for invalid actions
 const invalid = actionManager.actions.filter(action => {
-    if (!action.type || !action.target || !action.metadata) {
-        return true;
-    }
-    
-    const { start, end } = action.metadata;
-    if (start !== undefined && end !== undefined && start >= end) {
-        return true;
-    }
-    
-    return false;
+  if (!action.type || !action.target || !action.metadata) {
+    return true;
+  }
+
+  const { start, end } = action.metadata;
+  if (start !== undefined && end !== undefined && start >= end) {
+    return true;
+  }
+
+  return false;
 });
 
 if (invalid.length > 0) {
-    console.warn(`Found ${invalid.length} invalid actions:`, invalid);
+  console.warn(`Found ${invalid.length} invalid actions:`, invalid);
 }
 ```
 
@@ -610,47 +596,52 @@ if (invalid.length > 0) {
 ### Problem: Actions not executing
 
 **Check**:
+
 1. Is execution already running? `actionManager.isExecuting`
 2. Are there pending actions? `actionManager.actions.filter(a => a.status === 'pending')`
 3. Are there conflicts? `actionManager.checkActionConflicts(pending)`
 
 **Solution**:
+
 ```javascript
 if (actionManager.isExecuting) {
-    console.log('Already executing, please wait');
+  console.log('Already executing, please wait');
 } else {
-    const pending = actionManager.actions.filter(a => a.status === 'pending');
-    if (pending.length === 0) {
-        console.log('No pending actions');
-    } else {
-        await actionManager.executeAllActions();
-    }
+  const pending = actionManager.actions.filter(a => a.status === 'pending');
+  if (pending.length === 0) {
+    console.log('No pending actions');
+  } else {
+    await actionManager.executeAllActions();
+  }
 }
 ```
 
 ### Problem: Clipboard empty
 
 **Check**:
+
 ```javascript
 if (!actionManager.clipboard || !actionManager.clipboard.sequence) {
-    console.log('Clipboard is empty - please copy or cut sequence first');
+  console.log('Clipboard is empty - please copy or cut sequence first');
 } else {
-    console.log('Clipboard contains:', actionManager.clipboard.sequence.length, 'bp');
+  console.log('Clipboard contains:', actionManager.clipboard.sequence.length, 'bp');
 }
 ```
 
 ### Problem: Features not updating
 
 **Check**:
+
 1. Ensure original annotations backed up
 2. Check sequence modifications recorded
 3. Verify feature adjustment called
 
 **Solution**:
+
 ```javascript
 // Force feature update
 if (actionManager.genomeBrowser.trackRenderer) {
-    actionManager.genomeBrowser.trackRenderer.updateFeatureTrack();
+  actionManager.genomeBrowser.trackRenderer.updateFeatureTrack();
 }
 ```
 
@@ -677,10 +668,8 @@ regions.forEach(async r => {
 ```javascript
 // Periodically clear completed actions to reduce queue size
 if (actionManager.actions.length > 100) {
-    actionManager.actions = actionManager.actions.filter(a => 
-        a.status === 'pending' || a.status === 'executing'
-    );
-    actionManager.updateActionListUI();
+  actionManager.actions = actionManager.actions.filter(a => a.status === 'pending' || a.status === 'executing');
+  actionManager.updateActionListUI();
 }
 ```
 
@@ -689,16 +678,16 @@ if (actionManager.actions.length > 100) {
 ```javascript
 // Create checkpoint before major changes
 const checkpointId = await checkpointManager.createCheckpoint(
-    'Before major editing',
-    checkpointManager.CHECKPOINT_TYPES.MANUAL
+  'Before major editing',
+  checkpointManager.CHECKPOINT_TYPES.MANUAL
 );
 
 try {
-    // Perform operations
-    await actionManager.executeAllActions();
+  // Perform operations
+  await actionManager.executeAllActions();
 } catch (error) {
-    // Rollback on failure
-    await checkpointManager.rollbackToCheckpoint(checkpointId);
+  // Rollback on failure
+  await checkpointManager.rollbackToCheckpoint(checkpointId);
 }
 ```
 

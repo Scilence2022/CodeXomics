@@ -7,13 +7,7 @@
   "category": "network-analysis",
   "type": "visualization",
   "main": "index.js",
-  "tags": [
-    "protein",
-    "interaction",
-    "network",
-    "ppi",
-    "visualization"
-  ],
+  "tags": ["protein", "interaction", "network", "ppi", "visualization"],
   "keywords": [
     "protein",
     "network",
@@ -30,18 +24,10 @@
   "homepage": "https://github.com/genomeexplorer/protein-networks",
   "repository": "https://github.com/genomeexplorer/protein-networks.git",
   "license": "Apache-2.0",
-  "supportedDataTypes": [
-    "protein-interaction",
-    "ppi-network",
-    "generic"
-  ],
+  "supportedDataTypes": ["protein-interaction", "ppi-network", "generic"],
   "compatibility": {
     "genomeExplorer": ">=2.0.0",
-    "platforms": [
-      "windows",
-      "macos",
-      "linux"
-    ]
+    "platforms": ["windows", "macos", "linux"]
   },
   "contributes": {
     "visualizations": {
@@ -49,10 +35,7 @@
         "id": "protein-network",
         "name": "Protein Interaction Network",
         "description": "Visualize protein-protein interactions as an interactive network graph",
-        "supportedDataTypes": [
-          "protein-interaction",
-          "ppi-network"
-        ]
+        "supportedDataTypes": ["protein-interaction", "ppi-network"]
       }
     },
     "commands": [

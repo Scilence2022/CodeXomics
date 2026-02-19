@@ -1,725 +1,783 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KEGG Pathway Enrichment Analysis - CodeXomics</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --success-color: #27ae60;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --bg-primary: #f5f7fa;
-            --bg-secondary: #ffffff;
-            --text-primary: #2c3e50;
-            --text-secondary: #7f8c8d;
-            --border-color: #dee2e6;
-            --radius: 8px;
-            --shadow: 0 2px 10px rgba(0,0,0,0.1);
-            --shadow-hover: 0 4px 20px rgba(0,0,0,0.15);
+      :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --success-color: #27ae60;
+        --warning-color: #f39c12;
+        --danger-color: #e74c3c;
+        --bg-primary: #f5f7fa;
+        --bg-secondary: #ffffff;
+        --text-primary: #2c3e50;
+        --text-secondary: #7f8c8d;
+        --border-color: #dee2e6;
+        --radius: 8px;
+        --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          'Segoe UI',
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: var(--text-primary);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+
+      .app-header {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        color: var(--text-primary);
+        padding: 20px 30px;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      .app-title {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .app-title i {
+        font-size: 2.5rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .title-text h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2c3e50, #3498db);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 5px;
+      }
+
+      .title-text p {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .header-btn {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+      }
+
+      .header-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+      }
+
+      .main-container {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        min-height: calc(100vh - 100px);
+        max-width: 1600px;
+        margin: 0 auto;
+        gap: 24px;
+        padding: 24px;
+      }
+
+      .sidebar {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        padding: 24px;
+        overflow-y: auto;
+        height: fit-content;
+        position: sticky;
+        top: 120px;
+      }
+
+      .content-area {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        padding: 28px;
+        overflow-y: auto;
+      }
+
+      .form-section {
+        margin-bottom: 28px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid var(--border-color);
+      }
+
+      .form-section:last-child {
+        border-bottom: none;
+      }
+
+      .section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 18px;
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .section-title i {
+        font-size: 1.3rem;
+        padding: 8px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border-radius: 8px;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius);
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background: white;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+      }
+
+      textarea.form-control {
+        resize: vertical;
+        min-height: 120px;
+        font-family: 'Consolas', 'Monaco', monospace;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+        color: white;
+        width: 100%;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+      }
+
+      .btn-secondary {
+        background: #95a5a6;
+        color: white;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .btn-secondary:hover {
+        background: #7f8c8d;
+        transform: translateY(-2px);
+      }
+
+      #statusArea {
+        margin-bottom: 20px;
+      }
+
+      .status-message {
+        padding: 12px 16px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease;
+      }
+
+      .status-success {
+        background: #d4edda;
+        border-left: 4px solid var(--success-color);
+        color: #155724;
+      }
+
+      .status-error {
+        background: #f8d7da;
+        border-left: 4px solid var(--danger-color);
+        color: #721c24;
+      }
+
+      .status-info {
+        background: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        color: #0c5460;
+      }
+
+      .status-warning {
+        background: #fff3cd;
+        border-left: 4px solid var(--warning-color);
+        color: #856404;
+      }
+
+      #loadingIndicator {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        text-align: center;
+      }
+
+      .loading-spinner {
+        font-size: 3rem;
+        color: var(--secondary-color);
+        margin-bottom: 20px;
+      }
+
+      .loading-spinner i {
+        animation: spin 1s linear infinite;
+      }
+
+      .loading-message {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: var(--text-primary);
-            line-height: 1.6;
-            min-height: 100vh;
+        to {
+          transform: rotate(360deg);
         }
+      }
 
-        .app-header {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            color: var(--text-primary);
-            padding: 20px 30px;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+      @keyframes slideIn {
+        from {
+          transform: translateY(-10px);
+          opacity: 0;
         }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1600px;
-            margin: 0 auto;
+        to {
+          transform: translateY(0);
+          opacity: 1;
         }
+      }
 
-        .app-title {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+      .pathway-card {
+        background: white;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+      }
 
-        .app-title i {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+      .pathway-card:hover {
+        border-color: var(--secondary-color);
+        box-shadow: var(--shadow-hover);
+        transform: translateY(-2px);
+      }
 
-        .title-text h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #2c3e50, #3498db);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 5px;
-        }
+      .pathway-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 12px;
+      }
 
-        .title-text p {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-        }
+      .pathway-id {
+        font-weight: 700;
+        color: var(--secondary-color);
+        font-size: 1.1rem;
+      }
 
-        .header-actions {
-            display: flex;
-            gap: 12px;
-        }
+      .pathway-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
 
-        .header-btn {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-        }
+      .pathway-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+      }
 
-        .header-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-        }
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: var(--bg-primary);
+        border-radius: var(--radius);
+      }
 
+      .stat-item i {
+        color: var(--secondary-color);
+      }
+
+      .pathway-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .btn-small {
+        padding: 8px 16px;
+        font-size: 13px;
+      }
+
+      #llmInterpretationPanel {
+        display: none;
+        background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+        border: 2px solid var(--secondary-color);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        animation: slideIn 0.3s ease;
+      }
+
+      .llm-interpretation-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .llm-interpretation-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.3rem;
+        color: var(--primary-color);
+      }
+
+      .llm-interpretation-header i {
+        color: var(--secondary-color);
+        font-size: 1.5rem;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: var(--radius);
+        transition: all 0.3s ease;
+      }
+
+      .close-btn:hover {
+        background: rgba(0, 0, 0, 0.1);
+        color: var(--primary-color);
+      }
+
+      .llm-interpretation-content {
+        background: white;
+        padding: 20px;
+        border-radius: var(--radius);
+        margin-bottom: 16px;
+        line-height: 1.8;
+      }
+
+      .interpretation-text {
+        color: var(--text-primary);
+      }
+
+      .interpretation-text strong {
+        color: var(--primary-color);
+      }
+
+      .interpretation-text code {
+        background: var(--bg-primary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Consolas', monospace;
+      }
+
+      .llm-interpretation-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--text-secondary);
+      }
+
+      .empty-state i {
+        font-size: 4rem;
+        opacity: 0.3;
+        margin-bottom: 20px;
+      }
+
+      .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
+
+      @media (max-width: 1200px) {
         .main-container {
-            display: grid;
-            grid-template-columns: 400px 1fr;
-            min-height: calc(100vh - 100px);
-            max-width: 1600px;
-            margin: 0 auto;
-            gap: 24px;
-            padding: 24px;
+          grid-template-columns: 1fr;
         }
 
         .sidebar {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 24px;
-            overflow-y: auto;
-            height: fit-content;
-            position: sticky;
-            top: 120px;
+          position: relative;
+          top: 0;
         }
-
-        .content-area {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 28px;
-            overflow-y: auto;
-        }
-
-        .form-section {
-            margin-bottom: 28px;
-            padding-bottom: 24px;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .form-section:last-child {
-            border-bottom: none;
-        }
-
-        .section-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 18px;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .section-title i {
-            font-size: 1.3rem;
-            padding: 8px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: 8px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid var(--border-color);
-            border-radius: var(--radius);
-            font-size: 14px;
-            font-family: inherit;
-            transition: all 0.3s ease;
-            background: white;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-
-        textarea.form-control {
-            resize: vertical;
-            min-height: 120px;
-            font-family: 'Consolas', 'Monaco', monospace;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            font-family: inherit;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
-            color: white;
-            width: 100%;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-        }
-
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-            width: 100%;
-            justify-content: center;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
-            transform: translateY(-2px);
-        }
-
-        #statusArea {
-            margin-bottom: 20px;
-        }
-
-        .status-message {
-            padding: 12px 16px;
-            border-radius: var(--radius);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideIn 0.3s ease;
-        }
-
-        .status-success {
-            background: #d4edda;
-            border-left: 4px solid var(--success-color);
-            color: #155724;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            border-left: 4px solid var(--danger-color);
-            color: #721c24;
-        }
-
-        .status-info {
-            background: #d1ecf1;
-            border-left: 4px solid #17a2b8;
-            color: #0c5460;
-        }
-
-        .status-warning {
-            background: #fff3cd;
-            border-left: 4px solid var(--warning-color);
-            color: #856404;
-        }
-
-        #loadingIndicator {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 60px 20px;
-            text-align: center;
-        }
-
-        .loading-spinner {
-            font-size: 3rem;
-            color: var(--secondary-color);
-            margin-bottom: 20px;
-        }
-
-        .loading-spinner i {
-            animation: spin 1s linear infinite;
-        }
-
-        .loading-message {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(-10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .pathway-card {
-            background: white;
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .pathway-card:hover {
-            border-color: var(--secondary-color);
-            box-shadow: var(--shadow-hover);
-            transform: translateY(-2px);
-        }
-
-        .pathway-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 12px;
-        }
-
-        .pathway-id {
-            font-weight: 700;
-            color: var(--secondary-color);
-            font-size: 1.1rem;
-        }
-
-        .pathway-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--text-primary);
-        }
-
-        .pathway-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            background: var(--bg-primary);
-            border-radius: var(--radius);
-        }
-
-        .stat-item i {
-            color: var(--secondary-color);
-        }
-
-        .pathway-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .btn-small {
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-
-        #llmInterpretationPanel {
-            display: none;
-            background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
-            border: 2px solid var(--secondary-color);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            animation: slideIn 0.3s ease;
-        }
-
-        .llm-interpretation-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-
-        .llm-interpretation-header h3 {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.3rem;
-            color: var(--primary-color);
-        }
-
-        .llm-interpretation-header i {
-            color: var(--secondary-color);
-            font-size: 1.5rem;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 8px;
-            border-radius: var(--radius);
-            transition: all 0.3s ease;
-        }
-
-        .close-btn:hover {
-            background: rgba(0,0,0,0.1);
-            color: var(--primary-color);
-        }
-
-        .llm-interpretation-content {
-            background: white;
-            padding: 20px;
-            border-radius: var(--radius);
-            margin-bottom: 16px;
-            line-height: 1.8;
-        }
-
-        .interpretation-text {
-            color: var(--text-primary);
-        }
-
-        .interpretation-text strong {
-            color: var(--primary-color);
-        }
-
-        .interpretation-text code {
-            background: var(--bg-primary);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Consolas', monospace;
-        }
-
-        .llm-interpretation-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-secondary);
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            opacity: 0.3;
-            margin-bottom: 20px;
-        }
-
-        .empty-state h3 {
-            font-size: 1.5rem;
-            margin-bottom: 12px;
-            color: var(--text-primary);
-        }
-
-        @media (max-width: 1200px) {
-            .main-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .sidebar {
-                position: relative;
-                top: 0;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="app-header">
-        <div class="header-content">
-            <div class="app-title">
-                <i class="fas fa-sitemap"></i>
-                <div class="title-text">
-                    <h1>KEGG Pathway Enrichment Analysis</h1>
-                    <p>Kyoto Encyclopedia of Genes and Genomes - Functional Pathway Analysis</p>
-                </div>
-            </div>
-            <div class="header-actions">
-                <button class="header-btn" id="llmInterpretBtn" style="display: none;">
-                    <i class="fas fa-brain"></i>
-                    AI Interpret
-                </button>
-                <button class="header-btn" id="sendToChatBtn" style="display: none;">
-                    <i class="fas fa-comments"></i>
-                    Analyze in ChatBox
-                </button>
-            </div>
+      <div class="header-content">
+        <div class="app-title">
+          <i class="fas fa-sitemap"></i>
+          <div class="title-text">
+            <h1>KEGG Pathway Enrichment Analysis</h1>
+            <p>Kyoto Encyclopedia of Genes and Genomes - Functional Pathway Analysis</p>
+          </div>
         </div>
+        <div class="header-actions">
+          <button class="header-btn" id="llmInterpretBtn" style="display: none">
+            <i class="fas fa-brain"></i>
+            AI Interpret
+          </button>
+          <button class="header-btn" id="sendToChatBtn" style="display: none">
+            <i class="fas fa-comments"></i>
+            Analyze in ChatBox
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="main-container">
-        <div class="sidebar">
-            <div class="form-section">
-                <div class="section-title">
-                    <i class="fas fa-database"></i>
-                    Input Data
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Organism</label>
-                    <select class="form-control" id="organism">
-                        <option value="hsa">Homo sapiens (Human)</option>
-                        <option value="mmu">Mus musculus (Mouse)</option>
-                        <option value="rno">Rattus norvegicus (Rat)</option>
-                        <option value="dme">Drosophila melanogaster (Fruit fly)</option>
-                        <option value="cel">Caenorhabditis elegans (Worm)</option>
-                        <option value="sce">Saccharomyces cerevisiae (Yeast)</option>
-                        <option value="eco">Escherichia coli K-12</option>
-                        <option value="ath">Arabidopsis thaliana (Plant)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Gene List (one per line)</label>
-                    <textarea class="form-control" id="geneInput" 
-                        placeholder="Enter gene symbols or IDs:
+      <div class="sidebar">
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fas fa-database"></i>
+            Input Data
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Organism</label>
+            <select class="form-control" id="organism">
+              <option value="hsa">Homo sapiens (Human)</option>
+              <option value="mmu">Mus musculus (Mouse)</option>
+              <option value="rno">Rattus norvegicus (Rat)</option>
+              <option value="dme">Drosophila melanogaster (Fruit fly)</option>
+              <option value="cel">Caenorhabditis elegans (Worm)</option>
+              <option value="sce">Saccharomyces cerevisiae (Yeast)</option>
+              <option value="eco">Escherichia coli K-12</option>
+              <option value="ath">Arabidopsis thaliana (Plant)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Gene List (one per line)</label>
+            <textarea
+              class="form-control"
+              id="geneInput"
+              placeholder="Enter gene symbols or IDs:
 TP53
 EGFR
 BRCA1
 MYC
-KRAS"></textarea>
-                </div>
-                
-                <button class="btn btn-primary" id="analyzeBtn">
-                    <i class="fas fa-play"></i>
-                    Analyze Pathways
-                </button>
-            </div>
+KRAS"
+            ></textarea>
+          </div>
 
-            <div class="form-section">
-                <div class="section-title">
-                    <i class="fas fa-sliders-h"></i>
-                    Analysis Parameters
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">P-value Threshold</label>
-                    <input type="number" class="form-control" id="pValueThreshold" 
-                        value="0.05" step="0.01" min="0" max="1">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Minimum Gene Count</label>
-                    <input type="number" class="form-control" id="minGeneCount" 
-                        value="2" min="1">
-                </div>
-            </div>
-
-            <div class="form-section">
-                <div class="section-title">
-                    <i class="fas fa-tools"></i>
-                    Quick Actions
-                </div>
-                
-                <button class="btn btn-secondary" id="exampleBtn" style="margin-bottom: 10px;">
-                    <i class="fas fa-flask"></i>
-                    Load Example
-                </button>
-                
-                <button class="btn btn-secondary" id="clearBtn">
-                    <i class="fas fa-trash-alt"></i>
-                    Clear Results
-                </button>
-            </div>
+          <button class="btn btn-primary" id="analyzeBtn">
+            <i class="fas fa-play"></i>
+            Analyze Pathways
+          </button>
         </div>
 
-        <div class="content-area">
-            <div id="statusArea"></div>
-            
-            <div id="llmInterpretationPanel"></div>
-            
-            <div id="loadingIndicator">
-                <div class="loading-spinner">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
-                <div class="loading-message">Analyzing KEGG pathways...</div>
-            </div>
-            
-            <div id="resultsContainer">
-                <div class="empty-state">
-                    <i class="fas fa-sitemap"></i>
-                    <h3>No Analysis Results</h3>
-                    <p>Enter gene data and click "Analyze Pathways" to identify enriched KEGG pathways.</p>
-                </div>
-            </div>
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fas fa-sliders-h"></i>
+            Analysis Parameters
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">P-value Threshold</label>
+            <input type="number" class="form-control" id="pValueThreshold" value="0.05" step="0.01" min="0" max="1" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Minimum Gene Count</label>
+            <input type="number" class="form-control" id="minGeneCount" value="2" min="1" />
+          </div>
         </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fas fa-tools"></i>
+            Quick Actions
+          </div>
+
+          <button class="btn btn-secondary" id="exampleBtn" style="margin-bottom: 10px">
+            <i class="fas fa-flask"></i>
+            Load Example
+          </button>
+
+          <button class="btn btn-secondary" id="clearBtn">
+            <i class="fas fa-trash-alt"></i>
+            Clear Results
+          </button>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <div id="statusArea"></div>
+
+        <div id="llmInterpretationPanel"></div>
+
+        <div id="loadingIndicator">
+          <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+          </div>
+          <div class="loading-message">Analyzing KEGG pathways...</div>
+        </div>
+
+        <div id="resultsContainer">
+          <div class="empty-state">
+            <i class="fas fa-sitemap"></i>
+            <h3>No Analysis Results</h3>
+            <p>Enter gene data and click "Analyze Pathways" to identify enriched KEGG pathways.</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="tool-menu-handler.js"></script>
     <script src="shared-analyzer-base.js"></script>
     <script>
-        class KEGGAnalyzer extends SharedAnalyzerBase {
-            constructor() {
-                super('KEGG Pathway Analysis', {
-                    primaryColor: '#2c3e50',
-                    secondaryColor: '#3498db',
-                    icon: 'fa-sitemap'
-                });
-                
-                this.init();
-                
-                // Notify window is ready
-                setTimeout(() => {
-                    this.ipcRenderer.send('window-ready', 'kegg-analyzer');
-                }, 100);
+      class KEGGAnalyzer extends SharedAnalyzerBase {
+        constructor() {
+          super('KEGG Pathway Analysis', {
+            primaryColor: '#2c3e50',
+            secondaryColor: '#3498db',
+            icon: 'fa-sitemap',
+          });
+
+          this.init();
+
+          // Notify window is ready
+          setTimeout(() => {
+            this.ipcRenderer.send('window-ready', 'kegg-analyzer');
+          }, 100);
+        }
+
+        init() {
+          document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzePathways());
+          document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+          document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
+          document.getElementById('sendToChatBtn').addEventListener('click', () => this.sendCurrentToChatBox());
+        }
+
+        async analyzePathways() {
+          const geneInput = document.getElementById('geneInput').value.trim();
+          if (!geneInput) {
+            this.showStatus('Please enter gene data to analyze', 'warning');
+            return;
+          }
+
+          const genes = geneInput.split('\n').filter(g => g.trim());
+          const organism = document.getElementById('organism').value;
+          const pValueThreshold = parseFloat(document.getElementById('pValueThreshold').value);
+          const minGeneCount = parseInt(document.getElementById('minGeneCount').value);
+
+          this.showLoading(true, 'Querying KEGG database...');
+          this.showStatus('Starting pathway enrichment analysis...', 'info');
+
+          try {
+            await this.delay(1000);
+
+            // Simulate KEGG API call (in production, this would call actual KEGG REST API)
+            const results = await this.performKEGGEnrichment(genes, organism, pValueThreshold, minGeneCount);
+
+            this.currentResults = results;
+            this.displayResults(results);
+            this.showLoading(false);
+            this.showStatus(`Found ${results.enrichedPathways.length} enriched pathways`, 'success');
+
+            // Show ChatBox integration button
+            document.getElementById('sendToChatBtn').style.display = 'block';
+            document.getElementById('llmInterpretBtn').style.display = 'block';
+          } catch (error) {
+            this.showLoading(false);
+            this.showStatus(`Analysis failed: ${error.message}`, 'error');
+          }
+        }
+
+        async performKEGGEnrichment(genes, organism, pValueThreshold, minGeneCount) {
+          // Simulate KEGG pathway enrichment
+          const pathwayDatabase = this.getPathwayDatabase(organism);
+          const enrichedPathways = [];
+
+          for (const pathway of pathwayDatabase) {
+            const pValue = Math.random() * 0.1;
+            const geneCount = Math.floor(Math.random() * genes.length) + 1;
+
+            if (pValue <= pValueThreshold && geneCount >= minGeneCount) {
+              enrichedPathways.push({
+                ...pathway,
+                pValue: pValue,
+                fdr: pValue * 1.2,
+                geneCount: geneCount,
+                totalGenes: genes.length,
+                matchedGenes: genes.slice(0, geneCount),
+                foldEnrichment: (geneCount / genes.length) * 10,
+              });
             }
+          }
 
-            init() {
-                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzePathways());
-                document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
-                document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
-                document.getElementById('sendToChatBtn').addEventListener('click', () => this.sendCurrentToChatBox());
-            }
+          enrichedPathways.sort((a, b) => a.pValue - b.pValue);
 
-            async analyzePathways() {
-                const geneInput = document.getElementById('geneInput').value.trim();
-                if (!geneInput) {
-                    this.showStatus('Please enter gene data to analyze', 'warning');
-                    return;
-                }
+          return {
+            organism: organism,
+            inputGenes: genes,
+            enrichedPathways: enrichedPathways,
+            analysisDate: new Date().toISOString(),
+            parameters: { pValueThreshold, minGeneCount },
+          };
+        }
 
-                const genes = geneInput.split('\n').filter(g => g.trim());
-                const organism = document.getElementById('organism').value;
-                const pValueThreshold = parseFloat(document.getElementById('pValueThreshold').value);
-                const minGeneCount = parseInt(document.getElementById('minGeneCount').value);
+        getPathwayDatabase(organism) {
+          const pathways = [
+            {
+              id: 'hsa04110',
+              name: 'Cell cycle',
+              category: 'Cellular Processes',
+              description: 'Regulation of cell division and proliferation',
+            },
+            {
+              id: 'hsa05200',
+              name: 'Pathways in cancer',
+              category: 'Human Diseases',
+              description: 'Multiple cancer-related signaling pathways',
+            },
+            {
+              id: 'hsa04151',
+              name: 'PI3K-Akt signaling pathway',
+              category: 'Signal Transduction',
+              description: 'Cell growth and survival signaling',
+            },
+            {
+              id: 'hsa04010',
+              name: 'MAPK signaling pathway',
+              category: 'Signal Transduction',
+              description: 'Mitogen-activated protein kinase cascade',
+            },
+            {
+              id: 'hsa04115',
+              name: 'p53 signaling pathway',
+              category: 'Cellular Processes',
+              description: 'DNA damage response and apoptosis',
+            },
+            {
+              id: 'hsa04210',
+              name: 'Apoptosis',
+              category: 'Cellular Processes',
+              description: 'Programmed cell death pathway',
+            },
+            {
+              id: 'hsa04064',
+              name: 'NF-kappa B signaling pathway',
+              category: 'Signal Transduction',
+              description: 'Inflammatory response regulation',
+            },
+            {
+              id: 'hsa04668',
+              name: 'TNF signaling pathway',
+              category: 'Signal Transduction',
+              description: 'Tumor necrosis factor pathway',
+            },
+          ];
 
-                this.showLoading(true, 'Querying KEGG database...');
-                this.showStatus('Starting pathway enrichment analysis...', 'info');
+          return pathways.map(p => ({ ...p, id: p.id.replace('hsa', organism) }));
+        }
 
-                try {
-                    await this.delay(1000);
-                    
-                    // Simulate KEGG API call (in production, this would call actual KEGG REST API)
-                    const results = await this.performKEGGEnrichment(genes, organism, pValueThreshold, minGeneCount);
-                    
-                    this.currentResults = results;
-                    this.displayResults(results);
-                    this.showLoading(false);
-                    this.showStatus(`Found ${results.enrichedPathways.length} enriched pathways`, 'success');
-                    
-                    // Show ChatBox integration button
-                    document.getElementById('sendToChatBtn').style.display = 'block';
-                    document.getElementById('llmInterpretBtn').style.display = 'block';
-                    
-                } catch (error) {
-                    this.showLoading(false);
-                    this.showStatus(`Analysis failed: ${error.message}`, 'error');
-                }
-            }
-
-            async performKEGGEnrichment(genes, organism, pValueThreshold, minGeneCount) {
-                // Simulate KEGG pathway enrichment
-                const pathwayDatabase = this.getPathwayDatabase(organism);
-                const enrichedPathways = [];
-                
-                for (const pathway of pathwayDatabase) {
-                    const pValue = Math.random() * 0.1;
-                    const geneCount = Math.floor(Math.random() * genes.length) + 1;
-                    
-                    if (pValue <= pValueThreshold && geneCount >= minGeneCount) {
-                        enrichedPathways.push({
-                            ...pathway,
-                            pValue: pValue,
-                            fdr: pValue * 1.2,
-                            geneCount: geneCount,
-                            totalGenes: genes.length,
-                            matchedGenes: genes.slice(0, geneCount),
-                            foldEnrichment: (geneCount / genes.length) * 10
-                        });
-                    }
-                }
-                
-                enrichedPathways.sort((a, b) => a.pValue - b.pValue);
-                
-                return {
-                    organism: organism,
-                    inputGenes: genes,
-                    enrichedPathways: enrichedPathways,
-                    analysisDate: new Date().toISOString(),
-                    parameters: { pValueThreshold, minGeneCount }
-                };
-            }
-
-            getPathwayDatabase(organism) {
-                const pathways = [
-                    { id: 'hsa04110', name: 'Cell cycle', category: 'Cellular Processes', description: 'Regulation of cell division and proliferation' },
-                    { id: 'hsa05200', name: 'Pathways in cancer', category: 'Human Diseases', description: 'Multiple cancer-related signaling pathways' },
-                    { id: 'hsa04151', name: 'PI3K-Akt signaling pathway', category: 'Signal Transduction', description: 'Cell growth and survival signaling' },
-                    { id: 'hsa04010', name: 'MAPK signaling pathway', category: 'Signal Transduction', description: 'Mitogen-activated protein kinase cascade' },
-                    { id: 'hsa04115', name: 'p53 signaling pathway', category: 'Cellular Processes', description: 'DNA damage response and apoptosis' },
-                    { id: 'hsa04210', name: 'Apoptosis', category: 'Cellular Processes', description: 'Programmed cell death pathway' },
-                    { id: 'hsa04064', name: 'NF-kappa B signaling pathway', category: 'Signal Transduction', description: 'Inflammatory response regulation' },
-                    { id: 'hsa04668', name: 'TNF signaling pathway', category: 'Signal Transduction', description: 'Tumor necrosis factor pathway' }
-                ];
-                
-                return pathways.map(p => ({ ...p, id: p.id.replace('hsa', organism) }));
-            }
-
-            displayResults(results) {
-                const container = document.getElementById('resultsContainer');
-                if (!results || !results.enrichedPathways || results.enrichedPathways.length === 0) {
-                    container.innerHTML = `
+        displayResults(results) {
+          const container = document.getElementById('resultsContainer');
+          if (!results || !results.enrichedPathways || results.enrichedPathways.length === 0) {
+            container.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-sitemap"></i>
                             <h3>No Enriched Pathways Found</h3>
                             <p>No pathways met the significance threshold. Try adjusting parameters.</p>
                         </div>
                     `;
-                    return;
-                }
-                
-                const summaryHtml = `
+            return;
+          }
+
+          const summaryHtml = `
                     <div style="background: linear-gradient(135deg, #e3f2fd, #f3e5f5); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
                         <h2 style="margin-bottom: 16px; color: var(--primary-color);">
                             <i class="fas fa-chart-bar"></i>
@@ -747,8 +805,10 @@ KRAS"></textarea>
                         </div>
                     </div>
                 `;
-                
-                const pathwayCards = results.enrichedPathways.map((pathway, index) => `
+
+          const pathwayCards = results.enrichedPathways
+            .map(
+              (pathway, index) => `
                     <div class="pathway-card">
                         <div class="pathway-header">
                             <div>
@@ -791,72 +851,78 @@ KRAS"></textarea>
                             </button>
                         </div>
                     </div>
-                `).join('');
-                
-                container.innerHTML = summaryHtml + pathwayCards;
-            }
+                `
+            )
+            .join('');
 
-            viewPathway(pathwayId) {
-                const url = `https://www.genome.jp/kegg-bin/show_pathway?${pathwayId}`;
-                require('electron').shell.openExternal(url);
-            }
+          container.innerHTML = summaryHtml + pathwayCards;
+        }
 
-            askAboutPathway(pathwayId) {
-                const pathway = this.currentResults.enrichedPathways.find(p => p.id === pathwayId);
-                if (!pathway) return;
-                
-                const query = `Explain the biological significance of "${pathway.name}" pathway (${pathway.id}) in the context of these genes: ${pathway.matchedGenes.join(', ')}. What are the key functions and why might this pathway be enriched?`;
-                this.sendToChatBox(query, { pathway, fullResults: this.currentResults });
-            }
+        viewPathway(pathwayId) {
+          const url = `https://www.genome.jp/kegg-bin/show_pathway?${pathwayId}`;
+          require('electron').shell.openExternal(url);
+        }
 
-            sendCurrentToChatBox() {
-                if (!this.currentResults) {
-                    this.showStatus('No results to send', 'warning');
-                    return;
-                }
-                
-                const topPathways = this.currentResults.enrichedPathways.slice(0, 5).map(p => p.name).join(', ');
-                const query = `I performed KEGG pathway enrichment analysis on ${this.currentResults.inputGenes.length} genes and found ${this.currentResults.enrichedPathways.length} enriched pathways. The top pathways include: ${topPathways}. Please provide a comprehensive biological interpretation of these results.`;
-                
-                this.sendToChatBox(query, this.currentResults);
-            }
+        askAboutPathway(pathwayId) {
+          const pathway = this.currentResults.enrichedPathways.find(p => p.id === pathwayId);
+          if (!pathway) return;
 
-            buildDetailedQuery(data) {
-                const topPathways = data.enrichedPathways.slice(0, 3).map(p => 
-                    `${p.name} (${p.geneCount} genes, p=${p.pValue.toExponential(2)})`
-                ).join(', ');
-                
-                return `Provide detailed analysis of KEGG pathway enrichment results: ${topPathways}. What biological processes are highlighted?`;
-            }
+          const query = `Explain the biological significance of "${pathway.name}" pathway (${pathway.id}) in the context of these genes: ${pathway.matchedGenes.join(', ')}. What are the key functions and why might this pathway be enriched?`;
+          this.sendToChatBox(query, { pathway, fullResults: this.currentResults });
+        }
 
-            getResultCount(data) {
-                return data.enrichedPathways ? data.enrichedPathways.length : 0;
-            }
+        sendCurrentToChatBox() {
+          if (!this.currentResults) {
+            this.showStatus('No results to send', 'warning');
+            return;
+          }
 
-            loadExample() {
-                document.getElementById('geneInput').value = 'TP53\nEGFR\nBRCA1\nMYC\nKRAS\nPTEN\nRB1\nAPC\nVHL\nCDKN2A';
-                document.getElementById('organism').value = 'hsa';
-                this.showStatus('Example data loaded', 'success');
-            }
+          const topPathways = this.currentResults.enrichedPathways
+            .slice(0, 5)
+            .map(p => p.name)
+            .join(', ');
+          const query = `I performed KEGG pathway enrichment analysis on ${this.currentResults.inputGenes.length} genes and found ${this.currentResults.enrichedPathways.length} enriched pathways. The top pathways include: ${topPathways}. Please provide a comprehensive biological interpretation of these results.`;
 
-            clearResults() {
-                document.getElementById('resultsContainer').innerHTML = `
+          this.sendToChatBox(query, this.currentResults);
+        }
+
+        buildDetailedQuery(data) {
+          const topPathways = data.enrichedPathways
+            .slice(0, 3)
+            .map(p => `${p.name} (${p.geneCount} genes, p=${p.pValue.toExponential(2)})`)
+            .join(', ');
+
+          return `Provide detailed analysis of KEGG pathway enrichment results: ${topPathways}. What biological processes are highlighted?`;
+        }
+
+        getResultCount(data) {
+          return data.enrichedPathways ? data.enrichedPathways.length : 0;
+        }
+
+        loadExample() {
+          document.getElementById('geneInput').value = 'TP53\nEGFR\nBRCA1\nMYC\nKRAS\nPTEN\nRB1\nAPC\nVHL\nCDKN2A';
+          document.getElementById('organism').value = 'hsa';
+          this.showStatus('Example data loaded', 'success');
+        }
+
+        clearResults() {
+          document.getElementById('resultsContainer').innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-sitemap"></i>
                         <h3>No Analysis Results</h3>
                         <p>Enter gene data and click "Analyze Pathways" to identify enriched KEGG pathways.</p>
                     </div>
                 `;
-                this.currentResults = null;
-                document.getElementById('sendToChatBtn').style.display = 'none';
-                document.getElementById('llmInterpretBtn').style.display = 'none';
-                this.showStatus('Results cleared', 'success');
-            }
+          this.currentResults = null;
+          document.getElementById('sendToChatBtn').style.display = 'none';
+          document.getElementById('llmInterpretBtn').style.display = 'none';
+          this.showStatus('Results cleared', 'success');
         }
+      }
 
-        // Initialize
-        window.analyzer = new KEGGAnalyzer();
-        window.toolMenuHandler = new ToolMenuHandler('KEGG Pathway Analysis', window.analyzer);
+      // Initialize
+      window.analyzer = new KEGGAnalyzer();
+      window.toolMenuHandler = new ToolMenuHandler('KEGG Pathway Analysis', window.analyzer);
     </script>
-</body>
+  </body>
 </html>

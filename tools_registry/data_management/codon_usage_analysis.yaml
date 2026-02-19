@@ -31,28 +31,28 @@ parameters:
       type: string
       description: DNA sequence to analyze (must contain only A, T, G, C nucleotides). Alternative to geneName/locusTag.
       minLength: 3
-      pattern: "^[ATGC]+$"
+      pattern: '^[ATGC]+$'
       examples:
-        - "ATGGCTAGCTAGCTAGCTAG"
-        - "ATGAAACCCGGGTTT"
+        - 'ATGGCTAGCTAGCTAGCTAG'
+        - 'ATGAAACCCGGGTTT'
     geneName:
       type: string
       description: Gene name to analyze (e.g., 'lacZ', 'araA'). Alternative to sequence/locusTag.
       examples:
-        - "lacZ"
-        - "araA"
-        - "trpA"
+        - 'lacZ'
+        - 'araA'
+        - 'trpA'
     locusTag:
       type: string
       description: Locus tag to analyze (e.g., 'b0001', 'b0002'). Alternative to sequence/geneName.
       examples:
-        - "b0001"
-        - "b0002"
-        - "b0003"
+        - 'b0001'
+        - 'b0002'
+        - 'b0003'
     chromosome:
       type: string
       description: Chromosome/contig name (optional, uses current chromosome if not specified)
-      default: "current"
+      default: 'current'
     clientId:
       type: string
       description: Browser client ID for multi-window support
@@ -68,8 +68,8 @@ parameters:
     genetic_code:
       type: string
       description: Genetic code to use for analysis
-      enum: ["standard", "vertebrate_mitochondrial", "yeast_mitochondrial", "mold_mitochondrial"]
-      default: "standard"
+      enum: ['standard', 'vertebrate_mitochondrial', 'yeast_mitochondrial', 'mold_mitochondrial']
+      default: 'standard'
     window_size:
       type: integer
       description: Window size for sliding window analysis (0 = analyze entire sequence)
@@ -82,9 +82,9 @@ parameters:
       default: 1
   required: []
   anyOf:
-    - required: ["sequence"]
-    - required: ["geneName"]
-    - required: ["locusTag"]
+    - required: ['sequence']
+    - required: ['geneName']
+    - required: ['locusTag']
 sample_usages:
   - user_query: Analyze codon usage in this DNA sequence
     tool_call: codon_usage_analysis(sequence="ATGGCTAGCTAGCTAGCTAG", include_statistics=true, normalize_sequence=true)
@@ -121,24 +121,24 @@ metadata:
   usage_pattern: common
 error_handling:
   invalid_sequence:
-    error: "Sequence must contain only A, T, G, C nucleotides"
-    solution: "Use normalize_sequence=true to clean the sequence, or provide a valid DNA sequence"
+    error: 'Sequence must contain only A, T, G, C nucleotides'
+    solution: 'Use normalize_sequence=true to clean the sequence, or provide a valid DNA sequence'
     retry: true
   empty_sequence:
-    error: "Sequence is empty or too short"
-    solution: "Provide a sequence with at least 3 nucleotides"
+    error: 'Sequence is empty or too short'
+    solution: 'Provide a sequence with at least 3 nucleotides'
     retry: false
   invalid_genetic_code:
-    error: "Invalid genetic code specified"
-    solution: "Use one of: standard, vertebrate_mitochondrial, yeast_mitochondrial, mold_mitochondrial"
+    error: 'Invalid genetic code specified'
+    solution: 'Use one of: standard, vertebrate_mitochondrial, yeast_mitochondrial, mold_mitochondrial'
     retry: true
   analysis_failed:
-    error: "Codon usage analysis failed"
-    solution: "Check sequence validity and try again"
+    error: 'Codon usage analysis failed'
+    solution: 'Check sequence validity and try again'
     retry: true
 returns:
-  success: "boolean - Whether operation was successful"
-  result: "object - Analysis results including:
+  success: 'boolean - Whether operation was successful'
+  result: 'object - Analysis results including:
     - geneName: string - Gene name (if analyzed by gene name)
     - locusTag: string - Locus tag (if analyzed by locus tag)
     - gene: object - Gene information (if analyzed by gene name/locus tag)
@@ -147,19 +147,19 @@ returns:
     - codonUsage: array - Array of codon usage data with frequency percentages and RSCU values
     - aminoAcidComposition: object - Amino acid composition counts
     - codonPreferences: object - Codon preferences by amino acid showing:
-      - aminoAcid: string - Single letter amino acid code
-      - totalCount: number - Total count for this amino acid
-      - synonymousCodons: number - Number of synonymous codons
-      - codons: array - Detailed codon usage within amino acid including:
-        - codon: string - Three-letter codon sequence
-        - count: number - Number of occurrences
-        - percentage: number - Percentage within amino acid group
-        - rscu: number - Relative Synonymous Codon Usage value
-        - preference: string - Classification (preferred/neutral/rare)
-      - mostPreferred: string - Most frequently used codon for this amino acid
-      - leastPreferred: string - Least frequently used codon for this amino acid
+    - aminoAcid: string - Single letter amino acid code
+    - totalCount: number - Total count for this amino acid
+    - synonymousCodons: number - Number of synonymous codons
+    - codons: array - Detailed codon usage within amino acid including:
+    - codon: string - Three-letter codon sequence
+    - count: number - Number of occurrences
+    - percentage: number - Percentage within amino acid group
+    - rscu: number - Relative Synonymous Codon Usage value
+    - preference: string - Classification (preferred/neutral/rare)
+    - mostPreferred: string - Most frequently used codon for this amino acid
+    - leastPreferred: string - Least frequently used codon for this amino acid
     - mostFrequentCodons: array - Top 10 most frequent codons
     - sequenceLength: number - Length of analyzed sequence
-    - analysisType: string - Type of analysis performed (sequence/geneName/locusTag)"
-  error: "string - Error message if success is false"
-  error_type: "string - Type of error for proper handling"
+    - analysisType: string - Type of analysis performed (sequence/geneName/locusTag)'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

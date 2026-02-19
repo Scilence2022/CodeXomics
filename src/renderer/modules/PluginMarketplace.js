@@ -5,366 +5,373 @@
 console.log('📦 [DEBUG] PluginMarketplace.js file loaded at:', new Date().toISOString());
 
 class PluginMarketplace {
-    constructor(pluginManagerV2, configManager, options = {}) {
-        console.log('📦 [DEBUG] PluginMarketplace constructor called');
-        this.pluginManager = pluginManagerV2;
-        this.configManager = configManager;
-        this.options = {
-            enableSecurityValidation: false,  // Temporarily disabled for testing
-            enableDependencyResolution: true,
-            enableAutoUpdates: true,
-            cacheTimeout: 3600000, // 1 hour
-            maxConcurrentDownloads: 3,
-            ...options
-        };
-        
-        // Core components
-        this.marketplaceSources = new Map();
-        this.installedPlugins = new Map();
-        this.downloadQueue = new Map();
-        this.dependencyResolver = null;
-        this.securityValidator = null;
-        this.updateManager = null;
-        
-        // Cache and state
-        this.pluginCache = new Map();
-        this.searchCache = new Map();
-        this.lastCacheUpdate = 0;
-        this.isInitialized = false;
-        this._initializationPromise = null;
-        
-        // Event system
-        this.eventBus = new EventTarget();
-        
-        // Statistics
-        this.stats = {
-            totalSearches: 0,
-            totalInstalls: 0,
-            totalUpdates: 0,
-            failedInstalls: 0,
-            securityBlocks: 0
-        };
-        
-        console.log('🛒 PluginMarketplace initializing...');
-        // Store the promise so callers can wait for initialization
-        this._initializationPromise = this.initialize();
-    }
-    
-    /**
-     * Wait for marketplace initialization to complete
-     * @returns {Promise<void>}
-     */
-    async waitForInitialization() {
-        if (this.isInitialized) {
-            return;
-        }
-        if (this._initializationPromise) {
-            await this._initializationPromise;
-        }
-    }
+  constructor(pluginManagerV2, configManager, options = {}) {
+    console.log('📦 [DEBUG] PluginMarketplace constructor called');
+    this.pluginManager = pluginManagerV2;
+    this.configManager = configManager;
+    this.options = {
+      enableSecurityValidation: false, // Temporarily disabled for testing
+      enableDependencyResolution: true,
+      enableAutoUpdates: true,
+      cacheTimeout: 3600000, // 1 hour
+      maxConcurrentDownloads: 3,
+      ...options,
+    };
 
-    /**
-     * Initialize the marketplace system
-     */
-    async initialize() {
-        try {
-            console.log('🛒 Starting PluginMarketplace initialization...');
-            
-            // 1. Initialize dependency resolver
-            this.dependencyResolver = new PluginDependencyResolver(this);
-            console.log('✅ Dependency resolver initialized');
-            
-            // 2. Initialize security validator
-            this.securityValidator = new PluginSecurityValidator(this.options);
-            console.log('✅ Security validator initialized');
-            
-            // 3. Initialize update manager
-            this.updateManager = new PluginUpdateManager(this);
-            console.log('✅ Update manager initialized');
-            
-            // 4. Load configured marketplace sources
-            await this.loadMarketplaceSources();
-            console.log('✅ Marketplace sources loaded');
-            
-            // 5. Load installed plugins registry
-            await this.loadInstalledPlugins();
-            console.log('✅ Installed plugins registry loaded');
-            
-            // 6. Setup event listeners
-            this.setupEventListeners();
-            console.log('✅ Event listeners configured');
-            
-            // 7. Start background services
-            this.startBackgroundServices();
-            console.log('✅ Background services started');
-            
-            this.isInitialized = true;
-            this.emitEvent('marketplace-initialized', { timestamp: Date.now() });
-            
-            console.log('🚀 PluginMarketplace initialization complete');
-            
-        } catch (error) {
-            console.error('❌ PluginMarketplace initialization failed:', error);
-            throw error;
-        }
-    }
+    // Core components
+    this.marketplaceSources = new Map();
+    this.installedPlugins = new Map();
+    this.downloadQueue = new Map();
+    this.dependencyResolver = null;
+    this.securityValidator = null;
+    this.updateManager = null;
 
-    /**
-     * Load configured marketplace sources
-     */
-    async loadMarketplaceSources() {
-        // Default sources
-        this.defaultSources = [
-            { id: 'localhost', url: 'http://localhost:3001/api/v1', priority: 0, enabled: true },    // Updated to port 3001
-            { id: 'official', url: 'https://plugins.genomeexplorer.org/api/v1', priority: 1, enabled: false },
-            { id: 'community', url: 'https://community-plugins.genomeexplorer.org/api/v1', priority: 2, enabled: false }
-        ];
-        
-        // Load from config or use defaults
-        const configuredSources = this.configManager?.get('marketplace.sources') || this.defaultSources;
-        
-        for (const source of configuredSources) {
-            if (source.enabled) {
-                this.marketplaceSources.set(source.id, {
-                    ...source,
-                    lastSync: 0,
-                    syncInProgress: false,
-                    errorCount: 0,
-                    plugins: new Map()
-                });
-            }
-        }
-        
-        console.log(`📦 Loaded ${this.marketplaceSources.size} marketplace sources`);
-    }
+    // Cache and state
+    this.pluginCache = new Map();
+    this.searchCache = new Map();
+    this.lastCacheUpdate = 0;
+    this.isInitialized = false;
+    this._initializationPromise = null;
 
-    /**
-     * Load installed plugins registry and restore them to PluginManagerV2
-     */
-    async loadInstalledPlugins() {
-        // Wait for ConfigManager to finish initializing before reading data
-        if (this.configManager && this.configManager.waitForInitialization) {
-            await this.configManager.waitForInitialization();
-            console.log('✅ ConfigManager initialization complete, loading installed plugins...');
-        }
-        
-        // First, check localStorage directly for debugging
-        try {
-            const rawData = localStorage.getItem('marketplaceSettings');
-            if (rawData) {
-                const parsed = JSON.parse(rawData);
-                console.log('🔍 Direct localStorage check (marketplaceSettings):', {
-                    hasInstalled: !!parsed.installed,
-                    installedCount: Object.keys(parsed.installed || {}).length,
-                    installedIds: Object.keys(parsed.installed || {})
-                });
-            } else {
-                console.warn('⚠️  No marketplaceSettings found in localStorage');
-            }
-        } catch (e) {
-            console.error('❌ Error reading localStorage directly:', e);
-        }
-        
-        const installedData = this.configManager?.get('marketplace.installed') || {};
-        
-        console.log('📊 ConfigManager returned installed data:', {
-            hasData: Object.keys(installedData).length > 0,
-            pluginCount: Object.keys(installedData).length,
-            pluginIds: Object.keys(installedData)
+    // Event system
+    this.eventBus = new EventTarget();
+
+    // Statistics
+    this.stats = {
+      totalSearches: 0,
+      totalInstalls: 0,
+      totalUpdates: 0,
+      failedInstalls: 0,
+      securityBlocks: 0,
+    };
+
+    console.log('🛒 PluginMarketplace initializing...');
+    // Store the promise so callers can wait for initialization
+    this._initializationPromise = this.initialize();
+  }
+
+  /**
+   * Wait for marketplace initialization to complete
+   * @returns {Promise<void>}
+   */
+  async waitForInitialization() {
+    if (this.isInitialized) {
+      return;
+    }
+    if (this._initializationPromise) {
+      await this._initializationPromise;
+    }
+  }
+
+  /**
+   * Initialize the marketplace system
+   */
+  async initialize() {
+    try {
+      console.log('🛒 Starting PluginMarketplace initialization...');
+
+      // 1. Initialize dependency resolver
+      this.dependencyResolver = new PluginDependencyResolver(this);
+      console.log('✅ Dependency resolver initialized');
+
+      // 2. Initialize security validator
+      this.securityValidator = new PluginSecurityValidator(this.options);
+      console.log('✅ Security validator initialized');
+
+      // 3. Initialize update manager
+      this.updateManager = new PluginUpdateManager(this);
+      console.log('✅ Update manager initialized');
+
+      // 4. Load configured marketplace sources
+      await this.loadMarketplaceSources();
+      console.log('✅ Marketplace sources loaded');
+
+      // 5. Load installed plugins registry
+      await this.loadInstalledPlugins();
+      console.log('✅ Installed plugins registry loaded');
+
+      // 6. Setup event listeners
+      this.setupEventListeners();
+      console.log('✅ Event listeners configured');
+
+      // 7. Start background services
+      this.startBackgroundServices();
+      console.log('✅ Background services started');
+
+      this.isInitialized = true;
+      this.emitEvent('marketplace-initialized', { timestamp: Date.now() });
+
+      console.log('🚀 PluginMarketplace initialization complete');
+    } catch (error) {
+      console.error('❌ PluginMarketplace initialization failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load configured marketplace sources
+   */
+  async loadMarketplaceSources() {
+    // Default sources
+    this.defaultSources = [
+      { id: 'localhost', url: 'http://localhost:3001/api/v1', priority: 0, enabled: true }, // Updated to port 3001
+      { id: 'official', url: 'https://plugins.genomeexplorer.org/api/v1', priority: 1, enabled: false },
+      { id: 'community', url: 'https://community-plugins.genomeexplorer.org/api/v1', priority: 2, enabled: false },
+    ];
+
+    // Load from config or use defaults
+    const configuredSources = this.configManager?.get('marketplace.sources') || this.defaultSources;
+
+    for (const source of configuredSources) {
+      if (source.enabled) {
+        this.marketplaceSources.set(source.id, {
+          ...source,
+          lastSync: 0,
+          syncInProgress: false,
+          errorCount: 0,
+          plugins: new Map(),
         });
-        
-        for (const [pluginId, pluginInfo] of Object.entries(installedData)) {
-            this.installedPlugins.set(pluginId, {
-                id: pluginId,
-                version: pluginInfo.version,
-                source: pluginInfo.source,
-                installedAt: new Date(pluginInfo.installedAt),
-                dependencies: pluginInfo.dependencies || [],
-                autoUpdate: pluginInfo.autoUpdate !== false,
-                ...pluginInfo
+      }
+    }
+
+    console.log(`📦 Loaded ${this.marketplaceSources.size} marketplace sources`);
+  }
+
+  /**
+   * Load installed plugins registry and restore them to PluginManagerV2
+   */
+  async loadInstalledPlugins() {
+    // Wait for ConfigManager to finish initializing before reading data
+    if (this.configManager && this.configManager.waitForInitialization) {
+      await this.configManager.waitForInitialization();
+      console.log('✅ ConfigManager initialization complete, loading installed plugins...');
+    }
+
+    // First, check localStorage directly for debugging
+    try {
+      const rawData = localStorage.getItem('marketplaceSettings');
+      if (rawData) {
+        const parsed = JSON.parse(rawData);
+        console.log('🔍 Direct localStorage check (marketplaceSettings):', {
+          hasInstalled: !!parsed.installed,
+          installedCount: Object.keys(parsed.installed || {}).length,
+          installedIds: Object.keys(parsed.installed || {}),
+        });
+      } else {
+        console.warn('⚠️  No marketplaceSettings found in localStorage');
+      }
+    } catch (e) {
+      console.error('❌ Error reading localStorage directly:', e);
+    }
+
+    const installedData = this.configManager?.get('marketplace.installed') || {};
+
+    console.log('📊 ConfigManager returned installed data:', {
+      hasData: Object.keys(installedData).length > 0,
+      pluginCount: Object.keys(installedData).length,
+      pluginIds: Object.keys(installedData),
+    });
+
+    for (const [pluginId, pluginInfo] of Object.entries(installedData)) {
+      this.installedPlugins.set(pluginId, {
+        id: pluginId,
+        version: pluginInfo.version,
+        source: pluginInfo.source,
+        installedAt: new Date(pluginInfo.installedAt),
+        dependencies: pluginInfo.dependencies || [],
+        autoUpdate: pluginInfo.autoUpdate !== false,
+        ...pluginInfo,
+      });
+    }
+
+    console.log(`📋 Loaded ${this.installedPlugins.size} installed plugins from registry`);
+
+    // Restore installed plugins to PluginManagerV2
+    await this.restoreInstalledPlugins();
+  }
+
+  /**
+   * Restore installed plugins by re-registering them with PluginManagerV2
+   * First attempts to load from disk, then falls back to manifest in localStorage
+   */
+  async restoreInstalledPlugins() {
+    if (this.installedPlugins.size === 0) {
+      console.log('📋 No installed plugins to restore');
+      return;
+    }
+
+    console.log(`🔄 Restoring ${this.installedPlugins.size} installed plugins to PluginManagerV2...`);
+    console.log('📋 Plugins to restore:', Array.from(this.installedPlugins.keys()));
+
+    let restoredCount = 0;
+    let failedCount = 0;
+
+    for (const [pluginId, pluginInfo] of this.installedPlugins) {
+      try {
+        console.log(`🔄 Attempting to restore plugin: ${pluginId}`);
+
+        // Check if plugin is already registered
+        const existingPlugin = this.pluginManager.getPlugin(pluginId);
+        if (existingPlugin) {
+          console.log(`✅ Plugin ${pluginId} already registered`);
+          restoredCount++;
+          continue;
+        }
+
+        // Try to load plugin from disk first
+        let manifest = null;
+        let loadedFromDisk = false;
+
+        if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.loadPluginFromDisk) {
+          const installPath = this.pluginManager.pathResolver
+            ? this.pluginManager.pathResolver.getInstallPath(pluginId)
+            : `/plugins/${pluginId}`;
+
+          console.log(`💾 Attempting to load plugin from disk: ${installPath}`);
+
+          try {
+            const diskResult = await window.electronAPI.loadPluginFromDisk({
+              pluginId,
+              installPath,
             });
-        }
-        
-        console.log(`📋 Loaded ${this.installedPlugins.size} installed plugins from registry`);
-        
-        // Restore installed plugins to PluginManagerV2
-        await this.restoreInstalledPlugins();
-    }
-    
-    /**
-     * Restore installed plugins by re-registering them with PluginManagerV2
-     * First attempts to load from disk, then falls back to manifest in localStorage
-     */
-    async restoreInstalledPlugins() {
-        if (this.installedPlugins.size === 0) {
-            console.log('📋 No installed plugins to restore');
-            return;
-        }
-        
-        console.log(`🔄 Restoring ${this.installedPlugins.size} installed plugins to PluginManagerV2...`);
-        console.log('📋 Plugins to restore:', Array.from(this.installedPlugins.keys()));
-        
-        let restoredCount = 0;
-        let failedCount = 0;
-        
-        for (const [pluginId, pluginInfo] of this.installedPlugins) {
-            try {
-                console.log(`🔄 Attempting to restore plugin: ${pluginId}`);
-                
-                // Check if plugin is already registered
-                const existingPlugin = this.pluginManager.getPlugin(pluginId);
-                if (existingPlugin) {
-                    console.log(`✅ Plugin ${pluginId} already registered`);
-                    restoredCount++;
-                    continue;
-                }
-                
-                // Try to load plugin from disk first
-                let manifest = null;
-                let loadedFromDisk = false;
-                
-                if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.loadPluginFromDisk) {
-                    const installPath = this.pluginManager.pathResolver 
-                        ? this.pluginManager.pathResolver.getInstallPath(pluginId)
-                        : `/plugins/${pluginId}`;
-                    
-                    console.log(`💾 Attempting to load plugin from disk: ${installPath}`);
-                    
-                    try {
-                        const diskResult = await window.electronAPI.loadPluginFromDisk({
-                            pluginId,
-                            installPath
-                        });
-                        
-                        if (diskResult.success) {
-                            manifest = diskResult.manifest;
-                            loadedFromDisk = true;
-                            console.log(`✅ Loaded plugin ${pluginId} from disk`);
-                        } else {
-                            console.warn(`⚠️  Plugin ${pluginId} not found on disk: ${diskResult.error}`);
-                        }
-                    } catch (diskError) {
-                        console.warn(`⚠️  Failed to load plugin ${pluginId} from disk:`, diskError);
-                    }
-                }
-                
-                // Fall back to manifest from localStorage if not loaded from disk
-                if (!manifest) {
-                    console.log(`📝 Using stored manifest for plugin: ${pluginId}`);
-                    manifest = pluginInfo.manifest || {
-                        id: pluginId,
-                        name: pluginInfo.name || pluginId,
-                        description: pluginInfo.description || '',
-                        version: pluginInfo.version,
-                        author: pluginInfo.author || 'Unknown',
-                        category: pluginInfo.category || 'general',
-                        type: pluginInfo.type || 'function',
-                        dependencies: pluginInfo.dependencies || [],
-                        tags: pluginInfo.tags || [],
-                        homepage: pluginInfo.homepage || '',
-                        repository: pluginInfo.repository || '',
-                        license: pluginInfo.license || 'Unknown',
-                        // Type-specific fields
-                        ...(pluginInfo.type === 'function' ? {
-                            functions: pluginInfo.functions || {}
-                        } : {})
-                    };
-                }
-                
-                // For visualization plugins, ensure they have a working render method
-                if (manifest.type === 'visualization' || pluginInfo.type === 'visualization') {
-                    manifest.type = 'visualization';
-                    manifest.supportedDataTypes = manifest.supportedDataTypes || pluginInfo.supportedDataTypes || ['generic'];
-                    
-                    // Create a working renderer function since functions can't be serialized to JSON
-                    manifest.executor = this.createDefaultVisualizationRenderer(pluginId, manifest.name || pluginId);
-                    manifest.renderNetwork = manifest.executor;
-                    manifest.visualize = manifest.executor;
-                    
-                    console.log(`🎨 Added visualization renderer for plugin: ${pluginId}`);
-                }
-                
-                console.log(`📦 Restoring plugin manifest:`, {
-                    id: manifest.id,
-                    name: manifest.name,
-                    type: manifest.type,
-                    version: manifest.version,
-                    loadedFromDisk,
-                    hasExecutor: typeof manifest.executor === 'function'
-                });
-                
-                // Re-register plugin with PluginManagerV2
-                await this.pluginManager.registerPlugin(pluginId, manifest);
-                
-                // Verify registration
-                const verifyPlugin = this.pluginManager.getPlugin(pluginId);
-                if (verifyPlugin) {
-                    console.log(`✅ Restored and verified plugin: ${pluginId}`);
-                    restoredCount++;
-                } else {
-                    console.error(`❌ Plugin ${pluginId} registration returned but plugin not found!`);
-                    failedCount++;
-                }
-                
-            } catch (error) {
-                console.error(`❌ Failed to restore plugin ${pluginId}:`, error);
-                failedCount++;
+
+            if (diskResult.success) {
+              manifest = diskResult.manifest;
+              loadedFromDisk = true;
+              console.log(`✅ Loaded plugin ${pluginId} from disk`);
+            } else {
+              console.warn(`⚠️  Plugin ${pluginId} not found on disk: ${diskResult.error}`);
             }
+          } catch (diskError) {
+            console.warn(`⚠️  Failed to load plugin ${pluginId} from disk:`, diskError);
+          }
         }
-        
-        console.log(`✅ Plugin restoration complete: ${restoredCount} restored, ${failedCount} failed`);
-        
-        // Final verification - log all registered plugins
-        console.log('📊 Final plugin registry state:', {
-            functionPlugins: Array.from(this.pluginManager.pluginRegistry.function?.keys() || []),
-            visualizationPlugins: Array.from(this.pluginManager.pluginRegistry.visualization?.keys() || []),
-            utilityPlugins: Array.from(this.pluginManager.pluginRegistry.utility?.keys() || [])
+
+        // Fall back to manifest from localStorage if not loaded from disk
+        if (!manifest) {
+          console.log(`📝 Using stored manifest for plugin: ${pluginId}`);
+          manifest = pluginInfo.manifest || {
+            id: pluginId,
+            name: pluginInfo.name || pluginId,
+            description: pluginInfo.description || '',
+            version: pluginInfo.version,
+            author: pluginInfo.author || 'Unknown',
+            category: pluginInfo.category || 'general',
+            type: pluginInfo.type || 'function',
+            dependencies: pluginInfo.dependencies || [],
+            tags: pluginInfo.tags || [],
+            homepage: pluginInfo.homepage || '',
+            repository: pluginInfo.repository || '',
+            license: pluginInfo.license || 'Unknown',
+            // Type-specific fields
+            ...(pluginInfo.type === 'function'
+              ? {
+                  functions: pluginInfo.functions || {},
+                }
+              : {}),
+          };
+        }
+
+        // For visualization plugins, ensure they have a working render method
+        if (manifest.type === 'visualization' || pluginInfo.type === 'visualization') {
+          manifest.type = 'visualization';
+          manifest.supportedDataTypes = manifest.supportedDataTypes || pluginInfo.supportedDataTypes || ['generic'];
+
+          // Create a working renderer function since functions can't be serialized to JSON
+          manifest.executor = this.createDefaultVisualizationRenderer(pluginId, manifest.name || pluginId);
+          manifest.renderNetwork = manifest.executor;
+          manifest.visualize = manifest.executor;
+
+          console.log(`🎨 Added visualization renderer for plugin: ${pluginId}`);
+        }
+
+        console.log(`📦 Restoring plugin manifest:`, {
+          id: manifest.id,
+          name: manifest.name,
+          type: manifest.type,
+          version: manifest.version,
+          loadedFromDisk,
+          hasExecutor: typeof manifest.executor === 'function',
         });
+
+        // Re-register plugin with PluginManagerV2
+        await this.pluginManager.registerPlugin(pluginId, manifest);
+
+        // Verify registration
+        const verifyPlugin = this.pluginManager.getPlugin(pluginId);
+        if (verifyPlugin) {
+          console.log(`✅ Restored and verified plugin: ${pluginId}`);
+          restoredCount++;
+        } else {
+          console.error(`❌ Plugin ${pluginId} registration returned but plugin not found!`);
+          failedCount++;
+        }
+      } catch (error) {
+        console.error(`❌ Failed to restore plugin ${pluginId}:`, error);
+        failedCount++;
+      }
     }
-    
-    /**
-     * Create a default visualization renderer for marketplace-installed plugins
-     * Since functions cannot be serialized to JSON, we need to recreate them on restore
-     * @param {string} pluginId - Plugin identifier
-     * @param {string} pluginName - Plugin display name
-     * @returns {Function} A function that renders network data as SVG
-     */
-    createDefaultVisualizationRenderer(pluginId, pluginName) {
-        return async function renderNetworkVisualization(data) {
-            console.log(`🎨 Rendering visualization for ${pluginName}...`);
-            console.log('🔍 Data received:',  {dataType: typeof data, hasNodes: data?.nodes !== undefined, hasEdges: data?.edges !== undefined, data});
-            
-            // Validate input data
-            if (!data || typeof data !== 'object') {
-                const error = 'Invalid data: expected object with nodes and edges';
-                console.error(error, data);
-                const errorDiv = document.createElement('div');
-                errorDiv.style.cssText = 'padding: 20px; color: #f56565; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px;';
-                errorDiv.innerHTML = `<strong>❌ Rendering Error:</strong><br>${error}`;
-                return errorDiv;
-            }
-            
-            // Parse data if needed
-            if (typeof data === 'string') {
-                try {
-                    data = JSON.parse(data);
-                } catch (e) {
-                    console.error('Failed to parse data:', e);
-                    const errorDiv = document.createElement('div');
-                    errorDiv.style.cssText = 'padding: 20px; color: #f56565; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px;';
-                    errorDiv.innerHTML = `<strong>❌ Parse Error:</strong><br>${e.message}`;
-                    return errorDiv;
-                }
-            }
-            
-            // Validate data structure
-            const nodes = data.nodes || [];
-            const edges = data.edges || [];
-            
-            // Create container
-            const container = document.createElement('div');
-            container.className = 'plugin-network-container';
-            container.style.cssText = `
+
+    console.log(`✅ Plugin restoration complete: ${restoredCount} restored, ${failedCount} failed`);
+
+    // Final verification - log all registered plugins
+    console.log('📊 Final plugin registry state:', {
+      functionPlugins: Array.from(this.pluginManager.pluginRegistry.function?.keys() || []),
+      visualizationPlugins: Array.from(this.pluginManager.pluginRegistry.visualization?.keys() || []),
+      utilityPlugins: Array.from(this.pluginManager.pluginRegistry.utility?.keys() || []),
+    });
+  }
+
+  /**
+   * Create a default visualization renderer for marketplace-installed plugins
+   * Since functions cannot be serialized to JSON, we need to recreate them on restore
+   * @param {string} pluginId - Plugin identifier
+   * @param {string} pluginName - Plugin display name
+   * @returns {Function} A function that renders network data as SVG
+   */
+  createDefaultVisualizationRenderer(pluginId, pluginName) {
+    return async function renderNetworkVisualization(data) {
+      console.log(`🎨 Rendering visualization for ${pluginName}...`);
+      console.log('🔍 Data received:', {
+        dataType: typeof data,
+        hasNodes: data?.nodes !== undefined,
+        hasEdges: data?.edges !== undefined,
+        data,
+      });
+
+      // Validate input data
+      if (!data || typeof data !== 'object') {
+        const error = 'Invalid data: expected object with nodes and edges';
+        console.error(error, data);
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText =
+          'padding: 20px; color: #f56565; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px;';
+        errorDiv.innerHTML = `<strong>❌ Rendering Error:</strong><br>${error}`;
+        return errorDiv;
+      }
+
+      // Parse data if needed
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch (e) {
+          console.error('Failed to parse data:', e);
+          const errorDiv = document.createElement('div');
+          errorDiv.style.cssText =
+            'padding: 20px; color: #f56565; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px;';
+          errorDiv.innerHTML = `<strong>❌ Parse Error:</strong><br>${e.message}`;
+          return errorDiv;
+        }
+      }
+
+      // Validate data structure
+      const nodes = data.nodes || [];
+      const edges = data.edges || [];
+
+      // Create container
+      const container = document.createElement('div');
+      container.className = 'plugin-network-container';
+      container.style.cssText = `
                 width: 100%;
                 height: 600px;
                 background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
@@ -373,106 +380,106 @@ class PluginMarketplace {
                 position: relative;
                 overflow: hidden;
             `;
-            
-            // Create SVG canvas
-            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('width', '100%');
-            svg.setAttribute('height', '100%');
-            svg.setAttribute('viewBox', '0 0 800 600');
-            container.appendChild(svg);
-            
-            // Calculate node positions (simple force-directed layout simulation)
-            const width = 800;
-            const height = 600;
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const radius = Math.min(width, height) * 0.35;
-            
-            const nodePositions = new Map();
-            nodes.forEach((node, i) => {
-                const angle = (2 * Math.PI * i) / nodes.length;
-                nodePositions.set(node.id, {
-                    x: centerX + radius * Math.cos(angle),
-                    y: centerY + radius * Math.sin(angle),
-                    ...node
-                });
-            });
-            
-            // Render edges
-            const edgesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            edgesGroup.setAttribute('class', 'edges');
-            edges.forEach(edge => {
-                const source = nodePositions.get(edge.source);
-                const target = nodePositions.get(edge.target);
-                
-                if (source && target) {
-                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    line.setAttribute('x1', source.x);
-                    line.setAttribute('y1', source.y);
-                    line.setAttribute('x2', target.x);
-                    line.setAttribute('y2', target.y);
-                    
-                    const confidence = edge.confidence || 0.5;
-                    const color = confidence > 0.8 ? '#4CAF50' : confidence > 0.5 ? '#FF9800' : '#f44336';
-                    line.setAttribute('stroke', color);
-                    line.setAttribute('stroke-width', Math.max(1, confidence * 3));
-                    line.setAttribute('opacity', '0.6');
-                    edgesGroup.appendChild(line);
-                }
-            });
-            svg.appendChild(edgesGroup);
-            
-            // Render nodes
-            const nodesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            nodesGroup.setAttribute('class', 'nodes');
-            nodePositions.forEach((node, nodeId) => {
-                // Node circle
-                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circle.setAttribute('cx', node.x);
-                circle.setAttribute('cy', node.y);
-                circle.setAttribute('r', '20');
-                
-                const colors = {
-                    'protein': '#4CAF50',
-                    'enzyme': '#2196F3',
-                    'receptor': '#FF9800',
-                    'transcription_factor': '#9C27B0',
-                    'gene': '#E91E63',
-                    'default': '#607D8B'
-                };
-                circle.setAttribute('fill', colors[node.type] || colors.default);
-                circle.setAttribute('stroke', '#333');
-                circle.setAttribute('stroke-width', '2');
-                circle.style.cursor = 'pointer';
-                
-                // Hover effect
-                circle.addEventListener('mouseenter', () => {
-                    circle.setAttribute('r', '25');
-                    circle.setAttribute('stroke-width', '3');
-                });
-                circle.addEventListener('mouseleave', () => {
-                    circle.setAttribute('r', '20');
-                    circle.setAttribute('stroke-width', '2');
-                });
-                
-                nodesGroup.appendChild(circle);
-                
-                // Node label
-                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                text.setAttribute('x', node.x);
-                text.setAttribute('y', node.y - 28);
-                text.setAttribute('text-anchor', 'middle');
-                text.setAttribute('font-size', '12');
-                text.setAttribute('font-weight', 'bold');
-                text.setAttribute('fill', '#333');
-                text.textContent = (node.name || nodeId).substring(0, 20);
-                nodesGroup.appendChild(text);
-            });
-            svg.appendChild(nodesGroup);
-            
-            // Add info panel
-            const info = document.createElement('div');
-            info.style.cssText = `
+
+      // Create SVG canvas
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', '100%');
+      svg.setAttribute('viewBox', '0 0 800 600');
+      container.appendChild(svg);
+
+      // Calculate node positions (simple force-directed layout simulation)
+      const width = 800;
+      const height = 600;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = Math.min(width, height) * 0.35;
+
+      const nodePositions = new Map();
+      nodes.forEach((node, i) => {
+        const angle = (2 * Math.PI * i) / nodes.length;
+        nodePositions.set(node.id, {
+          x: centerX + radius * Math.cos(angle),
+          y: centerY + radius * Math.sin(angle),
+          ...node,
+        });
+      });
+
+      // Render edges
+      const edgesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      edgesGroup.setAttribute('class', 'edges');
+      edges.forEach(edge => {
+        const source = nodePositions.get(edge.source);
+        const target = nodePositions.get(edge.target);
+
+        if (source && target) {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', source.x);
+          line.setAttribute('y1', source.y);
+          line.setAttribute('x2', target.x);
+          line.setAttribute('y2', target.y);
+
+          const confidence = edge.confidence || 0.5;
+          const color = confidence > 0.8 ? '#4CAF50' : confidence > 0.5 ? '#FF9800' : '#f44336';
+          line.setAttribute('stroke', color);
+          line.setAttribute('stroke-width', Math.max(1, confidence * 3));
+          line.setAttribute('opacity', '0.6');
+          edgesGroup.appendChild(line);
+        }
+      });
+      svg.appendChild(edgesGroup);
+
+      // Render nodes
+      const nodesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      nodesGroup.setAttribute('class', 'nodes');
+      nodePositions.forEach((node, nodeId) => {
+        // Node circle
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', node.x);
+        circle.setAttribute('cy', node.y);
+        circle.setAttribute('r', '20');
+
+        const colors = {
+          protein: '#4CAF50',
+          enzyme: '#2196F3',
+          receptor: '#FF9800',
+          transcription_factor: '#9C27B0',
+          gene: '#E91E63',
+          default: '#607D8B',
+        };
+        circle.setAttribute('fill', colors[node.type] || colors.default);
+        circle.setAttribute('stroke', '#333');
+        circle.setAttribute('stroke-width', '2');
+        circle.style.cursor = 'pointer';
+
+        // Hover effect
+        circle.addEventListener('mouseenter', () => {
+          circle.setAttribute('r', '25');
+          circle.setAttribute('stroke-width', '3');
+        });
+        circle.addEventListener('mouseleave', () => {
+          circle.setAttribute('r', '20');
+          circle.setAttribute('stroke-width', '2');
+        });
+
+        nodesGroup.appendChild(circle);
+
+        // Node label
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', node.x);
+        text.setAttribute('y', node.y - 28);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('font-size', '12');
+        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('fill', '#333');
+        text.textContent = (node.name || nodeId).substring(0, 20);
+        nodesGroup.appendChild(text);
+      });
+      svg.appendChild(nodesGroup);
+
+      // Add info panel
+      const info = document.createElement('div');
+      info.style.cssText = `
                 position: absolute;
                 top: 10px;
                 left: 10px;
@@ -483,15 +490,15 @@ class PluginMarketplace {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             `;
-            info.innerHTML = `
+      info.innerHTML = `
                 <strong style="color: #667eea;">🔬 ${pluginName}</strong><br>
                 <span style="color: #666;">Nodes: ${nodes.length} | Edges: ${edges.length}</span>
             `;
-            container.appendChild(info);
-            
-            // Add legend
-            const legend = document.createElement('div');
-            legend.style.cssText = `
+      container.appendChild(info);
+
+      // Add legend
+      const legend = document.createElement('div');
+      legend.style.cssText = `
                 position: absolute;
                 bottom: 10px;
                 right: 10px;
@@ -502,1149 +509,1145 @@ class PluginMarketplace {
                 font-family: -apple-system, BlinkMacSystemFont, sans-serif;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             `;
-            legend.innerHTML = `
+      legend.innerHTML = `
                 <div style="font-weight: bold; margin-bottom: 6px;">Node Types</div>
                 <div><span style="display: inline-block; width: 12px; height: 12px; background: #4CAF50; border-radius: 50%; margin-right: 6px;"></span>Protein</div>
                 <div><span style="display: inline-block; width: 12px; height: 12px; background: #2196F3; border-radius: 50%; margin-right: 6px;"></span>Enzyme</div>
                 <div><span style="display: inline-block; width: 12px; height: 12px; background: #FF9800; border-radius: 50%; margin-right: 6px;"></span>Receptor</div>
             `;
-            container.appendChild(legend);
-            
-            console.log(`✅ Visualization rendered: ${nodes.length} nodes, ${edges.length} edges`);
-            
-            return container;
-        };
+      container.appendChild(legend);
+
+      console.log(`✅ Visualization rendered: ${nodes.length} nodes, ${edges.length} edges`);
+
+      return container;
+    };
+  }
+
+  /**
+   * Search plugins across all marketplace sources
+   */
+  async searchPlugins(query, filters = {}) {
+    const searchKey = JSON.stringify({ query, filters });
+
+    // Check cache first
+    if (this.searchCache.has(searchKey)) {
+      const cached = this.searchCache.get(searchKey);
+      if (Date.now() - cached.timestamp < this.options.cacheTimeout) {
+        this.stats.totalSearches++;
+        const cacheAge = Math.round((Date.now() - cached.timestamp) / 1000);
+        console.log(`📦 Returning ${cached.results.length} cached plugins (cached ${cacheAge}s ago)`);
+        return cached.results;
+      } else {
+        console.log('⏰ Cache expired, fetching fresh data from server');
+        this.searchCache.delete(searchKey);
+      }
     }
 
-    /**
-     * Search plugins across all marketplace sources
-     */
-    async searchPlugins(query, filters = {}) {
-        const searchKey = JSON.stringify({ query, filters });
-        
-        // Check cache first
-        if (this.searchCache.has(searchKey)) {
-            const cached = this.searchCache.get(searchKey);
-            if (Date.now() - cached.timestamp < this.options.cacheTimeout) {
-                this.stats.totalSearches++;
-                const cacheAge = Math.round((Date.now() - cached.timestamp) / 1000);
-                console.log(`📦 Returning ${cached.results.length} cached plugins (cached ${cacheAge}s ago)`);
-                return cached.results;
-            } else {
-                console.log('⏰ Cache expired, fetching fresh data from server');
-                this.searchCache.delete(searchKey);
-            }
-        }
-        
-        try {
-            console.log(`🔍 Searching plugins: "${query}"`);
-            console.log(`📊 Marketplace sources available: ${this.marketplaceSources.size}`);
-            console.log(`📋 Sources:`, Array.from(this.marketplaceSources.entries()).map(([id, src]) => ({
-                id, url: src.url, enabled: src.enabled
-            })));
-            
-            const searchPromises = [];
-            
-            // Search across all enabled sources
-            for (const [sourceId, source] of this.marketplaceSources) {
-                if (source.enabled) {
-                    console.log(`✅ Adding search for source: ${sourceId} (${source.url})`);
-                    searchPromises.push(this.searchInSource(sourceId, query, filters));
-                } else {
-                    console.log(`⏭️ Skipping disabled source: ${sourceId}`);
-                }
-            }
-            
-            const sourceResults = await Promise.allSettled(searchPromises);
-            
-            // Combine and deduplicate results
-            const allResults = new Map();
-            
-            sourceResults.forEach((result, index) => {
-                if (result.status === 'fulfilled') {
-                    const sourceId = Array.from(this.marketplaceSources.keys())[index];
-                    const source = this.marketplaceSources.get(sourceId);
-                    
-                    result.value.forEach(plugin => {
-                        const existingPlugin = allResults.get(plugin.id);
-                        
-                        if (!existingPlugin || source.priority < existingPlugin.source.priority) {
-                            allResults.set(plugin.id, {
-                                ...plugin,
-                                source: { id: sourceId, ...source }
-                            });
-                        }
-                    });
-                }
-            });
-            
-            // Apply filters and sorting
-            let results = Array.from(allResults.values());
-            results = this.applySearchFilters(results, filters);
-            results = this.sortSearchResults(results, query);
-            
-            // Cache results
-            this.searchCache.set(searchKey, {
-                results,
-                timestamp: Date.now()
-            });
-            
-            this.stats.totalSearches++;
-            this.emitEvent('plugins-searched', { query, resultCount: results.length });
-            
-            console.log(`✅ Found ${results.length} plugins for "${query}"`);
-            return results;
-            
-        } catch (error) {
-            console.error('❌ Plugin search failed:', error);
-            throw error;
-        }
-    }
+    try {
+      console.log(`🔍 Searching plugins: "${query}"`);
+      console.log(`📊 Marketplace sources available: ${this.marketplaceSources.size}`);
+      console.log(
+        `📋 Sources:`,
+        Array.from(this.marketplaceSources.entries()).map(([id, src]) => ({
+          id,
+          url: src.url,
+          enabled: src.enabled,
+        }))
+      );
 
-    /**
-     * Search plugins in a specific source
-     */
-    async searchInSource(sourceId, query, filters) {
-        const source = this.marketplaceSources.get(sourceId);
-        
-        if (source.url.startsWith('file://')) {
-            return this.searchLocalSource(source, query, filters);
+      const searchPromises = [];
+
+      // Search across all enabled sources
+      for (const [sourceId, source] of this.marketplaceSources) {
+        if (source.enabled) {
+          console.log(`✅ Adding search for source: ${sourceId} (${source.url})`);
+          searchPromises.push(this.searchInSource(sourceId, query, filters));
         } else {
-            return this.searchRemoteSource(source, query, filters);
+          console.log(`⏭️ Skipping disabled source: ${sourceId}`);
         }
-    }
+      }
 
+      const sourceResults = await Promise.allSettled(searchPromises);
 
-    /**
-     * Search in remote marketplace
-     */
-    async searchRemoteSource(source, query, filters) {
-        try {
-            console.log(`🌐 Calling marketplace API: ${source.url}/plugins`);
-            return this.callRealMarketplaceAPI(source, query, filters);
-            
-        } catch (error) {
-            console.error(`❌ Failed to search in source ${source.id}:`, error);
-            source.errorCount++;
-            return [];
-        }
-    }
+      // Combine and deduplicate results
+      const allResults = new Map();
 
-    /**
-     * Call real marketplace API
-     */
-    async callRealMarketplaceAPI(source, query, filters) {
-        try {
-            // Build query parameters
-            const params = new URLSearchParams();
-            if (query) params.append('query', query);
-            if (filters.category) params.append('category', filters.category);
-            if (filters.type) params.append('type', filters.type);
-            if (filters.author) params.append('author', filters.author);
-            if (filters.tags) {
-                const tags = Array.isArray(filters.tags) ? filters.tags : [filters.tags];
-                tags.forEach(tag => params.append('tags', tag));
-            }
-            params.append('limit', '50');
-            params.append('offset', '0');
-            
-            const url = `${source.url}/plugins?${params.toString()}`;
-            console.log(`📡 Fetching: ${url}`);
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'GenomeExplorer/2.0.0'
-                },
-                signal: AbortSignal.timeout(10000)  // 10 second timeout
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            
-            console.log(`📡 API Response:`, {
-                success: data.success,
-                pluginCount: data.data?.plugins?.length || 0,
-                hasData: !!data.data,
-                hasPagination: !!data.data?.pagination
-            });
-            
-            if (!data.success) {
-                throw new Error(data.message || 'API returned error');
-            }
-            
-            console.log(`✅ Real API returned ${data.data.plugins.length} plugins from ${source.id}`);
-            
-            // Transform API response to match internal format
-            return data.data.plugins.map(plugin => ({
+      sourceResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const sourceId = Array.from(this.marketplaceSources.keys())[index];
+          const source = this.marketplaceSources.get(sourceId);
+
+          result.value.forEach(plugin => {
+            const existingPlugin = allResults.get(plugin.id);
+
+            if (!existingPlugin || source.priority < existingPlugin.source.priority) {
+              allResults.set(plugin.id, {
                 ...plugin,
-                source: source.id,
-                // Ensure required fields exist
-                tags: plugin.tags || [],
-                dependencies: plugin.dependencies || [],
-                rating: plugin.rating || 0,
-                downloads: plugin.downloads || 0
-            }));
-            
-        } catch (error) {
-            console.error(`❌ Real API call failed for ${source.id}:`, error);
-            throw error;
-        }
-    }
-
-
-
-    /**
-     * Apply search filters to results
-     */
-    applySearchFilters(results, filters) {
-        let filtered = results;
-        
-        // Apply category filter (treat 'all' as no filter)
-        if (filters.category && filters.category !== 'all') {
-            filtered = filtered.filter(plugin => plugin.category === filters.category);
-        }
-        
-        // Apply type filter (treat 'all' as no filter)
-        if (filters.type && filters.type !== 'all') {
-            filtered = filtered.filter(plugin => plugin.type === filters.type);
-        }
-        
-        if (filters.author) {
-            filtered = filtered.filter(plugin => 
-                plugin.author.toLowerCase().includes(filters.author.toLowerCase())
-            );
-        }
-        
-        if (filters.minRating) {
-            filtered = filtered.filter(plugin => 
-                plugin.rating >= filters.minRating
-            );
-        }
-        
-        if (filters.tags) {
-            const requiredTags = Array.isArray(filters.tags) ? filters.tags : [filters.tags];
-            filtered = filtered.filter(plugin =>
-                requiredTags.some(tag => 
-                    plugin.tags.some(pluginTag => 
-                        pluginTag.toLowerCase().includes(tag.toLowerCase())
-                    )
-                )
-            );
-        }
-        
-        return filtered;
-    }
-
-    /**
-     * Sort search results by relevance
-     */
-    sortSearchResults(results, query) {
-        const queryLower = query.toLowerCase();
-        
-        return results.sort((a, b) => {
-            // Calculate relevance scores
-            let scoreA = 0;
-            let scoreB = 0;
-            
-            // Exact name match gets highest score
-            if (a.name.toLowerCase() === queryLower) scoreA += 100;
-            if (b.name.toLowerCase() === queryLower) scoreB += 100;
-            
-            // Name starts with query
-            if (a.name.toLowerCase().startsWith(queryLower)) scoreA += 50;
-            if (b.name.toLowerCase().startsWith(queryLower)) scoreB += 50;
-            
-            // Name contains query
-            if (a.name.toLowerCase().includes(queryLower)) scoreA += 25;
-            if (b.name.toLowerCase().includes(queryLower)) scoreB += 25;
-            
-            // Description contains query
-            if (a.description.toLowerCase().includes(queryLower)) scoreA += 10;
-            if (b.description.toLowerCase().includes(queryLower)) scoreB += 10;
-            
-            // Tag matches
-            const aTagMatches = a.tags.filter(tag => tag.toLowerCase().includes(queryLower)).length;
-            const bTagMatches = b.tags.filter(tag => tag.toLowerCase().includes(queryLower)).length;
-            scoreA += aTagMatches * 5;
-            scoreB += bTagMatches * 5;
-            
-            // Secondary sorting by popularity
-            if (scoreA === scoreB) {
-                // Sort by rating and downloads
-                const aPopularity = (a.rating || 0) * 0.2 + Math.log(a.downloads || 1) * 0.1;
-                const bPopularity = (b.rating || 0) * 0.2 + Math.log(b.downloads || 1) * 0.1;
-                return bPopularity - aPopularity;
+                source: { id: sourceId, ...source },
+              });
             }
-            
-            return scoreB - scoreA;
+          });
+        }
+      });
+
+      // Apply filters and sorting
+      let results = Array.from(allResults.values());
+      results = this.applySearchFilters(results, filters);
+      results = this.sortSearchResults(results, query);
+
+      // Cache results
+      this.searchCache.set(searchKey, {
+        results,
+        timestamp: Date.now(),
+      });
+
+      this.stats.totalSearches++;
+      this.emitEvent('plugins-searched', { query, resultCount: results.length });
+
+      console.log(`✅ Found ${results.length} plugins for "${query}"`);
+      return results;
+    } catch (error) {
+      console.error('❌ Plugin search failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search plugins in a specific source
+   */
+  async searchInSource(sourceId, query, filters) {
+    const source = this.marketplaceSources.get(sourceId);
+
+    if (source.url.startsWith('file://')) {
+      return this.searchLocalSource(source, query, filters);
+    } else {
+      return this.searchRemoteSource(source, query, filters);
+    }
+  }
+
+  /**
+   * Search in remote marketplace
+   */
+  async searchRemoteSource(source, query, filters) {
+    try {
+      console.log(`🌐 Calling marketplace API: ${source.url}/plugins`);
+      return this.callRealMarketplaceAPI(source, query, filters);
+    } catch (error) {
+      console.error(`❌ Failed to search in source ${source.id}:`, error);
+      source.errorCount++;
+      return [];
+    }
+  }
+
+  /**
+   * Call real marketplace API
+   */
+  async callRealMarketplaceAPI(source, query, filters) {
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (query) params.append('query', query);
+      if (filters.category) params.append('category', filters.category);
+      if (filters.type) params.append('type', filters.type);
+      if (filters.author) params.append('author', filters.author);
+      if (filters.tags) {
+        const tags = Array.isArray(filters.tags) ? filters.tags : [filters.tags];
+        tags.forEach(tag => params.append('tags', tag));
+      }
+      params.append('limit', '50');
+      params.append('offset', '0');
+
+      const url = `${source.url}/plugins?${params.toString()}`;
+      console.log(`📡 Fetching: ${url}`);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'GenomeExplorer/2.0.0',
+        },
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      console.log(`📡 API Response:`, {
+        success: data.success,
+        pluginCount: data.data?.plugins?.length || 0,
+        hasData: !!data.data,
+        hasPagination: !!data.data?.pagination,
+      });
+
+      if (!data.success) {
+        throw new Error(data.message || 'API returned error');
+      }
+
+      console.log(`✅ Real API returned ${data.data.plugins.length} plugins from ${source.id}`);
+
+      // Transform API response to match internal format
+      return data.data.plugins.map(plugin => ({
+        ...plugin,
+        source: source.id,
+        // Ensure required fields exist
+        tags: plugin.tags || [],
+        dependencies: plugin.dependencies || [],
+        rating: plugin.rating || 0,
+        downloads: plugin.downloads || 0,
+      }));
+    } catch (error) {
+      console.error(`❌ Real API call failed for ${source.id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Apply search filters to results
+   */
+  applySearchFilters(results, filters) {
+    let filtered = results;
+
+    // Apply category filter (treat 'all' as no filter)
+    if (filters.category && filters.category !== 'all') {
+      filtered = filtered.filter(plugin => plugin.category === filters.category);
+    }
+
+    // Apply type filter (treat 'all' as no filter)
+    if (filters.type && filters.type !== 'all') {
+      filtered = filtered.filter(plugin => plugin.type === filters.type);
+    }
+
+    if (filters.author) {
+      filtered = filtered.filter(plugin => plugin.author.toLowerCase().includes(filters.author.toLowerCase()));
+    }
+
+    if (filters.minRating) {
+      filtered = filtered.filter(plugin => plugin.rating >= filters.minRating);
+    }
+
+    if (filters.tags) {
+      const requiredTags = Array.isArray(filters.tags) ? filters.tags : [filters.tags];
+      filtered = filtered.filter(plugin =>
+        requiredTags.some(tag => plugin.tags.some(pluginTag => pluginTag.toLowerCase().includes(tag.toLowerCase())))
+      );
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Sort search results by relevance
+   */
+  sortSearchResults(results, query) {
+    const queryLower = query.toLowerCase();
+
+    return results.sort((a, b) => {
+      // Calculate relevance scores
+      let scoreA = 0;
+      let scoreB = 0;
+
+      // Exact name match gets highest score
+      if (a.name.toLowerCase() === queryLower) scoreA += 100;
+      if (b.name.toLowerCase() === queryLower) scoreB += 100;
+
+      // Name starts with query
+      if (a.name.toLowerCase().startsWith(queryLower)) scoreA += 50;
+      if (b.name.toLowerCase().startsWith(queryLower)) scoreB += 50;
+
+      // Name contains query
+      if (a.name.toLowerCase().includes(queryLower)) scoreA += 25;
+      if (b.name.toLowerCase().includes(queryLower)) scoreB += 25;
+
+      // Description contains query
+      if (a.description.toLowerCase().includes(queryLower)) scoreA += 10;
+      if (b.description.toLowerCase().includes(queryLower)) scoreB += 10;
+
+      // Tag matches
+      const aTagMatches = a.tags.filter(tag => tag.toLowerCase().includes(queryLower)).length;
+      const bTagMatches = b.tags.filter(tag => tag.toLowerCase().includes(queryLower)).length;
+      scoreA += aTagMatches * 5;
+      scoreB += bTagMatches * 5;
+
+      // Secondary sorting by popularity
+      if (scoreA === scoreB) {
+        // Sort by rating and downloads
+        const aPopularity = (a.rating || 0) * 0.2 + Math.log(a.downloads || 1) * 0.1;
+        const bPopularity = (b.rating || 0) * 0.2 + Math.log(b.downloads || 1) * 0.1;
+        return bPopularity - aPopularity;
+      }
+
+      return scoreB - scoreA;
+    });
+  }
+
+  /**
+   * Install plugin with dependency resolution
+   */
+  async installPlugin(pluginId, options = {}) {
+    try {
+      console.log(`📦 Starting installation of plugin: ${pluginId}`);
+
+      // 1. Find plugin in marketplace
+      const plugin = await this.findPlugin(pluginId);
+      if (!plugin) {
+        throw new Error(`Plugin ${pluginId} not found in marketplace`);
+      }
+
+      // 2. Check if already installed and registered
+      if (this.installedPlugins.has(pluginId) && !options.force) {
+        const installed = this.installedPlugins.get(pluginId);
+        if (this.compareVersions(installed.version, plugin.version) >= 0) {
+          // Also verify it's actually registered in PluginManagerV2
+          const isRegistered = this.pluginManager.getPlugin(pluginId);
+
+          if (isRegistered) {
+            console.log(`✅ Plugin ${pluginId} is already up to date and registered`);
+            return { success: true, action: 'already-installed' };
+          } else {
+            console.log(`⚠️ Plugin ${pluginId} is in marketplace but not registered, re-registering...`);
+            // Fall through to re-install and register
+          }
+        }
+      }
+
+      // 3. Resolve dependencies
+      const installPlan = await this.dependencyResolver.createInstallPlan(plugin);
+      console.log(`📋 Install plan created: ${installPlan.plugins.length} plugins to install`);
+
+      // 4. Validate security
+      if (this.options.enableSecurityValidation) {
+        await this.securityValidator.validateInstallPlan(installPlan);
+        console.log('🔒 Security validation passed');
+      }
+
+      // 5. Download and install plugins in dependency order
+      const results = await this.executeInstallPlan(installPlan);
+
+      this.stats.totalInstalls++;
+      this.emitEvent('plugin-installed', { pluginId, results });
+
+      console.log(`✅ Plugin ${pluginId} installed successfully`);
+      return { success: true, results };
+    } catch (error) {
+      this.stats.failedInstalls++;
+      console.error(`❌ Failed to install plugin ${pluginId}:`, error);
+      this.emitEvent('plugin-install-failed', { pluginId, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Find plugin by ID across all sources
+   */
+  async findPlugin(pluginId) {
+    // First check cache
+    if (this.pluginCache.has(pluginId)) {
+      const cached = this.pluginCache.get(pluginId);
+      if (Date.now() - cached.timestamp < this.options.cacheTimeout) {
+        return cached.plugin;
+      }
+    }
+
+    // Search across all sources
+    for (const [sourceId, source] of this.marketplaceSources) {
+      try {
+        const plugin = await this.findPluginInSource(sourceId, pluginId);
+        if (plugin) {
+          // Cache the result
+          this.pluginCache.set(pluginId, {
+            plugin,
+            timestamp: Date.now(),
+          });
+          return plugin;
+        }
+      } catch (error) {
+        console.warn(`Failed to search in source ${sourceId}:`, error);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Find plugin in specific source
+   */
+  async findPluginInSource(sourceId, pluginId) {
+    const source = this.marketplaceSources.get(sourceId);
+
+    if (source.url.startsWith('file://')) {
+      // Local source search
+      return this.findPluginInLocalSource(source, pluginId);
+    } else {
+      // Remote source search
+      return this.findPluginInRemoteSource(source, pluginId);
+    }
+  }
+
+  /**
+   * Find plugin in local source
+   */
+  async findPluginInLocalSource(source, pluginId) {
+    try {
+      // Read plugin manifest from local file system
+      const pluginPath = source.url.replace('file://', '');
+      const manifestPath = `${pluginPath}/${pluginId}/manifest.json`;
+
+      // For browser environment, we can't access file system directly
+      // This would need to be implemented via IPC in Electron
+      console.warn('Local plugin source not fully implemented - requires IPC bridge');
+      return null;
+    } catch (error) {
+      console.error(`Failed to read local plugin ${pluginId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Find plugin in remote source
+   */
+  async findPluginInRemoteSource(source, pluginId) {
+    try {
+      // Try direct endpoint first if available
+      const directUrl = `${source.url}/plugins/${pluginId}`;
+      try {
+        const directResp = await fetch(directUrl, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          signal: AbortSignal.timeout(8000),
         });
-    }
-
-    /**
-     * Install plugin with dependency resolution
-     */
-    async installPlugin(pluginId, options = {}) {
-        try {
-            console.log(`📦 Starting installation of plugin: ${pluginId}`);
-            
-            // 1. Find plugin in marketplace
-            const plugin = await this.findPlugin(pluginId);
-            if (!plugin) {
-                throw new Error(`Plugin ${pluginId} not found in marketplace`);
-            }
-            
-            // 2. Check if already installed and registered
-            if (this.installedPlugins.has(pluginId) && !options.force) {
-                const installed = this.installedPlugins.get(pluginId);
-                if (this.compareVersions(installed.version, plugin.version) >= 0) {
-                    // Also verify it's actually registered in PluginManagerV2
-                    const isRegistered = this.pluginManager.getPlugin(pluginId);
-                    
-                    if (isRegistered) {
-                        console.log(`✅ Plugin ${pluginId} is already up to date and registered`);
-                        return { success: true, action: 'already-installed' };
-                    } else {
-                        console.log(`⚠️ Plugin ${pluginId} is in marketplace but not registered, re-registering...`);
-                        // Fall through to re-install and register
-                    }
-                }
-            }
-            
-            // 3. Resolve dependencies
-            const installPlan = await this.dependencyResolver.createInstallPlan(plugin);
-            console.log(`📋 Install plan created: ${installPlan.plugins.length} plugins to install`);
-            
-            // 4. Validate security
-            if (this.options.enableSecurityValidation) {
-                await this.securityValidator.validateInstallPlan(installPlan);
-                console.log('🔒 Security validation passed');
-            }
-            
-            // 5. Download and install plugins in dependency order
-            const results = await this.executeInstallPlan(installPlan);
-            
-            this.stats.totalInstalls++;
-            this.emitEvent('plugin-installed', { pluginId, results });
-            
-            console.log(`✅ Plugin ${pluginId} installed successfully`);
-            return { success: true, results };
-            
-        } catch (error) {
-            this.stats.failedInstalls++;
-            console.error(`❌ Failed to install plugin ${pluginId}:`, error);
-            this.emitEvent('plugin-install-failed', { pluginId, error: error.message });
-            throw error;
-        }
-    }
-
-    /**
-     * Find plugin by ID across all sources
-     */
-    async findPlugin(pluginId) {
-        // First check cache
-        if (this.pluginCache.has(pluginId)) {
-            const cached = this.pluginCache.get(pluginId);
-            if (Date.now() - cached.timestamp < this.options.cacheTimeout) {
-                return cached.plugin;
-            }
-        }
-        
-        // Search across all sources
-        for (const [sourceId, source] of this.marketplaceSources) {
-            try {
-                const plugin = await this.findPluginInSource(sourceId, pluginId);
-                if (plugin) {
-                    // Cache the result
-                    this.pluginCache.set(pluginId, {
-                        plugin,
-                        timestamp: Date.now()
-                    });
-                    return plugin;
-                }
-            } catch (error) {
-                console.warn(`Failed to search in source ${sourceId}:`, error);
-            }
-        }
-        
-        return null;
-    }
-
-    /**
-     * Find plugin in specific source
-     */
-    async findPluginInSource(sourceId, pluginId) {
-        const source = this.marketplaceSources.get(sourceId);
-        
-        if (source.url.startsWith('file://')) {
-            // Local source search
-            return this.findPluginInLocalSource(source, pluginId);
-        } else {
-            // Remote source search
-            return this.findPluginInRemoteSource(source, pluginId);
-        }
-    }
-
-    /**
-     * Find plugin in local source
-     */
-    async findPluginInLocalSource(source, pluginId) {
-        try {
-            // Read plugin manifest from local file system
-            const pluginPath = source.url.replace('file://', '');
-            const manifestPath = `${pluginPath}/${pluginId}/manifest.json`;
-            
-            // For browser environment, we can't access file system directly
-            // This would need to be implemented via IPC in Electron
-            console.warn('Local plugin source not fully implemented - requires IPC bridge');
-            return null;
-            
-        } catch (error) {
-            console.error(`Failed to read local plugin ${pluginId}:`, error);
-            return null;
-        }
-    }
-
-    /**
-     * Find plugin in remote source
-     */
-    async findPluginInRemoteSource(source, pluginId) {
-        try {
-            // Try direct endpoint first if available
-            const directUrl = `${source.url}/plugins/${pluginId}`;
-            try {
-                const directResp = await fetch(directUrl, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' },
-                    signal: AbortSignal.timeout(8000)
-                });
-                if (directResp.ok) {
-                    const directData = await directResp.json();
-                    // Handle wrapped response {success, data: {plugin}}
-                    const plugin = directData.data?.plugin || directData.plugin || directData;
-                    if (plugin && plugin.id === pluginId) {
-                        plugin.downloadUrl = plugin.downloadUrl || `${source.url}/plugins/${plugin.id}/${plugin.version}/download`;
-                        plugin.source = source;
-                        return plugin;
-                    }
-                }
-            } catch (e) {
-                // Continue to list fallback
-            }
-
-            // Fallback: query the plugin list and filter by id
-            const listUrl = `${source.url}/plugins`;
-            const response = await fetch(listUrl, {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(10000)
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const responseData = await response.json();
-
-            // Unwrap server response: {success: true, data: {plugins: [...]}}
-            const data = responseData.data || responseData;
-
-            // Handle both array and object response shapes from server
-            let plugin = null;
-            if (Array.isArray(data)) {
-                // Direct array format
-                plugin = data.find(p => p && p.id === pluginId) || null;
-            } else if (Array.isArray(data.plugins)) {
-                // Array nested in plugins property (current server format)
-                plugin = data.plugins.find(p => p && p.id === pluginId) || null;
-            } else if (data.plugins && typeof data.plugins === 'object') {
-                // Object mapping format
-                plugin = data.plugins[pluginId] || null;
-            }
-
-            if (!plugin) {
-                console.log(`Plugin ${pluginId} not found in response:`, data);
-                return null;
-            }
-
-            // Ensure download URL exists
+        if (directResp.ok) {
+          const directData = await directResp.json();
+          // Handle wrapped response {success, data: {plugin}}
+          const plugin = directData.data?.plugin || directData.plugin || directData;
+          if (plugin && plugin.id === pluginId) {
             plugin.downloadUrl = plugin.downloadUrl || `${source.url}/plugins/${plugin.id}/${plugin.version}/download`;
             plugin.source = source;
-
             return plugin;
-        } catch (error) {
-            console.warn(`Failed to find plugin ${pluginId} in source ${source.id}:`, error);
-            return null;
+          }
         }
+      } catch (e) {
+        // Continue to list fallback
+      }
+
+      // Fallback: query the plugin list and filter by id
+      const listUrl = `${source.url}/plugins`;
+      const response = await fetch(listUrl, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+
+      // Unwrap server response: {success: true, data: {plugins: [...]}}
+      const data = responseData.data || responseData;
+
+      // Handle both array and object response shapes from server
+      let plugin = null;
+      if (Array.isArray(data)) {
+        // Direct array format
+        plugin = data.find(p => p && p.id === pluginId) || null;
+      } else if (Array.isArray(data.plugins)) {
+        // Array nested in plugins property (current server format)
+        plugin = data.plugins.find(p => p && p.id === pluginId) || null;
+      } else if (data.plugins && typeof data.plugins === 'object') {
+        // Object mapping format
+        plugin = data.plugins[pluginId] || null;
+      }
+
+      if (!plugin) {
+        console.log(`Plugin ${pluginId} not found in response:`, data);
+        return null;
+      }
+
+      // Ensure download URL exists
+      plugin.downloadUrl = plugin.downloadUrl || `${source.url}/plugins/${plugin.id}/${plugin.version}/download`;
+      plugin.source = source;
+
+      return plugin;
+    } catch (error) {
+      console.warn(`Failed to find plugin ${pluginId} in source ${source.id}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Execute install plan
+   */
+  async executeInstallPlan(installPlan) {
+    const results = [];
+
+    for (const plugin of installPlan.plugins) {
+      try {
+        console.log(`📥 Installing ${plugin.id} v${plugin.version}...`);
+
+        // Download plugin
+        const downloadResult = await this.downloadPlugin(plugin);
+
+        // Install plugin
+        const installResult = await this.installDownloadedPlugin(downloadResult);
+
+        // Register as installed (await to ensure persistence)
+        await this.registerInstalledPlugin(plugin, installResult);
+
+        results.push({
+          pluginId: plugin.id,
+          success: true,
+          action: 'installed',
+        });
+      } catch (error) {
+        console.error(`❌ Failed to install ${plugin.id}:`, error);
+        results.push({
+          pluginId: plugin.id,
+          success: false,
+          error: error.message,
+        });
+
+        // If this is a dependency, stop the installation
+        if (plugin.isDependency) {
+          throw new Error(`Failed to install dependency ${plugin.id}: ${error.message}`);
+        }
+      }
     }
 
+    return results;
+  }
 
+  /**
+   * Download plugin from marketplace
+   */
+  async downloadPlugin(plugin) {
+    console.log(`⬇️ Downloading ${plugin.id} from ${plugin.downloadUrl}...`);
 
-    /**
-     * Execute install plan
-     */
-    async executeInstallPlan(installPlan) {
-        const results = [];
-        
-        for (const plugin of installPlan.plugins) {
-            try {
-                console.log(`📥 Installing ${plugin.id} v${plugin.version}...`);
-                
-                // Download plugin
-                const downloadResult = await this.downloadPlugin(plugin);
-                
-                // Install plugin
-                const installResult = await this.installDownloadedPlugin(downloadResult);
-                
-                // Register as installed (await to ensure persistence)
-                await this.registerInstalledPlugin(plugin, installResult);
-                
-                results.push({
-                    pluginId: plugin.id,
-                    success: true,
-                    action: 'installed'
-                });
-                
-            } catch (error) {
-                console.error(`❌ Failed to install ${plugin.id}:`, error);
-                results.push({
-                    pluginId: plugin.id,
-                    success: false,
-                    error: error.message
-                });
-                
-                // If this is a dependency, stop the installation
-                if (plugin.isDependency) {
-                    throw new Error(`Failed to install dependency ${plugin.id}: ${error.message}`);
+    try {
+      const response = await fetch(plugin.downloadUrl, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json, application/zip, application/octet-stream',
+          'User-Agent': 'GenomeExplorer/2.0.0',
+        },
+        signal: AbortSignal.timeout(60000), // 60 second timeout for download
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      let downloadResult;
+
+      if (contentType && contentType.includes('application/json')) {
+        // Server returned JSON (mock plugin package)
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Download failed');
+        }
+
+        console.log(`✅ Downloaded ${plugin.id} as JSON package`);
+
+        // Use manifest from server response
+        downloadResult = {
+          pluginId: plugin.id,
+          version: plugin.version,
+          data: data.data.files, // JSON package files
+          manifest: data.data.manifest,
+        };
+      } else {
+        // Server returned binary file (actual zip/tarball)
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+
+        console.log(`✅ Downloaded ${plugin.id} (${blob.size} bytes)`);
+
+        // Return downloaded binary data with manifest from plugin metadata
+        downloadResult = {
+          pluginId: plugin.id,
+          version: plugin.version,
+          data: arrayBuffer,
+          blob: blob,
+          manifest: {
+            id: plugin.id,
+            name: plugin.name,
+            description: plugin.description,
+            version: plugin.version,
+            author: plugin.author,
+            category: plugin.category,
+            type: plugin.type,
+            dependencies: plugin.dependencies || [],
+            tags: plugin.tags || [],
+            homepage: plugin.homepage,
+            repository: plugin.repository,
+            license: plugin.license,
+            // Include contributes for commands, visualizations, etc.
+            ...(plugin.contributes ? { contributes: plugin.contributes } : {}),
+            // Add required fields for visualization plugins
+            ...(plugin.type === 'visualization'
+              ? {
+                  supportedDataTypes: plugin.supportedDataTypes || ['generic'],
+                  executor:
+                    plugin.executor ||
+                    function (data) {
+                      return data;
+                    },
                 }
-            }
-        }
-        
-        return results;
-    }
+              : {}),
+            // Add required fields for function plugins
+            ...(plugin.type === 'function'
+              ? {
+                  functions: plugin.functions || {},
+                }
+              : {}),
+          },
+        };
+      }
 
-    /**
-     * Download plugin from marketplace
-     */
-    async downloadPlugin(plugin) {
-        console.log(`⬇️ Downloading ${plugin.id} from ${plugin.downloadUrl}...`);
-        
+      return downloadResult;
+    } catch (error) {
+      console.error(`❌ Failed to download ${plugin.id}:`, error);
+      throw new Error(`Download failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Install downloaded plugin
+   */
+  async installDownloadedPlugin(downloadResult) {
+    console.log(`🔧 Installing ${downloadResult.pluginId}...`);
+
+    try {
+      // 1. Get installation path from path resolver
+      const installPath = this.pluginManager.pathResolver
+        ? this.pluginManager.pathResolver.getInstallPath(downloadResult.pluginId)
+        : `/plugins/${downloadResult.pluginId}`;
+
+      console.log(`💾 Plugin will be installed to: ${installPath}`);
+
+      // 2. Write plugin files to disk (if we have actual file data)
+      if (downloadResult.blob || downloadResult.data) {
+        console.log(`📦 Writing plugin files to disk...`);
+
         try {
-            const response = await fetch(plugin.downloadUrl, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json, application/zip, application/octet-stream',
-                    'User-Agent': 'GenomeExplorer/2.0.0'
-                },
-                signal: AbortSignal.timeout(60000) // 60 second timeout for download
+          // Use Electron IPC to write files to user plugins directory
+          if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.writePluginFiles) {
+            // Convert data to serializable format for IPC
+            let serializableData = downloadResult.data;
+
+            if (downloadResult.blob instanceof Blob) {
+              // Convert Blob to ArrayBuffer then to Uint8Array for IPC serialization
+              const arrayBuffer = await downloadResult.blob.arrayBuffer();
+              serializableData = Array.from(new Uint8Array(arrayBuffer));
+              console.log(`📦 Converted Blob to array (${serializableData.length} bytes)`);
+            } else if (downloadResult.data instanceof ArrayBuffer) {
+              // Convert ArrayBuffer to Uint8Array array for IPC serialization
+              serializableData = Array.from(new Uint8Array(downloadResult.data));
+              console.log(`📦 Converted ArrayBuffer to array (${serializableData.length} bytes)`);
+            } else if (typeof downloadResult.data === 'object' && !Array.isArray(downloadResult.data)) {
+              // JSON package with files object - already serializable
+              serializableData = downloadResult.data;
+              console.log(`📦 Using JSON package data`);
+            }
+
+            await window.electronAPI.writePluginFiles({
+              pluginId: downloadResult.pluginId,
+              installPath: installPath,
+              data: serializableData,
+              manifest: downloadResult.manifest,
             });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const contentType = response.headers.get('content-type');
-            let downloadResult;
-            
-            if (contentType && contentType.includes('application/json')) {
-                // Server returned JSON (mock plugin package)
-                const data = await response.json();
-                
-                if (!data.success) {
-                    throw new Error(data.error || 'Download failed');
-                }
-                
-                console.log(`✅ Downloaded ${plugin.id} as JSON package`);
-                
-                // Use manifest from server response
-                downloadResult = {
-                    pluginId: plugin.id,
-                    version: plugin.version,
-                    data: data.data.files, // JSON package files
-                    manifest: data.data.manifest
-                };
-                
-            } else {
-                // Server returned binary file (actual zip/tarball)
-                const blob = await response.blob();
-                const arrayBuffer = await blob.arrayBuffer();
-                
-                console.log(`✅ Downloaded ${plugin.id} (${blob.size} bytes)`);
-                
-                // Return downloaded binary data with manifest from plugin metadata
-                downloadResult = {
-                    pluginId: plugin.id,
-                    version: plugin.version,
-                    data: arrayBuffer,
-                    blob: blob,
-                    manifest: {
-                        id: plugin.id,
-                        name: plugin.name,
-                        description: plugin.description,
-                        version: plugin.version,
-                        author: plugin.author,
-                        category: plugin.category,
-                        type: plugin.type,
-                        dependencies: plugin.dependencies || [],
-                        tags: plugin.tags || [],
-                        homepage: plugin.homepage,
-                        repository: plugin.repository,
-                        license: plugin.license,
-                        // Include contributes for commands, visualizations, etc.
-                        ...(plugin.contributes ? { contributes: plugin.contributes } : {}),
-                        // Add required fields for visualization plugins
-                        ...(plugin.type === 'visualization' ? {
-                            supportedDataTypes: plugin.supportedDataTypes || ['generic'],
-                            executor: plugin.executor || function(data) { return data; }
-                        } : {}),
-                        // Add required fields for function plugins
-                        ...(plugin.type === 'function' ? {
-                            functions: plugin.functions || {}
-                        } : {})
-                    }
-                };
-            }
-            
-            return downloadResult;
-            
-        } catch (error) {
-            console.error(`❌ Failed to download ${plugin.id}:`, error);
-            throw new Error(`Download failed: ${error.message}`);
+            console.log(`✅ Plugin files written to disk at ${installPath}`);
+          } else {
+            console.warn('⚠️  electronAPI.writePluginFiles not available, plugin files not written to disk');
+            console.warn('⚠️  Plugin will only exist in memory and will be lost on restart');
+          }
+        } catch (writeError) {
+          console.error(`❌ Failed to write plugin files to disk:`, writeError);
+          console.warn('⚠️  Continuing with in-memory registration only');
         }
-    }
+      }
 
-    /**
-     * Install downloaded plugin
-     */
-    async installDownloadedPlugin(downloadResult) {
-        console.log(`🔧 Installing ${downloadResult.pluginId}...`);
-        
+      // 3. Load and instantiate the plugin to get proper definition
+      let pluginDefinition;
+
+      if (downloadResult.data && typeof downloadResult.data === 'object' && downloadResult.data['index.js']) {
+        // We have the plugin code in the download result
         try {
-            // 1. Get installation path from path resolver
-            const installPath = this.pluginManager.pathResolver 
-                ? this.pluginManager.pathResolver.getInstallPath(downloadResult.pluginId)
-                : `/plugins/${downloadResult.pluginId}`;
-            
-            console.log(`💾 Plugin will be installed to: ${installPath}`);
-            
-            // 2. Write plugin files to disk (if we have actual file data)
-            if (downloadResult.blob || downloadResult.data) {
-                console.log(`📦 Writing plugin files to disk...`);
-                
-                try {
-                    // Use Electron IPC to write files to user plugins directory
-                    if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.writePluginFiles) {
-                        // Convert data to serializable format for IPC
-                        let serializableData = downloadResult.data;
-                        
-                        if (downloadResult.blob instanceof Blob) {
-                            // Convert Blob to ArrayBuffer then to Uint8Array for IPC serialization
-                            const arrayBuffer = await downloadResult.blob.arrayBuffer();
-                            serializableData = Array.from(new Uint8Array(arrayBuffer));
-                            console.log(`📦 Converted Blob to array (${serializableData.length} bytes)`);
-                        } else if (downloadResult.data instanceof ArrayBuffer) {
-                            // Convert ArrayBuffer to Uint8Array array for IPC serialization
-                            serializableData = Array.from(new Uint8Array(downloadResult.data));
-                            console.log(`📦 Converted ArrayBuffer to array (${serializableData.length} bytes)`);
-                        } else if (typeof downloadResult.data === 'object' && !Array.isArray(downloadResult.data)) {
-                            // JSON package with files object - already serializable
-                            serializableData = downloadResult.data;
-                            console.log(`📦 Using JSON package data`);
-                        }
-                        
-                        await window.electronAPI.writePluginFiles({
-                            pluginId: downloadResult.pluginId,
-                            installPath: installPath,
-                            data: serializableData,
-                            manifest: downloadResult.manifest
-                        });
-                        console.log(`✅ Plugin files written to disk at ${installPath}`);
-                    } else {
-                        console.warn('⚠️  electronAPI.writePluginFiles not available, plugin files not written to disk');
-                        console.warn('⚠️  Plugin will only exist in memory and will be lost on restart');
-                    }
-                } catch (writeError) {
-                    console.error(`❌ Failed to write plugin files to disk:`, writeError);
-                    console.warn('⚠️  Continuing with in-memory registration only');
-                }
-            }
-            
-            // 3. Load and instantiate the plugin to get proper definition
-            let pluginDefinition;
-            
-            if (downloadResult.data && typeof downloadResult.data === 'object' && downloadResult.data['index.js']) {
-                // We have the plugin code in the download result
-                try {
-                    console.log(`📦 Loading plugin code for ${downloadResult.pluginId}...`);
-                    
-                    // Create a temporary script element to load the plugin code
-                    const pluginCode = downloadResult.data['index.js'];
-                    
-                    // Use Function constructor to evaluate the module code in a controlled context
-                    // Create a module-like environment
-                    const moduleExports = {};
-                    const moduleContext = {
-                        module: { exports: moduleExports },
-                        exports: moduleExports,
-                        console: console,
-                        document: document,
-                        window: window
-                    };
-                    
-                    // Wrap the code to make it work in our context
-                    const wrappedCode = `
+          console.log(`📦 Loading plugin code for ${downloadResult.pluginId}...`);
+
+          // Create a temporary script element to load the plugin code
+          const pluginCode = downloadResult.data['index.js'];
+
+          // Use Function constructor to evaluate the module code in a controlled context
+          // Create a module-like environment
+          const moduleExports = {};
+          const moduleContext = {
+            module: { exports: moduleExports },
+            exports: moduleExports,
+            console: console,
+            document: document,
+            window: window,
+          };
+
+          // Wrap the code to make it work in our context
+          const wrappedCode = `
                         (function(module, exports, console, document, window) {
                             ${pluginCode}
                             return module.exports;
                         })
                     `;
-                    
-                    const PluginClass = eval(wrappedCode)(
-                        moduleContext.module,
-                        moduleContext.exports,
-                        moduleContext.console,
-                        moduleContext.document,
-                        moduleContext.window
-                    );
-                    
-                    console.log(`✅ Plugin class loaded for ${downloadResult.pluginId}`);
-                    
-                    // Create a mock ExtensionContext to capture registrations
-                    const mockContext = {
-                        subscriptions: [],
-                        commandHandlers: new Map(),  // Store command handlers
-                        registerCommand: function(command, handler) {
-                            this.subscriptions.push({ type: 'command', command, handler });
-                            this.commandHandlers.set(command, handler);  // Save handler for later use
-                            return { dispose: () => {} };
-                        },
-                        registerVisualization: function(vizDef) {
-                            this.visualizationDef = vizDef;
-                            return { dispose: () => {} };
-                        }
-                    };
-                    
-                    // Instantiate and activate the plugin to capture its registrations
-                    const pluginInstance = new PluginClass();
-                    if (typeof pluginInstance.activate === 'function') {
-                        pluginInstance.activate(mockContext);
-                        console.log(`✅ Plugin activated, captured registrations`);
-                    }
-                    
-                    // Build the complete plugin definition from manifest and registrations
-                    pluginDefinition = {
-                        ...downloadResult.manifest,
-                        // Store plugin instance for command execution
-                        _instance: pluginInstance,
-                        // Store command handlers
-                        _commandHandlers: mockContext.commandHandlers,
-                        // Add executor and supportedDataTypes from visualization registration
-                        ...(mockContext.visualizationDef ? {
-                            executor: mockContext.visualizationDef.executor,
-                            supportedDataTypes: mockContext.visualizationDef.supportedDataTypes || downloadResult.manifest.supportedDataTypes
-                        } : {})
-                    };
-                    
-                    console.log(`✅ Plugin definition built:`, {
-                        id: pluginDefinition.id,
-                        type: pluginDefinition.type,
-                        hasExecutor: !!pluginDefinition.executor,
-                        supportedDataTypes: pluginDefinition.supportedDataTypes
-                    });
-                    
-                } catch (loadError) {
-                    console.error(`❌ Failed to load plugin code for ${downloadResult.pluginId}:`, loadError);
-                    // Fall back to manifest-only registration
-                    pluginDefinition = downloadResult.manifest;
+
+          const PluginClass = eval(wrappedCode)(
+            moduleContext.module,
+            moduleContext.exports,
+            moduleContext.console,
+            moduleContext.document,
+            moduleContext.window
+          );
+
+          console.log(`✅ Plugin class loaded for ${downloadResult.pluginId}`);
+
+          // Create a mock ExtensionContext to capture registrations
+          const mockContext = {
+            subscriptions: [],
+            commandHandlers: new Map(), // Store command handlers
+            registerCommand: function (command, handler) {
+              this.subscriptions.push({ type: 'command', command, handler });
+              this.commandHandlers.set(command, handler); // Save handler for later use
+              return { dispose: () => {} };
+            },
+            registerVisualization: function (vizDef) {
+              this.visualizationDef = vizDef;
+              return { dispose: () => {} };
+            },
+          };
+
+          // Instantiate and activate the plugin to capture its registrations
+          const pluginInstance = new PluginClass();
+          if (typeof pluginInstance.activate === 'function') {
+            pluginInstance.activate(mockContext);
+            console.log(`✅ Plugin activated, captured registrations`);
+          }
+
+          // Build the complete plugin definition from manifest and registrations
+          pluginDefinition = {
+            ...downloadResult.manifest,
+            // Store plugin instance for command execution
+            _instance: pluginInstance,
+            // Store command handlers
+            _commandHandlers: mockContext.commandHandlers,
+            // Add executor and supportedDataTypes from visualization registration
+            ...(mockContext.visualizationDef
+              ? {
+                  executor: mockContext.visualizationDef.executor,
+                  supportedDataTypes:
+                    mockContext.visualizationDef.supportedDataTypes || downloadResult.manifest.supportedDataTypes,
                 }
-            } else {
-                // No code available, use manifest only
-                pluginDefinition = downloadResult.manifest;
-            }
-            
-            // 4. Register plugin with plugin manager (in-memory registration)
-            if (this.pluginManager) {
-                await this.pluginManager.registerPlugin(downloadResult.pluginId, pluginDefinition);
-            } else {
-                throw new Error('Plugin manager not available');
-            }
-            
-            console.log(`✅ Successfully installed ${downloadResult.pluginId}`);
-            
-            return {
-                success: true,
-                installedAt: new Date(),
-                installPath: installPath
-            };
-            
-        } catch (error) {
-            console.error(`❌ Failed to install ${downloadResult.pluginId}:`, error);
-            throw new Error(`Installation failed: ${error.message}`);
+              : {}),
+          };
+
+          console.log(`✅ Plugin definition built:`, {
+            id: pluginDefinition.id,
+            type: pluginDefinition.type,
+            hasExecutor: !!pluginDefinition.executor,
+            supportedDataTypes: pluginDefinition.supportedDataTypes,
+          });
+        } catch (loadError) {
+          console.error(`❌ Failed to load plugin code for ${downloadResult.pluginId}:`, loadError);
+          // Fall back to manifest-only registration
+          pluginDefinition = downloadResult.manifest;
         }
-    }
+      } else {
+        // No code available, use manifest only
+        pluginDefinition = downloadResult.manifest;
+      }
 
-    /**
-     * Register installed plugin with complete manifest data
-     */
-    async registerInstalledPlugin(plugin, installResult) {
-        // Get complete manifest from plugin manager if available
-        const installedPlugin = this.pluginManager.getPlugin(plugin.id);
-        const manifest = installedPlugin || plugin;
-        
-        this.installedPlugins.set(plugin.id, {
-            id: plugin.id,
-            version: plugin.version,
-            source: plugin.source?.id || 'unknown',
-            installedAt: installResult.installedAt,
-            dependencies: plugin.dependencies || [],
-            autoUpdate: true,
-            // Store complete manifest data for restoration
-            manifest: {
-                id: manifest.id,
-                name: manifest.name,
-                description: manifest.description,
-                version: manifest.version,
-                author: manifest.author,
-                category: manifest.category,
-                type: manifest.type,
-                dependencies: manifest.dependencies || [],
-                tags: manifest.tags || [],
-                homepage: manifest.homepage,
-                repository: manifest.repository,
-                license: manifest.license,
-                // Include contributes for commands, visualizations, etc.
-                ...(manifest.contributes ? { contributes: manifest.contributes } : {}),
-                // Type-specific fields
-                ...(manifest.type === 'visualization' ? {
-                    supportedDataTypes: manifest.supportedDataTypes || ['generic'],
-                    executor: manifest.executor
-                } : {}),
-                ...(manifest.type === 'function' ? {
-                    functions: manifest.functions || {}
-                } : {})
-            }
-        });
-        
-        // Save to config immediately (await to ensure persistence)
-        await this.saveInstalledPluginsRegistry();
-        
-        console.log(`💾 Saved ${plugin.id} to installed plugins registry`);
-    }
+      // 4. Register plugin with plugin manager (in-memory registration)
+      if (this.pluginManager) {
+        await this.pluginManager.registerPlugin(downloadResult.pluginId, pluginDefinition);
+      } else {
+        throw new Error('Plugin manager not available');
+      }
 
-    /**
-     * Save installed plugins registry to ConfigManager (with immediate persistence)
-     */
-    async saveInstalledPluginsRegistry() {
-        if (this.configManager) {
-            const registryData = {};
-            for (const [id, plugin] of this.installedPlugins) {
-                registryData[id] = plugin;
+      console.log(`✅ Successfully installed ${downloadResult.pluginId}`);
+
+      return {
+        success: true,
+        installedAt: new Date(),
+        installPath: installPath,
+      };
+    } catch (error) {
+      console.error(`❌ Failed to install ${downloadResult.pluginId}:`, error);
+      throw new Error(`Installation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Register installed plugin with complete manifest data
+   */
+  async registerInstalledPlugin(plugin, installResult) {
+    // Get complete manifest from plugin manager if available
+    const installedPlugin = this.pluginManager.getPlugin(plugin.id);
+    const manifest = installedPlugin || plugin;
+
+    this.installedPlugins.set(plugin.id, {
+      id: plugin.id,
+      version: plugin.version,
+      source: plugin.source?.id || 'unknown',
+      installedAt: installResult.installedAt,
+      dependencies: plugin.dependencies || [],
+      autoUpdate: true,
+      // Store complete manifest data for restoration
+      manifest: {
+        id: manifest.id,
+        name: manifest.name,
+        description: manifest.description,
+        version: manifest.version,
+        author: manifest.author,
+        category: manifest.category,
+        type: manifest.type,
+        dependencies: manifest.dependencies || [],
+        tags: manifest.tags || [],
+        homepage: manifest.homepage,
+        repository: manifest.repository,
+        license: manifest.license,
+        // Include contributes for commands, visualizations, etc.
+        ...(manifest.contributes ? { contributes: manifest.contributes } : {}),
+        // Type-specific fields
+        ...(manifest.type === 'visualization'
+          ? {
+              supportedDataTypes: manifest.supportedDataTypes || ['generic'],
+              executor: manifest.executor,
             }
-            
-            console.log('💾 Saving installed plugins registry:', {
-                pluginCount: Object.keys(registryData).length,
-                pluginIds: Object.keys(registryData)
-            });
-            
-            // Use immediate save to ensure persistence (bypasses debounce)
-            // This is critical for plugin installation - data must be written to localStorage immediately
-            if (this.configManager.setAndSaveImmediate) {
-                const success = await this.configManager.setAndSaveImmediate('marketplace.installed', registryData);
-                if (success) {
-                    console.log('✅ Plugin registry saved to localStorage immediately');
-                } else {
-                    console.error('❌ Failed to save plugin registry immediately');
-                }
-            } else {
-                // Fallback to regular set (for backward compatibility)
-                this.configManager.set('marketplace.installed', registryData);
-                console.warn('⚠️  Using debounced save (setAndSaveImmediate not available)');
+          : {}),
+        ...(manifest.type === 'function'
+          ? {
+              functions: manifest.functions || {},
             }
-            
-            // Verify save was successful by reading from ConfigManager
-            setTimeout(() => {
-                const savedData = this.configManager.get('marketplace.installed');
-                console.log('✅ Verified saved data in ConfigManager:', {
-                    pluginCount: Object.keys(savedData || {}).length,
-                    pluginIds: Object.keys(savedData || {})
-                });
-                
-                // Also verify localStorage directly
-                try {
-                    const localStorageData = localStorage.getItem('marketplaceSettings');
-                    if (localStorageData) {
-                        const parsed = JSON.parse(localStorageData);
-                        console.log('✅ Verified data in localStorage:', {
-                            hasInstalled: !!parsed.installed,
-                            pluginCount: Object.keys(parsed.installed || {}).length
-                        });
-                    } else {
-                        console.warn('⚠️  marketplaceSettings not found in localStorage');
-                    }
-                } catch (e) {
-                    console.error('❌ Error verifying localStorage:', e);
-                }
-            }, 200);
+          : {}),
+      },
+    });
+
+    // Save to config immediately (await to ensure persistence)
+    await this.saveInstalledPluginsRegistry();
+
+    console.log(`💾 Saved ${plugin.id} to installed plugins registry`);
+  }
+
+  /**
+   * Save installed plugins registry to ConfigManager (with immediate persistence)
+   */
+  async saveInstalledPluginsRegistry() {
+    if (this.configManager) {
+      const registryData = {};
+      for (const [id, plugin] of this.installedPlugins) {
+        registryData[id] = plugin;
+      }
+
+      console.log('💾 Saving installed plugins registry:', {
+        pluginCount: Object.keys(registryData).length,
+        pluginIds: Object.keys(registryData),
+      });
+
+      // Use immediate save to ensure persistence (bypasses debounce)
+      // This is critical for plugin installation - data must be written to localStorage immediately
+      if (this.configManager.setAndSaveImmediate) {
+        const success = await this.configManager.setAndSaveImmediate('marketplace.installed', registryData);
+        if (success) {
+          console.log('✅ Plugin registry saved to localStorage immediately');
         } else {
-            console.warn('⚠️  ConfigManager not available, cannot save installed plugins registry');
+          console.error('❌ Failed to save plugin registry immediately');
         }
-    }
+      } else {
+        // Fallback to regular set (for backward compatibility)
+        this.configManager.set('marketplace.installed', registryData);
+        console.warn('⚠️  Using debounced save (setAndSaveImmediate not available)');
+      }
 
-    /**
-     * Compare version strings
-     */
-    compareVersions(version1, version2) {
-        const v1Parts = version1.split('.').map(Number);
-        const v2Parts = version2.split('.').map(Number);
-        
-        for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
-            const v1 = v1Parts[i] || 0;
-            const v2 = v2Parts[i] || 0;
-            
-            if (v1 > v2) return 1;
-            if (v1 < v2) return -1;
-        }
-        
-        return 0;
-    }
+      // Verify save was successful by reading from ConfigManager
+      setTimeout(() => {
+        const savedData = this.configManager.get('marketplace.installed');
+        console.log('✅ Verified saved data in ConfigManager:', {
+          pluginCount: Object.keys(savedData || {}).length,
+          pluginIds: Object.keys(savedData || {}),
+        });
 
-    /**
-     * Setup event listeners
-     */
-    setupEventListeners() {
-        // Plugin manager events
-        if (this.pluginManager) {
-            this.pluginManager.on('plugin-registered', (data) => {
-                this.emitEvent('marketplace-plugin-activated', data);
-            });
-            
-            // Handle plugin uninstall - remove from installed registry and persist
-            this.pluginManager.on('plugin-uninstalled', async (data) => {
-                const { pluginId } = data;
-                console.log(`🗑️ Marketplace received plugin-uninstalled event for: ${pluginId}`);
-                
-                if (this.installedPlugins.has(pluginId)) {
-                    this.installedPlugins.delete(pluginId);
-                    await this.saveInstalledPluginsRegistry();
-                    console.log(`✅ Removed ${pluginId} from marketplace installed registry`);
-                }
-                
-                this.emitEvent('marketplace-plugin-uninstalled', data);
-            });
-        }
-    }
-
-    /**
-     * Start background services
-     */
-    startBackgroundServices() {
-        // Auto-update check every hour
-        if (this.options.enableAutoUpdates) {
-            setInterval(() => {
-                this.checkForUpdates();
-            }, 3600000); // 1 hour
-        }
-        
-        // Marketplace sync every 6 hours
-        setInterval(() => {
-            this.syncMarketplaceSources();
-        }, 21600000); // 6 hours
-    }
-
-    /**
-     * Check for plugin updates
-     */
-    async checkForUpdates() {
-        console.log('🔄 Checking for plugin updates...');
-        
-        const updateablePlugins = [];
-        
-        for (const [pluginId, installedPlugin] of this.installedPlugins) {
-            if (installedPlugin.autoUpdate) {
-                try {
-                    const latestPlugin = await this.findPlugin(pluginId);
-                    if (latestPlugin && this.compareVersions(latestPlugin.version, installedPlugin.version) > 0) {
-                        updateablePlugins.push({
-                            current: installedPlugin,
-                            latest: latestPlugin
-                        });
-                    }
-                } catch (error) {
-                    console.warn(`Failed to check updates for ${pluginId}:`, error);
-                }
-            }
-        }
-        
-        if (updateablePlugins.length > 0) {
-            console.log(`📋 Found ${updateablePlugins.length} plugin updates available`);
-            this.emitEvent('updates-available', { plugins: updateablePlugins });
-        }
-        
-        return updateablePlugins;
-    }
-
-    /**
-     * Sync marketplace sources
-     */
-    async syncMarketplaceSources() {
-        console.log('🔄 Syncing marketplace sources...');
-        
-        for (const [sourceId, source] of this.marketplaceSources) {
-            if (source.enabled && !source.syncInProgress) {
-                try {
-                    source.syncInProgress = true;
-                    await this.syncSource(sourceId);
-                    source.lastSync = Date.now();
-                    source.errorCount = 0;
-                } catch (error) {
-                    console.error(`Failed to sync source ${sourceId}:`, error);
-                    source.errorCount++;
-                } finally {
-                    source.syncInProgress = false;
-                }
-            }
-        }
-    }
-
-    /**
-     * Sync specific source - fetch latest plugin index
-     */
-    async syncSource(sourceId) {
-        const source = this.marketplaceSources.get(sourceId);
-        console.log(`🔄 Syncing source: ${source.name || sourceId}`);
-        
+        // Also verify localStorage directly
         try {
-            // Clear old cache for this source
-            this.clearCacheForSource(sourceId);
-            
-            // Fetch latest plugin index from source
-            const url = `${source.url}/plugins`;
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'GenomeExplorer/2.0.0'
-                },
-                signal: AbortSignal.timeout(15000) // 15 second timeout
+          const localStorageData = localStorage.getItem('marketplaceSettings');
+          if (localStorageData) {
+            const parsed = JSON.parse(localStorageData);
+            console.log('✅ Verified data in localStorage:', {
+              hasInstalled: !!parsed.installed,
+              pluginCount: Object.keys(parsed.installed || {}).length,
             });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            const pluginList = data.data?.plugins || data.plugins || [];
-            
-            // Update source's plugin cache
-            source.plugins.clear();
-            pluginList.forEach(plugin => {
-                source.plugins.set(plugin.id, plugin);
+          } else {
+            console.warn('⚠️  marketplaceSettings not found in localStorage');
+          }
+        } catch (e) {
+          console.error('❌ Error verifying localStorage:', e);
+        }
+      }, 200);
+    } else {
+      console.warn('⚠️  ConfigManager not available, cannot save installed plugins registry');
+    }
+  }
+
+  /**
+   * Compare version strings
+   */
+  compareVersions(version1, version2) {
+    const v1Parts = version1.split('.').map(Number);
+    const v2Parts = version2.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
+      const v1 = v1Parts[i] || 0;
+      const v2 = v2Parts[i] || 0;
+
+      if (v1 > v2) return 1;
+      if (v1 < v2) return -1;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Setup event listeners
+   */
+  setupEventListeners() {
+    // Plugin manager events
+    if (this.pluginManager) {
+      this.pluginManager.on('plugin-registered', data => {
+        this.emitEvent('marketplace-plugin-activated', data);
+      });
+
+      // Handle plugin uninstall - remove from installed registry and persist
+      this.pluginManager.on('plugin-uninstalled', async data => {
+        const { pluginId } = data;
+        console.log(`🗑️ Marketplace received plugin-uninstalled event for: ${pluginId}`);
+
+        if (this.installedPlugins.has(pluginId)) {
+          this.installedPlugins.delete(pluginId);
+          await this.saveInstalledPluginsRegistry();
+          console.log(`✅ Removed ${pluginId} from marketplace installed registry`);
+        }
+
+        this.emitEvent('marketplace-plugin-uninstalled', data);
+      });
+    }
+  }
+
+  /**
+   * Start background services
+   */
+  startBackgroundServices() {
+    // Auto-update check every hour
+    if (this.options.enableAutoUpdates) {
+      setInterval(() => {
+        this.checkForUpdates();
+      }, 3600000); // 1 hour
+    }
+
+    // Marketplace sync every 6 hours
+    setInterval(() => {
+      this.syncMarketplaceSources();
+    }, 21600000); // 6 hours
+  }
+
+  /**
+   * Check for plugin updates
+   */
+  async checkForUpdates() {
+    console.log('🔄 Checking for plugin updates...');
+
+    const updateablePlugins = [];
+
+    for (const [pluginId, installedPlugin] of this.installedPlugins) {
+      if (installedPlugin.autoUpdate) {
+        try {
+          const latestPlugin = await this.findPlugin(pluginId);
+          if (latestPlugin && this.compareVersions(latestPlugin.version, installedPlugin.version) > 0) {
+            updateablePlugins.push({
+              current: installedPlugin,
+              latest: latestPlugin,
             });
-            
-            console.log(`✅ Source ${source.name || sourceId} synced successfully (${pluginList.length} plugins)`);
-            
+          }
         } catch (error) {
-            console.error(`❌ Failed to sync source ${sourceId}:`, error);
-            throw error;
+          console.warn(`Failed to check updates for ${pluginId}:`, error);
         }
+      }
     }
 
-    /**
-     * Clear cache for specific source
-     */
-    clearCacheForSource(sourceId) {
-        // Clear relevant cache entries
-        for (const [cacheKey, cacheEntry] of this.pluginCache) {
-            if (cacheEntry.plugin.source?.id === sourceId) {
-                this.pluginCache.delete(cacheKey);
-            }
+    if (updateablePlugins.length > 0) {
+      console.log(`📋 Found ${updateablePlugins.length} plugin updates available`);
+      this.emitEvent('updates-available', { plugins: updateablePlugins });
+    }
+
+    return updateablePlugins;
+  }
+
+  /**
+   * Sync marketplace sources
+   */
+  async syncMarketplaceSources() {
+    console.log('🔄 Syncing marketplace sources...');
+
+    for (const [sourceId, source] of this.marketplaceSources) {
+      if (source.enabled && !source.syncInProgress) {
+        try {
+          source.syncInProgress = true;
+          await this.syncSource(sourceId);
+          source.lastSync = Date.now();
+          source.errorCount = 0;
+        } catch (error) {
+          console.error(`Failed to sync source ${sourceId}:`, error);
+          source.errorCount++;
+        } finally {
+          source.syncInProgress = false;
         }
-        
-        // Clear search cache (it may contain results from this source)
-        this.searchCache.clear();
+      }
+    }
+  }
+
+  /**
+   * Sync specific source - fetch latest plugin index
+   */
+  async syncSource(sourceId) {
+    const source = this.marketplaceSources.get(sourceId);
+    console.log(`🔄 Syncing source: ${source.name || sourceId}`);
+
+    try {
+      // Clear old cache for this source
+      this.clearCacheForSource(sourceId);
+
+      // Fetch latest plugin index from source
+      const url = `${source.url}/plugins`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'GenomeExplorer/2.0.0',
+        },
+        signal: AbortSignal.timeout(15000), // 15 second timeout
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const pluginList = data.data?.plugins || data.plugins || [];
+
+      // Update source's plugin cache
+      source.plugins.clear();
+      pluginList.forEach(plugin => {
+        source.plugins.set(plugin.id, plugin);
+      });
+
+      console.log(`✅ Source ${source.name || sourceId} synced successfully (${pluginList.length} plugins)`);
+    } catch (error) {
+      console.error(`❌ Failed to sync source ${sourceId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear cache for specific source
+   */
+  clearCacheForSource(sourceId) {
+    // Clear relevant cache entries
+    for (const [cacheKey, cacheEntry] of this.pluginCache) {
+      if (cacheEntry.plugin.source?.id === sourceId) {
+        this.pluginCache.delete(cacheKey);
+      }
     }
 
-    /**
-     * Get marketplace statistics
-     */
-    getMarketplaceStats() {
-        return {
-            sources: {
-                total: this.marketplaceSources.size,
-                enabled: Array.from(this.marketplaceSources.values()).filter(s => s.enabled).length,
-                syncing: Array.from(this.marketplaceSources.values()).filter(s => s.syncInProgress).length
-            },
-            installed: {
-                total: this.installedPlugins.size,
-                autoUpdate: Array.from(this.installedPlugins.values()).filter(p => p.autoUpdate).length
-            },
-            cache: {
-                pluginCacheSize: this.pluginCache.size,
-                searchCacheSize: this.searchCache.size
-            },
-            stats: { ...this.stats }
-        };
+    // Clear search cache (it may contain results from this source)
+    this.searchCache.clear();
+  }
+
+  /**
+   * Get marketplace statistics
+   */
+  getMarketplaceStats() {
+    return {
+      sources: {
+        total: this.marketplaceSources.size,
+        enabled: Array.from(this.marketplaceSources.values()).filter(s => s.enabled).length,
+        syncing: Array.from(this.marketplaceSources.values()).filter(s => s.syncInProgress).length,
+      },
+      installed: {
+        total: this.installedPlugins.size,
+        autoUpdate: Array.from(this.installedPlugins.values()).filter(p => p.autoUpdate).length,
+      },
+      cache: {
+        pluginCacheSize: this.pluginCache.size,
+        searchCacheSize: this.searchCache.size,
+      },
+      stats: { ...this.stats },
+    };
+  }
+
+  /**
+   * Emit marketplace event
+   */
+  emitEvent(eventType, data) {
+    const event = new CustomEvent('marketplace-event', {
+      detail: { type: eventType, data, timestamp: Date.now() },
+    });
+
+    this.eventBus.dispatchEvent(event);
+
+    // Also emit to window for backward compatibility
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(event);
     }
 
-    /**
-     * Emit marketplace event
-     */
-    emitEvent(eventType, data) {
-        const event = new CustomEvent('marketplace-event', {
-            detail: { type: eventType, data, timestamp: Date.now() }
-        });
-        
-        this.eventBus.dispatchEvent(event);
-        
-        // Also emit to window for backward compatibility
-        if (typeof window !== 'undefined') {
-            window.dispatchEvent(event);
-        }
-        
-        console.log(`🔔 Marketplace event: ${eventType}`, data);
-    }
+    console.log(`🔔 Marketplace event: ${eventType}`, data);
+  }
 
-    /**
-     * Add event listener
-     */
-    on(eventType, callback) {
-        this.eventBus.addEventListener('marketplace-event', (event) => {
-            if (event.detail.type === eventType) {
-                callback(event.detail.data);
-            }
-        });
-    }
+  /**
+   * Add event listener
+   */
+  on(eventType, callback) {
+    this.eventBus.addEventListener('marketplace-event', event => {
+      if (event.detail.type === eventType) {
+        callback(event.detail.data);
+      }
+    });
+  }
 
-    /**
-     * Cleanup and destroy
-     */
-    destroy() {
-        console.log('🧹 Destroying PluginMarketplace...');
-        
-        // Clear timers
-        clearInterval(this.updateCheckInterval);
-        clearInterval(this.syncInterval);
-        
-        // Clear caches
-        this.pluginCache.clear();
-        this.searchCache.clear();
-        
-        // Clear registries
-        this.marketplaceSources.clear();
-        this.installedPlugins.clear();
-        
-        this.emitEvent('marketplace-destroyed', { timestamp: Date.now() });
-        console.log('✅ PluginMarketplace destroyed');
-    }
+  /**
+   * Cleanup and destroy
+   */
+  destroy() {
+    console.log('🧹 Destroying PluginMarketplace...');
+
+    // Clear timers
+    clearInterval(this.updateCheckInterval);
+    clearInterval(this.syncInterval);
+
+    // Clear caches
+    this.pluginCache.clear();
+    this.searchCache.clear();
+
+    // Clear registries
+    this.marketplaceSources.clear();
+    this.installedPlugins.clear();
+
+    this.emitEvent('marketplace-destroyed', { timestamp: Date.now() });
+    console.log('✅ PluginMarketplace destroyed');
+  }
 }
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PluginMarketplace;
+  module.exports = PluginMarketplace;
 } else if (typeof window !== 'undefined') {
-    window.PluginMarketplace = PluginMarketplace;
-} 
+  window.PluginMarketplace = PluginMarketplace;
+}

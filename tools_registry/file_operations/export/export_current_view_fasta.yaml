@@ -24,16 +24,16 @@ parameters:
     filename:
       type: string
       description: Output filename for the exported FASTA file
-      default: "current_view.fasta"
+      default: 'current_view.fasta'
       examples:
-        - "visible_region.fasta"
-        - "current_chromosome.fasta"
-        - "view_sequences.fasta"
+        - 'visible_region.fasta'
+        - 'current_chromosome.fasta'
+        - 'view_sequences.fasta'
     sequence_type:
       type: string
       description: Type of sequences to export from current view
-      enum: ["all", "genes", "cds", "intergenic", "features_only", "background_only"]
-      default: "all"
+      enum: ['all', 'genes', 'cds', 'intergenic', 'features_only', 'background_only']
+      default: 'all'
     include_coordinates:
       type: boolean
       description: Include genome coordinates in FASTA headers
@@ -49,15 +49,15 @@ parameters:
     coordinate_format:
       type: string
       description: Format for coordinate display
-      enum: ["1_based", "0_based", "range"]
-      default: "1_based"
+      enum: ['1_based', '0_based', 'range']
+      default: '1_based'
     feature_types:
       type: array
       description: Specific feature types to include (when sequence_type is features_only)
       items:
         type: string
-        enum: ["gene", "CDS", "tRNA", "rRNA", "misc_feature", "regulatory"]
-      default: ["gene", "CDS"]
+        enum: ['gene', 'CDS', 'tRNA', 'rRNA', 'misc_feature', 'regulatory']
+      default: ['gene', 'CDS']
     wrap_length:
       type: integer
       description: Number of characters per line (0 = no wrapping)
@@ -95,9 +95,9 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["load_genome_file", "navigation_tools"]
-  alternatives: ["export_fasta_sequence", "export_cds_fasta"]
-  prerequisites: ["genome_data_loaded", "current_view_available"]
+  enhances: ['load_genome_file', 'navigation_tools']
+  alternatives: ['export_fasta_sequence', 'export_cds_fasta']
+  prerequisites: ['genome_data_loaded', 'current_view_available']
   follow_up: []
 metadata:
   usage_count: 0
@@ -114,30 +114,30 @@ metadata:
   usage_pattern: frequent
 error_handling:
   no_current_view:
-    error: "No current view available"
-    solution: "Navigate to a genome region first"
+    error: 'No current view available'
+    solution: 'Navigate to a genome region first'
     retry: false
   empty_view:
-    error: "Current view is empty or contains no sequences"
-    solution: "Navigate to a region with sequence data"
+    error: 'Current view is empty or contains no sequences'
+    solution: 'Navigate to a region with sequence data'
     retry: false
   export_failed:
-    error: "Failed to export current view FASTA file"
-    solution: "Check file permissions and disk space"
+    error: 'Failed to export current view FASTA file'
+    solution: 'Check file permissions and disk space'
     retry: true
   invalid_coordinates:
-    error: "Invalid view coordinates"
-    solution: "Ensure current view has valid genome coordinates"
+    error: 'Invalid view coordinates'
+    solution: 'Ensure current view has valid genome coordinates'
     retry: false
 returns:
-  success: "boolean - Whether export was successful"
-  result: "object - Export results including:
+  success: 'boolean - Whether export was successful'
+  result: 'object - Export results including:
     - filename: string - Name of exported file
     - sequenceCount: number - Number of sequences exported
     - viewCoordinates: object - Current view coordinates (start, end, chromosome)
     - totalLength: number - Total length of exported sequences
     - fileSize: number - Size of exported file in bytes
     - sequenceType: string - Type of sequences exported
-    - extendedRegion: number - Extension applied to view region"
-  error: "string - Error message if success is false"
-  error_type: "string - Type of error for proper handling"
+    - extendedRegion: number - Extension applied to view region'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

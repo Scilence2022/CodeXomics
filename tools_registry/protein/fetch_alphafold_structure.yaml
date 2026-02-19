@@ -1,8 +1,8 @@
 name: fetch_alphafold_structure
 version: 1.1.0
-description: "Download and cache AlphaFold protein structure data by UniProt ID or gene name. Returns structure file and metadata."
+description: 'Download and cache AlphaFold protein structure data by UniProt ID or gene name. Returns structure file and metadata.'
 category: protein
-keywords: ["fetch", "download", "alphafold", "structure", "uniprot", "pdb", "cache"]
+keywords: ['fetch', 'download', 'alphafold', 'structure', 'uniprot', 'pdb', 'cache']
 priority: 1
 execution:
   type: built-in
@@ -17,50 +17,50 @@ parameters:
     uniprot_id:
       type: string
       description: "UniProt ID for the protein (e.g., 'P04637', 'P00350')"
-      pattern: "^[A-Z0-9]{6,10}$"
-      examples: ["P04637", "P00350", "P0A7B8"]
+      pattern: '^[A-Z0-9]{6,10}$'
+      examples: ['P04637', 'P00350', 'P0A7B8']
     geneName:
       type: string
       description: "Gene name as alternative to UniProt ID (e.g., 'p53', 'lacZ')"
-      examples: ["p53", "lacZ", "dnaA", "rpoB"]
+      examples: ['p53', 'lacZ', 'dnaA', 'rpoB']
     organism:
       type: string
-      description: "Organism name for gene name resolution"
-      default: "Homo sapiens"
-      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus"]
+      description: 'Organism name for gene name resolution'
+      default: 'Homo sapiens'
+      examples: ['Homo sapiens', 'Escherichia coli', 'Mus musculus']
     format:
       type: string
-      enum: ["pdb", "cif", "both"]
-      description: "Structure file format to download"
-      default: "pdb"
+      enum: ['pdb', 'cif', 'both']
+      description: 'Structure file format to download'
+      default: 'pdb'
     include_confidence:
       type: boolean
-      description: "Include per-residue confidence scores"
+      description: 'Include per-residue confidence scores'
       default: true
     cache_locally:
       type: boolean
-      description: "Cache structure file locally for faster access"
+      description: 'Cache structure file locally for faster access'
       default: true
     clientId:
       type: string
-      description: "Browser client ID for multi-window support"
-      default: "default"
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
   required: []
 sample_usages:
-  - user_query: "Download p53 structure from AlphaFold"
+  - user_query: 'Download p53 structure from AlphaFold'
     tool_call: "fetch_alphafold_structure(uniprot_id='P04637', format='pdb')"
-    thought: "User wants to download the p53 protein structure file"
-    expected_result: "Downloaded PDB file with p53 structure and confidence data"
-  
-  - user_query: "Get lacZ structure for E. coli"
+    thought: 'User wants to download the p53 protein structure file'
+    expected_result: 'Downloaded PDB file with p53 structure and confidence data'
+
+  - user_query: 'Get lacZ structure for E. coli'
     tool_call: "fetch_alphafold_structure(geneName='lacZ', organism='Escherichia coli', include_confidence=true)"
-    thought: "User wants lacZ structure from E. coli with confidence scores"
-    expected_result: "lacZ structure file with per-residue confidence information"
-  
-  - user_query: "Download protein structure in both PDB and CIF formats"
+    thought: 'User wants lacZ structure from E. coli with confidence scores'
+    expected_result: 'lacZ structure file with per-residue confidence information'
+
+  - user_query: 'Download protein structure in both PDB and CIF formats'
     tool_call: "fetch_alphafold_structure(uniprot_id='P0A7B8', format='both', cache_locally=true)"
-    thought: "User wants structure in multiple formats with local caching"
-    expected_result: "Both PDB and CIF files downloaded and cached locally"
+    thought: 'User wants structure in multiple formats with local caching'
+    expected_result: 'Both PDB and CIF files downloaded and cached locally'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -83,11 +83,11 @@ error_handling:
   gene_not_found: Returns error if gene not found
   structure_not_found: Returns error if structure not found
 returns:
-  success: "boolean - Whether structure download was successful"
-  structure_file: "string - Path to downloaded structure file"
-  uniprot_id: "string - UniProt ID of the protein"
-  file_format: "string - Format of downloaded file (pdb/cif)"
-  file_size: "number - Size of structure file in bytes"
-  confidence_data: "array - Per-residue confidence scores (if requested)"
-  download_time: "number - Time taken to download in milliseconds"
-  cached: "boolean - Whether file was cached locally"
+  success: 'boolean - Whether structure download was successful'
+  structure_file: 'string - Path to downloaded structure file'
+  uniprot_id: 'string - UniProt ID of the protein'
+  file_format: 'string - Format of downloaded file (pdb/cif)'
+  file_size: 'number - Size of structure file in bytes'
+  confidence_data: 'array - Per-residue confidence scores (if requested)'
+  download_time: 'number - Time taken to download in milliseconds'
+  cached: 'boolean - Whether file was cached locally'

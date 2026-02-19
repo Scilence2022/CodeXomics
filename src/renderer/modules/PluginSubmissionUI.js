@@ -3,28 +3,28 @@
  * Provides forms and workflows for submitting plugins to the marketplace
  */
 class PluginSubmissionUI {
-    constructor(marketplaceConfig, pluginManager) {
-        this.marketplaceConfig = marketplaceConfig;
-        this.pluginManager = pluginManager;
-        this.currentSubmission = null;
-        
-        console.log('📤 PluginSubmissionUI initialized');
-    }
+  constructor(marketplaceConfig, pluginManager) {
+    this.marketplaceConfig = marketplaceConfig;
+    this.pluginManager = pluginManager;
+    this.currentSubmission = null;
 
-    showSubmissionDialog() {
-        const existing = document.querySelector('.plugin-submission-modal');
-        if (existing) existing.remove();
-        
-        const modal = this.createSubmissionModal();
-        document.body.appendChild(modal);
-        
-        return modal;
-    }
+    console.log('📤 PluginSubmissionUI initialized');
+  }
 
-    createSubmissionModal() {
-        const modal = document.createElement('div');
-        modal.className = 'plugin-submission-modal';
-        modal.innerHTML = `
+  showSubmissionDialog() {
+    const existing = document.querySelector('.plugin-submission-modal');
+    if (existing) existing.remove();
+
+    const modal = this.createSubmissionModal();
+    document.body.appendChild(modal);
+
+    return modal;
+  }
+
+  createSubmissionModal() {
+    const modal = document.createElement('div');
+    modal.className = 'plugin-submission-modal';
+    modal.innerHTML = `
             <div class="plugin-submission-overlay">
                 <div class="plugin-submission-dialog">
                     <div class="plugin-submission-header">
@@ -136,18 +136,18 @@ class PluginSubmissionUI {
             </div>
         `;
 
-        this.addSubmissionStyles();
-        this.attachSubmissionEventHandlers(modal);
-        
-        return modal;
-    }
+    this.addSubmissionStyles();
+    this.attachSubmissionEventHandlers(modal);
 
-    addSubmissionStyles() {
-        if (document.getElementById('plugin-submission-styles')) return;
-        
-        const styles = document.createElement('style');
-        styles.id = 'plugin-submission-styles';
-        styles.textContent = `
+    return modal;
+  }
+
+  addSubmissionStyles() {
+    if (document.getElementById('plugin-submission-styles')) return;
+
+    const styles = document.createElement('style');
+    styles.id = 'plugin-submission-styles';
+    styles.textContent = `
             .plugin-submission-modal {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 z-index: 10000; font-family: 'Segoe UI', sans-serif;
@@ -242,85 +242,87 @@ class PluginSubmissionUI {
                 .plugin-submission-footer { flex-direction: column; gap: 10px; }
             }
         `;
-        
-        document.head.appendChild(styles);
-    }
 
-    attachSubmissionEventHandlers(modal) {
-        modal.querySelector('.plugin-submission-close').addEventListener('click', () => {
-            if (confirm('Are you sure you want to cancel? All progress will be lost.')) {
-                modal.remove();
-            }
-        });
-        
-        modal.querySelector('#cancel-submission-btn').addEventListener('click', () => {
-            if (confirm('Are you sure you want to cancel? All progress will be lost.')) {
-                modal.remove();
-            }
-        });
-        
-        this.setupFileUpload(modal);
-        
-        modal.querySelector('#submit-plugin-btn').addEventListener('click', () => {
-            this.submitPlugin(modal);
-        });
-    }
+    document.head.appendChild(styles);
+  }
 
-    setupFileUpload(modal) {
-        const fileUploadArea = modal.querySelector('#file-upload-area');
-        const fileInput = modal.querySelector('#plugin-files');
-        const uploadedFilesList = modal.querySelector('#uploaded-files-list');
-        
-        let uploadedFiles = [];
-        
-        fileUploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
-        
-        fileUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.add('dragover');
-        });
-        
-        fileUploadArea.addEventListener('dragleave', () => {
-            fileUploadArea.classList.remove('dragover');
-        });
-        
-        fileUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.remove('dragover');
-            
-            const files = Array.from(e.dataTransfer.files);
-            this.addFiles(files, uploadedFiles, uploadedFilesList);
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            const files = Array.from(e.target.files);
-            this.addFiles(files, uploadedFiles, uploadedFilesList);
-        });
-        
-        modal.uploadedFiles = uploadedFiles;
-    }
+  attachSubmissionEventHandlers(modal) {
+    modal.querySelector('.plugin-submission-close').addEventListener('click', () => {
+      if (confirm('Are you sure you want to cancel? All progress will be lost.')) {
+        modal.remove();
+      }
+    });
 
-    addFiles(files, uploadedFiles, uploadedFilesList) {
-        files.forEach(file => {
-            if (file.size > 50 * 1024 * 1024) {
-                alert(`File "${file.name}" is too large. Maximum size is 50MB.`);
-                return;
-            }
-            
-            if (uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                alert(`File "${file.name}" is already added.`);
-                return;
-            }
-            
-            uploadedFiles.push(file);
-            this.renderUploadedFiles(uploadedFiles, uploadedFilesList);
-        });
-    }
+    modal.querySelector('#cancel-submission-btn').addEventListener('click', () => {
+      if (confirm('Are you sure you want to cancel? All progress will be lost.')) {
+        modal.remove();
+      }
+    });
 
-    renderUploadedFiles(uploadedFiles, uploadedFilesList) {
-        uploadedFilesList.innerHTML = uploadedFiles.map((file, index) => `
+    this.setupFileUpload(modal);
+
+    modal.querySelector('#submit-plugin-btn').addEventListener('click', () => {
+      this.submitPlugin(modal);
+    });
+  }
+
+  setupFileUpload(modal) {
+    const fileUploadArea = modal.querySelector('#file-upload-area');
+    const fileInput = modal.querySelector('#plugin-files');
+    const uploadedFilesList = modal.querySelector('#uploaded-files-list');
+
+    let uploadedFiles = [];
+
+    fileUploadArea.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileUploadArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      fileUploadArea.classList.add('dragover');
+    });
+
+    fileUploadArea.addEventListener('dragleave', () => {
+      fileUploadArea.classList.remove('dragover');
+    });
+
+    fileUploadArea.addEventListener('drop', e => {
+      e.preventDefault();
+      fileUploadArea.classList.remove('dragover');
+
+      const files = Array.from(e.dataTransfer.files);
+      this.addFiles(files, uploadedFiles, uploadedFilesList);
+    });
+
+    fileInput.addEventListener('change', e => {
+      const files = Array.from(e.target.files);
+      this.addFiles(files, uploadedFiles, uploadedFilesList);
+    });
+
+    modal.uploadedFiles = uploadedFiles;
+  }
+
+  addFiles(files, uploadedFiles, uploadedFilesList) {
+    files.forEach(file => {
+      if (file.size > 50 * 1024 * 1024) {
+        alert(`File "${file.name}" is too large. Maximum size is 50MB.`);
+        return;
+      }
+
+      if (uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+        alert(`File "${file.name}" is already added.`);
+        return;
+      }
+
+      uploadedFiles.push(file);
+      this.renderUploadedFiles(uploadedFiles, uploadedFilesList);
+    });
+  }
+
+  renderUploadedFiles(uploadedFiles, uploadedFilesList) {
+    uploadedFilesList.innerHTML = uploadedFiles
+      .map(
+        (file, index) => `
             <div class="uploaded-file-item">
                 <div class="file-info">
                     <div class="file-icon">${this.getFileIcon(file.name)}</div>
@@ -333,121 +335,132 @@ class PluginSubmissionUI {
                     Remove
                 </button>
             </div>
-        `).join('');
-        
-        window.removeUploadedFile = (index) => {
-            uploadedFiles.splice(index, 1);
-            this.renderUploadedFiles(uploadedFiles, uploadedFilesList);
-        };
-    }
+        `
+      )
+      .join('');
 
-    getFileIcon(filename) {
-        const ext = filename.split('.').pop().toLowerCase();
-        const icons = {
-            'zip': '📦', 'gz': '📦', 'js': '📄', 'json': '📋', 'md': '📝', 'txt': '📄'
-        };
-        return icons[ext] || '📄';
-    }
+    window.removeUploadedFile = index => {
+      uploadedFiles.splice(index, 1);
+      this.renderUploadedFiles(uploadedFiles, uploadedFilesList);
+    };
+  }
 
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
+  getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+      zip: '📦',
+      gz: '📦',
+      js: '📄',
+      json: '📋',
+      md: '📝',
+      txt: '📄',
+    };
+    return icons[ext] || '📄';
+  }
 
-    async submitPlugin(modal) {
-        try {
-            const form = modal.querySelector('#plugin-submission-form');
-            const formData = new FormData(form);
-            
-            // Validation
-            const requiredFields = ['name', 'description', 'version', 'author', 'category', 'type'];
-            const missing = requiredFields.filter(field => !formData.get(field));
-            
-            if (missing.length > 0) {
-                alert(`Please fill in required fields: ${missing.join(', ')}`);
-                return;
-            }
-            
-            const uploadedFiles = modal.uploadedFiles || [];
-            if (uploadedFiles.length === 0) {
-                alert('Please upload at least one plugin file.');
-                return;
-            }
-            
-            const termsCheckbox = modal.querySelector('#terms-agreement');
-            if (!termsCheckbox.checked) {
-                alert('Please agree to the submission guidelines.');
-                return;
-            }
-            
-            const submitBtn = modal.querySelector('#submit-plugin-btn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
-            
-            // Parse tags
-            const tags = formData.get('tags') ? 
-                formData.get('tags').split(',').map(t => t.trim()).filter(t => t) : [];
-            
-            // Create metadata object
-            const metadata = {
-                name: formData.get('name'),
-                description: formData.get('description'),
-                version: formData.get('version'),
-                author: formData.get('author'),
-                category: formData.get('category'),
-                type: formData.get('type'),
-                tags: tags,
-                keywords: tags
-            };
-            
-            // Get marketplace server URL
-            const sources = this.marketplaceConfig.getEnabledSources();
-            const marketplaceSource = sources.find(s => s.url.includes('localhost'));
-            
-            if (!marketplaceSource) {
-                throw new Error('No marketplace server available for submission');
-            }
-            
-            // Prepare submission form data
-            const submissionData = new FormData();
-            submissionData.append('metadata', JSON.stringify(metadata));
-            submissionData.append('submitterEmail', formData.get('submitterEmail') || '');
-            
-            uploadedFiles.forEach(file => {
-                submissionData.append('files', file);
-            });
-            
-            // Submit to marketplace server
-            const response = await fetch(`${marketplaceSource.url}/plugins/submit`, {
-                method: 'POST',
-                body: submissionData
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                this.showSubmissionSuccess(result.data, modal);
-            } else {
-                throw new Error(result.message || 'Submission failed');
-            }
-            
-        } catch (error) {
-            console.error('❌ Plugin submission failed:', error);
-            alert('Submission failed: ' + error.message);
-            
-            const submitBtn = modal.querySelector('#submit-plugin-btn');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Submit Plugin';
-        }
-    }
+  formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
 
-    showSubmissionSuccess(submissionData, modal) {
-        const successModal = document.createElement('div');
-        successModal.className = 'plugin-submission-modal';
-        successModal.innerHTML = `
+  async submitPlugin(modal) {
+    try {
+      const form = modal.querySelector('#plugin-submission-form');
+      const formData = new FormData(form);
+
+      // Validation
+      const requiredFields = ['name', 'description', 'version', 'author', 'category', 'type'];
+      const missing = requiredFields.filter(field => !formData.get(field));
+
+      if (missing.length > 0) {
+        alert(`Please fill in required fields: ${missing.join(', ')}`);
+        return;
+      }
+
+      const uploadedFiles = modal.uploadedFiles || [];
+      if (uploadedFiles.length === 0) {
+        alert('Please upload at least one plugin file.');
+        return;
+      }
+
+      const termsCheckbox = modal.querySelector('#terms-agreement');
+      if (!termsCheckbox.checked) {
+        alert('Please agree to the submission guidelines.');
+        return;
+      }
+
+      const submitBtn = modal.querySelector('#submit-plugin-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      // Parse tags
+      const tags = formData.get('tags')
+        ? formData
+            .get('tags')
+            .split(',')
+            .map(t => t.trim())
+            .filter(t => t)
+        : [];
+
+      // Create metadata object
+      const metadata = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        version: formData.get('version'),
+        author: formData.get('author'),
+        category: formData.get('category'),
+        type: formData.get('type'),
+        tags: tags,
+        keywords: tags,
+      };
+
+      // Get marketplace server URL
+      const sources = this.marketplaceConfig.getEnabledSources();
+      const marketplaceSource = sources.find(s => s.url.includes('localhost'));
+
+      if (!marketplaceSource) {
+        throw new Error('No marketplace server available for submission');
+      }
+
+      // Prepare submission form data
+      const submissionData = new FormData();
+      submissionData.append('metadata', JSON.stringify(metadata));
+      submissionData.append('submitterEmail', formData.get('submitterEmail') || '');
+
+      uploadedFiles.forEach(file => {
+        submissionData.append('files', file);
+      });
+
+      // Submit to marketplace server
+      const response = await fetch(`${marketplaceSource.url}/plugins/submit`, {
+        method: 'POST',
+        body: submissionData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        this.showSubmissionSuccess(result.data, modal);
+      } else {
+        throw new Error(result.message || 'Submission failed');
+      }
+    } catch (error) {
+      console.error('❌ Plugin submission failed:', error);
+      alert('Submission failed: ' + error.message);
+
+      const submitBtn = modal.querySelector('#submit-plugin-btn');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Plugin';
+    }
+  }
+
+  showSubmissionSuccess(submissionData, modal) {
+    const successModal = document.createElement('div');
+    successModal.className = 'plugin-submission-modal';
+    successModal.innerHTML = `
             <div class="plugin-submission-overlay">
                 <div class="plugin-submission-dialog" style="max-width: 500px;">
                     <div class="plugin-submission-header" style="background: linear-gradient(135deg, #28a745, #20c997);">
@@ -481,14 +494,14 @@ class PluginSubmissionUI {
                 </div>
             </div>
         `;
-        
-        modal.remove();
-        document.body.appendChild(successModal);
-        
-        console.log('✅ Plugin submitted successfully:', submissionData);
-    }
+
+    modal.remove();
+    document.body.appendChild(successModal);
+
+    console.log('✅ Plugin submitted successfully:', submissionData);
+  }
 }
 
 if (typeof window !== 'undefined') {
-    window.PluginSubmissionUI = PluginSubmissionUI;
-} 
+  window.PluginSubmissionUI = PluginSubmissionUI;
+}

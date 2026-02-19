@@ -1,788 +1,846 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>InterPro Domain Analysis - CodeXomics</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
-        :root {
-            --primary-color: #4a90e2;
-            --secondary-color: #7bb3f0;
-            --success-color: #4caf50;
-            --warning-color: #ff9800;
-            --danger-color: #f44336;
-            --domain-color: #667eea;
-            --family-color: #f093fb;
-            --site-color: #43e97b;
-            --bg-primary: #f5f7fa;
-            --bg-secondary: #ffffff;
-            --text-primary: #2c3e50;
-            --text-secondary: #7f8c8d;
-            --border-color: #dee2e6;
-            --radius: 8px;
-            --shadow: 0 2px 10px rgba(0,0,0,0.1);
-            --shadow-hover: 0 4px 20px rgba(0,0,0,0.15);
+      :root {
+        --primary-color: #4a90e2;
+        --secondary-color: #7bb3f0;
+        --success-color: #4caf50;
+        --warning-color: #ff9800;
+        --danger-color: #f44336;
+        --domain-color: #667eea;
+        --family-color: #f093fb;
+        --site-color: #43e97b;
+        --bg-primary: #f5f7fa;
+        --bg-secondary: #ffffff;
+        --text-primary: #2c3e50;
+        --text-secondary: #7f8c8d;
+        --border-color: #dee2e6;
+        --radius: 8px;
+        --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          'Segoe UI',
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: var(--text-primary);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+
+      .app-header {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        padding: 20px 30px;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      .app-title {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .app-title i {
+        font-size: 2.5rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .title-text h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #4a90e2, #7bb3f0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 5px;
+      }
+
+      .title-text p {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .header-btn {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+      }
+
+      .header-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+      }
+
+      .main-container {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        min-height: calc(100vh - 100px);
+        max-width: 1600px;
+        margin: 0 auto;
+        gap: 24px;
+        padding: 24px;
+      }
+
+      .sidebar {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        padding: 24px;
+        overflow-y: auto;
+        height: fit-content;
+        position: sticky;
+        top: 120px;
+      }
+
+      .content-area {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        padding: 28px;
+        overflow-y: auto;
+      }
+
+      .form-section {
+        margin-bottom: 28px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid var(--border-color);
+      }
+
+      .form-section:last-child {
+        border-bottom: none;
+      }
+
+      .section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 18px;
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .section-title i {
+        font-size: 1.3rem;
+        padding: 8px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border-radius: 8px;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius);
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background: white;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+      }
+
+      textarea.form-control {
+        resize: vertical;
+        min-height: 150px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        line-height: 1.5;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--secondary-color), #4a90e2);
+        color: white;
+        width: 100%;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+      }
+
+      .btn-secondary {
+        background: #95a5a6;
+        color: white;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .btn-secondary:hover {
+        background: #7f8c8d;
+        transform: translateY(-2px);
+      }
+
+      #statusArea {
+        margin-bottom: 20px;
+      }
+
+      .status-message {
+        padding: 12px 16px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease;
+      }
+
+      .status-success {
+        background: #d4edda;
+        border-left: 4px solid var(--success-color);
+        color: #155724;
+      }
+
+      .status-error {
+        background: #f8d7da;
+        border-left: 4px solid var(--danger-color);
+        color: #721c24;
+      }
+
+      .status-info {
+        background: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        color: #0c5460;
+      }
+
+      .status-warning {
+        background: #fff3cd;
+        border-left: 4px solid var(--warning-color);
+        color: #856404;
+      }
+
+      #loadingIndicator {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        text-align: center;
+      }
+
+      .loading-spinner {
+        font-size: 3rem;
+        color: var(--secondary-color);
+        margin-bottom: 20px;
+      }
+
+      .loading-spinner i {
+        animation: spin 1s linear infinite;
+      }
+
+      .loading-message {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: var(--text-primary);
-            line-height: 1.6;
-            min-height: 100vh;
+        to {
+          transform: rotate(360deg);
         }
+      }
 
-        .app-header {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            padding: 20px 30px;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+      @keyframes slideIn {
+        from {
+          transform: translateY(-10px);
+          opacity: 0;
         }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1600px;
-            margin: 0 auto;
+        to {
+          transform: translateY(0);
+          opacity: 1;
         }
+      }
 
-        .app-title {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+      .domain-card {
+        background: white;
+        border: 2px solid var(--border-color);
+        border-left: 5px solid var(--domain-color);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+      }
 
-        .app-title i {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+      .domain-card:hover {
+        box-shadow: var(--shadow-hover);
+        transform: translateY(-2px);
+      }
 
-        .title-text h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #4a90e2, #7bb3f0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 5px;
-        }
+      .domain-card.family {
+        border-left-color: var(--family-color);
+      }
 
-        .title-text p {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-        }
+      .domain-card.site {
+        border-left-color: var(--site-color);
+      }
 
-        .header-actions {
-            display: flex;
-            gap: 12px;
-        }
+      .domain-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 12px;
+      }
 
-        .header-btn {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-        }
+      .domain-id {
+        font-weight: 700;
+        color: var(--secondary-color);
+        font-size: 1.1rem;
+      }
 
-        .header-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
-        }
+      .domain-type-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: white;
+      }
 
+      .domain-type-badge.domain {
+        background: var(--domain-color);
+      }
+
+      .domain-type-badge.family {
+        background: var(--family-color);
+      }
+
+      .domain-type-badge.site {
+        background: var(--site-color);
+      }
+
+      .domain-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
+
+      .domain-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: var(--bg-primary);
+        border-radius: var(--radius);
+      }
+
+      .stat-item i {
+        color: var(--secondary-color);
+      }
+
+      .domain-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .btn-small {
+        padding: 8px 16px;
+        font-size: 13px;
+      }
+
+      .sequence-viewer {
+        background: #f8f9fa;
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 20px;
+        font-family: 'Consolas', monospace;
+        font-size: 0.9rem;
+        overflow-x: auto;
+      }
+
+      .sequence-ruler {
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+      }
+
+      .sequence-text {
+        line-height: 1.8;
+        letter-spacing: 0.5px;
+      }
+
+      #llmInterpretationPanel {
+        display: none;
+        background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+        border: 2px solid var(--secondary-color);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        animation: slideIn 0.3s ease;
+      }
+
+      .llm-interpretation-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .llm-interpretation-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.3rem;
+        color: var(--primary-color);
+      }
+
+      .llm-interpretation-header i {
+        color: var(--secondary-color);
+        font-size: 1.5rem;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: var(--radius);
+        transition: all 0.3s ease;
+      }
+
+      .close-btn:hover {
+        background: rgba(0, 0, 0, 0.1);
+        color: var(--primary-color);
+      }
+
+      .llm-interpretation-content {
+        background: white;
+        padding: 20px;
+        border-radius: var(--radius);
+        margin-bottom: 16px;
+        line-height: 1.8;
+      }
+
+      .interpretation-text {
+        color: var(--text-primary);
+      }
+
+      .interpretation-text strong {
+        color: var(--primary-color);
+      }
+
+      .interpretation-text code {
+        background: var(--bg-primary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Consolas', monospace;
+      }
+
+      .llm-interpretation-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--text-secondary);
+      }
+
+      .empty-state i {
+        font-size: 4rem;
+        opacity: 0.3;
+        margin-bottom: 20px;
+      }
+
+      .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
+
+      @media (max-width: 1200px) {
         .main-container {
-            display: grid;
-            grid-template-columns: 400px 1fr;
-            min-height: calc(100vh - 100px);
-            max-width: 1600px;
-            margin: 0 auto;
-            gap: 24px;
-            padding: 24px;
+          grid-template-columns: 1fr;
         }
 
         .sidebar {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 24px;
-            overflow-y: auto;
-            height: fit-content;
-            position: sticky;
-            top: 120px;
+          position: relative;
+          top: 0;
         }
-
-        .content-area {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 28px;
-            overflow-y: auto;
-        }
-
-        .form-section {
-            margin-bottom: 28px;
-            padding-bottom: 24px;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .form-section:last-child {
-            border-bottom: none;
-        }
-
-        .section-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 18px;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .section-title i {
-            font-size: 1.3rem;
-            padding: 8px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: 8px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid var(--border-color);
-            border-radius: var(--radius);
-            font-size: 14px;
-            font-family: inherit;
-            transition: all 0.3s ease;
-            background: white;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
-        }
-
-        textarea.form-control {
-            resize: vertical;
-            min-height: 150px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            line-height: 1.5;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            font-family: inherit;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--secondary-color), #4a90e2);
-            color: white;
-            width: 100%;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
-        }
-
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-            width: 100%;
-            justify-content: center;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
-            transform: translateY(-2px);
-        }
-
-        #statusArea {
-            margin-bottom: 20px;
-        }
-
-        .status-message {
-            padding: 12px 16px;
-            border-radius: var(--radius);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideIn 0.3s ease;
-        }
-
-        .status-success {
-            background: #d4edda;
-            border-left: 4px solid var(--success-color);
-            color: #155724;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            border-left: 4px solid var(--danger-color);
-            color: #721c24;
-        }
-
-        .status-info {
-            background: #d1ecf1;
-            border-left: 4px solid #17a2b8;
-            color: #0c5460;
-        }
-
-        .status-warning {
-            background: #fff3cd;
-            border-left: 4px solid var(--warning-color);
-            color: #856404;
-        }
-
-        #loadingIndicator {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 60px 20px;
-            text-align: center;
-        }
-
-        .loading-spinner {
-            font-size: 3rem;
-            color: var(--secondary-color);
-            margin-bottom: 20px;
-        }
-
-        .loading-spinner i {
-            animation: spin 1s linear infinite;
-        }
-
-        .loading-message {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(-10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .domain-card {
-            background: white;
-            border: 2px solid var(--border-color);
-            border-left: 5px solid var(--domain-color);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .domain-card:hover {
-            box-shadow: var(--shadow-hover);
-            transform: translateY(-2px);
-        }
-
-        .domain-card.family {
-            border-left-color: var(--family-color);
-        }
-
-        .domain-card.site {
-            border-left-color: var(--site-color);
-        }
-
-        .domain-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 12px;
-        }
-
-        .domain-id {
-            font-weight: 700;
-            color: var(--secondary-color);
-            font-size: 1.1rem;
-        }
-
-        .domain-type-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: white;
-        }
-
-        .domain-type-badge.domain {
-            background: var(--domain-color);
-        }
-
-        .domain-type-badge.family {
-            background: var(--family-color);
-        }
-
-        .domain-type-badge.site {
-            background: var(--site-color);
-        }
-
-        .domain-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--text-primary);
-        }
-
-        .domain-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            background: var(--bg-primary);
-            border-radius: var(--radius);
-        }
-
-        .stat-item i {
-            color: var(--secondary-color);
-        }
-
-        .domain-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .btn-small {
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-
-        .sequence-viewer {
-            background: #f8f9fa;
-            padding: 16px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-family: 'Consolas', monospace;
-            font-size: 0.9rem;
-            overflow-x: auto;
-        }
-
-        .sequence-ruler {
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-
-        .sequence-text {
-            line-height: 1.8;
-            letter-spacing: 0.5px;
-        }
-
-        #llmInterpretationPanel {
-            display: none;
-            background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
-            border: 2px solid var(--secondary-color);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            animation: slideIn 0.3s ease;
-        }
-
-        .llm-interpretation-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-
-        .llm-interpretation-header h3 {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.3rem;
-            color: var(--primary-color);
-        }
-
-        .llm-interpretation-header i {
-            color: var(--secondary-color);
-            font-size: 1.5rem;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 8px;
-            border-radius: var(--radius);
-            transition: all 0.3s ease;
-        }
-
-        .close-btn:hover {
-            background: rgba(0,0,0,0.1);
-            color: var(--primary-color);
-        }
-
-        .llm-interpretation-content {
-            background: white;
-            padding: 20px;
-            border-radius: var(--radius);
-            margin-bottom: 16px;
-            line-height: 1.8;
-        }
-
-        .interpretation-text {
-            color: var(--text-primary);
-        }
-
-        .interpretation-text strong {
-            color: var(--primary-color);
-        }
-
-        .interpretation-text code {
-            background: var(--bg-primary);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Consolas', monospace;
-        }
-
-        .llm-interpretation-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-secondary);
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            opacity: 0.3;
-            margin-bottom: 20px;
-        }
-
-        .empty-state h3 {
-            font-size: 1.5rem;
-            margin-bottom: 12px;
-            color: var(--text-primary);
-        }
-
-        @media (max-width: 1200px) {
-            .main-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .sidebar {
-                position: relative;
-                top: 0;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="app-header">
-        <div class="header-content">
-            <div class="app-title">
-                <i class="fas fa-puzzle-piece"></i>
-                <div class="title-text">
-                    <h1>InterPro Domain Analysis</h1>
-                    <p>Protein Domain and Family Classification</p>
-                </div>
-            </div>
-            <div class="header-actions">
-                <button class="header-btn" id="llmInterpretBtn" style="display: none;">
-                    <i class="fas fa-brain"></i>
-                    AI Interpret
-                </button>
-                <button class="header-btn" id="sendToChatBtn" style="display: none;">
-                    <i class="fas fa-comments"></i>
-                    Analyze in ChatBox
-                </button>
-            </div>
+      <div class="header-content">
+        <div class="app-title">
+          <i class="fas fa-puzzle-piece"></i>
+          <div class="title-text">
+            <h1>InterPro Domain Analysis</h1>
+            <p>Protein Domain and Family Classification</p>
+          </div>
         </div>
+        <div class="header-actions">
+          <button class="header-btn" id="llmInterpretBtn" style="display: none">
+            <i class="fas fa-brain"></i>
+            AI Interpret
+          </button>
+          <button class="header-btn" id="sendToChatBtn" style="display: none">
+            <i class="fas fa-comments"></i>
+            Analyze in ChatBox
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="main-container">
-        <div class="sidebar">
-            <div class="form-section">
-                <div class="section-title">
-                    <i class="fas fa-dna"></i>
-                    Protein Sequence
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Enter Protein Sequence (FASTA format or raw)</label>
-                    <textarea class="form-control" id="sequenceInput" 
-                        placeholder=">Protein_ID
+      <div class="sidebar">
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fas fa-dna"></i>
+            Protein Sequence
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Enter Protein Sequence (FASTA format or raw)</label>
+            <textarea
+              class="form-control"
+              id="sequenceInput"
+              placeholder=">Protein_ID
 MKTIIALSYIFCLVFADYKDDDDK
 VNSAFEVWGPHDNNPFTVKADTAEI
 LPHVQHVLHNKPQKVTFTQIVSKAI
-..."></textarea>
-                </div>
-                
-                <button class="btn btn-primary" id="analyzeBtn">
-                    <i class="fas fa-search"></i>
-                    Analyze Domains
-                </button>
-            </div>
+..."
+            ></textarea>
+          </div>
 
-            <div class="form-section">
-                <div class="section-title">
-                    <i class="fas fa-sliders-h"></i>
-                    Analysis Parameters
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">E-value Threshold</label>
-                    <select class="form-control" id="evalueThreshold">
-                        <option value="0.001">0.001 (Very Stringent)</option>
-                        <option value="0.01">0.01 (Stringent)</option>
-                        <option value="0.1" selected>0.1 (Moderate)</option>
-                        <option value="1.0">1.0 (Relaxed)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Databases</label>
-                    <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 4px;">
-                        Pfam, SMART, PROSITE, Gene3D, PANTHER
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <div class="section-title">
-                    <i class="fas fa-tools"></i>
-                    Quick Actions
-                </div>
-                
-                <button class="btn btn-secondary" id="exampleBtn" style="margin-bottom: 10px;">
-                    <i class="fas fa-flask"></i>
-                    Load Example
-                </button>
-                
-                <button class="btn btn-secondary" id="clearBtn">
-                    <i class="fas fa-trash-alt"></i>
-                    Clear Results
-                </button>
-            </div>
+          <button class="btn btn-primary" id="analyzeBtn">
+            <i class="fas fa-search"></i>
+            Analyze Domains
+          </button>
         </div>
 
-        <div class="content-area">
-            <div id="statusArea"></div>
-            
-            <div id="llmInterpretationPanel"></div>
-            
-            <div id="loadingIndicator">
-                <div class="loading-spinner">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
-                <div class="loading-message">Analyzing protein domains...</div>
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fas fa-sliders-h"></i>
+            Analysis Parameters
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">E-value Threshold</label>
+            <select class="form-control" id="evalueThreshold">
+              <option value="0.001">0.001 (Very Stringent)</option>
+              <option value="0.01">0.01 (Stringent)</option>
+              <option value="0.1" selected>0.1 (Moderate)</option>
+              <option value="1.0">1.0 (Relaxed)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Databases</label>
+            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 4px">
+              Pfam, SMART, PROSITE, Gene3D, PANTHER
             </div>
-            
-            <div id="resultsContainer">
-                <div class="empty-state">
-                    <i class="fas fa-puzzle-piece"></i>
-                    <h3>No Analysis Results</h3>
-                    <p>Enter a protein sequence and click "Analyze Domains" to identify protein domains and functional sites.</p>
-                </div>
-            </div>
+          </div>
         </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fas fa-tools"></i>
+            Quick Actions
+          </div>
+
+          <button class="btn btn-secondary" id="exampleBtn" style="margin-bottom: 10px">
+            <i class="fas fa-flask"></i>
+            Load Example
+          </button>
+
+          <button class="btn btn-secondary" id="clearBtn">
+            <i class="fas fa-trash-alt"></i>
+            Clear Results
+          </button>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <div id="statusArea"></div>
+
+        <div id="llmInterpretationPanel"></div>
+
+        <div id="loadingIndicator">
+          <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+          </div>
+          <div class="loading-message">Analyzing protein domains...</div>
+        </div>
+
+        <div id="resultsContainer">
+          <div class="empty-state">
+            <i class="fas fa-puzzle-piece"></i>
+            <h3>No Analysis Results</h3>
+            <p>
+              Enter a protein sequence and click "Analyze Domains" to identify protein domains and functional sites.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="tool-menu-handler.js"></script>
     <script src="shared-analyzer-base.js"></script>
     <script>
-        class InterProAnalyzer extends SharedAnalyzerBase {
-            constructor() {
-                super('InterPro Domain Analysis', {
-                    primaryColor: '#4a90e2',
-                    secondaryColor: '#7bb3f0',
-                    icon: 'fa-puzzle-piece'
-                });
-                
-                this.init();
-                
-                // Notify window is ready
-                setTimeout(() => {
-                    this.ipcRenderer.send('window-ready', 'interpro-analyzer');
-                }, 100);
+      class InterProAnalyzer extends SharedAnalyzerBase {
+        constructor() {
+          super('InterPro Domain Analysis', {
+            primaryColor: '#4a90e2',
+            secondaryColor: '#7bb3f0',
+            icon: 'fa-puzzle-piece',
+          });
+
+          this.init();
+
+          // Notify window is ready
+          setTimeout(() => {
+            this.ipcRenderer.send('window-ready', 'interpro-analyzer');
+          }, 100);
+        }
+
+        init() {
+          document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeDomains());
+          document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+          document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
+          document.getElementById('sendToChatBtn').addEventListener('click', () => this.sendCurrentToChatBox());
+        }
+
+        async analyzeDomains() {
+          const sequenceInput = document.getElementById('sequenceInput').value.trim();
+          if (!sequenceInput) {
+            this.showStatus('Please enter a protein sequence', 'warning');
+            return;
+          }
+
+          // Parse FASTA or raw sequence
+          const sequence = this.parseSequence(sequenceInput);
+          if (!sequence || sequence.length < 20) {
+            this.showStatus('Sequence too short (minimum 20 amino acids)', 'warning');
+            return;
+          }
+
+          const evalueThreshold = parseFloat(document.getElementById('evalueThreshold').value);
+
+          this.showLoading(true, 'Analyzing protein domains...');
+          this.showStatus('Querying InterPro database...', 'info');
+
+          try {
+            await this.delay(1500);
+
+            const results = await this.performDomainAnalysis(sequence, evalueThreshold);
+
+            this.currentResults = results;
+            this.displayResults(results);
+            this.showLoading(false);
+            this.showStatus(`Found ${results.domains.length} protein domains`, 'success');
+
+            // Show ChatBox integration button
+            document.getElementById('sendToChatBtn').style.display = 'block';
+            document.getElementById('llmInterpretBtn').style.display = 'block';
+          } catch (error) {
+            this.showLoading(false);
+            this.showStatus(`Analysis failed: ${error.message}`, 'error');
+          }
+        }
+
+        parseSequence(input) {
+          // Remove FASTA header if present
+          const lines = input.split('\n');
+          let sequence = '';
+
+          for (const line of lines) {
+            if (!line.startsWith('>')) {
+              sequence += line.trim().replace(/\s/g, '');
             }
+          }
 
-            init() {
-                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeDomains());
-                document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
-                document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
-                document.getElementById('sendToChatBtn').addEventListener('click', () => this.sendCurrentToChatBox());
+          // Remove non-amino acid characters
+          return sequence.replace(/[^ACDEFGHIKLMNPQRSTVWY]/gi, '').toUpperCase();
+        }
+
+        async performDomainAnalysis(sequence, evalueThreshold) {
+          // Simulate InterPro domain analysis
+          const domainDatabase = this.getDomainDatabase();
+          const domains = [];
+
+          const seqLength = sequence.length;
+
+          // Simulate finding domains
+          for (let i = 0; i < Math.min(5, Math.floor(seqLength / 50)); i++) {
+            const domain = domainDatabase[Math.floor(Math.random() * domainDatabase.length)];
+            const start = Math.floor(Math.random() * (seqLength / 2));
+            const length = Math.floor(Math.random() * 100) + 50;
+            const end = Math.min(start + length, seqLength);
+
+            if (Math.random() < 0.7) {
+              // 70% chance to include domain
+              domains.push({
+                ...domain,
+                start: start,
+                end: end,
+                evalue: parseFloat((Math.random() * evalueThreshold).toExponential(2)),
+                score: Math.random() * 100 + 100,
+                database: ['Pfam', 'SMART', 'PROSITE', 'Gene3D'][Math.floor(Math.random() * 4)],
+              });
             }
+          }
 
-            async analyzeDomains() {
-                const sequenceInput = document.getElementById('sequenceInput').value.trim();
-                if (!sequenceInput) {
-                    this.showStatus('Please enter a protein sequence', 'warning');
-                    return;
-                }
+          domains.sort((a, b) => a.start - b.start);
 
-                // Parse FASTA or raw sequence
-                const sequence = this.parseSequence(sequenceInput);
-                if (!sequence || sequence.length < 20) {
-                    this.showStatus('Sequence too short (minimum 20 amino acids)', 'warning');
-                    return;
-                }
+          return {
+            sequence: sequence,
+            sequenceLength: seqLength,
+            domains: domains,
+            analysisDate: new Date().toISOString(),
+            parameters: { evalueThreshold },
+          };
+        }
 
-                const evalueThreshold = parseFloat(document.getElementById('evalueThreshold').value);
+        getDomainDatabase() {
+          return [
+            {
+              id: 'IPR000719',
+              name: 'Protein kinase domain',
+              type: 'domain',
+              description: 'Catalytic domain of protein kinases',
+            },
+            {
+              id: 'IPR001245',
+              name: 'Serine-threonine/tyrosine-protein kinase',
+              type: 'family',
+              description: 'Protein kinase family',
+            },
+            {
+              id: 'IPR020635',
+              name: 'Tyrosine protein kinase, active site',
+              type: 'site',
+              description: 'Active site of tyrosine kinases',
+            },
+            {
+              id: 'IPR000276',
+              name: 'G protein-coupled receptor',
+              type: 'family',
+              description: 'GPCR family signature',
+            },
+            {
+              id: 'IPR001092',
+              name: 'Helix-loop-helix DNA-binding domain',
+              type: 'domain',
+              description: 'DNA binding domain',
+            },
+            { id: 'IPR001841', name: 'Zinc finger, RING-type', type: 'domain', description: 'RING zinc finger domain' },
+            { id: 'IPR003593', name: 'AAA+ ATPase domain', type: 'domain', description: 'ATPase domain' },
+            {
+              id: 'IPR000561',
+              name: 'EGF-like calcium-binding domain',
+              type: 'domain',
+              description: 'EGF-like repeats',
+            },
+            { id: 'IPR001611', name: 'Leucine-rich repeat', type: 'domain', description: 'LRR domain' },
+            {
+              id: 'IPR002048',
+              name: 'EF-hand calcium-binding domain',
+              type: 'domain',
+              description: 'Calcium binding motif',
+            },
+          ];
+        }
 
-                this.showLoading(true, 'Analyzing protein domains...');
-                this.showStatus('Querying InterPro database...', 'info');
-
-                try {
-                    await this.delay(1500);
-                    
-                    const results = await this.performDomainAnalysis(sequence, evalueThreshold);
-                    
-                    this.currentResults = results;
-                    this.displayResults(results);
-                    this.showLoading(false);
-                    this.showStatus(`Found ${results.domains.length} protein domains`, 'success');
-                    
-                    // Show ChatBox integration button
-                    document.getElementById('sendToChatBtn').style.display = 'block';
-                    document.getElementById('llmInterpretBtn').style.display = 'block';
-                    
-                } catch (error) {
-                    this.showLoading(false);
-                    this.showStatus(`Analysis failed: ${error.message}`, 'error');
-                }
-            }
-
-            parseSequence(input) {
-                // Remove FASTA header if present
-                const lines = input.split('\n');
-                let sequence = '';
-                
-                for (const line of lines) {
-                    if (!line.startsWith('>')) {
-                        sequence += line.trim().replace(/\s/g, '');
-                    }
-                }
-                
-                // Remove non-amino acid characters
-                return sequence.replace(/[^ACDEFGHIKLMNPQRSTVWY]/gi, '').toUpperCase();
-            }
-
-            async performDomainAnalysis(sequence, evalueThreshold) {
-                // Simulate InterPro domain analysis
-                const domainDatabase = this.getDomainDatabase();
-                const domains = [];
-                
-                const seqLength = sequence.length;
-                
-                // Simulate finding domains
-                for (let i = 0; i < Math.min(5, Math.floor(seqLength / 50)); i++) {
-                    const domain = domainDatabase[Math.floor(Math.random() * domainDatabase.length)];
-                    const start = Math.floor(Math.random() * (seqLength / 2));
-                    const length = Math.floor(Math.random() * 100) + 50;
-                    const end = Math.min(start + length, seqLength);
-                    
-                    if (Math.random() < 0.7) { // 70% chance to include domain
-                        domains.push({
-                            ...domain,
-                            start: start,
-                            end: end,
-                            evalue: parseFloat((Math.random() * evalueThreshold).toExponential(2)),
-                            score: Math.random() * 100 + 100,
-                            database: ['Pfam', 'SMART', 'PROSITE', 'Gene3D'][Math.floor(Math.random() * 4)]
-                        });
-                    }
-                }
-                
-                domains.sort((a, b) => a.start - b.start);
-                
-                return {
-                    sequence: sequence,
-                    sequenceLength: seqLength,
-                    domains: domains,
-                    analysisDate: new Date().toISOString(),
-                    parameters: { evalueThreshold }
-                };
-            }
-
-            getDomainDatabase() {
-                return [
-                    { id: 'IPR000719', name: 'Protein kinase domain', type: 'domain', description: 'Catalytic domain of protein kinases' },
-                    { id: 'IPR001245', name: 'Serine-threonine/tyrosine-protein kinase', type: 'family', description: 'Protein kinase family' },
-                    { id: 'IPR020635', name: 'Tyrosine protein kinase, active site', type: 'site', description: 'Active site of tyrosine kinases' },
-                    { id: 'IPR000276', name: 'G protein-coupled receptor', type: 'family', description: 'GPCR family signature' },
-                    { id: 'IPR001092', name: 'Helix-loop-helix DNA-binding domain', type: 'domain', description: 'DNA binding domain' },
-                    { id: 'IPR001841', name: 'Zinc finger, RING-type', type: 'domain', description: 'RING zinc finger domain' },
-                    { id: 'IPR003593', name: 'AAA+ ATPase domain', type: 'domain', description: 'ATPase domain' },
-                    { id: 'IPR000561', name: 'EGF-like calcium-binding domain', type: 'domain', description: 'EGF-like repeats' },
-                    { id: 'IPR001611', name: 'Leucine-rich repeat', type: 'domain', description: 'LRR domain' },
-                    { id: 'IPR002048', name: 'EF-hand calcium-binding domain', type: 'domain', description: 'Calcium binding motif' }
-                ];
-            }
-
-            displayResults(results) {
-                const container = document.getElementById('resultsContainer');
-                if (!results || !results.domains || results.domains.length === 0) {
-                    container.innerHTML = `
+        displayResults(results) {
+          const container = document.getElementById('resultsContainer');
+          if (!results || !results.domains || results.domains.length === 0) {
+            container.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-puzzle-piece"></i>
                             <h3>No Domains Found</h3>
                             <p>No protein domains identified in the sequence. Try adjusting the E-value threshold.</p>
                         </div>
                     `;
-                    return;
-                }
-                
-                const summaryHtml = `
+            return;
+          }
+
+          const summaryHtml = `
                     <div style="background: linear-gradient(135deg, #e3f2fd, #f3e5f5); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
                         <h2 style="margin-bottom: 16px; color: var(--primary-color);">
                             <i class="fas fa-chart-bar"></i>
@@ -810,8 +868,10 @@ LPHVQHVLHNKPQKVTFTQIVSKAI
                         </div>
                     </div>
                 `;
-                
-                const domainCards = results.domains.map((domain, index) => `
+
+          const domainCards = results.domains
+            .map(
+              (domain, index) => `
                     <div class="domain-card ${domain.type}">
                         <div class="domain-header">
                             <div>
@@ -857,95 +917,98 @@ LPHVQHVLHNKPQKVTFTQIVSKAI
                             </button>
                         </div>
                     </div>
-                `).join('');
-                
-                const sequenceViewer = `
+                `
+            )
+            .join('');
+
+          const sequenceViewer = `
                     <div class="sequence-viewer">
                         <div class="sequence-ruler">Sequence (${results.sequenceLength} AA):</div>
                         <div class="sequence-text">${this.formatSequence(results.sequence)}</div>
                     </div>
                 `;
-                
-                container.innerHTML = summaryHtml + domainCards + sequenceViewer;
-            }
 
-            formatSequence(sequence, lineLength = 60) {
-                let formatted = '';
-                for (let i = 0; i < sequence.length; i += lineLength) {
-                    const pos = i + 1;
-                    const line = sequence.substring(i, i + lineLength);
-                    formatted += `${pos.toString().padStart(5, ' ')}  ${line}\n`;
-                }
-                return formatted;
-            }
+          container.innerHTML = summaryHtml + domainCards + sequenceViewer;
+        }
 
-            viewDomain(domainId) {
-                const url = `https://www.ebi.ac.uk/interpro/entry/InterPro/${domainId}`;
-                require('electron').shell.openExternal(url);
-            }
+        formatSequence(sequence, lineLength = 60) {
+          let formatted = '';
+          for (let i = 0; i < sequence.length; i += lineLength) {
+            const pos = i + 1;
+            const line = sequence.substring(i, i + lineLength);
+            formatted += `${pos.toString().padStart(5, ' ')}  ${line}\n`;
+          }
+          return formatted;
+        }
 
-            askAboutDomain(domainId) {
-                const domain = this.currentResults.domains.find(d => d.id === domainId);
-                if (!domain) return;
-                
-                const query = `Explain the function and biological significance of the protein domain "${domain.name}" (${domain.id}, ${domain.type}). It was found at position ${domain.start}-${domain.end}. What role does this domain typically play in protein function?`;
-                this.sendToChatBox(query, { domain, fullResults: this.currentResults });
-            }
+        viewDomain(domainId) {
+          const url = `https://www.ebi.ac.uk/interpro/entry/InterPro/${domainId}`;
+          require('electron').shell.openExternal(url);
+        }
 
-            sendCurrentToChatBox() {
-                if (!this.currentResults) {
-                    this.showStatus('No results to send', 'warning');
-                    return;
-                }
-                
-                const domainNames = this.currentResults.domains.map(d => d.name).join(', ');
-                const query = `I analyzed a ${this.currentResults.sequenceLength} AA protein sequence and found ${this.currentResults.domains.length} domains: ${domainNames}. What can you tell me about the likely function of this protein based on its domain architecture?`;
-                
-                this.sendToChatBox(query, this.currentResults);
-            }
+        askAboutDomain(domainId) {
+          const domain = this.currentResults.domains.find(d => d.id === domainId);
+          if (!domain) return;
 
-            buildDetailedQuery(data) {
-                const topDomains = data.domains.slice(0, 3).map(d => 
-                    `${d.name} (${d.start}-${d.end})`
-                ).join(', ');
-                
-                return `Provide detailed functional analysis of a protein with these domains: ${topDomains}. What biological processes might this protein be involved in?`;
-            }
+          const query = `Explain the function and biological significance of the protein domain "${domain.name}" (${domain.id}, ${domain.type}). It was found at position ${domain.start}-${domain.end}. What role does this domain typically play in protein function?`;
+          this.sendToChatBox(query, { domain, fullResults: this.currentResults });
+        }
 
-            getResultCount(data) {
-                return data.domains ? data.domains.length : 0;
-            }
+        sendCurrentToChatBox() {
+          if (!this.currentResults) {
+            this.showStatus('No results to send', 'warning');
+            return;
+          }
 
-            loadExample() {
-                const exampleSeq = `>Example_Protein_Kinase
+          const domainNames = this.currentResults.domains.map(d => d.name).join(', ');
+          const query = `I analyzed a ${this.currentResults.sequenceLength} AA protein sequence and found ${this.currentResults.domains.length} domains: ${domainNames}. What can you tell me about the likely function of this protein based on its domain architecture?`;
+
+          this.sendToChatBox(query, this.currentResults);
+        }
+
+        buildDetailedQuery(data) {
+          const topDomains = data.domains
+            .slice(0, 3)
+            .map(d => `${d.name} (${d.start}-${d.end})`)
+            .join(', ');
+
+          return `Provide detailed functional analysis of a protein with these domains: ${topDomains}. What biological processes might this protein be involved in?`;
+        }
+
+        getResultCount(data) {
+          return data.domains ? data.domains.length : 0;
+        }
+
+        loadExample() {
+          const exampleSeq = `>Example_Protein_Kinase
 MENFQKVEKIGEGTYGVVYKARNKLTGEVVALKKIRLDTETEGVPSTAIREISLLKELNH
 PNIVKLLDVIHTENKLYLVFEFLHQDLKKFMDASALTGIPLPLIKSYLFQLLQGLAFCHS
 HRVLHRDLKPQNLLINTEGAIKLADFGLARAFGVPVRTYTHEVVTLWYRAPEILLGCKYY
 STAVDIWSLGCIFAEMVTRRALFPGDSEIDQLFRIFRTLGTPDEVVWPGVTSMPDYKPSF
 PKWARQDFSKVVPPLDEDGRSLLSQMLHYDPNKRISAKAALAHPFFQDVTKPVPHLRL`;
-                
-                document.getElementById('sequenceInput').value = exampleSeq;
-                this.showStatus('Example protein kinase sequence loaded', 'success');
-            }
 
-            clearResults() {
-                document.getElementById('resultsContainer').innerHTML = `
+          document.getElementById('sequenceInput').value = exampleSeq;
+          this.showStatus('Example protein kinase sequence loaded', 'success');
+        }
+
+        clearResults() {
+          document.getElementById('resultsContainer').innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-puzzle-piece"></i>
                         <h3>No Analysis Results</h3>
                         <p>Enter a protein sequence and click "Analyze Domains" to identify protein domains and functional sites.</p>
                     </div>
                 `;
-                this.currentResults = null;
-                document.getElementById('sendToChatBtn').style.display = 'none';
-                document.getElementById('llmInterpretBtn').style.display = 'none';
-                this.showStatus('Results cleared', 'success');
-            }
+          this.currentResults = null;
+          document.getElementById('sendToChatBtn').style.display = 'none';
+          document.getElementById('llmInterpretBtn').style.display = 'none';
+          this.showStatus('Results cleared', 'success');
         }
+      }
 
-        // Initialize
-        window.analyzer = new InterProAnalyzer();
-        window.toolMenuHandler = new ToolMenuHandler('InterPro Domain Analysis', window.analyzer);
+      // Initialize
+      window.analyzer = new InterProAnalyzer();
+      window.toolMenuHandler = new ToolMenuHandler('InterPro Domain Analysis', window.analyzer);
     </script>
-</body>
+  </body>
 </html>

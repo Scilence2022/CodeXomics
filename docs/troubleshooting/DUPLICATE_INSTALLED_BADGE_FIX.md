@@ -33,6 +33,7 @@ ${isInstalled ? `
 ```
 
 This system showed:
+
 - "✓ INSTALLED" badge for all installed plugins
 - "⚡ UPDATE AVAILABLE" badge when updates were available (in addition to the installed badge)
 
@@ -54,6 +55,7 @@ ${isInstalled ? `
 ### The Conflict
 
 Both systems were active simultaneously, resulting in:
+
 - Top-right corner: "✓ INSTALLED" badge
 - Button area: "Installed" button with SVG checkmark
 
@@ -66,14 +68,17 @@ After analyzing the user's requirement ("应该直接取代或者完全遮盖原
 **The button is the primary status indicator.**
 
 The badge system should be simplified to only show **exceptional states** that require user attention, specifically:
+
 - **Update Available**: This is actionable information that deserves prominent placement
 
 The "Installed" status itself should be communicated through:
+
 1. The green "Installed" button (primary indicator)
 2. The green border and background tint of the plugin card (secondary visual cue)
 3. Version comparison text when applicable
 
 This creates a cleaner, more focused visual hierarchy where:
+
 - **Normal state** (installed, up-to-date): Button + card styling
 - **Action required** (update available): Badge + orange update button
 
@@ -84,6 +89,7 @@ This creates a cleaner, more focused visual hierarchy where:
 Modified the badge rendering logic to only show when an update is available:
 
 **Before**:
+
 ```javascript
 ${isInstalled ? `
     <div style="position: absolute; top: 10px; right: 10px;">
@@ -94,6 +100,7 @@ ${isInstalled ? `
 ```
 
 **After**:
+
 ```javascript
 ${isInstalled && needsUpdate ? `
     <div style="position: absolute; top: 10px; right: 10px;">
@@ -119,11 +126,11 @@ ${isInstalled && needsUpdate ? `
 
 ## Visual State Matrix
 
-| Plugin State | Top-Right Badge | Button Display | Card Border | Card Background |
-|--------------|----------------|----------------|-------------|-----------------|
-| **Not Installed** | _(none)_ | 📥 Install (green gradient) | Gray (#ddd) | Light gray (#f9f9f9) |
-| **Installed (current)** | _(none)_ | ✓ Installed (green gradient) | Green (#4CAF50) | Light green (#f1f8f4) |
-| **Update Available** | ⚡ UPDATE AVAILABLE | ⚡ Update to vX.X.X (orange gradient) | Green (#4CAF50) | Light green (#f1f8f4) |
+| Plugin State            | Top-Right Badge     | Button Display                        | Card Border     | Card Background       |
+| ----------------------- | ------------------- | ------------------------------------- | --------------- | --------------------- |
+| **Not Installed**       | _(none)_            | 📥 Install (green gradient)           | Gray (#ddd)     | Light gray (#f9f9f9)  |
+| **Installed (current)** | _(none)_            | ✓ Installed (green gradient)          | Green (#4CAF50) | Light green (#f1f8f4) |
+| **Update Available**    | ⚡ UPDATE AVAILABLE | ⚡ Update to vX.X.X (orange gradient) | Green (#4CAF50) | Light green (#f1f8f4) |
 
 ## Design Rationale
 
@@ -134,6 +141,7 @@ The badge and button both communicated the exact same information ("this plugin 
 
 **Reason 2: Visual Hierarchy**
 By removing the redundant badge, we create a cleaner visual hierarchy where:
+
 - The button area is the primary interaction zone
 - The top-right corner is reserved for **urgent notifications only**
 
@@ -153,6 +161,7 @@ The pulsing orange badge draws attention to plugins that need updates, even when
 
 **Reason 3: Complementary, Not Redundant**
 The badge and button serve different purposes:
+
 - **Badge**: "Hey, attention needed here!"
 - **Button**: "Click me to perform the update"
 
@@ -166,6 +175,7 @@ Placing the update notification in the top-right corner keeps it visually separa
 ### Before Fix (Duplicate Badges)
 
 **Visual Confusion**:
+
 - "Why are there two 'Installed' indicators?"
 - "Which one is the 'real' status?"
 - "Did the installation complete properly or is this a UI bug?"
@@ -175,6 +185,7 @@ Placing the update notification in the top-right corner keeps it visually separa
 ### After Fix (Single Button Indicator)
 
 **Visual Clarity**:
+
 - "The green button shows it's installed"
 - "The orange badge tells me there's an update"
 - "Clean, professional interface"
@@ -188,10 +199,12 @@ Placing the update notification in the top-right corner keeps it visually separa
 **Primary File**: `/src/renderer/modules/PluginMarketplaceUI.js`
 
 **Lines Changed**:
+
 - Lines 534-546: Badge rendering logic
 - Line 549: Conditional padding logic
 
 **Net Change**:
+
 - -11 lines removed (redundant "INSTALLED" badge code)
 - +5 lines added (simplified update badge logic)
 - -6 net lines (code reduction)
@@ -210,6 +223,7 @@ Placing the update notification in the top-right corner keeps it visually separa
 ### Case 1: Plugin Installed, Up-to-Date
 
 **Display**:
+
 - No badge in top-right corner
 - Green "Installed" button
 - Green card border and background tint
@@ -219,6 +233,7 @@ Placing the update notification in the top-right corner keeps it visually separa
 ### Case 2: Plugin Installed, Update Available
 
 **Display**:
+
 - "⚡ UPDATE AVAILABLE" badge in top-right corner (pulsing orange)
 - Orange "⚡ Update to vX.X.X" button
 - Green card border and background tint (plugin is still installed)
@@ -228,6 +243,7 @@ Placing the update notification in the top-right corner keeps it visually separa
 ### Case 3: Plugin Not Installed
 
 **Display**:
+
 - No badge in top-right corner
 - Green "📥 Install" button
 - Gray card border and background
@@ -241,15 +257,19 @@ Placing the update notification in the top-right corner keeps it visually separa
 The conditional padding on the plugin description area was updated to only apply when the "UPDATE AVAILABLE" badge is present:
 
 **Before**:
+
 ```javascript
 padding-right: ${isInstalled ? '140px' : ''}
 ```
+
 This reserved space for BOTH the "INSTALLED" and "UPDATE AVAILABLE" badges.
 
 **After**:
+
 ```javascript
 padding-right: ${isInstalled && needsUpdate ? '140px' : ''}
 ```
+
 This only reserves space when the "UPDATE AVAILABLE" badge is actually present.
 
 **Effect**: When a plugin is installed and up-to-date, the description text can now extend further to the right, making better use of available space.
@@ -263,16 +283,18 @@ animation: pulse 2s infinite;
 ```
 
 Defined in the CSS as:
+
 ```css
 @keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.8;
-        transform: scale(1.05);
-    }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 ```
 
@@ -283,6 +305,7 @@ This animation remains important for drawing user attention to available updates
 ### Manual Testing Steps:
 
 1. **Installed Plugin (Current Version)**:
+
    ```
    - Install a plugin
    - Verify only the green "Installed" button appears
@@ -292,6 +315,7 @@ This animation remains important for drawing user attention to available updates
    ```
 
 2. **Installed Plugin (Update Available)**:
+
    ```
    - Install an older version of a plugin
    - Ensure marketplace has newer version
@@ -302,6 +326,7 @@ This animation remains important for drawing user attention to available updates
    ```
 
 3. **Uninstalled Plugin**:
+
    ```
    - Browse marketplace for uninstalled plugin
    - Verify NO badges in top-right corner
@@ -326,9 +351,11 @@ This animation remains important for drawing user attention to available updates
 ### Potential Additions:
 
 1. **Tooltip on Installed Button**:
+
    ```javascript
-   title="Installed on ${installDate}"
+   title = 'Installed on ${installDate}';
    ```
+
    Could show when the plugin was installed.
 
 2. **Visual Feedback on Update Complete**:

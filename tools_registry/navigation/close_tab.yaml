@@ -1,129 +1,129 @@
-name: "close_tab"
-description: "Close a specific tab in the browser interface by tab ID, name, or index position. Cannot close the last remaining tab."
-version: "1.0.0"
-author: "CodeXomics"
-category: "navigation"
-intent: "tab_management"
+name: 'close_tab'
+description: 'Close a specific tab in the browser interface by tab ID, name, or index position. Cannot close the last remaining tab.'
+version: '1.0.0'
+author: 'CodeXomics'
+category: 'navigation'
+intent: 'tab_management'
 priority: 1
-keywords: ["close", "tab", "remove", "delete", "dismiss"]
-aliases: ["remove_tab", "delete_tab", "dismiss_tab"]
+keywords: ['close', 'tab', 'remove', 'delete', 'dismiss']
+aliases: ['remove_tab', 'delete_tab', 'dismiss_tab']
 enabled: true
 
 parameters:
   anyOf:
-    - required: ["tab_id"]
-    - required: ["tab_name"] 
-    - required: ["tab_index"]
+    - required: ['tab_id']
+    - required: ['tab_name']
+    - required: ['tab_index']
   properties:
     tab_id:
-      type: "string"
-      description: "The unique identifier of the tab to close"
-      example: "tab_12345"
+      type: 'string'
+      description: 'The unique identifier of the tab to close'
+      example: 'tab_12345'
     tab_name:
-      type: "string"
-      description: "The name/title of the tab to close (supports partial matching)"
-      example: "Genome Browser"
+      type: 'string'
+      description: 'The name/title of the tab to close (supports partial matching)'
+      example: 'Genome Browser'
     tab_index:
-      type: "integer"
-      description: "The zero-based index position of the tab to close"
+      type: 'integer'
+      description: 'The zero-based index position of the tab to close'
       minimum: 0
       example: 1
     clientId:
-      type: "string"
-      description: "Optional client identifier for the request"
-      example: "browser_client_001"
+      type: 'string'
+      description: 'Optional client identifier for the request'
+      example: 'browser_client_001'
 
 responses:
   success:
-    type: "object"
+    type: 'object'
     properties:
       success:
-        type: "boolean"
+        type: 'boolean'
         example: true
       message:
-        type: "string"
-        example: "Successfully closed tab"
+        type: 'string'
+        example: 'Successfully closed tab'
       closed_tab_id:
-        type: "string"
-        example: "tab_12345"
+        type: 'string'
+        example: 'tab_12345'
       closed_tab_title:
-        type: "string"
-        example: "Genome Browser"
+        type: 'string'
+        example: 'Genome Browser'
       remaining_tabs:
-        type: "integer"
+        type: 'integer'
         example: 3
   error:
-    type: "object"
+    type: 'object'
     properties:
       success:
-        type: "boolean"
+        type: 'boolean'
         example: false
       error:
-        type: "string"
-        example: "Tab not found"
+        type: 'string'
+        example: 'Tab not found'
 
 usage_examples:
-  - description: "Close tab by ID"
+  - description: 'Close tab by ID'
     input:
-      tab_id: "tab_12345"
+      tab_id: 'tab_12345'
     expected_output:
       success: true
-      message: "Successfully closed tab"
-      closed_tab_id: "tab_12345"
-      closed_tab_title: "Genome Browser"
+      message: 'Successfully closed tab'
+      closed_tab_id: 'tab_12345'
+      closed_tab_title: 'Genome Browser'
       remaining_tabs: 3
-  
-  - description: "Close tab by name"
+
+  - description: 'Close tab by name'
     input:
-      tab_name: "Genome Browser"
+      tab_name: 'Genome Browser'
     expected_output:
       success: true
-      message: "Successfully closed tab"
-      closed_tab_id: "tab_12345"
-      closed_tab_title: "Genome Browser"
+      message: 'Successfully closed tab'
+      closed_tab_id: 'tab_12345'
+      closed_tab_title: 'Genome Browser'
       remaining_tabs: 3
-  
-  - description: "Close tab by index"
+
+  - description: 'Close tab by index'
     input:
       tab_index: 1
     expected_output:
       success: true
-      message: "Successfully closed tab"
-      closed_tab_id: "tab_67890"
-      closed_tab_title: "Data Analysis"
+      message: 'Successfully closed tab'
+      closed_tab_id: 'tab_67890'
+      closed_tab_title: 'Data Analysis'
       remaining_tabs: 3
 
 error_handling:
-  - condition: "Tab ID not found"
+  - condition: 'Tab ID not found'
     response:
       success: false
       error: "Tab with ID 'tab_12345' not found"
-  
-  - condition: "Tab name not found"
+
+  - condition: 'Tab name not found'
     response:
       success: false
       error: "No tab found matching name 'Unknown Tab'"
-  
-  - condition: "Tab index out of range"
+
+  - condition: 'Tab index out of range'
     response:
       success: false
-      error: "Tab index 5 is out of range (0-2)"
-  
-  - condition: "Cannot close last tab"
+      error: 'Tab index 5 is out of range (0-2)'
+
+  - condition: 'Cannot close last tab'
     response:
       success: false
-      error: "Cannot close the last remaining tab"
-  
-  - condition: "No parameters provided"
+      error: 'Cannot close the last remaining tab'
+
+  - condition: 'No parameters provided'
     response:
       success: false
-      error: "At least one parameter (tab_id, tab_name, or tab_index) must be provided"
+      error: 'At least one parameter (tab_id, tab_name, or tab_index) must be provided'
 
 integration:
   mcp_tools: true
   dynamic_registry: true
   builtin_tools: true
-  
+
 compatibility:
-  min_version: "1.0.0"
-  platforms: ["desktop", "web"]
+  min_version: '1.0.0'
+  platforms: ['desktop', 'web']

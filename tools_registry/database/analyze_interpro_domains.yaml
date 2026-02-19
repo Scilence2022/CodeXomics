@@ -1,8 +1,8 @@
 name: analyze_interpro_domains
 version: 1.2.0
-description: "Analyze protein domains, families, and functional sites using InterPro database. Provides comprehensive domain architecture, functional annotations, and evolutionary relationships."
+description: 'Analyze protein domains, families, and functional sites using InterPro database. Provides comprehensive domain architecture, functional annotations, and evolutionary relationships.'
 category: database
-keywords: ["analyze", "interpro", "domains", "protein", "families", "functional sites", "architecture", "evolution"]
+keywords: ['analyze', 'interpro', 'domains', 'protein', 'families', 'functional sites', 'architecture', 'evolution']
 priority: 1
 execution:
   type: server
@@ -18,98 +18,121 @@ parameters:
   properties:
     sequence:
       type: string
-      description: "Protein amino acid sequence to analyze for domains (single-letter code)"
-      pattern: "^[ACDEFGHIKLMNPQRSTVWY*X-]+$"
+      description: 'Protein amino acid sequence to analyze for domains (single-letter code)'
+      pattern: '^[ACDEFGHIKLMNPQRSTVWY*X-]+$'
       minLength: 10
       maxLength: 50000
-      examples: ["MKLLVLALFMLLGLAFLVFGLLNQGVGM", "MVSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTLGYGVQCFSRYPDHMKQHDFFKSAMPEGYVQERTIFFKDDGNYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNYNSHNVYIMADKQKNGIKVNFKIRHNIEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSALSKDPNEKRDHMVLLEFVTAAGITLGMDELYK"]
+      examples:
+        [
+          'MKLLVLALFMLLGLAFLVFGLLNQGVGM',
+          'MVSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTLGYGVQCFSRYPDHMKQHDFFKSAMPEGYVQERTIFFKDDGNYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNYNSHNVYIMADKQKNGIKVNFKIRHNIEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSALSKDPNEKRDHMVLLEFVTAAGITLGMDELYK',
+        ]
     uniprot_id:
       type: string
-      description: "UniProt ID as alternative to sequence input"
-      pattern: "^[A-Z0-9]{6,10}$"
-      examples: ["P04637", "P00350", "P0A7B8"]
+      description: 'UniProt ID as alternative to sequence input'
+      pattern: '^[A-Z0-9]{6,10}$'
+      examples: ['P04637', 'P00350', 'P0A7B8']
     geneName:
       type: string
-      description: "Gene name as alternative input method"
-      examples: ["p53", "lacZ", "dnaA", "gfp"]
+      description: 'Gene name as alternative input method'
+      examples: ['p53', 'lacZ', 'dnaA', 'gfp']
     organism:
       type: string
-      description: "Organism name for gene name resolution"
-      default: "Homo sapiens"
-      examples: ["Homo sapiens", "Escherichia coli", "Mus musculus"]
+      description: 'Organism name for gene name resolution'
+      default: 'Homo sapiens'
+      examples: ['Homo sapiens', 'Escherichia coli', 'Mus musculus']
     applications:
       type: array
-      description: "InterPro member databases to search"
+      description: 'InterPro member databases to search'
       items:
         type: string
-        enum: ["Pfam", "SMART", "PROSITE", "PANTHER", "PRINTS", "Gene3D", "SUPERFAMILY", "PIRSF", "HAMAP", "CDD", "NCBIfam", "SFLD", "SignalP_EUK", "SignalP_GRAM_POSITIVE", "SignalP_GRAM_NEGATIVE", "Phobius", "TMHMM"]
-      default: ["Pfam", "SMART", "PROSITE", "PANTHER", "Gene3D"]
+        enum:
+          [
+            'Pfam',
+            'SMART',
+            'PROSITE',
+            'PANTHER',
+            'PRINTS',
+            'Gene3D',
+            'SUPERFAMILY',
+            'PIRSF',
+            'HAMAP',
+            'CDD',
+            'NCBIfam',
+            'SFLD',
+            'SignalP_EUK',
+            'SignalP_GRAM_POSITIVE',
+            'SignalP_GRAM_NEGATIVE',
+            'Phobius',
+            'TMHMM',
+          ]
+      default: ['Pfam', 'SMART', 'PROSITE', 'PANTHER', 'Gene3D']
     analysis_type:
       type: string
-      enum: ["domains", "families", "sites", "repeats", "complete"]
-      description: "Type of InterPro analysis to perform"
-      default: "complete"
+      enum: ['domains', 'families', 'sites', 'repeats', 'complete']
+      description: 'Type of InterPro analysis to perform'
+      default: 'complete'
     include_superfamilies:
       type: boolean
-      description: "Include protein superfamily classifications"
+      description: 'Include protein superfamily classifications'
       default: true
     confidence_threshold:
       type: number
-      description: "Minimum confidence score for domain predictions (0.0-1.0)"
+      description: 'Minimum confidence score for domain predictions (0.0-1.0)'
       minimum: 0.0
       maximum: 1.0
       default: 0.5
     output_format:
       type: string
-      enum: ["summary", "detailed", "graphical", "json"]
-      description: "Format for domain analysis output"
-      default: "detailed"
+      enum: ['summary', 'detailed', 'graphical', 'json']
+      description: 'Format for domain analysis output'
+      default: 'detailed'
     goterms:
       type: boolean
-      description: "Include Gene Ontology terms in analysis"
+      description: 'Include Gene Ontology terms in analysis'
       default: true
     pathways:
       type: boolean
-      description: "Include pathway information in analysis"
+      description: 'Include pathway information in analysis'
       default: true
     include_match_sequence:
       type: boolean
-      description: "Include matched sequence regions in results"
+      description: 'Include matched sequence regions in results'
       default: true
     email_notification:
       type: string
-      description: "Email address for job completion notification (optional)"
+      description: 'Email address for job completion notification (optional)'
       format: email
     priority:
       type: string
-      enum: ["low", "normal", "high"]
-      description: "Job priority level"
-      default: "normal"
+      enum: ['low', 'normal', 'high']
+      description: 'Job priority level'
+      default: 'normal'
     clientId:
       type: string
-      description: "Browser client ID for multi-window support"
-      default: "default"
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
   required: []
 sample_usages:
-  - user_query: "Analyze domains in this protein sequence"
+  - user_query: 'Analyze domains in this protein sequence'
     tool_call: "analyze_interpro_domains(sequence='MKLLVLALFMLLGLAFLVFGLLNQGVGM', analysis_type='domains', confidence_threshold=0.7)"
-    thought: "User provided direct protein sequence for domain analysis"
-    expected_result: "Domain architecture showing identified protein domains and their positions with confidence scores"
-  
-  - user_query: "Get complete InterPro analysis for p53"
+    thought: 'User provided direct protein sequence for domain analysis'
+    expected_result: 'Domain architecture showing identified protein domains and their positions with confidence scores'
+
+  - user_query: 'Get complete InterPro analysis for p53'
     tool_call: "analyze_interpro_domains(geneName='p53', organism='Homo sapiens', analysis_type='complete', include_superfamilies=true, applications=['Pfam', 'SMART', 'Gene3D'])"
-    thought: "User provided gene name, system will auto-resolve to protein sequence via UniProt"
-    expected_result: "Complete domain analysis with families, sites, repeats, and superfamilies for p53 protein"
-  
-  - user_query: "Find functional sites in this UniProt entry"
+    thought: 'User provided gene name, system will auto-resolve to protein sequence via UniProt'
+    expected_result: 'Complete domain analysis with families, sites, repeats, and superfamilies for p53 protein'
+
+  - user_query: 'Find functional sites in this UniProt entry'
     tool_call: "analyze_interpro_domains(uniprot_id='P04637', analysis_type='sites', confidence_threshold=0.8, output_format='graphical')"
-    thought: "User provided UniProt ID, system will auto-resolve to protein sequence"
-    expected_result: "Graphical display of functional sites with high confidence scores"
-  
-  - user_query: "Analyze membrane protein domains using multiple databases"
+    thought: 'User provided UniProt ID, system will auto-resolve to protein sequence'
+    expected_result: 'Graphical display of functional sites with high confidence scores'
+
+  - user_query: 'Analyze membrane protein domains using multiple databases'
     tool_call: "analyze_interpro_domains(sequence='MKTLGVLVLVLLPLLVAVAMGTGSMKQGGWGQVEAASWSPAELERAIWELFGGVFRPTMVLVYAIPLNSVCR', applications=['Pfam', 'TMHMM', 'Phobius', 'SignalP_EUK'], analysis_type='complete')"
-    thought: "User wants comprehensive membrane protein analysis including signal peptides and transmembrane domains"
-    expected_result: "Complete membrane protein domain analysis with topology predictions"
+    thought: 'User wants comprehensive membrane protein analysis including signal peptides and transmembrane domains'
+    expected_result: 'Complete membrane protein domain analysis with topology predictions'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -132,18 +155,18 @@ error_handling:
   network_error: Returns error if database is unavailable
   query_error: Returns error if query is invalid
 returns:
-  success: "boolean - Whether domain analysis was successful"
-  job_id: "string - InterPro job identifier for tracking"
-  protein_info: "object - Protein identification and basic information"
-  domain_architecture: "array - Ordered list of domains with positions, types, and confidence scores"
-  families: "array - Protein families and classifications with member database info"
-  functional_sites: "array - Active sites, binding sites, and other functional regions"
-  repeats: "array - Repeated sequence elements and tandem repeats"
-  superfamilies: "array - Superfamily classifications (if requested)"
-  confidence_scores: "object - Confidence values and statistical significance for each prediction"
-  graphical_output: "string - URL or data for graphical representation (if requested)"
-  member_databases: "array - List of databases used in the analysis"
-  analysis_statistics: "object - Coverage, match quality, and performance metrics"
-  go_terms: "array - Gene Ontology terms associated with domains (if requested)"
-  pathways: "array - Biological pathways associated with domains (if requested)"
-  execution_metadata: "object - Analysis timing, parameters used, and API version info"
+  success: 'boolean - Whether domain analysis was successful'
+  job_id: 'string - InterPro job identifier for tracking'
+  protein_info: 'object - Protein identification and basic information'
+  domain_architecture: 'array - Ordered list of domains with positions, types, and confidence scores'
+  families: 'array - Protein families and classifications with member database info'
+  functional_sites: 'array - Active sites, binding sites, and other functional regions'
+  repeats: 'array - Repeated sequence elements and tandem repeats'
+  superfamilies: 'array - Superfamily classifications (if requested)'
+  confidence_scores: 'object - Confidence values and statistical significance for each prediction'
+  graphical_output: 'string - URL or data for graphical representation (if requested)'
+  member_databases: 'array - List of databases used in the analysis'
+  analysis_statistics: 'object - Coverage, match quality, and performance metrics'
+  go_terms: 'array - Gene Ontology terms associated with domains (if requested)'
+  pathways: 'array - Biological pathways associated with domains (if requested)'
+  execution_metadata: 'object - Analysis timing, parameters used, and API version info'

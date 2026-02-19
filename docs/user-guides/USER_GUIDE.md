@@ -37,17 +37,20 @@ CodeXomics is an AI-powered bioinformatics analysis platform that combines tradi
 Download the latest version (v0.529beta) from the [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.529beta) page.
 
 #### macOS
+
 1. Download `CodeXomics-0.527.0-beta-x64.dmg` (Intel) or `CodeXomics-0.527.0-beta-arm64.dmg` (Apple Silicon)
 2. Open the DMG file
 3. Drag CodeXomics to your Applications folder
 4. Right-click and select "Open" the first time (macOS security)
 
 #### Windows
+
 1. Download `CodeXomics Setup 0.527.0-beta.exe` (installer) or portable version
 2. Run the installer and follow the prompts
 3. Launch from Start Menu or Desktop shortcut
 
 #### Linux
+
 1. Download `CodeXomics-0.527.0-beta.AppImage` or `.deb` package
 2. For AppImage: `chmod +x CodeXomics-0.527.0-beta.AppImage && ./CodeXomics-0.527.0-beta.AppImage`
 3. For Debian: `sudo dpkg -i codexomics_0.527.0-beta_amd64.deb`
@@ -95,17 +98,20 @@ Options → Configure LLMs
 ```
 
 **Add API Keys:**
+
 - **OpenAI**: Get key from https://platform.openai.com/api-keys
 - **Anthropic**: Get key from https://console.anthropic.com/
 - **Google**: Get key from https://ai.google.dev/
 - **SiliconFlow**: Get key from https://siliconflow.cn/
 
 **Configure Multi-Agent Settings:**
+
 - Enable multi-agent mode for complex analysis
 - Set coordinator and worker models
 - Configure collaboration parameters
 
 **Test Connection:**
+
 - Click "Test Connection" for each provider
 - Verify successful connection before proceeding
 
@@ -116,6 +122,7 @@ File → Load File → Select FASTA/GenBank file
 ```
 
 **Supported Formats:**
+
 - **FASTA** (.fasta, .fa, .fna) - Sequence data
 - **GenBank** (.gb, .gbk) - Annotated sequences
 - **GFF/GTF** (.gff, .gtf) - Feature annotations
@@ -129,17 +136,20 @@ CodeXomics includes E. coli genome and pathway data for testing.
 #### 3. Start Exploring
 
 **Navigate the Genome:**
+
 - Use the position slider to pan
 - Enter coordinates (e.g., "1000-5000") in the position input
 - Click zoom buttons (+/-) to adjust view scale
 - Right-click and drag to select regions
 
 **Search for Genes:**
+
 - Type gene name in search box (e.g., "lacZ")
 - Press Enter to jump to gene location
 - View detailed information in left sidebar
 
 **Ask the AI:**
+
 - Type questions in ChatBox (e.g., "What does the lacZ gene do?")
 - AI will use appropriate tools to answer
 - View conversation history and AI reasoning process
@@ -153,33 +163,39 @@ CodeXomics includes E. coli genome and pathway data for testing.
 #### Tracks
 
 **Gene Track** 🧬
+
 - Shows annotated genes and features
 - Color-coded by type (CDS, tRNA, rRNA, etc.)
 - Directional arrows indicate strand
 - Click to view detailed information
 
 **Sequence Track** 🔤
+
 - Displays DNA sequence
 - Adaptive density based on zoom level
 - Color-coded nucleotides (A, T, G, C)
 
 **GC Content & Skew Track** 📊
+
 - Dynamic SVG visualization
 - Adaptive window sizing
 - Shows GC percentage and skew values
 - Useful for identifying genomic features
 
 **Variant Track** 🔬
+
 - Shows SNPs and mutations from VCF files
 - Quality scores and annotations
 - Filter by type and quality
 
 **Read Alignment Track** 📋
+
 - Visualizes BAM/SAM alignments
 - Coverage depth display
 - Mismatch highlighting
 
 **Protein Track** ⚗️
+
 - Translated sequences
 - Protein features and domains
 - Link to structure prediction
@@ -187,14 +203,17 @@ CodeXomics includes E. coli genome and pathway data for testing.
 #### Track Controls
 
 **Resize Tracks:**
+
 - Click and drag track headers to adjust height
 - Settings persist across sessions
 
 **Reorder Tracks:**
+
 - Drag track headers to reorder
 - Customize your preferred layout
 
 **Toggle Tracks:**
+
 - Click eye icon to show/hide tracks
 - Right-click for track-specific options
 
@@ -207,6 +226,7 @@ File → New Project
 ```
 
 **Project Structure:**
+
 ```
 Documents/GenomeExplorer Projects/
 └── MyProject/
@@ -216,6 +236,7 @@ Documents/GenomeExplorer Projects/
 ```
 
 **Project Files Include:**
+
 - Genome sequences and annotations
 - AI conversation history
 - Custom annotations and features
@@ -235,16 +256,19 @@ Switch modes using: `View → Grid/List/Details`
 #### Loading Files
 
 **Single File:**
+
 ```
 File → Load File → Select file
 ```
 
 **Multiple Files:**
+
 ```
 File → Load Multiple Files → Select annotation files
 ```
 
 **Drag and Drop:**
+
 - Drag files directly onto the genome viewer
 - Automatically detects file type
 - Prompts for additional information if needed
@@ -252,16 +276,19 @@ File → Load Multiple Files → Select annotation files
 #### Exporting Data
 
 **Export Sequences:**
+
 ```
 Tools → Export → FASTA/GenBank/Protein
 ```
 
 **Export Features:**
+
 ```
 Tools → Export → GFF/BED
 ```
 
 **Export Analysis Results:**
+
 - AI conversation logs
 - Benchmark test results
 - Network analysis data
@@ -278,6 +305,7 @@ The ChatBox is your interface to CodeXomics' multi-agent AI system.
 #### Basic Queries
 
 **Gene Information:**
+
 ```
 "What does the lacZ gene do?"
 "Find all DNA polymerase genes"
@@ -285,6 +313,7 @@ The ChatBox is your interface to CodeXomics' multi-agent AI system.
 ```
 
 **Sequence Analysis:**
+
 ```
 "Calculate GC content of this region"
 "Find ORFs in this sequence"
@@ -292,6 +321,7 @@ The ChatBox is your interface to CodeXomics' multi-agent AI system.
 ```
 
 **Navigation:**
+
 ```
 "Jump to position 1000"
 "Show me the lac operon region"
@@ -301,6 +331,7 @@ The ChatBox is your interface to CodeXomics' multi-agent AI system.
 #### Advanced Multi-Agent Queries
 
 **Complex Analysis:**
+
 ```
 "Perform a comprehensive analysis of the lac operon including:
 - Gene annotation
@@ -310,12 +341,14 @@ The ChatBox is your interface to CodeXomics' multi-agent AI system.
 ```
 
 **Comparative Analysis:**
+
 ```
 "Compare GC content across multiple genomic regions"
 "Find similar genes in other organisms"
 ```
 
 **Workflow Automation:**
+
 ```
 "Load E. coli genome, find ribosomal genes, export to FASTA"
 "Analyze all genes in region 1000-10000 and generate summary"
@@ -324,16 +357,19 @@ The ChatBox is your interface to CodeXomics' multi-agent AI system.
 ### Understanding AI Responses
 
 **Thinking Process:**
+
 - Click "Show Thinking" to see AI reasoning
 - Understand tool selection decisions
 - View intermediate steps
 
 **Tool Calls:**
+
 - AI automatically selects appropriate tools
 - View which tools were used
 - See tool parameters and results
 
 **Multi-Agent Coordination:**
+
 - Coordinator assigns tasks to specialized agents
 - Workers execute specific analysis
 - Results are integrated and presented
@@ -341,16 +377,19 @@ The ChatBox is your interface to CodeXomics' multi-agent AI system.
 ### AI Configuration
 
 **Model Selection:**
+
 - Choose different models for different tasks
 - Coordinator vs Worker model configuration
 - Balance cost vs performance
 
 **Temperature Settings:**
+
 - Lower (0.0-0.3): Precise, factual responses
 - Medium (0.4-0.7): Balanced creativity and accuracy
 - Higher (0.8-1.0): More creative, exploratory
 
 **Context Management:**
+
 - AI maintains conversation context
 - Reference previous queries
 - Build on earlier analysis
@@ -366,12 +405,14 @@ CodeXomics integrates with several powerful external tools.
 **Purpose:** Protein engineering and sequence optimization
 
 **Access:**
+
 ```
 Tools → External Tools → ProGenFixer
 Keyboard: Cmd/Ctrl+Shift+P
 ```
 
 **Use Cases:**
+
 - Optimize protein sequences
 - Fix problematic sequences
 - Predict stability
@@ -382,12 +423,14 @@ Keyboard: Cmd/Ctrl+Shift+P
 **Purpose:** Advanced gene analysis and research
 
 **Access:**
+
 ```
 Tools → External Tools → Deep Gene Research
 Keyboard: Cmd/Ctrl+Shift+D
 ```
 
 **Features:**
+
 - Comprehensive gene databases
 - Literature mining
 - Functional annotation
@@ -398,12 +441,14 @@ Keyboard: Cmd/Ctrl+Shift+D
 **Purpose:** CRISPR design and analysis
 
 **Access:**
+
 ```
 Tools → External Tools → CHOPCHOP
 Keyboard: Cmd/Ctrl+Shift+C
 ```
 
 **Capabilities:**
+
 - sgRNA design
 - Off-target prediction
 - Primer design
@@ -414,12 +459,14 @@ Keyboard: Cmd/Ctrl+Shift+C
 **Purpose:** KEGG pathway visualization
 
 **Access:**
+
 ```
 Tools → KGML Pathway Viewer
 Keyboard: Cmd/Ctrl+Shift+K
 ```
 
 **Features:**
+
 - Interactive pathway maps
 - Gene highlighting
 - Metabolite information
@@ -430,11 +477,13 @@ Keyboard: Cmd/Ctrl+Shift+K
 **Purpose:** Protein-protein interaction analysis
 
 **Access:**
+
 ```
 Tools → Bioinformatics Tools → STRING Networks
 ```
 
 **Analysis:**
+
 - Interaction networks
 - Functional enrichment
 - Cluster analysis
@@ -455,34 +504,40 @@ Benchmark & Debug → Open Benchmark
 ### Test Categories
 
 **1. Navigation Tests** (4 tests)
+
 - Browser navigation
 - Position jumping
 - Gene search
 - Region selection
 
 **2. Analysis Tests** (5 tests)
+
 - Sequence analysis
 - GC content calculation
 - Codon usage
 - ORF finding
 
 **3. Data Loading Tests** (3 tests)
+
 - File loading
 - Format parsing
 - Data validation
 
 **4. Search Tests** (4 tests)
+
 - Gene search
 - Feature search
 - Database queries
 - Result validation
 
 **5. External Database Tests** (3 tests)
+
 - API integration
 - Data retrieval
 - Link validation
 
 **6. Workflow Tests** (3 tests)
+
 - Multi-step analysis
 - Tool coordination
 - Result integration
@@ -490,6 +545,7 @@ Benchmark & Debug → Open Benchmark
 ### Running Tests
 
 **Automatic Tests:**
+
 1. Select test suites
 2. Configure LLM settings
 3. Click "Run Selected Tests"
@@ -497,6 +553,7 @@ Benchmark & Debug → Open Benchmark
 5. Review results
 
 **Manual Tests:**
+
 1. Follow step-by-step instructions
 2. Complete verification checklist
 3. Provide scores (0-10)
@@ -506,17 +563,20 @@ Benchmark & Debug → Open Benchmark
 ### Viewing Results
 
 **Progress Tracking:**
+
 - Real-time progress bars
 - Test status indicators
 - Success/failure counts
 
 **Detailed Reports:**
+
 - Individual test results
 - LLM interaction logs
 - Performance metrics
 - Error analysis
 
 **Export Options:**
+
 - CSV export
 - JSON export
 - HTML reports
@@ -531,12 +591,14 @@ Benchmark & Debug → Open Benchmark
 Track AI reasoning and decision-making across conversations.
 
 **Features:**
+
 - Conversation state tracking
 - Decision point analysis
 - Tool usage patterns
 - Performance metrics
 
 **Access:**
+
 ```
 Tools → Conversation Evolution
 ```
@@ -546,11 +608,13 @@ Tools → Conversation Evolution
 Extend CodeXomics with community plugins.
 
 **Plugin Marketplace:**
+
 ```
 Plugins → Marketplace
 ```
 
 **Available Plugins:**
+
 - Biological Networks
 - Comparative Genomics
 - Metabolic Pathways
@@ -558,6 +622,7 @@ Plugins → Marketplace
 - Population Genomics
 
 **Installing Plugins:**
+
 1. Browse marketplace
 2. Click "Install" on desired plugin
 3. Plugin automatically integrates
@@ -568,6 +633,7 @@ Plugins → Marketplace
 Model Context Protocol enables seamless tool integration.
 
 **Benefits:**
+
 - Standardized tool interfaces
 - Cross-platform compatibility
 - Enhanced AI tool selection
@@ -578,12 +644,14 @@ Model Context Protocol enables seamless tool integration.
 Create your own genomic features.
 
 **Adding Features:**
+
 1. Select sequence region
 2. Right-click → "Create Feature"
 3. Enter feature details
 4. Save to project
 
 **Feature Types:**
+
 - CDS (Coding Sequence)
 - Gene
 - Regulatory Element
@@ -601,6 +669,7 @@ Create your own genomic features.
 **Symptoms:** ChatBox doesn't respond to queries
 
 **Solutions:**
+
 1. Check API key configuration (Options → Configure LLMs)
 2. Verify internet connection
 3. Test connection using "Test Connection" button
@@ -612,6 +681,7 @@ Create your own genomic features.
 **Symptoms:** Error loading genome file
 
 **Solutions:**
+
 1. Verify file format is supported
 2. Check file isn't corrupted (open in text editor)
 3. Ensure file permissions allow reading
@@ -623,6 +693,7 @@ Create your own genomic features.
 **Symptoms:** Interface feels sluggish
 
 **Solutions:**
+
 1. Reduce number of visible tracks
 2. Close unused external tool windows
 3. Clear conversation history
@@ -634,6 +705,7 @@ Create your own genomic features.
 **Symptoms:** Tests don't complete or fail unexpectedly
 
 **Solutions:**
+
 1. Verify test data files are accessible
 2. Check LLM configuration
 3. Ensure working directory is correct
@@ -643,16 +715,19 @@ Create your own genomic features.
 ### Getting Help
 
 **Check Documentation:**
+
 - This user guide
 - Developer guide
 - API reference
 - Fix summaries in docs/
 
 **Report Issues:**
+
 - GitHub Issues: https://github.com/Scilence2022/CodeXomics/issues
 - Include: Version, OS, steps to reproduce, error messages
 
 **Contact:**
+
 - Email: songlf@tib.cas.cn
 - GitHub Discussions: https://github.com/Scilence2022/CodeXomics/discussions
 
@@ -719,17 +794,20 @@ A: AI provides helpful insights but should be validated. Use benchmark tests to 
 ## Next Steps
 
 **Explore More:**
+
 - [Developer Guide](../developer-guides/DEVELOPER_GUIDE.md) - Create plugins and contribute
 - [API Reference](../api-docs/) - Technical documentation
 - [Release Notes](../release-notes/) - What's new in each version
 
 **Join the Community:**
+
 - GitHub Discussions
 - Report bugs
 - Request features
 - Share your analysis workflows
 
 **Stay Updated:**
+
 - Star the repository
 - Watch for releases
 - Follow changelog

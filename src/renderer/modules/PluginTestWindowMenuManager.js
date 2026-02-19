@@ -1,31 +1,31 @@
 /**
  * PluginTestWindowMenuManager - Provides copy/paste functionality for plugin test windows
  * Implements standalone menu system with keyboard shortcuts and context menus
- * 
+ *
  * @version 1.0.0
  * @author GenomeAIStudio Team
  */
 
 class PluginTestWindowMenuManager {
-    constructor(testWindow) {
-        this.testWindow = testWindow;
-        this.doc = testWindow.document;
-        
-        this.initializeMenuSystem();
-        this.initializeKeyboardShortcuts();
-        this.initializeContextMenu();
-        
-        console.log('✅ PluginTestWindowMenuManager initialized with copy/paste support');
-    }
+  constructor(testWindow) {
+    this.testWindow = testWindow;
+    this.doc = testWindow.document;
 
-    /**
-     * Initialize menu bar for the test window
-     */
-    initializeMenuSystem() {
-        // Create menu bar container
-        const menuBar = this.doc.createElement('div');
-        menuBar.id = 'plugin-test-menu-bar';
-        menuBar.innerHTML = `
+    this.initializeMenuSystem();
+    this.initializeKeyboardShortcuts();
+    this.initializeContextMenu();
+
+    console.log('✅ PluginTestWindowMenuManager initialized with copy/paste support');
+  }
+
+  /**
+   * Initialize menu bar for the test window
+   */
+  initializeMenuSystem() {
+    // Create menu bar container
+    const menuBar = this.doc.createElement('div');
+    menuBar.id = 'plugin-test-menu-bar';
+    menuBar.innerHTML = `
             <style>
                 #plugin-test-menu-bar {
                     position: sticky;
@@ -228,85 +228,85 @@ class PluginTestWindowMenuManager {
             </div>
         `;
 
-        // Insert menu bar at the top of the document
-        this.doc.body.insertBefore(menuBar, this.doc.body.firstChild);
+    // Insert menu bar at the top of the document
+    this.doc.body.insertBefore(menuBar, this.doc.body.firstChild);
 
-        // Attach menu event listeners
-        this.attachMenuEventListeners();
-    }
+    // Attach menu event listeners
+    this.attachMenuEventListeners();
+  }
 
-    /**
-     * Get the platform-specific modifier key label
-     */
-    getModifierKey() {
-        return navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? 'Cmd' : 'Ctrl';
-    }
+  /**
+   * Get the platform-specific modifier key label
+   */
+  getModifierKey() {
+    return navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? 'Cmd' : 'Ctrl';
+  }
 
-    /**
-     * Get the platform-specific modifier key code
-     */
-    getModifierKeyCode() {
-        return navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? 'metaKey' : 'ctrlKey';
-    }
+  /**
+   * Get the platform-specific modifier key code
+   */
+  getModifierKeyCode() {
+    return navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? 'metaKey' : 'ctrlKey';
+  }
 
-    /**
-     * Attach event listeners to menu items
-     */
-    attachMenuEventListeners() {
-        this.doc.getElementById('menu-copy').addEventListener('click', () => this.copySelection());
-        this.doc.getElementById('menu-paste').addEventListener('click', () => this.pasteFromClipboard());
-        this.doc.getElementById('menu-cut').addEventListener('click', () => this.cutSelection());
-        this.doc.getElementById('menu-select-all').addEventListener('click', () => this.selectAll());
-        this.doc.getElementById('menu-refresh').addEventListener('click', () => this.testWindow.location.reload());
-    }
+  /**
+   * Attach event listeners to menu items
+   */
+  attachMenuEventListeners() {
+    this.doc.getElementById('menu-copy').addEventListener('click', () => this.copySelection());
+    this.doc.getElementById('menu-paste').addEventListener('click', () => this.pasteFromClipboard());
+    this.doc.getElementById('menu-cut').addEventListener('click', () => this.cutSelection());
+    this.doc.getElementById('menu-select-all').addEventListener('click', () => this.selectAll());
+    this.doc.getElementById('menu-refresh').addEventListener('click', () => this.testWindow.location.reload());
+  }
 
-    /**
-     * Initialize keyboard shortcuts
-     */
-    initializeKeyboardShortcuts() {
-        this.doc.addEventListener('keydown', (e) => {
-            const modifierKey = this.getModifierKeyCode();
-            
-            // Copy: Ctrl/Cmd + C
-            if (e[modifierKey] && e.key.toLowerCase() === 'c' && !e.shiftKey) {
-                e.preventDefault();
-                this.copySelection();
-            }
-            
-            // Paste: Ctrl/Cmd + V
-            else if (e[modifierKey] && e.key.toLowerCase() === 'v' && !e.shiftKey) {
-                e.preventDefault();
-                this.pasteFromClipboard();
-            }
-            
-            // Cut: Ctrl/Cmd + X
-            else if (e[modifierKey] && e.key.toLowerCase() === 'x' && !e.shiftKey) {
-                e.preventDefault();
-                this.cutSelection();
-            }
-            
-            // Select All: Ctrl/Cmd + A
-            else if (e[modifierKey] && e.key.toLowerCase() === 'a' && !e.shiftKey) {
-                e.preventDefault();
-                this.selectAll();
-            }
+  /**
+   * Initialize keyboard shortcuts
+   */
+  initializeKeyboardShortcuts() {
+    this.doc.addEventListener('keydown', e => {
+      const modifierKey = this.getModifierKeyCode();
 
-            // Refresh: Ctrl/Cmd + R
-            else if (e[modifierKey] && e.key.toLowerCase() === 'r' && !e.shiftKey) {
-                e.preventDefault();
-                this.testWindow.location.reload();
-            }
-        });
-    }
+      // Copy: Ctrl/Cmd + C
+      if (e[modifierKey] && e.key.toLowerCase() === 'c' && !e.shiftKey) {
+        e.preventDefault();
+        this.copySelection();
+      }
 
-    /**
-     * Initialize context menu (right-click menu)
-     */
-    initializeContextMenu() {
-        // Create context menu
-        const contextMenu = this.doc.createElement('div');
-        contextMenu.id = 'plugin-test-context-menu';
-        contextMenu.innerHTML = `
+      // Paste: Ctrl/Cmd + V
+      else if (e[modifierKey] && e.key.toLowerCase() === 'v' && !e.shiftKey) {
+        e.preventDefault();
+        this.pasteFromClipboard();
+      }
+
+      // Cut: Ctrl/Cmd + X
+      else if (e[modifierKey] && e.key.toLowerCase() === 'x' && !e.shiftKey) {
+        e.preventDefault();
+        this.cutSelection();
+      }
+
+      // Select All: Ctrl/Cmd + A
+      else if (e[modifierKey] && e.key.toLowerCase() === 'a' && !e.shiftKey) {
+        e.preventDefault();
+        this.selectAll();
+      }
+
+      // Refresh: Ctrl/Cmd + R
+      else if (e[modifierKey] && e.key.toLowerCase() === 'r' && !e.shiftKey) {
+        e.preventDefault();
+        this.testWindow.location.reload();
+      }
+    });
+  }
+
+  /**
+   * Initialize context menu (right-click menu)
+   */
+  initializeContextMenu() {
+    // Create context menu
+    const contextMenu = this.doc.createElement('div');
+    contextMenu.id = 'plugin-test-context-menu';
+    contextMenu.innerHTML = `
             <div class="context-menu-item" id="context-copy">
                 <span class="context-menu-item-label">
                     <i class="fas fa-copy"></i>
@@ -338,220 +338,225 @@ class PluginTestWindowMenuManager {
             </div>
         `;
 
-        this.doc.body.appendChild(contextMenu);
+    this.doc.body.appendChild(contextMenu);
 
-        // Show context menu on right-click
-        this.doc.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            this.showContextMenu(e.clientX, e.clientY);
-        });
+    // Show context menu on right-click
+    this.doc.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      this.showContextMenu(e.clientX, e.clientY);
+    });
 
-        // Hide context menu on click outside
-        this.doc.addEventListener('click', () => {
-            this.hideContextMenu();
-        });
+    // Hide context menu on click outside
+    this.doc.addEventListener('click', () => {
+      this.hideContextMenu();
+    });
 
-        // Attach context menu event listeners
-        this.doc.getElementById('context-copy').addEventListener('click', () => {
-            this.copySelection();
-            this.hideContextMenu();
-        });
+    // Attach context menu event listeners
+    this.doc.getElementById('context-copy').addEventListener('click', () => {
+      this.copySelection();
+      this.hideContextMenu();
+    });
 
-        this.doc.getElementById('context-paste').addEventListener('click', () => {
-            this.pasteFromClipboard();
-            this.hideContextMenu();
-        });
+    this.doc.getElementById('context-paste').addEventListener('click', () => {
+      this.pasteFromClipboard();
+      this.hideContextMenu();
+    });
 
-        this.doc.getElementById('context-cut').addEventListener('click', () => {
-            this.cutSelection();
-            this.hideContextMenu();
-        });
+    this.doc.getElementById('context-cut').addEventListener('click', () => {
+      this.cutSelection();
+      this.hideContextMenu();
+    });
 
-        this.doc.getElementById('context-select-all').addEventListener('click', () => {
-            this.selectAll();
-            this.hideContextMenu();
-        });
+    this.doc.getElementById('context-select-all').addEventListener('click', () => {
+      this.selectAll();
+      this.hideContextMenu();
+    });
+  }
+
+  /**
+   * Show context menu at position
+   */
+  showContextMenu(x, y) {
+    const contextMenu = this.doc.getElementById('plugin-test-context-menu');
+    contextMenu.style.left = x + 'px';
+    contextMenu.style.top = y + 'px';
+    contextMenu.classList.add('show');
+
+    // Enable/disable menu items based on selection
+    const hasSelection = this.testWindow.getSelection().toString().length > 0;
+    const copyBtn = this.doc.getElementById('context-copy');
+    const cutBtn = this.doc.getElementById('context-cut');
+
+    if (hasSelection) {
+      copyBtn.classList.remove('disabled');
+      cutBtn.classList.remove('disabled');
+    } else {
+      copyBtn.classList.add('disabled');
+      cutBtn.classList.add('disabled');
+    }
+  }
+
+  /**
+   * Hide context menu
+   */
+  hideContextMenu() {
+    const contextMenu = this.doc.getElementById('plugin-test-context-menu');
+    contextMenu.classList.remove('show');
+  }
+
+  /**
+   * Copy selected text to clipboard
+   */
+  async copySelection() {
+    const selection = this.testWindow.getSelection();
+    const text = selection.toString();
+
+    if (!text) {
+      console.log('No text selected to copy');
+      return;
     }
 
-    /**
-     * Show context menu at position
-     */
-    showContextMenu(x, y) {
-        const contextMenu = this.doc.getElementById('plugin-test-context-menu');
-        contextMenu.style.left = x + 'px';
-        contextMenu.style.top = y + 'px';
-        contextMenu.classList.add('show');
+    try {
+      await navigator.clipboard.writeText(text);
+      this.showNotification('Copied to clipboard!');
+      console.log('✅ Text copied to clipboard:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+    } catch (error) {
+      console.error('❌ Failed to copy to clipboard:', error);
 
-        // Enable/disable menu items based on selection
-        const hasSelection = this.testWindow.getSelection().toString().length > 0;
-        const copyBtn = this.doc.getElementById('context-copy');
-        const cutBtn = this.doc.getElementById('context-cut');
-        
-        if (hasSelection) {
-            copyBtn.classList.remove('disabled');
-            cutBtn.classList.remove('disabled');
+      // Fallback to execCommand
+      try {
+        this.doc.execCommand('copy');
+        this.showNotification('Copied to clipboard!');
+      } catch (fallbackError) {
+        this.showNotification('Failed to copy', 'error');
+      }
+    }
+  }
+
+  /**
+   * Paste from clipboard
+   */
+  async pasteFromClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+
+      if (!text) {
+        console.log('Clipboard is empty');
+        return;
+      }
+
+      // Get the currently focused element
+      const activeElement = this.doc.activeElement;
+
+      // Check if it's an input field or textarea
+      if (
+        activeElement &&
+        (activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.contentEditable === 'true')
+      ) {
+        // Insert text at cursor position
+        if (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') {
+          const start = activeElement.selectionStart;
+          const end = activeElement.selectionEnd;
+          const currentValue = activeElement.value;
+
+          activeElement.value = currentValue.substring(0, start) + text + currentValue.substring(end);
+          activeElement.selectionStart = activeElement.selectionEnd = start + text.length;
+
+          // Trigger input event
+          activeElement.dispatchEvent(new Event('input', { bubbles: true }));
         } else {
-            copyBtn.classList.add('disabled');
-            cutBtn.classList.add('disabled');
+          // For contenteditable
+          this.doc.execCommand('insertText', false, text);
         }
+
+        this.showNotification('Pasted from clipboard!');
+        console.log('✅ Text pasted from clipboard:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+      } else {
+        console.log('No input field focused for paste');
+        this.showNotification('Please focus an input field first', 'warning');
+      }
+    } catch (error) {
+      console.error('❌ Failed to paste from clipboard:', error);
+      this.showNotification('Failed to paste', 'error');
+    }
+  }
+
+  /**
+   * Cut selected text to clipboard
+   */
+  async cutSelection() {
+    const selection = this.testWindow.getSelection();
+    const text = selection.toString();
+
+    if (!text) {
+      console.log('No text selected to cut');
+      return;
     }
 
-    /**
-     * Hide context menu
-     */
-    hideContextMenu() {
-        const contextMenu = this.doc.getElementById('plugin-test-context-menu');
-        contextMenu.classList.remove('show');
+    try {
+      await navigator.clipboard.writeText(text);
+
+      // Delete the selected text if it's in an editable field
+      const activeElement = this.doc.activeElement;
+      if (
+        activeElement &&
+        (activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.contentEditable === 'true')
+      ) {
+        this.doc.execCommand('delete');
+      }
+
+      this.showNotification('Cut to clipboard!');
+      console.log('✅ Text cut to clipboard:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+    } catch (error) {
+      console.error('❌ Failed to cut to clipboard:', error);
+      this.showNotification('Failed to cut', 'error');
+    }
+  }
+
+  /**
+   * Select all content
+   */
+  selectAll() {
+    const activeElement = this.doc.activeElement;
+
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+      activeElement.select();
+    } else {
+      const selection = this.testWindow.getSelection();
+      const range = this.doc.createRange();
+      range.selectNodeContents(this.doc.body);
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
 
-    /**
-     * Copy selected text to clipboard
-     */
-    async copySelection() {
-        const selection = this.testWindow.getSelection();
-        const text = selection.toString();
-        
-        if (!text) {
-            console.log('No text selected to copy');
-            return;
-        }
+    console.log('✅ All content selected');
+  }
 
-        try {
-            await navigator.clipboard.writeText(text);
-            this.showNotification('Copied to clipboard!');
-            console.log('✅ Text copied to clipboard:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
-        } catch (error) {
-            console.error('❌ Failed to copy to clipboard:', error);
-            
-            // Fallback to execCommand
-            try {
-                this.doc.execCommand('copy');
-                this.showNotification('Copied to clipboard!');
-            } catch (fallbackError) {
-                this.showNotification('Failed to copy', 'error');
-            }
-        }
-    }
-
-    /**
-     * Paste from clipboard
-     */
-    async pasteFromClipboard() {
-        try {
-            const text = await navigator.clipboard.readText();
-            
-            if (!text) {
-                console.log('Clipboard is empty');
-                return;
-            }
-
-            // Get the currently focused element
-            const activeElement = this.doc.activeElement;
-            
-            // Check if it's an input field or textarea
-            if (activeElement && (activeElement.tagName === 'INPUT' || 
-                                  activeElement.tagName === 'TEXTAREA' ||
-                                  activeElement.contentEditable === 'true')) {
-                
-                // Insert text at cursor position
-                if (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') {
-                    const start = activeElement.selectionStart;
-                    const end = activeElement.selectionEnd;
-                    const currentValue = activeElement.value;
-                    
-                    activeElement.value = currentValue.substring(0, start) + text + currentValue.substring(end);
-                    activeElement.selectionStart = activeElement.selectionEnd = start + text.length;
-                    
-                    // Trigger input event
-                    activeElement.dispatchEvent(new Event('input', { bubbles: true }));
-                } else {
-                    // For contenteditable
-                    this.doc.execCommand('insertText', false, text);
-                }
-                
-                this.showNotification('Pasted from clipboard!');
-                console.log('✅ Text pasted from clipboard:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
-            } else {
-                console.log('No input field focused for paste');
-                this.showNotification('Please focus an input field first', 'warning');
-            }
-        } catch (error) {
-            console.error('❌ Failed to paste from clipboard:', error);
-            this.showNotification('Failed to paste', 'error');
-        }
-    }
-
-    /**
-     * Cut selected text to clipboard
-     */
-    async cutSelection() {
-        const selection = this.testWindow.getSelection();
-        const text = selection.toString();
-        
-        if (!text) {
-            console.log('No text selected to cut');
-            return;
-        }
-
-        try {
-            await navigator.clipboard.writeText(text);
-            
-            // Delete the selected text if it's in an editable field
-            const activeElement = this.doc.activeElement;
-            if (activeElement && (activeElement.tagName === 'INPUT' || 
-                                  activeElement.tagName === 'TEXTAREA' ||
-                                  activeElement.contentEditable === 'true')) {
-                this.doc.execCommand('delete');
-            }
-            
-            this.showNotification('Cut to clipboard!');
-            console.log('✅ Text cut to clipboard:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
-        } catch (error) {
-            console.error('❌ Failed to cut to clipboard:', error);
-            this.showNotification('Failed to cut', 'error');
-        }
-    }
-
-    /**
-     * Select all content
-     */
-    selectAll() {
-        const activeElement = this.doc.activeElement;
-        
-        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
-            activeElement.select();
-        } else {
-            const selection = this.testWindow.getSelection();
-            const range = this.doc.createRange();
-            range.selectNodeContents(this.doc.body);
-            selection.removeAllRanges();
-            selection.addRange(range);
-        }
-        
-        console.log('✅ All content selected');
-    }
-
-    /**
-     * Show notification toast
-     */
-    showNotification(message, type = 'success') {
-        const notification = this.doc.createElement('div');
-        notification.className = 'copy-notification';
-        notification.innerHTML = `
+  /**
+   * Show notification toast
+   */
+  showNotification(message, type = 'success') {
+    const notification = this.doc.createElement('div');
+    notification.className = 'copy-notification';
+    notification.innerHTML = `
             <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'exclamation-circle'}"></i>
             ${message}
         `;
-        notification.style.background = type === 'success' ? '#48bb78' : type === 'error' ? '#f56565' : '#ed8936';
-        
-        this.doc.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
+    notification.style.background = type === 'success' ? '#48bb78' : type === 'error' ? '#f56565' : '#ed8936';
+
+    this.doc.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.remove();
+    }, 3000);
+  }
 }
 
 // Export for use in other modules
 if (typeof window !== 'undefined') {
-    window.PluginTestWindowMenuManager = PluginTestWindowMenuManager;
+  window.PluginTestWindowMenuManager = PluginTestWindowMenuManager;
 }

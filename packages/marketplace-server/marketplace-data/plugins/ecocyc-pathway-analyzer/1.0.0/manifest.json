@@ -7,16 +7,7 @@
   "category": "pathway-analysis",
   "type": "visualization",
   "main": "index.js",
-  "tags": [
-    "EcoCyc",
-    "pathway",
-    "biochemical",
-    "E.coli",
-    "metabolism",
-    "visualization",
-    "database",
-    "BioCyc"
-  ],
+  "tags": ["EcoCyc", "pathway", "biochemical", "E.coli", "metabolism", "visualization", "database", "BioCyc"],
   "keywords": [
     "EcoCyc",
     "pathway",
@@ -32,19 +23,10 @@
   "homepage": "https://github.com/codexomics/ecocyc-pathway-analyzer",
   "repository": "https://github.com/codexomics/ecocyc-pathway-analyzer.git",
   "license": "MIT",
-  "supportedDataTypes": [
-    "biochemical-pathway",
-    "ecocyc-pathway",
-    "metabolic-pathway",
-    "generic"
-  ],
+  "supportedDataTypes": ["biochemical-pathway", "ecocyc-pathway", "metabolic-pathway", "generic"],
   "compatibility": {
     "genomeExplorer": ">=2.0.0",
-    "platforms": [
-      "windows",
-      "macos",
-      "linux"
-    ]
+    "platforms": ["windows", "macos", "linux"]
   },
   "contributes": {
     "visualizations": {
@@ -52,11 +34,7 @@
         "id": "ecocyc-pathway",
         "name": "EcoCyc Biochemical Pathway",
         "description": "Visualize E. coli biochemical pathways from EcoCyc database with reactions, enzymes, and metabolites",
-        "supportedDataTypes": [
-          "biochemical-pathway",
-          "ecocyc-pathway",
-          "metabolic-pathway"
-        ]
+        "supportedDataTypes": ["biochemical-pathway", "ecocyc-pathway", "metabolic-pathway"]
       }
     },
     "commands": [

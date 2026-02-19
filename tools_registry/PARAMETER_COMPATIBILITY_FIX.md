@@ -12,7 +12,10 @@ This caused the [setWorkingDirectory](file:///Users/song/Github-Repos/GenomeAISt
 ## 📋 **Evidence from User's Debug Output**
 
 ```json
-{"tool_name":"set_working_directory","parameters":{"working_directory":"/Users/song/Documents/Genome-AI-Studio-Projects/test_data/"}}
+{
+  "tool_name": "set_working_directory",
+  "parameters": { "working_directory": "/Users/song/Documents/Genome-AI-Studio-Projects/test_data/" }
+}
 ```
 
 The LLM used `working_directory` instead of the expected `directory_path` parameter name.
@@ -20,6 +23,7 @@ The LLM used `working_directory` instead of the expected `directory_path` parame
 ## ✅ **Solution Implemented**
 
 ### **Parameter Compatibility Enhancement**
+
 Modified the [setWorkingDirectory](file:///Users/song/Github-Repos/GenomeAIStudio/src/renderer/modules/ChatManager.js#L1222-L1343) method to support both parameter names:
 
 ```javascript
@@ -27,13 +31,13 @@ async setWorkingDirectory(parameters = {}) {
     // Support both parameter names for compatibility
     const directory_path = parameters.directory_path || parameters.working_directory;
     const { use_home_directory = false, create_if_missing = false, validate_permissions = true } = parameters;
-    
-    console.log('📁 [ChatManager] Setting working directory:', { 
-        directory_path, 
-        working_directory: parameters.working_directory, 
-        use_home_directory, 
-        create_if_missing, 
-        validate_permissions 
+
+    console.log('📁 [ChatManager] Setting working directory:', {
+        directory_path,
+        working_directory: parameters.working_directory,
+        use_home_directory,
+        create_if_missing,
+        validate_permissions
     });
     // ... rest of method unchanged
 }
@@ -49,15 +53,18 @@ async setWorkingDirectory(parameters = {}) {
 ## 🧪 **Verification Results**
 
 ### **Parameter Handling Tests**
+
 ✅ **Test 1**: Standard `directory_path` parameter → SUCCESS  
 ✅ **Test 2**: Alternative `working_directory` parameter → SUCCESS  
-✅ **Test 3**: Both parameters (correct precedence) → SUCCESS  
+✅ **Test 3**: Both parameters (correct precedence) → SUCCESS
 
 ### **Tool Call Structure Test**
+
 ✅ **Failed Tool Call**: `{"working_directory": "/path/"}` → NOW WORKS  
 ✅ **Compatibility Fix**: Parameter extraction successful
 
 ### **Directory Validation**
+
 ✅ **Target Directory**: `/Users/song/Documents/Genome-AI-Studio-Projects/test_data/` exists  
 ✅ **Permissions**: Read and write permissions verified  
 ✅ **Directory Type**: Confirmed as valid directory
@@ -65,21 +72,25 @@ async setWorkingDirectory(parameters = {}) {
 ## 🎯 **Complete Fix Chain**
 
 ### **Previous Fixes (From Earlier Context)**
+
 1. ✅ **Tool Detection**: Enhanced intent analysis and built-in tool integration
 2. ✅ **Switch Case**: Added missing execution route in [executeToolByName](file:///Users/song/Github-Repos/GenomeAIStudio/src/renderer/modules/ChatManager.js#L8629-L9420)
 3. ✅ **State Enhancement**: Updated [getCurrentState](file:///Users/song/Github-Repos/GenomeAIStudio/src/renderer/modules/ChatManager.js#L3147-L3199) to include working directory
 
 ### **Final Fix (This Session)**
+
 4. ✅ **Parameter Compatibility**: Handle both `directory_path` and `working_directory` parameter names
 
 ## 🚀 **Expected Behavior Now**
 
 When the user sends:
+
 ```
 Set working directory to test data directory: /Users/song/Documents/Genome-AI-Studio-Projects/test_data/
 ```
 
 The complete flow should now work:
+
 1. **🎯 Tool Detection**: LLM correctly identifies `set_working_directory`
 2. **📡 Tool Execution**: [executeToolByName](file:///Users/song/Github-Repos/GenomeAIStudio/src/renderer/modules/ChatManager.js#L8629-L9420) routes to [setWorkingDirectory](file:///Users/song/Github-Repos/GenomeAIStudio/src/renderer/modules/ChatManager.js#L1222-L1343) method
 3. **🔧 Parameter Handling**: Method accepts either parameter name format

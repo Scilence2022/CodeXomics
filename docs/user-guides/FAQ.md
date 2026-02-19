@@ -9,6 +9,7 @@ CodeXomics is an advanced, AI-powered genome analysis platform that provides com
 ### What's new in v0.3 beta?
 
 Version 0.3 beta introduces several major enhancements:
+
 - **Complete Plugin System** with marketplace
 - **KGML Pathway Viewer** for pathway visualization
 - **Enhanced Gene Details** with 50+ database cross-references
@@ -20,6 +21,7 @@ Version 0.3 beta introduces several major enhancements:
 ### What operating systems are supported?
 
 CodeXomics supports:
+
 - **macOS** 10.14 and later
 - **Windows** 10 and later
 - **Linux** (Ubuntu 18.04+ and other modern distributions)
@@ -27,6 +29,7 @@ CodeXomics supports:
 ### Is CodeXomics free?
 
 The core application is free and open-source. Some advanced features may require:
+
 - API keys for AI services (OpenAI, Anthropic, Google)
 - Premium plugins from the marketplace
 - External database subscriptions
@@ -45,12 +48,14 @@ The core application is free and open-source. Some advanced features may require
 ### Can I use it without an internet connection?
 
 Yes, core functionality works offline including:
+
 - Genome visualization
 - File operations
 - Basic analysis tools
 - Local file management
 
 Internet connection is required for:
+
 - AI assistant features
 - Plugin marketplace
 - External database access
@@ -69,6 +74,7 @@ For local AI models, install Ollama and configure the local endpoint.
 ### What if I don't have an API key for AI services?
 
 You can:
+
 - Use the application without AI features
 - Set up a local LLM using Ollama (free)
 - Get free API keys from OpenAI, Anthropic, or Google (with usage limits)
@@ -78,17 +84,17 @@ You can:
 
 ### What file formats are supported?
 
-| Format | Type | Import | Export |
-|--------|------|---------|---------|
-| FASTA | Sequences | ✅ | ✅ |
-| GenBank | Genomes | ✅ | ✅ |
-| GFF/GTF | Annotations | ✅ | ✅ |
-| BED | Regions | ✅ | ✅ |
-| VCF | Variants | ✅ | ❌ |
-| SAM/BAM | Reads | ✅ | ❌ |
-| WIG | Tracks | ✅ | ✅ |
-| KGML | Pathways | ✅ | ✅ |
-| PRJ.GAI | Projects | ✅ | ✅ |
+| Format  | Type        | Import | Export |
+| ------- | ----------- | ------ | ------ |
+| FASTA   | Sequences   | ✅     | ✅     |
+| GenBank | Genomes     | ✅     | ✅     |
+| GFF/GTF | Annotations | ✅     | ✅     |
+| BED     | Regions     | ✅     | ✅     |
+| VCF     | Variants    | ✅     | ❌     |
+| SAM/BAM | Reads       | ✅     | ❌     |
+| WIG     | Tracks      | ✅     | ✅     |
+| KGML    | Pathways    | ✅     | ✅     |
+| PRJ.GAI | Projects    | ✅     | ✅     |
 
 ### How large files can I work with?
 
@@ -100,6 +106,7 @@ You can:
 ### Can I work with multiple genomes?
 
 Yes, you can:
+
 - Load multiple genome files in the same project
 - Compare genomes using comparative analysis tools
 - Use the tab system for multi-genome analysis
@@ -125,6 +132,7 @@ Yes, you can:
 ### What databases are available for BLAST?
 
 Built-in support for:
+
 - NCBI nucleotide (nt)
 - NCBI protein (nr)
 - RefSeq genomes
@@ -143,6 +151,7 @@ You can also create custom databases from your own sequences.
 ### Can I create custom annotations?
 
 Yes:
+
 1. **Select region**: Click and drag in the track area
 2. **Choose feature type**: Gene, CDS, regulatory element, etc.
 3. **Add information**: Name, description, strand
@@ -162,6 +171,7 @@ Yes:
 ### Are plugins safe?
 
 Plugins undergo validation including:
+
 - **Security scanning** for malicious code
 - **Functionality testing** for stability
 - **Code review** for quality
@@ -170,6 +180,7 @@ Plugins undergo validation including:
 ### Can I develop my own plugins?
 
 Yes! See the **[Plugin Development Guide](PLUGIN_DEVELOPMENT_GUIDE.md)** for:
+
 - Development environment setup
 - Plugin API documentation
 - Examples and templates
@@ -188,6 +199,7 @@ Yes! See the **[Plugin Development Guide](PLUGIN_DEVELOPMENT_GUIDE.md)** for:
 ### What can the AI assistant do?
 
 The AI can help with:
+
 - **Gene information**: "What does lacZ do?"
 - **Navigation**: "Go to the lac operon"
 - **Analysis**: "Calculate GC content"
@@ -198,6 +210,7 @@ The AI can help with:
 ### Why isn't the AI responding?
 
 Check:
+
 1. **API key**: Verify credentials are correct
 2. **Internet connection**: Ensure stable connectivity
 3. **API status**: Check provider service status
@@ -207,6 +220,7 @@ Check:
 ### Can I use local AI models?
 
 Yes, with Ollama:
+
 1. **Install Ollama**: Download from ollama.ai
 2. **Install model**: `ollama pull llama3`
 3. **Configure**: Set provider to "local" in LLM settings
@@ -225,6 +239,7 @@ Yes, with Ollama:
 ### How do projects work?
 
 Projects organize related files and analyses:
+
 - **Project file**: `.prj.GAI` contains project metadata
 - **Data folder**: Stores imported files
 - **Results folder**: Contains analysis outputs
@@ -233,6 +248,7 @@ Projects organize related files and analyses:
 ### Can I share projects with others?
 
 Yes:
+
 - **Export project**: File → Export Project
 - **Include data**: Option to bundle all data files
 - **Share package**: Send .zip file to collaborators
@@ -248,6 +264,7 @@ Yes:
 ### Can I work on multiple projects?
 
 Yes:
+
 - **Multiple windows**: Open multiple project windows
 - **Tab system**: Switch between different datasets
 - **Project switcher**: Quickly change active project
@@ -266,6 +283,7 @@ Yes:
 ### Can I customize the interface?
 
 Yes:
+
 - **Track heights**: Drag to resize tracks
 - **Track order**: Drag to reorder tracks
 - **Color schemes**: Customize track colors
@@ -275,6 +293,7 @@ Yes:
 ### What keyboard shortcuts are available?
 
 Common shortcuts:
+
 - **Ctrl+O**: Open file
 - **Ctrl+S**: Save project
 - **Ctrl+F**: Search
@@ -329,6 +348,7 @@ Common shortcuts:
 ### Can I automate analyses?
 
 Yes, through:
+
 - **AI workflows**: Use AI to chain operations
 - **Plugin scripts**: Create automated analysis plugins
 - **Batch processing**: Process multiple files
@@ -345,6 +365,7 @@ Yes, through:
 ### Can I integrate with other tools?
 
 Yes:
+
 - **Export formats**: Use standard formats for interoperability
 - **API access**: Plugin system provides programmatic access
 - **Command line**: Some operations support batch processing
@@ -371,6 +392,7 @@ Yes:
 ### Is there a user community?
 
 Yes:
+
 - **GitHub Discussions**: Community Q&A
 - **Discord Server**: Real-time chat with users
 - **Monthly Meetups**: Virtual user meetings
@@ -386,6 +408,7 @@ Yes:
 ### Can I request new features?
 
 Absolutely:
+
 - **GitHub Issues**: Submit feature requests
 - **Community Voting**: Popular requests get priority
 - **Plugin Development**: Create custom functionality
@@ -393,11 +416,11 @@ Absolutely:
 
 ---
 
-**Still have questions?** 
+**Still have questions?**
 
 - Check the **[User Manual](USER_MANUAL.md)** for detailed instructions
 - Visit our **[Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)** for technical issues
 - Browse the **[Documentation](../README.md)** for comprehensive information
 - Contact **support** for personalized assistance
 
-*This FAQ covers CodeXomics v0.3.0-beta. For the latest information, check the project repository.* 
+_This FAQ covers CodeXomics v0.3.0-beta. For the latest information, check the project repository._

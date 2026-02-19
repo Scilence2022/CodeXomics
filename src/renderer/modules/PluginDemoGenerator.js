@@ -2,15 +2,15 @@
  * PluginDemoGenerator - 为不同类型的插件生成专门的演示界面
  */
 class PluginDemoGenerator {
-    constructor(pluginManager) {
-        this.pluginManager = pluginManager;
-    }
+  constructor(pluginManager) {
+    this.pluginManager = pluginManager;
+  }
 
-    /**
-     * 生成网络可视化演示界面
-     */
-    generateNetworkVisualizationDemo(pluginId, pluginData) {
-        return `
+  /**
+   * 生成网络可视化演示界面
+   */
+  generateNetworkVisualizationDemo(pluginId, pluginData) {
+    return `
         <div class="demo-section">
             <div class="demo-header">
                 <h2><i class="fas fa-project-diagram"></i> ${pluginData.name}</h2>
@@ -83,13 +83,13 @@ class PluginDemoGenerator {
                 </div>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成序列分析演示界面
-     */
-    generateSequenceAnalysisDemo(pluginId, pluginData) {
-        return `
+  /**
+   * 生成序列分析演示界面
+   */
+  generateSequenceAnalysisDemo(pluginId, pluginData) {
+    return `
         <div class="demo-section">
             <div class="demo-header">
                 <h2><i class="fas fa-dna"></i> ${pluginData.name}</h2>
@@ -142,13 +142,13 @@ class PluginDemoGenerator {
             
             <div class="demo-results" id="analysisResults"></div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成系统发育分析演示界面
-     */
-    generatePhylogeneticsDemo(pluginId, pluginData) {
-        return `
+  /**
+   * 生成系统发育分析演示界面
+   */
+  generatePhylogeneticsDemo(pluginId, pluginData) {
+    return `
         <div class="demo-section">
             <div class="demo-header">
                 <h2><i class="fas fa-tree"></i> ${pluginData.name}</h2>
@@ -221,13 +221,13 @@ class PluginDemoGenerator {
                 </div>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 获取演示界面的样式
-     */
-    getDemoStyles() {
-        return `
+  /**
+   * 获取演示界面的样式
+   */
+  getDemoStyles() {
+    return `
             .demo-section {
                 padding: 2rem;
                 background: white;
@@ -420,31 +420,31 @@ class PluginDemoGenerator {
                 margin-top: 1rem;
             }
         `;
-    }
+  }
 
-    /**
-     * 为插件生成适当的演示界面
-     */
-    generateDemoInterface(pluginId, pluginData) {
-        const category = this.getPluginCategory(pluginId);
-        
-        switch (category) {
-            case 'Network Analysis':
-                return this.generateNetworkVisualizationDemo(pluginId, pluginData);
-            case 'Sequence Analysis':
-                return this.generateSequenceAnalysisDemo(pluginId, pluginData);
-            case 'Phylogenetics':
-                return this.generatePhylogeneticsDemo(pluginId, pluginData);
-            default:
-                return this.generateGenericDemo(pluginId, pluginData);
-        }
-    }
+  /**
+   * 为插件生成适当的演示界面
+   */
+  generateDemoInterface(pluginId, pluginData) {
+    const category = this.getPluginCategory(pluginId);
 
-    /**
-     * 生成通用演示界面
-     */
-    generateGenericDemo(pluginId, pluginData) {
-        return `
+    switch (category) {
+      case 'Network Analysis':
+        return this.generateNetworkVisualizationDemo(pluginId, pluginData);
+      case 'Sequence Analysis':
+        return this.generateSequenceAnalysisDemo(pluginId, pluginData);
+      case 'Phylogenetics':
+        return this.generatePhylogeneticsDemo(pluginId, pluginData);
+      default:
+        return this.generateGenericDemo(pluginId, pluginData);
+    }
+  }
+
+  /**
+   * 生成通用演示界面
+   */
+  generateGenericDemo(pluginId, pluginData) {
+    return `
         <div class="demo-section">
             <div class="demo-header">
                 <h2><i class="fas fa-chart-bar"></i> ${pluginData.name}</h2>
@@ -475,27 +475,27 @@ class PluginDemoGenerator {
                 </div>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 获取插件分类
-     */
-    getPluginCategory(pluginId) {
-        const categoryMap = {
-            'network-graph': 'Network Analysis',
-            'protein-interaction-network': 'Network Analysis',
-            'gene-regulatory-network': 'Network Analysis',
-            'phylogenetic-tree': 'Phylogenetics',
-            'gc-content-plot': 'Sequence Analysis',
-            'sequence-alignment': 'Sequence Analysis',
-            'heatmap': 'Data Visualization',
-            'dot-plot': 'Comparative Analysis'
-        };
-        return categoryMap[pluginId] || 'General';
-    }
+  /**
+   * 获取插件分类
+   */
+  getPluginCategory(pluginId) {
+    const categoryMap = {
+      'network-graph': 'Network Analysis',
+      'protein-interaction-network': 'Network Analysis',
+      'gene-regulatory-network': 'Network Analysis',
+      'phylogenetic-tree': 'Phylogenetics',
+      'gc-content-plot': 'Sequence Analysis',
+      'sequence-alignment': 'Sequence Analysis',
+      heatmap: 'Data Visualization',
+      'dot-plot': 'Comparative Analysis',
+    };
+    return categoryMap[pluginId] || 'General';
+  }
 }
 
 // 导出
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PluginDemoGenerator;
-} 
+  module.exports = PluginDemoGenerator;
+}

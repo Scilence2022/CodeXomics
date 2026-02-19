@@ -3,8 +3,9 @@
 ## Issue Encountered
 
 **Error Message:**
+
 ```
-Failed to load tool genome_codon_usage_analysis: 
+Failed to load tool genome_codon_usage_analysis:
 YAMLException: bad indentation of a mapping entry (36:56)
 ```
 
@@ -49,6 +50,7 @@ description: Minimum feature length in base pairs to include in analysis (defaul
 **File:** `/tools_registry/data_management/genome_codon_usage_analysis.yaml`
 
 **Changes:**
+
 - Line 28: Added quotes to `chromosome` description
 - Line 36: Removed colon from `featureType` description (changed `: CDS` to `CDS`)
 - Line 44: Removed colon from `minLength` description (changed `: 300` to `300`)
@@ -60,6 +62,7 @@ description: Minimum feature length in base pairs to include in analysis (defaul
 ### 1. **Quote Strings with Special Characters**
 
 Always quote strings containing:
+
 - Colons (`:`)
 - Brackets (`[]`, `{}`)
 - Quotes (`"`, `'`)
@@ -72,6 +75,7 @@ Always quote strings containing:
 - Dash at start (`-`)
 
 **Example:**
+
 ```yaml
 # ❌ BAD
 description: This is a test: example

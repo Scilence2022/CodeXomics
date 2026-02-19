@@ -35,6 +35,7 @@ Gene tracks display genomic annotations including genes, operons, and various fe
 #### Specialized Gene Types
 
 The system supports specialized shapes for different gene types:
+
 - **Promoters**: Vertical line with directional arrow
 - **Terminators**: Double vertical lines with open circle
 - **Regulatory Elements**: Custom shapes with specific colors

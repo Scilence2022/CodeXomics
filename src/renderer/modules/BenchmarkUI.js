@@ -2,91 +2,91 @@
  * Benchmark UI - User interface for LLM benchmark system
  */
 class BenchmarkUI {
-    constructor(benchmarkFramework) {
-        this.framework = benchmarkFramework;
-        this.currentResults = null;
-        this.isRunning = false;
-        this.window = null;
-        this.manualTestLock = false; // Prevent concurrent manual tests
-        this.manualTestResults = {};
-        this.setupEventHandlers();
-    }
+  constructor(benchmarkFramework) {
+    this.framework = benchmarkFramework;
+    this.currentResults = null;
+    this.isRunning = false;
+    this.window = null;
+    this.manualTestLock = false; // Prevent concurrent manual tests
+    this.manualTestResults = {};
+    this.setupEventHandlers();
+  }
 
-    /**
-     * Show benchmark runner - Open in separate window
-     */
-    async showBenchmarkRunner() {
-        console.log('🧪 Opening benchmark runner window...');
-        
-        try {
-            // Directly open benchmark runner window
-            this.showBenchmarkRunnerWindow();
-            console.log('✅ Benchmark runner window opened');
-            
-        } catch (error) {
-            console.error('❌ Failed to open benchmark runner:', error);
+  /**
+   * Show benchmark runner - Open in separate window
+   */
+  async showBenchmarkRunner() {
+    console.log('🧪 Opening benchmark runner window...');
+
+    try {
+      // Directly open benchmark runner window
+      this.showBenchmarkRunnerWindow();
+      console.log('✅ Benchmark runner window opened');
+    } catch (error) {
+      console.error('❌ Failed to open benchmark runner:', error);
+    }
+  }
+
+  /**
+   * Show benchmark interface in main window
+   */
+  showBenchmarkInterface() {
+    try {
+      console.log('🎯 Starting benchmark interface display...');
+
+      // CRITICAL FIX: Check if interface already exists
+      const existingInterface = document.getElementById('benchmarkInterface');
+      if (existingInterface) {
+        console.log('⚠️ Benchmark interface already exists, focusing existing one');
+        // Focus existing interface and ensure it's visible
+        existingInterface.style.display = 'block';
+        existingInterface.style.visibility = 'visible';
+        existingInterface.style.opacity = '1';
+
+        // If collapsed, expand it
+        if (existingInterface.classList.contains('collapsed')) {
+          this.toggleBenchmarkInterface();
         }
-    }
 
-    /**
-     * Show benchmark interface in main window
-     */
-    showBenchmarkInterface() {
-        try {
-            console.log('🎯 Starting benchmark interface display...');
-            
-            // CRITICAL FIX: Check if interface already exists
-            const existingInterface = document.getElementById('benchmarkInterface');
-            if (existingInterface) {
-                console.log('⚠️ Benchmark interface already exists, focusing existing one');
-                // Focus existing interface and ensure it's visible
-                existingInterface.style.display = 'block';
-                existingInterface.style.visibility = 'visible';
-                existingInterface.style.opacity = '1';
-                
-                // If collapsed, expand it
-                if (existingInterface.classList.contains('collapsed')) {
-                    this.toggleBenchmarkInterface();
-                }
-                
-                return; // Exit early - do not create duplicate
-            }
-            
-            // Create benchmark interface only if none exists
-            const benchmarkInterface = this.createBenchmarkInterface();
-            console.log('🔧 Benchmark interface created:', benchmarkInterface);
-            
-            // Add benchmark interface to body as an overlay
-            document.body.appendChild(benchmarkInterface);
-            console.log('✅ Benchmark interface added to body');
-            
-            // Ensure interface is visible with overlay positioning
-            benchmarkInterface.style.display = 'block';
-            benchmarkInterface.style.visibility = 'visible';
-            benchmarkInterface.style.opacity = '1';
-            benchmarkInterface.style.position = 'fixed';
-            benchmarkInterface.style.top = '0';
-            benchmarkInterface.style.left = '0';
-            benchmarkInterface.style.width = '100vw';
-            benchmarkInterface.style.height = '100vh';
-            benchmarkInterface.style.zIndex = '9999999'; // Maximum z-index
-            
-            // Force immediate rendering
-            benchmarkInterface.offsetHeight;
-            benchmarkInterface.offsetWidth;
-            
-            // Setup interface event handlers
-            this.setupBenchmarkInterfaceHandlers();
-            console.log('🎮 Event handlers setup complete');
-            
-            // Verify interface is actually visible
-            const isVisible = benchmarkInterface.offsetHeight > 0 && 
-                             benchmarkInterface.offsetWidth > 0 &&
-                             window.getComputedStyle(benchmarkInterface).display !== 'none';
-            
-            if (!isVisible) {
-                console.warn('⚠️ Interface may not be visible, forcing display');
-                benchmarkInterface.style.cssText = `
+        return; // Exit early - do not create duplicate
+      }
+
+      // Create benchmark interface only if none exists
+      const benchmarkInterface = this.createBenchmarkInterface();
+      console.log('🔧 Benchmark interface created:', benchmarkInterface);
+
+      // Add benchmark interface to body as an overlay
+      document.body.appendChild(benchmarkInterface);
+      console.log('✅ Benchmark interface added to body');
+
+      // Ensure interface is visible with overlay positioning
+      benchmarkInterface.style.display = 'block';
+      benchmarkInterface.style.visibility = 'visible';
+      benchmarkInterface.style.opacity = '1';
+      benchmarkInterface.style.position = 'fixed';
+      benchmarkInterface.style.top = '0';
+      benchmarkInterface.style.left = '0';
+      benchmarkInterface.style.width = '100vw';
+      benchmarkInterface.style.height = '100vh';
+      benchmarkInterface.style.zIndex = '9999999'; // Maximum z-index
+
+      // Force immediate rendering
+      benchmarkInterface.offsetHeight;
+      benchmarkInterface.offsetWidth;
+
+      // Setup interface event handlers
+      this.setupBenchmarkInterfaceHandlers();
+      console.log('🎮 Event handlers setup complete');
+
+      // Verify interface is actually visible
+      const isVisible =
+        benchmarkInterface.offsetHeight > 0 &&
+        benchmarkInterface.offsetWidth > 0 &&
+        window.getComputedStyle(benchmarkInterface).display !== 'none';
+
+      if (!isVisible) {
+        console.warn('⚠️ Interface may not be visible, forcing display');
+        benchmarkInterface.style.cssText = `
                     display: block !important;
                     visibility: visible !important;
                     opacity: 1 !important;
@@ -98,51 +98,49 @@ class BenchmarkUI {
                     z-index: 999999 !important;
                     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
                 `;
-            }
-            
-            console.log('✅ Benchmark interface display complete');
-            
-        } catch (error) {
-            console.error('❌ Failed to show benchmark interface:', error);
-            
-            // Emergency fallback: show alert with instructions
-            alert('Failed to display benchmark interface. Please try restarting the application.');
-            
-            throw error;
-        }
+      }
+
+      console.log('✅ Benchmark interface display complete');
+    } catch (error) {
+      console.error('❌ Failed to show benchmark interface:', error);
+
+      // Emergency fallback: show alert with instructions
+      alert('Failed to display benchmark interface. Please try restarting the application.');
+
+      throw error;
+    }
+  }
+
+  /**
+   * Fallback: Show benchmark runner in separate window
+   */
+  showBenchmarkRunnerWindow() {
+    if (this.window && !this.window.closed) {
+      this.window.focus();
+      return;
     }
 
-    /**
-     * Fallback: Show benchmark runner in separate window
-     */
-    showBenchmarkRunnerWindow() {
-        if (this.window && !this.window.closed) {
-            this.window.focus();
-            return;
-        }
+    const windowFeatures = 'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no';
+    this.window = window.open('', 'BenchmarkRunner', windowFeatures);
 
-        const windowFeatures = 'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no';
-        this.window = window.open('', 'BenchmarkRunner', windowFeatures);
-        
-        // Generate and write HTML content directly
-        this.window.document.write(this.generateBenchmarkHTML());
-        this.window.document.close();
-        
-        // Setup window event handlers
-        this.setupWindowEventHandlers();
-        
-        console.log('🧪 Benchmark runner window opened (fallback mode)');
-    }
+    // Generate and write HTML content directly
+    this.window.document.write(this.generateBenchmarkHTML());
+    this.window.document.close();
 
+    // Setup window event handlers
+    this.setupWindowEventHandlers();
 
-    /**
-     * Create benchmark interface for main window
-     */
-    createBenchmarkInterface() {
-        const benchmarkInterface = document.createElement('div');
-        benchmarkInterface.id = 'benchmarkInterface';
-        benchmarkInterface.className = 'benchmark-interface';
-        benchmarkInterface.innerHTML = `
+    console.log('🧪 Benchmark runner window opened (fallback mode)');
+  }
+
+  /**
+   * Create benchmark interface for main window
+   */
+  createBenchmarkInterface() {
+    const benchmarkInterface = document.createElement('div');
+    benchmarkInterface.id = 'benchmarkInterface';
+    benchmarkInterface.className = 'benchmark-interface';
+    benchmarkInterface.innerHTML = `
             <style>
                 .benchmark-interface {
                     position: fixed;
@@ -731,193 +729,193 @@ class BenchmarkUI {
             </div>
         `;
 
-        return benchmarkInterface;
+    return benchmarkInterface;
+  }
+
+  /**
+   * Toggle benchmark interface between collapsed and expanded states
+   */
+  toggleBenchmarkInterface() {
+    const benchmarkInterface = document.getElementById('benchmarkInterface');
+    const toggleIcon = document.getElementById('toggleIcon');
+
+    if (!benchmarkInterface) return;
+
+    const isCollapsed = benchmarkInterface.classList.contains('collapsed');
+
+    if (isCollapsed) {
+      // Expand
+      benchmarkInterface.classList.remove('collapsed');
+      if (toggleIcon) {
+        toggleIcon.className = 'fas fa-chevron-up';
+      }
+      console.log('🔼 Benchmark interface expanded');
+    } else {
+      // Collapse
+      benchmarkInterface.classList.add('collapsed');
+      if (toggleIcon) {
+        toggleIcon.className = 'fas fa-chevron-down';
+      }
+      console.log('🔽 Benchmark interface collapsed');
+    }
+  }
+
+  /**
+   * Close benchmark interface
+   */
+  closeBenchmarkInterface() {
+    console.log('📜 Closing benchmark interface...');
+
+    // Remove benchmark interface
+    const benchmarkInterface = document.getElementById('benchmarkInterface');
+    if (benchmarkInterface) {
+      benchmarkInterface.remove();
     }
 
-    /**
-     * Toggle benchmark interface between collapsed and expanded states
-     */
-    toggleBenchmarkInterface() {
-        const benchmarkInterface = document.getElementById('benchmarkInterface');
-        const toggleIcon = document.getElementById('toggleIcon');
-        
-        if (!benchmarkInterface) return;
-        
-        const isCollapsed = benchmarkInterface.classList.contains('collapsed');
-        
-        if (isCollapsed) {
-            // Expand
-            benchmarkInterface.classList.remove('collapsed');
-            if (toggleIcon) {
-                toggleIcon.className = 'fas fa-chevron-up';
-            }
-            console.log('🔼 Benchmark interface expanded');
-        } else {
-            // Collapse
-            benchmarkInterface.classList.add('collapsed');
-            if (toggleIcon) {
-                toggleIcon.className = 'fas fa-chevron-down';
-            }
-            console.log('🔽 Benchmark interface collapsed');
-        }
+    // Clean up drag styles
+    const dragStyles = document.getElementById('benchmark-drag-styles');
+    if (dragStyles) {
+      dragStyles.remove();
     }
 
-    /**
-     * Close benchmark interface
-     */
-    closeBenchmarkInterface() {
-        console.log('📜 Closing benchmark interface...');
-        
-        // Remove benchmark interface
+    // Reset handlers flag to allow fresh setup next time
+    this.handlersSetup = false;
+
+    // Stop any running benchmark
+    if (this.isRunning) {
+      this.stopMainWindowBenchmark();
+    }
+
+    console.log('✅ Benchmark interface closed and cleaned up');
+  }
+
+  /**
+   * Setup benchmark interface event handlers
+   */
+  setupBenchmarkInterfaceHandlers() {
+    // CRITICAL FIX: Prevent duplicate handler setup
+    if (this.handlersSetup) {
+      console.log('⚠️ Event handlers already setup, skipping duplicate setup');
+      return;
+    }
+
+    // Button handlers
+    const startBtn = document.getElementById('startBenchmark');
+    const stopBtn = document.getElementById('stopBenchmark');
+    const exportBtn = document.getElementById('exportResults');
+    const testBtn = document.getElementById('testManualDialog');
+    const browseBtn = document.getElementById('browseDirectoryBtn');
+
+    if (startBtn) startBtn.onclick = () => this.startMainWindowBenchmark();
+    if (stopBtn) stopBtn.onclick = () => this.stopMainWindowBenchmark();
+    if (exportBtn) exportBtn.onclick = () => this.exportMainWindowResults();
+    if (testBtn) testBtn.onclick = () => this.triggerTestManualDialog();
+    if (browseBtn) browseBtn.onclick = () => this.browseDefaultDirectory();
+
+    // Setup drag functionality for the title bar
+    this.setupDragFunctionality();
+
+    // Add manual test interaction handlers
+    this.setupManualTestHandlers();
+
+    // Initialize default directory field
+    this.initializeDefaultDirectory();
+
+    // Mark handlers as setup to prevent duplicates
+    this.handlersSetup = true;
+    console.log('✅ Event handlers setup complete (no duplicates)');
+  }
+
+  /**
+   * Setup drag functionality for moving the benchmark interface
+   */
+  setupDragFunctionality() {
+    const header = document.getElementById('benchmarkHeader');
+    const container = header.closest('.benchmark-container');
+
+    if (!header || !container) return;
+
+    let isDragging = false;
+    let startX, startY, startLeft, startTop;
+
+    // Add draggable cursor style
+    header.style.cursor = 'move';
+
+    header.addEventListener('mousedown', e => {
+      // Only start dragging if clicking directly on header (not controls)
+      if (e.target.closest('.header-controls')) return;
+
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+
+      // Get current position of container
+      const rect = container.getBoundingClientRect();
+      startLeft = rect.left;
+      startTop = rect.top;
+
+      // CRITICAL: Boost z-index for dragging to stay above main tabs
+      const benchmarkInterface = document.getElementById('benchmarkInterface');
+      if (benchmarkInterface) {
+        benchmarkInterface.style.zIndex = '99999999'; // Ultra-high z-index during dragging
+      }
+      container.style.zIndex = '99999999'; // Ultra-high z-index for container
+
+      // Change container positioning to absolute for dragging
+      container.style.position = 'absolute';
+      container.style.left = startLeft + 'px';
+      container.style.top = startTop + 'px';
+      container.style.margin = '0';
+      container.style.transform = 'none';
+
+      // Add dragging class for visual feedback
+      header.classList.add('dragging');
+
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+
+      const newLeft = startLeft + deltaX;
+      const newTop = startTop + deltaY;
+
+      // Ensure the interface stays within viewport bounds
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const containerWidth = container.offsetWidth;
+      const containerHeight = container.offsetHeight;
+
+      const boundedLeft = Math.max(0, Math.min(newLeft, viewportWidth - containerWidth));
+      const boundedTop = Math.max(0, Math.min(newTop, viewportHeight - containerHeight));
+
+      container.style.left = boundedLeft + 'px';
+      container.style.top = boundedTop + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        header.classList.remove('dragging');
+
+        // Restore normal z-index after dragging
         const benchmarkInterface = document.getElementById('benchmarkInterface');
         if (benchmarkInterface) {
-            benchmarkInterface.remove();
+          benchmarkInterface.style.zIndex = '9999999'; // Back to normal maximum z-index
         }
-        
-        // Clean up drag styles
-        const dragStyles = document.getElementById('benchmark-drag-styles');
-        if (dragStyles) {
-            dragStyles.remove();
-        }
-        
-        // Reset handlers flag to allow fresh setup next time
-        this.handlersSetup = false;
-        
-        // Stop any running benchmark
-        if (this.isRunning) {
-            this.stopMainWindowBenchmark();
-        }
-        
-        console.log('✅ Benchmark interface closed and cleaned up');
-    }
+        container.style.zIndex = ''; // Remove inline z-index, let CSS take over
+      }
+    });
 
-    /**
-     * Setup benchmark interface event handlers
-     */
-    setupBenchmarkInterfaceHandlers() {
-        // CRITICAL FIX: Prevent duplicate handler setup
-        if (this.handlersSetup) {
-            console.log('⚠️ Event handlers already setup, skipping duplicate setup');
-            return;
-        }
-        
-        // Button handlers
-        const startBtn = document.getElementById('startBenchmark');
-        const stopBtn = document.getElementById('stopBenchmark');
-        const exportBtn = document.getElementById('exportResults');
-        const testBtn = document.getElementById('testManualDialog');
-        const browseBtn = document.getElementById('browseDirectoryBtn');
-        
-        if (startBtn) startBtn.onclick = () => this.startMainWindowBenchmark();
-        if (stopBtn) stopBtn.onclick = () => this.stopMainWindowBenchmark();
-        if (exportBtn) exportBtn.onclick = () => this.exportMainWindowResults();
-        if (testBtn) testBtn.onclick = () => this.triggerTestManualDialog();
-        if (browseBtn) browseBtn.onclick = () => this.browseDefaultDirectory();
-        
-        // Setup drag functionality for the title bar
-        this.setupDragFunctionality();
-        
-        // Add manual test interaction handlers
-        this.setupManualTestHandlers();
-        
-        // Initialize default directory field
-        this.initializeDefaultDirectory();
-        
-        // Mark handlers as setup to prevent duplicates
-        this.handlersSetup = true;
-        console.log('✅ Event handlers setup complete (no duplicates)');
-    }
-
-    /**
-     * Setup drag functionality for moving the benchmark interface
-     */
-    setupDragFunctionality() {
-        const header = document.getElementById('benchmarkHeader');
-        const container = header.closest('.benchmark-container');
-        
-        if (!header || !container) return;
-        
-        let isDragging = false;
-        let startX, startY, startLeft, startTop;
-        
-        // Add draggable cursor style
-        header.style.cursor = 'move';
-        
-        header.addEventListener('mousedown', (e) => {
-            // Only start dragging if clicking directly on header (not controls)
-            if (e.target.closest('.header-controls')) return;
-            
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            
-            // Get current position of container
-            const rect = container.getBoundingClientRect();
-            startLeft = rect.left;
-            startTop = rect.top;
-            
-            // CRITICAL: Boost z-index for dragging to stay above main tabs
-            const benchmarkInterface = document.getElementById('benchmarkInterface');
-            if (benchmarkInterface) {
-                benchmarkInterface.style.zIndex = '99999999'; // Ultra-high z-index during dragging
-            }
-            container.style.zIndex = '99999999'; // Ultra-high z-index for container
-            
-            // Change container positioning to absolute for dragging
-            container.style.position = 'absolute';
-            container.style.left = startLeft + 'px';
-            container.style.top = startTop + 'px';
-            container.style.margin = '0';
-            container.style.transform = 'none';
-            
-            // Add dragging class for visual feedback
-            header.classList.add('dragging');
-            
-            e.preventDefault();
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            const newLeft = startLeft + deltaX;
-            const newTop = startTop + deltaY;
-            
-            // Ensure the interface stays within viewport bounds
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const containerWidth = container.offsetWidth;
-            const containerHeight = container.offsetHeight;
-            
-            const boundedLeft = Math.max(0, Math.min(newLeft, viewportWidth - containerWidth));
-            const boundedTop = Math.max(0, Math.min(newTop, viewportHeight - containerHeight));
-            
-            container.style.left = boundedLeft + 'px';
-            container.style.top = boundedTop + 'px';
-        });
-        
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                header.classList.remove('dragging');
-                
-                // Restore normal z-index after dragging
-                const benchmarkInterface = document.getElementById('benchmarkInterface');
-                if (benchmarkInterface) {
-                    benchmarkInterface.style.zIndex = '9999999'; // Back to normal maximum z-index
-                }
-                container.style.zIndex = ''; // Remove inline z-index, let CSS take over
-            }
-        });
-        
-        // Add CSS styles for dragging state (prevent duplicates)
-        const existingDragStyle = document.getElementById('benchmark-drag-styles');
-        if (!existingDragStyle) {
-            const style = document.createElement('style');
-            style.id = 'benchmark-drag-styles'; // Add ID to prevent duplicates
-            style.textContent = `
+    // Add CSS styles for dragging state (prevent duplicates)
+    const existingDragStyle = document.getElementById('benchmark-drag-styles');
+    if (!existingDragStyle) {
+      const style = document.createElement('style');
+      style.id = 'benchmark-drag-styles'; // Add ID to prevent duplicates
+      style.textContent = `
                 .benchmark-header.dragging {
                     cursor: grabbing !important;
                     user-select: none;
@@ -938,168 +936,167 @@ class BenchmarkUI {
                     z-index: 99999999 !important; /* ULTRA-HIGH z-index during dragging */
                 }
             `;
-            document.head.appendChild(style);
-        }
+      document.head.appendChild(style);
+    }
+  }
+
+  /**
+   * Setup handlers for manual test interactions
+   */
+  setupManualTestHandlers() {
+    console.log('🔍 Setting up manual test handlers...');
+
+    // Remove existing event listeners to prevent duplicates
+    if (this.manualTestRequiredHandler) {
+      document.removeEventListener('manualTestRequired', this.manualTestRequiredHandler);
+    }
+    if (this.manualTestCompletedHandler) {
+      document.removeEventListener('manualTestCompleted', this.manualTestCompletedHandler);
     }
 
-    /**
-     * Setup handlers for manual test interactions
-     */
-    setupManualTestHandlers() {
-        console.log('🔍 Setting up manual test handlers...');
-        
-        // Remove existing event listeners to prevent duplicates
-        if (this.manualTestRequiredHandler) {
-            document.removeEventListener('manualTestRequired', this.manualTestRequiredHandler);
-        }
-        if (this.manualTestCompletedHandler) {
-            document.removeEventListener('manualTestCompleted', this.manualTestCompletedHandler);
-        }
-        
-        // Create bound handlers
-        this.manualTestRequiredHandler = (event) => {
-            console.log('📝 Manual test required event received:', event.detail);
-            this.handleManualTest(event.detail);
-        };
-        
-        this.manualTestCompletedHandler = (event) => {
-            console.log('✅ Manual test completed event received:', event.detail);
-            this.handleManualTestCompletion(event.detail);
-        };
-        
-        // Listen for manual test events
-        document.addEventListener('manualTestRequired', this.manualTestRequiredHandler);
-        
-        // Listen for manual test completion
-        document.addEventListener('manualTestCompleted', this.manualTestCompletedHandler);
-        
-        console.log('✅ Manual test handlers setup complete');
-    }
+    // Create bound handlers
+    this.manualTestRequiredHandler = event => {
+      console.log('📝 Manual test required event received:', event.detail);
+      this.handleManualTest(event.detail);
+    };
 
-    /**
-     * Initialize default directory field with saved value
-     */
-    initializeDefaultDirectory() {
-        const directoryInput = document.getElementById('defaultFileDirectory');
-        if (directoryInput) {
-            const savedDirectory = this.loadDefaultDirectory();
-            directoryInput.value = savedDirectory;
-            
-            // Add change event listener to save automatically
-            directoryInput.addEventListener('change', (e) => {
-                const newPath = e.target.value.trim();
-                if (newPath) {
-                    const normalizedPath = newPath.endsWith('/') ? newPath : newPath + '/';
-                    e.target.value = normalizedPath;
-                    this.saveDefaultDirectory(normalizedPath);
-                }
-            });
-            
-            console.log('📁 Default directory initialized:', savedDirectory);
-        }
-    }
+    this.manualTestCompletedHandler = event => {
+      console.log('✅ Manual test completed event received:', event.detail);
+      this.handleManualTestCompletion(event.detail);
+    };
 
-    /**
-     * Browse for default directory
-     */
-    async browseDefaultDirectory() {
-        console.log('📁 Opening directory browser...');
-        
+    // Listen for manual test events
+    document.addEventListener('manualTestRequired', this.manualTestRequiredHandler);
+
+    // Listen for manual test completion
+    document.addEventListener('manualTestCompleted', this.manualTestCompletedHandler);
+
+    console.log('✅ Manual test handlers setup complete');
+  }
+
+  /**
+   * Initialize default directory field with saved value
+   */
+  initializeDefaultDirectory() {
+    const directoryInput = document.getElementById('defaultFileDirectory');
+    if (directoryInput) {
+      const savedDirectory = this.loadDefaultDirectory();
+      directoryInput.value = savedDirectory;
+
+      // Add change event listener to save automatically
+      directoryInput.addEventListener('change', e => {
+        const newPath = e.target.value.trim();
+        if (newPath) {
+          const normalizedPath = newPath.endsWith('/') ? newPath : newPath + '/';
+          e.target.value = normalizedPath;
+          this.saveDefaultDirectory(normalizedPath);
+        }
+      });
+
+      console.log('📁 Default directory initialized:', savedDirectory);
+    }
+  }
+
+  /**
+   * Browse for default directory
+   */
+  async browseDefaultDirectory() {
+    console.log('📁 Opening directory browser...');
+
+    try {
+      // Try to use Electron's IPC for directory selection
+      if (window.electronAPI && window.electronAPI.showDirectoryDialog) {
+        console.log('🔌 Using Electron IPC for directory dialog...');
+
+        const result = await window.electronAPI.showDirectoryDialog({
+          title: 'Select Default File Directory',
+          defaultPath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/',
+          properties: ['openDirectory'],
+        });
+
+        if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+          const selectedPath = result.filePaths[0];
+          const directoryInput = document.getElementById('defaultFileDirectory');
+          if (directoryInput) {
+            // Ensure path ends with /
+            const normalizedPath = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
+            directoryInput.value = normalizedPath;
+
+            // Save to configuration
+            this.saveDefaultDirectory(normalizedPath);
+
+            console.log('✅ Default directory updated via IPC:', normalizedPath);
+            return;
+          }
+        }
+      }
+
+      // Try legacy Electron remote API (if available)
+      if (window.require) {
         try {
-            // Try to use Electron's IPC for directory selection
-            if (window.electronAPI && window.electronAPI.showDirectoryDialog) {
-                console.log('🔌 Using Electron IPC for directory dialog...');
-                
-                const result = await window.electronAPI.showDirectoryDialog({
-                    title: 'Select Default File Directory',
-                    defaultPath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/',
-                    properties: ['openDirectory']
-                });
-                
-                if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
-                    const selectedPath = result.filePaths[0];
-                    const directoryInput = document.getElementById('defaultFileDirectory');
-                    if (directoryInput) {
-                        // Ensure path ends with /
-                        const normalizedPath = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
-                        directoryInput.value = normalizedPath;
-                        
-                        // Save to configuration
-                        this.saveDefaultDirectory(normalizedPath);
-                        
-                        console.log('✅ Default directory updated via IPC:', normalizedPath);
-                        return;
-                    }
-                }
-            }
-            
-            // Try legacy Electron remote API (if available)
-            if (window.require) {
-                try {
-                    console.log('🔌 Attempting legacy Electron remote API...');
-                    
-                    let dialog;
-                    try {
-                        // Try electron.remote first
-                        dialog = window.require('electron').remote?.dialog;
-                    } catch (e) {
-                        // If that fails, try @electron/remote
-                        try {
-                            dialog = window.require('@electron/remote').dialog;
-                        } catch (e2) {
-                            console.warn('⚠️ Remote modules not available:', e2.message);
-                            throw new Error('Remote API not available');
-                        }
-                    }
-                    
-                    if (dialog) {
-                        const result = await dialog.showOpenDialog({
-                            title: 'Select Default File Directory',
-                            properties: ['openDirectory'],
-                            defaultPath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/'
-                        });
-                        
-                        if (!result.canceled && result.filePaths.length > 0) {
-                            const selectedPath = result.filePaths[0];
-                            const directoryInput = document.getElementById('defaultFileDirectory');
-                            if (directoryInput) {
-                                // Ensure path ends with /
-                                const normalizedPath = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
-                                directoryInput.value = normalizedPath;
-                                
-                                // Save to configuration
-                                this.saveDefaultDirectory(normalizedPath);
-                                
-                                console.log('✅ Default directory updated via remote:', normalizedPath);
-                                return;
-                            }
-                        }
-                    }
-                } catch (remoteError) {
-                    console.warn('⚠️ Legacy remote API failed:', remoteError.message);
-                }
-            }
-            
-            // Fallback: Show custom input dialog using DOM
-            this.showCustomDirectoryDialog();
-            
-        } catch (error) {
-            console.error('❌ Failed to browse directory:', error);
-            
-            // Final fallback: Show custom input dialog
-            this.showCustomDirectoryDialog();
-        }
-    }
+          console.log('🔌 Attempting legacy Electron remote API...');
 
-    /**
-     * Show custom directory input dialog using DOM
-     */
-    showCustomDirectoryDialog() {
-        console.log('📝 Showing custom directory input dialog...');
-        
-        // Create custom dialog overlay
-        const dialogOverlay = document.createElement('div');
-        dialogOverlay.style.cssText = `
+          let dialog;
+          try {
+            // Try electron.remote first
+            dialog = window.require('electron').remote?.dialog;
+          } catch (e) {
+            // If that fails, try @electron/remote
+            try {
+              dialog = window.require('@electron/remote').dialog;
+            } catch (e2) {
+              console.warn('⚠️ Remote modules not available:', e2.message);
+              throw new Error('Remote API not available');
+            }
+          }
+
+          if (dialog) {
+            const result = await dialog.showOpenDialog({
+              title: 'Select Default File Directory',
+              properties: ['openDirectory'],
+              defaultPath: '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/',
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+              const selectedPath = result.filePaths[0];
+              const directoryInput = document.getElementById('defaultFileDirectory');
+              if (directoryInput) {
+                // Ensure path ends with /
+                const normalizedPath = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
+                directoryInput.value = normalizedPath;
+
+                // Save to configuration
+                this.saveDefaultDirectory(normalizedPath);
+
+                console.log('✅ Default directory updated via remote:', normalizedPath);
+                return;
+              }
+            }
+          }
+        } catch (remoteError) {
+          console.warn('⚠️ Legacy remote API failed:', remoteError.message);
+        }
+      }
+
+      // Fallback: Show custom input dialog using DOM
+      this.showCustomDirectoryDialog();
+    } catch (error) {
+      console.error('❌ Failed to browse directory:', error);
+
+      // Final fallback: Show custom input dialog
+      this.showCustomDirectoryDialog();
+    }
+  }
+
+  /**
+   * Show custom directory input dialog using DOM
+   */
+  showCustomDirectoryDialog() {
+    console.log('📝 Showing custom directory input dialog...');
+
+    // Create custom dialog overlay
+    const dialogOverlay = document.createElement('div');
+    dialogOverlay.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
@@ -1111,10 +1108,12 @@ class BenchmarkUI {
             align-items: center;
             justify-content: center;
         `;
-        
-        const currentValue = document.getElementById('defaultFileDirectory')?.value || '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
-        
-        dialogOverlay.innerHTML = `
+
+    const currentValue =
+      document.getElementById('defaultFileDirectory')?.value ||
+      '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+
+    dialogOverlay.innerHTML = `
             <div style="
                 background: white;
                 padding: 30px;
@@ -1164,222 +1163,226 @@ class BenchmarkUI {
                 </div>
             </div>
         `;
-        
-        document.body.appendChild(dialogOverlay);
-        
-        // Focus the input
-        const input = document.getElementById('customDirectoryInput');
-        input.focus();
-        input.select();
-        
-        // Handle dialog actions
-        const handleConfirm = () => {
-            const newPath = input.value.trim();
-            if (newPath) {
-                const directoryInput = document.getElementById('defaultFileDirectory');
-                if (directoryInput) {
-                    const normalizedPath = newPath.endsWith('/') ? newPath : newPath + '/';
-                    directoryInput.value = normalizedPath;
-                    this.saveDefaultDirectory(normalizedPath);
-                    console.log('✅ Default directory updated via custom dialog:', normalizedPath);
-                }
-            }
-            document.body.removeChild(dialogOverlay);
-        };
-        
-        const handleCancel = () => {
-            document.body.removeChild(dialogOverlay);
-        };
-        
-        // Event listeners
-        document.getElementById('confirmDirectoryDialog').onclick = handleConfirm;
-        document.getElementById('cancelDirectoryDialog').onclick = handleCancel;
-        
-        // Handle Enter key
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                handleConfirm();
-            } else if (e.key === 'Escape') {
-                handleCancel();
-            }
-        });
-        
-        // Handle click outside to close
-        dialogOverlay.addEventListener('click', (e) => {
-            if (e.target === dialogOverlay) {
-                handleCancel();
-            }
-        });
-    }
 
-    /**
-     * Save default directory to configuration
-     */
-    saveDefaultDirectory(directoryPath) {
-        try {
-            // Save to localStorage as fallback
-            localStorage.setItem('benchmarkDefaultDirectory', directoryPath);
-            
-            // Try to save to app configuration if available
-            if (window.configManager) {
-                window.configManager.set('benchmark.defaultDirectory', directoryPath);
-                window.configManager.saveConfig();
-            }
-            
-            console.log('💾 Default directory saved to configuration:', directoryPath);
-        } catch (error) {
-            console.error('❌ Failed to save default directory:', error);
-        }
-    }
+    document.body.appendChild(dialogOverlay);
 
-    /**
-     * Load default directory from configuration
-     */
-    loadDefaultDirectory() {
-        try {
-            // Try to load from app configuration first
-            if (window.configManager) {
-                const configPath = window.configManager.get('benchmark.defaultDirectory');
-                if (configPath) {
-                    return configPath;
-                }
-            }
-            
-            // Fallback to localStorage
-            const storedPath = localStorage.getItem('benchmarkDefaultDirectory');
-            if (storedPath) {
-                return storedPath;
-            }
-            
-            // Default path
-            return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
-        } catch (error) {
-            console.error('❌ Failed to load default directory:', error);
-            return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
-        }
-    }
+    // Focus the input
+    const input = document.getElementById('customDirectoryInput');
+    input.focus();
+    input.select();
 
-    /**
-     * Get current default directory setting
-     */
-    getDefaultDirectory() {
+    // Handle dialog actions
+    const handleConfirm = () => {
+      const newPath = input.value.trim();
+      if (newPath) {
         const directoryInput = document.getElementById('defaultFileDirectory');
-        if (directoryInput && directoryInput.value.trim()) {
-            return directoryInput.value.trim();
+        if (directoryInput) {
+          const normalizedPath = newPath.endsWith('/') ? newPath : newPath + '/';
+          directoryInput.value = normalizedPath;
+          this.saveDefaultDirectory(normalizedPath);
+          console.log('✅ Default directory updated via custom dialog:', normalizedPath);
         }
-        return this.loadDefaultDirectory();
+      }
+      document.body.removeChild(dialogOverlay);
+    };
+
+    const handleCancel = () => {
+      document.body.removeChild(dialogOverlay);
+    };
+
+    // Event listeners
+    document.getElementById('confirmDirectoryDialog').onclick = handleConfirm;
+    document.getElementById('cancelDirectoryDialog').onclick = handleCancel;
+
+    // Handle Enter key
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        handleConfirm();
+      } else if (e.key === 'Escape') {
+        handleCancel();
+      }
+    });
+
+    // Handle click outside to close
+    dialogOverlay.addEventListener('click', e => {
+      if (e.target === dialogOverlay) {
+        handleCancel();
+      }
+    });
+  }
+
+  /**
+   * Save default directory to configuration
+   */
+  saveDefaultDirectory(directoryPath) {
+    try {
+      // Save to localStorage as fallback
+      localStorage.setItem('benchmarkDefaultDirectory', directoryPath);
+
+      // Try to save to app configuration if available
+      if (window.configManager) {
+        window.configManager.set('benchmark.defaultDirectory', directoryPath);
+        window.configManager.saveConfig();
+      }
+
+      console.log('💾 Default directory saved to configuration:', directoryPath);
+    } catch (error) {
+      console.error('❌ Failed to save default directory:', error);
+    }
+  }
+
+  /**
+   * Load default directory from configuration
+   */
+  loadDefaultDirectory() {
+    try {
+      // Try to load from app configuration first
+      if (window.configManager) {
+        const configPath = window.configManager.get('benchmark.defaultDirectory');
+        if (configPath) {
+          return configPath;
+        }
+      }
+
+      // Fallback to localStorage
+      const storedPath = localStorage.getItem('benchmarkDefaultDirectory');
+      if (storedPath) {
+        return storedPath;
+      }
+
+      // Default path
+      return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+    } catch (error) {
+      console.error('❌ Failed to load default directory:', error);
+      return '/Users/song/Documents/Genome-AI-Studio-Projects/test_data/';
+    }
+  }
+
+  /**
+   * Get current default directory setting
+   */
+  getDefaultDirectory() {
+    const directoryInput = document.getElementById('defaultFileDirectory');
+    if (directoryInput && directoryInput.value.trim()) {
+      return directoryInput.value.trim();
+    }
+    return this.loadDefaultDirectory();
+  }
+
+  /**
+   * Trigger a manual test (for testing the dialog system)
+   */
+  triggerTestManualDialog() {
+    console.log('🧪 Triggering test manual dialog...');
+
+    const testData = {
+      testId: 'test_manual_01',
+      testName: 'Test Manual Dialog',
+      category: 'navigation',
+      complexity: 'simple',
+      instruction:
+        'This is a test manual dialog. Please verify that this dialog appears correctly and all interactive elements work as expected.',
+      expectedResult: {
+        tool_name: 'test_function',
+        parameters: {
+          test: true,
+        },
+      },
+      maxScore: 5,
+      manualVerification:
+        'Please verify: 1) This dialog appears correctly, 2) All buttons are clickable, 3) The interface is user-friendly, 4) You can interact with verification items.',
+    };
+
+    // Dispatch manual test event
+    document.dispatchEvent(
+      new CustomEvent('manualTestRequired', {
+        detail: testData,
+      })
+    );
+  }
+
+  /**
+   * Handle manual test execution with user interaction
+   */
+  async handleManualTest(testData) {
+    console.log('🔍 Manual test required:', testData.testName);
+
+    // Check if another manual test is already running
+    if (this.manualTestLock) {
+      console.warn('⚠️ Another manual test is already running, waiting...');
+
+      // Wait for the current manual test to complete
+      while (this.manualTestLock) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
 
-    /**
-     * Trigger a manual test (for testing the dialog system)
-     */
-    triggerTestManualDialog() {
-        console.log('🧪 Triggering test manual dialog...');
-        
-        const testData = {
-            testId: 'test_manual_01',
-            testName: 'Test Manual Dialog',
-            category: 'navigation',
-            complexity: 'simple',
-            instruction: 'This is a test manual dialog. Please verify that this dialog appears correctly and all interactive elements work as expected.',
-            expectedResult: {
-                tool_name: 'test_function',
-                parameters: {
-                    test: true
-                }
-            },
-            maxScore: 5,
-            manualVerification: 'Please verify: 1) This dialog appears correctly, 2) All buttons are clickable, 3) The interface is user-friendly, 4) You can interact with verification items.'
+    // Set lock to prevent concurrent manual tests
+    this.manualTestLock = true;
+    console.log('🔒 Manual test lock acquired for:', testData.testId);
+
+    try {
+      // Create manual test dialog
+      const dialog = this.createManualTestDialog(testData);
+      document.body.appendChild(dialog);
+
+      // Show the dialog with animation
+      dialog.style.display = 'block';
+      dialog.style.opacity = '0';
+      dialog.offsetHeight; // Force reflow
+      dialog.style.transition = 'opacity 0.3s ease';
+      dialog.style.opacity = '1';
+
+      console.log('✨ Manual test dialog displayed for:', testData.testName);
+
+      // Return a promise that resolves when user completes the test
+      return new Promise(resolve => {
+        // Store resolve function globally for access from onclick handlers
+        window[`resolveManualTest_${testData.testId}`] = resultData => {
+          console.log('📝 Manual test completed, resolving promise:', resultData);
+
+          // Release the lock
+          this.manualTestLock = false;
+          console.log('🔓 Manual test lock released for:', testData.testId);
+
+          resolve(resultData);
         };
-        
-        // Dispatch manual test event
-        document.dispatchEvent(new CustomEvent('manualTestRequired', {
-            detail: testData
-        }));
-    }
 
-    /**
-     * Handle manual test execution with user interaction
-     */
-    async handleManualTest(testData) {
-        console.log('🔍 Manual test required:', testData.testName);
-        
-        // Check if another manual test is already running
-        if (this.manualTestLock) {
-            console.warn('⚠️ Another manual test is already running, waiting...');
-            
-            // Wait for the current manual test to complete
-            while (this.manualTestLock) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-        }
-        
-        // Set lock to prevent concurrent manual tests
-        this.manualTestLock = true;
-        console.log('🔒 Manual test lock acquired for:', testData.testId);
-        
-        try {
-            // Create manual test dialog
-            const dialog = this.createManualTestDialog(testData);
-            document.body.appendChild(dialog);
-            
-            // Show the dialog with animation
-            dialog.style.display = 'block';
-            dialog.style.opacity = '0';
-            dialog.offsetHeight; // Force reflow
-            dialog.style.transition = 'opacity 0.3s ease';
-            dialog.style.opacity = '1';
-            
-            console.log('✨ Manual test dialog displayed for:', testData.testName);
-            
-            // Return a promise that resolves when user completes the test
-            return new Promise((resolve) => {
-                // Store resolve function globally for access from onclick handlers
-                window[`resolveManualTest_${testData.testId}`] = (resultData) => {
-                    console.log('📝 Manual test completed, resolving promise:', resultData);
-                    
-                    // Release the lock
-                    this.manualTestLock = false;
-                    console.log('🔓 Manual test lock released for:', testData.testId);
-                    
-                    resolve(resultData);
-                };
-                
-                console.log('⏳ Waiting for user to complete manual test:', testData.testId);
-            });
-        } catch (error) {
-            // Release lock on error
-            this.manualTestLock = false;
-            console.error('❌ Error creating manual test dialog:', error);
-            throw error;
-        }
+        console.log('⏳ Waiting for user to complete manual test:', testData.testId);
+      });
+    } catch (error) {
+      // Release lock on error
+      this.manualTestLock = false;
+      console.error('❌ Error creating manual test dialog:', error);
+      throw error;
     }
+  }
 
-    /**
-     * Create interactive dialog for manual tests with automatic scoring
-     */
-    createManualTestDialog(testData) {
-        const dialog = document.createElement('div');
-        dialog.className = 'manual-test-dialog';
-        dialog.id = `manual-test-${testData.testId}`;
-        
-        // Parse verification items and assign scores
-        const verificationItems = this.parseVerificationItems(testData.manualVerification);
-        
-        // CRITICAL FIX: Ensure full score is achievable when all items are checked
-        // Distribute maxScore across items, with any remainder going to bonus
-        const itemScore = verificationItems.length > 0 ? Math.floor(testData.maxScore / verificationItems.length) : 0;
-        const bonusScore = testData.maxScore - (itemScore * verificationItems.length); // Remainder as bonus
-        
-        console.log(`🎯 [Manual Test Dialog] Scoring setup for ${testData.testId}:`, {
-            maxScore: testData.maxScore,
-            verificationItems: verificationItems.length,
-            itemScore,
-            bonusScore,
-            maxPossible: (itemScore * verificationItems.length) + bonusScore
-        });
-        
-        dialog.innerHTML = `
+  /**
+   * Create interactive dialog for manual tests with automatic scoring
+   */
+  createManualTestDialog(testData) {
+    const dialog = document.createElement('div');
+    dialog.className = 'manual-test-dialog';
+    dialog.id = `manual-test-${testData.testId}`;
+
+    // Parse verification items and assign scores
+    const verificationItems = this.parseVerificationItems(testData.manualVerification);
+
+    // CRITICAL FIX: Ensure full score is achievable when all items are checked
+    // Distribute maxScore across items, with any remainder going to bonus
+    const itemScore = verificationItems.length > 0 ? Math.floor(testData.maxScore / verificationItems.length) : 0;
+    const bonusScore = testData.maxScore - itemScore * verificationItems.length; // Remainder as bonus
+
+    console.log(`🎯 [Manual Test Dialog] Scoring setup for ${testData.testId}:`, {
+      maxScore: testData.maxScore,
+      verificationItems: verificationItems.length,
+      itemScore,
+      bonusScore,
+      maxPossible: itemScore * verificationItems.length + bonusScore,
+    });
+
+    dialog.innerHTML = `
             <style>
                 .manual-test-dialog {
                     position: fixed;
@@ -1699,33 +1702,49 @@ class BenchmarkUI {
                     <p>${testData.instruction}</p>
                 </div>
                 
-                ${testData.llmResponse ? `
+                ${
+                  testData.llmResponse
+                    ? `
                 <div class="llm-response-section">
                     <h4><i class="fas fa-robot"></i> LLM Response</h4>
                     <div class="llm-response-content">
                         <pre>${this.formatLLMResponse(testData.llmResponse)}</pre>
                     </div>
                 </div>
-                ` : ''}
+                `
+                    : ''
+                }
                 
-                ${testData.expectedResult ? `
+                ${
+                  testData.expectedResult
+                    ? `
                 <div class="expected-result">
                     <h4><i class="fas fa-bullseye"></i> Expected Tool & Parameters</h4>
                     <p><strong>Tool:</strong> <code>${testData.expectedResult.tool_name || 'N/A'}</code></p>
-                    ${testData.expectedResult.parameters ? `
+                    ${
+                      testData.expectedResult.parameters
+                        ? `
                     <p><strong>Parameters:</strong> <code>${JSON.stringify(testData.expectedResult.parameters, null, 2)}</code></p>
-                    ` : ''}
+                    `
+                        : ''
+                    }
                 </div>
-                ` : ''}
+                `
+                    : ''
+                }
                 
-                ${testData.manualVerification ? `
+                ${
+                  testData.manualVerification
+                    ? `
                 <div class="verification-checklist">
                     <h4><i class="fas fa-tasks"></i> Verification Checklist (Auto-Scoring)</h4>
                     <div class="scoring-info" style="background: #e3f2fd; border: 1px solid #90caf9; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px;">
                         <strong>Automatic Scoring:</strong> Each item = ${itemScore} pts, Completion bonus = ${bonusScore} pt, Total possible = ${testData.maxScore} pts
                     </div>
                     <ul class="checklist-items">
-                        ${this.parseVerificationItems(testData.manualVerification).map((item, index) => `
+                        ${this.parseVerificationItems(testData.manualVerification)
+                          .map(
+                            (item, index) => `
                             <li class="checklist-item">
                                 <input type="checkbox" id="check-${testData.testId}-${index}" 
                                        data-score="${itemScore}" 
@@ -1734,13 +1753,17 @@ class BenchmarkUI {
                                     ${item} <span class="item-score">(${itemScore} pts)</span>
                                 </label>
                             </li>
-                        `).join('')}
+                        `
+                          )
+                          .join('')}
                     </ul>
                     <div class="auto-score-display" style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; text-align: center;">
                         <strong>Current Score: <span id="auto-score-${testData.testId}">0</span> / ${testData.maxScore} pts</strong>
                     </div>
                 </div>
-                ` : ''}
+                `
+                    : ''
+                }
                 
                 <div class="test-actions">
                     <div class="test-score-input">
@@ -1768,279 +1791,285 @@ class BenchmarkUI {
                 </div>
             </div>
         `;
-        
-        return dialog;
+
+    return dialog;
+  }
+
+  /**
+   * Update automatic score based on checklist verification
+   */
+  updateAutomaticScore(testId, itemScore, bonusScore, maxScore) {
+    const dialog = document.getElementById(`manual-test-${testId}`);
+    if (!dialog) return;
+
+    // Count checked items
+    const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
+    const checkedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
+
+    // Calculate score: (checked items * item score) + bonus if all completed
+    let autoScore = checkedItems * itemScore;
+    if (checkedItems === checkboxes.length && checkboxes.length > 0) {
+      autoScore += bonusScore; // Completion bonus
     }
 
-    /**
-     * Update automatic score based on checklist verification
-     */
-    updateAutomaticScore(testId, itemScore, bonusScore, maxScore) {
-        const dialog = document.getElementById(`manual-test-${testId}`);
-        if (!dialog) return;
-        
-        // Count checked items
-        const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
-        const checkedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
-        
-        // Calculate score: (checked items * item score) + bonus if all completed
-        let autoScore = checkedItems * itemScore;
-        if (checkedItems === checkboxes.length && checkboxes.length > 0) {
-            autoScore += bonusScore; // Completion bonus
-        }
-        
-        // Cap at max score
-        autoScore = Math.min(autoScore, maxScore);
-        
-        // Update display
-        const scoreDisplay = document.getElementById(`auto-score-${testId}`);
-        if (scoreDisplay) {
-            scoreDisplay.textContent = autoScore;
-        }
-        
-        // Update manual score select to match auto score
-        const scoreSelect = document.getElementById(`manual-score-${testId}`);
-        if (scoreSelect) {
-            scoreSelect.value = autoScore;
-        }
-        
-        // Visual feedback for completion
-        const checklistContainer = dialog.querySelector('.verification-checklist');
-        if (checklistContainer) {
-            if (checkedItems === checkboxes.length && checkboxes.length > 0) {
-                checklistContainer.style.borderLeft = '4px solid #27ae60';
-                checklistContainer.style.background = '#f8fff8';
-            } else {
-                checklistContainer.style.borderLeft = '4px solid #3498db';
-                checklistContainer.style.background = '#f8f9fa';
-            }
-        }
-        
-        console.log(`📊 Auto-score updated for ${testId}: ${autoScore}/${maxScore} (${checkedItems}/${checkboxes.length} items checked)`);
+    // Cap at max score
+    autoScore = Math.min(autoScore, maxScore);
+
+    // Update display
+    const scoreDisplay = document.getElementById(`auto-score-${testId}`);
+    if (scoreDisplay) {
+      scoreDisplay.textContent = autoScore;
     }
 
-    /**
-     * Parse verification items from manualVerification string
-     */
-    /**
-     * Format LLM response for display in manual dialog
-     */
-    formatLLMResponse(response) {
-        if (!response) {
-            return 'No response received from LLM';
-        }
-        
-        // Handle string responses
-        if (typeof response === 'string') {
-            // Try to detect if it contains function calls or structured data
-            if (response.includes('{') && response.includes('}')) {
-                try {
-                    // Try to parse and pretty-print JSON
-                    const parsed = JSON.parse(response);
-                    return JSON.stringify(parsed, null, 2);
-                } catch (e) {
-                    // Not valid JSON, return as-is but escaped
-                    return this.escapeHtml(response);
-                }
-            }
-            return this.escapeHtml(response);
-        }
-        
-        // Handle object responses
-        if (typeof response === 'object') {
-            return JSON.stringify(response, null, 2);
-        }
-        
-        // Handle other types
-        return String(response);
-    }
-    
-    /**
-     * Escape HTML characters to prevent XSS
-     */
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    // Update manual score select to match auto score
+    const scoreSelect = document.getElementById(`manual-score-${testId}`);
+    if (scoreSelect) {
+      scoreSelect.value = autoScore;
     }
 
-    parseVerificationItems(verificationText) {
-        if (!verificationText) return [];
-        
-        // Remove "Please verify:" prefix if it exists
-        let cleanText = verificationText.replace(/^Please verify:\s*/i, '');
-        
-        // Split by numbered items (1), 2), 3), etc.) or simple enumeration
-        const items = cleanText.split(/\d+\)\s*/).filter(item => item.trim());
-        
-        // If no numbered items found, try splitting by commas or line breaks
-        if (items.length <= 1) {
-            const alternativeItems = cleanText.split(/[,;\n]/).filter(item => item.trim());
-            if (alternativeItems.length > 1) {
-                return alternativeItems.map(item => item.trim());
-            }
-        }
-        
-        return items.map(item => item.trim()).filter(item => item.length > 0);
+    // Visual feedback for completion
+    const checklistContainer = dialog.querySelector('.verification-checklist');
+    if (checklistContainer) {
+      if (checkedItems === checkboxes.length && checkboxes.length > 0) {
+        checklistContainer.style.borderLeft = '4px solid #27ae60';
+        checklistContainer.style.background = '#f8fff8';
+      } else {
+        checklistContainer.style.borderLeft = '4px solid #3498db';
+        checklistContainer.style.background = '#f8f9fa';
+      }
     }
 
-    /**
-     * Complete manual test with user input and automatic scoring
-     */
-    completeManualTest(testId, result) {
-        console.log('✅ Completing manual test:', testId, 'with result:', result);
-        
-        const dialog = document.getElementById(`manual-test-${testId}`);
-        if (!dialog) {
-            console.error('❌ Manual test dialog not found for:', testId);
-            return;
-        }
-        
+    console.log(
+      `📊 Auto-score updated for ${testId}: ${autoScore}/${maxScore} (${checkedItems}/${checkboxes.length} items checked)`
+    );
+  }
+
+  /**
+   * Parse verification items from manualVerification string
+   */
+  /**
+   * Format LLM response for display in manual dialog
+   */
+  formatLLMResponse(response) {
+    if (!response) {
+      return 'No response received from LLM';
+    }
+
+    // Handle string responses
+    if (typeof response === 'string') {
+      // Try to detect if it contains function calls or structured data
+      if (response.includes('{') && response.includes('}')) {
         try {
-            // Get automatic score (already calculated by updateAutomaticScore)
-            const scoreSelect = document.getElementById(`manual-score-${testId}`);
-            const automaticScore = scoreSelect ? parseInt(scoreSelect.value) : 0;
-            
-            // Get verification checklist status
-            const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
-            const completedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
-            const totalItems = checkboxes.length;
-            
-            // Calculate verification percentage
-            const verificationPercentage = totalItems > 0 ? (completedItems / totalItems) : 1;
-            
-            // Create result data with automatic scoring
-            const resultData = {
-                testId: testId,
-                result: result,
-                manualScore: automaticScore, // Use automatic score
-                automaticScore: automaticScore,
-                verificationCompletion: verificationPercentage,
-                completedVerifications: completedItems,
-                totalVerifications: totalItems,
-                timestamp: new Date().toISOString(),
-                scoringMethod: 'automatic',
-                verificationDetails: Array.from(checkboxes).map((cb, index) => ({
-                    item: cb.nextElementSibling.textContent,
-                    completed: cb.checked,
-                    score: cb.checked ? parseInt(cb.dataset.score || '0') : 0
-                }))
-            };
-            
-            console.log('📊 Manual test completed with automatic scoring:', resultData);
-            
-            // Close dialog with animation
-            dialog.style.transition = 'opacity 0.3s ease';
-            dialog.style.opacity = '0';
-            setTimeout(() => {
-                dialog.remove();
-            }, 300);
-            
-            // Resolve the promise if available
-            const resolveFunction = window[`resolveManualTest_${testId}`];
-            if (resolveFunction) {
-                resolveFunction(resultData);
-                delete window[`resolveManualTest_${testId}`];
-            }
-            
-            // Dispatch completion event
-            document.dispatchEvent(new CustomEvent('manualTestCompleted', {
-                detail: resultData
-            }));
-            
-            console.log('✨ Manual test completed successfully:', resultData);
-            
-        } catch (error) {
-            console.error('❌ Error completing manual test:', error);
+          // Try to parse and pretty-print JSON
+          const parsed = JSON.parse(response);
+          return JSON.stringify(parsed, null, 2);
+        } catch (e) {
+          // Not valid JSON, return as-is but escaped
+          return this.escapeHtml(response);
         }
+      }
+      return this.escapeHtml(response);
     }
 
-    /**
-     * Handle manual test completion
-     */
-    handleManualTestCompletion(resultData) {
-        // Store result for later use
-        if (!this.manualTestResults) {
-            this.manualTestResults = {};
+    // Handle object responses
+    if (typeof response === 'object') {
+      return JSON.stringify(response, null, 2);
+    }
+
+    // Handle other types
+    return String(response);
+  }
+
+  /**
+   * Escape HTML characters to prevent XSS
+   */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  parseVerificationItems(verificationText) {
+    if (!verificationText) return [];
+
+    // Remove "Please verify:" prefix if it exists
+    let cleanText = verificationText.replace(/^Please verify:\s*/i, '');
+
+    // Split by numbered items (1), 2), 3), etc.) or simple enumeration
+    const items = cleanText.split(/\d+\)\s*/).filter(item => item.trim());
+
+    // If no numbered items found, try splitting by commas or line breaks
+    if (items.length <= 1) {
+      const alternativeItems = cleanText.split(/[,;\n]/).filter(item => item.trim());
+      if (alternativeItems.length > 1) {
+        return alternativeItems.map(item => item.trim());
+      }
+    }
+
+    return items.map(item => item.trim()).filter(item => item.length > 0);
+  }
+
+  /**
+   * Complete manual test with user input and automatic scoring
+   */
+  completeManualTest(testId, result) {
+    console.log('✅ Completing manual test:', testId, 'with result:', result);
+
+    const dialog = document.getElementById(`manual-test-${testId}`);
+    if (!dialog) {
+      console.error('❌ Manual test dialog not found for:', testId);
+      return;
+    }
+
+    try {
+      // Get automatic score (already calculated by updateAutomaticScore)
+      const scoreSelect = document.getElementById(`manual-score-${testId}`);
+      const automaticScore = scoreSelect ? parseInt(scoreSelect.value) : 0;
+
+      // Get verification checklist status
+      const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
+      const completedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
+      const totalItems = checkboxes.length;
+
+      // Calculate verification percentage
+      const verificationPercentage = totalItems > 0 ? completedItems / totalItems : 1;
+
+      // Create result data with automatic scoring
+      const resultData = {
+        testId: testId,
+        result: result,
+        manualScore: automaticScore, // Use automatic score
+        automaticScore: automaticScore,
+        verificationCompletion: verificationPercentage,
+        completedVerifications: completedItems,
+        totalVerifications: totalItems,
+        timestamp: new Date().toISOString(),
+        scoringMethod: 'automatic',
+        verificationDetails: Array.from(checkboxes).map((cb, index) => ({
+          item: cb.nextElementSibling.textContent,
+          completed: cb.checked,
+          score: cb.checked ? parseInt(cb.dataset.score || '0') : 0,
+        })),
+      };
+
+      console.log('📊 Manual test completed with automatic scoring:', resultData);
+
+      // Close dialog with animation
+      dialog.style.transition = 'opacity 0.3s ease';
+      dialog.style.opacity = '0';
+      setTimeout(() => {
+        dialog.remove();
+      }, 300);
+
+      // Resolve the promise if available
+      const resolveFunction = window[`resolveManualTest_${testId}`];
+      if (resolveFunction) {
+        resolveFunction(resultData);
+        delete window[`resolveManualTest_${testId}`];
+      }
+
+      // Dispatch completion event
+      document.dispatchEvent(
+        new CustomEvent('manualTestCompleted', {
+          detail: resultData,
+        })
+      );
+
+      console.log('✨ Manual test completed successfully:', resultData);
+    } catch (error) {
+      console.error('❌ Error completing manual test:', error);
+    }
+  }
+
+  /**
+   * Handle manual test completion
+   */
+  handleManualTestCompletion(resultData) {
+    // Store result for later use
+    if (!this.manualTestResults) {
+      this.manualTestResults = {};
+    }
+    this.manualTestResults[resultData.testId] = resultData;
+
+    // Update progress display if visible
+    this.updateManualTestProgress(resultData);
+  }
+
+  /**
+   * Update progress display for manual tests
+   */
+  updateManualTestProgress(resultData) {
+    // This will be called to update any progress indicators
+    // Implementation depends on how progress is displayed
+    console.log('📊 Manual test progress updated:', resultData);
+  }
+
+  /**
+   * Start benchmark in main window
+   */
+  async startMainWindowBenchmark() {
+    if (this.isRunning) return;
+
+    try {
+      this.isRunning = true;
+      this.startTime = Date.now(); // CRITICAL: Set startTime for elapsed timer
+
+      // Update UI
+      document.getElementById('startBenchmark').disabled = true;
+      document.getElementById('stopBenchmark').disabled = false;
+      document.getElementById('progressSection').style.display = 'block';
+
+      // Start elapsed time updater (every second)
+      this.elapsedTimeInterval = setInterval(() => {
+        const elapsedTime = document.getElementById('elapsedTime');
+        if (elapsedTime && this.startTime && this.isRunning) {
+          const elapsed = Date.now() - this.startTime;
+          const minutes = Math.floor(elapsed / 60000);
+          const seconds = Math.floor((elapsed % 60000) / 1000);
+          elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
-        this.manualTestResults[resultData.testId] = resultData;
-        
-        // Update progress display if visible
-        this.updateManualTestProgress(resultData);
-    }
+      }, 1000); // Update every second
 
-    /**
-     * Update progress display for manual tests
-     */
-    updateManualTestProgress(resultData) {
-        // This will be called to update any progress indicators
-        // Implementation depends on how progress is displayed
-        console.log('📊 Manual test progress updated:', resultData);
-    }
+      console.log(
+        '🚀 [UI Start] Benchmark started, elapsed timer started at:',
+        new Date(this.startTime).toLocaleTimeString()
+      );
 
-    /**
-     * Start benchmark in main window
-     */
-    async startMainWindowBenchmark() {
-        if (this.isRunning) return;
+      // Update menu status
+      // Status update removed - no menu manager
 
-        try {
-            this.isRunning = true;
-            this.startTime = Date.now(); // CRITICAL: Set startTime for elapsed timer
-            
-            // Update UI
-            document.getElementById('startBenchmark').disabled = true;
-            document.getElementById('stopBenchmark').disabled = false;
-            document.getElementById('progressSection').style.display = 'block';
-            
-            // Start elapsed time updater (every second)
-            this.elapsedTimeInterval = setInterval(() => {
-                const elapsedTime = document.getElementById('elapsedTime');
-                if (elapsedTime && this.startTime && this.isRunning) {
-                    const elapsed = Date.now() - this.startTime;
-                    const minutes = Math.floor(elapsed / 60000);
-                    const seconds = Math.floor((elapsed % 60000) / 1000);
-                    elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                }
-            }, 1000); // Update every second
-            
-            console.log('🚀 [UI Start] Benchmark started, elapsed timer started at:', new Date(this.startTime).toLocaleTimeString());
-            
-            // Update menu status
-            // Status update removed - no menu manager
-            
-            // Get configuration
-            const options = this.getBenchmarkConfiguration();
-            
-            console.log('🧪 Starting benchmark in main window:', options);
-            
-            // Run benchmark
-            const results = await this.framework.runAllBenchmarks(options);
-            
-            this.currentResults = results;
-            this.displayMainWindowResults(results);
-            
-            // Status update removed - no menu manager
-            
-        } catch (error) {
-            console.error('❌ Benchmark failed:', error);
-            
-            // Enhanced error handling with specific LLM configuration guidance
-            let errorMessage = error.message || 'Unknown error occurred';
-            let detailedGuidance = '';
-            
-            if (errorMessage.includes('LLM not configured') || errorMessage.includes('LLM provider')) {
-                detailedGuidance = '\n\nTo fix this:\n' +
-                    '1. Go to Options → Configure LLMs\n' +
-                    '2. Set up your preferred AI provider\n' +
-                    '3. Enable at least one provider\n' +
-                    '4. Test the connection\n' +
-                    '5. Try running the benchmark again';
-                    
-                // Also show in results area if available
-                const resultsArea = document.getElementById('resultsContent');
-                if (resultsArea) {
-                    resultsArea.innerHTML = `
+      // Get configuration
+      const options = this.getBenchmarkConfiguration();
+
+      console.log('🧪 Starting benchmark in main window:', options);
+
+      // Run benchmark
+      const results = await this.framework.runAllBenchmarks(options);
+
+      this.currentResults = results;
+      this.displayMainWindowResults(results);
+
+      // Status update removed - no menu manager
+    } catch (error) {
+      console.error('❌ Benchmark failed:', error);
+
+      // Enhanced error handling with specific LLM configuration guidance
+      let errorMessage = error.message || 'Unknown error occurred';
+      let detailedGuidance = '';
+
+      if (errorMessage.includes('LLM not configured') || errorMessage.includes('LLM provider')) {
+        detailedGuidance =
+          '\n\nTo fix this:\n' +
+          '1. Go to Options → Configure LLMs\n' +
+          '2. Set up your preferred AI provider\n' +
+          '3. Enable at least one provider\n' +
+          '4. Test the connection\n' +
+          '5. Try running the benchmark again';
+
+        // Also show in results area if available
+        const resultsArea = document.getElementById('resultsContent');
+        if (resultsArea) {
+          resultsArea.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #e74c3c;">
                             <h3>❌ LLM Configuration Required</h3>
                             <p>Please configure an LLM provider before running benchmarks.</p>
@@ -2054,419 +2083,429 @@ class BenchmarkUI {
                             </div>
                         </div>
                     `;
-                }
-            }
-            
-            alert('Benchmark failed: ' + errorMessage + detailedGuidance);
-        } finally {
-            this.isRunning = false;
-            
-            // Clear elapsed time interval
-            if (this.elapsedTimeInterval) {
-                clearInterval(this.elapsedTimeInterval);
-                this.elapsedTimeInterval = null;
-                console.log('⏱️ [UI Stop] Elapsed timer stopped');
-            }
-            
-            document.getElementById('startBenchmark').disabled = false;
-            document.getElementById('stopBenchmark').disabled = true;
-            document.getElementById('exportResults').disabled = false;
-            
-            // Enable LLM interaction export button
-            const exportLLMBtn = document.getElementById('exportLLMInteractions');
-            if (exportLLMBtn) {
-                exportLLMBtn.disabled = false;
-            }
         }
+      }
+
+      alert('Benchmark failed: ' + errorMessage + detailedGuidance);
+    } finally {
+      this.isRunning = false;
+
+      // Clear elapsed time interval
+      if (this.elapsedTimeInterval) {
+        clearInterval(this.elapsedTimeInterval);
+        this.elapsedTimeInterval = null;
+        console.log('⏱️ [UI Stop] Elapsed timer stopped');
+      }
+
+      document.getElementById('startBenchmark').disabled = false;
+      document.getElementById('stopBenchmark').disabled = true;
+      document.getElementById('exportResults').disabled = false;
+
+      // Enable LLM interaction export button
+      const exportLLMBtn = document.getElementById('exportLLMInteractions');
+      if (exportLLMBtn) {
+        exportLLMBtn.disabled = false;
+      }
+    }
+  }
+
+  /**
+   * Stop benchmark in main window
+   */
+  stopMainWindowBenchmark() {
+    if (!this.isRunning) return;
+
+    this.isRunning = false;
+
+    // Clear elapsed time interval
+    if (this.elapsedTimeInterval) {
+      clearInterval(this.elapsedTimeInterval);
+      this.elapsedTimeInterval = null;
+      console.log('⏱️ [UI Stop] Elapsed timer stopped (manual stop)');
     }
 
-    /**
-     * Stop benchmark in main window
-     */
-    stopMainWindowBenchmark() {
-        if (!this.isRunning) return;
-        
-        this.isRunning = false;
-        
-        // Clear elapsed time interval
-        if (this.elapsedTimeInterval) {
-            clearInterval(this.elapsedTimeInterval);
-            this.elapsedTimeInterval = null;
-            console.log('⏱️ [UI Stop] Elapsed timer stopped (manual stop)');
-        }
-        
-        if (this.framework) {
-            this.framework.stopBenchmark();
-        }
-        
-        // Update UI
-        document.getElementById('startBenchmark').disabled = false;
-        document.getElementById('stopBenchmark').disabled = true;
-        
-        // Status update removed - no menu manager
-        
-        console.log('⏹️ Benchmark stopped in main window');
+    if (this.framework) {
+      this.framework.stopBenchmark();
     }
 
-    /**
-     * Safe JSON serialization that handles circular references
-     */
-    safeJSONStringify(obj, maxDepth = 10) {
-        const seen = new WeakSet();
-        const depthMap = new WeakMap();
-        
-        return JSON.stringify(obj, (key, value) => {
-            // Handle basic types
-            if (value === null || typeof value !== 'object') {
-                return value;
+    // Update UI
+    document.getElementById('startBenchmark').disabled = false;
+    document.getElementById('stopBenchmark').disabled = true;
+
+    // Status update removed - no menu manager
+
+    console.log('⏹️ Benchmark stopped in main window');
+  }
+
+  /**
+   * Safe JSON serialization that handles circular references
+   */
+  safeJSONStringify(obj, maxDepth = 10) {
+    const seen = new WeakSet();
+    const depthMap = new WeakMap();
+
+    return JSON.stringify(
+      obj,
+      (key, value) => {
+        // Handle basic types
+        if (value === null || typeof value !== 'object') {
+          return value;
+        }
+
+        // Check depth to prevent infinite recursion
+        const currentDepth = depthMap.get(value) || 0;
+        if (currentDepth > maxDepth) {
+          return '[Max Depth Reached]';
+        }
+
+        // Handle circular references
+        if (seen.has(value)) {
+          return '[Circular Reference]';
+        }
+
+        seen.add(value);
+        depthMap.set(value, currentDepth + 1);
+
+        // Filter out problematic properties
+        if (value && typeof value === 'object') {
+          const filtered = {};
+          for (const [k, v] of Object.entries(value)) {
+            // Skip known problematic properties
+            if (
+              k === 'genomeBrowser' ||
+              k === 'fileManager' ||
+              k === 'chatManager' ||
+              k === 'configManager' ||
+              k === 'framework' ||
+              k === 'window' ||
+              k === 'document' ||
+              k === 'parent' ||
+              k === 'constructor'
+            ) {
+              filtered[k] = '[Filtered: Circular Reference]';
+            } else if (typeof v === 'function') {
+              filtered[k] = '[Function]';
+            } else if (v instanceof Promise) {
+              filtered[k] = '[Promise]';
+            } else if (v instanceof HTMLElement) {
+              filtered[k] = '[DOM Element]';
+            } else {
+              filtered[k] = v;
             }
-            
-            // Check depth to prevent infinite recursion
-            const currentDepth = depthMap.get(value) || 0;
-            if (currentDepth > maxDepth) {
-                return '[Max Depth Reached]';
-            }
-            
-            // Handle circular references
-            if (seen.has(value)) {
-                return '[Circular Reference]';
-            }
-            
-            seen.add(value);
-            depthMap.set(value, currentDepth + 1);
-            
-            // Filter out problematic properties
-            if (value && typeof value === 'object') {
-                const filtered = {};
-                for (const [k, v] of Object.entries(value)) {
-                    // Skip known problematic properties
-                    if (k === 'genomeBrowser' || k === 'fileManager' || k === 'chatManager' || 
-                        k === 'configManager' || k === 'framework' || k === 'window' || 
-                        k === 'document' || k === 'parent' || k === 'constructor') {
-                        filtered[k] = '[Filtered: Circular Reference]';
-                    } else if (typeof v === 'function') {
-                        filtered[k] = '[Function]';
-                    } else if (v instanceof Promise) {
-                        filtered[k] = '[Promise]';
-                    } else if (v instanceof HTMLElement) {
-                        filtered[k] = '[DOM Element]';
-                    } else {
-                        filtered[k] = v;
-                    }
-                }
-                return filtered;
-            }
-            
-            return value;
-        }, 2);
+          }
+          return filtered;
+        }
+
+        return value;
+      },
+      2
+    );
+  }
+
+  /**
+   * Export results from main window
+   */
+  exportMainWindowResults() {
+    if (!this.currentResults) {
+      alert('No results to export');
+      return;
     }
 
-    /**
-     * Export results from main window
-     */
-    exportMainWindowResults() {
-        if (!this.currentResults) {
-            alert('No results to export');
-            return;
-        }
-        
-        try {
-            const safeJSON = this.safeJSONStringify(this.currentResults);
-            const blob = new Blob([safeJSON], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'benchmark-results-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            console.log('📤 Results exported from main window');
-        } catch (error) {
-            console.error('Failed to export results:', error);
-            alert('Failed to export results: ' + error.message);
-        }
+    try {
+      const safeJSON = this.safeJSONStringify(this.currentResults);
+      const blob = new Blob([safeJSON], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'benchmark-results-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      console.log('📤 Results exported from main window');
+    } catch (error) {
+      console.error('Failed to export results:', error);
+      alert('Failed to export results: ' + error.message);
+    }
+  }
+
+  /**
+   * Export detailed LLM interaction data
+   */
+  exportDetailedLLMInteractions() {
+    if (!this.currentResults) {
+      alert('No benchmark results available to export');
+      return;
     }
 
-    /**
-     * Export detailed LLM interaction data
-     */
-    exportDetailedLLMInteractions() {
-        if (!this.currentResults) {
-            alert('No benchmark results available to export');
-            return;
-        }
+    try {
+      // Extract all LLM interaction data
+      const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults);
 
-        try {
-            // Extract all LLM interaction data
-            const detailedInteractions = this.extractAllLLMInteractionData(this.currentResults);
-            
-            // Create comprehensive export data
-            const exportData = {
-                metadata: {
-                    exportTimestamp: new Date().toISOString(),
-                    benchmarkTimestamp: this.currentResults.startTime,
-                    totalTests: this.currentResults.overallStats?.totalTests || 0,
-                    totalInteractions: detailedInteractions.length,
-                    exportType: 'detailed_llm_interactions',
-                    version: '1.0.0'
+      // Create comprehensive export data
+      const exportData = {
+        metadata: {
+          exportTimestamp: new Date().toISOString(),
+          benchmarkTimestamp: this.currentResults.startTime,
+          totalTests: this.currentResults.overallStats?.totalTests || 0,
+          totalInteractions: detailedInteractions.length,
+          exportType: 'detailed_llm_interactions',
+          version: '1.0.0',
+        },
+
+        // Summary statistics
+        summary: {
+          totalInteractions: detailedInteractions.length,
+          successfulInteractions: detailedInteractions.filter(i => !i.analysis?.isError).length,
+          failedInteractions: detailedInteractions.filter(i => i.analysis?.isError).length,
+          averageResponseTime: this.calculateAverageResponseTime(detailedInteractions),
+          totalConsoleLogs: detailedInteractions.reduce((sum, i) => sum + (i.detailedLogs?.totalLogs || 0), 0),
+        },
+
+        // Complete interaction data
+        interactions: detailedInteractions,
+
+        // Benchmark results for context
+        benchmarkResults: this.currentResults,
+      };
+
+      // Create and download JSON file
+      const jsonString = this.safeJSONStringify(exportData);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'llm-interactions-detailed-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      console.log('📤 Detailed LLM interactions exported');
+
+      // Also offer HTML report export
+      this.exportDetailedHTMLReport(exportData);
+    } catch (error) {
+      console.error('Failed to export detailed interactions:', error);
+      alert('Failed to export detailed interactions: ' + error.message);
+    }
+  }
+
+  /**
+   * Extract all LLM interaction data from benchmark results
+   * Enhanced to extract data from multiple sources including incomplete/timeout scenarios
+   */
+  extractAllLLMInteractionData(results) {
+    const interactions = [];
+
+    if (results.testSuiteResults) {
+      results.testSuiteResults.forEach(suite => {
+        if (suite.testResults) {
+          suite.testResults.forEach(test => {
+            // Primary source: dedicated llmInteractionData field
+            if (test.llmInteractionData) {
+              interactions.push({
+                ...test.llmInteractionData,
+                testInfo: {
+                  testId: test.testId,
+                  testName: test.testName,
+                  suiteId: test.suiteId,
+                  score: test.score,
+                  success: test.success,
+                  duration: test.duration,
+                  status: test.status,
                 },
-                
-                // Summary statistics
-                summary: {
-                    totalInteractions: detailedInteractions.length,
-                    successfulInteractions: detailedInteractions.filter(i => !i.analysis?.isError).length,
-                    failedInteractions: detailedInteractions.filter(i => i.analysis?.isError).length,
-                    averageResponseTime: this.calculateAverageResponseTime(detailedInteractions),
-                    totalConsoleLogs: detailedInteractions.reduce((sum, i) => sum + (i.detailedLogs?.totalLogs || 0), 0)
-                },
-                
-                // Complete interaction data
-                interactions: detailedInteractions,
-                
-                // Benchmark results for context
-                benchmarkResults: this.currentResults
-            };
-
-            // Create and download JSON file
-            const jsonString = this.safeJSONStringify(exportData);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'llm-interactions-detailed-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            console.log('📤 Detailed LLM interactions exported');
-            
-            // Also offer HTML report export
-            this.exportDetailedHTMLReport(exportData);
-            
-        } catch (error) {
-            console.error('Failed to export detailed interactions:', error);
-            alert('Failed to export detailed interactions: ' + error.message);
-        }
-    }
-
-    /**
-     * Extract all LLM interaction data from benchmark results
-     * Enhanced to extract data from multiple sources including incomplete/timeout scenarios
-     */
-    extractAllLLMInteractionData(results) {
-        const interactions = [];
-        
-        if (results.testSuiteResults) {
-            results.testSuiteResults.forEach(suite => {
-                if (suite.testResults) {
-                    suite.testResults.forEach(test => {
-                        // Primary source: dedicated llmInteractionData field
-                        if (test.llmInteractionData) {
-                            interactions.push({
-                                ...test.llmInteractionData,
-                                testInfo: {
-                                    testId: test.testId,
-                                    testName: test.testName,
-                                    suiteId: test.suiteId,
-                                    score: test.score,
-                                    success: test.success,
-                                    duration: test.duration,
-                                    status: test.status
-                                }
-                            });
-                        } else {
-                            // Fallback: construct interaction data from available test fields
-                            const reconstructedInteraction = this.reconstructLLMInteractionFromTest(test);
-                            if (reconstructedInteraction) {
-                                interactions.push(reconstructedInteraction);
-                            }
-                        }
-                    });
-                }
-            });
-        }
-        
-        return interactions;
-    }
-
-    /**
-     * Reconstruct LLM interaction data from test result fields
-     * Used when dedicated llmInteractionData is not available
-     */
-    reconstructLLMInteractionFromTest(test) {
-        // Skip if no meaningful data is available
-        if (!test.llmResponse && !test.actualResult && !test.errors?.length && !test.metrics) {
-            return null;
-        }
-
-        const interaction = {
-            // Reconstruct request information
-            request: {
-                prompt: test.details?.instruction || `Test: ${test.testName}`,
-                timestamp: new Date(test.startTime || Date.now()).toISOString(),
-                requestId: `reconstructed_${test.testId}_${Date.now()}`,
-                testContext: {
-                    expectedResult: test.expectedResult,
-                    maxScore: test.maxScore,
-                    testType: test.type || 'unknown'
-                }
-            },
-
-            // Reconstruct response information
-            response: {
-                content: test.llmResponse || null,
-                responseTime: test.metrics?.responseTime || test.duration || 0,
-                timestamp: new Date(test.endTime || Date.now()).toISOString(),
-                responseId: `reconstructed_resp_${test.testId}_${Date.now()}`,
-                
-                // Extract function calls if available
-                toolCalls: this.extractToolCallsFromResult(test.actualResult),
-                
-                // Response metadata
-                tokenCount: test.metrics?.tokenCount || 0,
-                responseLength: test.metrics?.responseLength || 0,
-                functionCallsCount: test.metrics?.functionCallsCount || 0
-            },
-
-            // Reconstruct analysis information
-            analysis: {
-                correctToolUsed: test.success && test.actualResult?.tool_name,
-                parametersCorrect: test.success,
-                taskCompleted: test.success,
-                isError: test.status === 'error' || test.errors?.length > 0,
-                errorDetails: test.errors?.join('; ') || null,
-                confidence: test.metrics?.confidence || null,
-                score: test.score || 0,
-                maxScore: test.maxScore || 100,
-                successRate: test.success ? 100 : 0
-            },
-
-            // Reconstruct detailed logs
-            detailedLogs: {
-                totalLogs: (test.errors?.length || 0) + (test.warnings?.length || 0) + 1,
-                consoleLogs: [
-                    `Test ${test.testId} (${test.testName}) executed`,
-                    ...(test.errors || []).map(error => `ERROR: ${error}`),
-                    ...(test.warnings || []).map(warning => `WARNING: ${warning}`),
-                    `Result: ${test.status} (score: ${test.score}/${test.maxScore})`
-                ],
-                errorLogs: test.errors || [],
-                warningLogs: test.warnings || [],
-                performanceLogs: test.metrics ? [
-                    `Response time: ${test.metrics.responseTime || test.duration}ms`,
-                    `Token count: ${test.metrics.tokenCount || 'unknown'}`,
-                    `Function calls: ${test.metrics.functionCallsCount || 0}`
-                ] : []
-            },
-
-            // Test context information
-            testInfo: {
-                testId: test.testId,
-                testName: test.testName,
-                suiteId: test.suiteId,
-                score: test.score,
-                success: test.success,
-                duration: test.duration,
-                status: test.status,
-                
-                // Additional context
-                startTime: test.startTime,
-                endTime: test.endTime,
-                expectedResult: test.expectedResult,
-                actualResult: test.actualResult
+              });
+            } else {
+              // Fallback: construct interaction data from available test fields
+              const reconstructedInteraction = this.reconstructLLMInteractionFromTest(test);
+              if (reconstructedInteraction) {
+                interactions.push(reconstructedInteraction);
+              }
             }
-        };
-
-        return interaction;
+          });
+        }
+      });
     }
 
-    /**
-     * Extract tool calls from actualResult
-     */
-    extractToolCallsFromResult(actualResult) {
-        if (!actualResult) return [];
+    return interactions;
+  }
 
-        const toolCalls = [];
-
-        // Handle direct tool call format
-        if (actualResult.tool_name) {
-            toolCalls.push({
-                tool: actualResult.tool_name,
-                parameters: actualResult.parameters || {},
-                result: actualResult.result || 'executed'
-            });
-        }
-
-        // Handle array of function calls
-        if (Array.isArray(actualResult)) {
-            actualResult.forEach(call => {
-                if (call.tool_name) {
-                    toolCalls.push({
-                        tool: call.tool_name,
-                        parameters: call.parameters || {},
-                        result: call.result || 'executed'
-                    });
-                }
-            });
-        }
-
-        // Handle functionCalls array
-        if (actualResult.functionCalls && Array.isArray(actualResult.functionCalls)) {
-            actualResult.functionCalls.forEach(call => {
-                if (call.tool_name || call.name) {
-                    toolCalls.push({
-                        tool: call.tool_name || call.name,
-                        parameters: call.parameters || call.args || {},
-                        result: call.result || 'executed'
-                    });
-                }
-            });
-        }
-
-        return toolCalls;
+  /**
+   * Reconstruct LLM interaction data from test result fields
+   * Used when dedicated llmInteractionData is not available
+   */
+  reconstructLLMInteractionFromTest(test) {
+    // Skip if no meaningful data is available
+    if (!test.llmResponse && !test.actualResult && !test.errors?.length && !test.metrics) {
+      return null;
     }
 
-    /**
-     * Calculate average response time from interactions
-     */
-    calculateAverageResponseTime(interactions) {
-        const responseTimes = interactions
-            .map(i => i.response?.responseTime)
-            .filter(time => time && time > 0);
-        
-        if (responseTimes.length === 0) return 0;
-        
-        return responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+    const interaction = {
+      // Reconstruct request information
+      request: {
+        prompt: test.details?.instruction || `Test: ${test.testName}`,
+        timestamp: new Date(test.startTime || Date.now()).toISOString(),
+        requestId: `reconstructed_${test.testId}_${Date.now()}`,
+        testContext: {
+          expectedResult: test.expectedResult,
+          maxScore: test.maxScore,
+          testType: test.type || 'unknown',
+        },
+      },
+
+      // Reconstruct response information
+      response: {
+        content: test.llmResponse || null,
+        responseTime: test.metrics?.responseTime || test.duration || 0,
+        timestamp: new Date(test.endTime || Date.now()).toISOString(),
+        responseId: `reconstructed_resp_${test.testId}_${Date.now()}`,
+
+        // Extract function calls if available
+        toolCalls: this.extractToolCallsFromResult(test.actualResult),
+
+        // Response metadata
+        tokenCount: test.metrics?.tokenCount || 0,
+        responseLength: test.metrics?.responseLength || 0,
+        functionCallsCount: test.metrics?.functionCallsCount || 0,
+      },
+
+      // Reconstruct analysis information
+      analysis: {
+        correctToolUsed: test.success && test.actualResult?.tool_name,
+        parametersCorrect: test.success,
+        taskCompleted: test.success,
+        isError: test.status === 'error' || test.errors?.length > 0,
+        errorDetails: test.errors?.join('; ') || null,
+        confidence: test.metrics?.confidence || null,
+        score: test.score || 0,
+        maxScore: test.maxScore || 100,
+        successRate: test.success ? 100 : 0,
+      },
+
+      // Reconstruct detailed logs
+      detailedLogs: {
+        totalLogs: (test.errors?.length || 0) + (test.warnings?.length || 0) + 1,
+        consoleLogs: [
+          `Test ${test.testId} (${test.testName}) executed`,
+          ...(test.errors || []).map(error => `ERROR: ${error}`),
+          ...(test.warnings || []).map(warning => `WARNING: ${warning}`),
+          `Result: ${test.status} (score: ${test.score}/${test.maxScore})`,
+        ],
+        errorLogs: test.errors || [],
+        warningLogs: test.warnings || [],
+        performanceLogs: test.metrics
+          ? [
+              `Response time: ${test.metrics.responseTime || test.duration}ms`,
+              `Token count: ${test.metrics.tokenCount || 'unknown'}`,
+              `Function calls: ${test.metrics.functionCallsCount || 0}`,
+            ]
+          : [],
+      },
+
+      // Test context information
+      testInfo: {
+        testId: test.testId,
+        testName: test.testName,
+        suiteId: test.suiteId,
+        score: test.score,
+        success: test.success,
+        duration: test.duration,
+        status: test.status,
+
+        // Additional context
+        startTime: test.startTime,
+        endTime: test.endTime,
+        expectedResult: test.expectedResult,
+        actualResult: test.actualResult,
+      },
+    };
+
+    return interaction;
+  }
+
+  /**
+   * Extract tool calls from actualResult
+   */
+  extractToolCallsFromResult(actualResult) {
+    if (!actualResult) return [];
+
+    const toolCalls = [];
+
+    // Handle direct tool call format
+    if (actualResult.tool_name) {
+      toolCalls.push({
+        tool: actualResult.tool_name,
+        parameters: actualResult.parameters || {},
+        result: actualResult.result || 'executed',
+      });
     }
 
-    /**
-     * Export detailed HTML report with LLM interactions
-     */
-    exportDetailedHTMLReport(exportData) {
-        try {
-            const htmlContent = this.generateDetailedHTMLReport(exportData);
-            
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'llm-interactions-report-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.html';
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            console.log('📤 Detailed HTML report exported');
-            
-        } catch (error) {
-            console.error('Failed to export HTML report:', error);
+    // Handle array of function calls
+    if (Array.isArray(actualResult)) {
+      actualResult.forEach(call => {
+        if (call.tool_name) {
+          toolCalls.push({
+            tool: call.tool_name,
+            parameters: call.parameters || {},
+            result: call.result || 'executed',
+          });
         }
+      });
     }
 
-    /**
-     * Generate detailed HTML report with complete LLM interaction data
-     */
-    generateDetailedHTMLReport(exportData) {
-        return `
+    // Handle functionCalls array
+    if (actualResult.functionCalls && Array.isArray(actualResult.functionCalls)) {
+      actualResult.functionCalls.forEach(call => {
+        if (call.tool_name || call.name) {
+          toolCalls.push({
+            tool: call.tool_name || call.name,
+            parameters: call.parameters || call.args || {},
+            result: call.result || 'executed',
+          });
+        }
+      });
+    }
+
+    return toolCalls;
+  }
+
+  /**
+   * Calculate average response time from interactions
+   */
+  calculateAverageResponseTime(interactions) {
+    const responseTimes = interactions.map(i => i.response?.responseTime).filter(time => time && time > 0);
+
+    if (responseTimes.length === 0) return 0;
+
+    return responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+  }
+
+  /**
+   * Export detailed HTML report with LLM interactions
+   */
+  exportDetailedHTMLReport(exportData) {
+    try {
+      const htmlContent = this.generateDetailedHTMLReport(exportData);
+
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'llm-interactions-report-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.html';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      console.log('📤 Detailed HTML report exported');
+    } catch (error) {
+      console.error('Failed to export HTML report:', error);
+    }
+  }
+
+  /**
+   * Generate detailed HTML report with complete LLM interaction data
+   */
+  generateDetailedHTMLReport(exportData) {
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2529,7 +2568,9 @@ class BenchmarkUI {
         
         <h2>📋 Detailed Interactions</h2>
         
-        ${exportData.interactions.map(interaction => `
+        ${exportData.interactions
+          .map(
+            interaction => `
             <div class="interaction">
                 <div class="interaction-header">
                     <h3 style="margin: 0;">🧪 ${interaction.testInfo?.testName || interaction.testName}</h3>
@@ -2548,7 +2589,7 @@ class BenchmarkUI {
                         <div class="metric">Model: ${interaction.request?.model || 'N/A'}</div>
                         <div class="metric">Temperature: ${interaction.request?.temperature || 'N/A'}</div>
                         <div class="metric">Max Tokens: ${interaction.request?.maxTokens || 'N/A'}</div>
-                        <div class="metric">Timeout: ${interaction.request?.timeout ? (interaction.request.timeout/1000) + 's' : 'N/A'}</div>
+                        <div class="metric">Timeout: ${interaction.request?.timeout ? interaction.request.timeout / 1000 + 's' : 'N/A'}</div>
                         
                         <details>
                             <summary>📝 Full Prompt</summary>
@@ -2571,56 +2612,82 @@ class BenchmarkUI {
                     </div>
                     
                     <!-- Thinking Process -->
-                    ${interaction.detailedLogs?.thinkingProcess?.thinkingContent ? `
+                    ${
+                      interaction.detailedLogs?.thinkingProcess?.thinkingContent
+                        ? `
                     <div class="section thinking-section">
                         <h4>🧠 LLM Thinking Process</h4>
                         <pre>${interaction.detailedLogs.thinkingProcess.thinkingContent}</pre>
                     </div>
-                    ` : ''}
+                    `
+                        : ''
+                    }
                     
                     <!-- Debug Information -->
-                    ${interaction.detailedLogs?.llmRawResponse?.sectionFound ? `
+                    ${
+                      interaction.detailedLogs?.llmRawResponse?.sectionFound
+                        ? `
                     <div class="section debug-section">
                         <h4>🔍 Debug Information</h4>
                         <div class="metric">Response Type: ${interaction.detailedLogs.llmRawResponse.responseType || 'N/A'}</div>
                         <div class="metric">Original Length: ${interaction.detailedLogs.llmRawResponse.responseLength || 'N/A'}</div>
                         <div class="metric">Trimmed Length: ${interaction.detailedLogs.llmRawResponse.trimmedLength || 'N/A'}</div>
                         
-                        ${interaction.detailedLogs.llmRawResponse.hexDump ? `
+                        ${
+                          interaction.detailedLogs.llmRawResponse.hexDump
+                            ? `
                         <details>
                             <summary>🔢 Hex Dump</summary>
                             <pre>${interaction.detailedLogs.llmRawResponse.hexDump}</pre>
                         </details>
-                        ` : ''}
+                        `
+                            : ''
+                        }
                     </div>
-                    ` : ''}
+                    `
+                        : ''
+                    }
                     
                     <!-- Error Information -->
-                    ${interaction.analysis?.isError ? `
+                    ${
+                      interaction.analysis?.isError
+                        ? `
                     <div class="section error-section">
                         <h4>❌ Error Information</h4>
                         <div class="metric">Error Type: ${interaction.analysis.errorType || 'Unknown'}</div>
                         <div class="metric">Error Message: ${interaction.analysis.errorMessage || 'No details'}</div>
                     </div>
-                    ` : ''}
+                    `
+                        : ''
+                    }
                     
                     <!-- Complete Console Logs -->
-                    ${interaction.detailedLogs?.logs ? `
+                    ${
+                      interaction.detailedLogs?.logs
+                        ? `
                     <details>
                         <summary>📜 Complete Console Logs (${interaction.detailedLogs.totalLogs} entries)</summary>
                         <div style="max-height: 400px; overflow-y: auto;">
-                            ${interaction.detailedLogs.logs.map(log => `
+                            ${interaction.detailedLogs.logs
+                              .map(
+                                log => `
                                 <div class="log-entry">
                                     <div style="font-size: 10px; color: #bdc3c7;">[${log.timestamp}]</div>
                                     <pre style="margin: 2px 0; color: #ecf0f1;">${log.message}</pre>
                                 </div>
-                            `).join('')}
+                            `
+                              )
+                              .join('')}
                         </div>
                     </details>
-                    ` : ''}
+                    `
+                        : ''
+                    }
                 </div>
             </div>
-        `).join('')}
+        `
+          )
+          .join('')}
         
         <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
             <h3>📊 Export Information</h3>
@@ -2633,45 +2700,44 @@ class BenchmarkUI {
 </body>
 </html>
         `;
+  }
+
+  /**
+   * Export detailed HTML report
+   */
+  exportDetailedHTMLReport(exportData) {
+    try {
+      const htmlContent = this.generateDetailedHTMLReport(exportData);
+
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'llm-interactions-report-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.html';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      console.log('📤 Detailed HTML report exported');
+    } catch (error) {
+      console.error('Failed to export HTML report:', error);
+    }
+  }
+
+  /**
+   * Generate detailed LLM interaction display for test results
+   */
+  generateLLMInteractionDisplay(testResult) {
+    if (!testResult.llmInteractionData) {
+      return '<div class="llm-interaction-missing">❌ No LLM interaction data available</div>';
     }
 
-    /**
-     * Export detailed HTML report
-     */
-    exportDetailedHTMLReport(exportData) {
-        try {
-            const htmlContent = this.generateDetailedHTMLReport(exportData);
-            
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'llm-interactions-report-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.html';
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            console.log('📤 Detailed HTML report exported');
-            
-        } catch (error) {
-            console.error('Failed to export HTML report:', error);
-        }
-    }
+    const interaction = testResult.llmInteractionData;
+    const requestData = interaction.request || {};
+    const responseData = interaction.response || {};
+    const analysisData = interaction.analysis || {};
 
-    /**
-     * Generate detailed LLM interaction display for test results
-     */
-    generateLLMInteractionDisplay(testResult) {
-        if (!testResult.llmInteractionData) {
-            return '<div class="llm-interaction-missing">❌ No LLM interaction data available</div>';
-        }
-
-        const interaction = testResult.llmInteractionData;
-        const requestData = interaction.request || {};
-        const responseData = interaction.response || {};
-        const analysisData = interaction.analysis || {};
-
-        return `
+    return `
             <div class="llm-interaction-details" style="border: 1px solid #ddd; border-radius: 8px; margin: 10px 0; background: #f9f9f9;">
                 <div class="interaction-header" style="background: #34495e; color: white; padding: 10px; border-radius: 8px 8px 0 0;">
                     <h4 style="margin: 0; font-size: 14px;">🤖 LLM Interaction Details</h4>
@@ -2691,7 +2757,7 @@ class BenchmarkUI {
                             <div style="margin-bottom: 8px;">
                                 <strong>Provider:</strong> ${requestData.provider || 'Not specified'} |
                                 <strong>Model:</strong> ${requestData.model || 'Not specified'} |
-                                <strong>Timeout:</strong> ${requestData.timeout ? (requestData.timeout/1000) + 's' : 'N/A'}
+                                <strong>Timeout:</strong> ${requestData.timeout ? requestData.timeout / 1000 + 's' : 'N/A'}
                             </div>
                             <div style="margin-bottom: 8px;">
                                 <strong>Temperature:</strong> ${requestData.temperature || 'N/A'} |
@@ -2733,12 +2799,17 @@ class BenchmarkUI {
                                 <summary style="cursor: pointer; font-weight: bold; color: #27ae60;">🗨️ Raw Response (Click to expand)</summary>
                                 <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${responseData.rawResponse || 'Not available'}</pre>
                             </details>
-                            ${responseData.processedResponse && responseData.processedResponse !== responseData.rawResponse ? `
+                            ${
+                              responseData.processedResponse &&
+                              responseData.processedResponse !== responseData.rawResponse
+                                ? `
                             <details style="margin-top: 10px;">
                                 <summary style="cursor: pointer; font-weight: bold; color: #f39c12;">⚙️ Processed Response (Click to expand)</summary>
                                 <pre style="background: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; white-space: pre-wrap;">${responseData.processedResponse}</pre>
                             </details>
-                            ` : ''}
+                            `
+                                : ''
+                            }
                             
                             <!-- ENHANCED: Add detailed debug information from Console logs -->
                             ${interaction.detailedLogs ? this.generateDetailedLogsDisplay(interaction.detailedLogs) : ''}
@@ -2754,66 +2825,76 @@ class BenchmarkUI {
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px;">
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getConfidenceColor(analysisData.confidence)};">
-                                        ${(analysisData.confidence !== null && analysisData.confidence !== undefined) ? analysisData.confidence.toFixed(1) : 'N/A'}
+                                        ${analysisData.confidence !== null && analysisData.confidence !== undefined ? analysisData.confidence.toFixed(1) : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Confidence</div>
                                 </div>
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getComplexityColor(analysisData.complexity)};">
-                                        ${(analysisData.complexity !== null && analysisData.complexity !== undefined) ? analysisData.complexity.toFixed(1) : 'N/A'}
+                                        ${analysisData.complexity !== null && analysisData.complexity !== undefined ? analysisData.complexity.toFixed(1) : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Complexity</div>
                                 </div>
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getAmbiguityColor(analysisData.ambiguity)};">
-                                        ${(analysisData.ambiguity !== null && analysisData.ambiguity !== undefined) ? analysisData.ambiguity.toFixed(1) : 'N/A'}
+                                        ${analysisData.ambiguity !== null && analysisData.ambiguity !== undefined ? analysisData.ambiguity.toFixed(1) : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Ambiguity</div>
                                 </div>
                                 <div style="text-align: center; padding: 8px; background: #ecf0f1; border-radius: 4px;">
                                     <div style="font-size: 16px; font-weight: bold; color: ${BenchmarkUI.getRelevanceColor(analysisData.contextRelevance)};">
-                                        ${(analysisData.contextRelevance !== null && analysisData.contextRelevance !== undefined) ? analysisData.contextRelevance.toFixed(1) : 'N/A'}
+                                        ${analysisData.contextRelevance !== null && analysisData.contextRelevance !== undefined ? analysisData.contextRelevance.toFixed(1) : 'N/A'}
                                     </div>
                                     <div style="font-size: 11px; color: #7f8c8d;">Relevance</div>
                                 </div>
                             </div>
-                            ${analysisData.isError ? `
+                            ${
+                              analysisData.isError
+                                ? `
                             <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 8px; margin-top: 8px;">
                                 <strong style="color: #721c24;">❌ Error Detected:</strong> 
                                 <span style="color: #721c24;">${analysisData.errorType || 'Unknown'} - ${analysisData.errorMessage || 'No details'}</span>
                             </div>
-                            ` : ''}
+                            `
+                                : ''
+                            }
                         </div>
                     </div>
                 </div>
             </div>
         `;
+  }
+
+  /**
+   * Generate detailed logs display from captured Console output
+   */
+  generateDetailedLogsDisplay(detailedLogs) {
+    if (!detailedLogs || !detailedLogs.logs) {
+      return '';
     }
 
-    /**
-     * Generate detailed logs display from captured Console output
-     */
-    generateDetailedLogsDisplay(detailedLogs) {
-        if (!detailedLogs || !detailedLogs.logs) {
-            return '';
-        }
-
-        return `
+    return `
             <div style="margin-top: 15px; border-top: 1px solid #ddd; padding-top: 15px;">
                 <h6 style="color: #2c3e50; margin-bottom: 10px;">🔍 Detailed Console Logs (${detailedLogs.totalLogs} entries)</h6>
                 
                 <!-- Thinking Process -->
-                ${detailedLogs.thinkingProcess?.thinkingContent ? `
+                ${
+                  detailedLogs.thinkingProcess?.thinkingContent
+                    ? `
                 <details style="margin-bottom: 10px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #9b59b6;">🧠 LLM Thinking Process (Click to expand)</summary>
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
                         <pre style="background: #fff; padding: 10px; border-radius: 4px; font-size: 11px; white-space: pre-wrap; border: 1px solid #e9ecef;">${detailedLogs.thinkingProcess.thinkingContent}</pre>
                     </div>
                 </details>
-                ` : ''}
+                `
+                    : ''
+                }
                 
                 <!-- Raw Response Debug Info -->
-                ${detailedLogs.llmRawResponse?.sectionFound ? `
+                ${
+                  detailedLogs.llmRawResponse?.sectionFound
+                    ? `
                 <details style="margin-bottom: 10px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #17a2b8;">📊 Raw Response Debug Info (Click to expand)</summary>
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
@@ -2823,418 +2904,498 @@ class BenchmarkUI {
                             <div><strong>Empty:</strong> ${detailedLogs.llmRawResponse.isEmpty || 'N/A'}</div>
                             <div><strong>Undefined:</strong> ${detailedLogs.llmRawResponse.isUndefined || 'N/A'}</div>
                         </div>
-                        ${detailedLogs.llmRawResponse.firstChars ? `
+                        ${
+                          detailedLogs.llmRawResponse.firstChars
+                            ? `
                         <div style="margin-bottom: 8px;">
                             <strong>First 100 chars:</strong>
                             <pre style="background: #fff; padding: 8px; border-radius: 4px; font-size: 10px; border: 1px solid #e9ecef;">${detailedLogs.llmRawResponse.firstChars}</pre>
                         </div>
-                        ` : ''}
-                        ${detailedLogs.llmRawResponse.hexDump ? `
+                        `
+                            : ''
+                        }
+                        ${
+                          detailedLogs.llmRawResponse.hexDump
+                            ? `
                         <div style="margin-bottom: 8px;">
                             <strong>Hex Dump (first 50 chars):</strong>
                             <pre style="background: #fff; padding: 8px; border-radius: 4px; font-size: 10px; font-family: monospace; border: 1px solid #e9ecef;">${detailedLogs.llmRawResponse.hexDump}</pre>
                         </div>
-                        ` : ''}
+                        `
+                            : ''
+                        }
                     </div>
                 </details>
-                ` : ''}
+                `
+                    : ''
+                }
                 
                 <!-- Tool Call History -->
-                ${detailedLogs.toolCallHistory?.toolCallRounds.length > 0 ? `
+                ${
+                  detailedLogs.toolCallHistory?.toolCallRounds.length > 0
+                    ? `
                 <details style="margin-bottom: 10px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #28a745;">🔧 Function Call Rounds (Click to expand)</summary>
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
-                        ${detailedLogs.toolCallHistory.toolCallRounds.map(round => `
+                        ${detailedLogs.toolCallHistory.toolCallRounds
+                          .map(
+                            round => `
                             <div style="background: #fff; padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 3px solid #28a745;">
                                 <div style="font-weight: bold; margin-bottom: 6px;">
                                     <strong>Round ${round.current}/${round.total}</strong> - ${round.timestamp}
                                 </div>
-                                ${round.tools && round.tools.length > 0 ? `
+                                ${
+                                  round.tools && round.tools.length > 0
+                                    ? `
                                 <div style="margin-left: 15px; padding: 6px; background: #e7f5e7; border-radius: 3px;">
                                     <strong style="color: #28a745;">🎯 Tools Called:</strong>
                                     <div style="margin-top: 4px;">
-                                        ${round.tools.map(tool => `
+                                        ${round.tools
+                                          .map(
+                                            tool => `
                                             <span style="display: inline-block; background: #28a745; color: white; padding: 2px 8px; margin: 2px; border-radius: 3px; font-size: 11px;">
                                                 ${tool}
                                             </span>
-                                        `).join('')}
+                                        `
+                                          )
+                                          .join('')}
                                     </div>
                                 </div>
-                                ` : `
+                                `
+                                    : `
                                 <div style="margin-left: 15px; padding: 6px; background: #fff3cd; border-radius: 3px;">
                                     <span style="color: #856404; font-size: 11px;">⚠️ No tools detected in this round</span>
                                 </div>
-                                `}
+                                `
+                                }
                             </div>
-                        `).join('')}
+                        `
+                          )
+                          .join('')}
                         
-                        ${detailedLogs.toolCallHistory.skippedTools.length > 0 ? `
+                        ${
+                          detailedLogs.toolCallHistory.skippedTools.length > 0
+                            ? `
                         <div style="margin-top: 10px;">
                             <strong>Skipped Tools:</strong> ${detailedLogs.toolCallHistory.skippedTools.join(', ')}
                         </div>
-                        ` : ''}
+                        `
+                            : ''
+                        }
                     </div>
                 </details>
-                ` : ''}
+                `
+                    : ''
+                }
                 
                 <!-- Conversation History Debug -->
-                ${detailedLogs.conversationHistory?.historyEntries.length > 0 ? `
+                ${
+                  detailedLogs.conversationHistory?.historyEntries.length > 0
+                    ? `
                 <details style="margin-bottom: 10px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #6f42c1;">💬 Conversation History Debug (Click to expand)</summary>
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
                         <div style="margin-bottom: 10px;"><strong>Total History Length:</strong> ${detailedLogs.conversationHistory.historyLength || 'N/A'}</div>
-                        ${detailedLogs.conversationHistory.historyEntries.map((entry, index) => `
+                        ${detailedLogs.conversationHistory.historyEntries
+                          .map(
+                            (entry, index) => `
                             <div style="background: #fff; padding: 8px; margin: 5px 0; border-radius: 4px; border-left: 3px solid ${entry.role === 'user' ? '#007bff' : entry.role === 'assistant' ? '#28a745' : '#6c757d'};">
                                 <strong>History[${entry.index}]</strong> - Role: ${entry.role}, Length: ${entry.contentLength} chars
-                                ${detailedLogs.conversationHistory.contentPreviews[index] ? `
+                                ${
+                                  detailedLogs.conversationHistory.contentPreviews[index]
+                                    ? `
                                 <div style="font-size: 10px; color: #6c757d; margin-top: 4px; font-style: italic;">
                                     Preview: ${detailedLogs.conversationHistory.contentPreviews[index]}
                                 </div>
-                                ` : ''}
+                                `
+                                    : ''
+                                }
                             </div>
-                        `).join('')}
+                        `
+                          )
+                          .join('')}
                     </div>
                 </details>
-                ` : ''}
+                `
+                    : ''
+                }
                 
                 <!-- Parse Debug Information -->
-                ${detailedLogs.parseDebugInfo?.parseSteps.length > 0 ? `
+                ${
+                  detailedLogs.parseDebugInfo?.parseSteps.length > 0
+                    ? `
                 <details style="margin-bottom: 10px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #dc3545;">🔍 Response Parse Debug (Click to expand)</summary>
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-top: 8px;">
                         <!-- SONG'S REQUEST: Show detected tools prominently -->
-                        ${detailedLogs.parseDebugInfo.detectedTools?.length > 0 ? `
+                        ${
+                          detailedLogs.parseDebugInfo.detectedTools?.length > 0
+                            ? `
                         <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; padding: 10px; margin-bottom: 12px;">
                             <strong style="color: #155724;">🎯 DETECTED TOOLS (${detailedLogs.parseDebugInfo.detectedTools.length}):</strong>
                             <div style="margin-top: 8px;">
-                                ${detailedLogs.parseDebugInfo.detectedTools.map(tool => `
+                                ${detailedLogs.parseDebugInfo.detectedTools
+                                  .map(
+                                    tool => `
                                     <div style="background: #fff; padding: 6px; margin: 3px 0; border-radius: 3px; font-size: 11px; border-left: 3px solid #28a745;">
                                         <strong style="color: #28a745;">📋 ${tool.tool}</strong> 
                                         <span style="color: #6c757d;">(via ${tool.method})</span>
                                         ${tool.parameters ? `<br><span style="font-size: 10px; color: #495057;">Parameters: ${JSON.stringify(tool.parameters)}</span>` : ''}
                                     </div>
-                                `).join('')}
+                                `
+                                  )
+                                  .join('')}
                             </div>
                         </div>
-                        ` : `
+                        `
+                            : `
                         <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 10px; margin-bottom: 12px;">
                             <strong style="color: #721c24;">⚠️ NO TOOLS DETECTED</strong>
                             <div style="font-size: 11px; color: #721c24; margin-top: 4px;">No valid tool calls were found in the parsing process</div>
                         </div>
-                        `}
+                        `
+                        }
                         
                         <!-- Parse Steps -->
                         <div style="margin-top: 8px;">
                             <strong style="color: #495057;">Parse Steps:</strong>
-                            ${detailedLogs.parseDebugInfo.parseSteps.map(step => `
+                            ${detailedLogs.parseDebugInfo.parseSteps
+                              .map(
+                                step => `
                                 <div style="background: #fff; padding: 6px; margin: 3px 0; border-radius: 3px; font-size: 10px; font-family: monospace;">
                                     ${step}
                                 </div>
-                            `).join('')}
+                            `
+                              )
+                              .join('')}
                         </div>
                     </div>
                 </details>
-                ` : ''}
+                `
+                    : ''
+                }
                 
                 <!-- Complete Console Log Dump -->
                 <details style="margin-bottom: 10px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #fd7e14;">📜 Complete Console Log Dump (Click to expand)</summary>
                     <div style="background: #2c3e50; color: #ecf0f1; border-radius: 4px; padding: 12px; margin-top: 8px; max-height: 400px; overflow-y: auto;">
-                        ${detailedLogs.logs.map(log => `
+                        ${detailedLogs.logs
+                          .map(
+                            log => `
                             <div style="margin-bottom: 8px; padding: 6px; background: rgba(255,255,255,0.1); border-radius: 3px;">
                                 <div style="font-size: 10px; color: #bdc3c7;">[${log.timestamp}]</div>
                                 <pre style="margin: 4px 0; font-size: 11px; white-space: pre-wrap;">${log.message}</pre>
                             </div>
-                        `).join('')}
+                        `
+                          )
+                          .join('')}
                     </div>
                 </details>
             </div>
         `;
+  }
+
+  /**
+   * Get color for confidence score (5-point scale)
+   */
+  static getConfidenceColor(confidence) {
+    if (confidence === null || confidence === undefined) return '#95a5a6';
+    if (confidence >= 4.0) return '#27ae60'; // High confidence (4.0-5.0)
+    if (confidence >= 3.0) return '#f39c12'; // Medium confidence (3.0-3.9)
+    return '#e74c3c'; // Low confidence (0-2.9)
+  }
+
+  /**
+   * Get color for complexity score (5-point scale)
+   */
+  static getComplexityColor(complexity) {
+    if (complexity === null || complexity === undefined) return '#95a5a6';
+    if (complexity >= 7.0) return '#e74c3c'; // High complexity (7.0-10.0)
+    if (complexity >= 4.0) return '#f39c12'; // Medium complexity (4.0-6.9)
+    return '#27ae60'; // Low complexity (0-3.9)
+  }
+
+  /**
+   * Get color for ambiguity score (5-point scale)
+   */
+  static getAmbiguityColor(ambiguity) {
+    if (ambiguity === null || ambiguity === undefined) return '#95a5a6';
+    if (ambiguity >= 2.5) return '#e74c3c'; // High ambiguity (2.5-5.0)
+    if (ambiguity >= 1.25) return '#f39c12'; // Medium ambiguity (1.25-2.4)
+    return '#27ae60'; // Low ambiguity (0-1.24)
+  }
+
+  /**
+   * Get color for relevance score (5-point scale)
+   */
+  static getRelevanceColor(relevance) {
+    if (relevance === null || relevance === undefined) return '#95a5a6';
+    if (relevance >= 4.0) return '#27ae60'; // High relevance (4.0-5.0)
+    if (relevance >= 3.0) return '#f39c12'; // Medium relevance (3.0-3.9)
+    return '#e74c3c'; // Low relevance (0-2.9)
+  }
+
+  /**
+   * Get benchmark configuration from UI
+   */
+  getBenchmarkConfiguration() {
+    const selectedSuites = [];
+    document.querySelectorAll('input[id^="suite-"]:checked').forEach(cb => {
+      selectedSuites.push(cb.id.replace('suite-', ''));
+    });
+
+    const timeoutValue = parseInt(document.getElementById('testTimeout').value);
+
+    const config = {
+      suites: selectedSuites,
+      generateReport: document.getElementById('generateReport').checked,
+      includeCharts: document.getElementById('includeCharts').checked,
+      includeRawData: document.getElementById('includeRawData')?.checked || false,
+      includeLLMInteractions: document.getElementById('includeLLMInteractions')?.checked !== false, // Default to true
+      stopOnError: document.getElementById('stopOnError').checked,
+      verboseLogging: document.getElementById('verboseLogging')?.checked || false,
+      timeout: timeoutValue === -1 ? null : timeoutValue, // null means use individual test timeouts
+      useIndividualTimeouts: timeoutValue === -1, // Flag to indicate individual timeout mode
+      testDelay: parseInt(document.getElementById('testDelay')?.value || '60000'), // Delay every 10 tests to avoid rate limits
+      concurrency: parseInt(document.getElementById('concurrency')?.value || '1'),
+      defaultDirectory: this.getDefaultDirectory(), // CRITICAL: Include default directory
+      onProgress: (progress, suiteId, suiteResult) => {
+        this.updateMainWindowProgress(progress, suiteId, suiteResult);
+      },
+      onTestProgress: (progress, testId, testResult, suiteId) => {
+        this.updateMainWindowTestProgress(progress, testId, testResult, suiteId);
+      },
+    };
+
+    console.log('🔧 [BenchmarkUI] Generated benchmark configuration:', {
+      suites: config.suites,
+      defaultDirectory: config.defaultDirectory,
+      timeout: config.timeout,
+      useIndividualTimeouts: config.useIndividualTimeouts,
+      testDelay: config.testDelay,
+      otherOptions: Object.keys(config).filter(
+        key =>
+          ![
+            'suites',
+            'defaultDirectory',
+            'timeout',
+            'useIndividualTimeouts',
+            'testDelay',
+            'onProgress',
+            'onTestProgress',
+          ].includes(key)
+      ),
+    });
+
+    return config;
+  }
+
+  /**
+   * Update progress in main window with enhanced test-based tracking
+   */
+  updateMainWindowProgress(progress, suiteId, suiteResult) {
+    const progressFill = document.getElementById('progressFill');
+    const currentSuite = document.getElementById('currentSuite');
+
+    if (progressFill) {
+      const percentage = Math.min(100, Math.max(0, progress * 100));
+      progressFill.style.width = percentage + '%';
+
+      // Update percentage display
+      const progressPercentage = document.getElementById('progressPercentage');
+      if (progressPercentage) {
+        progressPercentage.textContent = `${percentage.toFixed(1)}%`;
+      }
+
+      console.log(`📊 [UI Progress] Updated progress bar to ${percentage.toFixed(1)}%`);
     }
 
-    /**
-     * Get color for confidence score (5-point scale)
-     */
-    static getConfidenceColor(confidence) {
-        if (confidence === null || confidence === undefined) return '#95a5a6';
-        if (confidence >= 4.0) return '#27ae60'; // High confidence (4.0-5.0)
-        if (confidence >= 3.0) return '#f39c12'; // Medium confidence (3.0-3.9)
-        return '#e74c3c'; // Low confidence (0-2.9)
+    // Always update current suite when provided
+    if (currentSuite && suiteId) {
+      currentSuite.textContent = suiteId || '-';
+      console.log(`🏆 [UI Suite Update] Current suite updated to: ${suiteId}`);
     }
 
-    /**
-     * Get color for complexity score (5-point scale)
-     */
-    static getComplexityColor(complexity) {
-        if (complexity === null || complexity === undefined) return '#95a5a6';
-        if (complexity >= 7.0) return '#e74c3c'; // High complexity (7.0-10.0)
-        if (complexity >= 4.0) return '#f39c12'; // Medium complexity (4.0-6.9)
-        return '#27ae60'; // Low complexity (0-3.9)
+    // Update cumulative test counts when suite completes (suiteResult is provided)
+    if (suiteResult) {
+      const completedElement = document.getElementById('completedTests');
+      const passedElement = document.getElementById('passedTests');
+      const failedElement = document.getElementById('failedTests');
+
+      const currentCompleted = parseInt(completedElement?.textContent || '0');
+      const currentPassed = parseInt(passedElement?.textContent || '0');
+      const currentFailed = parseInt(failedElement?.textContent || '0');
+
+      const newCompleted = currentCompleted + suiteResult.stats.totalTests;
+      const newPassed = currentPassed + suiteResult.stats.passedTests;
+      const newFailed = currentFailed + suiteResult.stats.failedTests;
+
+      if (completedElement) completedElement.textContent = newCompleted;
+      if (passedElement) passedElement.textContent = newPassed;
+      if (failedElement) failedElement.textContent = newFailed;
+
+      console.log(
+        `✅ [UI Suite Complete] Suite ${suiteId} completed - Updated totals: ${newCompleted} completed, ${newPassed} passed, ${newFailed} failed`
+      );
+    } else {
+      // Suite is starting - no stats to update yet
+      console.log(`🚀 [UI Suite Start] Suite ${suiteId} is starting...`);
     }
 
-    /**
-     * Get color for ambiguity score (5-point scale)
-     */
-    static getAmbiguityColor(ambiguity) {
-        if (ambiguity === null || ambiguity === undefined) return '#95a5a6';
-        if (ambiguity >= 2.5) return '#e74c3c'; // High ambiguity (2.5-5.0)
-        if (ambiguity >= 1.25) return '#f39c12'; // Medium ambiguity (1.25-2.4)
-        return '#27ae60'; // Low ambiguity (0-1.24)
+    // Add total test count display if available
+    this.updateTotalTestDisplay();
+  }
+
+  /**
+   * Update test progress in main window with enhanced real-time tracking
+   */
+  updateMainWindowTestProgress(progress, testId, testResult, suiteId) {
+    const currentTest = document.getElementById('currentTest');
+    const progressFill = document.getElementById('progressFill');
+
+    // Always update current test name when provided
+    if (currentTest && testId) {
+      currentTest.textContent = testId || '-';
+      console.log(`🎯 [UI Test Update] Current test updated to: ${testId}`);
     }
 
-    /**
-     * Get color for relevance score (5-point scale)
-     */
-    static getRelevanceColor(relevance) {
-        if (relevance === null || relevance === undefined) return '#95a5a6';
-        if (relevance >= 4.0) return '#27ae60'; // High relevance (4.0-5.0)
-        if (relevance >= 3.0) return '#f39c12'; // Medium relevance (3.0-3.9)
-        return '#e74c3c'; // Low relevance (0-2.9)
+    // Update progress bar with real-time test progress
+    if (progressFill && typeof progress === 'number') {
+      const percentage = Math.min(100, Math.max(0, progress * 100));
+      progressFill.style.width = percentage + '%';
+
+      // Update percentage display
+      const progressPercentage = document.getElementById('progressPercentage');
+      if (progressPercentage) {
+        progressPercentage.textContent = `${percentage.toFixed(1)}%`;
+      }
+
+      console.log(`📊 [UI Test Progress] Real-time progress: ${percentage.toFixed(1)}% (Test: ${testId})`);
     }
 
-    /**
-     * Get benchmark configuration from UI
-     */
-    getBenchmarkConfiguration() {
-        const selectedSuites = [];
-        document.querySelectorAll('input[id^="suite-"]:checked').forEach(cb => {
-            selectedSuites.push(cb.id.replace('suite-', ''));
-        });
-
-        const timeoutValue = parseInt(document.getElementById('testTimeout').value);
-        
-        const config = {
-            suites: selectedSuites,
-            generateReport: document.getElementById('generateReport').checked,
-            includeCharts: document.getElementById('includeCharts').checked,
-            includeRawData: document.getElementById('includeRawData')?.checked || false,
-            includeLLMInteractions: document.getElementById('includeLLMInteractions')?.checked !== false, // Default to true
-            stopOnError: document.getElementById('stopOnError').checked,
-            verboseLogging: document.getElementById('verboseLogging')?.checked || false,
-            timeout: timeoutValue === -1 ? null : timeoutValue, // null means use individual test timeouts
-            useIndividualTimeouts: timeoutValue === -1, // Flag to indicate individual timeout mode
-            testDelay: parseInt(document.getElementById('testDelay')?.value || '60000'), // Delay every 10 tests to avoid rate limits
-            concurrency: parseInt(document.getElementById('concurrency')?.value || '1'),
-            defaultDirectory: this.getDefaultDirectory(), // CRITICAL: Include default directory
-            onProgress: (progress, suiteId, suiteResult) => {
-                this.updateMainWindowProgress(progress, suiteId, suiteResult);
-            },
-            onTestProgress: (progress, testId, testResult, suiteId) => {
-                this.updateMainWindowTestProgress(progress, testId, testResult, suiteId);
-            }
-        };
-        
-        console.log('🔧 [BenchmarkUI] Generated benchmark configuration:', {
-            suites: config.suites,
-            defaultDirectory: config.defaultDirectory,
-            timeout: config.timeout,
-            useIndividualTimeouts: config.useIndividualTimeouts,
-            testDelay: config.testDelay,
-            otherOptions: Object.keys(config).filter(key => !['suites', 'defaultDirectory', 'timeout', 'useIndividualTimeouts', 'testDelay', 'onProgress', 'onTestProgress'].includes(key))
-        });
-        
-        return config;
+    // Update elapsed time
+    const elapsedTime = document.getElementById('elapsedTime');
+    if (elapsedTime && this.startTime) {
+      const elapsed = Date.now() - this.startTime;
+      const minutes = Math.floor(elapsed / 60000);
+      const seconds = Math.floor((elapsed % 60000) / 1000);
+      elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    /**
-     * Update progress in main window with enhanced test-based tracking
-     */
-    updateMainWindowProgress(progress, suiteId, suiteResult) {
-        const progressFill = document.getElementById('progressFill');
-        const currentSuite = document.getElementById('currentSuite');
-        
-        if (progressFill) {
-            const percentage = Math.min(100, Math.max(0, progress * 100));
-            progressFill.style.width = percentage + '%';
-            
-            // Update percentage display
-            const progressPercentage = document.getElementById('progressPercentage');
-            if (progressPercentage) {
-                progressPercentage.textContent = `${percentage.toFixed(1)}%`;
-            }
-            
-            console.log(`📊 [UI Progress] Updated progress bar to ${percentage.toFixed(1)}%`);
-        }
-        
-        // Always update current suite when provided
-        if (currentSuite && suiteId) {
-            currentSuite.textContent = suiteId || '-';
-            console.log(`🏆 [UI Suite Update] Current suite updated to: ${suiteId}`);
-        }
-        
-        // Update cumulative test counts when suite completes (suiteResult is provided)
-        if (suiteResult) {
-            const completedElement = document.getElementById('completedTests');
-            const passedElement = document.getElementById('passedTests');
-            const failedElement = document.getElementById('failedTests');
-            
-            const currentCompleted = parseInt(completedElement?.textContent || '0');
-            const currentPassed = parseInt(passedElement?.textContent || '0');
-            const currentFailed = parseInt(failedElement?.textContent || '0');
-            
-            const newCompleted = currentCompleted + suiteResult.stats.totalTests;
-            const newPassed = currentPassed + suiteResult.stats.passedTests;
-            const newFailed = currentFailed + suiteResult.stats.failedTests;
-            
-            if (completedElement) completedElement.textContent = newCompleted;
-            if (passedElement) passedElement.textContent = newPassed;
-            if (failedElement) failedElement.textContent = newFailed;
-            
-            console.log(`✅ [UI Suite Complete] Suite ${suiteId} completed - Updated totals: ${newCompleted} completed, ${newPassed} passed, ${newFailed} failed`);
-        } else {
-            // Suite is starting - no stats to update yet
-            console.log(`🚀 [UI Suite Start] Suite ${suiteId} is starting...`);
-        }
-        
-        // Add total test count display if available
-        this.updateTotalTestDisplay();
+    // Update individual test completion count ONLY when test completes (testResult is not null)
+    if (testResult && testResult.status === 'completed') {
+      this.updateIndividualTestCount(testResult);
+      console.log(
+        `✅ [UI Test Complete] Test ${testId} completed with status: ${testResult.success ? 'PASS' : 'FAIL'}`
+      );
+    } else if (testResult === null) {
+      // Test is starting - this is when we update the current test name
+      console.log(`🚀 [UI Test Start] Test ${testId} is starting...`);
+    }
+  }
+
+  /**
+   * Update individual test completion counts in real-time
+   */
+  updateIndividualTestCount(testResult) {
+    const completedElement = document.getElementById('completedTests');
+    const passedElement = document.getElementById('passedTests');
+    const failedElement = document.getElementById('failedTests');
+
+    if (completedElement) {
+      const current = parseInt(completedElement.textContent || '0');
+      completedElement.textContent = current + 1;
     }
 
-    /**
-     * Update test progress in main window with enhanced real-time tracking
-     */
-    updateMainWindowTestProgress(progress, testId, testResult, suiteId) {
-        const currentTest = document.getElementById('currentTest');
-        const progressFill = document.getElementById('progressFill');
-        
-        // Always update current test name when provided
-        if (currentTest && testId) {
-            currentTest.textContent = testId || '-';
-            console.log(`🎯 [UI Test Update] Current test updated to: ${testId}`);
-        }
-        
-        // Update progress bar with real-time test progress
-        if (progressFill && typeof progress === 'number') {
-            const percentage = Math.min(100, Math.max(0, progress * 100));
-            progressFill.style.width = percentage + '%';
-            
-            // Update percentage display
-            const progressPercentage = document.getElementById('progressPercentage');
-            if (progressPercentage) {
-                progressPercentage.textContent = `${percentage.toFixed(1)}%`;
-            }
-            
-            console.log(`📊 [UI Test Progress] Real-time progress: ${percentage.toFixed(1)}% (Test: ${testId})`);
-        }
-        
-        // Update elapsed time
-        const elapsedTime = document.getElementById('elapsedTime');
-        if (elapsedTime && this.startTime) {
-            const elapsed = Date.now() - this.startTime;
-            const minutes = Math.floor(elapsed / 60000);
-            const seconds = Math.floor((elapsed % 60000) / 1000);
-            elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-        
-        // Update individual test completion count ONLY when test completes (testResult is not null)
-        if (testResult && testResult.status === 'completed') {
-            this.updateIndividualTestCount(testResult);
-            console.log(`✅ [UI Test Complete] Test ${testId} completed with status: ${testResult.success ? 'PASS' : 'FAIL'}`);
-        } else if (testResult === null) {
-            // Test is starting - this is when we update the current test name
-            console.log(`🚀 [UI Test Start] Test ${testId} is starting...`);
-        }
+    if (testResult.success && passedElement) {
+      const current = parseInt(passedElement.textContent || '0');
+      passedElement.textContent = current + 1;
+    } else if (!testResult.success && failedElement) {
+      const current = parseInt(failedElement.textContent || '0');
+      failedElement.textContent = current + 1;
     }
-    
-    /**
-     * Update individual test completion counts in real-time
-     */
-    updateIndividualTestCount(testResult) {
+  }
+
+  /**
+   * Update total test count display for better progress context
+   */
+  updateTotalTestDisplay() {
+    // Try to get total test count from benchmark framework
+    if (this.benchmarkManager && this.benchmarkManager.framework) {
+      const framework = this.benchmarkManager.framework;
+      const totalTests = framework.totalTestCount || framework.getTotalTestCount();
+
+      if (totalTests > 0) {
+        // Add total count display to completed tests if not already present
         const completedElement = document.getElementById('completedTests');
-        const passedElement = document.getElementById('passedTests');
-        const failedElement = document.getElementById('failedTests');
-        
-        if (completedElement) {
-            const current = parseInt(completedElement.textContent || '0');
-            completedElement.textContent = current + 1;
+        if (completedElement && !completedElement.textContent.includes('/')) {
+          const currentCompleted = parseInt(completedElement.textContent || '0');
+          completedElement.textContent = `${currentCompleted}/${totalTests}`;
         }
-        
-        if (testResult.success && passedElement) {
-            const current = parseInt(passedElement.textContent || '0');
-            passedElement.textContent = current + 1;
-        } else if (!testResult.success && failedElement) {
-            const current = parseInt(failedElement.textContent || '0');
-            failedElement.textContent = current + 1;
-        }
-    }
-    
-    /**
-     * Update total test count display for better progress context
-     */
-    updateTotalTestDisplay() {
-        // Try to get total test count from benchmark framework
-        if (this.benchmarkManager && this.benchmarkManager.framework) {
-            const framework = this.benchmarkManager.framework;
-            const totalTests = framework.totalTestCount || framework.getTotalTestCount();
-            
-            if (totalTests > 0) {
-                // Add total count display to completed tests if not already present
-                const completedElement = document.getElementById('completedTests');
-                if (completedElement && !completedElement.textContent.includes('/')) {
-                    const currentCompleted = parseInt(completedElement.textContent || '0');
-                    completedElement.textContent = `${currentCompleted}/${totalTests}`;
-                }
-                
-        console.log(`📊 [UI Total] Total tests to run: ${totalTests}`);
-            }
-        }
-    }
-    
-    /**
-     * Reset progress counters for new benchmark run
-     */
-    resetProgressCounters() {
-        const progressFill = document.getElementById('progressFill');
-        const currentSuite = document.getElementById('currentSuite');
-        const currentTest = document.getElementById('currentTest');
-        const completedTests = document.getElementById('completedTests');
-        const passedTests = document.getElementById('passedTests');
-        const failedTests = document.getElementById('failedTests');
-        const elapsedTime = document.getElementById('elapsedTime');
-        
-        if (progressFill) progressFill.style.width = '0%';
-        if (currentSuite) currentSuite.textContent = '-';
-        if (currentTest) currentTest.textContent = '-';
-        if (completedTests) completedTests.textContent = '0';
-        if (passedTests) passedTests.textContent = '0';
-        if (failedTests) failedTests.textContent = '0';
-        if (elapsedTime) elapsedTime.textContent = '00:00'; // Reset elapsed time
-        
-        // Reset percentage display
-        const progressPercentage = document.getElementById('progressPercentage');
-        if (progressPercentage) progressPercentage.textContent = '0%';
-        
-        // Reset startTime to current time
-        this.startTime = Date.now();
-        
-        console.log('🔄 [UI Reset] Progress counters reset for new benchmark run, startTime set to:', new Date(this.startTime).toLocaleTimeString());
-    }
 
-    /**
-     * Display results in main window with enhanced LLM interaction details
-     */
-    displayMainWindowResults(results) {
-        const resultsSection = document.getElementById('resultsSection');
-        const resultsSummary = document.getElementById('resultsSummary');
-        const resultsContent = document.getElementById('resultsContent');
-        
-        if (resultsSection) resultsSection.style.display = 'block';
-        
-        const stats = results.overallStats;
-        
-        // Calculate total delay time across all suites
-        let totalDelayTime = 0;
-        results.testSuiteResults.forEach(suite => {
-            totalDelayTime += (suite.delayTime || 0);
-        });
-        
-        // Calculate actual test execution time (excluding delays)
-        const totalDuration = results.duration;
-        const actualDuration = totalDuration - totalDelayTime;
-        
-        // Display summary cards
-        if (resultsSummary) {
-            resultsSummary.innerHTML = `
+        console.log(`📊 [UI Total] Total tests to run: ${totalTests}`);
+      }
+    }
+  }
+
+  /**
+   * Reset progress counters for new benchmark run
+   */
+  resetProgressCounters() {
+    const progressFill = document.getElementById('progressFill');
+    const currentSuite = document.getElementById('currentSuite');
+    const currentTest = document.getElementById('currentTest');
+    const completedTests = document.getElementById('completedTests');
+    const passedTests = document.getElementById('passedTests');
+    const failedTests = document.getElementById('failedTests');
+    const elapsedTime = document.getElementById('elapsedTime');
+
+    if (progressFill) progressFill.style.width = '0%';
+    if (currentSuite) currentSuite.textContent = '-';
+    if (currentTest) currentTest.textContent = '-';
+    if (completedTests) completedTests.textContent = '0';
+    if (passedTests) passedTests.textContent = '0';
+    if (failedTests) failedTests.textContent = '0';
+    if (elapsedTime) elapsedTime.textContent = '00:00'; // Reset elapsed time
+
+    // Reset percentage display
+    const progressPercentage = document.getElementById('progressPercentage');
+    if (progressPercentage) progressPercentage.textContent = '0%';
+
+    // Reset startTime to current time
+    this.startTime = Date.now();
+
+    console.log(
+      '🔄 [UI Reset] Progress counters reset for new benchmark run, startTime set to:',
+      new Date(this.startTime).toLocaleTimeString()
+    );
+  }
+
+  /**
+   * Display results in main window with enhanced LLM interaction details
+   */
+  displayMainWindowResults(results) {
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsSummary = document.getElementById('resultsSummary');
+    const resultsContent = document.getElementById('resultsContent');
+
+    if (resultsSection) resultsSection.style.display = 'block';
+
+    const stats = results.overallStats;
+
+    // Calculate total delay time across all suites
+    let totalDelayTime = 0;
+    results.testSuiteResults.forEach(suite => {
+      totalDelayTime += suite.delayTime || 0;
+    });
+
+    // Calculate actual test execution time (excluding delays)
+    const totalDuration = results.duration;
+    const actualDuration = totalDuration - totalDelayTime;
+
+    // Display summary cards
+    if (resultsSummary) {
+      resultsSummary.innerHTML = `
                 <div class="summary-card">
                     <h3>Overall Success Rate</h3>
                     <div class="value">${stats.overallSuccessRate.toFixed(1)}</div>
@@ -3260,34 +3421,42 @@ class BenchmarkUI {
                     <div class="value">${Math.round(actualDuration / 1000)}</div>
                     <div class="unit">seconds</div>
                 </div>
-                ${totalDelayTime > 0 ? `
+                ${
+                  totalDelayTime > 0
+                    ? `
                 <div class="summary-card">
                     <h3>Batch Delays</h3>
                     <div class="value">${Math.round(totalDelayTime / 1000)}</div>
                     <div class="unit">seconds</div>
                 </div>
-                ` : ''}
+                `
+                    : ''
+                }
             `;
-        }
-        
-        // Display detailed results
-        if (resultsContent) {
-            resultsContent.innerHTML = `
+    }
+
+    // Display detailed results
+    if (resultsContent) {
+      resultsContent.innerHTML = `
                 <h3 style="color: #2c3e50; margin-bottom: 15px;">📋 Detailed Results</h3>
-                ${results.testSuiteResults.map(suite => `
+                ${results.testSuiteResults
+                  .map(
+                    suite => `
                     <div style="border: 1px solid #ddd; border-radius: 8px; margin: 15px 0; overflow: hidden;">
                         <div style="background: #f8f9fa; padding: 20px; font-weight: bold; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span>${suite.suiteName}</span>
                                 <span style="font-size: 14px; color: #6c757d;">
-                                    ${(suite.stats.passedTests / suite.stats.totalTests * 100).toFixed(1)}% pass rate | 
+                                    ${((suite.stats.passedTests / suite.stats.totalTests) * 100).toFixed(1)}% pass rate | 
                                     ${Math.round((suite.duration - (suite.delayTime || 0)) / 1000)}s actual
                                     ${suite.delayTime > 0 ? ` (+${Math.round(suite.delayTime / 1000)}s delays)` : ''}
                                 </span>
                             </div>
                         </div>
                         <div style="padding: 20px; display: none;">
-                            ${suite.testResults.map(test => `
+                            ${suite.testResults
+                              .map(
+                                test => `
                                 <div style="padding: 12px; margin: 8px 0; border-radius: 6px; background: ${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid ${test.success ? '#28a745' : '#dc3545'};">
                                     <div style="font-weight: bold; margin-bottom: 5px;">${test.testName}</div>
                                     <div style="font-size: 13px; color: #6c757d;">
@@ -3300,39 +3469,42 @@ class BenchmarkUI {
                                     <!-- CRITICAL ENHANCEMENT: Add detailed LLM interaction display -->
                                     ${this.generateLLMInteractionDisplay(test)}
                                 </div>
-                            `).join('')}
+                            `
+                              )
+                              .join('')}
                         </div>
                     </div>
-                `).join('')}
+                `
+                  )
+                  .join('')}
             `;
-        }
     }
+  }
 
-    /**
-     * Exit benchmark mode and restore main app
-     */
-    exitBenchmarkMode() {
-        console.log('🚪 Exiting benchmark mode...');
-        
-        try {
-            // Remove benchmark interface
-            const benchmarkInterface = document.getElementById('benchmarkInterface');
-            if (benchmarkInterface) {
-                benchmarkInterface.remove();
-            }
+  /**
+   * Exit benchmark mode and restore main app
+   */
+  exitBenchmarkMode() {
+    console.log('🚪 Exiting benchmark mode...');
 
-            console.log('✅ Benchmark mode exited');
-            
-        } catch (error) {
-            console.error('❌ Failed to exit benchmark mode:', error);
-        }
+    try {
+      // Remove benchmark interface
+      const benchmarkInterface = document.getElementById('benchmarkInterface');
+      if (benchmarkInterface) {
+        benchmarkInterface.remove();
+      }
+
+      console.log('✅ Benchmark mode exited');
+    } catch (error) {
+      console.error('❌ Failed to exit benchmark mode:', error);
     }
+  }
 
-    /**
-     * Generate complete benchmark HTML with menu system
-     */
-    generateBenchmarkHTML() {
-        return `
+  /**
+   * Generate complete benchmark HTML with menu system
+   */
+  generateBenchmarkHTML() {
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4328,90 +4500,90 @@ Active Test Suites:
     </script>
 </body>
 </html>`;
+  }
+
+  /**
+   * Setup window event handlers
+   */
+  setupWindowEventHandlers() {
+    if (!this.window) return;
+
+    // Handle window close
+    this.window.addEventListener('beforeunload', () => {
+      if (this.isRunning) {
+        this.framework.stopBenchmark();
+      }
+    });
+
+    // Make framework available to window
+    this.window.benchmarkFramework = this.framework;
+  }
+
+  /**
+   * Setup main window event handlers
+   */
+  setupEventHandlers() {
+    // Listen for benchmark events
+    window.addEventListener('benchmark-complete', event => {
+      this.onBenchmarkComplete(event.detail);
+    });
+
+    window.addEventListener('benchmark-error', event => {
+      this.onBenchmarkError(event.detail);
+    });
+
+    // Setup export button handlers when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      this.setupExportButtonHandlers();
+    });
+
+    // If DOM is already loaded, setup immediately
+    if (document.readyState === 'loading') {
+      // DOM is still loading
+    } else {
+      // DOM is already loaded
+      setTimeout(() => this.setupExportButtonHandlers(), 100);
+    }
+  }
+
+  /**
+   * Setup export button event handlers
+   */
+  setupExportButtonHandlers() {
+    // Main window export buttons
+    const exportResultsBtn = document.getElementById('exportResults');
+    const exportLLMBtn = document.getElementById('exportLLMInteractions');
+
+    if (exportResultsBtn) {
+      exportResultsBtn.addEventListener('click', () => {
+        this.exportMainWindowResults();
+      });
     }
 
-    /**
-     * Setup window event handlers
-     */
-    setupWindowEventHandlers() {
-        if (!this.window) return;
-
-        // Handle window close
-        this.window.addEventListener('beforeunload', () => {
-            if (this.isRunning) {
-                this.framework.stopBenchmark();
-            }
-        });
-
-        // Make framework available to window
-        this.window.benchmarkFramework = this.framework;
+    if (exportLLMBtn) {
+      exportLLMBtn.addEventListener('click', () => {
+        this.exportDetailedLLMInteractions();
+      });
     }
 
-    /**
-     * Setup main window event handlers
-     */
-    setupEventHandlers() {
-        // Listen for benchmark events
-        window.addEventListener('benchmark-complete', (event) => {
-            this.onBenchmarkComplete(event.detail);
-        });
+    // Make UI instance globally available for onclick handlers
+    window.benchmarkUI = this;
+  }
 
-        window.addEventListener('benchmark-error', (event) => {
-            this.onBenchmarkError(event.detail);
-        });
-        
-        // Setup export button handlers when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            this.setupExportButtonHandlers();
-        });
-        
-        // If DOM is already loaded, setup immediately
-        if (document.readyState === 'loading') {
-            // DOM is still loading
-        } else {
-            // DOM is already loaded
-            setTimeout(() => this.setupExportButtonHandlers(), 100);
-        }
-    }
+  /**
+   * Handle benchmark completion
+   */
+  onBenchmarkComplete(results) {
+    this.currentResults = results;
+    console.log('Benchmark completed:', results);
+  }
 
-    /**
-     * Setup export button event handlers
-     */
-    setupExportButtonHandlers() {
-        // Main window export buttons
-        const exportResultsBtn = document.getElementById('exportResults');
-        const exportLLMBtn = document.getElementById('exportLLMInteractions');
-        
-        if (exportResultsBtn) {
-            exportResultsBtn.addEventListener('click', () => {
-                this.exportMainWindowResults();
-            });
-        }
-        
-        if (exportLLMBtn) {
-            exportLLMBtn.addEventListener('click', () => {
-                this.exportDetailedLLMInteractions();
-            });
-        }
-        
-        // Make UI instance globally available for onclick handlers
-        window.benchmarkUI = this;
-    }
-
-    /**
-     * Handle benchmark completion
-     */
-    onBenchmarkComplete(results) {
-        this.currentResults = results;
-        console.log('Benchmark completed:', results);
-    }
-
-    /**
-     * Handle benchmark error
-     */
-    onBenchmarkError(error) {
-        console.error('Benchmark error:', error);
-    }
+  /**
+   * Handle benchmark error
+   */
+  onBenchmarkError(error) {
+    console.error('Benchmark error:', error);
+  }
 }
 
 // Make available globally

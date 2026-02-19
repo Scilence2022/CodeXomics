@@ -1,11 +1,13 @@
 # DMG Assets Setup Instructions
 
 ## Generated Files
+
 - `dmg-background-template.html` - Template for DMG background
 
 ## Manual Steps Required
 
 ### 1. Create Icon (macOS only)
+
 ```bash
 # Convert PNG to ICNS (requires macOS)
 mkdir -p icon.iconset
@@ -24,25 +26,32 @@ rm -rf icon.iconset
 ```
 
 ### 2. Create DMG Background
+
 1. Open `build/dmg-background-template.html` in a browser
 2. Set browser window to exactly 660x420 pixels
 3. Take a screenshot and save as `build/dmg-background.png`
 
 ### 3. Alternative: Use Figma/Design Tool
+
 Create a 660x420 background with:
+
 - Gradient background (brand colors)
 - App name and version
 - "Drag to Applications" instruction
 - Subtle branding elements
 
 ## Build Command
+
 After creating the assets:
+
 ```bash
 npm run build:mac
 ```
 
 ## DMG Configuration
+
 The package.json has been updated with:
+
 - Larger window size (660x420)
 - Better icon positioning
 - Background image support

@@ -2,11 +2,11 @@
  * PluginTestHelpers - Helper methods for plugin testing UI
  */
 class PluginTestHelpers {
-    /**
-     * Generate overview tab content
-     */
-    static generateOverviewTab(plugin, type) {
-        return `
+  /**
+   * Generate overview tab content
+   */
+  static generateOverviewTab(plugin, type) {
+    return `
             <div class="test-section">
                 <div class="test-section-header">
                     <span><i class="fas fa-info-circle"></i> Plugin Overview</span>
@@ -29,18 +29,28 @@ class PluginTestHelpers {
                         </div>
                         <div>
                             <h4>Capabilities</h4>
-                            ${type === 'function' && plugin.functions ? `
+                            ${
+                              type === 'function' && plugin.functions
+                                ? `
                                 <p><strong>Functions:</strong> ${Object.keys(plugin.functions).length}</p>
                                 <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
-                                    ${Object.keys(plugin.functions).map(func => `<li>${func}</li>`).join('')}
+                                    ${Object.keys(plugin.functions)
+                                      .map(func => `<li>${func}</li>`)
+                                      .join('')}
                                 </ul>
-                            ` : ''}
-                            ${type === 'visualization' && plugin.supportedDataTypes ? `
+                            `
+                                : ''
+                            }
+                            ${
+                              type === 'visualization' && plugin.supportedDataTypes
+                                ? `
                                 <p><strong>Supported Data Types:</strong> ${plugin.supportedDataTypes.length}</p>
                                 <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
                                     ${plugin.supportedDataTypes.map(dataType => `<li>${dataType}</li>`).join('')}
                                 </ul>
-                            ` : ''}
+                            `
+                                : ''
+                            }
                         </div>
                     </div>
                     <div style="margin-top: 2rem;">
@@ -66,13 +76,13 @@ class PluginTestHelpers {
                 </div>
             </div>
         `;
-    }
+  }
 
-    /**
-     * Generate results tab content
-     */
-    static generateResultsTab() {
-        return `
+  /**
+   * Generate results tab content
+   */
+  static generateResultsTab() {
+    return `
             <div class="test-section">
                 <div class="test-section-header">
                     <span><i class="fas fa-chart-line"></i> Test Results</span>
@@ -114,15 +124,15 @@ class PluginTestHelpers {
                 </div>
             </div>
         `;
-    }
+  }
 
-    /**
-     * Generate functions tab content
-     */
-    static generateFunctionsTab(plugin, type) {
-        if (type === 'function') {
-            if (!plugin.functions || Object.keys(plugin.functions).length === 0) {
-                return `
+  /**
+   * Generate functions tab content
+   */
+  static generateFunctionsTab(plugin, type) {
+    if (type === 'function') {
+      if (!plugin.functions || Object.keys(plugin.functions).length === 0) {
+        return `
                     <div class="test-section">
                         <div class="test-section-header">
                             <span><i class="fas fa-exclamation-triangle"></i> No Functions Available</span>
@@ -132,9 +142,11 @@ class PluginTestHelpers {
                         </div>
                     </div>
                 `;
-            }
+      }
 
-            const functionsHTML = Object.entries(plugin.functions).map(([funcName, func]) => `
+      const functionsHTML = Object.entries(plugin.functions)
+        .map(
+          ([funcName, func]) => `
                 <div class="function-card">
                     <div class="function-name">
                         <i class="fas fa-code"></i>
@@ -161,9 +173,11 @@ class PluginTestHelpers {
                     </div>
                     <div id="functionResult_${funcName}" style="margin-top: 0.75rem; display: none;"></div>
                 </div>
-            `).join('');
+            `
+        )
+        .join('');
 
-            return `
+      return `
                 <div class="test-section">
                     <div class="test-section-header">
                         <span><i class="fas fa-code"></i> Function Tests</span>
@@ -176,10 +190,12 @@ class PluginTestHelpers {
                     </div>
                 </div>
             `;
-        } else {
-            const supportedTypes = plugin.supportedDataTypes || [];
-            
-            const testsHTML = supportedTypes.map(dataType => `
+    } else {
+      const supportedTypes = plugin.supportedDataTypes || [];
+
+      const testsHTML = supportedTypes
+        .map(
+          dataType => `
                 <div class="function-card">
                     <div class="function-name">
                         <i class="fas fa-chart-bar"></i>
@@ -202,9 +218,11 @@ class PluginTestHelpers {
                     </div>
                     <div id="visualizationResult_${dataType}" style="margin-top: 0.75rem; display: none;"></div>
                 </div>
-            `).join('');
+            `
+        )
+        .join('');
 
-            return `
+      return `
                 <div class="test-section">
                     <div class="test-section-header">
                         <span><i class="fas fa-chart-bar"></i> Visualization Tests</span>
@@ -228,14 +246,14 @@ class PluginTestHelpers {
                     </div>
                 </div>
             `;
-        }
     }
+  }
 
-    /**
-     * Generate performance tab content
-     */
-    static generatePerformanceTab() {
-        return `
+  /**
+   * Generate performance tab content
+   */
+  static generatePerformanceTab() {
+    return `
             <div class="test-section">
                 <div class="test-section-header">
                     <span><i class="fas fa-tachometer-alt"></i> Performance Metrics</span>
@@ -336,13 +354,13 @@ class PluginTestHelpers {
                 </div>
             </div>
         `;
-    }
+  }
 
-    /**
-     * Generate logs tab content
-     */
-    static generateLogsTab() {
-        return `
+  /**
+   * Generate logs tab content
+   */
+  static generateLogsTab() {
+    return `
             <div class="test-section">
                 <div class="test-section-header">
                     <span><i class="fas fa-terminal"></i> Test Logs</span>
@@ -390,13 +408,13 @@ class PluginTestHelpers {
                 </div>
             </div>
         `;
-    }
+  }
 
-    /**
-     * Generate enhanced test script
-     */
-    static generateEnhancedTestScript(pluginId, plugin, type) {
-        return `
+  /**
+   * Generate enhanced test script
+   */
+  static generateEnhancedTestScript(pluginId, plugin, type) {
+    return `
             // Test state management
             let testState = {
                 isRunning: false,
@@ -505,15 +523,19 @@ class PluginTestHelpers {
                 addTestResult('Plugin Description', !!plugin.description, 
                     plugin.description ? 'Description present' : 'Missing description');
                 
-                ${type === 'function' ? `
+                ${
+                  type === 'function'
+                    ? `
                     addTestResult('Functions Available', 
                         !!(plugin.functions && Object.keys(plugin.functions).length > 0), 
                         plugin.functions ? \`\${Object.keys(plugin.functions).length} functions available\` : 'No functions defined');
-                ` : `
+                `
+                    : `
                     addTestResult('Supported Data Types', 
                         !!(plugin.supportedDataTypes && plugin.supportedDataTypes.length > 0),
                         plugin.supportedDataTypes ? \`\${plugin.supportedDataTypes.length} data types supported\` : 'No data types defined');
-                `}
+                `
+                }
             }
 
             function addTestResult(testName, success, message, details = '') {
@@ -613,12 +635,12 @@ class PluginTestHelpers {
                 };
             }
         `;
-    }
+  }
 }
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PluginTestHelpers;
+  module.exports = PluginTestHelpers;
 } else if (typeof window !== 'undefined') {
-    window.PluginTestHelpers = PluginTestHelpers;
-} 
+  window.PluginTestHelpers = PluginTestHelpers;
+}

@@ -5,6 +5,7 @@ This guide explains how to use the BLAST search functionality in the Electron Ge
 ## Overview
 
 The Genome Viewer includes comprehensive BLAST search capabilities that allow you to:
+
 - Search sequence similarity against NCBI databases
 - Perform batch searches with multiple sequences
 - Use advanced filtering and algorithm parameters
@@ -16,7 +17,7 @@ The Genome Viewer includes comprehensive BLAST search capabilities that allow yo
 
 1. **Open BLAST Search**: Click the "BLAST" button in the top toolbar
 2. **Select BLAST Type**: Choose from blastn, blastp, blastx, or tblastn
-3. **Input Sequence**: 
+3. **Input Sequence**:
    - Type/paste sequence directly
    - Upload a FASTA file
    - Load sequence from current genomic region
@@ -29,11 +30,13 @@ The Genome Viewer includes comprehensive BLAST search capabilities that allow yo
 You can perform BLAST searches through the chat interface using natural language or tool calls:
 
 #### Natural Language Examples:
+
 - "BLAST this sequence against the nucleotide database: ATGCGCTATCG"
 - "Search for protein similarity: MKELLKAGWKELQP"
 - "BLAST the current genomic region"
 
 #### Tool Call Examples:
+
 ```json
 {
   "tool_name": "blast_search",
@@ -58,8 +61,8 @@ Search multiple sequences simultaneously:
   "tool_name": "batch_blast_search",
   "parameters": {
     "sequences": [
-      {"id": "gene1", "sequence": "ATGCGCTATCG"},
-      {"id": "gene2", "sequence": "ATGAAAGAATT"}
+      { "id": "gene1", "sequence": "ATGCGCTATCG" },
+      { "id": "gene2", "sequence": "ATGAAAGAATT" }
     ],
     "blastType": "blastn",
     "database": "nt",
@@ -112,11 +115,13 @@ BLAST the sequence from a specific genomic region:
 ## Available Databases
 
 ### Nucleotide Databases
+
 - **nt**: Nucleotide collection (all GenBank+EMBL+DDBJ+PDB sequences)
 - **refseq_rna**: RefSeq RNA sequences
 - **refseq_genomic**: RefSeq Genome sequences
 
 ### Protein Databases
+
 - **nr**: Non-redundant protein sequences
 - **swissprot**: UniProtKB/Swiss-Prot
 - **pdb**: Protein Data Bank proteins
@@ -135,10 +140,11 @@ For advanced features like local databases and batch processing, you can set up 
 ### Setting Up Local BLAST Server
 
 1. **Install BLAST+**:
+
    ```bash
    # On macOS with Homebrew
    brew install blast
-   
+
    # On Ubuntu/Debian
    sudo apt-get install ncbi-blast+
    ```
@@ -146,6 +152,7 @@ For advanced features like local databases and batch processing, you can set up 
 2. **Set up databases** (optional for local databases)
 
 3. **Run example MCP BLAST server**:
+
    ```bash
    cd examples
    node mcp-blast-server.js
@@ -158,6 +165,7 @@ For advanced features like local databases and batch processing, you can set up 
 ### MCP BLAST Server Features
 
 When connected to an MCP BLAST server, you get additional capabilities:
+
 - Local database searches
 - Batch processing optimization
 - Custom algorithm parameters
@@ -166,6 +174,7 @@ When connected to an MCP BLAST server, you get additional capabilities:
 ## Parameters Reference
 
 ### Basic Parameters
+
 - **sequence**: Query sequence (required)
 - **blastType**: Type of BLAST search (required)
 - **database**: Target database (required)
@@ -173,6 +182,7 @@ When connected to an MCP BLAST server, you get additional capabilities:
 - **maxTargets**: Maximum number of results (default: 50)
 
 ### Advanced Parameters
+
 - **wordSize**: Word size for initial matching
 - **matrix**: Scoring matrix (BLOSUM62, PAM30, etc.)
 - **gapOpen**: Gap opening penalty
@@ -180,6 +190,7 @@ When connected to an MCP BLAST server, you get additional capabilities:
 - **lowComplexity**: Filter low complexity regions
 
 ### Filtering Options
+
 - **minIdentity**: Minimum identity percentage
 - **minCoverage**: Minimum coverage percentage
 - **maxEvalue**: Maximum E-value threshold
@@ -188,6 +199,7 @@ When connected to an MCP BLAST server, you get additional capabilities:
 ## Result Interpretation
 
 BLAST results include:
+
 - **Accession**: Database identifier
 - **Description**: Sequence description
 - **Score**: Alignment score
@@ -243,6 +255,7 @@ BLAST results include:
 ## Examples
 
 ### DNA Sequence Analysis
+
 ```json
 {
   "tool_name": "blast_search",
@@ -255,6 +268,7 @@ BLAST results include:
 ```
 
 ### Protein Homology Search
+
 ```json
 {
   "tool_name": "blast_search",
@@ -267,6 +281,7 @@ BLAST results include:
 ```
 
 ### High-Specificity Search
+
 ```json
 {
   "tool_name": "advanced_blast_search",
@@ -280,4 +295,4 @@ BLAST results include:
     }
   }
 }
-``` 
+```

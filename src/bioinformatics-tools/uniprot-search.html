@@ -1,770 +1,798 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Search UniProt Database - CodeXomics</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
-        :root {
-            --primary-color: #1e88e5;
-            --secondary-color: #42a5f5;
-            --success-color: #4caf50;
-            --warning-color: #ff9800;
-            --danger-color: #f44336;
-            --bg-primary: #f5f5f5;
-            --bg-secondary: #ffffff;
-            --text-primary: #333;
-            --text-secondary: #666;
-            --border-color: #ddd;
-            --radius: 8px;
-            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+      :root {
+        --primary-color: #1e88e5;
+        --secondary-color: #42a5f5;
+        --success-color: #4caf50;
+        --warning-color: #ff9800;
+        --danger-color: #f44336;
+        --bg-primary: #f5f5f5;
+        --bg-secondary: #ffffff;
+        --text-primary: #333;
+        --text-secondary: #666;
+        --border-color: #ddd;
+        --radius: 8px;
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
+      }
+
+      .app-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 20px;
+        box-shadow: var(--shadow);
+      }
+
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .app-title {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .app-title i {
+        font-size: 2rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 10px;
+        border-radius: var(--radius);
+      }
+
+      .title-text h1 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+
+      .title-text p {
+        font-size: 0.9rem;
+        opacity: 0.9;
+      }
+
+      .header-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 8px 16px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: 10px;
+      }
+
+      .header-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+      }
+
+      .main-container {
+        display: flex;
+        height: calc(100vh - 100px);
+        max-width: 1400px;
+        margin: 0 auto;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .search-panel {
+        width: 350px;
+        background: var(--bg-secondary);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      .results-panel {
+        flex: 1;
+        background: var(--bg-secondary);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      .search-section {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .search-section:last-child {
+        border-bottom: none;
+      }
+
+      .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: var(--text-primary);
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.2);
+      }
+
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn-primary {
+        background: var(--secondary-color);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-color);
+        transform: translateY(-2px);
+      }
+
+      .btn-success {
+        background: var(--success-color);
+        color: white;
+      }
+
+      .btn-warning {
+        background: var(--warning-color);
+        color: white;
+      }
+
+      .btn-block {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .protein-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+      }
+
+      .protein-card:hover {
+        box-shadow: var(--shadow);
+        transform: translateY(-2px);
+      }
+
+      .protein-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+      }
+
+      .protein-id {
+        font-weight: 600;
+        color: var(--primary-color);
+        font-size: 1.1rem;
+      }
+
+      .protein-length {
+        background: #e3f2fd;
+        color: var(--primary-color);
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+
+      .protein-name {
+        font-size: 1.2rem;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+      }
+
+      .protein-organism {
+        color: var(--text-secondary);
+        font-style: italic;
+        margin-bottom: 15px;
+      }
+
+      .protein-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .info-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.9rem;
+      }
+
+      .protein-sequence {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: var(--radius);
+        font-family: monospace;
+        font-size: 0.8rem;
+        word-break: break-all;
+        max-height: 100px;
+        overflow-y: auto;
+        margin-bottom: 15px;
+      }
+
+      .protein-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-secondary);
+      }
+
+      .loading i {
+        font-size: 2rem;
+        animation: spin 1s linear infinite;
+        margin-bottom: 10px;
+        display: block;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
+        100% {
+          transform: rotate(360deg);
         }
+      }
 
-        .app-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 20px;
-            box-shadow: var(--shadow);
-        }
+      .status-message {
+        padding: 10px;
+        border-radius: var(--radius);
+        margin-bottom: 15px;
+      }
 
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+      .status-success {
+        background: rgba(76, 175, 80, 0.1);
+        border: 1px solid rgba(76, 175, 80, 0.3);
+        color: var(--success-color);
+      }
 
-        .app-title {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+      .status-error {
+        background: rgba(244, 67, 54, 0.1);
+        border: 1px solid rgba(244, 67, 54, 0.3);
+        color: var(--danger-color);
+      }
 
-        .app-title i {
-            font-size: 2rem;
-            background: rgba(255,255,255,0.2);
-            padding: 10px;
-            border-radius: var(--radius);
-        }
-
-        .title-text h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .title-text p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        .header-btn {
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 8px 16px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-left: 10px;
-        }
-
-        .header-btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-        }
-
+      @media (max-width: 768px) {
         .main-container {
-            display: flex;
-            height: calc(100vh - 100px);
-            max-width: 1400px;
-            margin: 0 auto;
-            gap: 20px;
-            padding: 20px;
+          flex-direction: column;
+          height: auto;
         }
 
         .search-panel {
-            width: 350px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 20px;
-            overflow-y: auto;
+          width: 100%;
         }
-
-        .results-panel {
-            flex: 1;
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .search-section {
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .search-section:last-child { border-bottom: none; }
-
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-group { margin-bottom: 15px; }
-
-        .form-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.2);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: var(--secondary-color);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-color);
-            transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background: var(--success-color);
-            color: white;
-        }
-
-        .btn-warning {
-            background: var(--warning-color);
-            color: white;
-        }
-
-        .btn-block {
-            width: 100%;
-            justify-content: center;
-        }
-
-        .protein-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            padding: 20px;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .protein-card:hover {
-            box-shadow: var(--shadow);
-            transform: translateY(-2px);
-        }
-
-        .protein-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 15px;
-        }
-
-        .protein-id {
-            font-weight: 600;
-            color: var(--primary-color);
-            font-size: 1.1rem;
-        }
-
-        .protein-length {
-            background: #e3f2fd;
-            color: var(--primary-color);
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        .protein-name {
-            font-size: 1.2rem;
-            font-weight: 500;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-        }
-
-        .protein-organism {
-            color: var(--text-secondary);
-            font-style: italic;
-            margin-bottom: 15px;
-        }
-
-        .protein-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .info-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.9rem;
-        }
-
-        .protein-sequence {
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: var(--radius);
-            font-family: monospace;
-            font-size: 0.8rem;
-            word-break: break-all;
-            max-height: 100px;
-            overflow-y: auto;
-            margin-bottom: 15px;
-        }
-
-        .protein-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
-        }
-
-        .loading i {
-            font-size: 2rem;
-            animation: spin 1s linear infinite;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .status-message {
-            padding: 10px;
-            border-radius: var(--radius);
-            margin-bottom: 15px;
-        }
-
-        .status-success {
-            background: rgba(76, 175, 80, 0.1);
-            border: 1px solid rgba(76, 175, 80, 0.3);
-            color: var(--success-color);
-        }
-
-        .status-error {
-            background: rgba(244, 67, 54, 0.1);
-            border: 1px solid rgba(244, 67, 54, 0.3);
-            color: var(--danger-color);
-        }
-
-        @media (max-width: 768px) {
-            .main-container {
-                flex-direction: column;
-                height: auto;
-            }
-
-            .search-panel {
-                width: 100%;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="app-header">
-        <div class="header-content">
-            <div class="app-title">
-                <i class="fas fa-database"></i>
-                <div class="title-text">
-                    <h1>Search UniProt Database</h1>
-                    <p>Universal Protein Resource Database Query Tool</p>
-                </div>
-            </div>
-            <div>
-                <button class="header-btn" id="helpBtn">
-                    <i class="fas fa-question-circle"></i>
-                    Help
-                </button>
-                <button class="header-btn" id="exportBtn">
-                    <i class="fas fa-download"></i>
-                    Export
-                </button>
-            </div>
+      <div class="header-content">
+        <div class="app-title">
+          <i class="fas fa-database"></i>
+          <div class="title-text">
+            <h1>Search UniProt Database</h1>
+            <p>Universal Protein Resource Database Query Tool</p>
+          </div>
         </div>
+        <div>
+          <button class="header-btn" id="helpBtn">
+            <i class="fas fa-question-circle"></i>
+            Help
+          </button>
+          <button class="header-btn" id="exportBtn">
+            <i class="fas fa-download"></i>
+            Export
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="main-container">
-        <div class="search-panel">
-            <div class="search-section">
-                <div class="section-title">
-                    <i class="fas fa-search"></i>
-                    Search Options
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Search Type</label>
-                    <select class="form-control" id="searchType">
-                        <option value="protein_name">Protein Name</option>
-                        <option value="gene_name">Gene Name</option>
-                        <option value="uniprot_id">UniProt ID</option>
-                        <option value="organism">Organism</option>
-                        <option value="keyword">Keyword</option>
-                        <option value="sequence">Sequence Similarity</option>
-                    </select>
-                </div>
+      <div class="search-panel">
+        <div class="search-section">
+          <div class="section-title">
+            <i class="fas fa-search"></i>
+            Search Options
+          </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="searchQuery">Search Query</label>
-                    <input type="text" class="form-control" id="searchQuery" placeholder="Enter search terms...">
-                </div>
+          <div class="form-group">
+            <label class="form-label">Search Type</label>
+            <select class="form-control" id="searchType">
+              <option value="protein_name">Protein Name</option>
+              <option value="gene_name">Gene Name</option>
+              <option value="uniprot_id">UniProt ID</option>
+              <option value="organism">Organism</option>
+              <option value="keyword">Keyword</option>
+              <option value="sequence">Sequence Similarity</option>
+            </select>
+          </div>
 
-                <div class="form-group">
-                    <label class="form-label">Organism Filter</label>
-                    <select class="form-control" id="organismFilter">
-                        <option value="">All organisms</option>
-                        <option value="9606">Homo sapiens (Human)</option>
-                        <option value="10090">Mus musculus (Mouse)</option>
-                        <option value="83333">Escherichia coli K-12</option>
-                        <option value="196627">Corynebacterium glutamicum</option>
-                        <option value="559292">Saccharomyces cerevisiae</option>
-                        <option value="7227">Drosophila melanogaster</option>
-                        <option value="6239">Caenorhabditis elegans</option>
-                        <option value="3702">Arabidopsis thaliana</option>
-                        <option value="custom">Custom organism...</option>
-                    </select>
-                </div>
+          <div class="form-group">
+            <label class="form-label" for="searchQuery">Search Query</label>
+            <input type="text" class="form-control" id="searchQuery" placeholder="Enter search terms..." />
+          </div>
 
-                <div class="form-group" id="customOrganismGroup" style="display: none;">
-                    <label class="form-label">Custom Organism Name</label>
-                    <input type="text" class="form-control" id="customOrganism" placeholder="Enter organism name (e.g., Bacillus subtilis)">
-                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">
-                        Enter the scientific name of the organism you want to search for.
-                    </div>
-                </div>
+          <div class="form-group">
+            <label class="form-label">Organism Filter</label>
+            <select class="form-control" id="organismFilter">
+              <option value="">All organisms</option>
+              <option value="9606">Homo sapiens (Human)</option>
+              <option value="10090">Mus musculus (Mouse)</option>
+              <option value="83333">Escherichia coli K-12</option>
+              <option value="196627">Corynebacterium glutamicum</option>
+              <option value="559292">Saccharomyces cerevisiae</option>
+              <option value="7227">Drosophila melanogaster</option>
+              <option value="6239">Caenorhabditis elegans</option>
+              <option value="3702">Arabidopsis thaliana</option>
+              <option value="custom">Custom organism...</option>
+            </select>
+          </div>
 
-                <button class="btn btn-primary btn-block" id="searchBtn">
-                    <i class="fas fa-search"></i>
-                    Search UniProt
-                </button>
+          <div class="form-group" id="customOrganismGroup" style="display: none">
+            <label class="form-label">Custom Organism Name</label>
+            <input
+              type="text"
+              class="form-control"
+              id="customOrganism"
+              placeholder="Enter organism name (e.g., Bacillus subtilis)"
+            />
+            <div style="font-size: 0.8rem; color: #666; margin-top: 5px">
+              Enter the scientific name of the organism you want to search for.
             </div>
+          </div>
 
-            <div class="search-section">
-                <div class="section-title">
-                    <i class="fas fa-filter"></i>
-                    Filters
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">
-                        <input type="checkbox" id="reviewedOnly" checked> Reviewed entries only
-                    </label>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Protein Length</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="number" class="form-control" id="minLength" placeholder="Min" style="width: 50%;">
-                        <input type="number" class="form-control" id="maxLength" placeholder="Max" style="width: 50%;">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Results Limit</label>
-                    <select class="form-control" id="resultLimit">
-                        <option value="10">10 results</option>
-                        <option value="25" selected>25 results</option>
-                        <option value="50">50 results</option>
-                        <option value="100">100 results</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="search-section">
-                <div class="section-title">
-                    <i class="fas fa-bolt"></i>
-                    Quick Actions
-                </div>
-
-                <button class="btn btn-success btn-block" id="exampleBtn">
-                    <i class="fas fa-flask"></i>
-                    Load Example
-                </button>
-
-                <button class="btn btn-warning btn-block" id="clearBtn">
-                    <i class="fas fa-trash"></i>
-                    Clear Results
-                </button>
-            </div>
+          <button class="btn btn-primary btn-block" id="searchBtn">
+            <i class="fas fa-search"></i>
+            Search UniProt
+          </button>
         </div>
 
-        <div class="results-panel">
-            <div id="statusArea"></div>
-            
-            <div id="resultsContainer">
-                <div class="loading" style="display: none;" id="loadingIndicator">
-                    <i class="fas fa-spinner"></i>
-                    <p>Searching UniProt database...</p>
-                </div>
-                
-                <div id="searchResults">
-                    <div style="text-align: center; padding: 40px; color: #666;">
-                        <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
-                        <h3>No Search Results</h3>
-                        <p>Enter search terms and click "Search UniProt" to find proteins.</p>
-                    </div>
-                </div>
+        <div class="search-section">
+          <div class="section-title">
+            <i class="fas fa-filter"></i>
+            Filters
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <input type="checkbox" id="reviewedOnly" checked /> Reviewed entries only
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Protein Length</label>
+            <div style="display: flex; gap: 10px">
+              <input type="number" class="form-control" id="minLength" placeholder="Min" style="width: 50%" />
+              <input type="number" class="form-control" id="maxLength" placeholder="Max" style="width: 50%" />
             </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Results Limit</label>
+            <select class="form-control" id="resultLimit">
+              <option value="10">10 results</option>
+              <option value="25" selected>25 results</option>
+              <option value="50">50 results</option>
+              <option value="100">100 results</option>
+            </select>
+          </div>
         </div>
+
+        <div class="search-section">
+          <div class="section-title">
+            <i class="fas fa-bolt"></i>
+            Quick Actions
+          </div>
+
+          <button class="btn btn-success btn-block" id="exampleBtn">
+            <i class="fas fa-flask"></i>
+            Load Example
+          </button>
+
+          <button class="btn btn-warning btn-block" id="clearBtn">
+            <i class="fas fa-trash"></i>
+            Clear Results
+          </button>
+        </div>
+      </div>
+
+      <div class="results-panel">
+        <div id="statusArea"></div>
+
+        <div id="resultsContainer">
+          <div class="loading" style="display: none" id="loadingIndicator">
+            <i class="fas fa-spinner"></i>
+            <p>Searching UniProt database...</p>
+          </div>
+
+          <div id="searchResults">
+            <div style="text-align: center; padding: 40px; color: #666">
+              <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3"></i>
+              <h3>No Search Results</h3>
+              <p>Enter search terms and click "Search UniProt" to find proteins.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="tool-menu-handler.js"></script>
     <script>
-        class UniProtSearcher {
-            constructor() {
-                this.currentResults = [];
-                this.apiBaseUrl = 'https://rest.uniprot.org';
-                this.init();
-                this.initMenuHandler();
-                this.showStatus('UniProt Search Tool initialized. Ready to search protein database.', 'success');
+      class UniProtSearcher {
+        constructor() {
+          this.currentResults = [];
+          this.apiBaseUrl = 'https://rest.uniprot.org';
+          this.init();
+          this.initMenuHandler();
+          this.showStatus('UniProt Search Tool initialized. Ready to search protein database.', 'success');
+        }
+
+        initMenuHandler() {
+          // Initialize menu handler with tool-specific actions
+          this.menuHandler = new ToolMenuHandler('Search UniProt Database', this);
+        }
+
+        async testUniProtAPI() {
+          try {
+            // Test basic connectivity to UniProt REST API
+            const testUrl = `${this.apiBaseUrl}/uniprotkb/search?query=insulin&format=json&size=1`;
+            const response = await fetch(testUrl);
+            return response.ok;
+          } catch (error) {
+            return false;
+          }
+        }
+
+        init() {
+          this.setupEventListeners();
+        }
+
+        setupEventListeners() {
+          document.getElementById('searchBtn').addEventListener('click', () => this.search());
+          document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+          document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
+          document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
+          document.getElementById('exportBtn').addEventListener('click', () => this.exportResults());
+
+          // Enter key support
+          document.getElementById('searchQuery').addEventListener('keypress', e => {
+            if (e.key === 'Enter') this.search();
+          });
+
+          // Custom organism toggle
+          document.getElementById('organismFilter').addEventListener('change', e => {
+            const customGroup = document.getElementById('customOrganismGroup');
+            if (e.target.value === 'custom') {
+              customGroup.style.display = 'block';
+              document.getElementById('customOrganism').focus();
+            } else {
+              customGroup.style.display = 'none';
+              document.getElementById('customOrganism').value = '';
             }
+          });
+        }
 
-            initMenuHandler() {
-                // Initialize menu handler with tool-specific actions
-                this.menuHandler = new ToolMenuHandler('Search UniProt Database', this);
-            }
+        loadExample() {
+          document.getElementById('searchType').value = 'gene_name';
+          document.getElementById('searchQuery').value = 'TP53';
+          document.getElementById('organismFilter').value = '9606';
+          this.showStatus('Example search loaded. Click "Search UniProt" to execute.', 'success');
+        }
 
-            async testUniProtAPI() {
-                try {
-                    // Test basic connectivity to UniProt REST API
-                    const testUrl = `${this.apiBaseUrl}/uniprotkb/search?query=insulin&format=json&size=1`;
-                    const response = await fetch(testUrl);
-                    return response.ok;
-                } catch (error) {
-                    return false;
-                }
-            }
-
-            init() {
-                this.setupEventListeners();
-            }
-
-            setupEventListeners() {
-                document.getElementById('searchBtn').addEventListener('click', () => this.search());
-                document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
-                document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
-                document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportResults());
-
-                // Enter key support
-                document.getElementById('searchQuery').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') this.search();
-                });
-
-                // Custom organism toggle
-                document.getElementById('organismFilter').addEventListener('change', (e) => {
-                    const customGroup = document.getElementById('customOrganismGroup');
-                    if (e.target.value === 'custom') {
-                        customGroup.style.display = 'block';
-                        document.getElementById('customOrganism').focus();
-                    } else {
-                        customGroup.style.display = 'none';
-                        document.getElementById('customOrganism').value = '';
-                    }
-                });
-            }
-
-            loadExample() {
-                document.getElementById('searchType').value = 'gene_name';
-                document.getElementById('searchQuery').value = 'TP53';
-                document.getElementById('organismFilter').value = '9606';
-                this.showStatus('Example search loaded. Click "Search UniProt" to execute.', 'success');
-            }
-
-            clearResults() {
-                this.currentResults = [];
-                document.getElementById('searchResults').innerHTML = `
+        clearResults() {
+          this.currentResults = [];
+          document.getElementById('searchResults').innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #666;">
                         <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
                         <h3>No Search Results</h3>
                         <p>Enter search terms and click "Search UniProt" to find proteins.</p>
                     </div>
                 `;
-                this.showStatus('Results cleared.', 'success');
+          this.showStatus('Results cleared.', 'success');
+        }
+
+        async search() {
+          const query = document.getElementById('searchQuery').value.trim();
+          if (!query) {
+            this.showStatus('Please enter a search query.', 'error');
+            return;
+          }
+
+          const searchType = document.getElementById('searchType').value;
+          let organism = document.getElementById('organismFilter').value;
+
+          // Handle custom organism input
+          if (organism === 'custom') {
+            const customOrganism = document.getElementById('customOrganism').value.trim();
+            if (!customOrganism) {
+              this.showStatus('Please enter a custom organism name.', 'error');
+              this.showLoading(false);
+              return;
+            }
+            organism = customOrganism;
+          }
+
+          const reviewedOnly = document.getElementById('reviewedOnly').checked;
+          const minLength = parseInt(document.getElementById('minLength').value) || null;
+          const maxLength = parseInt(document.getElementById('maxLength').value) || null;
+          const limit = parseInt(document.getElementById('resultLimit').value);
+
+          this.showLoading(true);
+          this.showStatus('Searching UniProt database...', 'success');
+
+          try {
+            // Use direct UniProt REST API
+            const apiResults = await this.searchUniProtDirectAPI(
+              query,
+              searchType,
+              organism,
+              reviewedOnly,
+              minLength,
+              maxLength,
+              limit
+            );
+
+            this.currentResults = apiResults;
+            this.displayResults(apiResults);
+
+            if (apiResults.length > 0) {
+              this.showStatus(`Found ${apiResults.length} protein(s) from UniProt REST API.`, 'success');
+            } else {
+              this.showStatus('No proteins found matching your search criteria.', 'warning');
             }
 
-            async search() {
-                const query = document.getElementById('searchQuery').value.trim();
-                if (!query) {
-                    this.showStatus('Please enter a search query.', 'error');
-                    return;
-                }
+            this.showLoading(false);
+          } catch (error) {
+            this.showStatus(
+              `Search failed: ${error.message}. Please check your internet connection and try again.`,
+              'error'
+            );
+            this.showLoading(false);
+            this.currentResults = [];
+            this.displayResults([]);
+          }
+        }
 
-                const searchType = document.getElementById('searchType').value;
-                let organism = document.getElementById('organismFilter').value;
-                
-                // Handle custom organism input
-                if (organism === 'custom') {
-                    const customOrganism = document.getElementById('customOrganism').value.trim();
-                    if (!customOrganism) {
-                        this.showStatus('Please enter a custom organism name.', 'error');
-                        this.showLoading(false);
-                        return;
-                    }
-                    organism = customOrganism;
-                }
-                
-                const reviewedOnly = document.getElementById('reviewedOnly').checked;
-                const minLength = parseInt(document.getElementById('minLength').value) || null;
-                const maxLength = parseInt(document.getElementById('maxLength').value) || null;
-                const limit = parseInt(document.getElementById('resultLimit').value);
+        async searchUniProtDirectAPI(query, searchType, organism, reviewedOnly, minLength, maxLength, limit) {
+          try {
+            // Build UniProt search query
+            let searchQuery = this.buildUniProtQuery(query, searchType, organism, reviewedOnly, minLength, maxLength);
 
-                this.showLoading(true);
-                this.showStatus('Searching UniProt database...', 'success');
+            // Construct API URL
+            const apiUrl = `${this.apiBaseUrl}/uniprotkb/search?query=${encodeURIComponent(searchQuery)}&format=json&size=${limit}&fields=accession,id,gene_names,organism_name,protein_name,length,mass,reviewed,cc_function,ft_domain,sequence`;
 
-                try {
-                    // Use direct UniProt REST API
-                    const apiResults = await this.searchUniProtDirectAPI(query, searchType, organism, reviewedOnly, minLength, maxLength, limit);
-                    
-                    this.currentResults = apiResults;
-                    this.displayResults(apiResults);
-                    
-                    if (apiResults.length > 0) {
-                        this.showStatus(`Found ${apiResults.length} protein(s) from UniProt REST API.`, 'success');
-                    } else {
-                        this.showStatus('No proteins found matching your search criteria.', 'warning');
-                    }
-                    
-                    this.showLoading(false);
-                } catch (error) {
-                    this.showStatus(`Search failed: ${error.message}. Please check your internet connection and try again.`, 'error');
-                    this.showLoading(false);
-                    this.currentResults = [];
-                    this.displayResults([]);
-                }
+            console.log('UniProt API URL:', apiUrl);
+
+            const response = await fetch(apiUrl);
+
+            if (!response.ok) {
+              throw new Error(`API request failed: ${response.status} ${response.statusText}`);
             }
 
-            async searchUniProtDirectAPI(query, searchType, organism, reviewedOnly, minLength, maxLength, limit) {
-                try {
-                    // Build UniProt search query
-                    let searchQuery = this.buildUniProtQuery(query, searchType, organism, reviewedOnly, minLength, maxLength);
-                    
-                    // Construct API URL
-                    const apiUrl = `${this.apiBaseUrl}/uniprotkb/search?query=${encodeURIComponent(searchQuery)}&format=json&size=${limit}&fields=accession,id,gene_names,organism_name,protein_name,length,mass,reviewed,cc_function,ft_domain,sequence`;
-                    
-                    console.log('UniProt API URL:', apiUrl);
-                    
-                    const response = await fetch(apiUrl);
-                    
-                    if (!response.ok) {
-                        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-                    }
-                    
-                    const data = await response.json();
-                    
-                    // Transform API response to our format
-                    return this.transformUniProtAPIResponse(data.results || []);
-                    
-                } catch (error) {
-                    console.warn('Direct UniProt API failed:', error);
-                    throw error;
-                }
+            const data = await response.json();
+
+            // Transform API response to our format
+            return this.transformUniProtAPIResponse(data.results || []);
+          } catch (error) {
+            console.warn('Direct UniProt API failed:', error);
+            throw error;
+          }
+        }
+
+        buildUniProtQuery(query, searchType, organism, reviewedOnly, minLength, maxLength) {
+          let searchParts = [];
+
+          // Add main query based on search type
+          switch (searchType) {
+            case 'protein_name':
+              searchParts.push(`protein_name:${query}`);
+              break;
+            case 'gene_name':
+              searchParts.push(`gene:${query}`);
+              break;
+            case 'uniprot_id':
+              searchParts.push(`accession:${query}`);
+              break;
+            case 'organism':
+              searchParts.push(`organism_name:${query}`);
+              break;
+            case 'keyword':
+              searchParts.push(`keyword:${query}`);
+              break;
+            case 'sequence':
+              // For sequence searches, use a general search
+              searchParts.push(query);
+              break;
+            default:
+              searchParts.push(query);
+          }
+
+          // Add organism filter
+          if (organism) {
+            const organismMap = {
+              9606: 'Homo sapiens',
+              10090: 'Mus musculus',
+              83333: 'Escherichia coli',
+              196627: 'Corynebacterium glutamicum',
+              559292: 'Saccharomyces cerevisiae',
+              7227: 'Drosophila melanogaster',
+              6239: 'Caenorhabditis elegans',
+              3702: 'Arabidopsis thaliana',
+            };
+            const organismName = organismMap[organism] || organism;
+            searchParts.push(`organism_name:"${organismName}"`);
+          }
+
+          // Add reviewed filter
+          if (reviewedOnly) {
+            searchParts.push('reviewed:true');
+          }
+
+          // Add length filters
+          if (minLength) {
+            searchParts.push(`length:[${minLength} TO *]`);
+          }
+          if (maxLength) {
+            searchParts.push(`length:[* TO ${maxLength}]`);
+          }
+
+          return searchParts.join(' AND ');
+        }
+
+        transformUniProtAPIResponse(apiResults) {
+          return apiResults.map(entry => {
+            // Extract gene names
+            const geneNames = entry.genes || [];
+            const primaryGene = geneNames.length > 0 ? geneNames[0] : null;
+            const geneName = primaryGene?.geneName?.value || primaryGene?.geneName || 'Unknown';
+
+            // Extract protein name
+            let proteinName = 'Unknown protein';
+            if (entry.proteinDescription?.recommendedName?.fullName?.value) {
+              proteinName = entry.proteinDescription.recommendedName.fullName.value;
+            } else if (entry.proteinDescription?.submissionNames?.[0]?.fullName?.value) {
+              proteinName = entry.proteinDescription.submissionNames[0].fullName.value;
             }
 
-            buildUniProtQuery(query, searchType, organism, reviewedOnly, minLength, maxLength) {
-                let searchParts = [];
-                
-                // Add main query based on search type
-                switch (searchType) {
-                    case 'protein_name':
-                        searchParts.push(`protein_name:${query}`);
-                        break;
-                    case 'gene_name':
-                        searchParts.push(`gene:${query}`);
-                        break;
-                    case 'uniprot_id':
-                        searchParts.push(`accession:${query}`);
-                        break;
-                    case 'organism':
-                        searchParts.push(`organism_name:${query}`);
-                        break;
-                    case 'keyword':
-                        searchParts.push(`keyword:${query}`);
-                        break;
-                    case 'sequence':
-                        // For sequence searches, use a general search
-                        searchParts.push(query);
-                        break;
-                    default:
-                        searchParts.push(query);
-                }
-                
-                // Add organism filter
-                if (organism) {
-                    const organismMap = {
-                        '9606': 'Homo sapiens',
-                        '10090': 'Mus musculus',
-                        '83333': 'Escherichia coli',
-                        '196627': 'Corynebacterium glutamicum',
-                        '559292': 'Saccharomyces cerevisiae',
-                        '7227': 'Drosophila melanogaster',
-                        '6239': 'Caenorhabditis elegans',
-                        '3702': 'Arabidopsis thaliana'
-                    };
-                    const organismName = organismMap[organism] || organism;
-                    searchParts.push(`organism_name:"${organismName}"`);
-                }
-                
-                // Add reviewed filter
-                if (reviewedOnly) {
-                    searchParts.push('reviewed:true');
-                }
-                
-                // Add length filters
-                if (minLength) {
-                    searchParts.push(`length:[${minLength} TO *]`);
-                }
-                if (maxLength) {
-                    searchParts.push(`length:[* TO ${maxLength}]`);
-                }
-                
-                return searchParts.join(' AND ');
+            // Extract function
+            let functionText = 'Function not available';
+            const functionComment = entry.comments?.find(c => c.commentType === 'FUNCTION');
+            if (functionComment?.texts?.[0]?.value) {
+              functionText = functionComment.texts[0].value;
             }
 
-            transformUniProtAPIResponse(apiResults) {
-                return apiResults.map(entry => {
-                    // Extract gene names
-                    const geneNames = entry.genes || [];
-                    const primaryGene = geneNames.length > 0 ? geneNames[0] : null;
-                    const geneName = primaryGene?.geneName?.value || primaryGene?.geneName || 'Unknown';
-                    
-                    // Extract protein name
-                    let proteinName = 'Unknown protein';
-                    if (entry.proteinDescription?.recommendedName?.fullName?.value) {
-                        proteinName = entry.proteinDescription.recommendedName.fullName.value;
-                    } else if (entry.proteinDescription?.submissionNames?.[0]?.fullName?.value) {
-                        proteinName = entry.proteinDescription.submissionNames[0].fullName.value;
-                    }
-                    
-                    // Extract function
-                    let functionText = 'Function not available';
-                    const functionComment = entry.comments?.find(c => c.commentType === 'FUNCTION');
-                    if (functionComment?.texts?.[0]?.value) {
-                        functionText = functionComment.texts[0].value;
-                    }
-                    
-                    // Extract features
-                    const features = (entry.features || []).slice(0, 5).map(f => ({
-                        type: f.type,
-                        location: { 
-                            start: f.location?.start?.value || f.location?.start, 
-                            end: f.location?.end?.value || f.location?.end 
-                        },
-                        description: f.description || f.type
-                    }));
-                    
-                    return {
-                        uniprotId: entry.primaryAccession || entry.accession,
-                        proteinName: proteinName,
-                        geneNames: geneName ? [{ primary: geneName, synonyms: [] }] : [],
-                        organism: entry.organism?.scientificName || 'Unknown organism',
-                        length: entry.sequence?.length || 0,
-                        mass: entry.sequence?.molWeight || 0,
-                        reviewed: entry.entryType === 'UniProtKB reviewed (Swiss-Prot)' || entry.reviewed === true,
-                        function: functionText,
-                        sequence: entry.sequence?.value || '',
-                        features: features,
-                        uniprotUrl: `https://www.uniprot.org/uniprotkb/${entry.primaryAccession || entry.accession}`
-                    };
-                });
-            }
+            // Extract features
+            const features = (entry.features || []).slice(0, 5).map(f => ({
+              type: f.type,
+              location: {
+                start: f.location?.start?.value || f.location?.start,
+                end: f.location?.end?.value || f.location?.end,
+              },
+              description: f.description || f.type,
+            }));
 
+            return {
+              uniprotId: entry.primaryAccession || entry.accession,
+              proteinName: proteinName,
+              geneNames: geneName ? [{ primary: geneName, synonyms: [] }] : [],
+              organism: entry.organism?.scientificName || 'Unknown organism',
+              length: entry.sequence?.length || 0,
+              mass: entry.sequence?.molWeight || 0,
+              reviewed: entry.entryType === 'UniProtKB reviewed (Swiss-Prot)' || entry.reviewed === true,
+              function: functionText,
+              sequence: entry.sequence?.value || '',
+              features: features,
+              uniprotUrl: `https://www.uniprot.org/uniprotkb/${entry.primaryAccession || entry.accession}`,
+            };
+          });
+        }
 
-            displayResults(results) {
-                const container = document.getElementById('searchResults');
-                
-                if (!results.length) {
-                    container.innerHTML = `
+        displayResults(results) {
+          const container = document.getElementById('searchResults');
+
+          if (!results.length) {
+            container.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #666;">
                             <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
                             <h3>No Proteins Found</h3>
                             <p>Try adjusting your search terms or filters.</p>
                         </div>
                     `;
-                    return;
-                }
+            return;
+          }
 
-                const proteinCards = results.map(protein => {
-                    const primaryGene = protein.geneNames && protein.geneNames.length > 0 
-                        ? protein.geneNames[0].primary || protein.geneNames[0]
-                        : 'Unknown';
-                    
-                    const displayLength = protein.length || 0;
-                    const displayMass = protein.mass || 0;
-                    const displayFeatures = protein.features || [];
-                    const displaySequence = protein.sequence || '';
-                    const reviewedStatus = protein.reviewed ? 'Reviewed (Swiss-Prot)' : 'Unreviewed (TrEMBL)';
-                    const reviewedColor = protein.reviewed ? '#4caf50' : '#ff9800';
+          const proteinCards = results
+            .map(protein => {
+              const primaryGene =
+                protein.geneNames && protein.geneNames.length > 0
+                  ? protein.geneNames[0].primary || protein.geneNames[0]
+                  : 'Unknown';
 
-                    return `
+              const displayLength = protein.length || 0;
+              const displayMass = protein.mass || 0;
+              const displayFeatures = protein.features || [];
+              const displaySequence = protein.sequence || '';
+              const reviewedStatus = protein.reviewed ? 'Reviewed (Swiss-Prot)' : 'Unreviewed (TrEMBL)';
+              const reviewedColor = protein.reviewed ? '#4caf50' : '#ff9800';
+
+              return `
                         <div class="protein-card">
                             <div class="protein-header">
                                 <div class="protein-id">
@@ -796,38 +824,55 @@
                                 </div>
                             </div>
 
-                            ${displaySequence ? `
+                            ${
+                              displaySequence
+                                ? `
                                 <div class="protein-sequence">
                                     <strong>Sequence:</strong><br>
                                     <span style="font-family: 'Courier New', monospace; font-size: 12px; word-break: break-all;">
                                         ${displaySequence.substring(0, 200)}${displaySequence.length > 200 ? '...' : ''}
                                     </span>
                                 </div>
-                            ` : ''}
+                            `
+                                : ''
+                            }
 
-                            ${protein.function ? `
+                            ${
+                              protein.function
+                                ? `
                                 <div style="margin-bottom: 15px;">
                                     <strong>Function:</strong> 
                                     <span style="font-size: 14px;">${protein.function.substring(0, 300)}${protein.function.length > 300 ? '...' : ''}</span>
                                 </div>
-                            ` : ''}
+                            `
+                                : ''
+                            }
 
-                            ${displayFeatures.length > 0 ? `
+                            ${
+                              displayFeatures.length > 0
+                                ? `
                                 <div style="margin-bottom: 15px;">
                                     <strong>Key Features:</strong> 
                                     <span style="font-size: 14px;">
-                                        ${displayFeatures.slice(0, 3).map(f => f.type || f).join(', ')}
+                                        ${displayFeatures
+                                          .slice(0, 3)
+                                          .map(f => f.type || f)
+                                          .join(', ')}
                                         ${displayFeatures.length > 3 ? '...' : ''}
                                     </span>
                                 </div>
-                            ` : ''}
+                            `
+                                : ''
+                            }
 
                             <div class="protein-actions">
                                 <button class="btn btn-primary btn-sm" onclick="window.open('${protein.uniprotUrl}', '_blank')">
                                     <i class="fas fa-external-link-alt"></i>
                                     View in UniProt
                                 </button>
-                                ${displaySequence ? `
+                                ${
+                                  displaySequence
+                                    ? `
                                     <button class="btn btn-success btn-sm" onclick="navigator.clipboard.writeText('${displaySequence}')">
                                         <i class="fas fa-copy"></i>
                                         Copy Sequence
@@ -836,15 +881,18 @@
                                         <i class="fas fa-download"></i>
                                         Download FASTA
                                     </button>
-                                ` : ''}
+                                `
+                                    : ''
+                                }
                             </div>
                         </div>
                     `;
-                }).join('');
+            })
+            .join('');
 
-                const sourceNote = 'Results retrieved from UniProt REST API';
+          const sourceNote = 'Results retrieved from UniProt REST API';
 
-                container.innerHTML = `
+          container.innerHTML = `
                     <div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
                         <h4>Search Results (${results.length} proteins found)</h4>
                         <p>${sourceNote}</p>
@@ -852,80 +900,79 @@
                     </div>
                     ${proteinCards}
                 `;
-            }
+        }
 
-            downloadFasta(id, name, sequence) {
-                const fastaContent = `>${id} ${name}\n${sequence.match(/.{1,80}/g).join('\n')}`;
-                const blob = new Blob([fastaContent], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `${id}.fasta`;
-                link.click();
-                URL.revokeObjectURL(url);
-                this.showStatus(`FASTA file downloaded: ${id}.fasta`, 'success');
-            }
+        downloadFasta(id, name, sequence) {
+          const fastaContent = `>${id} ${name}\n${sequence.match(/.{1,80}/g).join('\n')}`;
+          const blob = new Blob([fastaContent], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${id}.fasta`;
+          link.click();
+          URL.revokeObjectURL(url);
+          this.showStatus(`FASTA file downloaded: ${id}.fasta`, 'success');
+        }
 
-            exportResults() {
-                if (!this.currentResults.length) {
-                    this.showStatus('No results to export. Please search first.', 'error');
-                    return;
-                }
+        exportResults() {
+          if (!this.currentResults.length) {
+            this.showStatus('No results to export. Please search first.', 'error');
+            return;
+          }
 
-                const csvContent = this.convertToCSV(this.currentResults);
-                const blob = new Blob([csvContent], { type: 'text/csv' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `uniprot_search_results_${new Date().toISOString().split('T')[0]}.csv`;
-                link.click();
-                URL.revokeObjectURL(url);
-                
-                this.showStatus('Results exported successfully!', 'success');
-            }
+          const csvContent = this.convertToCSV(this.currentResults);
+          const blob = new Blob([csvContent], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `uniprot_search_results_${new Date().toISOString().split('T')[0]}.csv`;
+          link.click();
+          URL.revokeObjectURL(url);
 
-            convertToCSV(results) {
-                const headers = ['UniProt_ID', 'Protein_Name', 'Gene', 'Organism', 'Length', 'Mass', 'Reviewed', 'Function'];
-                const rows = results.map(p => {
-                    const primaryGene = p.geneNames && p.geneNames.length > 0 
-                        ? (p.geneNames[0].primary || p.geneNames[0])
-                        : 'Unknown';
-                    return [
-                        p.uniprotId,
-                        p.proteinName,
-                        primaryGene,
-                        p.organism,
-                        p.length || 0,
-                        p.mass || 0,
-                        p.reviewed ? 'Yes' : 'No',
-                        (p.function || '').replace(/"/g, '""')
-                    ];
-                });
-                return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-            }
+          this.showStatus('Results exported successfully!', 'success');
+        }
 
-            showLoading(show) {
-                document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
-            }
+        convertToCSV(results) {
+          const headers = ['UniProt_ID', 'Protein_Name', 'Gene', 'Organism', 'Length', 'Mass', 'Reviewed', 'Function'];
+          const rows = results.map(p => {
+            const primaryGene =
+              p.geneNames && p.geneNames.length > 0 ? p.geneNames[0].primary || p.geneNames[0] : 'Unknown';
+            return [
+              p.uniprotId,
+              p.proteinName,
+              primaryGene,
+              p.organism,
+              p.length || 0,
+              p.mass || 0,
+              p.reviewed ? 'Yes' : 'No',
+              (p.function || '').replace(/"/g, '""'),
+            ];
+          });
+          return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+        }
 
-            showStatus(message, type) {
-                const statusArea = document.getElementById('statusArea');
-                const iconMap = {
-                    'success': 'check-circle',
-                    'error': 'exclamation-triangle',
-                    'warning': 'exclamation-circle'
-                };
-                statusArea.innerHTML = `
+        showLoading(show) {
+          document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+
+        showStatus(message, type) {
+          const statusArea = document.getElementById('statusArea');
+          const iconMap = {
+            success: 'check-circle',
+            error: 'exclamation-triangle',
+            warning: 'exclamation-circle',
+          };
+          statusArea.innerHTML = `
                     <div class="status-message status-${type}">
                         <i class="fas fa-${iconMap[type] || 'info-circle'}"></i>
                         ${message}
                     </div>
                 `;
-                setTimeout(() => statusArea.innerHTML = '', 5000);
-            }
+          setTimeout(() => (statusArea.innerHTML = ''), 5000);
+        }
 
-            showHelp() {
-                alert(`Search UniProt Database Help:
+        showHelp() {
+          alert(`Search UniProt Database Help:
 
 DIRECT API ACCESS:
 This tool connects directly to the UniProt REST API for real-time protein data.
@@ -955,18 +1002,18 @@ TIPS:
 • Enable "Reviewed only" for high-quality data
 • Try different search types if no results found
 • Internet connection required for API access`);
-            }
-
-            delay(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
-            }
         }
 
-        // Global instance for button access
-        let uniprotSearcher;
-        document.addEventListener('DOMContentLoaded', () => {
-            uniprotSearcher = new UniProtSearcher();
-        });
+        delay(ms) {
+          return new Promise(resolve => setTimeout(resolve, ms));
+        }
+      }
+
+      // Global instance for button access
+      let uniprotSearcher;
+      document.addEventListener('DOMContentLoaded', () => {
+        uniprotSearcher = new UniProtSearcher();
+      });
     </script>
-</body>
-</html> 
+  </body>
+</html>

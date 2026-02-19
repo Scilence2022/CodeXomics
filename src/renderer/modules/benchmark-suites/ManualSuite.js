@@ -3,646 +3,675 @@
  * Renamed from ManualSimpleSuite.js for broader scope
  */
 class ManualSuite {
-    constructor() {
-        this.suiteName = 'Manual Tests';
-        this.suiteId = 'manual_suite';
-        this.description = 'Manual evaluation tests - Genomic operations requiring human verification';
-        this.framework = null;
-        this.tests = this.initializeTests();
+  constructor() {
+    this.suiteName = 'Manual Tests';
+    this.suiteId = 'manual_suite';
+    this.description = 'Manual evaluation tests - Genomic operations requiring human verification';
+    this.framework = null;
+    this.tests = this.initializeTests();
+  }
+
+  getName() {
+    return this.suiteName;
+  }
+
+  getTests() {
+    return this.tests;
+  }
+
+  getTestCount() {
+    return this.tests.length;
+  }
+
+  /**
+   * Initialize manual test cases
+   */
+  initializeTests() {
+    return [
+      // DATA LOADING TASKS - Manual + Simple (FIRST - Data must be loaded before other tests)
+      {
+        id: 'load_manual_01',
+        name: 'Load Genome File Dialog',
+        type: 'function_call',
+        category: 'data_loading',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Load a genome file using the file selection dialog.',
+        expectedResult: {
+          tool_name: 'load_genome_file',
+          parameters: {
+            showFileDialog: true,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification:
+          'Please verify: 1) File selection dialog opens properly, 2) Dialog supports FASTA/GenBank formats.',
+      },
+      {
+        id: 'load_manual_02',
+        name: 'Load Annotation Data',
+        type: 'function_call',
+        category: 'data_loading',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Load annotation data for the current genome.',
+        expectedResult: {
+          tool_name: 'load_annotation_file',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification:
+          'Please verify: 1) Annotation loading interface appears, 2) Annotation file can be loaded and visualized.',
+      },
+      {
+        id: 'load_manual_03',
+        name: 'Load Aligned Reads',
+        type: 'function_call',
+        category: 'data_loading',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Load aligned reads data for genome visualization.',
+        expectedResult: {
+          tool_name: 'load_reads_file',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) Reads file dialog opens, 2) BAM/SAM file can be loaded and visualized.',
+      },
+      {
+        id: 'load_manual_04',
+        name: 'Load WIG Track Data',
+        type: 'function_call',
+        category: 'data_loading',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Load WIG track data for quantitative visualization.',
+        expectedResult: {
+          tool_name: 'load_wig_tracks',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification:
+          'Please verify: 1) WIG file loading interface appears, 2) WIG files can be loaded and visulized.',
+      },
+
+      // NAVIGATION TASKS - Manual + Simple
+      {
+        id: 'nav_manual_01',
+        name: 'Jump to lacZ Gene',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Jump to the lacZ gene location.',
+        expectedResult: {
+          tool_name: 'jump_to_gene',
+          parameters: {
+            geneName: 'lacZ',
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) Browser navigates to lacZ gene；',
+      },
+      {
+        id: 'nav_manual_02',
+        name: 'Open New Browser Tab',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Open a new tab.',
+        expectedResult: {
+          tool_name: 'open_new_tab',
+          parameters: {},
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) New browser tab opens successfully；',
+      },
+      {
+        id: 'nav_manual_03',
+        name: 'Switch to First Tab',
+        type: 'function_call',
+        category: 'navigation',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Switch to the first tab (tab index 0).',
+        expectedResult: {
+          tool_name: 'switch_to_tab',
+          parameters: {
+            tab_index: 0,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) Browser switches to the first tab successfully；',
+      },
+
+      // ANALYSIS TASKS - Manual + Simple
+      {
+        id: 'anal_manual_01',
+        name: 'lacZ Codon Usage Analysis',
+        type: 'function_call',
+        category: 'analysis',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: 'Analyze codon usage patterns for the lacZ gene',
+        expectedResult: {
+          tool_name: 'codon_usage_analysis',
+          parameters: {
+            geneName: 'lacZ',
+            include_statistics: true,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification:
+          'Please verify: 1) Codon usage analysis is performed for lacZ, 2) Results show frequency tables and statistics；',
+      },
+
+      // SEARCH TASKS - Manual + Simple
+      {
+        id: 'search_manual_01',
+        name: 'Search b1210 Locus Tags',
+        type: 'function_call',
+        category: 'search',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction: "Search for genes with locus tags starting with 'b1210'.",
+        expectedResult: {
+          tool_name: 'search_gene_by_name',
+          parameters: {
+            name: 'b1210',
+            exact_match: false,
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification: 'Please verify: 1) Search identifies genes with locus tags b1210 etc.;',
+      },
+
+      // COMPLEX NAVIGATION WORKFLOW - Manual + Complex
+      {
+        id: 'navi_manual_01',
+        name: 'Open tabs and navigate to different positions',
+        type: 'workflow',
+        category: 'navigation',
+        complexity: 'complex',
+        evaluation: 'manual',
+        instruction:
+          'Open three new tabs and navigate to different positions: 1) Open a new tab then navigate to position 1000000, 2) Open a new tab then jump to lacZ gene, 3) Open a new tab then navigate to position 2500000.',
+        expectedResult: {
+          tool_sequence: [
+            'open_new_tab',
+            'navigate_to_position',
+            'open_new_tab',
+            'jump_to_gene',
+            'open_new_tab',
+            'navigate_to_position',
+          ],
+          parameters: [
+            {}, // open_new_tab 1
+            { chromosome: '<current_chromosome>', position: 1000000 }, // navigate to 1M in new tab
+            {}, // open_new_tab 2
+            { geneName: 'lacZ' }, // jump to lacZ in new tab
+            {}, // open_new_tab 3
+            { chromosome: '<current_chromosome>', position: 2500000 }, // navigate to 2.5M in new tab
+          ],
+        },
+        maxScore: 15,
+        bonusScore: 5,
+        timeout: 300000,
+        evaluator: this.evaluateComplexNavigationWorkflow.bind(this),
+        manualVerification:
+          'Please verify: 1) Three new tabs are opened successfully, 2) First new tab automatically navigates to position 1000000, 3) Second new tab automatically navigates to lacZ gene location, 4) Third new tab automatically navigates to position 2500000, 5) Navigation in each tab is accurate and responsive.',
+      },
+    ];
+  }
+
+  /**
+   * Evaluator methods - shared across all suite types
+   */
+  async evaluateBasicFunctionCall(actualResult, expectedResult, testResult) {
+    const evaluation = {
+      success: false,
+      score: 0,
+      maxScore: testResult.maxScore || 5, // Use test's actual maxScore, default to 5 for simple
+      errors: [],
+      warnings: [],
+    };
+
+    if (!actualResult) {
+      evaluation.errors.push('No result obtained from test execution');
+      return evaluation;
     }
 
-    getName() {
-        return this.suiteName;
-    }
+    console.log(`📊 [ManualSuite] Evaluating test result:`, {
+      testId: testResult.testId,
+      expectedTool: expectedResult.tool_name,
+      actualResult: actualResult,
+      resultType: typeof actualResult,
+    });
 
-    getTests() {
-        return this.tests;
-    }
+    // PRIORITY 0: Check Tool Execution Tracker for direct execution status
+    if (window.chatManager && window.chatManager.toolExecutionTracker) {
+      const tracker = window.chatManager.toolExecutionTracker;
+      const recentExecutions = tracker.getSessionExecutions();
 
-    getTestCount() {
-        return this.tests.length;
-    }
+      console.log(`🔍 [ManualSuite] Checking tracker for tool: ${expectedResult.tool_name}`);
 
-    /**
-     * Initialize manual test cases
-     */
-    initializeTests() {
-        return [
-            // DATA LOADING TASKS - Manual + Simple (FIRST - Data must be loaded before other tests)
-            {
-                id: 'load_manual_01',
-                name: 'Load Genome File Dialog',
-                type: 'function_call',
-                category: 'data_loading',
-                complexity: 'simple',
-                evaluation: 'manual',
-                instruction: 'Load a genome file using the file selection dialog.',
-                expectedResult: {
-                    tool_name: 'load_genome_file',
-                    parameters: {
-                        showFileDialog: true
-                    }
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 300000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) File selection dialog opens properly, 2) Dialog supports FASTA/GenBank formats.'
-            },
-            {
-                id: 'load_manual_02',
-                name: 'Load Annotation Data',
-                type: 'function_call',
-                category: 'data_loading',
-                complexity: 'simple',
-                evaluation: 'manual',
-                instruction: 'Load annotation data for the current genome.',
-                expectedResult: {
-                    tool_name: 'load_annotation_file',
-                    parameters: {}
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 300000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) Annotation loading interface appears, 2) Annotation file can be loaded and visualized.'
-            },
-            {
-                id: 'load_manual_03',
-                name: 'Load Aligned Reads',
-                type: 'function_call',
-                category: 'data_loading',
-                complexity: 'simple',
-                evaluation: 'manual',
-                instruction: 'Load aligned reads data for genome visualization.',
-                expectedResult: {
-                    tool_name: 'load_reads_file',
-                    parameters: {}
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 300000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) Reads file dialog opens, 2) BAM/SAM file can be loaded and visualized.'
-            },
-            {
-                id: 'load_manual_04',
-                name: 'Load WIG Track Data',
-                type: 'function_call',
-                category: 'data_loading',
-                complexity: 'simple',
-                evaluation: 'manual',
-                instruction: 'Load WIG track data for quantitative visualization.',
-                expectedResult: {
-                    tool_name: 'load_wig_tracks',
-                    parameters: {}
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 300000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) WIG file loading interface appears, 2) WIG files can be loaded and visulized.'
-            },
+      // Look for recent successful execution of the expected tool
+      // Use configured benchmark timeout instead of hardcoded 30 seconds
+      const timeoutMs = (this.framework && this.framework.testTimeout) || 120000; // Default to 2 minutes
+      const relevantExecution = recentExecutions.find(
+        exec =>
+          exec.toolName === expectedResult.tool_name &&
+          exec.status === 'completed' &&
+          Date.now() - exec.startTime < timeoutMs // Within configured timeout window
+      );
 
-            // NAVIGATION TASKS - Manual + Simple
-            {
-                id: 'nav_manual_01',
-                name: 'Jump to lacZ Gene',
-                type: 'function_call',
-                category: 'navigation',
-                complexity: 'simple',
-                evaluation: 'manual',
-                instruction: 'Jump to the lacZ gene location.',
-                expectedResult: {
-                    tool_name: 'jump_to_gene',
-                    parameters: {
-                        geneName: 'lacZ'
-                    }
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 300000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) Browser navigates to lacZ gene；'
-            },
-            {
-                id: 'nav_manual_02',
-                name: 'Open New Browser Tab',
-                type: 'function_call',
-                category: 'navigation',
-                complexity: 'simple',
-                evaluation: 'manual',
-                instruction: 'Open a new tab.',
-                expectedResult: {
-                    tool_name: 'open_new_tab',
-                    parameters: {}
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 300000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) New browser tab opens successfully；'
-            },
-            {
-                id: 'nav_manual_03',
-                name: 'Switch to First Tab',
-                type: 'function_call',
-                category: 'navigation',
-                complexity: 'simple',
-                evaluation: 'manual',
-                instruction: 'Switch to the first tab (tab index 0).',
-                expectedResult: {
-                    tool_name: 'switch_to_tab',
-                    parameters: {
-                        tab_index: 0
-                    }
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 300000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) Browser switches to the first tab successfully；'
-            },
-           
-
-            // ANALYSIS TASKS - Manual + Simple
-            {
-                id: 'anal_manual_01',
-                name: 'lacZ Codon Usage Analysis',
-                type: 'function_call',
-                category: 'analysis',
-                complexity: 'simple',
-                evaluation: 'manual',
-                instruction: 'Analyze codon usage patterns for the lacZ gene',
-                expectedResult: {
-                    tool_name: 'codon_usage_analysis',
-                    parameters: {
-                        geneName: 'lacZ',
-                        include_statistics: true
-                    }
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 300000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) Codon usage analysis is performed for lacZ, 2) Results show frequency tables and statistics；'
-            },
-
-            // SEARCH TASKS - Manual + Simple
-            {
-                id: 'search_manual_01',
-                name: 'Search b1210 Locus Tags',
-                type: 'function_call',
-                category: 'search',
-                complexity: 'simple',
-                evaluation: 'manual',
-                instruction: 'Search for genes with locus tags starting with \'b1210\'.',
-                expectedResult: {
-                    tool_name: 'search_gene_by_name',
-                    parameters: {
-                        name: 'b1210',
-                        exact_match: false
-                    }
-                },
-                maxScore: 5,
-                bonusScore: 1,
-                timeout: 300000,
-                evaluator: this.evaluateBasicFunctionCall.bind(this),
-                manualVerification: 'Please verify: 1) Search identifies genes with locus tags b1210 etc.;'
-            },
-
-            // COMPLEX NAVIGATION WORKFLOW - Manual + Complex
-            {
-                id: 'navi_manual_01',
-                name: 'Open tabs and navigate to different positions',
-                type: 'workflow',
-                category: 'navigation',
-                complexity: 'complex',
-                evaluation: 'manual',
-                instruction: 'Open three new tabs and navigate to different positions: 1) Open a new tab then navigate to position 1000000, 2) Open a new tab then jump to lacZ gene, 3) Open a new tab then navigate to position 2500000.',
-                expectedResult: {
-                    tool_sequence: ['open_new_tab', 'navigate_to_position', 'open_new_tab', 'jump_to_gene', 'open_new_tab', 'navigate_to_position'],
-                    parameters: [
-                        {},  // open_new_tab 1
-                        { chromosome: '<current_chromosome>', position: 1000000 },  // navigate to 1M in new tab
-                        {},  // open_new_tab 2
-                        { geneName: 'lacZ' },  // jump to lacZ in new tab
-                        {},  // open_new_tab 3
-                        { chromosome: '<current_chromosome>', position: 2500000 }  // navigate to 2.5M in new tab
-                    ]
-                },
-                maxScore: 15,
-                bonusScore: 5,
-                timeout: 300000,
-                evaluator: this.evaluateComplexNavigationWorkflow.bind(this),
-                manualVerification: 'Please verify: 1) Three new tabs are opened successfully, 2) First new tab automatically navigates to position 1000000, 3) Second new tab automatically navigates to lacZ gene location, 4) Third new tab automatically navigates to position 2500000, 5) Navigation in each tab is accurate and responsive.'
-            }
-        ];
-    }
-
-    /**
-     * Evaluator methods - shared across all suite types
-     */
-    async evaluateBasicFunctionCall(actualResult, expectedResult, testResult) {
-        const evaluation = {
-            success: false,
-            score: 0,
-            maxScore: testResult.maxScore || 5, // Use test's actual maxScore, default to 5 for simple
-            errors: [],
-            warnings: []
-        };
-
-        if (!actualResult) {
-            evaluation.errors.push('No result obtained from test execution');
-            return evaluation;
-        }
-
-        console.log(`📊 [ManualSuite] Evaluating test result:`, {
-            testId: testResult.testId,
-            expectedTool: expectedResult.tool_name,
-            actualResult: actualResult,
-            resultType: typeof actualResult
-        });
-
-        // PRIORITY 0: Check Tool Execution Tracker for direct execution status
-        if (window.chatManager && window.chatManager.toolExecutionTracker) {
-            const tracker = window.chatManager.toolExecutionTracker;
-            const recentExecutions = tracker.getSessionExecutions();
-            
-            console.log(`🔍 [ManualSuite] Checking tracker for tool: ${expectedResult.tool_name}`);
-            
-            // Look for recent successful execution of the expected tool
-            // Use configured benchmark timeout instead of hardcoded 30 seconds
-            const timeoutMs = (this.framework && this.framework.testTimeout) || 120000; // Default to 2 minutes
-            const relevantExecution = recentExecutions.find(exec => 
-                exec.toolName === expectedResult.tool_name && 
-                exec.status === 'completed' &&
-                Date.now() - exec.startTime < timeoutMs // Within configured timeout window
-            );
-            
-            if (relevantExecution) {
-                console.log(`✅ [ManualSuite] TRACKER SUCCESS: Found successful execution of '${expectedResult.tool_name}'`, relevantExecution);
-                evaluation.score = evaluation.maxScore; // FULL POINTS from tracker
-                evaluation.success = true;
-                evaluation.warnings.push('Awarded full points based on Tool Execution Tracker data');
-                return evaluation;
-            }
-            
-            // Look for recent failed execution
-            const failedExecution = recentExecutions.find(exec => 
-                exec.toolName === expectedResult.tool_name && 
-                exec.status === 'failed' &&
-                Date.now() - exec.startTime < timeoutMs // Within configured timeout window
-            );
-            
-            if (failedExecution) {
-                console.log(`❌ [ManualSuite] TRACKER FAILURE: Found failed execution of '${expectedResult.tool_name}'`, failedExecution);
-                evaluation.errors.push(`Tool execution failed: ${failedExecution.error?.message || 'Unknown error'}`);
-                return evaluation; // Score remains 0
-            }
-        }
-
-        // ENHANCED: Handle multiple tool calls - check all tools in array
-        let actualTools = [];
-        let actualTool = null;
-        
-        if (Array.isArray(actualResult)) {
-            actualTools = actualResult.map(call => call?.tool_name).filter(Boolean);
-            actualTool = actualTools[0]; // Primary tool for backward compatibility
-            console.log(`🎯 [ManualSuite] Multiple tools detected:`, actualTools);
-            console.log(`🎯 [ManualSuite] Checking if expected tool '${expectedResult.tool_name}' is in:`, actualTools);
-            
-            // Check if expected tool is in the array
-            if (actualTools.includes(expectedResult.tool_name)) {
-                actualTool = expectedResult.tool_name; // Use the expected tool for evaluation
-                console.log(`✅ [ManualSuite] Expected tool '${expectedResult.tool_name}' found in tool array!`);
-            } else {
-                console.log(`❌ [ManualSuite] Expected tool '${expectedResult.tool_name}' NOT found in tool array`);
-            }
-        } else {
-            actualTool = actualResult?.tool_name;
-            actualTools = actualTool ? [actualTool] : [];
-            console.log(`🎯 [ManualSuite] Single tool detected: '${actualTool}'`);
-        }
-        
-        console.log(`🎯 [ManualSuite] Final extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`);        
-        
-        // Check if expected tool is found in the detected tools array
-        if (actualTools.includes(expectedResult.tool_name)) {
-            console.log(`✅ [ManualSuite] EXPECTED TOOL FOUND: '${expectedResult.tool_name}' detected in tools array`);
-            evaluation.score = evaluation.maxScore; // FULL POINTS for correct tool detection
-            actualTool = expectedResult.tool_name; // Set for parameter evaluation
-        } else if (actualTool === expectedResult.tool_name) {
-            console.log(`✅ [ManualSuite] Correct tool name detected: ${actualTool}`);
-            evaluation.score = evaluation.maxScore; // Full points for correct tool
-        } else {
-            console.log(`❌ [ManualSuite] Tool mismatch: expected '${expectedResult.tool_name}', got '${actualTool}'`);
-            console.log(`❌ [ManualSuite] Available tools were:`, actualTools);
-            evaluation.errors.push(`Expected tool '${expectedResult.tool_name}' but got '${actualTool || 'none'}'. Available tools: [${actualTools.join(', ')}]`);
-            evaluation.score = 0; // No points for wrong tool
-            evaluation.success = false;
-            return evaluation;
-        }
-
-        // Check parameters - deduct points for parameter issues
-        const actualParams = Array.isArray(actualResult) ? actualResult[0]?.parameters : actualResult.parameters;
-        if (actualParams && expectedResult.parameters) {
-            const expectedKeys = Object.keys(expectedResult.parameters);
-            const matchingKeys = expectedKeys.filter(key => 
-                key in actualParams && 
-                (actualParams[key] === expectedResult.parameters[key] || 
-                 expectedResult.parameters[key] === '<current_chromosome>' ||
-                 expectedResult.parameters[key] === '<lacZ_protein_sequence>' ||
-                 expectedResult.parameters[key] === '<araA_protein_sequence>')
-            );
-            
-            // Deduct 1 point for each missing/incorrect parameter
-            const missingParams = expectedKeys.length - matchingKeys.length;
-            if (missingParams > 0) {
-                evaluation.score = Math.max(0, evaluation.score - missingParams);
-                evaluation.warnings.push(`${missingParams} parameter(s) missing or incorrect`);
-            }
-        }
-
-        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
+      if (relevantExecution) {
+        console.log(
+          `✅ [ManualSuite] TRACKER SUCCESS: Found successful execution of '${expectedResult.tool_name}'`,
+          relevantExecution
+        );
+        evaluation.score = evaluation.maxScore; // FULL POINTS from tracker
+        evaluation.success = true;
+        evaluation.warnings.push('Awarded full points based on Tool Execution Tracker data');
         return evaluation;
+      }
+
+      // Look for recent failed execution
+      const failedExecution = recentExecutions.find(
+        exec =>
+          exec.toolName === expectedResult.tool_name &&
+          exec.status === 'failed' &&
+          Date.now() - exec.startTime < timeoutMs // Within configured timeout window
+      );
+
+      if (failedExecution) {
+        console.log(
+          `❌ [ManualSuite] TRACKER FAILURE: Found failed execution of '${expectedResult.tool_name}'`,
+          failedExecution
+        );
+        evaluation.errors.push(`Tool execution failed: ${failedExecution.error?.message || 'Unknown error'}`);
+        return evaluation; // Score remains 0
+      }
     }
 
-    /**
-     * Evaluate complex navigation workflow with multiple tabs and navigation
-     */
-    async evaluateComplexNavigationWorkflow(actualResult, expectedResult, testResult) {
-        const evaluation = {
-            success: false,
-            score: 0,
-            maxScore: testResult.maxScore || 15,
-            errors: [],
-            warnings: [],
-            details: {
-                toolsExecuted: [],
-                expectedSequence: expectedResult.tool_sequence || [],
-                actualSequence: [],
-                sequenceMatch: false
-            }
-        };
+    // ENHANCED: Handle multiple tool calls - check all tools in array
+    let actualTools = [];
+    let actualTool = null;
 
-        console.log(`🧭 [ManualSuite] Evaluating complex navigation workflow:`, {
-            testId: testResult.testId,
-            expectedSequence: expectedResult.tool_sequence,
-            actualResult: actualResult,
-            actualResultType: typeof actualResult,
-            isArray: Array.isArray(actualResult)
-        });
+    if (Array.isArray(actualResult)) {
+      actualTools = actualResult.map(call => call?.tool_name).filter(Boolean);
+      actualTool = actualTools[0]; // Primary tool for backward compatibility
+      console.log(`🎯 [ManualSuite] Multiple tools detected:`, actualTools);
+      console.log(`🎯 [ManualSuite] Checking if expected tool '${expectedResult.tool_name}' is in:`, actualTools);
 
-        if (!actualResult) {
-            evaluation.errors.push('No result obtained from complex navigation workflow');
-            return evaluation;
-        }
+      // Check if expected tool is in the array
+      if (actualTools.includes(expectedResult.tool_name)) {
+        actualTool = expectedResult.tool_name; // Use the expected tool for evaluation
+        console.log(`✅ [ManualSuite] Expected tool '${expectedResult.tool_name}' found in tool array!`);
+      } else {
+        console.log(`❌ [ManualSuite] Expected tool '${expectedResult.tool_name}' NOT found in tool array`);
+      }
+    } else {
+      actualTool = actualResult?.tool_name;
+      actualTools = actualTool ? [actualTool] : [];
+      console.log(`🎯 [ManualSuite] Single tool detected: '${actualTool}'`);
+    }
 
-        // CRITICAL FIX: Handle different result formats
-        let toolResults = [];
-        
-        // Check if actualResult is already an array of tool calls
-        if (Array.isArray(actualResult)) {
-            toolResults = actualResult;
-        } 
-        // Check if it's a single tool call object
-        else if (actualResult.tool_name) {
-            toolResults = [actualResult];
-        }
-        // Check if executionData has functionCalls array
-        else if (testResult.llmInteractionData?.response?.actualExecutionData?.functionCalls) {
-            const functionCalls = testResult.llmInteractionData.response.actualExecutionData.functionCalls;
-            toolResults = functionCalls.map(call => ({
-                tool_name: call.tool_name,
-                parameters: call.parameters,
-                round: call.round
-            }));
-            console.log(`🔧 [ManualSuite] Extracted ${toolResults.length} tools from executionData`);
-        }
-        // Fallback: check detailedLogs for round information
-        else if (testResult.detailedLogs?.toolCallHistory?.toolCallRounds) {
-            const rounds = testResult.detailedLogs.toolCallHistory.toolCallRounds;
-            const allTools = [];
-            rounds.forEach(round => {
-                if (round.tools && round.tools.length > 0) {
-                    round.tools.forEach(tool => {
-                        allTools.push({
-                            tool_name: tool,
-                            round: round.current
-                        });
-                    });
-                }
+    console.log(
+      `🎯 [ManualSuite] Final extracted tool name: '${actualTool}' (expected: '${expectedResult.tool_name}')`
+    );
+
+    // Check if expected tool is found in the detected tools array
+    if (actualTools.includes(expectedResult.tool_name)) {
+      console.log(`✅ [ManualSuite] EXPECTED TOOL FOUND: '${expectedResult.tool_name}' detected in tools array`);
+      evaluation.score = evaluation.maxScore; // FULL POINTS for correct tool detection
+      actualTool = expectedResult.tool_name; // Set for parameter evaluation
+    } else if (actualTool === expectedResult.tool_name) {
+      console.log(`✅ [ManualSuite] Correct tool name detected: ${actualTool}`);
+      evaluation.score = evaluation.maxScore; // Full points for correct tool
+    } else {
+      console.log(`❌ [ManualSuite] Tool mismatch: expected '${expectedResult.tool_name}', got '${actualTool}'`);
+      console.log(`❌ [ManualSuite] Available tools were:`, actualTools);
+      evaluation.errors.push(
+        `Expected tool '${expectedResult.tool_name}' but got '${actualTool || 'none'}'. Available tools: [${actualTools.join(', ')}]`
+      );
+      evaluation.score = 0; // No points for wrong tool
+      evaluation.success = false;
+      return evaluation;
+    }
+
+    // Check parameters - deduct points for parameter issues
+    const actualParams = Array.isArray(actualResult) ? actualResult[0]?.parameters : actualResult.parameters;
+    if (actualParams && expectedResult.parameters) {
+      const expectedKeys = Object.keys(expectedResult.parameters);
+      const matchingKeys = expectedKeys.filter(
+        key =>
+          key in actualParams &&
+          (actualParams[key] === expectedResult.parameters[key] ||
+            expectedResult.parameters[key] === '<current_chromosome>' ||
+            expectedResult.parameters[key] === '<lacZ_protein_sequence>' ||
+            expectedResult.parameters[key] === '<araA_protein_sequence>')
+      );
+
+      // Deduct 1 point for each missing/incorrect parameter
+      const missingParams = expectedKeys.length - matchingKeys.length;
+      if (missingParams > 0) {
+        evaluation.score = Math.max(0, evaluation.score - missingParams);
+        evaluation.warnings.push(`${missingParams} parameter(s) missing or incorrect`);
+      }
+    }
+
+    evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
+    return evaluation;
+  }
+
+  /**
+   * Evaluate complex navigation workflow with multiple tabs and navigation
+   */
+  async evaluateComplexNavigationWorkflow(actualResult, expectedResult, testResult) {
+    const evaluation = {
+      success: false,
+      score: 0,
+      maxScore: testResult.maxScore || 15,
+      errors: [],
+      warnings: [],
+      details: {
+        toolsExecuted: [],
+        expectedSequence: expectedResult.tool_sequence || [],
+        actualSequence: [],
+        sequenceMatch: false,
+      },
+    };
+
+    console.log(`🧭 [ManualSuite] Evaluating complex navigation workflow:`, {
+      testId: testResult.testId,
+      expectedSequence: expectedResult.tool_sequence,
+      actualResult: actualResult,
+      actualResultType: typeof actualResult,
+      isArray: Array.isArray(actualResult),
+    });
+
+    if (!actualResult) {
+      evaluation.errors.push('No result obtained from complex navigation workflow');
+      return evaluation;
+    }
+
+    // CRITICAL FIX: Handle different result formats
+    let toolResults = [];
+
+    // Check if actualResult is already an array of tool calls
+    if (Array.isArray(actualResult)) {
+      toolResults = actualResult;
+    }
+    // Check if it's a single tool call object
+    else if (actualResult.tool_name) {
+      toolResults = [actualResult];
+    }
+    // Check if executionData has functionCalls array
+    else if (testResult.llmInteractionData?.response?.actualExecutionData?.functionCalls) {
+      const functionCalls = testResult.llmInteractionData.response.actualExecutionData.functionCalls;
+      toolResults = functionCalls.map(call => ({
+        tool_name: call.tool_name,
+        parameters: call.parameters,
+        round: call.round,
+      }));
+      console.log(`🔧 [ManualSuite] Extracted ${toolResults.length} tools from executionData`);
+    }
+    // Fallback: check detailedLogs for round information
+    else if (testResult.detailedLogs?.toolCallHistory?.toolCallRounds) {
+      const rounds = testResult.detailedLogs.toolCallHistory.toolCallRounds;
+      const allTools = [];
+      rounds.forEach(round => {
+        if (round.tools && round.tools.length > 0) {
+          round.tools.forEach(tool => {
+            allTools.push({
+              tool_name: tool,
+              round: round.current,
             });
-            toolResults = allTools;
-            console.log(`🔧 [ManualSuite] Extracted ${toolResults.length} tools from detailedLogs`);
+          });
         }
-
-        console.log(`🧭 [ManualSuite] Processing ${toolResults.length} tool calls in workflow`);
-        console.log(`🧭 [ManualSuite] Tool results:`, toolResults);
-
-        // Extract actual tool sequence
-        evaluation.details.actualSequence = toolResults.map(result => result?.tool_name).filter(Boolean);
-        evaluation.details.toolsExecuted = evaluation.details.actualSequence;
-
-        console.log(`🧭 [ManualSuite] Actual sequence:`, evaluation.details.actualSequence);
-        console.log(`🧭 [ManualSuite] Expected sequence:`, evaluation.details.expectedSequence);
-
-        // Check sequence matching
-        const expectedSequence = evaluation.details.expectedSequence;
-        const actualSequence = evaluation.details.actualSequence;
-        
-        // ENHANCED: More flexible sequence matching
-        let sequenceScore = 0;
-        const maxSequenceScore = 10; // 10 points for sequence matching (increased from 8)
-        
-        if (actualSequence.length > 0) {
-            // Count tools that match expected sequence (in order)
-            let correctTools = 0;
-            let exactMatches = 0;
-            
-            // Check exact sequence match
-            for (let i = 0; i < Math.min(expectedSequence.length, actualSequence.length); i++) {
-                if (actualSequence[i] === expectedSequence[i]) {
-                    exactMatches++;
-                }
-            }
-            
-            // Also give credit for having the right tools, even if order is slightly different
-            expectedSequence.forEach(expectedTool => {
-                if (actualSequence.includes(expectedTool)) {
-                    correctTools++;
-                }
-            });
-            
-            // Calculate score based on both exact matches and presence
-            const exactMatchRatio = exactMatches / expectedSequence.length;
-            const presenceRatio = correctTools / expectedSequence.length;
-            
-            // Weight exact matches more heavily (70%) than just presence (30%)
-            sequenceScore = Math.round((exactMatchRatio * 0.7 + presenceRatio * 0.3) * maxSequenceScore);
-            
-            evaluation.details.sequenceMatch = exactMatches >= Math.ceil(expectedSequence.length * 0.7); // 70% exact match required
-            
-            console.log(`🎯 [ManualSuite] Sequence scoring:`, {
-                exactMatches,
-                correctTools,
-                expectedLength: expectedSequence.length,
-                exactMatchRatio: (exactMatchRatio * 100).toFixed(1) + '%',
-                presenceRatio: (presenceRatio * 100).toFixed(1) + '%',
-                sequenceScore
-            });
-        }
-
-        // Award additional points for workflow completion
-        let workflowScore = 0;
-        const maxWorkflowScore = 5; // 5 points for overall workflow success (reduced to make room for sequence score)
-        
-        // Check for key workflow components
-        const tabCreationCount = actualSequence.filter(tool => tool === 'open_new_tab').length;
-        const hasNavigation = actualSequence.includes('navigate_to_position') || actualSequence.includes('jump_to_gene');
-        const expectedTabCount = expectedSequence.filter(tool => tool === 'open_new_tab').length;
-        
-        // Award points for tab creation (3 points max)
-        if (tabCreationCount > 0) {
-            workflowScore += Math.min(3, (tabCreationCount / Math.max(1, expectedTabCount)) * 3);
-        }
-        
-        // Award points for navigation (2 points)
-        if (hasNavigation) {
-            workflowScore += 2;
-        }
-        
-        workflowScore = Math.round(workflowScore);
-
-        evaluation.score = sequenceScore + workflowScore;
-        evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
-
-        // Add detailed feedback
-        evaluation.warnings.push(`Sequence matching: ${sequenceScore}/${maxSequenceScore} points`);
-        evaluation.warnings.push(`Workflow completion: ${workflowScore}/${maxWorkflowScore} points`);
-        evaluation.warnings.push(`Tools executed: ${actualSequence.join(' → ')}`);
-        evaluation.warnings.push(`Expected tools: ${expectedSequence.join(' → ')}`);
-
-        console.log(`🧭 [ManualSuite] Complex navigation workflow evaluation complete:`, {
-            score: evaluation.score,
-            maxScore: evaluation.maxScore,
-            success: evaluation.success,
-            sequenceMatch: evaluation.details.sequenceMatch,
-            toolsExecuted: evaluation.details.toolsExecuted.length
-        });
-
-        return evaluation;
+      });
+      toolResults = allTools;
+      console.log(`🔧 [ManualSuite] Extracted ${toolResults.length} tools from detailedLogs`);
     }
 
-    async evaluateNavigationCall(actualResult, expectedResult, testResult) {
-        const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
-        
-        // Add navigation-specific checks
-        if (actualResult && actualResult.parameters) {
-            const params = actualResult.parameters;
-            
-            // Check for reasonable coordinate ranges
-            if (params.start && params.end && params.start > params.end) {
-                evaluation.warnings.push('Start position should be less than end position');
-            }
-            
-            // Check for very large ranges that might indicate errors
-            if (params.start && params.end && (params.end - params.start) > 10000000) {
-                evaluation.warnings.push('Range is very large (>10Mb), verify this is intentional');
-            }
+    console.log(`🧭 [ManualSuite] Processing ${toolResults.length} tool calls in workflow`);
+    console.log(`🧭 [ManualSuite] Tool results:`, toolResults);
+
+    // Extract actual tool sequence
+    evaluation.details.actualSequence = toolResults.map(result => result?.tool_name).filter(Boolean);
+    evaluation.details.toolsExecuted = evaluation.details.actualSequence;
+
+    console.log(`🧭 [ManualSuite] Actual sequence:`, evaluation.details.actualSequence);
+    console.log(`🧭 [ManualSuite] Expected sequence:`, evaluation.details.expectedSequence);
+
+    // Check sequence matching
+    const expectedSequence = evaluation.details.expectedSequence;
+    const actualSequence = evaluation.details.actualSequence;
+
+    // ENHANCED: More flexible sequence matching
+    let sequenceScore = 0;
+    const maxSequenceScore = 10; // 10 points for sequence matching (increased from 8)
+
+    if (actualSequence.length > 0) {
+      // Count tools that match expected sequence (in order)
+      let correctTools = 0;
+      let exactMatches = 0;
+
+      // Check exact sequence match
+      for (let i = 0; i < Math.min(expectedSequence.length, actualSequence.length); i++) {
+        if (actualSequence[i] === expectedSequence[i]) {
+          exactMatches++;
         }
-        
-        return evaluation;
-    }
+      }
 
-    async evaluateSequenceAnalysisCall(actualResult, expectedResult, testResult) {
-        const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
-        
-        // Add sequence-specific checks
-        if (actualResult && actualResult.parameters && actualResult.parameters.sequence) {
-            const sequence = actualResult.parameters.sequence.toUpperCase();
-            const validChars = /^[ATCGN]+$/;
-            
-            if (validChars.test(sequence)) {
-                evaluation.score += 5; // Bonus for valid DNA sequence
-            } else {
-                evaluation.warnings.push('Sequence contains invalid DNA characters');
-            }
+      // Also give credit for having the right tools, even if order is slightly different
+      expectedSequence.forEach(expectedTool => {
+        if (actualSequence.includes(expectedTool)) {
+          correctTools++;
         }
-        
-        return evaluation;
+      });
+
+      // Calculate score based on both exact matches and presence
+      const exactMatchRatio = exactMatches / expectedSequence.length;
+      const presenceRatio = correctTools / expectedSequence.length;
+
+      // Weight exact matches more heavily (70%) than just presence (30%)
+      sequenceScore = Math.round((exactMatchRatio * 0.7 + presenceRatio * 0.3) * maxSequenceScore);
+
+      evaluation.details.sequenceMatch = exactMatches >= Math.ceil(expectedSequence.length * 0.7); // 70% exact match required
+
+      console.log(`🎯 [ManualSuite] Sequence scoring:`, {
+        exactMatches,
+        correctTools,
+        expectedLength: expectedSequence.length,
+        exactMatchRatio: (exactMatchRatio * 100).toFixed(1) + '%',
+        presenceRatio: (presenceRatio * 100).toFixed(1) + '%',
+        sequenceScore,
+      });
     }
 
-    async evaluateSearchFunctionCall(actualResult, expectedResult, testResult) {
-        const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
-        
-        // Add search-specific checks
-        if (actualResult && actualResult.parameters) {
-            const params = actualResult.parameters;
-            
-            // Check for case sensitivity handling
-            if (params.caseSensitive === false || params.caseSensitive === true) {
-                evaluation.score += 2; // Bonus for explicit case sensitivity handling
-            }
+    // Award additional points for workflow completion
+    let workflowScore = 0;
+    const maxWorkflowScore = 5; // 5 points for overall workflow success (reduced to make room for sequence score)
+
+    // Check for key workflow components
+    const tabCreationCount = actualSequence.filter(tool => tool === 'open_new_tab').length;
+    const hasNavigation = actualSequence.includes('navigate_to_position') || actualSequence.includes('jump_to_gene');
+    const expectedTabCount = expectedSequence.filter(tool => tool === 'open_new_tab').length;
+
+    // Award points for tab creation (3 points max)
+    if (tabCreationCount > 0) {
+      workflowScore += Math.min(3, (tabCreationCount / Math.max(1, expectedTabCount)) * 3);
+    }
+
+    // Award points for navigation (2 points)
+    if (hasNavigation) {
+      workflowScore += 2;
+    }
+
+    workflowScore = Math.round(workflowScore);
+
+    evaluation.score = sequenceScore + workflowScore;
+    evaluation.success = evaluation.score >= Math.ceil(evaluation.maxScore * 0.6); // 60% threshold
+
+    // Add detailed feedback
+    evaluation.warnings.push(`Sequence matching: ${sequenceScore}/${maxSequenceScore} points`);
+    evaluation.warnings.push(`Workflow completion: ${workflowScore}/${maxWorkflowScore} points`);
+    evaluation.warnings.push(`Tools executed: ${actualSequence.join(' → ')}`);
+    evaluation.warnings.push(`Expected tools: ${expectedSequence.join(' → ')}`);
+
+    console.log(`🧭 [ManualSuite] Complex navigation workflow evaluation complete:`, {
+      score: evaluation.score,
+      maxScore: evaluation.maxScore,
+      success: evaluation.success,
+      sequenceMatch: evaluation.details.sequenceMatch,
+      toolsExecuted: evaluation.details.toolsExecuted.length,
+    });
+
+    return evaluation;
+  }
+
+  async evaluateNavigationCall(actualResult, expectedResult, testResult) {
+    const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
+
+    // Add navigation-specific checks
+    if (actualResult && actualResult.parameters) {
+      const params = actualResult.parameters;
+
+      // Check for reasonable coordinate ranges
+      if (params.start && params.end && params.start > params.end) {
+        evaluation.warnings.push('Start position should be less than end position');
+      }
+
+      // Check for very large ranges that might indicate errors
+      if (params.start && params.end && params.end - params.start > 10000000) {
+        evaluation.warnings.push('Range is very large (>10Mb), verify this is intentional');
+      }
+    }
+
+    return evaluation;
+  }
+
+  async evaluateSequenceAnalysisCall(actualResult, expectedResult, testResult) {
+    const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
+
+    // Add sequence-specific checks
+    if (actualResult && actualResult.parameters && actualResult.parameters.sequence) {
+      const sequence = actualResult.parameters.sequence.toUpperCase();
+      const validChars = /^[ATCGN]+$/;
+
+      if (validChars.test(sequence)) {
+        evaluation.score += 5; // Bonus for valid DNA sequence
+      } else {
+        evaluation.warnings.push('Sequence contains invalid DNA characters');
+      }
+    }
+
+    return evaluation;
+  }
+
+  async evaluateSearchFunctionCall(actualResult, expectedResult, testResult) {
+    const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
+
+    // Add search-specific checks
+    if (actualResult && actualResult.parameters) {
+      const params = actualResult.parameters;
+
+      // Check for case sensitivity handling
+      if (params.caseSensitive === false || params.caseSensitive === true) {
+        evaluation.score += 2; // Bonus for explicit case sensitivity handling
+      }
+    }
+
+    return evaluation;
+  }
+
+  async evaluateTabSwitchCall(actualResult, expectedResult, testResult) {
+    const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
+
+    console.log(`🔄 [ManualSuite] Evaluating tab switch call:`, {
+      testId: testResult.testId,
+      expectedTool: expectedResult.tool_name,
+      actualResult: actualResult,
+    });
+
+    // Add tab switching-specific checks
+    if (actualResult && actualResult.parameters) {
+      const params = actualResult.parameters;
+
+      // Validate tab switching parameters
+      if (params.tab_id || params.tab_name || params.tab_index !== undefined) {
+        evaluation.score += 1; // Bonus for providing valid tab identification
+
+        // Bonus for using appropriate parameter types
+        if (params.tab_index !== undefined && typeof params.tab_index === 'number') {
+          evaluation.score += 1; // Bonus for correct index type
         }
-        
-        return evaluation;
-    }
 
-    async evaluateTabSwitchCall(actualResult, expectedResult, testResult) {
-        const evaluation = await this.evaluateBasicFunctionCall(actualResult, expectedResult, testResult);
-        
-        console.log(`🔄 [ManualSuite] Evaluating tab switch call:`, {
-            testId: testResult.testId,
-            expectedTool: expectedResult.tool_name,
-            actualResult: actualResult
-        });
-        
-        // Add tab switching-specific checks
-        if (actualResult && actualResult.parameters) {
-            const params = actualResult.parameters;
-            
-            // Validate tab switching parameters
-            if (params.tab_id || params.tab_name || params.tab_index !== undefined) {
-                evaluation.score += 1; // Bonus for providing valid tab identification
-                
-                // Bonus for using appropriate parameter types
-                if (params.tab_index !== undefined && typeof params.tab_index === 'number') {
-                    evaluation.score += 1; // Bonus for correct index type
-                }
-                
-                if (params.tab_name && typeof params.tab_name === 'string') {
-                    evaluation.score += 1; // Bonus for string tab name
-                }
-                
-                if (params.tab_id && typeof params.tab_id === 'string') {
-                    evaluation.score += 1; // Bonus for string tab ID
-                }
-            } else {
-                evaluation.warnings.push('No valid tab identification parameter provided (tab_id, tab_name, or tab_index required)');
-            }
-            
-            // Check for invalid combinations
-            const providedParams = [params.tab_id, params.tab_name, params.tab_index].filter(p => p !== undefined && p !== null);
-            if (providedParams.length > 1) {
-                evaluation.warnings.push('Multiple tab identification parameters provided - tool will use the first valid one');
-            }
+        if (params.tab_name && typeof params.tab_name === 'string') {
+          evaluation.score += 1; // Bonus for string tab name
         }
-        
-        // Cap the score at maxScore to prevent over-scoring
-        evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
-        
-        return evaluation;
+
+        if (params.tab_id && typeof params.tab_id === 'string') {
+          evaluation.score += 1; // Bonus for string tab ID
+        }
+      } else {
+        evaluation.warnings.push(
+          'No valid tab identification parameter provided (tab_id, tab_name, or tab_index required)'
+        );
+      }
+
+      // Check for invalid combinations
+      const providedParams = [params.tab_id, params.tab_name, params.tab_index].filter(
+        p => p !== undefined && p !== null
+      );
+      if (providedParams.length > 1) {
+        evaluation.warnings.push('Multiple tab identification parameters provided - tool will use the first valid one');
+      }
     }
 
-    async setup(context) {
-        console.log('Setting up Manual test suite');
-    }
+    // Cap the score at maxScore to prevent over-scoring
+    evaluation.score = Math.min(evaluation.score, evaluation.maxScore);
 
-    async cleanup(context) {
-        console.log('Cleaning up Manual test suite');
-    }
+    return evaluation;
+  }
+
+  async setup(context) {
+    console.log('Setting up Manual test suite');
+  }
+
+  async cleanup(context) {
+    console.log('Cleaning up Manual test suite');
+  }
 }
 
 // Make the class available globally

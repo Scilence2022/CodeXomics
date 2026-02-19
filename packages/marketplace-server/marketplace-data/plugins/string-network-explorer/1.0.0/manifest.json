@@ -7,41 +7,16 @@
   "category": "network-analysis",
   "type": "visualization",
   "main": "index.js",
-  "tags": [
-    "protein",
-    "interaction",
-    "network",
-    "ppi",
-    "STRING",
-    "database",
-    "visualization"
-  ],
-  "keywords": [
-    "protein",
-    "network",
-    "interaction",
-    "STRING",
-    "database",
-    "visualization",
-    "enrichment"
-  ],
+  "tags": ["protein", "interaction", "network", "ppi", "STRING", "database", "visualization"],
+  "keywords": ["protein", "network", "interaction", "STRING", "database", "visualization", "enrichment"],
   "dependencies": [],
   "homepage": "https://github.com/codexomics/string-network-explorer",
   "repository": "https://github.com/codexomics/string-network-explorer.git",
   "license": "MIT",
-  "supportedDataTypes": [
-    "protein-interaction",
-    "string-network",
-    "ppi-network",
-    "generic"
-  ],
+  "supportedDataTypes": ["protein-interaction", "string-network", "ppi-network", "generic"],
   "compatibility": {
     "genomeExplorer": ">=2.0.0",
-    "platforms": [
-      "windows",
-      "macos",
-      "linux"
-    ]
+    "platforms": ["windows", "macos", "linux"]
   },
   "contributes": {
     "visualizations": {
@@ -49,11 +24,7 @@
         "id": "string-network",
         "name": "STRING Protein Network",
         "description": "Visualize protein-protein interactions from STRING database as an interactive network graph with confidence scores",
-        "supportedDataTypes": [
-          "protein-interaction",
-          "string-network",
-          "ppi-network"
-        ]
+        "supportedDataTypes": ["protein-interaction", "string-network", "ppi-network"]
       }
     },
     "commands": [

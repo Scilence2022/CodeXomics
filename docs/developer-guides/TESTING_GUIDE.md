@@ -3,6 +3,7 @@
 ## Quick Start Testing
 
 ### Prerequisites
+
 1. Ensure CodeXomics is installed
 2. Have the application running
 3. Main window should be visible
@@ -12,6 +13,7 @@
 ### Test 1.1: KEGG Pathway Analyzer
 
 **Steps**:
+
 1. Open Tools → KEGG Pathway Enrichment Analysis
 2. Verify window opens with modern gradient UI
 3. Click "Load Example" button
@@ -30,6 +32,7 @@
 6. Wait for analysis to complete (~1-2 seconds)
 
 **Expected Results**:
+
 - ✅ Window opens with purple-blue gradient background
 - ✅ Form controls are visible and responsive
 - ✅ Example data loads correctly
@@ -51,6 +54,7 @@
 ### Test 1.2: Gene Ontology Analyzer
 
 **Steps**:
+
 1. Open Tools → Gene Ontology (GO) Analyzer
 2. Click "Load Example"
 3. Verify all three GO namespace checkboxes are checked:
@@ -61,6 +65,7 @@
 5. Wait for analysis
 
 **Expected Results**:
+
 - ✅ Window opens with purple gradient
 - ✅ Namespace summary cards display with color coding:
   - Green for BP
@@ -82,6 +87,7 @@
 ### Test 1.3: InterPro Domain Analyzer
 
 **Steps**:
+
 1. Open Tools → InterPro Domain Analysis
 2. Click "Load Example"
 3. Verify protein kinase sequence loads
@@ -90,6 +96,7 @@
 6. Wait for analysis
 
 **Expected Results**:
+
 - ✅ FASTA sequence parsed correctly
 - ✅ Sequence length calculated (should be ~300 AA)
 - ✅ Domain cards display:
@@ -110,6 +117,7 @@
 ### Test 2.1: Visual Design
 
 **Check each analyzer for**:
+
 - ✅ Glass-morphism effect on panels
 - ✅ Smooth gradient backgrounds
 - ✅ Consistent color scheme
@@ -120,6 +128,7 @@
 - ✅ Responsive grid layout
 
 **Test resizing**:
+
 1. Resize window to different sizes
 2. Verify layout adapts properly
 3. Check sidebar remains usable
@@ -169,29 +178,35 @@
 ### Test 3.1: Analyzer → ChatBox Communication
 
 **KEGG Analyzer Test**:
+
 1. Run KEGG analysis
 2. Click "Analyze in ChatBox" button in header
 3. Switch to main window ChatBox panel
 
 **Expected**:
+
 - ✅ ChatBox receives message automatically
 - ✅ System message appears: "📊 Analysis request from KEGG Pathway Analysis"
 - ✅ Query is formatted with pathway names
 - ✅ No errors in console
 
 **GO Analyzer Test**:
+
 1. Click specific GO term's "Ask ChatBox" button
 2. Check ChatBox
 
 **Expected**:
+
 - ✅ Specific question about that GO term sent
 - ✅ Query includes gene names and namespace
 
 **InterPro Analyzer Test**:
+
 1. Click "Ask ChatBox" on specific domain
 2. Verify query in ChatBox
 
 **Expected**:
+
 - ✅ Domain-specific question formatted
 - ✅ Includes position information
 
@@ -202,11 +217,13 @@
 **Note**: This requires ChatBox integration code to be added (see CHATBOX_ANALYZER_INTEGRATION_GUIDE.md)
 
 **Steps**:
+
 1. Run analysis in any analyzer
 2. Click "AI Interpret" button
 3. Wait for response
 
 **Expected** (when ChatBox integration complete):
+
 - ✅ Request sent to ChatBox
 - ✅ LLM processes query
 - ✅ Interpretation appears in analyzer window
@@ -219,6 +236,7 @@
 ### Test 3.3: Pending Data System
 
 **Test sequence**:
+
 1. Close all analyzer windows
 2. In browser console of main window:
    ```javascript
@@ -226,17 +244,16 @@
    ipcRenderer.send('send-to-analyzer', {
      toolName: 'kegg-analyzer',
      data: {
-       enrichedPathways: [
-         { id: 'hsa04110', name: 'Cell cycle', geneCount: 5, pValue: 0.001 }
-       ]
+       enrichedPathways: [{ id: 'hsa04110', name: 'Cell cycle', geneCount: 5, pValue: 0.001 }],
      },
-     originalQuery: 'Test'
+     originalQuery: 'Test',
    });
    ```
 3. KEGG analyzer should open automatically
 4. Data should be displayed
 
 **Expected**:
+
 - ✅ Analyzer opens
 - ✅ Data loads automatically
 - ✅ Displays pending data message if applicable
@@ -248,6 +265,7 @@
 ### Test 4.1: Basic Export
 
 **For each analyzer**:
+
 1. Run analysis
 2. Look for export options (if visible)
 3. Test export functionality
@@ -259,6 +277,7 @@
 ### Test 4.2: Export with Interpretation
 
 **When LLM integration complete**:
+
 1. Get LLM interpretation
 2. Click "Export with Interpretation"
 3. Verify exported file includes:
@@ -273,6 +292,7 @@
 ### Test 5.1: Empty Input
 
 **For each analyzer**:
+
 1. Clear all input fields
 2. Click analyze
 3. Verify warning message appears
@@ -283,10 +303,12 @@
 ### Test 5.2: Invalid Input
 
 **KEGG/GO Analyzers**:
+
 - Input: Special characters only (`@#$%`)
 - Expected: Handles gracefully or shows warning
 
 **InterPro Analyzer**:
+
 - Input: Non-amino acid characters
 - Expected: Strips invalid characters or shows error
 
@@ -295,10 +317,12 @@
 ### Test 5.3: Very Large Input
 
 **InterPro Analyzer**:
+
 - Input: 10,000+ character sequence
 - Expected: Processes without freezing UI
 
 **KEGG/GO Analyzers**:
+
 - Input: 1000+ genes
 - Expected: Handles or shows limit warning
 
@@ -362,9 +386,10 @@
 
 ### Test 8.1: Network Simulation
 
-*Note: Current implementation uses mock data, this will be relevant when real APIs are integrated*
+_Note: Current implementation uses mock data, this will be relevant when real APIs are integrated_
 
 **Future test**:
+
 1. Disconnect network
 2. Run analysis
 3. Should fall back gracefully
@@ -387,7 +412,7 @@
 // Test all analyzers programmatically
 async function testAllAnalyzers() {
   const tests = [];
-  
+
   // Test KEGG Analyzer
   tests.push({
     name: 'KEGG Analyzer',
@@ -395,9 +420,9 @@ async function testAllAnalyzers() {
       const kegg = new KEGGAnalyzer();
       kegg.loadExample();
       return kegg.analyzePathways();
-    }
+    },
   });
-  
+
   // Test GO Analyzer
   tests.push({
     name: 'GO Analyzer',
@@ -405,9 +430,9 @@ async function testAllAnalyzers() {
       const go = new GOAnalyzer();
       go.loadExample();
       return go.analyzeGO();
-    }
+    },
   });
-  
+
   // Test InterPro Analyzer
   tests.push({
     name: 'InterPro Analyzer',
@@ -415,9 +440,9 @@ async function testAllAnalyzers() {
       const interpro = new InterProAnalyzer();
       interpro.loadExample();
       return interpro.analyzeDomains();
-    }
+    },
   });
-  
+
   // Run all tests
   for (const test of tests) {
     console.log(`Testing ${test.name}...`);
@@ -462,9 +487,9 @@ If you find issues, report with:
 **Version**: CodeXomics version
 **OS**: macOS/Windows/Linux + version
 **Steps to Reproduce**:
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 **Expected Behavior**:
 
@@ -480,7 +505,7 @@ If you find issues, report with:
 ## Test Results Log
 
 | Test Suite | Date | Tester | Status | Notes |
-|------------|------|--------|--------|-------|
+| ---------- | ---- | ------ | ------ | ----- |
 | Suite 1    |      |        |        |       |
 | Suite 2    |      |        |        |       |
 | Suite 3    |      |        |        |       |
@@ -541,9 +566,9 @@ The rebuilt tools are considered successful if:
 
 ## Testing Sign-Off
 
-| Role | Name | Signature | Date |
-|------|------|-----------|------|
-| Developer | | | |
-| QA Tester | | | |
-| Tech Lead | | | |
-| Product Owner | | | |
+| Role          | Name | Signature | Date |
+| ------------- | ---- | --------- | ---- |
+| Developer     |      |           |      |
+| QA Tester     |      |           |      |
+| Tech Lead     |      |           |      |
+| Product Owner |      |           |      |

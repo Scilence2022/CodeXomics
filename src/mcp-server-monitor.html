@@ -1,691 +1,687 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MCP Server Monitor</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #0d1117;
-            color: #c9d1d9;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #0d1117;
+        color: #c9d1d9;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
 
-        .header {
-            background: #161b22;
-            padding: 16px 24px;
-            border-bottom: 1px solid #30363d;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+      .header {
+        background: #161b22;
+        padding: 16px 24px;
+        border-bottom: 1px solid #30363d;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
-        .header h1 {
-            font-size: 20px;
-            font-weight: 600;
-            color: #f0f6fc;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+      .header h1 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #f0f6fc;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
 
-        .header-icon {
-            font-size: 24px;
-        }
+      .header-icon {
+        font-size: 24px;
+      }
 
-        .status-badge {
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border: 1px solid transparent;
-        }
+      .status-badge {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 1px solid transparent;
+      }
 
-        .status-badge.running {
-            background: #238636;
-            color: #fff;
-            border-color: #2ea043;
-        }
+      .status-badge.running {
+        background: #238636;
+        color: #fff;
+        border-color: #2ea043;
+      }
 
-        .status-badge.stopped {
-            background: #da3633;
-            color: #fff;
-            border-color: #f85149;
-        }
+      .status-badge.stopped {
+        background: #da3633;
+        color: #fff;
+        border-color: #f85149;
+      }
 
-        .status-badge.starting {
-            background: #9e6a03;
-            color: #fff;
-            border-color: #d29922;
-        }
+      .status-badge.starting {
+        background: #9e6a03;
+        color: #fff;
+        border-color: #d29922;
+      }
 
-        .status-badge.stopping {
-            background: #bc4c00;
-            color: #fff;
-            border-color: #e16f24;
-        }
+      .status-badge.stopping {
+        background: #bc4c00;
+        color: #fff;
+        border-color: #e16f24;
+      }
 
-        .main-content {
-            flex: 1;
-            padding: 24px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+      .main-content {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
 
-        .control-panel {
-            background: #161b22;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #30363d;
-        }
+      .control-panel {
+        background: #161b22;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #30363d;
+      }
 
-        .control-panel h2 {
-            font-size: 14px;
-            margin-bottom: 16px;
-            color: #8b949e;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
+      .control-panel h2 {
+        font-size: 14px;
+        margin-bottom: 16px;
+        color: #8b949e;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+      }
 
-        .button-group {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
+      .button-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
 
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
 
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
 
-        .btn-primary {
-            background: #238636;
-            color: #fff;
-        }
+      .btn-primary {
+        background: #238636;
+        color: #fff;
+      }
 
-        .btn-primary:hover:not(:disabled) {
-            background: #2ea043;
-        }
+      .btn-primary:hover:not(:disabled) {
+        background: #2ea043;
+      }
 
-        .btn-danger {
-            background: #da3633;
-            color: #fff;
-        }
+      .btn-danger {
+        background: #da3633;
+        color: #fff;
+      }
 
-        .btn-danger:hover:not(:disabled) {
-            background: #f85149;
-        }
+      .btn-danger:hover:not(:disabled) {
+        background: #f85149;
+      }
 
-        .btn-secondary {
-            background: #21262d;
-            color: #c9d1d9;
-            border: 1px solid #30363d;
-        }
+      .btn-secondary {
+        background: #21262d;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+      }
 
-        .btn-secondary:hover:not(:disabled) {
-            background: #30363d;
-            border-color: #8b949e;
-        }
+      .btn-secondary:hover:not(:disabled) {
+        background: #30363d;
+        border-color: #8b949e;
+      }
 
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+
+      @media (max-width: 900px) {
         .stats-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
+          grid-template-columns: repeat(2, 1fr);
         }
+      }
 
-        @media (max-width: 900px) {
-            .stats-row {
-                grid-template-columns: repeat(2, 1fr);
-            }
+      @media (max-width: 500px) {
+        .stats-row {
+          grid-template-columns: 1fr;
         }
+      }
 
-        @media (max-width: 500px) {
-            .stats-row {
-                grid-template-columns: 1fr;
-            }
-        }
+      .stat-item {
+        background: #161b22;
+        padding: 16px;
+        border-radius: 10px;
+        border: 1px solid #30363d;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: border-color 0.2s;
+      }
 
-        .stat-item {
-            background: #161b22;
-            padding: 16px;
-            border-radius: 10px;
-            border: 1px solid #30363d;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: border-color 0.2s;
-        }
+      .stat-item:hover {
+        border-color: #58a6ff;
+      }
 
-        .stat-item:hover {
-            border-color: #58a6ff;
-        }
+      .stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        background: #21262d;
+      }
 
-        .stat-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            background: #21262d;
-        }
+      .stat-icon.http {
+        background: rgba(88, 166, 255, 0.15);
+      }
 
-        .stat-icon.http {
-            background: rgba(88, 166, 255, 0.15);
-        }
+      .stat-icon.ws {
+        background: rgba(139, 148, 158, 0.15);
+      }
 
-        .stat-icon.ws {
-            background: rgba(139, 148, 158, 0.15);
-        }
+      .stat-icon.clients {
+        background: rgba(35, 134, 54, 0.15);
+      }
 
-        .stat-icon.clients {
-            background: rgba(35, 134, 54, 0.15);
-        }
+      .stat-icon.uptime {
+        background: rgba(210, 153, 34, 0.15);
+      }
 
-        .stat-icon.uptime {
-            background: rgba(210, 153, 34, 0.15);
-        }
+      .stat-item .content {
+        display: flex;
+        flex-direction: column;
+      }
 
-        .stat-item .content {
-            display: flex;
-            flex-direction: column;
-        }
+      .stat-item .label {
+        font-size: 11px;
+        color: #8b949e;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
 
-        .stat-item .label {
-            font-size: 11px;
-            color: #8b949e;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
+      .stat-item .value {
+        font-size: 20px;
+        font-weight: 600;
+        color: #f0f6fc;
+      }
 
-        .stat-item .value {
-            font-size: 20px;
-            font-weight: 600;
-            color: #f0f6fc;
-        }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
 
+      @media (max-width: 768px) {
         .info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
+          grid-template-columns: 1fr;
         }
+      }
 
-        @media (max-width: 768px) {
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+      .info-card {
+        background: #161b22;
+        border-radius: 10px;
+        padding: 16px;
+        border: 1px solid #30363d;
+        border-left: 3px solid #58a6ff;
+        transition:
+          transform 0.2s,
+          border-color 0.2s;
+      }
 
-        .info-card {
-            background: #161b22;
-            border-radius: 10px;
-            padding: 16px;
-            border: 1px solid #30363d;
-            border-left: 3px solid #58a6ff;
-            transition: transform 0.2s, border-color 0.2s;
-        }
+      .info-card:hover {
+        transform: translateY(-2px);
+        border-color: #58a6ff;
+      }
 
-        .info-card:hover {
-            transform: translateY(-2px);
-            border-color: #58a6ff;
-        }
+      .info-card h3 {
+        font-size: 11px;
+        color: #8b949e;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+      }
 
-        .info-card h3 {
-            font-size: 11px;
-            color: #8b949e;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
+      .info-card .value {
+        font-size: 18px;
+        font-weight: 600;
+        color: #f0f6fc;
+        margin-bottom: 4px;
+      }
 
-        .info-card .value {
-            font-size: 18px;
-            font-weight: 600;
-            color: #f0f6fc;
-            margin-bottom: 4px;
-        }
+      .info-card .sub-value {
+        font-size: 12px;
+        color: #6e7681;
+      }
 
-        .info-card .sub-value {
-            font-size: 12px;
-            color: #6e7681;
-        }
+      .connection-list {
+        background: #161b22;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #30363d;
+        flex: 1;
+        min-height: 200px;
+      }
 
-        .connection-list {
-            background: #161b22;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #30363d;
-            flex: 1;
-            min-height: 200px;
-        }
+      .connection-list h2 {
+        font-size: 14px;
+        margin-bottom: 16px;
+        color: #8b949e;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+      }
 
-        .connection-list h2 {
-            font-size: 14px;
-            margin-bottom: 16px;
-            color: #8b949e;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
+      .connection-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: #0d1117;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        border: 1px solid #21262d;
+        transition: border-color 0.2s;
+      }
 
-        .connection-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: #0d1117;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            border: 1px solid #21262d;
-            transition: border-color 0.2s;
-        }
+      .connection-item:hover {
+        border-color: #30363d;
+      }
 
-        .connection-item:hover {
-            border-color: #30363d;
-        }
+      .connection-item:last-child {
+        margin-bottom: 0;
+      }
 
-        .connection-item:last-child {
-            margin-bottom: 0;
-        }
+      .connection-info {
+        display: flex;
+        flex-direction: column;
+      }
 
-        .connection-info {
-            display: flex;
-            flex-direction: column;
-        }
+      .connection-name {
+        font-weight: 500;
+        color: #f0f6fc;
+        font-size: 14px;
+      }
 
-        .connection-name {
-            font-weight: 500;
-            color: #f0f6fc;
-            font-size: 14px;
-        }
+      .connection-detail {
+        font-size: 12px;
+        color: #6e7681;
+        margin-top: 2px;
+      }
 
-        .connection-detail {
-            font-size: 12px;
-            color: #6e7681;
-            margin-top: 2px;
-        }
+      .connection-status {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
 
-        .connection-status {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
+      .connection-status.connected {
+        background: rgba(35, 134, 54, 0.2);
+        color: #3fb950;
+      }
 
-        .connection-status.connected {
-            background: rgba(35, 134, 54, 0.2);
-            color: #3fb950;
-        }
+      .connection-status.disconnected {
+        background: rgba(110, 118, 129, 0.2);
+        color: #8b949e;
+      }
 
-        .connection-status.disconnected {
-            background: rgba(110, 118, 129, 0.2);
-            color: #8b949e;
-        }
+      .log-panel {
+        background: #161b22;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #30363d;
+        display: flex;
+        flex-direction: column;
+        min-height: 280px;
+      }
 
-        .log-panel {
-            background: #161b22;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #30363d;
-            display: flex;
-            flex-direction: column;
-            min-height: 280px;
-        }
+      .log-panel h2 {
+        font-size: 14px;
+        margin-bottom: 16px;
+        color: #8b949e;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
-        .log-panel h2 {
-            font-size: 14px;
-            margin-bottom: 16px;
-            color: #8b949e;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+      .log-container {
+        background: #0d1117;
+        border-radius: 8px;
+        padding: 12px;
+        flex: 1;
+        overflow-y: auto;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        border: 1px solid #21262d;
+      }
 
-        .log-container {
-            background: #0d1117;
-            border-radius: 8px;
-            padding: 12px;
-            flex: 1;
-            overflow-y: auto;
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.6;
-            border: 1px solid #21262d;
-        }
+      .log-entry {
+        margin-bottom: 6px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.02);
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
 
-        .log-entry {
-            margin-bottom: 6px;
-            padding: 8px 12px;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.02);
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-        }
+      .log-entry:hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
 
-        .log-entry:hover {
-            background: rgba(255, 255, 255, 0.04);
-        }
+      .log-entry .timestamp {
+        color: #6e7681;
+        white-space: nowrap;
+        font-size: 11px;
+      }
 
-        .log-entry .timestamp {
-            color: #6e7681;
-            white-space: nowrap;
-            font-size: 11px;
-        }
+      .log-entry .level {
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        min-width: 50px;
+        text-align: center;
+      }
 
-        .log-entry .level {
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            min-width: 50px;
-            text-align: center;
-        }
+      .log-entry .level.info {
+        background: rgba(88, 166, 255, 0.15);
+        color: #58a6ff;
+      }
 
-        .log-entry .level.info {
-            background: rgba(88, 166, 255, 0.15);
-            color: #58a6ff;
-        }
+      .log-entry .level.success {
+        background: rgba(35, 134, 54, 0.15);
+        color: #3fb950;
+      }
 
-        .log-entry .level.success {
-            background: rgba(35, 134, 54, 0.15);
-            color: #3fb950;
-        }
+      .log-entry .level.error {
+        background: rgba(248, 81, 73, 0.15);
+        color: #f85149;
+      }
 
-        .log-entry .level.error {
-            background: rgba(248, 81, 73, 0.15);
-            color: #f85149;
-        }
+      .log-entry .level.warning {
+        background: rgba(210, 153, 34, 0.15);
+        color: #d29922;
+      }
 
-        .log-entry .level.warning {
-            background: rgba(210, 153, 34, 0.15);
-            color: #d29922;
-        }
+      .log-entry .message {
+        color: #c9d1d9;
+        flex: 1;
+        word-break: break-word;
+      }
 
-        .log-entry .message {
-            color: #c9d1d9;
-            flex: 1;
-            word-break: break-word;
-        }
+      .empty-state {
+        text-align: center;
+        padding: 48px 20px;
+        color: #6e7681;
+      }
 
-        .empty-state {
-            text-align: center;
-            padding: 48px 20px;
-            color: #6e7681;
-        }
+      .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
 
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
+      .empty-state p {
+        margin: 0;
+      }
 
-        .empty-state p {
-            margin: 0;
-        }
+      .empty-state p:first-of-type {
+        font-size: 14px;
+        color: #8b949e;
+        margin-bottom: 8px;
+      }
 
-        .empty-state p:first-of-type {
-            font-size: 14px;
-            color: #8b949e;
-            margin-bottom: 8px;
-        }
+      .empty-state p:last-of-type {
+        font-size: 12px;
+        color: #6e7681;
+      }
 
-        .empty-state p:last-of-type {
-            font-size: 12px;
-            color: #6e7681;
-        }
+      .clear-logs-btn {
+        background: transparent;
+        border: 1px solid #30363d;
+        color: #8b949e;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
 
-        .clear-logs-btn {
-            background: transparent;
-            border: 1px solid #30363d;
-            color: #8b949e;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
+      .clear-logs-btn:hover {
+        background: #21262d;
+        border-color: #8b949e;
+        color: #f0f6fc;
+      }
 
-        .clear-logs-btn:hover {
-            background: #21262d;
-            border-color: #8b949e;
-            color: #f0f6fc;
-        }
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
 
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
+      ::-webkit-scrollbar-track {
+        background: #0d1117;
+        border-radius: 4px;
+      }
 
-        ::-webkit-scrollbar-track {
-            background: #0d1117;
-            border-radius: 4px;
-        }
+      ::-webkit-scrollbar-thumb {
+        background: #30363d;
+        border-radius: 4px;
+      }
 
-        ::-webkit-scrollbar-thumb {
-            background: #30363d;
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #484f58;
-        }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #484f58;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="header">
-        <h1><span class="header-icon">🛰️</span> MCP Server Monitor</h1>
-        <span id="status-badge" class="status-badge stopped">Stopped</span>
+      <h1><span class="header-icon">🛰️</span> MCP Server Monitor</h1>
+      <span id="status-badge" class="status-badge stopped">Stopped</span>
     </div>
 
     <div class="main-content">
-        <!-- Control Panel -->
-        <div class="control-panel">
-            <h2>Server Controls</h2>
-            <div class="button-group">
-                <button id="start-btn" class="btn btn-primary">
-                    <span>▶</span> Start Server
-                </button>
-                <button id="stop-btn" class="btn btn-danger" disabled>
-                    <span>⏹</span> Stop Server
-                </button>
-                <button id="refresh-btn" class="btn btn-secondary">
-                    <span>⟳</span> Refresh Status
-                </button>
-            </div>
+      <!-- Control Panel -->
+      <div class="control-panel">
+        <h2>Server Controls</h2>
+        <div class="button-group">
+          <button id="start-btn" class="btn btn-primary"><span>▶</span> Start Server</button>
+          <button id="stop-btn" class="btn btn-danger" disabled><span>⏹</span> Stop Server</button>
+          <button id="refresh-btn" class="btn btn-secondary"><span>⟳</span> Refresh Status</button>
         </div>
+      </div>
 
-        <!-- Stats Row -->
-        <div class="stats-row">
-            <div class="stat-item">
-                <div class="stat-icon http">🌐</div>
-                <div class="content">
-                    <span class="label">HTTP Port</span>
-                    <span id="http-port" class="value">-</span>
-                </div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-icon ws">🔌</div>
-                <div class="content">
-                    <span class="label">WebSocket Port</span>
-                    <span id="ws-port" class="value">-</span>
-                </div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-icon clients">👥</div>
-                <div class="content">
-                    <span class="label">Connected Clients</span>
-                    <span id="client-count" class="value">0</span>
-                </div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-icon uptime">⏱️</div>
-                <div class="content">
-                    <span class="label">Uptime</span>
-                    <span id="uptime" class="value">-</span>
-                </div>
-            </div>
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-icon http">🌐</div>
+          <div class="content">
+            <span class="label">HTTP Port</span>
+            <span id="http-port" class="value">-</span>
+          </div>
         </div>
+        <div class="stat-item">
+          <div class="stat-icon ws">🔌</div>
+          <div class="content">
+            <span class="label">WebSocket Port</span>
+            <span id="ws-port" class="value">-</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon clients">👥</div>
+          <div class="content">
+            <span class="label">Connected Clients</span>
+            <span id="client-count" class="value">0</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon uptime">⏱️</div>
+          <div class="content">
+            <span class="label">Uptime</span>
+            <span id="uptime" class="value">-</span>
+          </div>
+        </div>
+      </div>
 
-        <!-- Server Info -->
-        <div class="info-grid">
-            <div class="info-card">
-                <h3>Server Type</h3>
-                <div class="value">Unified Claude MCP</div>
-                <div class="sub-value">Multi-protocol support</div>
-            </div>
-            <div class="info-card">
-                <h3>Protocol Version</h3>
-                <div class="value">2024-11-05</div>
-                <div class="sub-value">Model Context Protocol</div>
-            </div>
-            <div class="info-card">
-                <h3>Transport</h3>
-                <div class="value">HTTP + WebSocket</div>
-                <div class="sub-value">Dual transport mode</div>
-            </div>
+      <!-- Server Info -->
+      <div class="info-grid">
+        <div class="info-card">
+          <h3>Server Type</h3>
+          <div class="value">Unified Claude MCP</div>
+          <div class="sub-value">Multi-protocol support</div>
         </div>
+        <div class="info-card">
+          <h3>Protocol Version</h3>
+          <div class="value">2024-11-05</div>
+          <div class="sub-value">Model Context Protocol</div>
+        </div>
+        <div class="info-card">
+          <h3>Transport</h3>
+          <div class="value">HTTP + WebSocket</div>
+          <div class="sub-value">Dual transport mode</div>
+        </div>
+      </div>
 
-        <!-- Connection List -->
-        <div class="connection-list">
-            <h2>Active Connections</h2>
-            <div id="connections-container">
-                <div class="empty-state">
-                    <div class="empty-state-icon">📡</div>
-                    <p>No active connections</p>
-                    <p>Start the server to accept connections</p>
-                </div>
-            </div>
+      <!-- Connection List -->
+      <div class="connection-list">
+        <h2>Active Connections</h2>
+        <div id="connections-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">📡</div>
+            <p>No active connections</p>
+            <p>Start the server to accept connections</p>
+          </div>
         </div>
+      </div>
 
-        <!-- Log Panel -->
-        <div class="log-panel">
-            <h2>
-                Server Logs
-                <button id="clear-logs-btn" class="clear-logs-btn">Clear Logs</button>
-            </h2>
-            <div id="log-container" class="log-container">
-                <div class="empty-state">
-                    <div class="empty-state-icon">📝</div>
-                    <p>No logs yet</p>
-                    <p>Server activity will appear here</p>
-                </div>
-            </div>
+      <!-- Log Panel -->
+      <div class="log-panel">
+        <h2>
+          Server Logs
+          <button id="clear-logs-btn" class="clear-logs-btn">Clear Logs</button>
+        </h2>
+        <div id="log-container" class="log-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <p>No logs yet</p>
+            <p>Server activity will appear here</p>
+          </div>
         </div>
+      </div>
     </div>
 
     <script>
-        // State
-        let serverStatus = 'stopped';
-        let startTime = null;
-        let logs = [];
+      // State
+      let serverStatus = 'stopped';
+      let startTime = null;
+      let logs = [];
 
-        // DOM Elements
-        const statusBadge = document.getElementById('status-badge');
-        const startBtn = document.getElementById('start-btn');
-        const stopBtn = document.getElementById('stop-btn');
-        const refreshBtn = document.getElementById('refresh-btn');
-        const httpPortEl = document.getElementById('http-port');
-        const wsPortEl = document.getElementById('ws-port');
-        const clientCountEl = document.getElementById('client-count');
-        const uptimeEl = document.getElementById('uptime');
-        const logContainer = document.getElementById('log-container');
-        const connectionsContainer = document.getElementById('connections-container');
-        const clearLogsBtn = document.getElementById('clear-logs-btn');
+      // DOM Elements
+      const statusBadge = document.getElementById('status-badge');
+      const startBtn = document.getElementById('start-btn');
+      const stopBtn = document.getElementById('stop-btn');
+      const refreshBtn = document.getElementById('refresh-btn');
+      const httpPortEl = document.getElementById('http-port');
+      const wsPortEl = document.getElementById('ws-port');
+      const clientCountEl = document.getElementById('client-count');
+      const uptimeEl = document.getElementById('uptime');
+      const logContainer = document.getElementById('log-container');
+      const connectionsContainer = document.getElementById('connections-container');
+      const clearLogsBtn = document.getElementById('clear-logs-btn');
 
-        // Helper functions
-        function updateStatus(status, data = {}) {
-            serverStatus = status;
-            
-            // Update badge
-            statusBadge.className = `status-badge ${status}`;
-            statusBadge.textContent = status;
+      // Helper functions
+      function updateStatus(status, data = {}) {
+        serverStatus = status;
 
-            // Update buttons
-            startBtn.disabled = status !== 'stopped';
-            stopBtn.disabled = status !== 'running';
+        // Update badge
+        statusBadge.className = `status-badge ${status}`;
+        statusBadge.textContent = status;
 
-            // Update ports
-            if (data.httpPort) {
-                httpPortEl.textContent = data.httpPort;
-            } else {
-                httpPortEl.textContent = '-';
-            }
+        // Update buttons
+        startBtn.disabled = status !== 'stopped';
+        stopBtn.disabled = status !== 'running';
 
-            if (data.wsPort) {
-                wsPortEl.textContent = data.wsPort;
-            } else {
-                wsPortEl.textContent = '-';
-            }
-
-            // Update client count
-            if (data.connectedClients !== undefined) {
-                clientCountEl.textContent = data.connectedClients;
-                updateConnectionsList(data.connectedClients);
-            }
-
-            // Update start time for uptime calculation
-            if (status === 'running' && !startTime) {
-                startTime = Date.now();
-            } else if (status !== 'running') {
-                startTime = null;
-                uptimeEl.textContent = '-';
-            }
+        // Update ports
+        if (data.httpPort) {
+          httpPortEl.textContent = data.httpPort;
+        } else {
+          httpPortEl.textContent = '-';
         }
 
-        function updateConnectionsList(count) {
-            if (count === 0) {
-                connectionsContainer.innerHTML = `
+        if (data.wsPort) {
+          wsPortEl.textContent = data.wsPort;
+        } else {
+          wsPortEl.textContent = '-';
+        }
+
+        // Update client count
+        if (data.connectedClients !== undefined) {
+          clientCountEl.textContent = data.connectedClients;
+          updateConnectionsList(data.connectedClients);
+        }
+
+        // Update start time for uptime calculation
+        if (status === 'running' && !startTime) {
+          startTime = Date.now();
+        } else if (status !== 'running') {
+          startTime = null;
+          uptimeEl.textContent = '-';
+        }
+      }
+
+      function updateConnectionsList(count) {
+        if (count === 0) {
+          connectionsContainer.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">📡</div>
                         <p>No active connections</p>
                         <p>Start the server to accept connections</p>
                     </div>
                 `;
-                return;
-            }
+          return;
+        }
 
-            // Generate mock connection items for display
-            let html = '';
-            for (let i = 0; i < count; i++) {
-                html += `
+        // Generate mock connection items for display
+        let html = '';
+        for (let i = 0; i < count; i++) {
+          html += `
                     <div class="connection-item">
                         <div class="connection-info">
                             <span class="connection-name">Client ${i + 1}</span>
@@ -694,137 +690,141 @@
                         <span class="connection-status connected">Connected</span>
                     </div>
                 `;
-            }
-            connectionsContainer.innerHTML = html;
+        }
+        connectionsContainer.innerHTML = html;
+      }
+
+      function addLog(level, message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = { timestamp, level, message };
+        logs.push(logEntry);
+
+        // Keep only last 100 logs
+        if (logs.length > 100) {
+          logs = logs.slice(-100);
         }
 
-        function addLog(level, message) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = { timestamp, level, message };
-            logs.push(logEntry);
+        renderLogs();
+      }
 
-            // Keep only last 100 logs
-            if (logs.length > 100) {
-                logs = logs.slice(-100);
-            }
-
-            renderLogs();
-        }
-
-        function renderLogs() {
-            if (logs.length === 0) {
-                logContainer.innerHTML = `
+      function renderLogs() {
+        if (logs.length === 0) {
+          logContainer.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">📝</div>
                         <p>No logs yet</p>
                         <p>Server activity will appear here</p>
                     </div>
                 `;
-                return;
-            }
+          return;
+        }
 
-            logContainer.innerHTML = logs.map(log => `
+        logContainer.innerHTML = logs
+          .map(
+            log => `
                 <div class="log-entry">
                     <span class="timestamp">${log.timestamp}</span>
                     <span class="level ${log.level}">${log.level}</span>
                     <span class="message">${log.message}</span>
                 </div>
-            `).join('');
+            `
+          )
+          .join('');
 
-            // Auto-scroll to bottom
-            logContainer.scrollTop = logContainer.scrollHeight;
+        // Auto-scroll to bottom
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+
+      function updateUptime() {
+        if (startTime && serverStatus === 'running') {
+          const elapsed = Date.now() - startTime;
+          const seconds = Math.floor(elapsed / 1000);
+          const minutes = Math.floor(seconds / 60);
+          const hours = Math.floor(minutes / 60);
+
+          if (hours > 0) {
+            uptimeEl.textContent = `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+          } else if (minutes > 0) {
+            uptimeEl.textContent = `${minutes}m ${seconds % 60}s`;
+          } else {
+            uptimeEl.textContent = `${seconds}s`;
+          }
         }
+      }
 
-        function updateUptime() {
-            if (startTime && serverStatus === 'running') {
-                const elapsed = Date.now() - startTime;
-                const seconds = Math.floor(elapsed / 1000);
-                const minutes = Math.floor(seconds / 60);
-                const hours = Math.floor(minutes / 60);
-                
-                if (hours > 0) {
-                    uptimeEl.textContent = `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-                } else if (minutes > 0) {
-                    uptimeEl.textContent = `${minutes}m ${seconds % 60}s`;
-                } else {
-                    uptimeEl.textContent = `${seconds}s`;
-                }
-            }
+      // Event Handlers
+      startBtn.addEventListener('click', async () => {
+        addLog('info', 'Starting MCP server...');
+        try {
+          const result = await window.electronAPI.invoke('mcp-server-start');
+          if (result.success) {
+            addLog('success', result.message);
+            updateStatus('running', result);
+          } else {
+            addLog('error', result.message);
+            updateStatus(result.status);
+          }
+        } catch (error) {
+          addLog('error', `Failed to start server: ${error.message}`);
         }
+      });
 
-        // Event Handlers
-        startBtn.addEventListener('click', async () => {
-            addLog('info', 'Starting MCP server...');
-            try {
-                const result = await window.electronAPI.invoke('mcp-server-start');
-                if (result.success) {
-                    addLog('success', result.message);
-                    updateStatus('running', result);
-                } else {
-                    addLog('error', result.message);
-                    updateStatus(result.status);
-                }
-            } catch (error) {
-                addLog('error', `Failed to start server: ${error.message}`);
-            }
-        });
+      stopBtn.addEventListener('click', async () => {
+        addLog('info', 'Stopping MCP server...');
+        try {
+          const result = await window.electronAPI.invoke('mcp-server-stop');
+          if (result.success) {
+            addLog('success', result.message);
+            updateStatus(result.status);
+          } else {
+            addLog('error', result.message);
+          }
+        } catch (error) {
+          addLog('error', `Failed to stop server: ${error.message}`);
+        }
+      });
 
-        stopBtn.addEventListener('click', async () => {
-            addLog('info', 'Stopping MCP server...');
-            try {
-                const result = await window.electronAPI.invoke('mcp-server-stop');
-                if (result.success) {
-                    addLog('success', result.message);
-                    updateStatus(result.status);
-                } else {
-                    addLog('error', result.message);
-                }
-            } catch (error) {
-                addLog('error', `Failed to stop server: ${error.message}`);
-            }
-        });
+      refreshBtn.addEventListener('click', async () => {
+        addLog('info', 'Refreshing server status...');
+        try {
+          const status = await window.electronAPI.invoke('mcp-server-status');
+          updateStatus(status.status, status);
+          addLog('info', `Server status: ${status.status}`);
+        } catch (error) {
+          addLog('error', `Failed to get status: ${error.message}`);
+        }
+      });
 
-        refreshBtn.addEventListener('click', async () => {
-            addLog('info', 'Refreshing server status...');
-            try {
-                const status = await window.electronAPI.invoke('mcp-server-status');
-                updateStatus(status.status, status);
-                addLog('info', `Server status: ${status.status}`);
-            } catch (error) {
-                addLog('error', `Failed to get status: ${error.message}`);
-            }
-        });
+      clearLogsBtn.addEventListener('click', () => {
+        logs = [];
+        renderLogs();
+        addLog('info', 'Logs cleared');
+      });
 
-        clearLogsBtn.addEventListener('click', () => {
-            logs = [];
-            renderLogs();
-            addLog('info', 'Logs cleared');
-        });
+      // Listen for status updates from main process
+      window.electronAPI.on('mcp-server-status-update', data => {
+        updateStatus(data.status, data);
+        addLog('info', `Server status updated: ${data.status}`);
+      });
 
-        // Listen for status updates from main process
-        window.electronAPI.on('mcp-server-status-update', (data) => {
-            updateStatus(data.status, data);
-            addLog('info', `Server status updated: ${data.status}`);
-        });
+      window.electronAPI.on('mcp-server-status-changed', data => {
+        updateStatus(data.status, data);
+        addLog('info', `Server status changed: ${data.status}`);
+      });
 
-        window.electronAPI.on('mcp-server-status-changed', (data) => {
-            updateStatus(data.status, data);
-            addLog('info', `Server status changed: ${data.status}`);
-        });
+      // Update uptime every second
+      setInterval(updateUptime, 1000);
 
-        // Update uptime every second
-        setInterval(updateUptime, 1000);
-
-        // Initial status check
-        window.addEventListener('DOMContentLoaded', async () => {
-            addLog('info', 'MCP Server Monitor initialized');
-            try {
-                const status = await window.electronAPI.invoke('mcp-server-status');
-                updateStatus(status.status, status);
-            } catch (error) {
-                addLog('error', `Failed to get initial status: ${error.message}`);
-            }
-        });
+      // Initial status check
+      window.addEventListener('DOMContentLoaded', async () => {
+        addLog('info', 'MCP Server Monitor initialized');
+        try {
+          const status = await window.electronAPI.invoke('mcp-server-status');
+          updateStatus(status.status, status);
+        } catch (error) {
+          addLog('error', `Failed to get initial status: ${error.message}`);
+        }
+      });
     </script>
-</body>
+  </body>
 </html>

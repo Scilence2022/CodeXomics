@@ -10,6 +10,7 @@ npm install
 ## Running Services
 
 ### Start Everything
+
 ```bash
 npm run start-full
 # Starts: MCP Server (3000) + Marketplace (3001) + Electron App
@@ -37,12 +38,14 @@ npm run start-with-mcp
 ## Managing Dependencies
 
 ### Root Package (Electron App)
+
 ```bash
 npm install <package-name>
 npm uninstall <package-name>
 ```
 
 ### Marketplace Server Package
+
 ```bash
 npm install <package-name> --workspace=packages/marketplace-server
 npm uninstall <package-name> --workspace=packages/marketplace-server
@@ -74,22 +77,26 @@ npm info packages/marketplace-server
 ## Development Workflows
 
 ### Scenario 1: Working on Main App
+
 ```bash
 npm start
 ```
 
 ### Scenario 2: Working on Marketplace Server
+
 ```bash
 cd packages/marketplace-server
 npm run dev  # Auto-reload on changes
 ```
 
 ### Scenario 3: Full Stack Development
+
 ```bash
 npm run start-full
 ```
 
 ### Scenario 4: Marketplace API Testing
+
 ```bash
 # Terminal 1
 npm run marketplace:start
@@ -125,6 +132,7 @@ GenomeAIStudio_1/
 ## Quick Troubleshooting
 
 ### Dependencies not installing
+
 ```bash
 rm -rf node_modules package-lock.json
 rm -rf packages/*/node_modules
@@ -132,6 +140,7 @@ npm install
 ```
 
 ### Port already in use
+
 ```bash
 # Check what's using the port
 lsof -i :3001
@@ -141,6 +150,7 @@ pkill -f plugin-marketplace-server
 ```
 
 ### Workspace not detected
+
 ```bash
 npm ls --workspaces
 ```

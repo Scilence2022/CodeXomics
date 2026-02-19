@@ -119,6 +119,7 @@ CodeXomics/
 CodeXomics uses Electron's multi-process architecture:
 
 **Main Process** (`src/main.js`)
+
 - Creates browser windows
 - Handles system-level operations
 - Manages IPC (Inter-Process Communication)
@@ -126,12 +127,14 @@ CodeXomics uses Electron's multi-process architecture:
 - Manages file system access
 
 **Renderer Process** (`src/renderer/`)
+
 - User interface
 - Genome visualization
 - AI chat interface
 - Tool interactions
 
 **Preload Script** (`src/preload.js`)
+
 - Bridge between main and renderer
 - Exposes safe APIs to renderer
 - Handles IPC communication
@@ -144,23 +147,23 @@ Each major feature is encapsulated in its own module:
 ```javascript
 // Example module structure
 class ModuleName {
-    constructor() {
-        this.initializeComponent();
-    }
-    
-    initializeComponent() {
-        // Setup code
-    }
-    
-    // Public methods
-    publicMethod() {
-        // Implementation
-    }
-    
-    // Private methods
-    _privateMethod() {
-        // Implementation
-    }
+  constructor() {
+    this.initializeComponent();
+  }
+
+  initializeComponent() {
+    // Setup code
+  }
+
+  // Public methods
+  publicMethod() {
+    // Implementation
+  }
+
+  // Private methods
+  _privateMethod() {
+    // Implementation
+  }
 }
 ```
 
@@ -192,14 +195,12 @@ const VERSION_PATCH = 0;
 const VERSION_PRERELEASE = 'beta';
 
 const VERSION_INFO = {
-    version: `${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}`,
-    fullVersion: VERSION_PRERELEASE 
-        ? `${VERSION_STRING}-${VERSION_PRERELEASE}` 
-        : VERSION_STRING,
-    displayVersion: VERSION_PRERELEASE 
-        ? `v${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_PRERELEASE}` 
-        : `v${VERSION_MAJOR}.${VERSION_MINOR}`,
-    // ... more properties
+  version: `${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}`,
+  fullVersion: VERSION_PRERELEASE ? `${VERSION_STRING}-${VERSION_PRERELEASE}` : VERSION_STRING,
+  displayVersion: VERSION_PRERELEASE
+    ? `v${VERSION_MAJOR}.${VERSION_MINOR}${VERSION_PRERELEASE}`
+    : `v${VERSION_MAJOR}.${VERSION_MINOR}`,
+  // ... more properties
 };
 ```
 
@@ -244,19 +245,19 @@ Response to User
 ```javascript
 // In ChatManager.js
 class ChatManager {
-    async handleUserMessage(message) {
-        // 1. Pre-process message
-        const processed = this.preprocessMessage(message);
-        
-        // 2. Get AI response
-        const response = await this.getAIResponse(processed);
-        
-        // 3. Execute tool calls if needed
-        const results = await this.executeToolCalls(response.toolCalls);
-        
-        // 4. Post-process and display
-        this.displayResponse(results);
-    }
+  async handleUserMessage(message) {
+    // 1. Pre-process message
+    const processed = this.preprocessMessage(message);
+
+    // 2. Get AI response
+    const response = await this.getAIResponse(processed);
+
+    // 3. Execute tool calls if needed
+    const results = await this.executeToolCalls(response.toolCalls);
+
+    // 4. Post-process and display
+    this.displayResponse(results);
+  }
 }
 ```
 
@@ -267,19 +268,20 @@ class ChatManager {
 ```javascript
 // src/renderer/modules/ExternalToolsManager.js
 const builtinTools = {
-    progenfixer: {
-        name: 'ProGenFixer',
-        url: 'https://progenfixer.biodesign.ac.cn',
-        icon: 'fas fa-wrench',
-        accelerator: 'CmdOrCtrl+Shift+P'
-    },
-    // ... more tools
+  progenfixer: {
+    name: 'ProGenFixer',
+    url: 'https://progenfixer.biodesign.ac.cn',
+    icon: 'fas fa-wrench',
+    accelerator: 'CmdOrCtrl+Shift+P',
+  },
+  // ... more tools
 };
 ```
 
 **Adding New External Tool:**
 
 1. **Add to ExternalToolsManager.js:**
+
 ```javascript
 newtool: {
     name: 'New Tool',
@@ -290,35 +292,38 @@ newtool: {
 ```
 
 2. **Add window creator in main.js:**
+
 ```javascript
 function createNewToolWindow() {
-    const window = new BrowserWindow({
-        width: 1400,
-        height: 900,
-        title: 'New Tool',
-        webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true
-        }
-    });
-    
-    window.loadURL('https://example.com');
-    return window;
+  const window = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    title: 'New Tool',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  window.loadURL('https://example.com');
+  return window;
 }
 ```
 
 3. **Add IPC handler:**
+
 ```javascript
 ipcMain.on('open-newtool-window', () => {
-    if (!newToolWindow || newToolWindow.isDestroyed()) {
-        newToolWindow = createNewToolWindow();
-    } else {
-        newToolWindow.focus();
-    }
+  if (!newToolWindow || newToolWindow.isDestroyed()) {
+    newToolWindow = createNewToolWindow();
+  } else {
+    newToolWindow.focus();
+  }
 });
 ```
 
 4. **Add to menu:**
+
 ```javascript
 {
     label: 'New Tool',
@@ -347,19 +352,19 @@ LLM models are configured in multiple locations:
 ```javascript
 // In LLMConfigManager.js
 const availableModels = [
-    // ... existing models
-    {
-        provider: 'newprovider',
-        name: 'New Model Name',
-        id: 'provider/model-id',
-        supportsStreaming: true
-    }
+  // ... existing models
+  {
+    provider: 'newprovider',
+    name: 'New Model Name',
+    id: 'provider/model-id',
+    supportsStreaming: true,
+  },
 ];
 
 // In index.html
 <optgroup label="🆕 New Provider">
-    <option value="provider/model-id">New Model Name</option>
-</optgroup>
+  <option value="provider/model-id">New Model Name</option>
+</optgroup>;
 ```
 
 ---
@@ -371,48 +376,48 @@ const availableModels = [
 ```javascript
 // Example plugin template
 const MyPlugin = {
-    // Plugin metadata
-    id: 'my-plugin',
-    name: 'My Plugin',
-    version: '1.0.0',
-    description: 'Plugin description',
-    author: 'Your Name',
-    
-    // Plugin functions (callable by AI)
-    functions: {
-        myFunction: {
-            name: 'myFunction',
-            description: 'Function description',
-            parameters: {
-                type: 'object',
-                properties: {
-                    param1: {
-                        type: 'string',
-                        description: 'Parameter description'
-                    }
-                },
-                required: ['param1']
-            },
-            execute: async (params) => {
-                // Function implementation
-                return { result: 'success' };
-            }
-        }
+  // Plugin metadata
+  id: 'my-plugin',
+  name: 'My Plugin',
+  version: '1.0.0',
+  description: 'Plugin description',
+  author: 'Your Name',
+
+  // Plugin functions (callable by AI)
+  functions: {
+    myFunction: {
+      name: 'myFunction',
+      description: 'Function description',
+      parameters: {
+        type: 'object',
+        properties: {
+          param1: {
+            type: 'string',
+            description: 'Parameter description',
+          },
+        },
+        required: ['param1'],
+      },
+      execute: async params => {
+        // Function implementation
+        return { result: 'success' };
+      },
     },
-    
-    // Plugin lifecycle
-    initialize: async () => {
-        console.log('Plugin initialized');
-    },
-    
-    cleanup: async () => {
-        console.log('Plugin cleaned up');
-    }
+  },
+
+  // Plugin lifecycle
+  initialize: async () => {
+    console.log('Plugin initialized');
+  },
+
+  cleanup: async () => {
+    console.log('Plugin cleaned up');
+  },
 };
 
 // Register plugin
 if (typeof window !== 'undefined' && window.PluginManager) {
-    window.PluginManager.registerPlugin(MyPlugin);
+  window.PluginManager.registerPlugin(MyPlugin);
 }
 ```
 
@@ -481,20 +486,20 @@ tools_registry/
 ```javascript
 // tools_registry/my_category/my_tool.js
 module.exports = {
-    name: 'myTool',
-    category: 'my_category',
-    description: 'Tool description',
-    parameters: {
-        type: 'object',
-        properties: {
-            param1: { type: 'string', description: 'Parameter 1' }
-        },
-        required: ['param1']
+  name: 'myTool',
+  category: 'my_category',
+  description: 'Tool description',
+  parameters: {
+    type: 'object',
+    properties: {
+      param1: { type: 'string', description: 'Parameter 1' },
     },
-    execute: async (params) => {
-        // Implementation
-        return { result: 'success' };
-    }
+    required: ['param1'],
+  },
+  execute: async params => {
+    // Implementation
+    return { result: 'success' };
+  },
 };
 ```
 
@@ -503,9 +508,9 @@ module.exports = {
 ```yaml
 categories:
   my_category:
-    name: "My Category"
-    description: "Category description"
-    icon: "fas fa-icon"
+    name: 'My Category'
+    description: 'Category description'
+    icon: 'fas fa-icon'
     tools:
       - myTool
 ```
@@ -548,29 +553,28 @@ src/tests/
 ```javascript
 // In appropriate suite file
 const newTest = {
-    id: 'test_unique_id',
-    name: 'Test Name',
-    category: 'category_name',
-    type: 'automatic',  // or 'manual'
-    complexity: 'simple',  // or 'complex'
-    timeout: 30000,
-    
-    execute: async (llmClient, context) => {
-        // Test implementation
-        const result = await llmClient.sendMessage(
-            "Test prompt",
-            context
-        );
-        
-        // Validation
-        const success = validateResult(result);
-        
-        return {
-            success,
-            message: 'Test result message',
-            details: { /* test details */ }
-        };
-    }
+  id: 'test_unique_id',
+  name: 'Test Name',
+  category: 'category_name',
+  type: 'automatic', // or 'manual'
+  complexity: 'simple', // or 'complex'
+  timeout: 30000,
+
+  execute: async (llmClient, context) => {
+    // Test implementation
+    const result = await llmClient.sendMessage('Test prompt', context);
+
+    // Validation
+    const success = validateResult(result);
+
+    return {
+      success,
+      message: 'Test result message',
+      details: {
+        /* test details */
+      },
+    };
+  },
 };
 ```
 
@@ -588,11 +592,11 @@ Create unit tests for individual modules:
 ```javascript
 // Example unit test
 describe('FileManager', () => {
-    it('should load FASTA file', async () => {
-        const data = await FileManager.loadFile('test.fasta');
-        expect(data).toBeDefined();
-        expect(data.sequence).toHaveLength(greaterThan(0));
-    });
+  it('should load FASTA file', async () => {
+    const data = await FileManager.loadFile('test.fasta');
+    expect(data).toBeDefined();
+    expect(data.sequence).toHaveLength(greaterThan(0));
+  });
 });
 ```
 
@@ -604,6 +608,7 @@ describe('FileManager', () => {
 
 1. **Fork the repository**
 2. **Create feature branch:**
+
    ```bash
    git checkout -b feature/amazing-feature
    ```
@@ -615,12 +620,14 @@ describe('FileManager', () => {
    - Add tests if applicable
 
 4. **Test changes:**
+
    ```bash
    npm start  # Manual testing
    # Run benchmark tests if relevant
    ```
 
 5. **Commit with conventional commits:**
+
    ```bash
    git commit -m "feat: add amazing feature"
    git commit -m "fix: resolve issue with X"
@@ -636,6 +643,7 @@ describe('FileManager', () => {
 ### Code Style Guidelines
 
 **JavaScript:**
+
 - Use ES6+ features
 - 4-space indentation
 - Semicolons required
@@ -644,11 +652,13 @@ describe('FileManager', () => {
 - Descriptive variable names
 
 **HTML:**
+
 - Semantic HTML5
 - Proper indentation
 - Accessibility attributes
 
 **CSS:**
+
 - BEM naming convention
 - Mobile-first approach
 - CSS variables for theming
@@ -656,6 +666,7 @@ describe('FileManager', () => {
 ### Documentation Guidelines
 
 **Code Documentation:**
+
 ```javascript
 /**
  * Function description
@@ -666,11 +677,12 @@ describe('FileManager', () => {
  * @throws {Error} Error conditions
  */
 async function myFunction(param1, options = {}) {
-    // Implementation
+  // Implementation
 }
 ```
 
 **Markdown Documentation:**
+
 - Clear headings
 - Code examples
 - Screenshots for UI features
@@ -679,16 +691,18 @@ async function myFunction(param1, options = {}) {
 ### Pull Request Guidelines
 
 **PR Title Format:**
+
 ```
 type(scope): brief description
 
 Examples:
 feat(chat): add multi-agent coordination
-fix(renderer): resolve track rendering issue  
+fix(renderer): resolve track rendering issue
 docs(readme): update installation instructions
 ```
 
 **PR Description:**
+
 - What changes were made
 - Why changes were necessary
 - How to test changes
@@ -702,10 +716,11 @@ docs(readme): update installation instructions
 ### Version Update Workflow
 
 1. **Update version numbers:**
+
    ```javascript
    // src/version.js
-   const VERSION_MINOR = 523;  // Increment
-   const VERSION_PRERELEASE = null;  // or 'beta'
+   const VERSION_MINOR = 523; // Increment
+   const VERSION_PRERELEASE = null; // or 'beta'
    ```
 
    ```json
@@ -716,6 +731,7 @@ docs(readme): update installation instructions
    ```
 
 2. **Synchronize versions:**
+
    ```bash
    npm run version-sync
    npm run version-validate
@@ -744,6 +760,7 @@ npm run build:all
 ### Creating GitHub Release
 
 1. **Create and push tag:**
+
    ```bash
    git tag -a v0.523 -m "Release v0.523"
    git push origin v0.523
@@ -784,12 +801,14 @@ npm run build:all
 ### Debugging
 
 **Enable Developer Tools:**
+
 ```javascript
 // In main.js
 mainWindow.webContents.openDevTools();
 ```
 
 **Logging:**
+
 ```javascript
 // Use consistent logging
 console.log('[ModuleName]', 'Message', data);
@@ -797,6 +816,7 @@ console.error('[ModuleName]', 'Error:', error);
 ```
 
 **Debugging AI:**
+
 - Enable "Show Thinking" in ChatBox
 - Check conversation evolution logs
 - Review tool call parameters
@@ -807,18 +827,21 @@ console.error('[ModuleName]', 'Error:', error);
 ## Resources
 
 ### Internal Documentation
+
 - [User Guide](../user-guides/USER_GUIDE.md)
 - [API Reference](../api-docs/)
 - [Fix Summaries](../fix-summaries/)
 - [Project Rules](../../PROJECT_RULES.md)
 
 ### External Resources
+
 - [Electron Documentation](https://www.electronjs.org/docs)
 - [D3.js Documentation](https://d3js.org/)
 - [OpenAI API Reference](https://platform.openai.com/docs/api-reference)
 - [Anthropic Claude API](https://docs.anthropic.com/)
 
 ### Community
+
 - [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
 - [GitHub Discussions](https://github.com/Scilence2022/CodeXomics/discussions)
 - [Contributing Guidelines](../../CONTRIBUTING.md)

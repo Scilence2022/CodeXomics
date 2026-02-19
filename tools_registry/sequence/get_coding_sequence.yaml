@@ -1,6 +1,6 @@
 name: get_coding_sequence
 version: 1.0.0
-description: "Extract the coding DNA sequence (CDS) for a specific gene by name or locus tag. Returns the actual coding nucleotide sequence without introns."
+description: 'Extract the coding DNA sequence (CDS) for a specific gene by name or locus tag. Returns the actual coding nucleotide sequence without introns.'
 category: sequence
 keywords:
   - coding sequence
@@ -22,27 +22,27 @@ parameters:
   properties:
     gene_name:
       type: string
-      description: "Gene name or locus tag to extract coding sequence from"
+      description: 'Gene name or locus tag to extract coding sequence from'
       examples:
-        - "lacZ"
-        - "dnaA"
-        - "b0062"
-        - "lysC"
+        - 'lacZ'
+        - 'dnaA'
+        - 'b0062'
+        - 'lysC'
     include_upstream:
       type: number
-      description: "Number of nucleotides to include upstream of start codon"
+      description: 'Number of nucleotides to include upstream of start codon'
       default: 0
       minimum: 0
     include_downstream:
       type: number
-      description: "Number of nucleotides to include downstream of stop codon"
+      description: 'Number of nucleotides to include downstream of stop codon'
       default: 0
       minimum: 0
     format:
       type: string
-      description: "Output format for the sequence"
-      enum: ["raw", "fasta", "genbank"]
-      default: "raw"
+      description: 'Output format for the sequence'
+      enum: ['raw', 'fasta', 'genbank']
+      default: 'raw'
     clientId:
       type: string
       description: Browser client ID for multi-window support
@@ -50,27 +50,27 @@ parameters:
   required:
     - gene_name
 sample_usages:
-  - user_query: "Get the coding sequence for lacZ gene"
+  - user_query: 'Get the coding sequence for lacZ gene'
     tool_call: "get_coding_sequence(gene_name='lacZ')"
-    thought: "User wants the DNA coding sequence for the lacZ gene"
-    expected_result: "DNA sequence of lacZ coding region from start to stop codon"
-  
-  - user_query: "Extract dnaA sequence with promoter region"
+    thought: 'User wants the DNA coding sequence for the lacZ gene'
+    expected_result: 'DNA sequence of lacZ coding region from start to stop codon'
+
+  - user_query: 'Extract dnaA sequence with promoter region'
     tool_call: "get_coding_sequence(gene_name='dnaA', include_upstream=100)"
-    thought: "User wants dnaA coding sequence plus 100bp upstream region"
-    expected_result: "dnaA coding sequence with 100bp upstream included"
-  
-  - user_query: "Get lysC sequence in FASTA format"
+    thought: 'User wants dnaA coding sequence plus 100bp upstream region'
+    expected_result: 'dnaA coding sequence with 100bp upstream included'
+
+  - user_query: 'Get lysC sequence in FASTA format'
     tool_call: "get_coding_sequence(gene_name='lysC', format='fasta')"
-    thought: "User wants lysC coding sequence formatted as FASTA"
-    expected_result: "lysC coding sequence in proper FASTA format with header"
+    thought: 'User wants lysC coding sequence formatted as FASTA'
+    expected_result: 'lysC coding sequence in proper FASTA format with header'
 relationships:
-  depends_on: ["jump_to_gene", "search_gene_by_name"]
+  depends_on: ['jump_to_gene', 'search_gene_by_name']
   conflicts_with: []
-  enhances: ["translate_dna"]
-  alternatives: ["get_sequence"]
+  enhances: ['translate_dna']
+  alternatives: ['get_sequence']
   prerequisites: []
-  follow_up: ["translate_dna", "compute_gc"]
+  follow_up: ['translate_dna', 'compute_gc']
 metadata:
   usage_count: 0
   success_rate: 0
@@ -83,11 +83,11 @@ metadata:
     - extraction
   complexity: simple
   usage_pattern: common
-  recommendation: "Use when you need the actual DNA sequence of a specific gene"
+  recommendation: 'Use when you need the actual DNA sequence of a specific gene'
 error_handling:
-  gene_not_found: "Returns error if gene name is not found in annotations"
-  no_coding_sequence: "Returns error if gene has no coding sequence"
-  invalid_gene_name: "Returns error if gene name is empty or invalid"
+  gene_not_found: 'Returns error if gene name is not found in annotations'
+  no_coding_sequence: 'Returns error if gene has no coding sequence'
+  invalid_gene_name: 'Returns error if gene name is empty or invalid'
 returns:
   success: boolean - Whether extraction was successful
   gene_name: string - Name of the gene

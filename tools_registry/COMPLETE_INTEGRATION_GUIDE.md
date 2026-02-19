@@ -9,24 +9,28 @@ This document describes the complete integration of built-in file loading tools 
 ### 1. Core System Components
 
 #### ToolsRegistryManager (`registry_manager.js`)
+
 - **Enhanced Intent Analysis**: Advanced file loading pattern detection
 - **Smart Tool Scoring**: Priority-based scoring with file type matching
 - **Dynamic Tool Retrieval**: Context-aware tool selection
 - **Usage Tracking**: Performance optimization through usage statistics
 
 #### SystemIntegration (`system_integration.js`)
+
 - **Dual Mode Operation**: Dynamic and non-dynamic system prompt generation
 - **Built-in Tool Integration**: Seamless integration with ChatManager methods
 - **Enhanced Context Handling**: Comprehensive genome browser state management
 - **Tool Execution Routing**: Intelligent routing between built-in and external tools
 
 #### BuiltInToolsIntegration (`builtin_tools_integration.js`)
+
 - **Native Tool Mapping**: Direct mapping to ChatManager methods
 - **Pattern Recognition**: Advanced file loading intent detection
 - **Performance Optimization**: Direct execution without external dependencies
 - **Non-Dynamic Mode Support**: Specialized system prompts for built-in tools
 
 #### EnhancedChatManagerWithDynamicTools (`enhanced_chatmanager_integration.js`)
+
 - **Complete Integration**: Full ChatManager integration with all features
 - **Execution History**: Comprehensive tracking and analytics
 - **Mode Switching**: Dynamic/non-dynamic mode switching
@@ -35,6 +39,7 @@ This document describes the complete integration of built-in file loading tools 
 ### 2. File Loading Tools Integration
 
 #### Built-in Tools Implemented:
+
 1. **load_genome_file** - FASTA/GenBank genome files
 2. **load_annotation_file** - GFF/BED/GTF annotation files
 3. **load_variant_file** - VCF variant files
@@ -43,7 +48,9 @@ This document describes the complete integration of built-in file loading tools 
 6. **load_operon_file** - Operon/regulatory element files
 
 #### YAML Tool Definitions:
+
 Each tool has a comprehensive YAML definition with:
+
 - Built-in implementation specification
 - Parameter definitions with validation
 - Usage examples and patterns
@@ -58,22 +65,21 @@ Each tool has a comprehensive YAML definition with:
 const SystemIntegration = require('./tools_registry/system_integration');
 
 class ChatManager {
-    constructor(app, configManager = null) {
-        
-        // Initialize enhanced dynamic tools system
-        this.dynamicTools = new SystemIntegration();
-        this.operationMode = 'dynamic'; // or 'non-dynamic'
-        this.initializeDynamicTools();
-    }
+  constructor(app, configManager = null) {
+    // Initialize enhanced dynamic tools system
+    this.dynamicTools = new SystemIntegration();
+    this.operationMode = 'dynamic'; // or 'non-dynamic'
+    this.initializeDynamicTools();
+  }
 
-    async initializeDynamicTools() {
-        try {
-            await this.dynamicTools.initialize();
-            console.log('✅ Enhanced Dynamic Tools System integrated');
-        } catch (error) {
-            console.error('❌ Dynamic Tools System failed:', error);
-        }
+  async initializeDynamicTools() {
+    try {
+      await this.dynamicTools.initialize();
+      console.log('✅ Enhanced Dynamic Tools System integrated');
+    } catch (error) {
+      console.error('❌ Dynamic Tools System failed:', error);
     }
+  }
 }
 ```
 
@@ -83,7 +89,7 @@ class ChatManager {
 async getBaseSystemMessage() {
     try {
         const context = this.getCurrentContext();
-        
+
         let promptData;
         if (this.operationMode === 'dynamic') {
             // Intelligent tool selection based on user intent
@@ -95,7 +101,7 @@ async getBaseSystemMessage() {
             // Emphasize built-in tools for better performance
             promptData = await this.dynamicTools.generateNonDynamicSystemPrompt(context);
         }
-        
+
         return promptData.systemPrompt;
     } catch (error) {
         console.error('Failed to generate system message:', error);
@@ -111,12 +117,12 @@ async executeTool(toolName, parameters, clientId) {
     try {
         // Intelligent routing between built-in and external tools
         const result = await this.dynamicTools.executeToolWithRouting(
-            toolName, 
-            parameters, 
+            toolName,
+            parameters,
             this, // ChatManager instance for built-in tools
             clientId
         );
-        
+
         return result;
     } catch (error) {
         console.error(`Tool execution failed: ${toolName}`, error);
@@ -134,16 +140,18 @@ The system now includes advanced pattern recognition for file loading operations
 ```javascript
 // Enhanced file loading patterns
 const fileLoadingPatterns = {
-    direct_path: /[\w\-\.\\\/]+\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)$/i,
-    quoted_path: /"[^"]*\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)"/i,
-    load_genome: /(load|open|import)\s+(genome|fasta|genbank|gbk|gb)\s+(file)?/i,
-    // ... additional patterns
+  direct_path:
+    /[\w\-\.\\\/]+\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)$/i,
+  quoted_path: /"[^"]*\.(fasta|fa|genbank|gbk|gb|gff|gff3|bed|gtf|vcf|sam|bam|wig|bigwig|bedgraph|json|csv|txt)"/i,
+  load_genome: /(load|open|import)\s+(genome|fasta|genbank|gbk|gb)\s+(file)?/i,
+  // ... additional patterns
 };
 ```
 
 ### 2. Priority-Based Tool Scoring
 
 Tools are scored based on multiple factors:
+
 - **Intent Matching**: Direct query keyword matching (25 points)
 - **File Type Bonuses**: Specific file type matching (50-100 points)
 - **Usage Statistics**: Historical performance (5-10 points)
@@ -152,11 +160,13 @@ Tools are scored based on multiple factors:
 ### 3. Dual Operation Modes
 
 #### Dynamic Mode
+
 - Intelligent tool selection based on user intent
 - Context-aware system prompt generation
 - Optimal for complex queries and varied use cases
 
-#### Non-Dynamic Mode  
+#### Non-Dynamic Mode
+
 - Emphasizes built-in tools for maximum performance
 - Specialized system prompts for file operations
 - Optimal for file loading and core functionality
@@ -164,6 +174,7 @@ Tools are scored based on multiple factors:
 ### 4. Comprehensive Monitoring
 
 The system provides detailed analytics:
+
 - Tool execution statistics
 - Performance metrics
 - Intent analysis results
@@ -172,12 +183,14 @@ The system provides detailed analytics:
 ## 📊 Performance Improvements
 
 ### Before Integration
+
 - System prompt size: ~5000+ lines
 - Tool loading time: 2-3 seconds
 - Context utilization: 80-90%
 - File loading recognition: Basic keyword matching
 
 ### After Integration
+
 - System prompt size: 200-500 lines (dynamic)
 - Tool loading time: 200-500ms
 - Context utilization: 40-60%
@@ -186,6 +199,7 @@ The system provides detailed analytics:
 ## 🚀 Usage Examples
 
 ### Example 1: File Loading with Path Detection
+
 ```
 User: "Load genome file '/Users/data/ecoli.gbk'"
 
@@ -198,6 +212,7 @@ System Response:
 ```
 
 ### Example 2: Dynamic Tool Selection
+
 ```
 User: "Analyze the GC content of the current region and compare with protein structure data"
 
@@ -209,6 +224,7 @@ System Response:
 ```
 
 ### Example 3: Non-Dynamic Mode Operation
+
 ```
 Mode: Non-dynamic
 User: "Load annotation file"
@@ -223,22 +239,25 @@ System Response:
 ## 🔧 Configuration and Customization
 
 ### Mode Selection
+
 ```javascript
 // Set operation mode
-chatManager.setOperationMode('dynamic');    // Intelligent selection
+chatManager.setOperationMode('dynamic'); // Intelligent selection
 chatManager.setOperationMode('non-dynamic'); // Built-in tools emphasis
 ```
 
 ### Custom Intent Patterns
+
 ```javascript
 // Add custom file loading patterns
 const customPatterns = {
-    custom_format: /\.(myformat|customext)$/i,
-    special_loading: /(import|load)\s+special\s+data/i
+  custom_format: /\.(myformat|customext)$/i,
+  special_loading: /(import|load)\s+special\s+data/i,
 };
 ```
 
 ### Performance Tuning
+
 ```javascript
 // Adjust tool selection limits
 const relevantTools = await registryManager.getRelevantTools(query, context, 15); // Top 15 tools

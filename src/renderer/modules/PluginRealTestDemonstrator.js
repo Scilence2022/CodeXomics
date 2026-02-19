@@ -1,305 +1,304 @@
 /**
  * Plugin Real Test Demonstrator
  * Showcases actual plugin functionality with interactive demonstrations
- * 
+ *
  * This class serves as a UNIFIED ENTRY POINT that:
  * 1. Dynamically loads plugin-specific demo scripts (plugin/demo.js)
  * 2. Delegates demo execution to plugin-owned demo modules
  * 3. Provides UI framework and common utilities
  * 4. Requires PluginPathResolver to be initialized before use
- * 
+ *
  * @version 4.0.0 - Strict Modular Architecture (No Legacy Fallback)
  * @author GenomeAIStudio Team
  */
 
 class PluginRealTestDemonstrator {
-    constructor(pluginManager) {
-        this.pluginManager = pluginManager;
-        this.demoModules = new Map(); // Plugin-specific demo modules
-        this.testResults = new Map();
-        // Note: pluginBasePath removed - now using dynamic path resolution per plugin
+  constructor(pluginManager) {
+    this.pluginManager = pluginManager;
+    this.demoModules = new Map(); // Plugin-specific demo modules
+    this.testResults = new Map();
+    // Note: pluginBasePath removed - now using dynamic path resolution per plugin
+  }
+
+  /**
+   * Resolve demo.js path for a plugin
+   * Searches multiple locations: installed plugins, marketplace source, built-in plugins
+   * @param {string} pluginId - Plugin identifier
+   * @param {string} version - Plugin version
+   * @returns {string} Absolute path to demo.js
+   * @throws {Error} If demo.js cannot be found in any location
+   */
+  resolvePluginDemoPath(pluginId, version) {
+    const path = require('path');
+    const fs = require('fs');
+
+    // Get project root path using multiple strategies
+    let basePath = null;
+
+    // Strategy 1: Use __dirname (most reliable in Electron renderer with Node.js integration)
+    // __dirname for this file is: <project>/src/renderer/modules/
+    // So we need to go up 3 levels to get project root
+    if (typeof __dirname !== 'undefined' && __dirname) {
+      const potentialRoot = path.resolve(__dirname, '..', '..', '..');
+      if (fs.existsSync(path.join(potentialRoot, 'package.json'))) {
+        basePath = potentialRoot;
+      }
     }
 
-    /**
-     * Resolve demo.js path for a plugin
-     * Searches multiple locations: installed plugins, marketplace source, built-in plugins
-     * @param {string} pluginId - Plugin identifier  
-     * @param {string} version - Plugin version
-     * @returns {string} Absolute path to demo.js
-     * @throws {Error} If demo.js cannot be found in any location
-     */
-    resolvePluginDemoPath(pluginId, version) {
-        const path = require('path');
-        const fs = require('fs');
-        
-        // Get project root path using multiple strategies
-        let basePath = null;
-        
-        // Strategy 1: Use __dirname (most reliable in Electron renderer with Node.js integration)
-        // __dirname for this file is: <project>/src/renderer/modules/
-        // So we need to go up 3 levels to get project root
-        if (typeof __dirname !== 'undefined' && __dirname) {
-            const potentialRoot = path.resolve(__dirname, '..', '..', '..');
-            if (fs.existsSync(path.join(potentialRoot, 'package.json'))) {
-                basePath = potentialRoot;
-            }
+    // Strategy 2: Use Electron's app path if available (async call stored as property)
+    if (!basePath && typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getAppPath) {
+      try {
+        const appPath = window.electronAPI.getAppPath();
+        if (appPath && fs.existsSync(path.join(appPath, 'package.json'))) {
+          basePath = appPath;
         }
-        
-        // Strategy 2: Use Electron's app path if available (async call stored as property)
-        if (!basePath && typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getAppPath) {
-            try {
-                const appPath = window.electronAPI.getAppPath();
-                if (appPath && fs.existsSync(path.join(appPath, 'package.json'))) {
-                    basePath = appPath;
-                }
-            } catch (e) {
-                // Ignore error, try next strategy
-            }
-        }
-        
-        // Strategy 3: Use process.cwd() and search upward for package.json
-        if (!basePath) {
-            let searchPath = process.cwd();
-            // Search up to 10 levels up for project root
-            for (let i = 0; i < 10; i++) {
-                if (fs.existsSync(path.join(searchPath, 'package.json'))) {
-                    // Verify it's our project by checking for specific directories
-                    if (fs.existsSync(path.join(searchPath, 'src', 'renderer', 'modules'))) {
-                        basePath = searchPath;
-                        break;
-                    }
-                }
-                const parentPath = path.dirname(searchPath);
-                if (parentPath === searchPath) break; // Reached root
-                searchPath = parentPath;
-            }
-        }
-        
-        // Strategy 4: Fallback - look for the path relative to common locations
-        if (!basePath) {
-            const fallbackPaths = [
-                path.join(process.env.HOME || '', 'Github-Repos', 'GenomeAIStudio_1'),
-                path.join(process.env.HOME || '', 'GenomeAIStudio_1'),
-                process.cwd()
-            ];
-            for (const fallbackPath of fallbackPaths) {
-                if (fs.existsSync(path.join(fallbackPath, 'package.json')) &&
-                    fs.existsSync(path.join(fallbackPath, 'src', 'renderer', 'modules'))) {
-                    basePath = fallbackPath;
-                    break;
-                }
-            }
-        }
-        
-        // If still no basePath, use process.cwd() as last resort
-        if (!basePath) {
-            basePath = process.cwd();
-        }
-        
-        console.log(`🔍 Resolving demo path for ${pluginId}@${version}`);
-        console.log(`  Base path: ${basePath}`);
-        console.log(`  Has package.json: ${fs.existsSync(path.join(basePath, 'package.json'))}`);
-        
-        // Define search locations in priority order
-        const searchLocations = [
-            // 1. User-installed plugins directory
-            path.join(basePath, 'src/renderer/modules/Plugins/UserInstalled', pluginId, version, 'demo.js'),
-            
-            // 2. Marketplace server source (development) - with version
-            path.join(basePath, 'packages/marketplace-server/marketplace-data/plugins', pluginId, version, 'demo.js'),
-            
-            // 3. Built-in plugins directory
-            path.join(basePath, 'src/renderer/modules/Plugins', pluginId, version, 'demo.js'),
-            
-            // 4. Marketplace without version subdirectory (fallback)
-            path.join(basePath, 'packages/marketplace-server/marketplace-data/plugins', pluginId, 'demo.js'),
-        ];
-        
-        // Search for demo.js in each location
-        for (const demoPath of searchLocations) {
-            console.log(`  Checking: ${demoPath}`);
-            try {
-                if (fs.existsSync(demoPath)) {
-                    console.log(`✅ Found demo.js at: ${demoPath}`);
-                    return demoPath;
-                }
-            } catch (error) {
-                console.log(`  ⚠️ Error checking ${demoPath}:`, error.message);
-            }
-        }
-        
-        // If PathResolver is available, try its paths too
-        const pathResolver = this.pluginManager?.pathResolver;
-        if (pathResolver && pathResolver._isInitialized) {
-            const userPluginsPath = pathResolver.getUserPluginsPath();
-            const builtinPluginsPath = pathResolver.getBuiltinPluginsPath();
-            
-            const resolverPaths = [
-                path.join(basePath, userPluginsPath, pluginId, version, 'demo.js'),
-                path.join(basePath, builtinPluginsPath, pluginId, version, 'demo.js'),
-            ];
-            
-            for (const demoPath of resolverPaths) {
-                if (!searchLocations.includes(demoPath)) {
-                    console.log(`  Checking (resolver): ${demoPath}`);
-                    try {
-                        if (fs.existsSync(demoPath)) {
-                            console.log(`✅ Found demo.js at: ${demoPath}`);
-                            return demoPath;
-                        }
-                    } catch (error) {
-                        console.log(`  ⚠️ Error checking ${demoPath}:`, error.message);
-                    }
-                }
-            }
-        }
-        
-        // Not found in any location
-        throw new Error(
-            `Demo file not found for plugin "${pluginId}@${version}".\n` +
-            `Searched locations:\n` +
-            searchLocations.map(p => `  - ${p}`).join('\n') +
-            `\nEnsure demo.js exists in one of these locations.`
-        );
+      } catch (e) {
+        // Ignore error, try next strategy
+      }
     }
 
-    /**
-     * Dynamically load plugin demo module
-     * @param {string} pluginId - Plugin identifier
-     * @returns {Promise<Object|null>} Demo module instance or null
-     */
-    async loadPluginDemo(pluginId) {
-        // Check if already loaded
-        if (this.demoModules.has(pluginId)) {
-            return this.demoModules.get(pluginId);
+    // Strategy 3: Use process.cwd() and search upward for package.json
+    if (!basePath) {
+      let searchPath = process.cwd();
+      // Search up to 10 levels up for project root
+      for (let i = 0; i < 10; i++) {
+        if (fs.existsSync(path.join(searchPath, 'package.json'))) {
+          // Verify it's our project by checking for specific directories
+          if (fs.existsSync(path.join(searchPath, 'src', 'renderer', 'modules'))) {
+            basePath = searchPath;
+            break;
+          }
         }
+        const parentPath = path.dirname(searchPath);
+        if (parentPath === searchPath) break; // Reached root
+        searchPath = parentPath;
+      }
+    }
+
+    // Strategy 4: Fallback - look for the path relative to common locations
+    if (!basePath) {
+      const fallbackPaths = [
+        path.join(process.env.HOME || '', 'Github-Repos', 'GenomeAIStudio_1'),
+        path.join(process.env.HOME || '', 'GenomeAIStudio_1'),
+        process.cwd(),
+      ];
+      for (const fallbackPath of fallbackPaths) {
+        if (
+          fs.existsSync(path.join(fallbackPath, 'package.json')) &&
+          fs.existsSync(path.join(fallbackPath, 'src', 'renderer', 'modules'))
+        ) {
+          basePath = fallbackPath;
+          break;
+        }
+      }
+    }
+
+    // If still no basePath, use process.cwd() as last resort
+    if (!basePath) {
+      basePath = process.cwd();
+    }
+
+    console.log(`🔍 Resolving demo path for ${pluginId}@${version}`);
+    console.log(`  Base path: ${basePath}`);
+    console.log(`  Has package.json: ${fs.existsSync(path.join(basePath, 'package.json'))}`);
+
+    // Define search locations in priority order
+    const searchLocations = [
+      // 1. User-installed plugins directory
+      path.join(basePath, 'src/renderer/modules/Plugins/UserInstalled', pluginId, version, 'demo.js'),
+
+      // 2. Marketplace server source (development) - with version
+      path.join(basePath, 'packages/marketplace-server/marketplace-data/plugins', pluginId, version, 'demo.js'),
+
+      // 3. Built-in plugins directory
+      path.join(basePath, 'src/renderer/modules/Plugins', pluginId, version, 'demo.js'),
+
+      // 4. Marketplace without version subdirectory (fallback)
+      path.join(basePath, 'packages/marketplace-server/marketplace-data/plugins', pluginId, 'demo.js'),
+    ];
+
+    // Search for demo.js in each location
+    for (const demoPath of searchLocations) {
+      console.log(`  Checking: ${demoPath}`);
+      try {
+        if (fs.existsSync(demoPath)) {
+          console.log(`✅ Found demo.js at: ${demoPath}`);
+          return demoPath;
+        }
+      } catch (error) {
+        console.log(`  ⚠️ Error checking ${demoPath}:`, error.message);
+      }
+    }
+
+    // If PathResolver is available, try its paths too
+    const pathResolver = this.pluginManager?.pathResolver;
+    if (pathResolver && pathResolver._isInitialized) {
+      const userPluginsPath = pathResolver.getUserPluginsPath();
+      const builtinPluginsPath = pathResolver.getBuiltinPluginsPath();
+
+      const resolverPaths = [
+        path.join(basePath, userPluginsPath, pluginId, version, 'demo.js'),
+        path.join(basePath, builtinPluginsPath, pluginId, version, 'demo.js'),
+      ];
+
+      for (const demoPath of resolverPaths) {
+        if (!searchLocations.includes(demoPath)) {
+          console.log(`  Checking (resolver): ${demoPath}`);
+          try {
+            if (fs.existsSync(demoPath)) {
+              console.log(`✅ Found demo.js at: ${demoPath}`);
+              return demoPath;
+            }
+          } catch (error) {
+            console.log(`  ⚠️ Error checking ${demoPath}:`, error.message);
+          }
+        }
+      }
+    }
+
+    // Not found in any location
+    throw new Error(
+      `Demo file not found for plugin "${pluginId}@${version}".\n` +
+        `Searched locations:\n` +
+        searchLocations.map(p => `  - ${p}`).join('\n') +
+        `\nEnsure demo.js exists in one of these locations.`
+    );
+  }
+
+  /**
+   * Dynamically load plugin demo module
+   * @param {string} pluginId - Plugin identifier
+   * @returns {Promise<Object|null>} Demo module instance or null
+   */
+  async loadPluginDemo(pluginId) {
+    // Check if already loaded
+    if (this.demoModules.has(pluginId)) {
+      return this.demoModules.get(pluginId);
+    }
+
+    try {
+      // Get plugin from registry to access version
+      let plugin = null;
+      if (this.pluginManager.pluginRegistry) {
+        plugin =
+          this.pluginManager.pluginRegistry.visualization.get(pluginId) ||
+          this.pluginManager.pluginRegistry.function.get(pluginId);
+      }
+
+      if (!plugin) {
+        console.warn(`⚠️ Plugin ${pluginId} not found in registry, cannot load demo module`);
+        return null;
+      }
+
+      // Resolve path to plugin demo script - will throw if PathResolver not ready
+      const version = plugin.version || '1.0.0';
+      const demoPath = this.resolvePluginDemoPath(pluginId, version);
+
+      console.log(`🔍 Attempting to load demo module: ${demoPath}`);
+
+      // Dynamic import (for ES modules)
+      let DemoClass;
+      try {
+        // Try Node.js require() for Electron renderer process
+        console.log(`  Trying require() for installed plugin demo...`);
+        DemoClass = require(demoPath);
+
+        // Handle ES module default export
+        if (DemoClass && DemoClass.__esModule && DemoClass.default) {
+          DemoClass = DemoClass.default;
+        }
+      } catch (requireError) {
+        console.log(`  require() failed: ${requireError.message}`);
+        console.log(`  Trying browser-style fetch fallback...`);
 
         try {
-            // Get plugin from registry to access version
-            let plugin = null;
-            if (this.pluginManager.pluginRegistry) {
-                plugin = this.pluginManager.pluginRegistry.visualization.get(pluginId) ||
-                         this.pluginManager.pluginRegistry.function.get(pluginId);
-            }
+          // Fallback: Try browser-style script loading
+          const response = await fetch(`file://${demoPath}`);
+          if (!response.ok) throw new Error('Demo file not found via fetch');
 
-            if (!plugin) {
-                console.warn(`⚠️ Plugin ${pluginId} not found in registry, cannot load demo module`);
-                return null;
-            }
+          const scriptContent = await response.text();
+          eval(scriptContent); // Execute script to define class
 
-            // Resolve path to plugin demo script - will throw if PathResolver not ready
-            const version = plugin.version || '1.0.0';
-            const demoPath = this.resolvePluginDemoPath(pluginId, version);
-            
-            console.log(`🔍 Attempting to load demo module: ${demoPath}`);
+          // Get class from global scope based on plugin ID
+          const className = this.getDemoClassName(pluginId);
+          DemoClass = window[className];
 
-            // Dynamic import (for ES modules)
-            let DemoClass;
-            try {
-                // Try Node.js require() for Electron renderer process
-                console.log(`  Trying require() for installed plugin demo...`);
-                DemoClass = require(demoPath);
-                
-                // Handle ES module default export
-                if (DemoClass && DemoClass.__esModule && DemoClass.default) {
-                    DemoClass = DemoClass.default;
-                }
-                
-            } catch (requireError) {
-                console.log(`  require() failed: ${requireError.message}`);
-                console.log(`  Trying browser-style fetch fallback...`);
-                
-                try {
-                    // Fallback: Try browser-style script loading
-                    const response = await fetch(`file://${demoPath}`);
-                    if (!response.ok) throw new Error('Demo file not found via fetch');
-                    
-                    const scriptContent = await response.text();
-                    eval(scriptContent); // Execute script to define class
-                    
-                    // Get class from global scope based on plugin ID
-                    const className = this.getDemoClassName(pluginId);
-                    DemoClass = window[className];
-                    
-                    if (!DemoClass) {
-                        throw new Error(`Demo class ${className} not found after loading`);
-                    }
-                } catch (fetchError) {
-                    throw new Error(`Both require() and fetch() failed. Demo file may not exist at: ${demoPath}`);
-                }
-            }
-
-            // Get plugin instance (from _instance property stored during installation)
-            const pluginInstance = plugin._instance || plugin.instance || plugin;
-
-            // Instantiate demo module
-            const demoInstance = new DemoClass(pluginInstance);
-            this.demoModules.set(pluginId, demoInstance);
-            
-            console.log(`✅ Successfully loaded demo module for ${pluginId}`);
-            console.log(`  Demo scenarios: ${Object.keys(demoInstance.demoData).join(', ')}`);
-            
-            return demoInstance;
-
-        } catch (error) {
-            // Re-throw initialization errors with clear context
-            if (error.message.includes('PluginPathResolver not initialized')) {
-                throw new Error(
-                    `Cannot load plugin demo: ${error.message}\n` +
-                    `Plugin: ${pluginId}\n` +
-                    `Please ensure the plugin system is fully initialized before running tests.`
-                );
-            }
-            
-            // Re-throw other errors with plugin context
-            throw new Error(
-                `Failed to load demo module for plugin "${pluginId}": ${error.message}`
-            );
+          if (!DemoClass) {
+            throw new Error(`Demo class ${className} not found after loading`);
+          }
+        } catch (fetchError) {
+          throw new Error(`Both require() and fetch() failed. Demo file may not exist at: ${demoPath}`);
         }
+      }
+
+      // Get plugin instance (from _instance property stored during installation)
+      const pluginInstance = plugin._instance || plugin.instance || plugin;
+
+      // Instantiate demo module
+      const demoInstance = new DemoClass(pluginInstance);
+      this.demoModules.set(pluginId, demoInstance);
+
+      console.log(`✅ Successfully loaded demo module for ${pluginId}`);
+      console.log(`  Demo scenarios: ${Object.keys(demoInstance.demoData).join(', ')}`);
+
+      return demoInstance;
+    } catch (error) {
+      // Re-throw initialization errors with clear context
+      if (error.message.includes('PluginPathResolver not initialized')) {
+        throw new Error(
+          `Cannot load plugin demo: ${error.message}\n` +
+            `Plugin: ${pluginId}\n` +
+            `Please ensure the plugin system is fully initialized before running tests.`
+        );
+      }
+
+      // Re-throw other errors with plugin context
+      throw new Error(`Failed to load demo module for plugin "${pluginId}": ${error.message}`);
+    }
+  }
+
+  /**
+   * Get demo class name from plugin ID
+   */
+  getDemoClassName(pluginId) {
+    const classMap = {
+      'string-network-explorer': 'STRINGNetworkDemo',
+      'kegg-pathway-viewer': 'KEGGPathwayDemo',
+      'ecocyc-pathway-analyzer': 'EcoCycPathwayDemo',
+      'protein-interaction-network': 'ProteinNetworkDemo',
+    };
+    return classMap[pluginId] || null;
+  }
+
+  /**
+   * Get demo data for plugin - requires plugin-specific demo.js
+   * @param {string} pluginId - Plugin identifier
+   * @returns {Promise<Object>} Demo scenarios
+   * @throws {Error} If demo module cannot be loaded
+   */
+  async getDemoData(pluginId) {
+    // Load plugin-specific demo module (will throw if not available)
+    const demoModule = await this.loadPluginDemo(pluginId);
+
+    if (!demoModule || !demoModule.demoData) {
+      throw new Error(
+        `Plugin "${pluginId}" demo module loaded but does not provide demoData. ` +
+          `Ensure the demo.js file exports a class with a demoData property.`
+      );
     }
 
-    /**
-     * Get demo class name from plugin ID
-     */
-    getDemoClassName(pluginId) {
-        const classMap = {
-            'string-network-explorer': 'STRINGNetworkDemo',
-            'kegg-pathway-viewer': 'KEGGPathwayDemo',
-            'ecocyc-pathway-analyzer': 'EcoCycPathwayDemo',
-            'protein-interaction-network': 'ProteinNetworkDemo'
-        };
-        return classMap[pluginId] || null;
-    }
+    console.log(`📦 Using modular demo data for ${pluginId}`);
+    return demoModule.demoData;
+  }
 
-    /**
-     * Get demo data for plugin - requires plugin-specific demo.js
-     * @param {string} pluginId - Plugin identifier
-     * @returns {Promise<Object>} Demo scenarios
-     * @throws {Error} If demo module cannot be loaded
-     */
-    async getDemoData(pluginId) {
-        // Load plugin-specific demo module (will throw if not available)
-        const demoModule = await this.loadPluginDemo(pluginId);
-        
-        if (!demoModule || !demoModule.demoData) {
-            throw new Error(
-                `Plugin "${pluginId}" demo module loaded but does not provide demoData. ` +
-                `Ensure the demo.js file exports a class with a demoData property.`
-            );
-        }
-        
-        console.log(`📦 Using modular demo data for ${pluginId}`);
-        return demoModule.demoData;
-    }
+  /**
+   * Generate interactive test interface for plugin
+   * Now async to support dynamic demo loading
+   */
+  async generateInteractiveTestUI(pluginId, plugin, type) {
+    const demoSets = await this.getDemoData(pluginId);
 
-    /**
-     * Generate interactive test interface for plugin
-     * Now async to support dynamic demo loading
-     */
-    async generateInteractiveTestUI(pluginId, plugin, type) {
-        const demoSets = await this.getDemoData(pluginId);
-        
-        return `
+    return `
             <div class="real-test-container">
                 <div class="test-header-banner">
                     <div class="banner-icon">
@@ -315,7 +314,9 @@ class PluginRealTestDemonstrator {
                 <div class="demo-selector">
                     <h3><i class="fas fa-database"></i> Choose Demo Dataset</h3>
                     <div class="demo-options">
-                        ${Object.entries(demoSets).map(([key, demo]) => `
+                        ${Object.entries(demoSets)
+                          .map(
+                            ([key, demo]) => `
                             <div class="demo-option" data-demo-key="${key}">
                                 <input type="radio" name="demo-select" id="demo-${key}" value="${key}" ${key === 'basic' ? 'checked' : ''}>
                                 <label for="demo-${key}">
@@ -325,7 +326,9 @@ class PluginRealTestDemonstrator {
                                     ${demo.isRealTimeSearch ? '<span class="realtime-badge">⚡ Real-time</span>' : ''}
                                 </label>
                             </div>
-                        `).join('')}
+                        `
+                          )
+                          .join('')}
                     </div>
                 </div>
 
@@ -381,13 +384,13 @@ class PluginRealTestDemonstrator {
                 </div>
             </div>
         `;
-    }
+  }
 
-    /**
-     * Generate styles for real test UI
-     */
-    generateTestStyles() {
-        return `
+  /**
+   * Generate styles for real test UI
+   */
+  generateTestStyles() {
+    return `
             <style>
                 .real-test-container {
                     padding: 20px;
@@ -702,48 +705,48 @@ class PluginRealTestDemonstrator {
                 }
             </style>
         `;
+  }
+
+  /**
+   * Generate interactive test script
+   * Updated to support modular demo execution
+   */
+  async generateTestScript(pluginId, plugin, type) {
+    // Pre-process demo data: generators cannot be serialized to JSON,
+    // so we must execute them and store the result as static data
+    const rawDemoData = await this.getDemoData(pluginId);
+    const processedDemoData = {};
+
+    for (const [key, demo] of Object.entries(rawDemoData)) {
+      if (demo.generator && typeof demo.generator === 'function') {
+        // Execute generator and store result as static data
+        console.log(`📊 Pre-generating data for demo: ${demo.name}`);
+        // Preserve all demo properties except generator, replace with generated data
+        processedDemoData[key] = {
+          ...demo, // Spread all existing properties (name, description, complexity, etc.)
+          data: demo.generator(), // Execute the generator and store result
+          generator: undefined, // Remove non-serializable generator function
+        };
+        // Clean up undefined to reduce JSON size
+        delete processedDemoData[key].generator;
+      } else if (demo.networkData) {
+        // Demo has direct networkData property, use it as data
+        processedDemoData[key] = {
+          ...demo,
+          data: demo.networkData, // Map networkData to data for consistency
+        };
+      } else {
+        // Keep static data as-is
+        processedDemoData[key] = demo;
+      }
     }
 
-    /**
-     * Generate interactive test script
-     * Updated to support modular demo execution
-     */
-    async generateTestScript(pluginId, plugin, type) {
-        // Pre-process demo data: generators cannot be serialized to JSON,
-        // so we must execute them and store the result as static data
-        const rawDemoData = await this.getDemoData(pluginId);
-        const processedDemoData = {};
-        
-        for (const [key, demo] of Object.entries(rawDemoData)) {
-            if (demo.generator && typeof demo.generator === 'function') {
-                // Execute generator and store result as static data
-                console.log(`📊 Pre-generating data for demo: ${demo.name}`);
-                // Preserve all demo properties except generator, replace with generated data
-                processedDemoData[key] = {
-                    ...demo,  // Spread all existing properties (name, description, complexity, etc.)
-                    data: demo.generator(), // Execute the generator and store result
-                    generator: undefined // Remove non-serializable generator function
-                };
-                // Clean up undefined to reduce JSON size
-                delete processedDemoData[key].generator;
-            } else if (demo.networkData) {
-                // Demo has direct networkData property, use it as data
-                processedDemoData[key] = {
-                    ...demo,
-                    data: demo.networkData // Map networkData to data for consistency
-                };
-            } else {
-                // Keep static data as-is
-                processedDemoData[key] = demo;
-            }
-        }
-        
-        // Check if modular demo is available
-        const hasModularDemo = this.demoModules.has(pluginId);
-        
-        const demoDataJSON = JSON.stringify(processedDemoData);
-        
-        return `
+    // Check if modular demo is available
+    const hasModularDemo = this.demoModules.has(pluginId);
+
+    const demoDataJSON = JSON.stringify(processedDemoData);
+
+    return `
             const demoData = ${demoDataJSON};
             const pluginId = '${pluginId}';
             const hasModularDemo = ${hasModularDemo};
@@ -1267,10 +1270,10 @@ class PluginRealTestDemonstrator {
             log('Interactive test demonstrator ready', 'success');
             log('Select a demo and click "Run Demo" to begin', 'info');
         `;
-    }
+  }
 }
 
 // Export
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PluginRealTestDemonstrator;
+  module.exports = PluginRealTestDemonstrator;
 }

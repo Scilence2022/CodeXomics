@@ -60,10 +60,10 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["navigate_to_position", "jump_to_gene"]
-  alternatives: ["zoom_out"]
-  prerequisites: ["genome_data_loaded"]
-  follow_up: ["zoom_out"]
+  enhances: ['navigate_to_position', 'jump_to_gene']
+  alternatives: ['zoom_out']
+  prerequisites: ['genome_data_loaded']
+  follow_up: ['zoom_out']
 metadata:
   usage_count: 0
   success_rate: 0
@@ -78,23 +78,23 @@ metadata:
   usage_pattern: frequent
 error_handling:
   no_data:
-    error: "No genome data loaded for zooming"
-    solution: "Load genome data first before zooming"
+    error: 'No genome data loaded for zooming'
+    solution: 'Load genome data first before zooming'
     retry: false
   invalid_factor:
-    error: "Invalid zoom factor specified"
-    solution: "Use zoom factor between 1.1 and 10"
+    error: 'Invalid zoom factor specified'
+    solution: 'Use zoom factor between 1.1 and 10'
     retry: true
   zoom_limit:
-    error: "Cannot zoom beyond maximum resolution"
-    solution: "Current zoom level is at maximum detail"
+    error: 'Cannot zoom beyond maximum resolution'
+    solution: 'Current zoom level is at maximum detail'
     retry: false
 returns:
-  success: "boolean - Whether zoom operation was successful"
-  result: "object - Zoom operation results including:
+  success: 'boolean - Whether zoom operation was successful'
+  result: 'object - Zoom operation results including:
     - factor: number - Applied zoom factor
     - newRange: object - New view range after zoom
     - oldRange: object - Previous view range
-    - currentPosition: object - Current position after zoom"
-  error: "string - Error message if success is false"
-  error_type: "string - Type of error for proper handling"
+    - currentPosition: object - Current position after zoom'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

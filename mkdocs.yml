@@ -13,14 +13,14 @@ theme:
   favicon: assets/favicon.ico
   logo: assets/logo.png
   palette:
-    - media: "(prefers-color-scheme: light)"
+    - media: '(prefers-color-scheme: light)'
       scheme: default
       primary: teal
       accent: deep orange
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
+    - media: '(prefers-color-scheme: dark)'
       scheme: slate
       primary: teal
       accent: deep orange
@@ -90,26 +90,26 @@ copyright: Copyright &copy; 2024-2025 CodeXomics Team
 nav:
   - Home: index.md
   - Getting Started:
-    - Quick Start: user-guides/GETTING_STARTED.md
-    - User Guide: user-guides/USER_GUIDE.md
-    - FAQ: user-guides/FAQ.md
-    - Troubleshooting: user-guides/TROUBLESHOOTING_GUIDE.md
+      - Quick Start: user-guides/GETTING_STARTED.md
+      - User Guide: user-guides/USER_GUIDE.md
+      - FAQ: user-guides/FAQ.md
+      - Troubleshooting: user-guides/TROUBLESHOOTING_GUIDE.md
   - Developer Guide:
-    - Overview: developer-guides/DEVELOPER_GUIDE.md
-    - Plugin Development: developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md
-    - Testing Guide: developer-guides/TESTING_GUIDE.md
-    - Build Instructions: developer-guides/build-instructions.md
-    - Actions System:
-      - Documentation: developer-guides/ACTIONS_SYSTEM_DOCUMENTATION.md
-      - Quick Reference: developer-guides/ACTIONS_QUICK_REFERENCE.md
+      - Overview: developer-guides/DEVELOPER_GUIDE.md
+      - Plugin Development: developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md
+      - Testing Guide: developer-guides/TESTING_GUIDE.md
+      - Build Instructions: developer-guides/build-instructions.md
+      - Actions System:
+          - Documentation: developer-guides/ACTIONS_SYSTEM_DOCUMENTATION.md
+          - Quick Reference: developer-guides/ACTIONS_QUICK_REFERENCE.md
   - Architecture:
-    - Multi-Agent System: architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md
-    - Plugin System: architecture/PLUGIN_SYSTEM_DEEP_ANALYSIS.md
-    - Track System: architecture/TRACK_SYSTEM_ANALYSIS.md
-    - Workspace: architecture/WORKSPACE_ARCHITECTURE.md
+      - Multi-Agent System: architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md
+      - Plugin System: architecture/PLUGIN_SYSTEM_DEEP_ANALYSIS.md
+      - Track System: architecture/TRACK_SYSTEM_ANALYSIS.md
+      - Workspace: architecture/WORKSPACE_ARCHITECTURE.md
   - Reference:
-    - BLAST Guide: reference/BLAST_GUIDE.md
-    - Smart Execution: reference/SMART_EXECUTION_GUIDE.md
-    - Benchmark Methods: reference/BENCHMARK_METHODS.md
-    - Workspace Migration: reference/WORKSPACE_MIGRATION_GUIDE.md
+      - BLAST Guide: reference/BLAST_GUIDE.md
+      - Smart Execution: reference/SMART_EXECUTION_GUIDE.md
+      - Benchmark Methods: reference/BENCHMARK_METHODS.md
+      - Workspace Migration: reference/WORKSPACE_MIGRATION_GUIDE.md
   - Release Notes: release-notes/RELEASE_GUIDE.md

@@ -24,35 +24,35 @@ parameters:
     filename:
       type: string
       description: Output filename for the exported BED file
-      default: "features.bed"
+      default: 'features.bed'
       examples:
-        - "genes.bed"
-        - "selected_features.bed"
-        - "chromosome_1.bed"
+        - 'genes.bed'
+        - 'selected_features.bed'
+        - 'chromosome_1.bed'
     bed_format:
       type: string
       description: BED format variant
-      enum: ["bed3", "bed6", "bed9", "bed12"]
-      default: "bed6"
+      enum: ['bed3', 'bed6', 'bed9', 'bed12']
+      default: 'bed6'
     feature_types:
       type: array
       description: Types of features to include
       items:
         type: string
-        enum: ["gene", "CDS", "exon", "tRNA", "rRNA", "misc_feature", "regulatory", "repeat_region", "all"]
-      default: ["gene"]
+        enum: ['gene', 'CDS', 'exon', 'tRNA', 'rRNA', 'misc_feature', 'regulatory', 'repeat_region', 'all']
+      default: ['gene']
     export_range:
       type: string
       description: Range of genome to export
-      enum: ["all", "current_view", "selected_features", "custom_range", "by_chromosome"]
-      default: "all"
+      enum: ['all', 'current_view', 'selected_features', 'custom_range', 'by_chromosome']
+      default: 'all'
     chromosome:
       type: string
       description: Specific chromosome to export (when export_range is by_chromosome)
       examples:
-        - "chromosome"
-        - "chr1"
-        - "U00096"
+        - 'chromosome'
+        - 'chr1'
+        - 'U00096'
     start_position:
       type: integer
       description: Start position for custom range export
@@ -72,8 +72,8 @@ parameters:
     score_method:
       type: string
       description: Method to calculate feature scores
-      enum: ["length", "expression", "conservation", "fixed"]
-      default: "length"
+      enum: ['length', 'expression', 'conservation', 'fixed']
+      default: 'length'
     fixed_score:
       type: integer
       description: Fixed score value (when score_method is fixed)
@@ -83,21 +83,21 @@ parameters:
     color_scheme:
       type: string
       description: Color scheme for features (for bed9+ formats)
-      enum: ["default", "by_type", "by_strand", "custom"]
-      default: "by_type"
+      enum: ['default', 'by_type', 'by_strand', 'custom']
+      default: 'by_type'
     track_name:
       type: string
       description: Track name for BED header
-      default: "Genome Features"
+      default: 'Genome Features'
     track_description:
       type: string
       description: Track description for BED header
-      default: "Exported genome features"
+      default: 'Exported genome features'
     sort_by:
       type: string
       description: Sort features by position or name
-      enum: ["position", "name", "none"]
-      default: "position"
+      enum: ['position', 'name', 'none']
+      default: 'position'
     clientId:
       type: string
       description: Browser client ID for multi-window support
@@ -119,9 +119,9 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["load_genome_file"]
-  alternatives: ["export_gff_annotations", "export_genbank_format"]
-  prerequisites: ["genome_data_loaded", "annotations_available"]
+  enhances: ['load_genome_file']
+  alternatives: ['export_gff_annotations', 'export_genbank_format']
+  prerequisites: ['genome_data_loaded', 'annotations_available']
   follow_up: []
 metadata:
   usage_count: 0
@@ -138,25 +138,25 @@ metadata:
   usage_pattern: common
 error_handling:
   no_features:
-    error: "No features available for export"
-    solution: "Load genome file with annotations"
+    error: 'No features available for export'
+    solution: 'Load genome file with annotations'
     retry: false
   invalid_format:
-    error: "Invalid BED format specified"
-    solution: "Use one of: bed3, bed6, bed9, bed12"
+    error: 'Invalid BED format specified'
+    solution: 'Use one of: bed3, bed6, bed9, bed12'
     retry: true
   export_failed:
-    error: "Failed to export BED file"
-    solution: "Check file permissions and disk space"
+    error: 'Failed to export BED file'
+    solution: 'Check file permissions and disk space'
     retry: true
 returns:
-  success: "boolean - Whether export was successful"
-  result: "object - Export results including:
+  success: 'boolean - Whether export was successful'
+  result: 'object - Export results including:
     - filename: string - Name of exported file
     - featureCount: number - Number of features exported
     - bedFormat: string - BED format version used
     - fileSize: number - Size of exported file in bytes
     - trackName: string - Track name used
-    - exportRange: string - Range of genome exported"
-  error: "string - Error message if success is false"
-  error_type: "string - Type of error for proper handling"
+    - exportRange: string - Range of genome exported'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

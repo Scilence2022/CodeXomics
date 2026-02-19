@@ -10,7 +10,7 @@ const path = require('path');
 
 // Simple SVG to PNG conversion approach
 const createSvgBackground = () => {
-    return `<svg width="660" height="420" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="660" height="420" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
@@ -110,6 +110,8 @@ console.log('✅ DMG background SVG created:', svgPath);
 console.log('');
 console.log('📋 To convert to PNG (requires additional tools):');
 console.log('1. Install Inkscape: brew install inkscape');
-console.log('2. Convert: inkscape --export-type=png --export-filename=build/dmg-background.png build/dmg-background.svg');
+console.log(
+  '2. Convert: inkscape --export-type=png --export-filename=build/dmg-background.png build/dmg-background.svg'
+);
 console.log('');
 console.log('Alternative: Open the SVG in any design tool and export as PNG (660x420)');

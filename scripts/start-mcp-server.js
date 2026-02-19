@@ -2,7 +2,7 @@
 
 /**
  * Start CodeXomics MCP Server
- * 
+ *
  * This script starts the CodeXomics MCP (Model Context Protocol) server
  * using the official Claude MCP TypeScript SDK for proper protocol compliance.
  */
@@ -18,21 +18,21 @@ const server = new StandardClaudeMCPServer();
 
 // Start the server
 server.start().catch(error => {
-    process.stderr.write(`❌ Failed to start CodeXomics MCP Server: ${error}\n`);
-    process.exit(1);
+  process.stderr.write(`❌ Failed to start CodeXomics MCP Server: ${error}\n`);
+  process.exit(1);
 });
 
 // Graceful shutdown handlers
 process.on('SIGINT', async () => {
-    process.stderr.write('\n🛑 Shutting down CodeXomics MCP Server...\n');
-    await server.stop();
-    process.exit(0);
+  process.stderr.write('\n🛑 Shutting down CodeXomics MCP Server...\n');
+  await server.stop();
+  process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-    process.stderr.write('\n🛑 Shutting down CodeXomics MCP Server...\n');
-    await server.stop();
-    process.exit(0);
+  process.stderr.write('\n🛑 Shutting down CodeXomics MCP Server...\n');
+  await server.stop();
+  process.exit(0);
 });
 
 process.stderr.write('💡 CodeXomics MCP Server Usage Instructions:\n');

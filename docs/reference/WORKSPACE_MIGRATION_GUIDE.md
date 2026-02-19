@@ -9,6 +9,7 @@ This guide documents the migration of CodeXomics to an npm workspace structure, 
 ### Directory Structure
 
 **Before:**
+
 ```
 GenomeAIStudio_1/
 ├── plugin-marketplace-server.js
@@ -19,6 +20,7 @@ GenomeAIStudio_1/
 ```
 
 **After:**
+
 ```
 GenomeAIStudio_1/
 ├── packages/
@@ -36,7 +38,9 @@ GenomeAIStudio_1/
 ### Package.json Changes
 
 #### Root package.json
+
 1. **Added workspace configuration:**
+
    ```json
    "workspaces": [
      "packages/*"
@@ -51,6 +55,7 @@ GenomeAIStudio_1/
    - `start-full` - Start app + MCP + marketplace
 
 #### Marketplace package.json
+
 - Renamed from `marketplace-server-package.json` to `package.json`
 - Moved to `packages/marketplace-server/`
 - Content remains unchanged
@@ -58,6 +63,7 @@ GenomeAIStudio_1/
 ### Files Moved
 
 The following files were moved to `packages/marketplace-server/`:
+
 - `plugin-marketplace-server.js`
 - `marketplace-server-package.json` → `package.json`
 - `start-marketplace-server.sh`
@@ -73,6 +79,7 @@ The following files were moved to `packages/marketplace-server/`:
 ### .gitignore Updates
 
 Added workspace-specific patterns:
+
 ```gitignore
 packages/*/node_modules/
 packages/*/package-lock.json
@@ -92,6 +99,7 @@ packages/marketplace-server/marketplace-data/uploads/*
 ### Backward Compatibility
 
 The old files at the root level can remain for a transition period:
+
 - `plugin-marketplace-server.js` (root)
 - `marketplace-server-package.json` (root)
 - `marketplace-data/` (root)
@@ -103,17 +111,20 @@ However, these are now duplicates and can be safely removed after verification.
 ### For Existing Developers
 
 1. **Pull the latest changes:**
+
    ```bash
    git pull origin main
    ```
 
 2. **Clean install dependencies:**
+
    ```bash
    rm -rf node_modules package-lock.json
    npm install
    ```
 
 3. **Verify workspace setup:**
+
    ```bash
    npm ls --workspaces
    ```
@@ -125,6 +136,7 @@ However, these are now duplicates and can be safely removed after verification.
 ### For New Developers
 
 Follow the standard setup:
+
 ```bash
 git clone <repository>
 cd GenomeAIStudio_1
@@ -138,6 +150,7 @@ npm start                  # Start app (in another terminal)
 ### Starting Services
 
 #### Development (Recommended)
+
 ```bash
 # Start everything together
 npm run start-full
@@ -149,6 +162,7 @@ npm start                 # Terminal 3: Electron App
 ```
 
 #### Marketplace Only
+
 ```bash
 npm run marketplace:start
 # or with auto-reload
@@ -156,6 +170,7 @@ npm run marketplace:dev
 ```
 
 #### Application with Marketplace
+
 ```bash
 npm run start-with-marketplace
 ```
@@ -163,11 +178,13 @@ npm run start-with-marketplace
 ### Installing Dependencies
 
 #### Root dependencies (Electron app):
+
 ```bash
 npm install <package-name>
 ```
 
 #### Marketplace dependencies:
+
 ```bash
 npm install <package-name> --workspace=packages/marketplace-server
 # or
@@ -178,12 +195,14 @@ npm install <package-name>
 ### Running Scripts
 
 #### Marketplace scripts from root:
+
 ```bash
 npm run start --workspace=packages/marketplace-server
 npm run dev --workspace=packages/marketplace-server
 ```
 
 #### Marketplace scripts from package directory:
+
 ```bash
 cd packages/marketplace-server
 npm start
@@ -209,11 +228,13 @@ npm test --workspaces
 ### Deployment
 
 #### Development/Staging
+
 ```bash
 npm run marketplace:start
 ```
 
 #### Production (Remote Server)
+
 ```bash
 cd packages/marketplace-server
 npm install --production
@@ -225,6 +246,7 @@ node plugin-marketplace-server.js
 If issues arise, you can temporarily revert to the old structure:
 
 1. **Use the root-level files:**
+
    ```bash
    node plugin-marketplace-server.js
    ```
@@ -253,6 +275,7 @@ After migration, verify:
 ### Issue: Workspace not detected
 
 **Solution:**
+
 ```bash
 rm -rf node_modules package-lock.json
 npm install
@@ -261,6 +284,7 @@ npm install
 ### Issue: Dependencies not installing
 
 **Solution:**
+
 ```bash
 npm install --workspace=packages/marketplace-server --force
 ```
@@ -272,6 +296,7 @@ npm install --workspace=packages/marketplace-server --force
 ### Issue: Port conflicts
 
 **Solution:**
+
 ```bash
 # Stop old marketplace processes
 pkill -f plugin-marketplace-server
@@ -296,6 +321,7 @@ packages/
 ### Full Separation
 
 If needed in the future, the marketplace-server package can be:
+
 1. Moved to its own repository
 2. Published to npm
 3. Installed as a regular dependency
@@ -349,17 +375,20 @@ npm run start-full
 ## Documentation Updates
 
 Updated documents:
+
 - `WORKSPACE_ARCHITECTURE.md` - Complete architecture overview
 - `packages/marketplace-server/README.md` - Package-specific docs
 - `WORKSPACE_MIGRATION_GUIDE.md` - This migration guide
 
 Existing documents remain valid:
+
 - `docs/COMPLETE_SYSTEM_ARCHITECTURE.md`
 - `docs/project-guides/PLUGIN_MARKETPLACE_USAGE_GUIDE.md`
 
 ## Support
 
 For questions or issues related to the workspace migration:
+
 1. Check this migration guide
 2. Review `WORKSPACE_ARCHITECTURE.md`
 3. Check package-specific README files

@@ -2,7 +2,7 @@
 
 /**
  * Generate DMG Assets Script for CodeXomics
- * 
+ *
  * This script generates the necessary assets for a beautiful DMG installer:
  * - Converts PNG icon to ICNS format
  * - Creates a DMG background image
@@ -20,7 +20,7 @@ console.log('🎨 Generating DMG Assets for CodeXomics...');
 
 // Ensure build directory exists
 if (!fs.existsSync(buildDir)) {
-    fs.mkdirSync(buildDir, { recursive: true });
+  fs.mkdirSync(buildDir, { recursive: true });
 }
 
 // Check if source icon exists
@@ -28,8 +28,8 @@ const sourceIcon = path.join(assetsDir, 'icon.png');
 const targetIcns = path.join(buildDir, 'icon.icns');
 
 if (!fs.existsSync(sourceIcon)) {
-    console.error('❌ Source icon not found at:', sourceIcon);
-    process.exit(1);
+  console.error('❌ Source icon not found at:', sourceIcon);
+  process.exit(1);
 }
 
 // For now, copy the PNG as a placeholder (on macOS, you'd use iconutil)

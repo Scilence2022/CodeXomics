@@ -3,75 +3,75 @@
  * Handles page size configuration and settings persistence
  */
 class LiteratureSettings {
-    constructor() {
-        this.storageKey = 'genomeBrowser_literatureSettings';
-        this.defaults = {
-            pageSize: 10
-        };
-        this.settings = { ...this.defaults };
-        this.loadSettings();
-    }
+  constructor() {
+    this.storageKey = 'genomeBrowser_literatureSettings';
+    this.defaults = {
+      pageSize: 10,
+    };
+    this.settings = { ...this.defaults };
+    this.loadSettings();
+  }
 
-    /**
-     * Load settings from localStorage
-     */
-    loadSettings() {
-        try {
-            const stored = localStorage.getItem(this.storageKey);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                this.settings = { ...this.defaults, ...parsed };
-            }
-        } catch (error) {
-            console.error('Error loading literature settings:', error);
-            this.settings = { ...this.defaults };
-        }
+  /**
+   * Load settings from localStorage
+   */
+  loadSettings() {
+    try {
+      const stored = localStorage.getItem(this.storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        this.settings = { ...this.defaults, ...parsed };
+      }
+    } catch (error) {
+      console.error('Error loading literature settings:', error);
+      this.settings = { ...this.defaults };
     }
+  }
 
-    /**
-     * Save settings to localStorage
-     */
-    saveSettings() {
-        try {
-            localStorage.setItem(this.storageKey, JSON.stringify(this.settings));
-            console.log('Literature settings saved:', this.settings);
-        } catch (error) {
-            console.error('Error saving literature settings:', error);
-        }
+  /**
+   * Save settings to localStorage
+   */
+  saveSettings() {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(this.settings));
+      console.log('Literature settings saved:', this.settings);
+    } catch (error) {
+      console.error('Error saving literature settings:', error);
     }
+  }
 
-    /**
-     * Get current page size
-     * @returns {number} Page size
-     */
-    getPageSize() {
-        return this.settings.pageSize;
-    }
+  /**
+   * Get current page size
+   * @returns {number} Page size
+   */
+  getPageSize() {
+    return this.settings.pageSize;
+  }
 
-    /**
-     * Set page size
-     * @param {number} size - New page size
-     */
-    setPageSize(size) {
-        const validSize = Math.max(5, Math.min(50, parseInt(size) || 10));
-        this.settings.pageSize = validSize;
-        this.saveSettings();
-    }
+  /**
+   * Set page size
+   * @param {number} size - New page size
+   */
+  setPageSize(size) {
+    const validSize = Math.max(5, Math.min(50, parseInt(size) || 10));
+    this.settings.pageSize = validSize;
+    this.saveSettings();
+  }
 
-    /**
-     * Reset to default settings
-     */
-    resetToDefaults() {
-        this.settings = { ...this.defaults };
-        this.saveSettings();
-    }
+  /**
+   * Reset to default settings
+   */
+  resetToDefaults() {
+    this.settings = { ...this.defaults };
+    this.saveSettings();
+  }
 
-    /**
-     * Generate settings modal HTML
-     * @returns {string} HTML for settings modal
-     */
-    generateSettingsModalHTML() {
-        return `
+  /**
+   * Generate settings modal HTML
+   * @returns {string} HTML for settings modal
+   */
+  generateSettingsModalHTML() {
+    return `
             <div class="literature-settings-modal-overlay" id="literatureSettingsModal">
                 <div class="literature-settings-modal">
                     <div class="literature-settings-header">
@@ -103,65 +103,65 @@ class LiteratureSettings {
                 </div>
             </div>
         `;
+  }
+
+  /**
+   * Show settings modal
+   */
+  showModal() {
+    // Remove existing modal if present
+    const existingModal = document.getElementById('literatureSettingsModal');
+    if (existingModal) {
+      existingModal.remove();
     }
 
-    /**
-     * Show settings modal
-     */
-    showModal() {
-        // Remove existing modal if present
-        const existingModal = document.getElementById('literatureSettingsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', this.generateSettingsModalHTML());
 
-        // Add modal to body
-        document.body.insertAdjacentHTML('beforeend', this.generateSettingsModalHTML());
+    // Focus on input
+    setTimeout(() => {
+      const input = document.getElementById('literaturePageSize');
+      if (input) input.focus();
+    }, 100);
+  }
 
-        // Focus on input
-        setTimeout(() => {
-            const input = document.getElementById('literaturePageSize');
-            if (input) input.focus();
-        }, 100);
+  /**
+   * Close settings modal
+   */
+  closeModal() {
+    const modal = document.getElementById('literatureSettingsModal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  /**
+   * Apply settings and close modal
+   */
+  applyAndClose() {
+    const input = document.getElementById('literaturePageSize');
+    if (input) {
+      this.setPageSize(parseInt(input.value));
+    }
+    this.closeModal();
+
+    // Trigger refresh of citation display
+    if (window.enhancedCitationDisplay) {
+      window.enhancedCitationDisplay.onSettingsChanged();
+    }
+  }
+
+  /**
+   * Add settings modal CSS styles
+   */
+  addSettingsStyles() {
+    if (document.getElementById('literature-settings-styles')) {
+      return;
     }
 
-    /**
-     * Close settings modal
-     */
-    closeModal() {
-        const modal = document.getElementById('literatureSettingsModal');
-        if (modal) {
-            modal.remove();
-        }
-    }
-
-    /**
-     * Apply settings and close modal
-     */
-    applyAndClose() {
-        const input = document.getElementById('literaturePageSize');
-        if (input) {
-            this.setPageSize(parseInt(input.value));
-        }
-        this.closeModal();
-
-        // Trigger refresh of citation display
-        if (window.enhancedCitationDisplay) {
-            window.enhancedCitationDisplay.onSettingsChanged();
-        }
-    }
-
-    /**
-     * Add settings modal CSS styles
-     */
-    addSettingsStyles() {
-        if (document.getElementById('literature-settings-styles')) {
-            return;
-        }
-
-        const style = document.createElement('style');
-        style.id = 'literature-settings-styles';
-        style.textContent = `
+    const style = document.createElement('style');
+    style.id = 'literature-settings-styles';
+    style.textContent = `
             .literature-settings-modal-overlay {
                 position: fixed;
                 top: 0;
@@ -287,26 +287,26 @@ class LiteratureSettings {
                 background: #f8f9fa;
             }
         `;
-        document.head.appendChild(style);
-    }
+    document.head.appendChild(style);
+  }
 
-    /**
-     * Initialize the settings manager
-     */
-    init() {
-        this.addSettingsStyles();
-        console.log('LiteratureSettings initialized with page size:', this.settings.pageSize);
-    }
+  /**
+   * Initialize the settings manager
+   */
+  init() {
+    this.addSettingsStyles();
+    console.log('LiteratureSettings initialized with page size:', this.settings.pageSize);
+  }
 }
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = LiteratureSettings;
+  module.exports = LiteratureSettings;
 }
 // Always expose to window immediately
 if (typeof window !== 'undefined') {
-    window.LiteratureSettings = LiteratureSettings;
-    window.literatureSettings = new LiteratureSettings();
-    window.literatureSettings.init();
-    console.log('LiteratureSettings class registered on window object');
+  window.LiteratureSettings = LiteratureSettings;
+  window.literatureSettings = new LiteratureSettings();
+  window.literatureSettings.init();
+  console.log('LiteratureSettings class registered on window object');
 }

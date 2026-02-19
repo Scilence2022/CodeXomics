@@ -5,7 +5,8 @@ description: How to start the CodeXomics MCP Server for MCP Client
 This workflow starts the CodeXomics MCP Server, which allows you to connect MCP Client to your local Genome Explorer instance.
 
 1. Start the Claude MCP Server
-// turbo
+   // turbo
+
 ```bash
 npm run claude-mcp-server
 ```
@@ -31,4 +32,5 @@ If this is your first time setting this up, you need to configure MCP Client to 
   }
 }
 ```
-*Note: Replace `/ABSOLUTE/PATH/TO/` with the actual full path to your repository.*
+
+_Note: Replace `/ABSOLUTE/PATH/TO/` with the actual full path to your repository._

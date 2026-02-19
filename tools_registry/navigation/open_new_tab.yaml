@@ -1,6 +1,6 @@
 name: open_new_tab
 version: 1.0.0
-description: "Open a new browser tab for parallel genome analysis. Use this to compare different genomic regions or analyze multiple locations simultaneously."
+description: 'Open a new browser tab for parallel genome analysis. Use this to compare different genomic regions or analyze multiple locations simultaneously.'
 category: navigation
 keywords:
   - open
@@ -26,15 +26,15 @@ parameters:
   properties:
     title:
       type: string
-      description: "Title for the new tab"
-      default: "New Analysis"
+      description: 'Title for the new tab'
+      default: 'New Analysis'
     copy_current_view:
       type: boolean
-      description: "Whether to copy the current view to the new tab"
+      description: 'Whether to copy the current view to the new tab'
       default: false
     initial_position:
       type: object
-      description: "Initial genomic position for the new tab (optional)"
+      description: 'Initial genomic position for the new tab (optional)'
       properties:
         chromosome:
           type: string
@@ -48,27 +48,27 @@ parameters:
       default: default
   required: []
 sample_usages:
-  - user_query: "Open a new tab for comparison"
+  - user_query: 'Open a new tab for comparison'
     tool_call: "open_new_tab(title='Comparison View', copy_current_view=false)"
-    thought: "User wants a new tab for parallel analysis without copying current view"
-    expected_result: "New browser tab opens with default view ready for analysis"
-  
-  - user_query: "Copy this view to a new tab"
-    tool_call: "open_new_tab(copy_current_view=true)"
-    thought: "User wants to duplicate current view in a new tab"
-    expected_result: "New tab opens with identical view to current tab"
-  
-  - user_query: "Open new tab at position 50000"
+    thought: 'User wants a new tab for parallel analysis without copying current view'
+    expected_result: 'New browser tab opens with default view ready for analysis'
+
+  - user_query: 'Copy this view to a new tab'
+    tool_call: 'open_new_tab(copy_current_view=true)'
+    thought: 'User wants to duplicate current view in a new tab'
+    expected_result: 'New tab opens with identical view to current tab'
+
+  - user_query: 'Open new tab at position 50000'
     tool_call: "open_new_tab(initial_position={chromosome: 'U00096', start: 49000, end: 51000})"
-    thought: "User wants new tab starting at specific position"
-    expected_result: "New tab opens showing the specified genomic region"
+    thought: 'User wants new tab starting at specific position'
+    expected_result: 'New tab opens showing the specified genomic region'
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["navigate_to_position", "jump_to_gene"]
+  enhances: ['navigate_to_position', 'jump_to_gene']
   alternatives: []
   prerequisites: []
-  follow_up: ["navigate_to_position", "jump_to_gene"]
+  follow_up: ['navigate_to_position', 'jump_to_gene']
 metadata:
   usage_count: 0
   success_rate: 0
@@ -81,10 +81,10 @@ metadata:
     - workflow
   complexity: simple
   usage_pattern: rare
-  recommendation: "Use for comparative analysis or when you need multiple views"
+  recommendation: 'Use for comparative analysis or when you need multiple views'
 error_handling:
-  client_error: "Returns error if browser client is not available"
-  max_tabs_reached: "Returns error if maximum tab limit is reached"
+  client_error: 'Returns error if browser client is not available'
+  max_tabs_reached: 'Returns error if maximum tab limit is reached'
 returns:
   success: boolean - Whether tab creation was successful
   tab_id: string - Identifier of the newly created tab

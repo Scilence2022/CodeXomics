@@ -42,6 +42,7 @@ Or use WebSocket transport:
 ### 3. Verify Connection
 
 Ask the AI to run:
+
 ```
 Please check the CodeXomics server status using the ping tool.
 ```
@@ -49,46 +50,54 @@ Please check the CodeXomics server status using the ping tool.
 ## Quick Command Reference
 
 ### Load Data
+
 - "Load the E. coli genome from `/path/to/ecoli.fasta`"
 - "Load gene annotations from `/path/to/ecoli.gff`"
 - "Load sequencing reads from `/path/to/reads.bam`"
 
 ### Navigate
+
 - "Go to gene lacZ"
 - "Navigate to chromosome 1, position 10000-20000"
 - "Zoom in 2x on the current region"
 
 ### Analyze
+
 - "Get the coding sequence for gene rpoB"
 - "Calculate GC content of the current view"
 - "Search for restriction site EcoRI (GAATTC)"
 
 ### Visualize
+
 - "Show the genes track in compact mode"
 - "Enable coverage visualization for reads"
 - "Color variants by impact severity"
 
 ### Export
+
 - "Export the current sequence as FASTA"
 - "Export all CDS sequences to a file"
 
 ## Common Workflows
 
 ### Gene Analysis
+
 ```
-"Find the dnaA gene, show its details, get its coding sequence, 
+"Find the dnaA gene, show its details, get its coding sequence,
 and check if it has a known protein structure"
 ```
 
 ### Track Configuration
+
 ```
-"Configure the genes track: set layout to compact, gene height to 20px, 
+"Configure the genes track: set layout to compact, gene height to 20px,
 and enable circular mode"
 ```
 
 ### Comparative Analysis
+
 ```
-"Navigate to position 50000-60000, extract the sequence, 
+"Navigate to position 50000-60000, extract the sequence,
 translate it to protein, and analyze its domains"
 ```
 
@@ -102,17 +111,18 @@ translate it to protein, and analyze its domains"
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| "Server not found" | Make sure CodeXomics is running and MCP server is started |
-| "Tool execution failed" | Check if required files are loaded (genome, annotations) |
-| "Gene not found" | Use `search_gene_by_name` with partial matches |
-| "Track not visible" | Use `toggle_track` to enable the track first |
-| "Settings not applied" | Use `get_track_settings` to verify current configuration |
+| Issue                   | Solution                                                  |
+| ----------------------- | --------------------------------------------------------- |
+| "Server not found"      | Make sure CodeXomics is running and MCP server is started |
+| "Tool execution failed" | Check if required files are loaded (genome, annotations)  |
+| "Gene not found"        | Use `search_gene_by_name` with partial matches            |
+| "Track not visible"     | Use `toggle_track` to enable the track first              |
+| "Settings not applied"  | Use `get_track_settings` to verify current configuration  |
 
 ## Example Prompts
 
 ### For Gene Research
+
 ```
 I want to study the lac operon in E. coli. Please:
 1. Find all genes in the lac operon
@@ -123,6 +133,7 @@ I want to study the lac operon in E. coli. Please:
 ```
 
 ### For Sequencing Analysis
+
 ```
 I have BAM files loaded. Please:
 1. Configure the reads track to show coverage
@@ -132,6 +143,7 @@ I have BAM files loaded. Please:
 ```
 
 ### For Visualization
+
 ```
 I need to prepare a figure showing:
 1. Gene annotations in compact mode
@@ -144,6 +156,7 @@ Please configure the tracks accordingly and navigate to the region.
 ## Advanced Features
 
 ### Batch Track Configuration
+
 ```
 Apply these settings to all tracks:
 - Genes: compact layout, 20px height
@@ -152,6 +165,7 @@ Apply these settings to all tracks:
 ```
 
 ### Protein Structure Analysis
+
 ```
 For gene dnaA:
 1. Get its protein sequence
@@ -162,6 +176,7 @@ For gene dnaA:
 ```
 
 ### Codon Usage Analysis
+
 ```
 Analyze codon usage for:
 1. A specific gene

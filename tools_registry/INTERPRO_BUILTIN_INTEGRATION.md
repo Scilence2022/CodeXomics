@@ -15,26 +15,27 @@
 analyze_interpro_domains({
   sequence: 'MKLLVLALFMLLGLAFLVFGLLNQGVGM',
   analysis_type: 'complete',
-  confidence_threshold: 0.8
-})
+  confidence_threshold: 0.8,
+});
 
 // 方式 2: 通过基因名自动解析（推荐用于已知基因）
 analyze_interpro_domains({
   geneName: 'p53',
   organism: 'Homo sapiens',
   analysis_type: 'complete',
-  confidence_threshold: 0.8
-})
+  confidence_threshold: 0.8,
+});
 
 // 方式 3: 通过 UniProt ID 自动解析
 analyze_interpro_domains({
   uniprot_id: 'P04637',
   analysis_type: 'complete',
-  confidence_threshold: 0.8
-})
+  confidence_threshold: 0.8,
+});
 ```
 
 **实现细节**：
+
 - 所有三个输入参数（`sequence`, `geneName`, `uniprot_id`）都是可选的
 - 系统会自动检测并使用提供的输入方式
 - 如果提供基因名或 UniProt ID，系统会自动通过 UniProt 数据库解析获取序列
@@ -54,46 +55,46 @@ analyze_interpro_domains({
 ```javascript
 // UniProt 工具
 this.builtInToolsMap.set('search_uniprot_database', {
-    method: 'searchUniProtDatabase',
-    category: 'database',
-    type: 'built-in',
-    priority: 1
+  method: 'searchUniProtDatabase',
+  category: 'database',
+  type: 'built-in',
+  priority: 1,
 });
 
 this.builtInToolsMap.set('advanced_uniprot_search', {
-    method: 'advancedUniProtSearch',
-    category: 'database',
-    type: 'built-in',
-    priority: 2
+  method: 'advancedUniProtSearch',
+  category: 'database',
+  type: 'built-in',
+  priority: 2,
 });
 
 this.builtInToolsMap.set('get_uniprot_entry', {
-    method: 'getUniProtEntry',
-    category: 'database',
-    type: 'built-in',
-    priority: 1
+  method: 'getUniProtEntry',
+  category: 'database',
+  type: 'built-in',
+  priority: 1,
 });
 
 // InterPro 工具
 this.builtInToolsMap.set('analyze_interpro_domains', {
-    method: 'analyzeInterProDomains',
-    category: 'database',
-    type: 'built-in',
-    priority: 1
+  method: 'analyzeInterProDomains',
+  category: 'database',
+  type: 'built-in',
+  priority: 1,
 });
 
 this.builtInToolsMap.set('search_interpro_entry', {
-    method: 'searchInterProEntry',
-    category: 'database',
-    type: 'built-in',
-    priority: 2
+  method: 'searchInterProEntry',
+  category: 'database',
+  type: 'built-in',
+  priority: 2,
 });
 
 this.builtInToolsMap.set('get_interpro_entry_details', {
-    method: 'getInterProEntryDetails',
-    category: 'database',
-    type: 'built-in',
-    priority: 2
+  method: 'getInterProEntryDetails',
+  category: 'database',
+  type: 'built-in',
+  priority: 2,
 });
 ```
 
@@ -104,30 +105,30 @@ this.builtInToolsMap.set('get_interpro_entry_details', {
 ```javascript
 // UniProt 检测
 if (/\b(uniprot|protein\s+database|search\s+protein|protein\s+search)\b/i.test(query)) {
-    if (/\b(advanced|multiple|complex)\b/i.test(query)) {
-        // 高级搜索
-        relevantTools.push({ name: 'advanced_uniprot_search', confidence: 0.9 });
-    } else if (/\b(get|retrieve|fetch|entry|id)\b/i.test(query)) {
-        // 获取条目
-        relevantTools.push({ name: 'get_uniprot_entry', confidence: 0.9 });
-    } else {
-        // 基础搜索
-        relevantTools.push({ name: 'search_uniprot_database', confidence: 0.85 });
-    }
+  if (/\b(advanced|multiple|complex)\b/i.test(query)) {
+    // 高级搜索
+    relevantTools.push({ name: 'advanced_uniprot_search', confidence: 0.9 });
+  } else if (/\b(get|retrieve|fetch|entry|id)\b/i.test(query)) {
+    // 获取条目
+    relevantTools.push({ name: 'get_uniprot_entry', confidence: 0.9 });
+  } else {
+    // 基础搜索
+    relevantTools.push({ name: 'search_uniprot_database', confidence: 0.85 });
+  }
 }
 
 // InterPro 检测
 if (/\b(interpro|domain|family|families|functional\s+site)\b/i.test(query)) {
-    if (/\b(analyze|analysis|predict|domain\s+analysis)\b/i.test(query)) {
-        // 域分析
-        relevantTools.push({ name: 'analyze_interpro_domains', confidence: 0.95 });
-    } else if (/\b(get|retrieve|fetch|entry|details)\b/i.test(query)) {
-        // 获取详情
-        relevantTools.push({ name: 'get_interpro_entry_details', confidence: 0.9 });
-    } else if (/\b(search|find|lookup)\b/i.test(query)) {
-        // 搜索条目
-        relevantTools.push({ name: 'search_interpro_entry', confidence: 0.85 });
-    }
+  if (/\b(analyze|analysis|predict|domain\s+analysis)\b/i.test(query)) {
+    // 域分析
+    relevantTools.push({ name: 'analyze_interpro_domains', confidence: 0.95 });
+  } else if (/\b(get|retrieve|fetch|entry|details)\b/i.test(query)) {
+    // 获取详情
+    relevantTools.push({ name: 'get_interpro_entry_details', confidence: 0.9 });
+  } else if (/\b(search|find|lookup)\b/i.test(query)) {
+    // 搜索条目
+    relevantTools.push({ name: 'search_interpro_entry', confidence: 0.85 });
+  }
 }
 ```
 
@@ -146,6 +147,7 @@ if (/\b(interpro|domain|family|families|functional\s+site)\b/i.test(query)) {
 - **get_interpro_entry_details**: Built-in database tool
 
 **Database Tools Instructions:**
+
 - **UniProt Tools**: Search and retrieve protein information from UniProt database
   - search_uniprot_database: Basic protein/gene searches
   - advanced_uniprot_search: Complex multi-field searches
@@ -157,14 +159,16 @@ if (/\b(interpro|domain|family|families|functional\s+site)\b/i.test(query)) {
   - get_interpro_entry_details: Get detailed InterPro entry information
 
 **Important**: analyze_interpro_domains supports three input methods:
-  1. Direct sequence: Provide protein amino acid sequence
-  2. Gene name: Provide gene name + organism (auto-resolves sequence)
-  3. UniProt ID: Provide UniProt accession ID (auto-resolves sequence)
+
+1. Direct sequence: Provide protein amino acid sequence
+2. Gene name: Provide gene name + organism (auto-resolves sequence)
+3. UniProt ID: Provide UniProt accession ID (auto-resolves sequence)
 ```
 
 ## 集成效果
 
 ### Before (集成前)
+
 ```
 Total built-in tools: 11
 Categories:
@@ -175,6 +179,7 @@ Categories:
 ```
 
 ### After (集成后)
+
 ```
 Total built-in tools: 17
 Categories:
@@ -195,24 +200,24 @@ search_uniprot_database({
   query: 'p53',
   searchType: 'gene_name',
   organism: 'Homo sapiens',
-  reviewedOnly: true
-})
+  reviewedOnly: true,
+});
 
 // 高级搜索
 advanced_uniprot_search({
   queries: [
     { field: 'gene', value: 'BRCA1' },
-    { field: 'organism', value: '9606' }
+    { field: 'organism', value: '9606' },
   ],
-  includeIsoforms: true
-})
+  includeIsoforms: true,
+});
 
 // 获取条目详情
 get_uniprot_entry({
   uniprotId: 'P04637',
   includeSequence: true,
-  includeFeatures: true
-})
+  includeFeatures: true,
+});
 ```
 
 ### InterPro 工具使用（三种输入方式）
@@ -224,8 +229,8 @@ analyze_interpro_domains({
   applications: ['Pfam', 'SMART', 'Gene3D'],
   analysis_type: 'complete',
   confidence_threshold: 0.8,
-  output_format: 'detailed'
-})
+  output_format: 'detailed',
+});
 
 // 方式 2: 基因名分析（自动解析序列）
 analyze_interpro_domains({
@@ -233,51 +238,55 @@ analyze_interpro_domains({
   organism: 'Homo sapiens',
   analysis_type: 'complete',
   confidence_threshold: 0.8,
-  applications: ['Pfam', 'SMART', 'Gene3D']
-})
+  applications: ['Pfam', 'SMART', 'Gene3D'],
+});
 
 // 方式 3: UniProt ID 分析（自动解析序列）
 analyze_interpro_domains({
   uniprot_id: 'P04637',
   analysis_type: 'sites',
   confidence_threshold: 0.8,
-  output_format: 'graphical'
-})
+  output_format: 'graphical',
+});
 
 // 搜索 InterPro 条目
 search_interpro_entry({
   search_term: 'kinase',
   entry_type: 'domain',
   database_source: ['Pfam', 'SMART'],
-  min_protein_count: 100
-})
+  min_protein_count: 100,
+});
 
 // 批量搜索
 search_interpro_entry({
   search_terms: ['kinase', 'phosphatase', 'transferase'],
   entry_type: 'domain',
-  max_results: 25
-})
+  max_results: 25,
+});
 ```
 
 ## 技术改进
 
 ### 1. 参数设计优化
+
 - **灵活性**: 支持三种输入方式（序列/基因名/UniProt ID）
 - **可选性**: 所有输入参数都是可选的，系统智能检测
 - **自动解析**: 基因名和 UniProt ID 自动解析为序列
 
 ### 2. Built-in 集成
+
 - **完整映射**: 6 个数据库工具全部集成
 - **智能检测**: 基于关键词的意图识别
 - **优先级管理**: 合理设置工具优先级（1-2）
 
 ### 3. 系统提示增强
+
 - **分类展示**: 数据库工具独立分类
 - **使用说明**: 详细的工具使用指南
 - **输入方式**: 明确说明三种输入方式
 
 ### 4. 向后兼容
+
 - **零破坏**: 现有代码无需修改
 - **渐进增强**: 新功能为可选项
 - **平滑迁移**: 支持新旧参数格式
@@ -297,6 +306,7 @@ search_interpro_entry({
 ## 相关文件
 
 ### 修改的文件
+
 1. **`builtin_tools_integration.js`**
    - 添加 6 个数据库工具映射
    - 添加数据库工具意图检测
@@ -308,6 +318,7 @@ search_interpro_entry({
    - 更新使用场景
 
 ### 相关规范
+
 - **InterPro Tool Parameter Standardization**: 参数标准化规范
 - **Dual-Mode Tool Integration**: 双模式集成规范
 - **Comprehensive Error Handling**: 三层错误处理规范

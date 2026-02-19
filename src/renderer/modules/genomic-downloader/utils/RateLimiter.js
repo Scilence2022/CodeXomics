@@ -3,79 +3,79 @@
  * Ensures we don't exceed API rate limits (e.g., NCBI's 3 requests/second)
  */
 class RateLimiter {
-    constructor(maxRequestsPerSecond = 3) {
-        this.maxTokens = maxRequestsPerSecond;
-        this.tokens = maxRequestsPerSecond;
-        this.refillRate = maxRequestsPerSecond; // tokens per second
-        this.lastRefillTime = Date.now();
-        this.queue = [];
+  constructor(maxRequestsPerSecond = 3) {
+    this.maxTokens = maxRequestsPerSecond;
+    this.tokens = maxRequestsPerSecond;
+    this.refillRate = maxRequestsPerSecond; // tokens per second
+    this.lastRefillTime = Date.now();
+    this.queue = [];
+  }
+
+  /**
+   * Acquire a token to make a request
+   * If no tokens available, waits until one becomes available
+   */
+  async acquire() {
+    this.refill();
+
+    if (this.tokens >= 1) {
+      this.tokens -= 1;
+      return Promise.resolve();
     }
 
-    /**
-     * Acquire a token to make a request
-     * If no tokens available, waits until one becomes available
-     */
-    async acquire() {
-        this.refill();
+    // No tokens available, queue the request
+    return new Promise(resolve => {
+      this.queue.push(resolve);
+      this.processQueue();
+    });
+  }
 
-        if (this.tokens >= 1) {
-            this.tokens -= 1;
-            return Promise.resolve();
-        }
+  /**
+   * Refill tokens based on time elapsed
+   */
+  refill() {
+    const now = Date.now();
+    const timePassed = (now - this.lastRefillTime) / 1000; // seconds
+    const tokensToAdd = timePassed * this.refillRate;
 
-        // No tokens available, queue the request
-        return new Promise(resolve => {
-            this.queue.push(resolve);
-            this.processQueue();
-        });
-    }
+    this.tokens = Math.min(this.maxTokens, this.tokens + tokensToAdd);
+    this.lastRefillTime = now;
+  }
 
-    /**
-     * Refill tokens based on time elapsed
-     */
-    refill() {
-        const now = Date.now();
-        const timePassed = (now - this.lastRefillTime) / 1000; // seconds
-        const tokensToAdd = timePassed * this.refillRate;
+  /**
+   * Process queued requests when tokens become available
+   */
+  processQueue() {
+    if (this.queue.length === 0) return;
 
-        this.tokens = Math.min(this.maxTokens, this.tokens + tokensToAdd);
-        this.lastRefillTime = now;
-    }
+    const interval = setInterval(() => {
+      this.refill();
 
-    /**
-     * Process queued requests when tokens become available
-     */
-    processQueue() {
-        if (this.queue.length === 0) return;
+      while (this.tokens >= 1 && this.queue.length > 0) {
+        this.tokens -= 1;
+        const resolve = this.queue.shift();
+        resolve();
+      }
 
-        const interval = setInterval(() => {
-            this.refill();
+      if (this.queue.length === 0) {
+        clearInterval(interval);
+      }
+    }, 1000 / this.refillRate); // Check at refill rate
+  }
 
-            while (this.tokens >= 1 && this.queue.length > 0) {
-                this.tokens -= 1;
-                const resolve = this.queue.shift();
-                resolve();
-            }
-
-            if (this.queue.length === 0) {
-                clearInterval(interval);
-            }
-        }, 1000 / this.refillRate); // Check at refill rate
-    }
-
-    /**
-     * Reset the rate limiter
-     */
-    reset() {
-        this.tokens = this.maxTokens;
-        this.lastRefillTime = Date.now();
-        this.queue = [];
-    }
+  /**
+   * Reset the rate limiter
+   */
+  reset() {
+    this.tokens = this.maxTokens;
+    this.lastRefillTime = Date.now();
+    this.queue = [];
+  }
 }
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = RateLimiter;
+  module.exports = RateLimiter;
 } else {
-    window.RateLimiter = RateLimiter;
+  window.RateLimiter = RateLimiter;
 }

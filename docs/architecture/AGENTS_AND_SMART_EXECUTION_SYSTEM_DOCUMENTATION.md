@@ -112,7 +112,7 @@ The system architecture flowchart illustrates the interaction relationships and 
 - **Execution Results Layer**: Collects execution results from all components and provides feedback to users
 
 ![System Architecture Flowchart](AGENTS_SYSTEM_ARCHITECTURE_FLOWCHART.svg)
-*A comprehensive diagram illustrating the system architecture, component interactions, and data flow processes. Click the SVG file to view it in full resolution.*
+_A comprehensive diagram illustrating the system architecture, component interactions, and data flow processes. Click the SVG file to view it in full resolution._
 
 ## Multi-Agent System
 
@@ -148,10 +148,10 @@ The MAS implements a publish-subscribe communication model where agents can publ
 setupCommunicationProtocols() {
     // Event bus for agent communication
     this.eventBus = new EventEmitter();
-    
+
     // Register common event handlers
     this.registerCoreEvents();
-    
+
     // Setup cross-agent communication channels
     this.setupAgentChannels();
 }
@@ -189,7 +189,7 @@ constructor(agentType, config = {}) {
         avgExecutionTime: 0,
         errorRate: 0
     };
-    
+
     // Initialize event system
     this.initializeEvents();
 }
@@ -206,19 +206,19 @@ Agents define their capabilities through a standardized format that includes the
 ```javascript
 // Example capability definition in NavigationAgent
 this.capabilities = [
-    {
-        name: 'navigate_to_position',
-        description: 'Navigate to specific genomic position',
-        priority: 'high',
-        method: 'navigateToPosition'
-    },
-    {
-        name: 'jump_to_gene',
-        description: 'Jump to specific gene location',
-        priority: 'high',
-        method: 'jumpToGene'
-    },
-    // Additional capabilities...
+  {
+    name: 'navigate_to_position',
+    description: 'Navigate to specific genomic position',
+    priority: 'high',
+    method: 'navigateToPosition',
+  },
+  {
+    name: 'jump_to_gene',
+    description: 'Jump to specific gene location',
+    priority: 'high',
+    method: 'jumpToGene',
+  },
+  // Additional capabilities...
 ];
 ```
 
@@ -314,12 +314,12 @@ constructor(chatManager) {
     this.chatManager = chatManager;
     this.app = chatManager.app;
     this.organizer = new FunctionCallsOrganizer(chatManager);
-    
+
     // Execution state tracking
     this.isExecuting = false;
     this.currentExecution = null;
     this.executionQueue = [];
-    
+
     // Performance monitoring
     this.executionMetrics = {
         totalExecutions: 0,
@@ -347,17 +347,17 @@ The Smart Execution System implements different execution strategies based on fu
 async executeWithStrategy(toolRequests, strategy) {
     const results = [];
     const executionPlan = strategy.executionPlan;
-    
+
     for (const phase of executionPlan) {
         console.log(`🚀 Executing ${phase.phase} (Priority: ${phase.priority})`);
-        
+
         // Get tools for current phase
         const phaseTools = this.getPhaseTools(toolRequests, phase.tools);
-        
+
         if (phaseTools.length === 0) continue;
-        
+
         let phaseResults;
-        
+
         if (phase.parallelizable && phaseTools.length > 1) {
             // Parallel execution
             phaseResults = await this.executeParallel(phaseTools);
@@ -365,10 +365,10 @@ async executeWithStrategy(toolRequests, strategy) {
             // Sequential execution
             phaseResults = await this.executeSequential(phaseTools);
         }
-        
+
         results.push(...phaseResults);
     }
-    
+
     return results;
 }
 ```
@@ -399,8 +399,8 @@ await multiAgentSystem.initialize();
 
 // Execute a task using the appropriate agent
 const result = await multiAgentSystem.executeTool('navigate_to_position', {
-    chromosome: 'chr1',
-    position: 1000000
+  chromosome: 'chr1',
+  position: 1000000,
 });
 ```
 
@@ -411,14 +411,11 @@ const result = await multiAgentSystem.executeTool('navigate_to_position', {
 const smartExecutor = new SmartExecutor(chatManager);
 
 // Execute multiple tools with optimization
-const results = await smartExecutor.smartExecute(
-    'Analyze this gene and show its sequence',
-    [
-        { tool_name: 'search_gene_by_name', parameters: { gene: 'BRCA1' } },
-        { tool_name: 'get_sequence', parameters: {} },
-        { tool_name: 'calculate_gc_content', parameters: {} }
-    ]
-);
+const results = await smartExecutor.smartExecute('Analyze this gene and show its sequence', [
+  { tool_name: 'search_gene_by_name', parameters: { gene: 'BRCA1' } },
+  { tool_name: 'get_sequence', parameters: {} },
+  { tool_name: 'calculate_gc_content', parameters: {} },
+]);
 ```
 
 ### Example 3: Registering a New Tool

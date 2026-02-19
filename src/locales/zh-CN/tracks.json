@@ -1,107 +1,107 @@
 {
-    "tracks": {
-        "genes": "基因与特征",
-        "gc": "GC 含量",
-        "variants": "VCF 变异",
-        "reads": "比对读段",
-        "wigTracks": "WIG 轨道",
-        "proteins": "蛋白质",
-        "sequence": "底部序列面板",
-        "sequenceLine": "单行序列轨道",
-        "actions": "操作",
-        "blast": "Blast 结果"
-    },
-    "features": {
-        "gene": "基因",
-        "CDS": "CDS",
-        "mRNA": "mRNA",
-        "tRNA": "tRNA",
-        "rRNA": "rRNA",
-        "promoter": "启动子",
-        "terminator": "终止子",
-        "regulatory": "调控元件",
-        "source": "来源",
-        "misc_feature": "其他特征",
-        "repeat_region": "重复区域",
-        "bed_feature": "BED 特征",
-        "other": "其他"
-    },
-    "strands": {
-        "forward": "正链 (+)",
-        "reverse": "负链 (-)",
-        "both": "双链"
-    },
-    "toolbar": {
-        "sidebar": "侧边栏",
-        "chromosome": "染色体",
-        "selectChromosome": "选择染色体...",
-        "zoom": "缩放",
-        "zoomIn": "放大",
-        "zoomOut": "缩小",
-        "reset": "重置",
-        "actions": "操作",
-        "tracks": "轨道",
-        "features": "特征",
-        "addFeatures": "添加特征"
-    },
-    "sidebar": {
-        "geneDetails": "基因详情",
-        "readDetails": "读段详情",
-        "variantDetails": "变异详情",
-        "searchResults": "搜索结果",
-        "operonsInView": "视图中的操纵子",
-        "fileInfo": "文件信息",
-        "navigation": "导航",
-        "statistics": "统计",
-        "noGeneSelected": "点击基因与特征轨道中的基因以查看详情",
-        "noReadSelected": "点击比对读段轨道中的读段以查看详情",
-        "noVariantSelected": "点击 VCF 轨道中的变异以查看详细分析",
-        "noSearchResults": "无搜索结果",
-        "noOperons": "当前视图中未检测到操纵子",
-        "noFileLoaded": "未加载文件"
-    },
-    "statistics": {
-        "length": "长度",
-        "gcContent": "GC 含量",
-        "currentPosition": "当前位置"
-    },
-    "actions": {
-        "sequenceOperations": "序列操作",
-        "copy": "复制",
-        "cut": "剪切",
-        "paste": "粘贴",
-        "delete": "删除",
-        "insert": "插入",
-        "actionManagement": "操作管理",
-        "actionList": "操作列表",
-        "executeAll": "执行全部",
-        "checkpointSystem": "检查点系统",
-        "createCheckpoint": "创建检查点",
-        "rollback": "回滚"
-    },
-    "welcome": {
-        "title": "欢迎使用 CodeXomics",
-        "subtitle": "选择文件类型开始探索",
-        "genomeFile": "基因组文件",
-        "annotationMerge": "注释 (合并)",
-        "annotationNew": "注释 (新轨道)",
-        "variantFile": "变异文件",
-        "readsFile": "读段文件",
-        "anyFile": "任意支持的文件"
-    },
-    "navigation": {
-        "previous": "上一个",
-        "next": "下一个",
-        "goTo": "跳转"
-    },
-    "header": {
-        "blast": "BLAST",
-        "search": "搜索",
-        "searchPlaceholder": "搜索基因名称或序列...",
-        "advancedSearch": "高级",
-        "positionPlaceholder": "染色体:起始-结束",
-        "options": "选项",
-        "loadFile": "加载文件",
-        "exportAs": "导出为"
-    }
+  "tracks": {
+    "genes": "基因与特征",
+    "gc": "GC 含量",
+    "variants": "VCF 变异",
+    "reads": "比对读段",
+    "wigTracks": "WIG 轨道",
+    "proteins": "蛋白质",
+    "sequence": "底部序列面板",
+    "sequenceLine": "单行序列轨道",
+    "actions": "操作",
+    "blast": "Blast 结果"
+  },
+  "features": {
+    "gene": "基因",
+    "CDS": "CDS",
+    "mRNA": "mRNA",
+    "tRNA": "tRNA",
+    "rRNA": "rRNA",
+    "promoter": "启动子",
+    "terminator": "终止子",
+    "regulatory": "调控元件",
+    "source": "来源",
+    "misc_feature": "其他特征",
+    "repeat_region": "重复区域",
+    "bed_feature": "BED 特征",
+    "other": "其他"
+  },
+  "strands": {
+    "forward": "正链 (+)",
+    "reverse": "负链 (-)",
+    "both": "双链"
+  },
+  "toolbar": {
+    "sidebar": "侧边栏",
+    "chromosome": "染色体",
+    "selectChromosome": "选择染色体...",
+    "zoom": "缩放",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "reset": "重置",
+    "actions": "操作",
+    "tracks": "轨道",
+    "features": "特征",
+    "addFeatures": "添加特征"
+  },
+  "sidebar": {
+    "geneDetails": "基因详情",
+    "readDetails": "读段详情",
+    "variantDetails": "变异详情",
+    "searchResults": "搜索结果",
+    "operonsInView": "视图中的操纵子",
+    "fileInfo": "文件信息",
+    "navigation": "导航",
+    "statistics": "统计",
+    "noGeneSelected": "点击基因与特征轨道中的基因以查看详情",
+    "noReadSelected": "点击比对读段轨道中的读段以查看详情",
+    "noVariantSelected": "点击 VCF 轨道中的变异以查看详细分析",
+    "noSearchResults": "无搜索结果",
+    "noOperons": "当前视图中未检测到操纵子",
+    "noFileLoaded": "未加载文件"
+  },
+  "statistics": {
+    "length": "长度",
+    "gcContent": "GC 含量",
+    "currentPosition": "当前位置"
+  },
+  "actions": {
+    "sequenceOperations": "序列操作",
+    "copy": "复制",
+    "cut": "剪切",
+    "paste": "粘贴",
+    "delete": "删除",
+    "insert": "插入",
+    "actionManagement": "操作管理",
+    "actionList": "操作列表",
+    "executeAll": "执行全部",
+    "checkpointSystem": "检查点系统",
+    "createCheckpoint": "创建检查点",
+    "rollback": "回滚"
+  },
+  "welcome": {
+    "title": "欢迎使用 CodeXomics",
+    "subtitle": "选择文件类型开始探索",
+    "genomeFile": "基因组文件",
+    "annotationMerge": "注释 (合并)",
+    "annotationNew": "注释 (新轨道)",
+    "variantFile": "变异文件",
+    "readsFile": "读段文件",
+    "anyFile": "任意支持的文件"
+  },
+  "navigation": {
+    "previous": "上一个",
+    "next": "下一个",
+    "goTo": "跳转"
+  },
+  "header": {
+    "blast": "BLAST",
+    "search": "搜索",
+    "searchPlaceholder": "搜索基因名称或序列...",
+    "advancedSearch": "高级",
+    "positionPlaceholder": "染色体:起始-结束",
+    "options": "选项",
+    "loadFile": "加载文件",
+    "exportAs": "导出为"
+  }
 }

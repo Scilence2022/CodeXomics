@@ -28,10 +28,10 @@ parameters:
   required:
     - chromosome
 sample_usages:
-  - user_query: "Create protein database from genome using all reading frames"
+  - user_query: 'Create protein database from genome using all reading frames'
     tool_call: "blast_create_protein_db_from_genome(chromosome='chr1')"
-    thought: "User wants 6-frame translation protein database"
-    expected_result: "Protein database created with all reading frames"
+    thought: 'User wants 6-frame translation protein database'
+    expected_result: 'Protein database created with all reading frames'
 relationships:
   depends_on:
     - get_genome_info
@@ -47,7 +47,7 @@ metadata:
     - translation
   complexity: moderate
 error_handling:
-  no_genome: "Returns error if no genome loaded"
+  no_genome: 'Returns error if no genome loaded'
 returns:
   success: boolean
   database: object

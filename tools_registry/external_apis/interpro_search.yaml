@@ -17,21 +17,21 @@ execution:
   requires_data: false
   requires_network: true
 deprecated: true
-replacement_tool: "analyze_interpro_domains"
+replacement_tool: 'analyze_interpro_domains'
 deprecation_notice: "This tool has been replaced by 'analyze_interpro_domains' which provides enhanced functionality with multiple input methods (sequence, UniProt ID, or gene name). Please update your code to use 'analyze_interpro_domains' instead."
 parameters:
   type: object
   properties:
     sequence:
       type: string
-      description: "Protein sequence for InterPro analysis"
-      pattern: "^[ACDEFGHIKLMNPQRSTVWY*X-]+$"
+      description: 'Protein sequence for InterPro analysis'
+      pattern: '^[ACDEFGHIKLMNPQRSTVWY*X-]+$'
     search_term:
       type: string
-      description: "Search term for InterPro database"
+      description: 'Search term for InterPro database'
     analysis_type:
       type: string
-      description: "Type of InterPro analysis"
+      description: 'Type of InterPro analysis'
       enum:
         - domains
         - families
@@ -40,29 +40,29 @@ parameters:
       default: complete
     applications:
       type: array
-      description: "InterPro member databases to use"
+      description: 'InterPro member databases to use'
       items:
         type: string
-        enum: ["Pfam", "SMART", "PROSITE", "PANTHER", "Gene3D"]
-      default: ["Pfam", "SMART"]
+        enum: ['Pfam', 'SMART', 'PROSITE', 'PANTHER', 'Gene3D']
+      default: ['Pfam', 'SMART']
     clientId:
       type: string
-      description: "Browser client ID for multi-window support"
-      default: "default"
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
   required: []
   anyOf:
-    - required: ["sequence"]
-    - required: ["search_term"]
+    - required: ['sequence']
+    - required: ['search_term']
 sample_usages:
-  - user_query: "Analyze protein domains using InterPro"
+  - user_query: 'Analyze protein domains using InterPro'
     tool_call: "analyze_interpro_domains(sequence='MVSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGK', analysis_type='domains')"
-    thought: "⚠️ DEPRECATED: Use analyze_interpro_domains instead of interpro_search"
-    expected_result: "Domain analysis results from InterPro - Please migrate to analyze_interpro_domains"
-  
-  - user_query: "Search InterPro database for kinase domains"
+    thought: '⚠️ DEPRECATED: Use analyze_interpro_domains instead of interpro_search'
+    expected_result: 'Domain analysis results from InterPro - Please migrate to analyze_interpro_domains'
+
+  - user_query: 'Search InterPro database for kinase domains'
     tool_call: "search_interpro_entry(search_term='kinase', entry_type='domain', database_source=['Pfam', 'SMART'])"
-    thought: "⚠️ DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis"
-    expected_result: "InterPro search results - Please use the appropriate replacement tool"
+    thought: '⚠️ DEPRECATED: Use search_interpro_entry for search operations or analyze_interpro_domains for sequence analysis'
+    expected_result: 'InterPro search results - Please use the appropriate replacement tool'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -84,10 +84,10 @@ error_handling:
   api_error: Returns error if external API is unavailable
   network_timeout: Returns error if request times out
 returns:
-  success: "boolean - Whether API call was successful"
-  results: "array - List of InterPro analysis results"
-  domains: "array - Identified protein domains"
-  families: "array - Protein families found"
-  statistics: "object - Analysis statistics and coverage"
-  execution_time: "number - API call execution time"
-  api_source: "string - External API endpoint used"
+  success: 'boolean - Whether API call was successful'
+  results: 'array - List of InterPro analysis results'
+  domains: 'array - Identified protein domains'
+  families: 'array - Protein families found'
+  statistics: 'object - Analysis statistics and coverage'
+  execution_time: 'number - API call execution time'
+  api_source: 'string - External API endpoint used'
