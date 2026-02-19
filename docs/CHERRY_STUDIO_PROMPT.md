@@ -60,7 +60,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "CodeXomics": {
       "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/GenomeAIStudio_1/scripts/start-claude-mcp-server.js"],
+      "args": ["/ABSOLUTE/PATH/TO/GenomeAIStudio_1/scripts/start-mcp-server.js"],
       "env": {}
     }
   }
