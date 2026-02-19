@@ -1,7 +1,7 @@
 /**
  * MCPBridge - Auto-connect bridge between CodeXomics app and standalone MCP server
  * 
- * When the standalone MCP server is running (npm run claude-mcp-server),
+ * When the standalone MCP server is running (npm run codexomics-mcp-server),
  * this module automatically connects via WebSocket and handles tool execution
  * requests from external AI agents (like Claude Desktop).
  */

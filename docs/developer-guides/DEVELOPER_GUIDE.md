@@ -59,7 +59,7 @@ npm run version-validate    # Validate version consistency
 
 # MCP server
 npm run mcp-server          # Start MCP server
-npm run claude-mcp-server   # Start Claude-specific MCP server
+npm run codexomics-mcp-server   # Start CodeXomics MCP server
 ```
 
 ### Project Structure
