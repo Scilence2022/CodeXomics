@@ -3,7 +3,7 @@
  * 
  * When the standalone MCP server is running (npm run codexomics-mcp-server),
  * this module automatically connects via WebSocket and handles tool execution
- * requests from external AI agents (like Claude Desktop).
+ * requests from external AI agents (like MCP Client).
  */
 class MCPBridge {
     constructor(options = {}) {

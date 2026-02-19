@@ -1,6 +1,6 @@
 # CodeXomics MCP Server - AI Assistant System Prompt
 
-> **For use with Cherry Studio, Claude Desktop, and other MCP-compatible AI tools**
+> **For use with Cherry Studio, MCP Client, and other MCP-compatible AI tools**
 
 ## Your Role
 

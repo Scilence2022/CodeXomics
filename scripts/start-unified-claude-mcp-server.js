@@ -4,14 +4,14 @@
  * Startup script for Unified Claude MCP Server
  * 
  * This script starts the unified MCP server that provides:
- * 1. MCP protocol interface for Claude Desktop (STDIO)
+ * 1. MCP protocol interface for MCP Client (STDIO)
  * 2. WebSocket interface for CodeXomics
  * 3. HTTP REST API for external tools
  * 4. Authentication and security for remote access
  * 5. Client Bridge for remote tool execution
  * 
  * Usage:
- * - For Claude Desktop: node start-unified-claude-mcp-server.js
+ * - For MCP Client: node start-unified-claude-mcp-server.js
  * - For CodeXomics: Use the Start button in the UI
  * 
  * Environment Variables:
@@ -73,7 +73,7 @@ async function main() {
 
         await server.start();
 
-        // Server is now running and connected via STDIO to Claude Desktop
+        // Server is now running and connected via STDIO to MCP Client
 
     } catch (error) {
         process.stderr.write(`💥 Failed to start Unified Claude MCP Server: ${error.message}\n`);

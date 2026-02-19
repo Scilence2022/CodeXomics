@@ -5,7 +5,7 @@
  * 
  * This is a standard MCP server implementation that:
  * 1. Follows the official MCP protocol specification
- * 2. Uses proper SSE transport for Claude Desktop
+ * 2. Uses proper SSE transport for MCP Client
  * 3. Handles initialization handshake correctly
  * 4. Communicates with CodeXomics via Electron IPC
  * 
@@ -330,7 +330,7 @@ class StandardClaudeMCPServer {
             });
         });
 
-        // SSE endpoint for Claude Desktop
+        // SSE endpoint for MCP Client
         this.app.get('/sse', this.authMiddleware, (req, res) => {
             this.handleSSEConnection(req, res);
         });
@@ -1393,7 +1393,7 @@ class StandardClaudeMCPServer {
             console.log(`🔗 WebSocket Server: ws://localhost:${this.wsPort}`);
             console.log(`🔧 IPC Communication: ${!!this.mainWindow}`);
             console.log('');
-            console.log('🎯 Ready for Claude Desktop connections!');
+            console.log('🎯 Ready for MCP Client connections!');
             console.log('');
 
         } catch (error) {

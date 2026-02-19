@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * Fix Claude Desktop Configuration Issues
- * This script automatically fixes common Claude Desktop MCP configuration problems
+ * Fix MCP Client Configuration Issues
+ * This script automatically fixes common MCP Client MCP configuration problems
  */
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-console.log('🔧 Claude Desktop Configuration Fixer\n');
+console.log('🔧 MCP Client Configuration Fixer\n');
 
-// Determine Claude Desktop config path based on OS
+// Determine MCP Client config path based on OS
 function getClaudeConfigPath() {
     const platform = os.platform();
 
@@ -69,7 +69,7 @@ function validateJSON(content) {
 function fixClaudeConfig() {
     try {
         const configPath = getClaudeConfigPath();
-        console.log(`📍 Claude Desktop config path: ${configPath}`);
+        console.log(`📍 MCP Client config path: ${configPath}`);
 
         // Ensure directory exists
         const configDir = path.dirname(configPath);
@@ -107,9 +107,9 @@ function fixClaudeConfig() {
         console.log(cleanConfigJSON);
 
         console.log('\n💡 Next Steps:');
-        console.log('1. Restart Claude Desktop completely');
+        console.log('1. Restart MCP Client completely');
         console.log('2. Start the MCP server: node start-mcp-server.js');
-        console.log('3. Check Claude Desktop for the codexomics server');
+        console.log('3. Check MCP Client for the codexomics server');
 
         return true;
 

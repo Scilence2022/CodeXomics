@@ -137,8 +137,8 @@ async function testDirectIntegration() {
     console.log('- Direct integration functional');
     
     console.log('\n🎯 Next Steps:');
-    console.log('1. Update Claude Desktop configuration');
-    console.log('2. Test with actual Claude Desktop integration');
+    console.log('1. Update MCP Client configuration');
+    console.log('2. Test with actual MCP Client integration');
     console.log('3. Verify all tool categories work correctly');
     console.log('4. Monitor performance improvements');
     

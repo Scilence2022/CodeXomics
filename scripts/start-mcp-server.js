@@ -38,12 +38,12 @@ process.on('SIGTERM', async () => {
 process.stderr.write('💡 CodeXomics MCP Server Usage Instructions:\n');
 process.stderr.write('1. Keep this server running\n');
 process.stderr.write('2. Configure your MCP client to connect to this server\n');
-process.stderr.write('3. Use stdio transport for Claude Desktop integration\n');
+process.stderr.write('3. Use stdio transport for MCP Client integration\n');
 process.stderr.write('4. Launch the CodeXomics application\n');
 process.stderr.write('5. The server will handle communication between the AI and the browser\n');
 process.stderr.write('\n');
-process.stderr.write('🔧 Claude Desktop Configuration:\n');
-process.stderr.write('Add this to your Claude Desktop MCP settings:\n');
+process.stderr.write('🔧 MCP Client Configuration:\n');
+process.stderr.write('Add this to your MCP Client MCP settings:\n');
 process.stderr.write('{\n');
 process.stderr.write('  "mcpServers": {\n');
 process.stderr.write('    "CodeXomics": {\n');
@@ -114,7 +114,7 @@ const toolInfo = `📚 Available Tools (Full List):
 
 🔗 Connection Info:
 - Protocol: JSON-RPC 2.0 (Claude MCP Standard)
-- Transport: stdio (for Claude Desktop)
+- Transport: stdio (for MCP Client)
 - WebSocket: ws://localhost:3003 (Browser connection)
 - HTTP/SSE: http://localhost:3002
 - Total Tools: 40+ comprehensive genomics tools

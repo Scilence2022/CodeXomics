@@ -40,4 +40,4 @@ process.stderr.write('🚀 Starting Direct MCP Server for CodeXomics...\n');
 process.stderr.write('📡 HTTP Server: http://localhost:3002\n');
 process.stderr.write('🔌 WebSocket: ws://localhost:3003\n');
 process.stderr.write('🎯 Claude MCP: stdio transport\n');
-process.stderr.write('✅ Ready for Claude Desktop integration\n\n'); 
+process.stderr.write('✅ Ready for MCP Client integration\n\n'); 

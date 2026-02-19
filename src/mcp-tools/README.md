@@ -70,15 +70,15 @@ curl -H "Authorization: Bearer your-api-key" http://localhost:3002/mcp
 
 ## Architecture Overview
 
-The new architecture eliminates the complex chain of legacy dependencies and provides direct integration with Claude Desktop:
+The new architecture eliminates the complex chain of legacy dependencies and provides direct integration with MCP Client:
 
 ```
-Claude Desktop → Claude MCP Server → CodeXomics
+MCP Client → Claude MCP Server → CodeXomics
 ```
 
 ### Previous Architecture (Complex)
 ```
-Claude Desktop → Claude MCP Server → Legacy MCP Server → CodeXomics
+MCP Client → Claude MCP Server → Legacy MCP Server → CodeXomics
 ```
 
 ## Directory Structure

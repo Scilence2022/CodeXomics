@@ -8880,7 +8880,7 @@ class GenomeBrowser {
                 btn.classList.add('running');
                 btn.disabled = false;
                 const serverTypeText = info.serverType === 'unified-claude-mcp' ? 'Unified Claude MCP Server' : 'MCP Server';
-                btn.title = `Stop ${serverTypeText} (Connect Claude Desktop to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
+                btn.title = `Stop ${serverTypeText} (Connect MCP Client to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
                 break;
             case 'stopping':
                 statusText.textContent = 'Stopping...';
@@ -8938,7 +8938,7 @@ class GenomeBrowser {
 
                 if (result.success) {
                     const serverTypeText = result.serverType === 'unified-claude-mcp' ? 'Unified Claude MCP Server' : 'MCP Server';
-                    this.showNotification(`${serverTypeText} started successfully! Claude Desktop can connect via custom connector: http://localhost:${result.httpPort}/mcp`, 'success');
+                    this.showNotification(`${serverTypeText} started successfully! MCP Client can connect via custom connector: http://localhost:${result.httpPort}/mcp`, 'success');
 
                     // Auto-connect the ChatManager to the built-in server after starting (only if auto-activation is allowed)
                     const currentSettings = this.configManager ?

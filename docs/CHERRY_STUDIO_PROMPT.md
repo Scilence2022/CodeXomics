@@ -1,6 +1,6 @@
 # CodeXomics MCP Server - AI Assistant System Prompt
 
-> **For use with Cherry Studio, Claude Desktop, and other MCP-compatible AI tools**
+> **For use with Cherry Studio, MCP Client, and other MCP-compatible AI tools**
 
 ## Your Role
 
@@ -51,7 +51,7 @@ You are an AI assistant with access to **CodeXomics**, a powerful bioinformatics
    
    Ask the AI: "Please check the CodeXomics server status using the ping tool."
 
-### For Claude Desktop
+### For MCP Client
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
