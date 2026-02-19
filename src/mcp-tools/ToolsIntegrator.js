@@ -45,7 +45,41 @@ class ToolsIntegrator {
             ...this.actionTools.getTools(),
             ...this.utilityTools.getTools(),
             ...this.fileTools.getTools(),
-            ...this.trackSettingsTools.getTools()
+            ...this.trackSettingsTools.getTools(),
+            // Multi-window management tools (server-side only)
+            ...this.getWindowManagementTools()
+        };
+    }
+
+    /**
+     * Get window management tools for multi-window genome support.
+     * These tools are executed server-side (main process), not delegated to renderer.
+     */
+    getWindowManagementTools() {
+        return {
+            list_genome_windows: {
+                name: 'list_genome_windows',
+                description: 'List all open CodeXomics genome browser windows and their loaded genomes. Use this to see which genomes are open and which window is focused.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {},
+                    required: []
+                }
+            },
+            switch_active_window: {
+                name: 'switch_active_window',
+                description: 'Focus/activate a specific CodeXomics window by its windowId. Subsequent tool calls without an explicit windowId will target this window.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        windowId: {
+                            type: 'string',
+                            description: 'The window ID to focus (e.g., "win_1", "win_2"). Use list_genome_windows to see available IDs.'
+                        }
+                    },
+                    required: ['windowId']
+                }
+            }
         };
     }
 
@@ -214,6 +248,14 @@ class ToolsIntegrator {
                     default:
                         return await this.trackSettingsTools.executeClientTool(toolName, parameters, clientId);
                 }
+            }
+
+            // Multi-window management tools (server-side, no client delegation needed)
+            if (toolName === 'list_genome_windows') {
+                return this.executeListGenomeWindows();
+            }
+            if (toolName === 'switch_active_window') {
+                return this.executeSwitchActiveWindow(parameters);
             }
 
             throw new Error(`Tool execution handler not found for '${toolName}'`);
@@ -435,6 +477,61 @@ class ToolsIntegrator {
 
         // Use the server's client tool execution method
         return await this.server.executeToolOnClient(toolName, parameters, clientId);
+    }
+
+    /**
+     * List all open genome browser windows (server-side, no client delegation)
+     */
+    executeListGenomeWindows() {
+        if (!this.server || !this.server.listWindows) {
+            return {
+                success: false,
+                error: 'Window registry not available. MCP server may not support multi-window mode.'
+            };
+        }
+
+        const windows = this.server.listWindows();
+        return {
+            success: true,
+            windowCount: windows.length,
+            windows: windows
+        };
+    }
+
+    /**
+     * Switch focus to a specific genome window (server-side, no client delegation)
+     */
+    executeSwitchActiveWindow(parameters) {
+        const { windowId } = parameters;
+        if (!windowId) {
+            return { success: false, error: 'windowId parameter is required' };
+        }
+
+        if (!this.server || !this.server.windowRegistry) {
+            return { success: false, error: 'Window registry not available' };
+        }
+
+        const entry = this.server.windowRegistry.get(windowId);
+        if (!entry) {
+            const available = Array.from(this.server.windowRegistry.keys());
+            return {
+                success: false,
+                error: `Window '${windowId}' not found. Available: [${available.join(', ')}]`
+            };
+        }
+
+        const win = entry.window || entry;
+        if (!win || win.isDestroyed()) {
+            return { success: false, error: `Window '${windowId}' is destroyed` };
+        }
+
+        win.focus();
+        return {
+            success: true,
+            message: `Focused window '${windowId}'`,
+            windowId,
+            genomeName: entry.genomeName || null
+        };
     }
 }
 

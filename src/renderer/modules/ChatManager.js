@@ -3293,6 +3293,8 @@ class ChatManager {
         // console.log('ChatManager getCurrentState - this.app.currentPosition:', this.app.currentPosition);
 
         const state = {
+            // Multi-window support: include window identifier
+            windowId: this.app.windowId || null,
             currentChromosome: this.app.currentChromosome,
             currentPosition: this.app.currentPosition,
             visibleTracks: this.getVisibleTracks(),
@@ -10014,7 +10016,11 @@ ${this.getPluginSystemInfo()}`;
         const annotationCount = this.app.currentAnnotations ?
             Object.values(this.app.currentAnnotations).reduce((sum, annotations) => sum + annotations.length, 0) : 0;
 
-        return `${sequences.length} sequence(s), ${totalLength.toLocaleString()} bp total, ${annotationCount} annotations`;
+        let summary = `${sequences.length} sequence(s), ${totalLength.toLocaleString()} bp total, ${annotationCount} annotations`;
+        if (this.app.windowId) {
+            summary = `[Window: ${this.app.windowId}] ${summary}`;
+        }
+        return summary;
     }
 
     getCurrentStateSummary(context) {

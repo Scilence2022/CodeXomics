@@ -633,7 +633,7 @@ class GenomeBrowser {
     initializeMCPBridge() {
         try {
             if (typeof MCPBridge !== 'undefined') {
-                this.mcpBridge = new MCPBridge();
+                this.mcpBridge = new MCPBridge({ windowId: this.windowId });
                 this.mcpBridge.setInternalMCPServer(this.internalMCPServer);
                 this.mcpBridge.start();
 
@@ -645,7 +645,7 @@ class GenomeBrowser {
                 script.src = 'modules/MCPBridge.js';
                 script.onload = () => {
                     if (typeof MCPBridge !== 'undefined') {
-                        this.mcpBridge = new MCPBridge();
+                        this.mcpBridge = new MCPBridge({ windowId: this.windowId });
                         this.mcpBridge.setInternalMCPServer(this.internalMCPServer);
                         this.mcpBridge.start();
                         window.mcpBridge = this.mcpBridge;
@@ -2641,6 +2641,20 @@ class GenomeBrowser {
     }
 
     setupIPC() {
+        // Multi-window support: receive windowId from main process
+        ipcRenderer.on('set-window-id', (event, windowId) => {
+            this.windowId = windowId;
+            console.log(`📋 [Window] Assigned windowId: ${windowId}`);
+            // Pass windowId to MCPBridge if already initialized
+            if (this.mcpBridge) {
+                this.mcpBridge.setWindowId(windowId);
+            }
+            // Update document title to show windowId for debugging
+            if (typeof VERSION_INFO !== 'undefined') {
+                document.title = `${VERSION_INFO.appTitle} [${windowId}]`;
+            }
+        });
+
         // Handle file opened from main process
         ipcRenderer.on('file-opened', (event, filePath) => {
             this.fileManager.loadFile(filePath);

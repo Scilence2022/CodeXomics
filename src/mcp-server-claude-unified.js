@@ -60,6 +60,15 @@ class StandardClaudeMCPServer {
         // Track client bridge connections (for remote tool execution)
         this.clientBridges = new Map();
 
+        // Multi-window support: Map of windowId → WebSocket client
+        this.internalClients = new Map();
+        // Legacy single-client reference (for backward compatibility)
+        this.internalClient = null;
+        this.internalClientId = null;
+
+        // Multi-window support: Map of windowId → BrowserWindow (for IPC routing)
+        this.windowRegistry = new Map();
+
         // Connection state tracking
         this.isInitialized = false;
         this.clientInfo = null;
@@ -439,10 +448,15 @@ class StandardClaudeMCPServer {
 
                             clearTimeout(authTimeout);
                             authenticated = true;
-                            sessionId = `internal_${Date.now()}`;
+                            const clientWindowId = message.windowId || 'default';
+                            sessionId = `internal_${clientWindowId}_${Date.now()}`;
                             connectionId = `internal_client_${sessionId}`;
 
-                            // Store as internal client for tool execution forwarding
+                            // Store in multi-client Map keyed by windowId
+                            this.internalClients.set(clientWindowId, ws);
+                            ws.windowId = clientWindowId;
+
+                            // Also maintain legacy single-client reference (last connected)
                             this.internalClient = ws;
                             this.internalClientId = connectionId;
 
@@ -450,7 +464,8 @@ class StandardClaudeMCPServer {
                             this.healthMonitor.registerConnection(connectionId, {
                                 type: 'internal-client',
                                 ip: clientIp,
-                                userAgent: 'CodeXomics-App'
+                                userAgent: 'CodeXomics-App',
+                                windowId: clientWindowId
                             });
 
                             // Send connection success
@@ -458,10 +473,11 @@ class StandardClaudeMCPServer {
                                 type: 'internal-client-connected',
                                 sessionId,
                                 serverId: 'unified-claude-mcp',
-                                capabilities: ['tools', 'logging']
+                                capabilities: ['tools', 'logging'],
+                                windowId: clientWindowId
                             }));
 
-                            console.log(`✅ Internal CodeXomics client connected: ${connectionId}`);
+                            console.log(`✅ Internal CodeXomics client connected: ${connectionId} (windowId: ${clientWindowId})`);
                             return;
                         }
 
@@ -579,10 +595,19 @@ class StandardClaudeMCPServer {
                 this.wsConnections.delete(ws);
 
                 // Clean up internal client reference if this was the internal client
+                if (ws.windowId && this.internalClients.has(ws.windowId)) {
+                    console.log(`🔌 Internal CodeXomics client disconnected (windowId: ${ws.windowId})`);
+                    this.internalClients.delete(ws.windowId);
+                }
                 if (this.internalClient === ws) {
-                    console.log('🔌 Internal CodeXomics client disconnected');
                     this.internalClient = null;
                     this.internalClientId = null;
+                    // Promote another internal client as the legacy default if available
+                    if (this.internalClients.size > 0) {
+                        const [firstWindowId, firstWs] = this.internalClients.entries().next().value;
+                        this.internalClient = firstWs;
+                        this.internalClientId = `internal_client_${firstWindowId}`;
+                    }
                 }
 
                 if (connectionId) {
@@ -1020,21 +1045,34 @@ class StandardClaudeMCPServer {
         // Check if this tool requires client-side execution
         const validation = this.toolCategoryManager.validateExecution(
             toolName,
-            this.mainWindow || this.internalClient || this.clientBridges.size > 0
+            this.mainWindow || this.internalClients.size > 0 || this.clientBridges.size > 0
         );
 
         if (!validation.valid) {
             throw new Error(validation.error);
         }
 
-        // Try local Electron IPC first if available (embedded mode)
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-            return await this.executeViaElectronIPC(toolName, parameters, clientId);
+        // Determine target windowId from parameters (Option C: default focused, optional override)
+        const targetWindowId = parameters?.windowId || null;
+        // Remove windowId from parameters before forwarding to avoid confusing tool handlers
+        if (parameters?.windowId) {
+            parameters = { ...parameters };
+            delete parameters.windowId;
         }
 
-        // Try WebSocket internal client if available (standalone mode with app connected)
-        if (this.internalClient && this.internalClient.readyState === 1) { // WebSocket.OPEN = 1
-            return await this.executeViaInternalClient(toolName, parameters, clientId);
+        // Try WebSocket internal client first (multi-window aware)
+        if (this.internalClients.size > 0) {
+            return await this.executeViaInternalClient(toolName, parameters, clientId, targetWindowId);
+        }
+
+        // Try local Electron IPC if available (multi-window aware)
+        if (this.windowRegistry.size > 0) {
+            return await this.executeViaElectronIPC(toolName, parameters, clientId, targetWindowId);
+        }
+
+        // Legacy: single mainWindow fallback
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            return await this.executeViaElectronIPC(toolName, parameters, clientId, null);
         }
 
         // Try client bridge if available
@@ -1049,7 +1087,29 @@ class StandardClaudeMCPServer {
         );
     }
 
-    async executeViaInternalClient(toolName, parameters, clientId) {
+    async executeViaInternalClient(toolName, parameters, clientId, targetWindowId) {
+        // Resolve the target WS client
+        let targetClient = null;
+        let resolvedWindowId = targetWindowId;
+
+        if (targetWindowId && this.internalClients.has(targetWindowId)) {
+            // Explicit windowId specified — use that client
+            targetClient = this.internalClients.get(targetWindowId);
+        } else {
+            // Default: find the focused window's client, or fall back to first available
+            targetClient = this.getFocusedWindowClient() || this.internalClient;
+            if (targetClient) {
+                resolvedWindowId = targetClient.windowId || 'default';
+            }
+        }
+
+        if (!targetClient || targetClient.readyState !== 1) {
+            throw new Error(
+                `No active WebSocket client for window '${targetWindowId || 'focused'}'. ` +
+                `Available windows: [${Array.from(this.internalClients.keys()).join(', ')}]`
+            );
+        }
+
         const requestId = `mcp_ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         // Convert snake_case tool name to camelCase method name
@@ -1058,7 +1118,7 @@ class StandardClaudeMCPServer {
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 this.pendingRequests.delete(requestId);
-                reject(new Error(`Tool execution timeout for ${toolName} via internal client`));
+                reject(new Error(`Tool execution timeout for ${toolName} via internal client (window: ${resolvedWindowId})`));
             }, 30000);
 
             this.pendingRequests.set(requestId, {
@@ -1069,9 +1129,9 @@ class StandardClaudeMCPServer {
                 parameters
             });
 
-            // Send tool execution request via WebSocket to internal client
-            console.log(`📡 [MCP Server] Sending tool execution via WebSocket: ${toolName} -> ${methodName}`);
-            this.internalClient.send(JSON.stringify({
+            // Send tool execution request via WebSocket to target window's client
+            console.log(`📡 [MCP Server] Sending tool execution via WebSocket: ${toolName} -> ${methodName} (window: ${resolvedWindowId})`);
+            targetClient.send(JSON.stringify({
                 type: 'tool-execution',
                 requestId,
                 method: methodName,
@@ -1083,7 +1143,44 @@ class StandardClaudeMCPServer {
     }
 
 
-    async executeViaElectronIPC(toolName, parameters, clientId) {
+    async executeViaElectronIPC(toolName, parameters, clientId, targetWindowId) {
+        // Resolve the target BrowserWindow
+        let targetWindow = null;
+
+        if (targetWindowId && this.windowRegistry.has(targetWindowId)) {
+            const entry = this.windowRegistry.get(targetWindowId);
+            targetWindow = entry.window || entry;
+        } else if (this.windowRegistry.size > 0) {
+            // Default: find the focused window, or fall back to first available
+            for (const [wid, entry] of this.windowRegistry.entries()) {
+                const win = entry.window || entry;
+                if (win && !win.isDestroyed() && win.isFocused()) {
+                    targetWindow = win;
+                    targetWindowId = wid;
+                    break;
+                }
+            }
+            // Fallback to first available window
+            if (!targetWindow) {
+                for (const [wid, entry] of this.windowRegistry.entries()) {
+                    const win = entry.window || entry;
+                    if (win && !win.isDestroyed()) {
+                        targetWindow = win;
+                        targetWindowId = wid;
+                        break;
+                    }
+                }
+            }
+        } else if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            // Legacy fallback
+            targetWindow = this.mainWindow;
+            targetWindowId = 'legacy';
+        }
+
+        if (!targetWindow || targetWindow.isDestroyed()) {
+            throw new Error(`No active window for '${targetWindowId || 'focused'}'. Available: [${Array.from(this.windowRegistry.keys()).join(', ')}]`);
+        }
+
         const requestId = `mcp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         // Convert snake_case tool name to camelCase method name
@@ -1092,7 +1189,7 @@ class StandardClaudeMCPServer {
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 this.pendingRequests.delete(requestId);
-                reject(new Error(`Tool execution timeout for ${toolName}`));
+                reject(new Error(`Tool execution timeout for ${toolName} (window: ${targetWindowId})`));
             }, 30000);
 
             this.pendingRequests.set(requestId, {
@@ -1104,11 +1201,10 @@ class StandardClaudeMCPServer {
             });
 
             // Send tool execution request to renderer process via IPC
-            // Uses 'mcp-tool-call' channel to match InternalMCPServer.setupIPCHandlers()
-            console.log(`📡 [MCP Server] Sending tool execution via Electron IPC: ${toolName} -> ${methodName}`);
-            this.mainWindow.webContents.send('mcp-tool-call', {
+            console.log(`📡 [MCP Server] Sending tool execution via Electron IPC: ${toolName} -> ${methodName} (window: ${targetWindowId})`);
+            targetWindow.webContents.send('mcp-tool-call', {
                 requestId,
-                method: methodName,  // Use 'method' field to match InternalMCPServer expectation
+                method: methodName,
                 parameters,
                 clientId
             });
@@ -1381,6 +1477,54 @@ class StandardClaudeMCPServer {
 
     getConnectedClientsCount() {
         return this.activeConnections.size + this.wsConnections.size;
+    }
+
+    // Multi-window support: Register a BrowserWindow for IPC routing
+    registerWindow(windowId, browserWindow) {
+        this.windowRegistry.set(windowId, { window: browserWindow, genomeName: null });
+        console.log(`📋 [MCP Server] Registered window: ${windowId} (total: ${this.windowRegistry.size})`);
+    }
+
+    // Multi-window support: Unregister a BrowserWindow
+    unregisterWindow(windowId) {
+        this.windowRegistry.delete(windowId);
+        // Also clean up any associated WS client
+        if (this.internalClients.has(windowId)) {
+            this.internalClients.delete(windowId);
+        }
+        console.log(`📋 [MCP Server] Unregistered window: ${windowId} (total: ${this.windowRegistry.size})`);
+    }
+
+    // Multi-window support: Get the WebSocket client for the currently focused window
+    getFocusedWindowClient() {
+        // Try to find the focused window in our registry
+        for (const [windowId, entry] of this.windowRegistry.entries()) {
+            const win = entry.window || entry;
+            if (win && !win.isDestroyed() && win.isFocused()) {
+                const client = this.internalClients.get(windowId);
+                if (client && client.readyState === 1) {
+                    return client;
+                }
+            }
+        }
+        // Fallback to legacy internalClient
+        return this.internalClient;
+    }
+
+    // Multi-window support: List all registered windows with their genome info
+    listWindows() {
+        const windows = [];
+        for (const [windowId, entry] of this.windowRegistry.entries()) {
+            const win = entry.window || entry;
+            windows.push({
+                windowId,
+                genomeName: entry.genomeName || null,
+                isFocused: win && !win.isDestroyed() ? win.isFocused() : false,
+                hasWsClient: this.internalClients.has(windowId),
+                isDestroyed: win ? win.isDestroyed() : true
+            });
+        }
+        return windows;
     }
 
     async ping() {

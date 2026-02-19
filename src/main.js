@@ -22,6 +22,41 @@ let mainWindow;
 let unifiedMCPServer = null;
 let unifiedServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
 
+// Multi-window genome support: Window Registry
+// Tracks all main genome browser windows by windowId
+const windowRegistry = new Map(); // windowId → { window: BrowserWindow, genomeName: string, createdAt: Date }
+let windowIdCounter = 0;
+
+function generateWindowId() {
+  return `win_${++windowIdCounter}`;
+}
+
+// Register a genome browser window in the registry
+function registerGenomeWindow(windowId, browserWindow) {
+  windowRegistry.set(windowId, {
+    window: browserWindow,
+    genomeName: null,
+    createdAt: new Date()
+  });
+  console.log(`📋 [WindowRegistry] Registered window: ${windowId} (total: ${windowRegistry.size})`);
+
+  // If MCP server is running, register the window with it
+  if (unifiedMCPServer) {
+    unifiedMCPServer.registerWindow(windowId, browserWindow);
+  }
+}
+
+// Unregister a genome browser window from the registry
+function unregisterGenomeWindow(windowId) {
+  windowRegistry.delete(windowId);
+  console.log(`📋 [WindowRegistry] Unregistered window: ${windowId} (total: ${windowRegistry.size})`);
+
+  // If MCP server is running, unregister the window
+  if (unifiedMCPServer) {
+    unifiedMCPServer.unregisterWindow(windowId);
+  }
+}
+
 // 为生物信息学工具窗口创建独立菜单
 // 存储各个工具窗口的菜单模板
 let toolMenuTemplates = new Map();
@@ -1397,6 +1432,9 @@ function createEvo2WindowMenu(evo2Window) {
 }
 
 function createWindow() {
+  // Generate a unique window ID for multi-window support
+  const windowId = generateWindowId();
+
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -1414,12 +1452,21 @@ function createWindow() {
     show: false
   });
 
+  // Store windowId on the BrowserWindow object for easy lookup
+  mainWindow.windowId = windowId;
+
+  // Register in window registry
+  registerGenomeWindow(windowId, mainWindow);
+
   // Load the app
   mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
 
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+
+    // Send windowId to renderer process for MCPBridge identification
+    mainWindow.webContents.send('set-window-id', windowId);
 
     // Initialize RPC interface after window is ready
     genomeStudioRPC.setMainWindow(mainWindow);
@@ -1447,6 +1494,7 @@ function createWindow() {
 
   // Handle window closed
   mainWindow.on('closed', () => {
+    unregisterGenomeWindow(windowId);
     mainWindow = null;
     currentActiveWindow = null;
   });
@@ -3984,6 +4032,14 @@ ipcMain.handle('mcp-server-start', async () => {
       unifiedServerStatus = 'running';
       console.log('Unified Claude MCP Server started successfully on ports 3002 (HTTP) and 3003 (WebSocket)');
 
+      // Multi-window support: Register all existing windows with the MCP server
+      for (const [windowId, info] of windowRegistry.entries()) {
+        if (info.window && !info.window.isDestroyed()) {
+          unifiedMCPServer.registerWindow(windowId, info.window);
+          console.log(`📋 [MCP Server] Registered existing window: ${windowId}`);
+        }
+      }
+
       return {
         success: true,
         message: 'Unified Claude MCP Server started successfully',
@@ -4056,6 +4112,40 @@ ipcMain.handle('mcp-server-status', async () => {
     wsPort: unifiedServerStatus === 'running' ? 3003 : null,
     connectedClients: unifiedMCPServer ? unifiedMCPServer.getConnectedClientsCount() : 0
   };
+});
+
+// Multi-window genome support: IPC handlers for window registry
+ipcMain.handle('list-genome-windows', async () => {
+  return Array.from(windowRegistry.entries()).map(([id, info]) => ({
+    windowId: id,
+    genomeName: info.genomeName,
+    isFocused: info.window && !info.window.isDestroyed() ? info.window.isFocused() : false,
+    isDestroyed: info.window ? info.window.isDestroyed() : true
+  }));
+});
+
+// Renderer calls this when a genome file is loaded to update the registry
+ipcMain.on('update-window-genome-name', (event, { windowId, genomeName }) => {
+  const entry = windowRegistry.get(windowId);
+  if (entry) {
+    entry.genomeName = genomeName;
+    console.log(`📋 [WindowRegistry] Updated genome name for ${windowId}: ${genomeName}`);
+  }
+});
+
+// Get the windowId for the sender window
+ipcMain.handle('get-window-id', async (event) => {
+  const senderWindow = BrowserWindow.fromWebContents(event.sender);
+  if (senderWindow && senderWindow.windowId) {
+    return senderWindow.windowId;
+  }
+  // Fallback: find in registry
+  for (const [windowId, info] of windowRegistry.entries()) {
+    if (info.window && !info.window.isDestroyed() && info.window.webContents === event.sender) {
+      return windowId;
+    }
+  }
+  return null;
 });
 
 // Handle opening resource manager
@@ -8096,6 +8186,9 @@ ipcMain.handle('checkMainWindowStatus', async () => {
 // Handle creating new main window with file
 ipcMain.handle('createNewMainWindow', async (event, filePath) => {
   try {
+    // Generate a unique window ID for multi-window support
+    const windowId = generateWindowId();
+
     // Create a new main window with identical configuration to the original
     const newMainWindow = new BrowserWindow({
       width: 1400,
@@ -8112,6 +8205,12 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
+
+    // Store windowId on the BrowserWindow object for easy lookup
+    newMainWindow.windowId = windowId;
+
+    // Register in window registry
+    registerGenomeWindow(windowId, newMainWindow);
 
     // Set up the new window with same initialization as original main window
     newMainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
@@ -8134,6 +8233,8 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
         // Window is fully loaded, wait for DOM and modules to be ready
         setTimeout(() => {
           console.log('Checking if new window is ready for file loading...');
+          // Send windowId to renderer process for MCPBridge identification
+          newMainWindow.webContents.send('set-window-id', windowId);
           // Send a test message to verify the window is responsive
           newMainWindow.webContents.send('ping-test');
 
@@ -8153,7 +8254,7 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
       newMainWindow.focus();
       currentActiveWindow = newMainWindow;
       createMenu(); // Set main window menu immediately
-      console.log('New window shown and focused with main menu set');
+      console.log(`New window shown and focused with main menu set (windowId: ${windowId})`);
     });
 
     // Open DevTools to debug UI issues (same as original main window)
@@ -8164,19 +8265,20 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
       if (currentActiveWindow !== newMainWindow) {
         currentActiveWindow = newMainWindow;
         createMenu(); // Set main window menu when focused
-        console.log('New window focused - set main menu');
+        console.log(`New window focused - set main menu (windowId: ${windowId})`);
       }
     });
 
     // Handle window closed
     newMainWindow.on('closed', () => {
-      console.log('New main window closed');
+      console.log(`New main window closed (windowId: ${windowId})`);
+      unregisterGenomeWindow(windowId);
       if (currentActiveWindow === newMainWindow) {
         currentActiveWindow = null;
       }
     });
 
-    return { success: true, message: 'New window created with file' };
+    return { success: true, message: 'New window created with file', windowId };
   } catch (error) {
     return { success: false, error: error.message };
   }

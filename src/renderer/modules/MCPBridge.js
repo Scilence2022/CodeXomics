@@ -16,6 +16,7 @@ class MCPBridge {
         this.connectionAttempts = 0;
         this.maxReconnectAttempts = options.maxReconnectAttempts || Infinity;
         this.quiet = false; // Suppress repeated "not available" logs
+        this.windowId = options.windowId || null; // Multi-window support: unique window identifier
 
         console.log('[MCPBridge] Initialized, will attempt connection to:', this.wsUrl);
     }
@@ -25,6 +26,22 @@ class MCPBridge {
      */
     setInternalMCPServer(server) {
         this.internalMCPServer = server;
+    }
+
+    /**
+     * Set the windowId for multi-window support
+     * Called when the main process sends the window identifier via IPC
+     */
+    setWindowId(windowId) {
+        this.windowId = windowId;
+        console.log(`[MCPBridge] Window ID set to: ${windowId}`);
+        // If already connected, re-identify with the new windowId
+        if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'internal-client',
+                windowId: this.windowId
+            }));
+        }
     }
 
     /**
@@ -66,9 +83,10 @@ class MCPBridge {
                 this.connectionAttempts = 0;
                 this.quiet = false;
 
-                // Send internal client identification (no API key needed for localhost)
+                // Send internal client identification with windowId (no API key needed for localhost)
                 this.ws.send(JSON.stringify({
-                    type: 'internal-client'
+                    type: 'internal-client',
+                    windowId: this.windowId
                 }));
             };
 

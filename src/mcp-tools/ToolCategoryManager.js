@@ -25,7 +25,11 @@ class ToolCategoryManager {
             'compute_gc',
             'translate_dna',
             'reverse_complement',
-            'codon_usage_analysis'
+            'codon_usage_analysis',
+
+            // Multi-window management tools (server-side only)
+            'list_genome_windows',
+            'switch_active_window'
         ]);
 
         // Tools that require client-side execution (browser context)
