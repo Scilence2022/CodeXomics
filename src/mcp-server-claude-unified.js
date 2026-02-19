@@ -67,7 +67,10 @@ class StandardClaudeMCPServer {
         this.internalClientId = null;
 
         // Multi-window support: Map of windowId → BrowserWindow (for IPC routing)
+        // This is also used as a local cache; the authoritative registry is in main.js
         this.windowRegistry = new Map();
+        // Reference to the authoritative windowRegistry in main.js (set via setMainWindowRegistry)
+        this.mainWindowRegistry = null;
 
         // Connection state tracking
         this.isInitialized = false;
@@ -1479,6 +1482,12 @@ class StandardClaudeMCPServer {
         return this.activeConnections.size + this.wsConnections.size;
     }
 
+    // Multi-window support: Set reference to the authoritative windowRegistry from main.js
+    setMainWindowRegistry(registry) {
+        this.mainWindowRegistry = registry;
+        console.log(`📋 [MCP Server] Linked to main window registry (${registry.size} windows)`);
+    }
+
     // Multi-window support: Register a BrowserWindow for IPC routing
     registerWindow(windowId, browserWindow) {
         this.windowRegistry.set(windowId, { window: browserWindow, genomeName: null });
@@ -1513,15 +1522,18 @@ class StandardClaudeMCPServer {
 
     // Multi-window support: List all registered windows with their genome info
     listWindows() {
+        // Use the authoritative main.js registry if available, fall back to local copy
+        const registry = this.mainWindowRegistry || this.windowRegistry;
         const windows = [];
-        for (const [windowId, entry] of this.windowRegistry.entries()) {
+        for (const [windowId, entry] of registry.entries()) {
             const win = entry.window || entry;
+            if (!win || win.isDestroyed()) continue;
             windows.push({
                 windowId,
                 genomeName: entry.genomeName || null,
-                isFocused: win && !win.isDestroyed() ? win.isFocused() : false,
+                isFocused: win.isFocused(),
                 hasWsClient: this.internalClients.has(windowId),
-                isDestroyed: win ? win.isDestroyed() : true
+                isDestroyed: false
             });
         }
         return windows;

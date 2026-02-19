@@ -4026,17 +4026,20 @@ ipcMain.handle('mcp-server-start', async () => {
       // Create Unified Claude MCP server with ports 3002 and 3003, and main window
       unifiedMCPServer = new UnifiedClaudeMCPServer(3002, 3003, mainWindow);
 
+      // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
+      unifiedMCPServer.setMainWindowRegistry(windowRegistry);
+
       // Start the server
       await unifiedMCPServer.start();
 
       unifiedServerStatus = 'running';
       console.log('Unified Claude MCP Server started successfully on ports 3002 (HTTP) and 3003 (WebSocket)');
 
-      // Multi-window support: Register all existing windows with the MCP server
+      // Multi-window support: Also populate the server's local IPC registry for routing
       for (const [windowId, info] of windowRegistry.entries()) {
         if (info.window && !info.window.isDestroyed()) {
           unifiedMCPServer.registerWindow(windowId, info.window);
-          console.log(`📋 [MCP Server] Registered existing window: ${windowId}`);
+          console.log(`📋 [MCP Server] Registered existing window for IPC routing: ${windowId}`);
         }
       }
 
