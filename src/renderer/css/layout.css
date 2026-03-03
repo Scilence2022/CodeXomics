@@ -163,6 +163,108 @@
   max-height: 50px;
 }
 
+/* Chat Dock Container - Right side panel when ChatBox is docked */
+.chat-dock-container {
+  width: var(--chat-dock-width, 400px);
+  min-width: 280px;
+  max-width: 50vw;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-secondary, #f8f9fa);
+  border-left: 1px solid var(--border-color, #e9ecef);
+}
+
+/* Chat Dock Splitter - Vertical resize handle */
+.chat-dock-splitter {
+  width: 8px;
+  background: linear-gradient(to right, #e9ecef, #dee2e6, #e9ecef);
+  cursor: col-resize;
+  position: relative;
+  border-left: 1px solid #ced4da;
+  border-right: 1px solid #ced4da;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.chat-dock-splitter:hover {
+  background: linear-gradient(to right, #dee2e6, #ced4da, #dee2e6);
+  width: 10px;
+  margin: 0 -1px;
+}
+
+.chat-dock-splitter.resizing {
+  background: linear-gradient(to right, #ced4da, #adb5bd, #ced4da);
+  width: 10px;
+  margin: 0 -1px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+  transition: none !important;
+}
+
+.chat-dock-splitter-handle {
+  color: #6c757d;
+  font-size: 12px;
+  font-weight: bold;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.chat-dock-splitter:hover .chat-dock-splitter-handle {
+  opacity: 1;
+  color: #495057;
+  font-size: 14px;
+}
+
+/* Docked ChatBox overrides - must use .resizable-movable.docked for higher
+   specificity than .chat-panel.resizable-movable in styles.css which sets
+   position:fixed !important */
+.chat-panel.resizable-movable.docked {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  z-index: auto !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+.chat-panel.resizable-movable.docked .chat-header {
+  border-radius: 0;
+}
+
+.chat-panel.resizable-movable.docked .chat-input-container {
+  border-radius: 0;
+}
+
+/* Hide resize handles when docked */
+.chat-panel.resizable-movable.docked .resize-handle {
+  display: none !important;
+}
+
+/* Minimized state in docked mode */
+.chat-panel.resizable-movable.docked.minimized {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+
 /* Modal Layout - Moved to modals.css and styles.css to avoid conflicts */
 
 /* Split Panel Layout */

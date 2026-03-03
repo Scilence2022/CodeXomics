@@ -11,6 +11,9 @@ class ChatManager {
     this.mcpServerManager = null;
     this.chatHistory = [];
 
+    // Dock state
+    this.isDocked = false;
+
     // Event emitter functionality
     this.eventHandlers = new Map();
 
@@ -2940,9 +2943,9 @@ class ChatManager {
     console.log('🔍 [Tool Detection] search_features tool called with params:', params);
     console.log(
       '🔍 [Tool Detection] Detected tool: search_features, parameters: query="' +
-        query +
-        '", caseSensitive=' +
-        (caseSensitive || false)
+      query +
+      '", caseSensitive=' +
+      (caseSensitive || false)
     );
 
     console.log('searchFeatures called with params:', params);
@@ -3329,38 +3332,38 @@ class ChatManager {
       // Enhanced: Add selected gene information
       selectedGene: this.app.selectedGene
         ? {
-            geneName: this.app.selectedGene.gene?.qualifiers?.gene || 'Unknown',
-            locusTag: this.app.selectedGene.gene?.qualifiers?.locus_tag || 'Unknown',
-            product: this.app.selectedGene.gene?.qualifiers?.product || 'Unknown',
-            position: `${this.app.selectedGene.gene?.start}-${this.app.selectedGene.gene?.end}`,
-            strand: this.app.selectedGene.gene?.strand === -1 ? '-' : '+',
-            type: this.app.selectedGene.gene?.type || 'Unknown',
-            hasOperonInfo: !!this.app.selectedGene.operonInfo,
-          }
+          geneName: this.app.selectedGene.gene?.qualifiers?.gene || 'Unknown',
+          locusTag: this.app.selectedGene.gene?.qualifiers?.locus_tag || 'Unknown',
+          product: this.app.selectedGene.gene?.qualifiers?.product || 'Unknown',
+          position: `${this.app.selectedGene.gene?.start}-${this.app.selectedGene.gene?.end}`,
+          strand: this.app.selectedGene.gene?.strand === -1 ? '-' : '+',
+          type: this.app.selectedGene.gene?.type || 'Unknown',
+          hasOperonInfo: !!this.app.selectedGene.operonInfo,
+        }
         : null,
 
       // Enhanced: Add sequence selection information
       sequenceSelection: this.app.sequenceSelection
         ? {
-            active: this.app.sequenceSelection.active,
-            start: this.app.sequenceSelection.start,
-            end: this.app.sequenceSelection.end,
-            length:
-              this.app.sequenceSelection.active && this.app.sequenceSelection.start && this.app.sequenceSelection.end
-                ? this.app.sequenceSelection.end - this.app.sequenceSelection.start + 1
-                : null,
-          }
+          active: this.app.sequenceSelection.active,
+          start: this.app.sequenceSelection.start,
+          end: this.app.sequenceSelection.end,
+          length:
+            this.app.sequenceSelection.active && this.app.sequenceSelection.start && this.app.sequenceSelection.end
+              ? this.app.sequenceSelection.end - this.app.sequenceSelection.start + 1
+              : null,
+        }
         : null,
 
       // Enhanced: Add current viewing region details
       viewingRegion: this.app.currentPosition
         ? {
-            chromosome: this.app.currentChromosome,
-            start: this.app.currentPosition.start,
-            end: this.app.currentPosition.end,
-            length: this.app.currentPosition.end - this.app.currentPosition.start + 1,
-            centerPosition: Math.floor((this.app.currentPosition.start + this.app.currentPosition.end) / 2),
-          }
+          chromosome: this.app.currentChromosome,
+          start: this.app.currentPosition.start,
+          end: this.app.currentPosition.end,
+          length: this.app.currentPosition.end - this.app.currentPosition.start + 1,
+          centerPosition: Math.floor((this.app.currentPosition.start + this.app.currentPosition.end) / 2),
+        }
         : null,
 
       // Enhanced: Add open tabs information
@@ -3391,9 +3394,9 @@ class ChatManager {
           chromosome: tabState.chromosome || this.app.currentChromosome,
           position: tabState.position
             ? {
-                start: tabState.position.start,
-                end: tabState.position.end,
-              }
+              start: tabState.position.start,
+              end: tabState.position.end,
+            }
             : null,
           isActive: tabId === activeTabId,
           index: tabs.length,
@@ -4515,6 +4518,9 @@ class ChatManager {
                         </div>
                     </div>
                     <div class="chat-controls">
+                        <button id="dockChatBtn" class="btn btn-sm chat-btn" title="Dock to right side">
+                            <i class="fas fa-columns"></i>
+                        </button>
                         <button id="chatBoxSettingsBtn" class="btn btn-sm chat-btn" title="ChatBox Settings">
                             <i class="fas fa-cog"></i>
                         </button>
@@ -4680,6 +4686,12 @@ class ChatManager {
           chatPanel.style.top = freshDefaultPos.y + 'px';
         }
       }
+
+      // Restore dock state from config
+      const savedDockState = this.configManager.get('chat.docked', false);
+      if (savedDockState) {
+        this.dockChat();
+      }
     }, 50);
   }
 
@@ -4836,6 +4848,11 @@ class ChatManager {
       this.resetChatPosition();
     });
 
+    // Dock/Undock button
+    document.getElementById('dockChatBtn')?.addEventListener('click', () => {
+      this.toggleDockState();
+    });
+
     // Context mode toggle
     document.getElementById('contextModeToggle')?.addEventListener('change', e => {
       this.contextModeEnabled = e.target.checked;
@@ -4892,10 +4909,202 @@ class ChatManager {
       const isVisible = chatPanel.style.display !== 'none';
       chatPanel.style.display = isVisible ? 'none' : 'flex';
 
+      // Also toggle dock container/splitter if docked
+      if (this.isDocked) {
+        const dockContainer = document.getElementById('chatDockContainer');
+        const dockSplitter = document.getElementById('chatDockSplitter');
+        if (dockContainer) dockContainer.style.display = isVisible ? 'none' : 'flex';
+        if (dockSplitter) dockSplitter.style.display = isVisible ? 'none' : 'flex';
+      }
+
       // Save visibility state
       this.configManager.set('chat.visible', !isVisible);
       console.log('ChatBox visibility toggled:', isVisible ? 'hidden' : 'visible');
     }
+  }
+
+  /**
+   * Toggle between docked and floating ChatBox states
+   */
+  toggleDockState() {
+    if (this.isDocked) {
+      this.undockChat();
+    } else {
+      this.dockChat();
+    }
+  }
+
+  /**
+   * Dock the ChatBox to the right side panel
+   */
+  dockChat() {
+    const chatPanel = document.getElementById('llmChatPanel');
+    const dockContainer = document.getElementById('chatDockContainer');
+    const dockSplitter = document.getElementById('chatDockSplitter');
+    const dockBtn = document.getElementById('dockChatBtn');
+
+    if (!chatPanel || !dockContainer || !dockSplitter) return;
+
+    // Save current floating position/size before docking
+    this.configManager.set('chat.floatingPosition', {
+      x: parseInt(chatPanel.style.left) || 0,
+      y: parseInt(chatPanel.style.top) || 0
+    });
+    this.configManager.set('chat.floatingSize', {
+      width: parseInt(chatPanel.style.width) || 400,
+      height: parseInt(chatPanel.style.height) || 600
+    });
+
+    // If minimized, un-minimize first
+    if (chatPanel.classList.contains('minimized')) {
+      chatPanel.classList.remove('minimized');
+    }
+
+    // Move chat panel into dock container
+    dockContainer.appendChild(chatPanel);
+
+    // Add docked class and show container/splitter
+    chatPanel.classList.add('docked');
+    dockContainer.style.display = 'flex';
+    dockSplitter.style.display = 'flex';
+
+    // Ensure chat panel is visible
+    chatPanel.style.display = 'flex';
+
+    // Restore saved dock width
+    const savedDockWidth = this.configManager.get('chat.dockWidth', 400);
+    dockContainer.style.width = savedDockWidth + 'px';
+
+    // Update button icon and title
+    if (dockBtn) {
+      dockBtn.title = 'Undock to floating window';
+      dockBtn.innerHTML = '<i class="fas fa-window-restore"></i>';
+    }
+
+    // Hide the reset position button when docked (not meaningful)
+    const resetBtn = document.getElementById('resetChatPositionBtn');
+    if (resetBtn) resetBtn.style.display = 'none';
+
+    this.isDocked = true;
+    this.configManager.set('chat.docked', true);
+
+    // Setup dock splitter dragging
+    this.setupDockSplitterDragging();
+
+    console.log('ChatBox docked to right panel');
+  }
+
+  /**
+   * Undock the ChatBox back to floating mode
+   */
+  undockChat() {
+    const chatPanel = document.getElementById('llmChatPanel');
+    const dockContainer = document.getElementById('chatDockContainer');
+    const dockSplitter = document.getElementById('chatDockSplitter');
+    const dockBtn = document.getElementById('dockChatBtn');
+    const appDiv = document.getElementById('app');
+
+    if (!chatPanel || !dockContainer || !dockSplitter || !appDiv) return;
+
+    // Save dock width for next time
+    this.configManager.set('chat.dockWidth', parseInt(dockContainer.style.width) || 400);
+
+    // Move chat panel back to app root
+    appDiv.appendChild(chatPanel);
+
+    // Remove docked class and hide container/splitter
+    chatPanel.classList.remove('docked');
+    dockContainer.style.display = 'none';
+    dockSplitter.style.display = 'none';
+
+    // Restore floating position and size
+    const savedPos = this.configManager.get('chat.floatingPosition', this.getDefaultChatPosition());
+    const savedSize = this.configManager.get('chat.floatingSize', { width: 400, height: 600 });
+
+    chatPanel.style.left = savedPos.x + 'px';
+    chatPanel.style.top = savedPos.y + 'px';
+    chatPanel.style.width = savedSize.width + 'px';
+    chatPanel.style.height = savedSize.height + 'px';
+
+    // Ensure visibility
+    chatPanel.style.display = 'flex';
+
+    // Update button icon and title
+    if (dockBtn) {
+      dockBtn.title = 'Dock to right side';
+      dockBtn.innerHTML = '<i class="fas fa-columns"></i>';
+    }
+
+    // Show the reset position button again
+    const resetBtn = document.getElementById('resetChatPositionBtn');
+    if (resetBtn) resetBtn.style.display = '';
+
+    this.isDocked = false;
+    this.configManager.set('chat.docked', false);
+
+    console.log('ChatBox undocked to floating mode');
+  }
+
+  /**
+   * Setup dock splitter dragging for resizable dock width
+   */
+  setupDockSplitterDragging() {
+    const splitter = document.getElementById('chatDockSplitter');
+    const dockContainer = document.getElementById('chatDockContainer');
+    const mainContent = document.querySelector('.main-content');
+
+    if (!splitter || !dockContainer || !mainContent) return;
+
+    // Remove any existing listeners (in case called multiple times)
+    const newSplitter = splitter.cloneNode(true);
+    splitter.parentNode.replaceChild(newSplitter, splitter);
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    const onMouseDown = (e) => {
+      if (e.button !== 0) return;
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(dockContainer.style.width) || dockContainer.offsetWidth;
+
+      newSplitter.classList.add('resizing');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+      if (!isResizing) return;
+
+      const deltaX = startX - e.clientX; // dragging left increases width
+      let newWidth = startWidth + deltaX;
+
+      // Enforce min/max
+      const maxWidth = mainContent.offsetWidth * 0.5;
+      newWidth = Math.max(280, Math.min(maxWidth, newWidth));
+
+      dockContainer.style.width = newWidth + 'px';
+    };
+
+    const onMouseUp = () => {
+      if (!isResizing) return;
+      isResizing = false;
+
+      newSplitter.classList.remove('resizing');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+
+      // Save the new width
+      const finalWidth = parseInt(dockContainer.style.width) || 400;
+      this.configManager.set('chat.dockWidth', finalWidth);
+    };
+
+    newSplitter.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   }
 
   /**
@@ -5111,11 +5320,11 @@ class ChatManager {
         if (showAgentInfo) {
           this.addThinkingMessage(
             `🤖 **Multi-Agent System Activated**\n\n` +
-              `🔄 **Agent Coordination Mode**: Enabled\n` +
-              `📊 **Available Agents**: 8 specialized agents\n` +
-              `🧠 **Decision Process**: Intelligent agent selection and coordination\n` +
-              `⚡ **Performance**: Optimized execution with caching\n\n` +
-              `*Multi-agent system will now coordinate tool execution across specialized agents...*`
+            `🔄 **Agent Coordination Mode**: Enabled\n` +
+            `📊 **Available Agents**: 8 specialized agents\n` +
+            `🧠 **Decision Process**: Intelligent agent selection and coordination\n` +
+            `⚡ **Performance**: Optimized execution with caching\n\n` +
+            `*Multi-agent system will now coordinate tool execution across specialized agents...*`
           );
         }
       }
@@ -5131,7 +5340,7 @@ class ChatManager {
       this.showThinkingProcess &&
         this.addThinkingMessage(
           `🔄 <strong>Starting request processing</strong> (max rounds: ${maxRounds})<br>` +
-            `📝 <strong>User Query:</strong> ${message.substring(0, 200)}${message.length > 200 ? '...' : ''}`
+          `📝 <strong>User Query:</strong> ${message.substring(0, 200)}${message.length > 200 ? '...' : ''}`
         );
 
       // Get current studio context
@@ -5971,9 +6180,9 @@ class ChatManager {
           `• Allowing up to ${result.allowedMismatches} mismatches\n` +
           (result.matches.length > 0
             ? `• Top matches:\n${result.matches
-                .slice(0, 5)
-                .map(m => `  - Position ${m.position}: ${m.sequence} (${m.strand} strand, ${m.mismatches} mismatches)`)
-                .join('\n')}`
+              .slice(0, 5)
+              .map(m => `  - Position ${m.position}: ${m.sequence} (${m.strand} strand, ${m.mismatches} mismatches)`)
+              .join('\n')}`
             : '• No matches found')
         );
 
@@ -5983,9 +6192,9 @@ class ChatManager {
           `• Found ${result.matchesFound} matches in ${result.searchRegion}\n` +
           (result.matches.length > 0
             ? `• Matches:\n${result.matches
-                .slice(0, 10)
-                .map(m => `  - Position ${m.position}: ${m.sequence} (length: ${m.length})`)
-                .join('\n')}`
+              .slice(0, 10)
+              .map(m => `  - Position ${m.position}: ${m.sequence} (length: ${m.length})`)
+              .join('\n')}`
             : '• No matches found')
         );
 
@@ -5995,11 +6204,11 @@ class ChatManager {
           `• Found ${result.featuresFound} features\n` +
           (result.features.length > 0
             ? `• Features:\n${result.features
-                .map(
-                  f =>
-                    `  - ${f.name} (${f.type}): ${f.start}-${f.end} ${f.strand} strand, ${f.distance} bp ${f.direction}`
-                )
-                .join('\n')}`
+              .map(
+                f =>
+                  `  - ${f.name} (${f.type}): ${f.start}-${f.end} ${f.strand} strand, ${f.distance} bp ${f.direction}`
+              )
+              .join('\n')}`
             : '• No features found in range')
         );
 
@@ -6010,12 +6219,12 @@ class ChatManager {
           `• Total intergenic length: ${result.totalIntergenicLength.toLocaleString()} bp\n` +
           (result.regions.length > 0
             ? `• Largest regions:\n${result.regions
-                .slice(0, 5)
-                .map(
-                  r =>
-                    `  - ${r.start}-${r.end} (${r.length.toLocaleString()} bp) between ${r.upstreamGene} and ${r.downstreamGene}`
-                )
-                .join('\n')}`
+              .slice(0, 5)
+              .map(
+                r =>
+                  `  - ${r.start}-${r.end} (${r.length.toLocaleString()} bp) between ${r.upstreamGene} and ${r.downstreamGene}`
+              )
+              .join('\n')}`
             : '• No intergenic regions found')
         );
 
@@ -6025,8 +6234,8 @@ class ChatManager {
           `• Found ${result.sitesFound} sites in ${result.searchRegion}\n` +
           (result.sites.length > 0
             ? `• Sites:\n${result.sites
-                .map(s => `  - Position ${s.position}: ${s.site} (${s.strand} strand)`)
-                .join('\n')}`
+              .map(s => `  - Position ${s.position}: ${s.site} (${s.strand} strand)`)
+              .join('\n')}`
             : '• No restriction sites found')
         );
 
@@ -6039,9 +6248,9 @@ class ChatManager {
           `• Size range: ${result.smallestFragment.toLocaleString()} - ${result.largestFragment.toLocaleString()} bp\n` +
           (result.fragmentDetails.length > 0
             ? `• Largest fragments:\n${result.fragmentDetails
-                .slice(0, 5)
-                .map(f => `  - ${f.start}-${f.end} (${f.length.toLocaleString()} bp) cut by ${f.cutBy}`)
-                .join('\n')}`
+              .slice(0, 5)
+              .map(f => `  - ${f.start}-${f.end} (${f.length.toLocaleString()} bp) cut by ${f.cutBy}`)
+              .join('\n')}`
             : '')
         );
 
@@ -6086,11 +6295,11 @@ class ChatManager {
           `• Showing: ${result.filteredBookmarks}\n` +
           (result.bookmarks.length > 0
             ? `• Bookmarks:\n${result.bookmarks
-                .map(
-                  b =>
-                    `  - ${b.name}: ${b.chromosome}:${b.start}-${b.end} (${new Date(b.created).toLocaleDateString()})`
-                )
-                .join('\n')}`
+              .map(
+                b =>
+                  `  - ${b.name}: ${b.chromosome}:${b.start}-${b.end} (${new Date(b.created).toLocaleDateString()})`
+              )
+              .join('\n')}`
             : '• No bookmarks found')
         );
 
@@ -6120,9 +6329,9 @@ class ChatManager {
           `• Found ${result.resultsFound} similar regions (≥${result.minSimilarity} similarity)\n` +
           (result.results.length > 0
             ? `• Top matches:\n${result.results
-                .slice(0, 5)
-                .map(r => `  - ${r.start}-${r.end}: ${r.similarity} similarity\n    ${r.sequence}`)
-                .join('\n')}`
+              .slice(0, 5)
+              .map(r => `  - ${r.start}-${r.end}: ${r.similarity} similarity\n    ${r.sequence}`)
+              .join('\n')}`
             : '• No similar sequences found')
         );
 
@@ -6147,8 +6356,8 @@ class ChatManager {
           `✓ Batch created ${result.annotationsCreated} annotations on ${result.chromosome}\n` +
           (result.annotations.length > 0
             ? `• Created annotations:\n${result.annotations
-                .map(a => `  - ${a.type}: ${a.start}-${a.end} (${a.qualifiers?.gene || a.id})`)
-                .join('\n')}`
+              .map(a => `  - ${a.type}: ${a.start}-${a.end} (${a.qualifiers?.gene || a.id})`)
+              .join('\n')}`
             : '')
         );
 
@@ -7951,9 +8160,9 @@ class ChatManager {
         member_databases: ['Pfam', 'SMART', 'PROSITE'],
         protein_matches: include_proteins
           ? [
-              { uniprot_id: 'P12345', name: 'Example protein 1', organism: 'Homo sapiens' },
-              { uniprot_id: 'P67890', name: 'Example protein 2', organism: 'Mus musculus' },
-            ]
+            { uniprot_id: 'P12345', name: 'Example protein 1', organism: 'Homo sapiens' },
+            { uniprot_id: 'P67890', name: 'Example protein 2', organism: 'Mus musculus' },
+          ]
           : [],
         statistics: {
           protein_count: 15000,
@@ -8278,9 +8487,9 @@ The genome file has been loaded and is ready for analysis.`;
 
 **Top Domains:**
 ${domains
-  .slice(0, 3)
-  .map(domain => `- **${domain.name}** (${domain.database}): ${domain.start}-${domain.end} (E-value: ${domain.evalue})`)
-  .join('\n')}
+              .slice(0, 3)
+              .map(domain => `- **${domain.name}** (${domain.database}): ${domain.start}-${domain.end} (E-value: ${domain.evalue})`)
+              .join('\n')}
 
 ${domains.length > 3 ? `... and ${domains.length - 3} more domains` : ''}
 
@@ -8441,19 +8650,19 @@ The gene search has been completed successfully.`;
 
 **Top 10 Most Frequent Codons:**
 ${data.mostFrequentCodons
-  .slice(0, 10)
-  .map(
-    codon =>
-      `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences)${codon.rscu ? ` - RSCU: ${codon.rscu}` : ''}`
-  )
-  .join('\n')}
+              .slice(0, 10)
+              .map(
+                codon =>
+                  `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences)${codon.rscu ? ` - RSCU: ${codon.rscu}` : ''}`
+              )
+              .join('\n')}
 
 **Amino Acid Composition:**
 ${Object.entries(data.aminoAcidComposition)
-  .sort(([, a], [, b]) => b - a)
-  .slice(0, 10)
-  .map(([aa, count]) => `- **${aa}**: ${count} codons`)
-  .join('\n')}`;
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 10)
+              .map(([aa, count]) => `- **${aa}**: ${count} codons`)
+              .join('\n')}`;
 
           // Add codon preferences if available
           if (data.codonPreferences && Object.keys(data.codonPreferences).length > 0) {
@@ -8495,12 +8704,12 @@ ${Object.entries(data.aminoAcidComposition)
 
 **Top 10 Most Frequent Codons (Genome-Wide):**
 ${data.mostFrequentCodons
-  .slice(0, 10)
-  .map(
-    codon =>
-      `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences) - RSCU: ${codon.rscu}`
-  )
-  .join('\n')}
+              .slice(0, 10)
+              .map(
+                codon =>
+                  `- **${codon.codon}** (${codon.aminoAcid}): ${codon.frequency}% (${codon.count} occurrences) - RSCU: ${codon.rscu}`
+              )
+              .join('\n')}
 
 **GC Content by Codon Position:**
 - **Position 1**: ${data.gcContent?.position1}%
@@ -9066,13 +9275,13 @@ ${connectedServers.map(server => `- ${server.name} (${server.category}): ${serve
 
 MCP Tools by Category:
 ${Object.entries(toolsByCategory)
-  .map(
-    ([category, tools]) =>
-      `${category.toUpperCase()}:\n${tools
-        .map(tool => `  - ${tool.name}: ${tool.description || 'No description'}`)
-        .join('\n')}`
-  )
-  .join('\n\n')}`;
+          .map(
+            ([category, tools]) =>
+              `${category.toUpperCase()}:\n${tools
+                .map(tool => `  - ${tool.name}: ${tool.description || 'No description'}`)
+                .join('\n')}`
+          )
+          .join('\n\n')}`;
     } else {
       toolsInfo += `
 No MCP servers connected. Available tools are limited to local and plugin functions.`;
@@ -9086,19 +9295,19 @@ No MCP servers connected. Available tools are limited to local and plugin functi
 
 MICROBE GENOMICS FUNCTIONS:
 ${Object.entries(categories)
-  .map(
-    ([category, info]) =>
-      `${category.toUpperCase()} (${info.description}):\n${info.functions
-        .map(
-          fn =>
-            `  - ${fn}: Use as "${fn
-              .toLowerCase()
-              .replace(/([A-Z])/g, '_$1')
-              .toLowerCase()}"`
-        )
-        .join('\n')}`
-  )
-  .join('\n\n')}`;
+            .map(
+              ([category, info]) =>
+                `${category.toUpperCase()} (${info.description}):\n${info.functions
+                  .map(
+                    fn =>
+                      `  - ${fn}: Use as "${fn
+                        .toLowerCase()
+                        .replace(/([A-Z])/g, '_$1')
+                        .toLowerCase()}"`
+                  )
+                  .join('\n')}`
+            )
+            .join('\n\n')}`;
       } catch (error) {
         toolsInfo += `\nMicrobeGenomics Functions: Available but details unavailable`;
       }
@@ -9387,16 +9596,14 @@ Track Settings:
 CURRENT GENOME STATE:
 - Chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None loaded'}
 - Position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
-- Selected Gene: ${
-      context.genomeBrowser.currentState.selectedGene
+- Selected Gene: ${context.genomeBrowser.currentState.selectedGene
         ? `${context.genomeBrowser.currentState.selectedGene.geneName} (${context.genomeBrowser.currentState.selectedGene.locusTag})`
         : 'None'
-    }
-- Sequence Selection: ${
-      context.genomeBrowser.currentState.sequenceSelection?.active
+      }
+- Sequence Selection: ${context.genomeBrowser.currentState.sequenceSelection?.active
         ? `${context.genomeBrowser.currentState.sequenceSelection.start}-${context.genomeBrowser.currentState.sequenceSelection.end} (${context.genomeBrowser.currentState.sequenceSelection.length} bp)`
         : 'None'
-    }
+      }
 - Visible Tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
 - Loaded Files: ${context.genomeBrowser.currentState.loadedFiles.length} files
 - Sequence Length: ${context.genomeBrowser.currentState.sequenceLength?.toLocaleString() || 'Unknown'}
@@ -10029,13 +10236,13 @@ ${connectedServers.map(server => `- ${server.name} (${server.category}): ${serve
 
 MCP Tools by Category:
 ${Object.entries(toolsByCategory)
-  .map(
-    ([category, tools]) =>
-      `${category.toUpperCase()}:\n${tools
-        .map(tool => `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`)
-        .join('\n')}`
-  )
-  .join('\n\n')}
+          .map(
+            ([category, tools]) =>
+              `${category.toUpperCase()}:\n${tools
+                .map(tool => `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`)
+                .join('\n')}`
+          )
+          .join('\n\n')}
 `;
     } else {
       mcpServersInfo = `
@@ -10054,24 +10261,24 @@ Note: Additional tools may be available when MCP servers are connected.
         microbeGenomicsInfo = `
 MICROBE GENOMICS FUNCTIONS (Advanced Analysis Tools):
 ${Object.entries(categories)
-  .map(
-    ([category, info]) =>
-      `${category.toUpperCase()} (${info.description}):\n${info.functions
-        .map(
-          fn =>
-            `  - ${fn}: Use as "${fn
-              .toLowerCase()
-              .replace(/([A-Z])/g, '_$1')
-              .toLowerCase()}"`
-        )
-        .join('\n')}`
-  )
-  .join('\n\n')}
+            .map(
+              ([category, info]) =>
+                `${category.toUpperCase()} (${info.description}):\n${info.functions
+                  .map(
+                    fn =>
+                      `  - ${fn}: Use as "${fn
+                        .toLowerCase()
+                        .replace(/([A-Z])/g, '_$1')
+                        .toLowerCase()}"`
+                  )
+                  .join('\n')}`
+            )
+            .join('\n\n')}
 
 MICROBE GENOMICS USAGE EXAMPLES:
 ${examples
-  .map(example => `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`)
-  .join('\n\n')}
+            .map(example => `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`)
+            .join('\n\n')}
 `;
       } catch (error) {
         microbeGenomicsInfo = '\nMicrobeGenomicsFunctions: Available but could not load details\n';
@@ -10323,13 +10530,13 @@ ${connectedServers.map(server => `- ${server.name} (${server.category}): ${serve
 
 MCP Tools by Category:
 ${Object.entries(toolsByCategory)
-  .map(
-    ([category, tools]) =>
-      `${category.toUpperCase()}:\n${tools
-        .map(tool => `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`)
-        .join('\n')}`
-  )
-  .join('\n\n')}
+          .map(
+            ([category, tools]) =>
+              `${category.toUpperCase()}:\n${tools
+                .map(tool => `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`)
+                .join('\n')}`
+          )
+          .join('\n\n')}
 `;
     } else {
       mcpServersInfo = `
@@ -10348,24 +10555,24 @@ Note: Additional tools may be available when MCP servers are connected.
         microbeGenomicsInfo = `
 MICROBE GENOMICS FUNCTIONS (Advanced Analysis Tools):
 ${Object.entries(categories)
-  .map(
-    ([category, info]) =>
-      `${category.toUpperCase()} (${info.description}):\n${info.functions
-        .map(
-          fn =>
-            `  - ${fn}: Use as "${fn
-              .toLowerCase()
-              .replace(/([A-Z])/g, '_$1')
-              .toLowerCase()}"`
-        )
-        .join('\n')}`
-  )
-  .join('\n\n')}
+            .map(
+              ([category, info]) =>
+                `${category.toUpperCase()} (${info.description}):\n${info.functions
+                  .map(
+                    fn =>
+                      `  - ${fn}: Use as "${fn
+                        .toLowerCase()
+                        .replace(/([A-Z])/g, '_$1')
+                        .toLowerCase()}"`
+                  )
+                  .join('\n')}`
+            )
+            .join('\n\n')}
 
 MICROBE GENOMICS USAGE EXAMPLES:
 ${examples
-  .map(example => `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`)
-  .join('\n\n')}
+            .map(example => `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`)
+            .join('\n\n')}
 `;
       } catch (error) {
         microbeGenomicsInfo = '\nMicrobeGenomicsFunctions: Available but could not load details\n';
@@ -11060,9 +11267,9 @@ ${this.getPluginSystemInfo()}`;
             // This is an external API tool that requires MCP server
             throw new Error(
               `Tool "${toolName}" requires an MCP server connection. ` +
-                `Please ensure the appropriate MCP server is connected. ` +
-                `Category: ${registryTool.category}, ` +
-                `Requires network: ${registryTool.execution.requires_network || false}`
+              `Please ensure the appropriate MCP server is connected. ` +
+              `Category: ${registryTool.category}, ` +
+              `Requires network: ${registryTool.execution.requires_network || false}`
             );
           }
         } catch (registryError) {
@@ -12995,13 +13202,13 @@ ${this.getPluginSystemInfo()}`;
           const summary = this.configManager.getConfigSummary();
           this.addMessageToChat(
             `📊 **Configuration Summary:**\n` +
-              `• Version: ${summary.version}\n` +
-              `• LLM Provider: ${summary.llmProvider || 'None'}\n` +
-              `• Enabled Providers: ${summary.llmProvidersEnabled.join(', ') || 'None'}\n` +
-              `• Theme: ${summary.theme}\n` +
-              `• Chat History: ${summary.chatHistoryLength} messages\n` +
-              `• Recent Files: ${summary.recentFilesCount}\n` +
-              `• Debug Mode: ${summary.debugMode ? 'On' : 'Off'}`,
+            `• Version: ${summary.version}\n` +
+            `• LLM Provider: ${summary.llmProvider || 'None'}\n` +
+            `• Enabled Providers: ${summary.llmProvidersEnabled.join(', ') || 'None'}\n` +
+            `• Theme: ${summary.theme}\n` +
+            `• Chat History: ${summary.chatHistoryLength} messages\n` +
+            `• Recent Files: ${summary.recentFilesCount}\n` +
+            `• Debug Mode: ${summary.debugMode ? 'On' : 'Off'}`,
             'assistant'
           );
           break;
@@ -13009,12 +13216,12 @@ ${this.getPluginSystemInfo()}`;
           const storageInfo = this.configManager.getStorageInfo();
           this.addMessageToChat(
             `🔧 **Storage Debug Info:**\n` +
-              `• Is Electron: ${storageInfo.isElectron}\n` +
-              `• Using Files: ${storageInfo.usingFiles}\n` +
-              `• Using localStorage: ${storageInfo.usingLocalStorage}\n` +
-              `• Is Initialized: ${storageInfo.isInitialized}\n` +
-              `• Config Path: ${storageInfo.configPath ? 'Available' : 'None'}\n` +
-              `• Storage Method: ${storageInfo.usingFiles ? 'File-based' : 'localStorage'}`,
+            `• Is Electron: ${storageInfo.isElectron}\n` +
+            `• Using Files: ${storageInfo.usingFiles}\n` +
+            `• Using localStorage: ${storageInfo.usingLocalStorage}\n` +
+            `• Is Initialized: ${storageInfo.isInitialized}\n` +
+            `• Config Path: ${storageInfo.configPath ? 'Available' : 'None'}\n` +
+            `• Storage Method: ${storageInfo.usingFiles ? 'File-based' : 'localStorage'}`,
             'assistant'
           );
           break;
@@ -13022,12 +13229,12 @@ ${this.getPluginSystemInfo()}`;
           const integrationResult = this.testMicrobeGenomicsIntegration();
           this.addMessageToChat(
             `🧬 **MicrobeGenomics Integration Test:**\n` +
-              `• Integration: ${integrationResult.success ? '✅ Success' : '❌ Failed'}\n` +
-              `• Functions Available: ${integrationResult.totalFunctions || 0}\n` +
-              `• Categories Available: ${integrationResult.categoriesAvailable ? '✅' : '❌'}\n` +
-              `• Examples Available: ${integrationResult.examplesAvailable ? '✅' : '❌'}\n` +
-              `• Function Test: ${integrationResult.functionCallTest?.success ? '✅ Passed' : '❌ Failed'}\n` +
-              (integrationResult.error ? `• Error: ${integrationResult.error}` : ''),
+            `• Integration: ${integrationResult.success ? '✅ Success' : '❌ Failed'}\n` +
+            `• Functions Available: ${integrationResult.totalFunctions || 0}\n` +
+            `• Categories Available: ${integrationResult.categoriesAvailable ? '✅' : '❌'}\n` +
+            `• Examples Available: ${integrationResult.examplesAvailable ? '✅' : '❌'}\n` +
+            `• Function Test: ${integrationResult.functionCallTest?.success ? '✅ Passed' : '❌ Failed'}\n` +
+            (integrationResult.error ? `• Error: ${integrationResult.error}` : ''),
             'assistant'
           );
           break;
@@ -13035,11 +13242,11 @@ ${this.getPluginSystemInfo()}`;
           const executionResult = await this.testToolExecution();
           this.addMessageToChat(
             `🔧 **Tool Execution Test:**\n` +
-              `• Status: ${executionResult.success ? '✅ All tests passed' : '❌ Tests failed'}\n` +
-              `• GC Calculation: ${executionResult.tests?.gc ? '✅ Working' : '❌ Failed'}\n` +
-              `• Reverse Complement: ${executionResult.tests?.reverseComplement ? '✅ Working' : '❌ Failed'}\n` +
-              `• Navigation: ${executionResult.tests?.currentRegion ? '✅ Working' : '❌ Failed'}\n` +
-              (executionResult.error ? `• Error: ${executionResult.error}` : ''),
+            `• Status: ${executionResult.success ? '✅ All tests passed' : '❌ Tests failed'}\n` +
+            `• GC Calculation: ${executionResult.tests?.gc ? '✅ Working' : '❌ Failed'}\n` +
+            `• Reverse Complement: ${executionResult.tests?.reverseComplement ? '✅ Working' : '❌ Failed'}\n` +
+            `• Navigation: ${executionResult.tests?.currentRegion ? '✅ Working' : '❌ Failed'}\n` +
+            (executionResult.error ? `• Error: ${executionResult.error}` : ''),
             'assistant'
           );
           break;
@@ -13426,14 +13633,14 @@ ${this.getPluginSystemInfo()}`;
       // Operon information if available
       operonInfo: operonInfo
         ? {
-            operonName: operonInfo.name,
-            operonStart: operonInfo.start,
-            operonEnd: operonInfo.end,
-            operonStrand: operonInfo.strand === -1 ? '-' : '+',
-            geneCount: operonInfo.genes?.length || 0,
-            genePosition:
-              operonInfo.genes?.findIndex(g => g.start === gene.start && g.end === gene.end) + 1 || 'Unknown',
-          }
+          operonName: operonInfo.name,
+          operonStart: operonInfo.start,
+          operonEnd: operonInfo.end,
+          operonStrand: operonInfo.strand === -1 ? '-' : '+',
+          geneCount: operonInfo.genes?.length || 0,
+          genePosition:
+            operonInfo.genes?.findIndex(g => g.start === gene.start && g.end === gene.end) + 1 || 'Unknown',
+        }
         : null,
     };
   }
@@ -17947,16 +18154,15 @@ ${this.getPluginSystemInfo()}`;
                     <span class="label">Release Date:</span>
                     <span class="value">${result.releaseDate || 'N/A'}</span>
                 </div>
-                ${
-                  result.classification
-                    ? `
+                ${result.classification
+        ? `
                 <div class="detail-row">
                     <span class="label">Classification:</span>
                     <span class="value">${result.classification}</span>
                 </div>
                 `
-                    : ''
-                }
+        : ''
+      }
             </div>
             <div class="result-actions">
                 <button class="btn btn-primary view-structure" data-pdb-id="${result.pdbId}" data-gene-name="${result.geneName || result.pdbId}">
@@ -19429,9 +19635,8 @@ ${this.getPluginSystemInfo()}`;
                         <div class="reasoning-label">Decision Reasoning:</div>
                         <div class="reasoning-text">${reasoning}</div>
                     </div>
-                    ${
-                      Object.keys(parameters).length > 0
-                        ? `
+                    ${Object.keys(parameters).length > 0
+        ? `
                         <div class="agent-parameters">
                             <div class="parameters-label">Parameters:</div>
                             <div class="parameters-content">
@@ -19439,8 +19644,8 @@ ${this.getPluginSystemInfo()}`;
                             </div>
                         </div>
                     `
-                        : ''
-                    }
+        : ''
+      }
                 </div>
             </div>
         `;
