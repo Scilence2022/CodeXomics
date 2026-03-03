@@ -66,6 +66,7 @@
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
@@ -176,6 +177,41 @@
   color: #28a745;
 }
 
+.banner-toggle-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 5px;
+  flex-shrink: 0;
+}
+
+.banner-toggle-button:hover {
+  background: #fff3e0;
+  border-color: #e67e22;
+  color: #e67e22;
+}
+
+.banner-toggle-button i {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.3s ease;
+}
+
+.banner-toggle-button:hover i {
+  color: #e67e22;
+}
+
+.banner-toggle-button.banner-collapsed i {
+  transform: rotate(180deg);
+}
+
 /* =====================================================
    TAB POSITION VISUALIZATION STYLES
    ===================================================== */
@@ -227,10 +263,14 @@
   box-shadow:
     0 0 4px rgba(26, 115, 232, 0.6),
     inset 0 0 2px rgba(255, 255, 255, 0.3);
-  min-width: 3px; /* Increased minimum width for better visibility */
-  z-index: 10; /* Ensure it's above the track */
-  display: block; /* Ensure it's visible */
-  visibility: visible; /* Ensure it's visible */
+  min-width: 3px;
+  /* Increased minimum width for better visibility */
+  z-index: 10;
+  /* Ensure it's above the track */
+  display: block;
+  /* Ensure it's visible */
+  visibility: visible;
+  /* Ensure it's visible */
 }
 
 .genome-tab.active .position-indicator {
@@ -239,8 +279,10 @@
     inset 0 0 3px rgba(255, 255, 255, 0.4);
   transform: scaleY(1.3);
   border-width: 2px;
-  display: block !important; /* Ensure it's visible */
-  visibility: visible !important; /* Ensure it's visible */
+  display: block !important;
+  /* Ensure it's visible */
+  visibility: visible !important;
+  /* Ensure it's visible */
 }
 
 /* Position indicator animation on hover */
@@ -248,8 +290,10 @@
   box-shadow:
     0 0 5px rgba(26, 115, 232, 0.8),
     inset 0 0 2px rgba(255, 255, 255, 0.3);
-  display: block !important; /* Ensure it's visible during hover */
-  visibility: visible !important; /* Ensure it's visible during hover */
+  display: block !important;
+  /* Ensure it's visible during hover */
+  visibility: visible !important;
+  /* Ensure it's visible during hover */
 }
 
 /* Animation enabled state */
@@ -258,6 +302,7 @@
 }
 
 @keyframes position-pulse {
+
   0%,
   100% {
     opacity: 0.8;
@@ -268,6 +313,7 @@
     display: block;
     visibility: visible;
   }
+
   50% {
     opacity: 1;
     transform: scaleY(1.2);
@@ -330,6 +376,7 @@
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+
   .genome-tab .position-indicator,
   .chromosome-track,
   .tab-position-visualization {
@@ -527,11 +574,11 @@
   border-radius: 50%;
 }
 
-input:checked + .slider {
+input:checked+.slider {
   background-color: #3b82f6;
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
   transform: translateX(26px);
 }
 

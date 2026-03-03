@@ -13,6 +13,9 @@ class TabManager {
     this.tabContainer = document.getElementById('tabContainer');
     this.newTabButton = document.getElementById('newTabButton');
     this.tabSettingsButton = document.getElementById('tabSettingsButton');
+    this.toggleBannerButton = document.getElementById('toggleBannerButton');
+    this.headerElement = document.querySelector('header.header');
+    this.bannerCollapsed = localStorage.getItem('bannerCollapsed') === 'true';
 
     // Check if required elements exist
     if (!this.tabContainer) {
@@ -23,6 +26,12 @@ class TabManager {
     }
     if (!this.tabSettingsButton) {
       console.error('TabManager: Required DOM element "tabSettingsButton" not found');
+    }
+    if (!this.toggleBannerButton) {
+      console.warn('TabManager: Optional DOM element "toggleBannerButton" not found. Banner toggle functionality disabled.');
+    }
+    if (!this.headerElement) {
+      console.warn('TabManager: Optional DOM element "header.header" not found. Banner toggle functionality disabled.');
     }
 
     // Tab state isolation
@@ -97,6 +106,21 @@ class TabManager {
     this.newTabButton.addEventListener('click', () => {
       this.createNewTab();
     });
+
+    // Banner toggle button
+    if (this.toggleBannerButton && this.headerElement) {
+      // Apply saved state on load
+      if (this.bannerCollapsed) {
+        this.headerElement.classList.add('collapsed');
+        this.toggleBannerButton.classList.add('banner-collapsed');
+      }
+      this.toggleBannerButton.addEventListener('click', () => {
+        this.bannerCollapsed = !this.bannerCollapsed;
+        this.headerElement.classList.toggle('collapsed', this.bannerCollapsed);
+        this.toggleBannerButton.classList.toggle('banner-collapsed', this.bannerCollapsed);
+        localStorage.setItem('bannerCollapsed', this.bannerCollapsed);
+      });
+    }
 
     // Handle keyboard shortcuts
     document.addEventListener('keydown', e => {
@@ -376,8 +400,8 @@ class TabManager {
     const currentTrackTypes = new Set(
       this.genomeBrowser.trackVisibility
         ? Object.entries(this.genomeBrowser.trackVisibility)
-            .filter(([_, visible]) => visible)
-            .map(([type, _]) => type)
+          .filter(([_, visible]) => visible)
+          .map(([type, _]) => type)
         : ['genes', 'sequence']
     );
 
@@ -390,16 +414,16 @@ class TabManager {
       : this.genomeBrowser.featureVisibility
         ? { ...this.genomeBrowser.featureVisibility }
         : {
-            genes: false,
-            CDS: true,
-            mRNA: true,
-            tRNA: true,
-            rRNA: true,
-            promoter: true,
-            terminator: true,
-            regulatory: true,
-            other: true,
-          };
+          genes: false,
+          CDS: true,
+          mRNA: true,
+          tRNA: true,
+          rRNA: true,
+          promoter: true,
+          terminator: true,
+          regulatory: true,
+          other: true,
+        };
 
     return {
       id: tabId,

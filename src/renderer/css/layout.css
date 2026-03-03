@@ -18,6 +18,18 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: relative;
   z-index: 1000;
+  max-height: 200px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+}
+
+.header.collapsed {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  border-bottom: none;
+  box-shadow: none;
 }
 
 .header-left {
@@ -292,9 +304,11 @@
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.1);
   }
+
   100% {
     transform: scale(1);
   }
@@ -447,6 +461,7 @@
 }
 
 @media (max-width: 768px) {
+
   .grid-2-col,
   .grid-3-col,
   .grid-4-col {
