@@ -938,10 +938,46 @@ class CanvasReadsRenderer {
   handleCanvasClick(event) {
     console.log('🖱️ [CanvasReadsRenderer] Canvas clicked');
 
-    const clickedRead = this.getReadAtPosition(event);
-    if (clickedRead) {
-      console.log('🖱️ [CanvasReadsRenderer] Read clicked:', clickedRead.id);
-      this.showReadDetails(clickedRead);
+    // Get canvas coordinates
+    const rect = this.canvas.getBoundingClientRect();
+    const canvasX = event.clientX - rect.left;
+    const canvasY = event.clientY - rect.top;
+
+    // First check if a specific mutation within a read was clicked
+    for (const readPos of this.readPositions) {
+      if (
+        canvasX >= readPos.x &&
+        canvasX <= readPos.x + readPos.width &&
+        canvasY >= readPos.y &&
+        canvasY <= readPos.y + readPos.height
+      ) {
+        const read = readPos.read;
+        if (read.mutations && read.mutations.length > 0) {
+          // Find if click was on a specific mutation
+          for (const mutation of read.mutations) {
+            const mutationPosInRead = mutation.position - read.start;
+            const readLength = read.sequence ? read.sequence.length : read.end - read.start + 1;
+
+            if (mutationPosInRead >= 0 && mutationPosInRead <= readLength) {
+              const mutationX = readPos.x + (mutationPosInRead / readLength) * readPos.width;
+              const tolerance = 3; // 3px tolerance for clicking narrow mutation lines
+
+              if (Math.abs(canvasX - mutationX) <= tolerance) {
+                console.log('🖱️ [CanvasReadsRenderer] Mutation clicked:', mutation.type, 'at', mutation.position);
+                if (window.genomeBrowser && window.genomeBrowser.selectMutation) {
+                  window.genomeBrowser.selectMutation(read, mutation);
+                  return;
+                }
+              }
+            }
+          }
+        }
+
+        // If no mutation clicked, handle read selection
+        console.log('🖱️ [CanvasReadsRenderer] Read clicked:', read.id);
+        this.showReadDetails(read);
+        return;
+      }
     }
   }
 

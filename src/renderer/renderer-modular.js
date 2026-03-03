@@ -1395,17 +1395,16 @@ class GenomeBrowser {
       'Memory Usage:',
       performance.memory
         ? {
-            used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
-            total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB',
-            limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + ' MB',
-          }
+          used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
+          total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB',
+          limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + ' MB',
+        }
         : 'Not available'
     );
 
     // Show alert with basic performance info
     alert(
-      `Performance Monitor\n\nMemory Usage: ${
-        performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB' : 'Not available'
+      `Performance Monitor\n\nMemory Usage: ${performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB' : 'Not available'
       }\n\nCheck console for detailed information.`
     );
   }
@@ -2325,14 +2324,13 @@ class GenomeBrowser {
                             onclick="genomeBrowser.editMCPServer('${server.id}')">
                         Edit
                     </button>
-                    ${
-                      !server.isBuiltin
-                        ? `<button class="btn-small btn-danger" 
+                    ${!server.isBuiltin
+          ? `<button class="btn-small btn-danger" 
                             onclick="genomeBrowser.removeMCPServer('${server.id}')">
                         Remove
                     </button>`
-                        : ''
-                    }
+          : ''
+        }
                 </div>
             `;
       serversList.appendChild(serverItem);
@@ -2382,8 +2380,8 @@ class GenomeBrowser {
                 <h4 class="category-title">${this.escapeHtml(category)}</h4>
                 <div class="tools-list">
                     ${tools
-                      .map(
-                        tool => `
+          .map(
+            tool => `
                         <div class="tool-item">
                             <div class="tool-info">
                                 <span class="tool-name">${this.escapeHtml(tool.name)}</span>
@@ -2392,8 +2390,8 @@ class GenomeBrowser {
                             <div class="tool-description">${this.escapeHtml(tool.description || 'No description')}</div>
                         </div>
                     `
-                      )
-                      .join('')}
+          )
+          .join('')}
                 </div>
             `;
       toolsList.appendChild(categorySection);
@@ -5816,6 +5814,60 @@ class GenomeBrowser {
     return value;
   }
 
+  /**
+   * Populate sidebar with details for a specific read mutation
+   */
+  populateReadMutationDetails(read, mutation) {
+    const variantContent = document.getElementById('variantDetailsContent');
+    if (!variantContent) return;
+
+    const readName = read.id || read.qname || 'Unknown Read';
+    const position = mutation.position.toLocaleString();
+    const type = mutation.type.charAt(0).toUpperCase() + mutation.type.slice(1);
+
+    let detailsHTML = `
+            <div class="read-mutation-details">
+                <div class="mutation-header" style="background: rgba(255, 152, 0, 0.1); border-left: 4px solid #FF9800; padding: 12px; margin-bottom: 15px; border-radius: 0 4px 4px 0;">
+                    <div style="font-size: 14px; font-weight: 600; color: #E65100;">READ-LEVEL MUTATION</div>
+                    <div style="font-size: 18px; font-weight: 700; margin: 5px 0;">${type} at ${position}</div>
+                    <div style="font-size: 12px; color: #555;">Detected in aligned sequence of read ${readName}</div>
+                </div>
+
+                <div class="mutation-info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div class="info-item" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                        <div style="font-size: 11px; color: #777; text-transform: uppercase;">Mutation Type</div>
+                        <div style="font-weight: 600;">${type}</div>
+                    </div>
+                    <div class="info-item" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                        <div style="font-size: 11px; color: #777; text-transform: uppercase;">Genomic Position</div>
+                        <div style="font-weight: 600;">${position}</div>
+                    </div>
+                    <div class="info-item" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                        <div style="font-size: 11px; color: #777; text-transform: uppercase;">Reference</div>
+                        <div style="font-weight: 700; color: #d32f2f;">${mutation.refSequence || (mutation.type === 'insertion' ? '-' : 'N')}</div>
+                    </div>
+                    <div class="info-item" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                        <div style="font-size: 11px; color: #777; text-transform: uppercase;">Alternate</div>
+                        <div style="font-weight: 700; color: #2e7d32;">${mutation.sequence || (mutation.type === 'deletion' ? '-' : 'N')}</div>
+                    </div>
+                </div>
+
+                <div class="read-context" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 14px;">Source Read Context</h4>
+                    <div style="font-size: 12px; margin-bottom: 5px;"><strong>Read ID:</strong> ${readName}</div>
+                    <div style="font-size: 12px; margin-bottom: 5px;"><strong>Mapping Quality:</strong> ${read.mappingQuality || 0}</div>
+                    <div style="font-size: 12px; margin-bottom: 10px;"><strong>Strand:</strong> ${read.strand === '+' || read.strand === 1 ? 'Forward (+)' : 'Reverse (-)'}</div>
+                    
+                    <button class="btn btn-sm" onclick="window.genomeBrowser.selectReadById('${read.id}')" style="width: 100%; margin-top: 10px; background: #fff; border: 1px solid #ccc;">
+                        <i class="fas fa-align-left"></i> View Full Read Details
+                    </button>
+                </div>
+            </div>
+        `;
+
+    variantContent.innerHTML = detailsHTML;
+  }
+
   interpretSamFlags(flags) {
     const flagMeanings = [];
     if (flags & 0x1) flagMeanings.push('paired');
@@ -7968,6 +8020,60 @@ class GenomeBrowser {
     this.showReadDetailsPanel();
 
     console.log('Read selected:', read.id || read.qname, 'at position', read.start + '-' + read.end);
+  }
+
+  /**
+   * Handle selection of a mutation within a read
+   */
+  selectMutation(read, mutation) {
+    this.selectedMutation = { read, mutation };
+
+    // Update the header of the variant section to distinguish from VCF variants
+    const variantDetailsSection = document.getElementById('variantDetailsSection');
+    if (variantDetailsSection) {
+      const header = variantDetailsSection.querySelector('h3');
+      if (header) {
+        header.textContent = 'Read Mutation Details';
+        header.classList.add('read-mutation-title');
+      }
+    }
+
+    // Populate and show mutation details
+    this.populateReadMutationDetails(read, mutation);
+    this.showVariantDetailsPanel();
+
+    console.log('Mutation selected:', mutation.type, 'at', mutation.position);
+  }
+
+  /**
+   * Select a read by its ID (useful for navigating from mutation details)
+   */
+  selectReadById(readId) {
+    if (!this.readsManager) return;
+
+    let read = null;
+
+    // Check raw data (in-memory mode)
+    if (this.readsManager.rawReadsData && Array.isArray(this.readsManager.rawReadsData)) {
+      read = this.readsManager.rawReadsData.find(r => r.id === readId || r.qname === readId);
+    }
+
+    // If not found, check cache (all modes: streaming, BAM, etc.)
+    if (!read && this.readsManager.cache) {
+      for (const region of this.readsManager.cache.values()) {
+        if (region.reads && Array.isArray(region.reads)) {
+          read = region.reads.find(r => r.id === readId || r.qname === readId);
+          if (read) break;
+        }
+      }
+    }
+
+    if (read) {
+      this.selectRead(read);
+    } else {
+      console.warn(`Read with ID ${readId} not found in current view or cache`);
+      this.showNotification(`Read ${readId} is no longer in the current view.`, 'warning');
+    }
   }
 
   showReadSelectionFeedback(read) {

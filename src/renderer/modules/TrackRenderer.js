@@ -4492,6 +4492,16 @@ class TrackRenderer {
     // Generate detailed HTML report
     const reportHTML = this.variantAnalyzer.generateVariantReport(analysis);
 
+    // Reset section header if it was changed by read mutation selection
+    const variantDetailsSection = document.getElementById('variantDetailsSection');
+    if (variantDetailsSection) {
+      const header = variantDetailsSection.querySelector('h3');
+      if (header) {
+        header.textContent = 'Variant Details';
+        header.classList.remove('read-mutation-title');
+      }
+    }
+
     // Add analysis timestamp and summary stats
     const summaryHTML = `
             <div class="analysis-summary">
@@ -7383,6 +7393,15 @@ class TrackRenderer {
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       title.textContent = this.formatMutationTooltip(mutation);
       mutationLine.appendChild(title);
+
+      // Add click handler for mutation details
+      mutationLine.style.cursor = 'pointer';
+      mutationLine.addEventListener('click', e => {
+        e.stopPropagation();
+        if (this.genomeBrowser && this.genomeBrowser.selectMutation) {
+          this.genomeBrowser.selectMutation(read, mutation);
+        }
+      });
 
       mutationElements.push(mutationLine);
     });
