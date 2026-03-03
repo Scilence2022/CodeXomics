@@ -4541,44 +4541,63 @@ class ChatManager {
                             <div class="message-content">
                                 <i class="fas fa-robot message-icon"></i>
                                 <div class="message-text">
-                                    <p>🧬 <strong>Welcome to your AI Genomics Assistant!</strong> I can help you with comprehensive genome analysis:</p>
-                                    <div class="capability-section">
-                                        <p><strong>🔍 Navigation & Search:</strong></p>
-                                        <ul>
-                                            <li>"Navigate to E. coli origin of replication"</li>
-                                            <li>"Search for DNA polymerase genes"</li>
-                                            <li>"Find genes near position 123456"</li>
-                                            <li>"Show me the bidA gene details"</li>
-                                        </ul>
+                                    <div class="welcome-hero">
+                                        <div class="welcome-hero-icon">🧬</div>
+                                        <div class="welcome-hero-text">
+                                            <h3>Welcome to CodeXomics AI</h3>
+                                            <p>Your intelligent genomics assistant — click any example below to get started</p>
+                                        </div>
                                     </div>
-                                    <div class="capability-section">
-                                        <p><strong>🧪 Molecular Biology Tools:</strong></p>
-                                        <ul>
-                                            <li>"Find EcoRI restriction sites in this region"</li>
-                                            <li>"Virtual digest with EcoRI and BamHI"</li>
-                                            <li>"Search for TATAAA promoter motifs"</li>
-                                            <li>"Translate this gene to protein"</li>
-                                        </ul>
+                                    <div class="welcome-cards-grid">
+                                        <div class="welcome-card welcome-card-search">
+                                            <div class="welcome-card-header">
+                                                <span class="welcome-card-icon">🔍</span>
+                                                <span class="welcome-card-title">Navigation & Search</span>
+                                            </div>
+                                            <div class="welcome-card-examples">
+                                                <button class="welcome-example-btn" data-prompt="Navigate to E. coli origin of replication">Navigate to E. coli origin of replication</button>
+                                                <button class="welcome-example-btn" data-prompt="Search for DNA polymerase genes">Search for DNA polymerase genes</button>
+                                                <button class="welcome-example-btn" data-prompt="Find genes near position 123456">Find genes near position 123456</button>
+                                            </div>
+                                        </div>
+                                        <div class="welcome-card welcome-card-molbio">
+                                            <div class="welcome-card-header">
+                                                <span class="welcome-card-icon">🧪</span>
+                                                <span class="welcome-card-title">Molecular Biology</span>
+                                            </div>
+                                            <div class="welcome-card-examples">
+                                                <button class="welcome-example-btn" data-prompt="Find EcoRI restriction sites in this region">Find EcoRI restriction sites in this region</button>
+                                                <button class="welcome-example-btn" data-prompt="Virtual digest with EcoRI and BamHI">Virtual digest with EcoRI and BamHI</button>
+                                                <button class="welcome-example-btn" data-prompt="Search for TATAAA promoter motifs">Search for TATAAA promoter motifs</button>
+                                            </div>
+                                        </div>
+                                        <div class="welcome-card welcome-card-analysis">
+                                            <div class="welcome-card-header">
+                                                <span class="welcome-card-icon">📊</span>
+                                                <span class="welcome-card-title">Sequence Analysis</span>
+                                            </div>
+                                            <div class="welcome-card-examples">
+                                                <button class="welcome-example-btn" data-prompt="What is the GC content of the current view?">What is the GC content of the current view?</button>
+                                                <button class="welcome-example-btn" data-prompt="Analyze codon usage in the lacZ gene">Analyze codon usage in the lacZ gene</button>
+                                                <button class="welcome-example-btn" data-prompt="Find all ORFs longer than 300bp">Find all ORFs longer than 300bp</button>
+                                            </div>
+                                        </div>
+                                        <div class="welcome-card welcome-card-export">
+                                            <div class="welcome-card-header">
+                                                <span class="welcome-card-icon">🔖</span>
+                                                <span class="welcome-card-title">Organization & Export</span>
+                                            </div>
+                                            <div class="welcome-card-examples">
+                                                <button class="welcome-example-btn" data-prompt="Bookmark this interesting region">Bookmark this interesting region</button>
+                                                <button class="welcome-example-btn" data-prompt="Export features from current view">Export features from current view</button>
+                                                <button class="welcome-example-btn" data-prompt="Show file information summary">Show file information summary</button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="capability-section">
-                                        <p><strong>📊 Sequence Analysis:</strong></p>
-                                        <ul>
-                                            <li>"What's the GC content and AT skew here?"</li>
-                                            <li>"Analyze codon usage in the lacZ gene"</li>
-                                            <li>"Find all ORFs longer than 300bp"</li>
-                                            <li>"Compare these two genomic regions"</li>
-                                        </ul>
+                                    <div class="welcome-tip">
+                                        <i class="fas fa-lightbulb"></i>
+                                        <span>Ask anything in natural language — e.g. <em>"What restriction enzymes cut here?"</em> or <em>"Find intergenic regions longer than 500bp"</em></span>
                                     </div>
-                                    <div class="capability-section">
-                                        <p><strong>🔖 Organization & Export:</strong></p>
-                                        <ul>
-                                            <li>"Bookmark this interesting region"</li>
-                                            <li>"Export features from current view"</li>
-                                            <li>"Save this view configuration"</li>
-                                            <li>"Show file information summary"</li>
-                                        </ul>
-                                    </div>
-                                    <p><em>💡 Tip: You can ask questions in natural language! Try "What restriction enzymes cut here?" or "Find intergenic regions longer than 500bp"</em></p>
                                 </div>
                             </div>
                         </div>
@@ -4858,6 +4877,26 @@ class ChatManager {
       this.contextModeEnabled = e.target.checked;
       console.log('Context mode changed:', this.contextModeEnabled ? 'Current message only' : 'Full conversation');
     });
+
+    // Welcome example buttons - click to auto-fill and send
+    const messagesContainer = document.getElementById('chatMessages');
+    if (messagesContainer) {
+      messagesContainer.addEventListener('click', e => {
+        const exampleBtn = e.target.closest('.welcome-example-btn');
+        if (exampleBtn) {
+          const prompt = exampleBtn.getAttribute('data-prompt');
+          if (prompt) {
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+              chatInput.value = prompt;
+              chatInput.style.height = 'auto';
+              chatInput.style.height = chatInput.scrollHeight + 'px';
+              this.sendMessage();
+            }
+          }
+        }
+      });
+    }
 
     // ChatBox settings event handler
     window.addEventListener('chatbox-settings', () => {
