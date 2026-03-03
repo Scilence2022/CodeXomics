@@ -3580,11 +3580,11 @@ class TrackRenderer {
       Object.keys(settings).length > 0
         ? settings
         : {
-            geneHeight: 12,
-            maxRows: 6,
-            fontSize: 11,
-            fontFamily: 'Arial, sans-serif',
-          };
+          geneHeight: 12,
+          maxRows: 6,
+          fontSize: 11,
+          fontFamily: 'Arial, sans-serif',
+        };
 
     console.log('Using fallback gene track settings:', finalSettings);
     return finalSettings;
@@ -6589,6 +6589,7 @@ class TrackRenderer {
       qualityColoring: settings.showQualityColors || false,
       strandColoring: !settings.showQualityColors, // Use strand coloring when not using quality
       mismatchHighlight: settings.highlightMismatches !== false,
+      showMutations: settings.showMutations || false,
       showCoverage: settings.showCoverage !== false,
       coverageHeight: settings.coverageHeight || 50,
       coverageColor: settings.coverageColor || '#4a90e2',
@@ -7265,7 +7266,13 @@ class TrackRenderer {
       strokeColor = settings.borderColor || '#2d3436';
     }
 
-    const borderWidth = settings.borderWidth || 1;
+    let borderWidth = settings.borderWidth || 1;
+
+    if (read.isMultiMapping) {
+      strokeColor = fillColor;
+      fillColor = 'transparent';
+      borderWidth = Math.max(1, borderWidth);
+    }
 
     if (width < 10) {
       // Simple rectangle for very small reads
@@ -13203,8 +13210,8 @@ This action cannot be undone.`;
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
                         ${examples
-                          .map(
-                            (example, index) => `
+        .map(
+          (example, index) => `
                             <div class="gallery-item" style="
                                 background: var(--bg-secondary);
                                 border: 1px solid var(--border-color);
@@ -13254,8 +13261,8 @@ This action cannot be undone.`;
                                 </div>
                             </div>
                         `
-                          )
-                          .join('')}
+        )
+        .join('')}
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -15756,7 +15763,7 @@ This action cannot be undone.`;
 
     // Force sequences toggle - define first so it can be used by main toggle
     const forceSequenceCheckbox = bodyElement.querySelector('#readsForceSequences');
-    let updateForceSequenceSettings = () => {}; // Default empty function
+    let updateForceSequenceSettings = () => { }; // Default empty function
 
     if (forceSequenceCheckbox) {
       updateForceSequenceSettings = () => {

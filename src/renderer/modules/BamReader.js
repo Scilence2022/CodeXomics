@@ -1248,6 +1248,7 @@ class BamReader {
           flags: record.flags || 0,
           templateLength: record.template_length || record.tlen || 0,
           tags: record.tags || {},
+          isMultiMapping: mappingQuality === 0 || (record.tags && record.tags.NH > 1),
           // Parse mutations from CIGAR and sequence
           mutations: this.parseMutations(record),
         };
@@ -1437,13 +1438,20 @@ class BamReader {
           // Mismatch: each character is a mismatch
           for (let i = 0; i < match[2].length; i++) {
             if (currentSeqPos < sequence.length) {
+              const seqChar = sequence[currentSeqPos].toUpperCase();
+              let color = '#FFD93D'; // Yellow for mismatches by default
+              if (seqChar === 'A') color = '#FF4136';
+              else if (seqChar === 'C') color = '#FF851B';
+              else if (seqChar === 'G') color = '#2ECC40';
+              else if (seqChar === 'T' || seqChar === 'U') color = '#0074D9';
+
               mismatches.push({
                 type: 'mismatch',
                 position: currentRefPos + 1, // Convert to 1-based
                 length: 1,
                 sequence: sequence[currentSeqPos],
                 refSequence: match[2][i],
-                color: '#FFD93D', // Yellow for mismatches
+                color: color,
               });
             }
             currentRefPos++;
@@ -1542,11 +1550,11 @@ class BamReader {
       },
       indexFile: this.hasIndex
         ? {
-            path: this.indexPath,
-            type: this.indexType,
-            size: this.indexSize,
-            formattedSize: this.getFormattedIndexSize(),
-          }
+          path: this.indexPath,
+          type: this.indexType,
+          size: this.indexSize,
+          formattedSize: this.getFormattedIndexSize(),
+        }
         : null,
       references: this.references.map(ref => ({
         name: ref.name,

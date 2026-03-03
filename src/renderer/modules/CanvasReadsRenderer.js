@@ -587,18 +587,29 @@ class CanvasReadsRenderer {
     // GUARANTEE: Always draw visual rectangle representation if sequence was not rendered
     // This ensures reads are NEVER invisible during zoom transitions
     if (!sequenceRendered) {
-      this.ctx.fillStyle = readColor;
-      this.ctx.fillRect(x, y, width, this.options.readHeight);
+      if (read.isMultiMapping) {
+        this.ctx.strokeStyle = readColor;
+        this.ctx.lineWidth = Math.max(1, this.options.borderWidth || 1);
+        this.ctx.strokeRect(x, y, width, this.options.readHeight);
+      } else {
+        this.ctx.fillStyle = readColor;
+        this.ctx.fillRect(x, y, width, this.options.readHeight);
 
-      // Draw read border for better visibility
-      this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
-      this.ctx.lineWidth = 0.5;
-      this.ctx.strokeRect(x, y, width, this.options.readHeight);
+        // Draw read border for better visibility
+        this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
+        this.ctx.lineWidth = 0.5;
+        this.ctx.strokeRect(x, y, width, this.options.readHeight);
+      }
     }
 
     // Highlight mismatches if enabled
     if (this.options.mismatchHighlight && read.mismatches) {
       this.renderMismatches(read, x, y, width);
+    }
+
+    // Show mutations (IGV-style) if enabled
+    if (this.options.showMutations && read.mutations) {
+      this.renderMutations(read, x, y, width);
     }
   }
 
@@ -859,6 +870,40 @@ class CanvasReadsRenderer {
 
         this.ctx.fillStyle = this.mismatchColor;
         this.ctx.fillRect(mismatchX, y - 1, mismatchWidth, this.options.readHeight + 2);
+      }
+    });
+  }
+
+  renderMutations(read, x, y, width) {
+    if (!read.mutations) return;
+
+    read.mutations.forEach(mutation => {
+      const mutationPosInRead = mutation.position - read.start;
+      const readLength = read.sequence ? read.sequence.length : read.end - read.start + 1;
+
+      if (mutationPosInRead >= 0 && mutationPosInRead <= readLength) {
+        const relativeX = x + (mutationPosInRead / readLength) * width;
+
+        this.ctx.strokeStyle = mutation.color;
+
+        if (mutation.type === 'insertion') {
+          this.ctx.lineWidth = 1.5;
+          this.ctx.setLineDash([2, 1]);
+        } else if (mutation.type === 'deletion') {
+          this.ctx.lineWidth = 2;
+          this.ctx.setLineDash([]);
+        } else {
+          this.ctx.lineWidth = 1;
+          this.ctx.setLineDash([]);
+        }
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(relativeX, y);
+        this.ctx.lineTo(relativeX, y + this.options.readHeight);
+        this.ctx.stroke();
+
+        // Reset dashed line
+        this.ctx.setLineDash([]);
       }
     });
   }
