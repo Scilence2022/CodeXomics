@@ -4273,6 +4273,7 @@ path.svg-gene-element.selected.border-highlight text {
   padding: 8px 10px;
   background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%);
   border-color: #0ea5e9;
+  white-space: normal;
 }
 
 .message-text code {
