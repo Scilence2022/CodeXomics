@@ -5027,6 +5027,9 @@ class ChatManager {
     this.isDocked = true;
     this.configManager.set('chat.docked', true);
 
+    // Hide any dock indicator
+    this.hideDockIndicator();
+
     // Setup dock splitter dragging
     this.setupDockSplitterDragging();
 
@@ -5080,6 +5083,9 @@ class ChatManager {
 
     this.isDocked = false;
     this.configManager.set('chat.docked', false);
+
+    // Hide any undock indicator
+    this.hideUndockIndicator();
 
     console.log('ChatBox undocked to floating mode');
   }
@@ -16406,19 +16412,25 @@ ${this.getPluginSystemInfo()}`;
   }
 
   /**
-   * Setup chat panel dragging functionality
+   * Setup chat panel dragging functionality with drag-and-drop docking support
    */
   setupChatDragging() {
     const chatPanel = document.getElementById('llmChatPanel');
     const chatHeader = document.getElementById('chatHeader');
+    const dockContainer = document.getElementById('chatDockContainer');
+    const dockSplitter = document.getElementById('chatDockSplitter');
     let isDragging = false;
     let startX, startY, startLeft, startTop;
+    let dragThreshold = 5; // Minimum pixels to consider as drag
+    let hasMoved = false;
+    let dockIndicator = null;
 
     chatHeader.addEventListener('mousedown', e => {
       // Don't drag if clicking on buttons
       if (e.target.closest('button')) return;
 
       isDragging = true;
+      hasMoved = false;
       startX = e.clientX;
       startY = e.clientY;
       startLeft = parseInt(window.getComputedStyle(chatPanel).left, 10);
@@ -16433,26 +16445,83 @@ ${this.getPluginSystemInfo()}`;
     document.addEventListener('mousemove', e => {
       if (!isDragging) return;
 
-      const newLeft = startLeft + e.clientX - startX;
-      const newTop = startTop + e.clientY - startY;
+      // Check if moved beyond threshold
+      if (!hasMoved) {
+        const deltaX = Math.abs(e.clientX - startX);
+        const deltaY = Math.abs(e.clientY - startY);
+        if (deltaX < dragThreshold && deltaY < dragThreshold) return;
+        hasMoved = true;
+      }
 
-      // Constrain to viewport
-      const maxLeft = window.innerWidth - chatPanel.offsetWidth;
-      const maxTop = window.innerHeight - chatPanel.offsetHeight;
+      if (!this.isDocked) {
+        // Floating mode: move the panel normally
+        const newLeft = startLeft + e.clientX - startX;
+        const newTop = startTop + e.clientY - startY;
 
-      const constrainedLeft = Math.max(0, Math.min(newLeft, maxLeft));
-      const constrainedTop = Math.max(0, Math.min(newTop, maxTop));
+        // Constrain to viewport
+        const maxLeft = window.innerWidth - chatPanel.offsetWidth;
+        const maxTop = window.innerHeight - chatPanel.offsetHeight;
 
-      chatPanel.style.left = constrainedLeft + 'px';
-      chatPanel.style.top = constrainedTop + 'px';
+        const constrainedLeft = Math.max(0, Math.min(newLeft, maxLeft));
+        const constrainedTop = Math.max(0, Math.min(newTop, maxTop));
+
+        chatPanel.style.left = constrainedLeft + 'px';
+        chatPanel.style.top = constrainedTop + 'px';
+
+        // Show dock indicator when dragging near the right edge
+        const rightEdgeThreshold = window.innerWidth - 150;
+        if (e.clientX > rightEdgeThreshold) {
+          this.showDockIndicator();
+        } else {
+          this.hideDockIndicator();
+        }
+      } else {
+        // Docked mode: show undock indicator when dragging left
+        const dragDistance = startX - e.clientX;
+        if (dragDistance > 50) {
+          this.showUndockIndicator();
+        } else {
+          this.hideUndockIndicator();
+        }
+      }
     });
 
-    document.addEventListener('mouseup', () => {
+    document.addEventListener('mouseup', e => {
       if (!isDragging) return;
 
       isDragging = false;
       chatPanel.classList.remove('dragging');
       document.body.style.userSelect = '';
+      this.hideDockIndicator();
+      this.hideUndockIndicator();
+
+      // Check for dock/undock via drag-and-drop
+      if (hasMoved) {
+        if (!this.isDocked) {
+          // Check if dropped near right edge to dock
+          const rightEdgeThreshold = window.innerWidth - 150;
+          if (e.clientX > rightEdgeThreshold) {
+            this.dockChat();
+            return;
+          }
+        } else {
+          // Check if dragged away from dock area to undock
+          const dragDistance = startX - e.clientX; // Positive when dragging left
+          if (dragDistance > 100) {
+            this.undockChat();
+            // Position the floating window at the drop location
+            setTimeout(() => {
+              const chatPanel = document.getElementById('llmChatPanel');
+              if (chatPanel) {
+                chatPanel.style.left = Math.max(0, e.clientX - 100) + 'px';
+                chatPanel.style.top = Math.max(0, e.clientY - 20) + 'px';
+                this.saveChatPosition();
+              }
+            }, 0);
+            return;
+          }
+        }
+      }
 
       // Save position
       this.saveChatPosition();
@@ -16460,6 +16529,98 @@ ${this.getPluginSystemInfo()}`;
 
     // Make header cursor indicate draggable
     chatHeader.style.cursor = 'move';
+  }
+
+  /**
+   * Show visual indicator for docking zone
+   */
+  showDockIndicator() {
+    let indicator = document.getElementById('chatDockIndicator');
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'chatDockIndicator';
+      indicator.innerHTML = '<i class="fas fa-columns"></i><span>Dock Here</span>';
+      document.body.appendChild(indicator);
+
+      // Add styles
+      indicator.style.cssText = `
+        position: fixed;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(13, 110, 253, 0.9);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      `;
+    }
+    indicator.style.opacity = '1';
+  }
+
+  /**
+   * Hide visual indicator for docking zone
+   */
+  hideDockIndicator() {
+    const indicator = document.getElementById('chatDockIndicator');
+    if (indicator) {
+      indicator.style.opacity = '0';
+    }
+  }
+
+  /**
+   * Show visual indicator for undocking
+   */
+  showUndockIndicator() {
+    let indicator = document.getElementById('chatUndockIndicator');
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'chatUndockIndicator';
+      indicator.innerHTML = '<i class="fas fa-window-restore"></i><span>Release to Undock</span>';
+      document.body.appendChild(indicator);
+
+      // Add styles
+      indicator.style.cssText = `
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(25, 135, 84, 0.9);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      `;
+    }
+    indicator.style.opacity = '1';
+  }
+
+  /**
+   * Hide visual indicator for undocking
+   */
+  hideUndockIndicator() {
+    const indicator = document.getElementById('chatUndockIndicator');
+    if (indicator) {
+      indicator.style.opacity = '0';
+    }
   }
 
   /**
