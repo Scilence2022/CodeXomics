@@ -4271,6 +4271,8 @@ path.svg-gene-element.selected.border-highlight text {
 .welcome-message .message-text {
   line-height: 1.4;
   padding: 8px 10px;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%);
+  border-color: #0ea5e9;
 }
 
 .message-text code {
@@ -4347,10 +4349,7 @@ path.svg-gene-element.selected.border-highlight text {
   }
 }
 
-.welcome-message .message-text {
-  background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%);
-  border-color: #0ea5e9;
-}
+
 
 .chat-input-container {
   padding: 8px 12px;
