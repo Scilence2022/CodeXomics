@@ -5,6 +5,34 @@ All notable changes to CodeXomics will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.530.0-beta] - 2026-03-04 - BETA UPDATE
+
+**🔧 Milestone: ChatBox Dock/Float Improvements and UI Fixes**
+
+### ✅ New Features and Enhancements
+
+#### **ChatBox Drag-and-Dock**
+
+- Added drag-and-drop support for switching ChatBox between docked and floating modes
+- Drag floating ChatBox to right edge to dock with visual "Dock Here" indicator
+- Drag docked ChatBox left to undock with auto-trigger at 80px threshold
+- Visual indicators for docking (blue) and undocking (green) actions
+
+### 🐛 Bug Fixes
+
+#### **UI Fixes**
+
+- Fixed Options menu dropdown covering issue caused by banner hide/show mechanism
+- Changed header overflow from hidden to visible to allow dropdowns to overflow
+- Increased dropdown menu z-index to ensure menus appear above all elements
+
+### 🔧 Technical Improvements
+
+#### **Code Quality**
+
+- Created comprehensive ChatManager.js refactoring plan (21,479 lines analyzed)
+- Identified 360+ methods and proposed modular architecture
+
 ## [0.529.0-beta] - 2026-01-19 - BETA UPDATE
 
 **🔧 Milestone: UI Improvements for Gene Details**
