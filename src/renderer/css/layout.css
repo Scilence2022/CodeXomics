@@ -19,7 +19,7 @@
   position: relative;
   z-index: 1000;
   max-height: 200px;
-  overflow: hidden;
+  overflow: visible; /* Changed from hidden to allow dropdowns to overflow */
   transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
 }
 
@@ -30,6 +30,7 @@
   opacity: 0;
   border-bottom: none;
   box-shadow: none;
+  overflow: hidden; /* Only hide overflow when collapsed */
 }
 
 .header-left {

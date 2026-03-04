@@ -168,7 +168,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  z-index: 1000;
+  z-index: 10000; /* Increased z-index to ensure dropdowns appear above all other elements */
   max-height: 600px;
   overflow-y: auto;
   overflow-x: visible;
