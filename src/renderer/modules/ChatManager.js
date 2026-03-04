@@ -16476,9 +16476,29 @@ ${this.getPluginSystemInfo()}`;
           this.hideDockIndicator();
         }
       } else {
-        // Docked mode: show undock indicator when dragging left
-        const dragDistance = startX - e.clientX;
-        if (dragDistance > 50) {
+        // Docked mode: auto-undock when dragged past threshold
+        const dragDistance = startX - e.clientX; // Positive when dragging left
+        const undockThreshold = 80; // Pixels to drag before auto-undock
+
+        if (dragDistance > undockThreshold) {
+          // Auto-trigger undock
+          isDragging = false; // Stop dragging to prevent further processing
+          this.hideUndockIndicator();
+
+          // Perform undock and position at current mouse location
+          this.undockChat();
+
+          // Position the floating window near the mouse cursor
+          setTimeout(() => {
+            const chatPanel = document.getElementById('llmChatPanel');
+            if (chatPanel) {
+              chatPanel.style.left = Math.max(0, e.clientX - 100) + 'px';
+              chatPanel.style.top = Math.max(0, e.clientY - 20) + 'px';
+              this.saveChatPosition();
+            }
+          }, 0);
+        } else if (dragDistance > 30) {
+          // Show indicator when getting close to threshold
           this.showUndockIndicator();
         } else {
           this.hideUndockIndicator();
@@ -16495,31 +16515,13 @@ ${this.getPluginSystemInfo()}`;
       this.hideDockIndicator();
       this.hideUndockIndicator();
 
-      // Check for dock/undock via drag-and-drop
-      if (hasMoved) {
-        if (!this.isDocked) {
-          // Check if dropped near right edge to dock
-          const rightEdgeThreshold = window.innerWidth - 150;
-          if (e.clientX > rightEdgeThreshold) {
-            this.dockChat();
-            return;
-          }
-        } else {
-          // Check if dragged away from dock area to undock
-          const dragDistance = startX - e.clientX; // Positive when dragging left
-          if (dragDistance > 100) {
-            this.undockChat();
-            // Position the floating window at the drop location
-            setTimeout(() => {
-              const chatPanel = document.getElementById('llmChatPanel');
-              if (chatPanel) {
-                chatPanel.style.left = Math.max(0, e.clientX - 100) + 'px';
-                chatPanel.style.top = Math.max(0, e.clientY - 20) + 'px';
-                this.saveChatPosition();
-              }
-            }, 0);
-            return;
-          }
+      // Check for dock via drag-and-drop (undock is now handled in mousemove)
+      if (hasMoved && !this.isDocked) {
+        // Check if dropped near right edge to dock
+        const rightEdgeThreshold = window.innerWidth - 150;
+        if (e.clientX > rightEdgeThreshold) {
+          this.dockChat();
+          return;
         }
       }
 
