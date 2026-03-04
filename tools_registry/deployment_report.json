@@ -1,29 +1,85 @@
 {
-  "timestamp": "2025-09-24T13:12:10.886Z",
+  "timestamp": "2026-03-04T04:53:16.578Z",
   "version": "1.0.0",
   "stats": {
-    "totalTools": 87,
-    "validTools": 87,
-    "invalidTools": 0,
-    "categories": 11,
-    "totalSize": 172673
+    "totalTools": 122,
+    "validTools": 122,
+    "invalidTools": 5,
+    "categories": 16,
+    "totalSize": 314987
   },
-  "errors": [],
-  "warnings": [],
+  "errors": [
+    "generate_sequence.yaml: Cannot read properties of undefined (reading 'name')",
+    "add_primer_annotation.yaml: Missing required fields: version, keywords",
+    "calculate_primer_properties.yaml: Missing required fields: version, keywords",
+    "design_primers.yaml: Missing required fields: version, keywords",
+    "find_primer_binding_sites.yaml: Missing required fields: version, keywords"
+  ],
+  "warnings": [
+    "close_tab.yaml: Parameters should be an object type",
+    "switch_to_tab.yaml: Parameters should be an object type",
+    "set_working_directory.yaml: Parameters should be an object type",
+    "interpro_search.yaml: Invalid priority value: 5"
+  ],
   "categories": [
+    "file_loading",
     "navigation",
     "sequence",
     "protein",
     "database",
     "ai_analysis",
     "data_management",
+    "file_operations",
     "pathway",
     "sequence_editing",
+    "primer_design",
+    "system",
     "plugin_management",
     "coordination",
-    "external_apis"
+    "external_apis",
+    "utility"
   ],
   "tools": [
+    {
+      "name": "get_loaded_files_list",
+      "category": "file_loading",
+      "file": "get_loaded_files_list.yaml"
+    },
+    {
+      "name": "load_annotation_file",
+      "category": "file_loading",
+      "file": "load_annotation_file.yaml"
+    },
+    {
+      "name": "load_genome_file",
+      "category": "file_loading",
+      "file": "load_genome_file.yaml"
+    },
+    {
+      "name": "load_operon_file",
+      "category": "file_loading",
+      "file": "load_operon_file.yaml"
+    },
+    {
+      "name": "load_reads_file",
+      "category": "file_loading",
+      "file": "load_reads_file.yaml"
+    },
+    {
+      "name": "load_variant_file",
+      "category": "file_loading",
+      "file": "load_variant_file.yaml"
+    },
+    {
+      "name": "load_wig_tracks",
+      "category": "file_loading",
+      "file": "load_wig_tracks.yaml"
+    },
+    {
+      "name": "close_tab",
+      "category": "navigation",
+      "file": "close_tab.yaml"
+    },
     {
       "name": "get_current_state",
       "category": "navigation",
@@ -60,9 +116,24 @@
       "file": "search_gene_by_name.yaml"
     },
     {
+      "name": "switch_to_tab",
+      "category": "navigation",
+      "file": "switch_to_tab.yaml"
+    },
+    {
       "name": "toggle_track",
       "category": "navigation",
       "file": "toggle_track.yaml"
+    },
+    {
+      "name": "zoom_in",
+      "category": "navigation",
+      "file": "zoom_in.yaml"
+    },
+    {
+      "name": "zoom_out",
+      "category": "navigation",
+      "file": "zoom_out.yaml"
     },
     {
       "name": "compute_gc",
@@ -125,6 +196,11 @@
       "file": "search_alphafold_by_gene.yaml"
     },
     {
+      "name": "search_pdb_structures",
+      "category": "protein",
+      "file": "search_pdb_structures.yaml"
+    },
+    {
       "name": "search_protein_by_gene",
       "category": "protein",
       "file": "search_protein_by_gene.yaml"
@@ -138,6 +214,31 @@
       "name": "analyze_interpro_domains",
       "category": "database",
       "file": "analyze_interpro_domains.yaml"
+    },
+    {
+      "name": "blast_create_database",
+      "category": "database",
+      "file": "blast_create_database.yaml"
+    },
+    {
+      "name": "blast_create_db_from_genome",
+      "category": "database",
+      "file": "blast_create_db_from_genome.yaml"
+    },
+    {
+      "name": "blast_create_protein_db_from_genome",
+      "category": "database",
+      "file": "blast_create_protein_db_from_genome.yaml"
+    },
+    {
+      "name": "blast_create_quick_db_for_current_genome",
+      "category": "database",
+      "file": "blast_create_quick_db_for_current_genome.yaml"
+    },
+    {
+      "name": "blast_list_databases",
+      "category": "database",
+      "file": "blast_list_databases.yaml"
     },
     {
       "name": "get_interpro_entry_details",
@@ -160,34 +261,19 @@
       "file": "search_uniprot_database.yaml"
     },
     {
-      "name": "evo2_analyze_essentiality",
+      "name": "generate_sequence",
       "category": "ai_analysis",
-      "file": "evo2_analyze_essentiality.yaml"
-    },
-    {
-      "name": "evo2_design_crispr",
-      "category": "ai_analysis",
-      "file": "evo2_design_crispr.yaml"
-    },
-    {
-      "name": "evo2_generate_sequence",
-      "category": "ai_analysis",
-      "file": "evo2_generate_sequence.yaml"
-    },
-    {
-      "name": "evo2_optimize_sequence",
-      "category": "ai_analysis",
-      "file": "evo2_optimize_sequence.yaml"
-    },
-    {
-      "name": "evo2_predict_function",
-      "category": "ai_analysis",
-      "file": "evo2_predict_function.yaml"
+      "file": "generate_sequence.yaml"
     },
     {
       "name": "analyze_region",
       "category": "data_management",
       "file": "analyze_region.yaml"
+    },
+    {
+      "name": "blast_filter_results",
+      "category": "data_management",
+      "file": "blast_filter_results.yaml"
     },
     {
       "name": "codon_usage_analysis",
@@ -203,6 +289,81 @@
       "name": "export_data",
       "category": "data_management",
       "file": "export_data.yaml"
+    },
+    {
+      "name": "genome_codon_usage_analysis",
+      "category": "data_management",
+      "file": "genome_codon_usage_analysis.yaml"
+    },
+    {
+      "name": "configure_export_settings",
+      "category": "file_operations",
+      "file": "configure_export_settings.yaml"
+    },
+    {
+      "name": "export_bed_format",
+      "category": "file_operations",
+      "file": "export_bed_format.yaml"
+    },
+    {
+      "name": "export_cds_fasta",
+      "category": "file_operations",
+      "file": "export_cds_fasta.yaml"
+    },
+    {
+      "name": "export_current_view_fasta",
+      "category": "file_operations",
+      "file": "export_current_view_fasta.yaml"
+    },
+    {
+      "name": "export_fasta_sequence",
+      "category": "file_operations",
+      "file": "export_fasta_sequence.yaml"
+    },
+    {
+      "name": "export_genbank_format",
+      "category": "file_operations",
+      "file": "export_genbank_format.yaml"
+    },
+    {
+      "name": "export_gff_annotations",
+      "category": "file_operations",
+      "file": "export_gff_annotations.yaml"
+    },
+    {
+      "name": "export_protein_fasta",
+      "category": "file_operations",
+      "file": "export_protein_fasta.yaml"
+    },
+    {
+      "name": "load_annotation_file",
+      "category": "file_operations",
+      "file": "load_annotation_file.yaml"
+    },
+    {
+      "name": "load_genome_file",
+      "category": "file_operations",
+      "file": "load_genome_file.yaml"
+    },
+    {
+      "name": "load_operon_file",
+      "category": "file_operations",
+      "file": "load_operon_file.yaml"
+    },
+    {
+      "name": "load_reads_file",
+      "category": "file_operations",
+      "file": "load_reads_file.yaml"
+    },
+    {
+      "name": "load_variant_file",
+      "category": "file_operations",
+      "file": "load_variant_file.yaml"
+    },
+    {
+      "name": "load_wig_tracks",
+      "category": "file_operations",
+      "file": "load_wig_tracks.yaml"
     },
     {
       "name": "find_pathway_genes",
@@ -260,9 +421,44 @@
       "file": "replace_sequence.yaml"
     },
     {
+      "name": "show_action_list",
+      "category": "sequence_editing",
+      "file": "show_action_list.yaml"
+    },
+    {
       "name": "undo_last_action",
       "category": "sequence_editing",
       "file": "undo_last_action.yaml"
+    },
+    {
+      "name": "add_primer_annotation",
+      "category": "primer_design",
+      "file": "add_primer_annotation.yaml"
+    },
+    {
+      "name": "calculate_primer_properties",
+      "category": "primer_design",
+      "file": "calculate_primer_properties.yaml"
+    },
+    {
+      "name": "design_primers",
+      "category": "primer_design",
+      "file": "design_primers.yaml"
+    },
+    {
+      "name": "find_primer_binding_sites",
+      "category": "primer_design",
+      "file": "find_primer_binding_sites.yaml"
+    },
+    {
+      "name": "list_available_tools",
+      "category": "system",
+      "file": "list_available_tools.yaml"
+    },
+    {
+      "name": "set_working_directory",
+      "category": "system",
+      "file": "set_working_directory.yaml"
     },
     {
       "name": "call_plugin_function",
@@ -420,6 +616,16 @@
       "file": "blast_search.yaml"
     },
     {
+      "name": "blast_search_local",
+      "category": "external_apis",
+      "file": "blast_search_local.yaml"
+    },
+    {
+      "name": "blast_search_online",
+      "category": "external_apis",
+      "file": "blast_search_online.yaml"
+    },
+    {
       "name": "blast_sequence",
       "category": "external_apis",
       "file": "blast_sequence.yaml"
@@ -458,6 +664,16 @@
       "name": "uniprot_search",
       "category": "external_apis",
       "file": "uniprot_search.yaml"
+    },
+    {
+      "name": "download_internet_file",
+      "category": "utility",
+      "file": "download_internet_file.yaml"
+    },
+    {
+      "name": "view_markdown_file",
+      "category": "utility",
+      "file": "view_markdown_file.yaml"
     }
   ]
 }

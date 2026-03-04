@@ -386,6 +386,7 @@ class ToolsRegistryManager {
       pathway: ['pathway', 'metabolic', 'kegg', 'reaction', 'enzyme'],
       blast: ['blast', 'similarity', 'align', 'match', 'homolog'],
       plugin: ['plugin', 'install', 'enable', 'disable', 'marketplace'],
+      primer_design: ['primer', 'design primer', 'pcr', 'binding site', 'melting temperature', 'tm ', 'oligo', 'amplicon'],
     };
 
     const detectedIntents = [];
@@ -728,6 +729,7 @@ class ToolsRegistryManager {
       pathway: ['pathway', 'metabolic', 'kegg'],
       blast: ['blast', 'similarity', 'align'],
       plugin: ['plugin', 'install', 'enable'],
+      primer_design: ['primer', 'design', 'pcr', 'binding', 'tm', 'oligo', 'amplicon', 'properties'],
     };
 
     return intentKeywordMap[intent] || [];

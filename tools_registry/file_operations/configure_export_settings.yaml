@@ -1,0 +1,54 @@
+name: configure_export_settings
+version: 1.0.0
+description: Configure export settings and preferences for all export operations
+category: file_operations
+keywords:
+  - configure
+  - export
+  - settings
+  - preferences
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Use configure_export_settings to analyze genomic data
+    tool_call: configure_export_settings(parameter1='value1', parameter2='value2')
+    thought: >-
+      User wants to use configure_export_settings for configure export settings and preferences for all export
+      operations
+    expected_result: Result from configure_export_settings analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - core
+    - essential
+  complexity: simple
+  usage_pattern: frequent
+error_handling: {}
+returns:
+  success: boolean - Whether operation was successful
+  result: object - Operation result

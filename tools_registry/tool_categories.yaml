@@ -131,6 +131,18 @@ categories:
       - 'clipboard_operations'
     tools_count: 10
 
+  primer_design:
+    name: 'Primer Design & PCR'
+    description: 'Tools for designing sequence primers, checking thermodynamic properties (Tm, GC), and mapping binding sites.'
+    icon: '🧬'
+    priority: 1
+    color: '#9C27B0'
+    subcategories:
+      - 'design'
+      - 'analysis'
+      - 'mapping'
+    tools_count: 4
+
   system:
     name: 'System Management'
     description: 'Tools for system operations, working directory management, and environment setup'

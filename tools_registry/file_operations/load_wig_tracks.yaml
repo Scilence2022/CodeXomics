@@ -1,0 +1,53 @@
+name: load_wig_tracks
+version: 1.0.0
+description: Load WIG track files (multiple files supported) directly by file paths
+category: file_operations
+keywords:
+  - load
+  - wig
+  - tracks
+  - multiple
+  - coverage
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Use load_wig_tracks to analyze genomic data
+    tool_call: load_wig_tracks(parameter1='value1', parameter2='value2')
+    thought: User wants to use load_wig_tracks for load wig track files (multiple files supported) directly by file paths
+    expected_result: Result from load_wig_tracks analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - core
+    - essential
+  complexity: simple
+  usage_pattern: frequent
+error_handling: {}
+returns:
+  success: boolean - Whether operation was successful
+  result: object - Operation result

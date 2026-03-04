@@ -3636,9 +3636,11 @@ class TrackRenderer {
     // Get operon information and assign color
     const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
 
-    // Override CSS background with operon-based color
-    geneElement.style.background = `linear-gradient(135deg, ${operonInfo.color}, ${this.lightenColor(operonInfo.color, 20)})`;
-    geneElement.style.borderColor = this.darkenColor(operonInfo.color, 20);
+    // Override CSS background with operon-based color, UNLESS it's a primer
+    if (geneType !== 'primer') {
+      geneElement.style.background = `linear-gradient(135deg, ${operonInfo.color}, ${this.lightenColor(operonInfo.color, 20)})`;
+      geneElement.style.borderColor = this.darkenColor(operonInfo.color, 20);
+    }
 
     // Add operon-specific CSS classes
     if (operonInfo.isInOperon) {

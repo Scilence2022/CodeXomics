@@ -266,13 +266,11 @@ svg {
   left: 0;
   right: 0;
   bottom: 0;
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 3px,
-    rgba(255, 255, 255, 0.3) 3px,
-    rgba(255, 255, 255, 0.3) 6px
-  );
+  background: repeating-linear-gradient(-45deg,
+      transparent,
+      transparent 3px,
+      rgba(255, 255, 255, 0.3) 3px,
+      rgba(255, 255, 255, 0.3) 6px);
   pointer-events: none;
   border-radius: 2px;
 }
@@ -290,6 +288,42 @@ svg {
   margin-right: 3px;
   font-weight: bold;
   font-size: 8px;
+}
+
+/* Primer specific styling */
+.gene-element.primer {
+  background: linear-gradient(to bottom, #d946ef, #c026d3) !important;
+  border-color: #a21caf !important;
+  border-radius: 2px !important;
+  height: 8px !important;
+  /* Thinner than normal genes */
+  top: 50% !important;
+  /* Center vertically in the track if possible, or adjust based on layout */
+}
+
+/* Forward primer (arrow pointing right) */
+.gene-element.primer:not(.reverse-strand) {
+  clip-path: polygon(0% 0%, 90% 0%, 100% 50%, 90% 100%, 0% 100%);
+}
+
+.gene-element.primer:not(.reverse-strand)::before {
+  content: '';
+  /* Remove default arrow since clip-path does it */
+}
+
+/* Reverse primer (arrow pointing left) */
+.gene-element.primer.reverse-strand {
+  clip-path: polygon(10% 0%, 100% 0%, 100% 100%, 10% 100%, 0% 50%);
+}
+
+.gene-element.primer.reverse-strand::before {
+  content: '';
+  /* Remove default arrow since clip-path does it */
+}
+
+.gene-element.primer.reverse-strand::after {
+  content: none;
+  /* Remove diagonal stripes */
 }
 
 /* Ensure text is always visible */

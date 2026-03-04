@@ -13,6 +13,7 @@ const ActionTools = require('./action/ActionTools');
 const UtilityTools = require('./utility/UtilityTools');
 const FileTools = require('./file/FileTools');
 const TrackSettingsTools = require('./track/TrackSettingsTools');
+const PrimerTools = require('./primer/PrimerTools');
 
 class ToolsIntegrator {
   constructor(server) {
@@ -29,6 +30,7 @@ class ToolsIntegrator {
     this.utilityTools = new UtilityTools(server);
     this.fileTools = new FileTools(server);
     this.trackSettingsTools = new TrackSettingsTools(server);
+    this.primerTools = new PrimerTools(server);
 
     // Combine all tools
     this.allTools = this.combineAllTools();
@@ -46,6 +48,7 @@ class ToolsIntegrator {
       ...this.utilityTools.getTools(),
       ...this.fileTools.getTools(),
       ...this.trackSettingsTools.getTools(),
+      ...this.primerTools.getTools(),
       // Multi-window management tools (server-side only)
       ...this.getWindowManagementTools(),
     };

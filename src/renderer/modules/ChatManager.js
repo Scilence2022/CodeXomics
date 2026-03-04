@@ -352,6 +352,8 @@ class ChatManager {
   async initializePluginFunctionCallsIntegrator() {
     try {
       // Load the integrator module
+      await this.loadScript('modules/BlastChatManagerIntegration.js');
+      await this.loadScript('modules/PrimerChatManagerIntegration.js');
       await this.loadScript('modules/PluginFunctionCallsIntegrator.js');
 
       // Initialize after PluginManager is ready
@@ -569,7 +571,17 @@ class ChatManager {
     try {
       // Initializing Dynamic Tools Registry System...
 
-      // Debug: Check if we can access file system to verify tools_registry directory
+      // Initialize Blast Function Tools
+      if (typeof this.initializeBlastFunctionTools === 'function') {
+        await this.initializeBlastFunctionTools();
+      }
+
+      // Initialize Primer Function Tools
+      if (typeof this.initializePrimerFunctionTools === 'function') {
+        await this.initializePrimerFunctionTools();
+      }
+
+      // Check if we can access file system to verify tools_registry directory
       if (window.require) {
         try {
           const fs = window.require('fs');
@@ -9422,6 +9434,12 @@ Track Settings:
   - get_track_settings_schema: Get complete settings schema with types and defaults
   - batch_set_track_settings: Batch update multiple track settings at once
 
+Primer Design & PCR:
+  - calculate_primer_properties: Calculate melting temp, GC content for a primer
+  - design_primers: Design a full PCR primer pair for a given sequence
+  - find_primer_binding_sites: Find binding locations of a primer on the genome
+  - add_primer_annotation: Add an interactive primer display to the genome track
+
 Protein Structure:
   - open_protein_viewer: Display 3D protein structures
   - fetch_protein_structure: Get PDB structure data
@@ -9466,7 +9484,13 @@ Track Settings:
   {"tool_name": "get_all_track_settings", "parameters": {}}
   {"tool_name": "reset_track_settings", "parameters": {"track_type": "all"}}
   {"tool_name": "get_track_settings_schema", "parameters": {}}
-  {"tool_name": "batch_set_track_settings", "parameters": {"settings_map": {"genes": {"height": 200}, "reads": {"readHeight": 6}}}}`;
+  {"tool_name": "batch_set_track_settings", "parameters": {"settings_map": {"genes": {"height": 200}, "reads": {"readHeight": 6}}}}
+  
+Primer Tools:
+  {"tool_name": "calculate_primer_properties", "parameters": {"sequence": "ATGCGCTAGCATCAT"}}
+  {"tool_name": "design_primers", "parameters": {"geneName": "lacZ", "targetTm": 60.5}}
+  {"tool_name": "find_primer_binding_sites", "parameters": {"primerSequence": "ATGCGTAC", "chromosome": "chr1"}}
+  {"tool_name": "add_primer_annotation", "parameters": {"name": "Test_Fwd", "chromosome": "chr1", "start": 1000, "end": 1020, "strand": "+"}}`;
 
     return toolsInfo;
   }
@@ -9592,6 +9616,12 @@ Track Settings:
         'reset_track_settings',
         'get_track_settings_schema',
         'batch_set_track_settings',
+      ],
+      'PRIMER DESIGN \u0026 PCR': [
+        'calculate_primer_properties',
+        'design_primers',
+        'find_primer_binding_sites',
+        'add_primer_annotation',
       ],
     };
 
@@ -9848,6 +9878,12 @@ ${coreTools}
       reset_track_settings: () => this.resetTrackSettings(parameters),
       get_track_settings_schema: () => this.getTrackSettingsSchema(parameters),
       batch_set_track_settings: () => this.batchSetTrackSettings(parameters),
+
+      // Primer Design Tools
+      calculate_primer_properties: () => this.primerCalculateProperties(parameters),
+      design_primers: () => this.primerDesign(parameters),
+      find_primer_binding_sites: () => this.primerFindBindingSites(parameters),
+      add_primer_annotation: () => this.primerAddAnnotation(parameters),
 
       // View control tools
       zoom_in: () => this.zoomIn(parameters),
