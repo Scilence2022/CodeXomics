@@ -1040,6 +1040,254 @@ class MicrobeGenomicsFunctions {
   }
 
   /* --------------------------------------------------------- */
+  /*  PRIMER DESIGN                                           */
+  /* --------------------------------------------------------- */
+
+  /**
+   * Design PCR primers for a target sequence or genomic region
+   * @param {string} sequence - Target DNA sequence or region identifier
+   * @param {Object} options - Design options
+   * @returns {Object} Designed primers and analysis
+   */
+  static designPCRPrimers(sequence, options = {}) {
+    // Check if PrimerDesign module is available
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      return window.PrimerDesign.designPCRPrimers(sequence, options);
+    }
+
+    // Fallback implementation
+    const targetSeq = sequence.toUpperCase().replace(/[^ATGC]/g, '');
+    const {
+      targetTm = 60,
+      minLength = 18,
+      maxLength = 25,
+      minGC = 40,
+      maxGC = 60,
+    } = options;
+
+    // Simple primer design fallback
+    const designPrimer = (seq, isReverse = false) => {
+      const workingSeq = isReverse ? this.reverseComplement(seq) : seq;
+      for (let len = minLength; len <= maxLength; len++) {
+        const primerSeq = workingSeq.substring(0, len);
+        const gc = this.computeGC(primerSeq);
+        if (gc >= minGC && gc <= maxGC) {
+          const tm = this.calculateMeltingTemp(primerSeq);
+          if (Math.abs(tm - targetTm) <= 5) {
+            return {
+              sequence: isReverse ? this.reverseComplement(primerSeq) : primerSeq,
+              length: len,
+              tm: tm,
+              gcContent: gc,
+              position: { start: 1, end: len }
+            };
+          }
+        }
+      }
+      return null;
+    };
+
+    const forward = designPrimer(targetSeq.substring(0, 200), false);
+    const reverse = designPrimer(targetSeq.slice(-200), true);
+
+    return {
+      forward: forward,
+      reverse: reverse,
+      ampliconSize: forward && reverse ? targetSeq.length : null,
+      pairAnalysis: forward && reverse ? {
+        tmDifference: Math.abs(forward.tm - reverse.tm),
+        isCompatible: Math.abs(forward.tm - reverse.tm) <= 5
+      } : null
+    };
+  }
+
+  /**
+   * Design qPCR primers with enhanced specificity
+   * @param {string} sequence - Target DNA sequence
+   * @param {Object} options - Design options
+   * @returns {Object} Designed qPCR primers
+   */
+  static designqPCRPrimers(sequence, options = {}) {
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      return window.PrimerDesign.designqPCRPrimers(sequence, options);
+    }
+    // Fallback to standard PCR design with stricter parameters
+    return this.designPCRPrimers(sequence, {
+      targetTm: 60,
+      minLength: 18,
+      maxLength: 22,
+      minGC: 45,
+      maxGC: 55,
+      ...options
+    });
+  }
+
+  /**
+   * Calculate melting temperature with advanced options
+   * @param {string} sequence - DNA sequence
+   * @param {Object} options - Calculation options
+   * @returns {number} Melting temperature in Celsius
+   */
+  static calculateAdvancedTm(sequence, options = {}) {
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      return window.PrimerDesign.calculateTm(sequence, options);
+    }
+    return this.calculateMeltingTemp(sequence);
+  }
+
+  /**
+   * Analyze primer for secondary structures
+   * @param {string} sequence - Primer sequence
+   * @returns {Object} Hairpin and self-dimer analysis
+   */
+  static analyzePrimerStructure(sequence) {
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      const hairpin = window.PrimerDesign.detectHairpin(sequence);
+      const selfDimer = window.PrimerDesign.detectSelfDimer(sequence);
+      return {
+        hairpin: hairpin,
+        selfDimer: selfDimer,
+        hasIssues: hairpin.isProblematic || selfDimer.isProblematic
+      };
+    }
+    return { hairpin: null, selfDimer: null, hasIssues: false };
+  }
+
+  /**
+   * Analyze primer pair compatibility
+   * @param {string} forwardSeq - Forward primer sequence
+   * @param {string} reverseSeq - Reverse primer sequence
+   * @returns {Object} Pair analysis results
+   */
+  static analyzePrimerPair(forwardSeq, reverseSeq) {
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      return window.PrimerDesign.analyzePrimerPair(forwardSeq, reverseSeq);
+    }
+
+    const forwardTm = this.calculateMeltingTemp(forwardSeq);
+    const reverseTm = this.calculateMeltingTemp(reverseSeq);
+
+    return {
+      forwardTm,
+      reverseTm,
+      tmDifference: Math.abs(forwardTm - reverseTm),
+      isCompatible: Math.abs(forwardTm - reverseTm) <= 5
+    };
+  }
+
+  /**
+   * Validate a primer sequence
+   * @param {string} sequence - Primer sequence
+   * @param {Object} options - Validation options
+   * @returns {Object} Validation results
+   */
+  static validatePrimer(sequence, options = {}) {
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      return window.PrimerDesign.validatePrimer(sequence, options);
+    }
+
+    const gc = this.computeGC(sequence);
+    const tm = this.calculateMeltingTemp(sequence);
+
+    return {
+      isValid: gc >= 40 && gc <= 60 && sequence.length >= 15 && sequence.length <= 30,
+      gcContent: gc,
+      tm: tm,
+      length: sequence.length,
+      issues: []
+    };
+  }
+
+  /**
+   * Export primers in specified format
+   * @param {Object} primerData - Primer design results
+   * @param {string} format - Export format (csv, fasta, json)
+   * @returns {string} Exported data
+   */
+  static exportPrimers(primerData, format = 'csv') {
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      return window.PrimerDesign.exportPrimers(primerData, format);
+    }
+
+    // Simple fallback export
+    if (format === 'json') {
+      return JSON.stringify(primerData, null, 2);
+    }
+
+    // Default text format
+    let output = 'Primer Design Results\n\n';
+    if (primerData.forward) {
+      output += `Forward: ${primerData.forward.sequence}\n`;
+      output += `  Tm: ${primerData.forward.tm}°C, GC: ${primerData.forward.gcContent}%\n\n`;
+    }
+    if (primerData.reverse) {
+      output += `Reverse: ${primerData.reverse.sequence}\n`;
+      output += `  Tm: ${primerData.reverse.tm}°C, GC: ${primerData.reverse.gcContent}%\n\n`;
+    }
+    return output;
+  }
+
+  /**
+   * Design primers for a specific gene
+   * @param {string} geneName - Gene name or locus tag
+   * @param {Object} options - Design options
+   * @returns {Object} Designed primers with genomic coordinates
+   */
+  static designPrimersForGene(geneName, options = {}) {
+    const gene = this.searchGeneByName(geneName);
+    if (!gene) {
+      return {
+        success: false,
+        error: `Gene "${geneName}" not found`,
+        suggestions: this.generateGeneSuggestions(geneName, this.getAvailableGeneNames())
+      };
+    }
+
+    const { chromosome, feature } = gene;
+    const gb = window.genomeBrowser;
+
+    if (!gb || !gb.currentSequence || !gb.currentSequence[chromosome]) {
+      return {
+        success: false,
+        error: `No sequence data available for chromosome ${chromosome}`
+      };
+    }
+
+    // Get gene sequence with some flanking region
+    const flankSize = options.flankSize || 100;
+    const start = Math.max(0, feature.start - flankSize - 1);
+    const end = Math.min(gb.currentSequence[chromosome].length, feature.end + flankSize);
+    const geneSequence = gb.currentSequence[chromosome].substring(start, end);
+
+    // Design primers
+    const primerResult = this.designPCRPrimers(geneSequence, options);
+
+    // Adjust positions to genomic coordinates
+    if (primerResult.forward) {
+      primerResult.forward.genomicPosition = {
+        chromosome: chromosome,
+        start: start + primerResult.forward.position.start,
+        end: start + primerResult.forward.position.end
+      };
+    }
+    if (primerResult.reverse) {
+      primerResult.reverse.genomicPosition = {
+        chromosome: chromosome,
+        start: start + primerResult.reverse.position.start,
+        end: start + primerResult.reverse.position.end
+      };
+    }
+
+    return {
+      success: true,
+      geneName: geneName,
+      chromosome: chromosome,
+      genePosition: { start: feature.start, end: feature.end },
+      ...primerResult
+    };
+  }
+
+  /* --------------------------------------------------------- */
   /*  UTILITY METHODS                                         */
   /* --------------------------------------------------------- */
 
@@ -1076,6 +1324,10 @@ class MicrobeGenomicsFunctions {
       addition: {
         description: 'Functions to add new annotations, tracks, and data',
         functions: ['addAnnotation', 'getUpstreamRegion', 'getDownstreamRegion', 'addTrack', 'addVariant'],
+      },
+      primer_design: {
+        description: 'Functions for PCR primer design and analysis',
+        functions: ['designPCRPrimers', 'designqPCRPrimers', 'designPrimersForGene', 'analyzePrimerStructure', 'analyzePrimerPair', 'validatePrimer', 'calculateAdvancedTm', 'exportPrimers'],
       },
       sequence_actions: {
         description: 'Functions to manipulate genome sequences via action queue',
@@ -1362,6 +1614,26 @@ class MicrobeGenomicsFunctions {
           '  const rbs = MicrobeFns.predictRBS(upstream);',
           '  if (rbs.length > 0) MicrobeFns.addAnnotation(atg.chromosome, rbs[0]);',
           '}',
+        ],
+      },
+      {
+        task: 'Design PCR primers for a gene',
+        steps: [
+          "const primers = MicrobeFns.designPrimersForGene('dnaA', { targetTm: 60 });",
+          'if (primers.success) {',
+          '  console.log(`Forward: ${primers.forward.sequence}`);',
+          '  console.log(`Reverse: ${primers.reverse.sequence}`);',
+          '  const analysis = MicrobeFns.analyzePrimerPair(primers.forward.sequence, primers.reverse.sequence);',
+          '}',
+        ],
+      },
+      {
+        task: 'Validate and analyze primer structure',
+        steps: [
+          "const primerSeq = 'ATCGATCGATCGATCGATCG';",
+          'const validation = MicrobeFns.validatePrimer(primerSeq);',
+          'const structure = MicrobeFns.analyzePrimerStructure(primerSeq);',
+          'const tm = MicrobeFns.calculateAdvancedTm(primerSeq, { method: "nearest_neighbor" });',
         ],
       },
     ];

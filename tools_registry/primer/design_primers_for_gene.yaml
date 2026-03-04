@@ -1,0 +1,103 @@
+# design_primers_for_gene.yaml
+name: 'design_primers_for_gene'
+version: '1.0.0'
+description: 'Design PCR primers for a specific gene by name or locus tag. Automatically extracts gene sequence and designs primers with genomic coordinates.'
+category: 'primer'
+keywords: ['primer', 'gene', 'pcr', 'design', 'locus', 'annotation']
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 10000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    geneName:
+      type: 'string'
+      description: 'Gene name or locus tag (e.g., dnaA, b0062)'
+      examples: ['dnaA', 'lacZ', 'b0062']
+    targetTm:
+      type: 'number'
+      description: 'Target melting temperature'
+      default: 60
+      minimum: 50
+      maximum: 70
+    flankSize:
+      type: 'number'
+      description: 'Flanking region size to include beyond gene boundaries'
+      default: 100
+      minimum: 0
+      maximum: 1000
+    minLength:
+      type: 'number'
+      description: 'Minimum primer length'
+      default: 18
+    maxLength:
+      type: 'number'
+      description: 'Maximum primer length'
+      default: 25
+    clientId:
+      type: 'string'
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: ['geneName']
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Design primers for the dnaA gene'
+    tool_call: "design_primers_for_gene(geneName='dnaA')"
+    thought: 'User wants primers for a specific gene by name'
+    expected_result: 'Primers designed for dnaA with genomic coordinates'
+
+  - user_query: 'Design PCR primers for gene b0062 with 200bp flanking'
+    tool_call: "design_primers_for_gene(geneName='b0062', flankSize=200)"
+    thought: 'User wants primers with extended flanking regions'
+    expected_result: 'Primers including 200bp upstream and downstream of gene'
+
+  - user_query: 'Make primers for lacZ with Tm of 65°C'
+    tool_call: "design_primers_for_gene(geneName='lacZ', targetTm=65)"
+    thought: 'User wants gene-specific primers with custom Tm'
+    expected_result: 'lacZ primers optimized for 65°C Tm'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ['search_gene_by_name', 'get_sequence']
+  conflicts_with: []
+  enhances: ['design_pcr_primers']
+  alternatives: ['design_pcr_primers']
+  prerequisites: ['genome_annotations_loaded']
+  follow_up: ['analyze_primer_pair', 'add_primer_to_track']
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ['primer', 'gene', 'design', 'annotation']
+  complexity: 'complex'
+  usage_pattern: 'common'
+
+# Error handling
+error_handling:
+  gene_not_found: 'Returns error with suggestions if gene name is not found'
+  no_annotations: 'Returns error if genome annotations are not loaded'
+  no_sequence: 'Returns error if chromosome sequence is not available'
+
+# Return value specification
+returns:
+  success: 'boolean - Whether primer design was successful'
+  geneName: 'string - Name of the target gene'
+  chromosome: 'string - Chromosome/contig name'
+  genePosition: 'object - Gene start and end positions'
+  forward: 'object - Forward primer with genomicPosition'
+  reverse: 'object - Reverse primer with genomicPosition'
+  ampliconSize: 'number - Expected PCR product size'
+  pairAnalysis: 'object - Primer pair compatibility'

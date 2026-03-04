@@ -1,0 +1,85 @@
+# analyze_primer_structure.yaml
+name: 'analyze_primer_structure'
+version: '1.0.0'
+description: 'Analyze a primer sequence for secondary structures including hairpins and self-dimer formation. Returns stability assessment and potential issues.'
+category: 'primer'
+keywords: ['primer', 'structure', 'hairpin', 'dimer', 'self-dimer', 'secondary', 'stability']
+priority: 3
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    sequence:
+      type: 'string'
+      description: 'Primer DNA sequence to analyze'
+      examples: ['ATGCGCTATCGATCGATCG', 'GCGCGCGCGCGCGCGCGCGC']
+    minStemLength:
+      type: 'number'
+      description: 'Minimum stem length for hairpin detection'
+      default: 3
+      minimum: 2
+      maximum: 10
+    maxLoopSize:
+      type: 'number'
+      description: 'Maximum loop size for hairpin detection'
+      default: 10
+      minimum: 3
+      maximum: 20
+    clientId:
+      type: 'string'
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: ['sequence']
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Analyze this primer for hairpins: ATGCGCTATCGATCGATCG'
+    tool_call: "analyze_primer_structure(sequence='ATGCGCTATCGATCGATCG')"
+    thought: 'User wants to check primer for secondary structures'
+    expected_result: 'Hairpin and self-dimer analysis with stability scores'
+
+  - user_query: 'Check if this primer will form dimers: GCGCGCGCGCGCGCGCGCGC'
+    tool_call: "analyze_primer_structure(sequence='GCGCGCGCGCGCGCGCGCGC')"
+    thought: 'User wants to check for self-dimer formation in a GC-rich primer'
+    expected_result: 'Self-dimer analysis showing potential issues'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['design_pcr_primers', 'validate_primer']
+  alternatives: []
+  prerequisites: []
+  follow_up: ['validate_primer']
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ['primer', 'structure', 'analysis', 'hairpin', 'dimer']
+  complexity: 'medium'
+  usage_pattern: 'common'
+
+# Error handling
+error_handling:
+  empty_sequence: 'Returns error if sequence is empty'
+  invalid_characters: 'Returns warning for non-standard nucleotides'
+
+# Return value specification
+returns:
+  hairpin: 'object - Hairpin analysis results'
+  selfDimer: 'object - Self-dimer analysis results'
+  hasIssues: 'boolean - Whether problematic structures were detected'
+  recommendations: 'array - Suggestions for primer improvement'

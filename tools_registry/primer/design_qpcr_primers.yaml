@@ -1,0 +1,106 @@
+# design_qpcr_primers.yaml
+name: 'design_qpcr_primers'
+version: '1.0.0'
+description: 'Design qPCR primers optimized for quantitative PCR with shorter amplicons and balanced Tm. Returns primers with qPCR-specific validation.'
+category: 'primer'
+keywords: ['primer', 'qpcr', 'real-time', 'pcr', 'quantitative', 'sybr', 'taqman']
+priority: 2
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 10000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    sequence:
+      type: 'string'
+      description: 'Target DNA sequence or "current_region"'
+      examples: ['ATGCGCTATCGATCGATCGATCG', 'current_region']
+    chromosome:
+      type: 'string'
+      description: 'Chromosome name (if using genomic coordinates)'
+    start:
+      type: 'number'
+      description: 'Start position (1-based)'
+      minimum: 1
+    end:
+      type: 'number'
+      description: 'End position (1-based)'
+      minimum: 1
+    targetTm:
+      type: 'number'
+      description: 'Target melting temperature'
+      default: 60
+      minimum: 55
+      maximum: 65
+    maxAmpliconSize:
+      type: 'number'
+      description: 'Maximum amplicon size for qPCR'
+      default: 200
+      minimum: 50
+      maximum: 500
+    minGC:
+      type: 'number'
+      description: 'Minimum GC content percentage'
+      default: 45
+    maxGC:
+      type: 'number'
+      description: 'Maximum GC content percentage'
+      default: 55
+    clientId:
+      type: 'string'
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: []
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Design qPCR primers for the dnaA gene'
+    tool_call: "design_qpcr_primers(sequence='ATGCGCTATCGATCGATCGATCG')"
+    thought: 'User wants qPCR primers for a specific sequence'
+    expected_result: 'qPCR-optimized primers with amplicon size validation'
+
+  - user_query: 'Design real-time PCR primers with Tm of 62°C'
+    tool_call: "design_qpcr_primers(sequence='current_region', targetTm=62)"
+    thought: 'User wants qPCR primers with custom Tm for the visible region'
+    expected_result: 'qPCR primers with 62°C target Tm'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ['get_sequence']
+  conflicts_with: []
+  enhances: ['design_pcr_primers']
+  alternatives: ['design_pcr_primers']
+  prerequisites: []
+  follow_up: ['analyze_primer_pair', 'validate_primer']
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ['primer', 'qpcr', 'real-time', 'quantitative']
+  complexity: 'complex'
+  usage_pattern: 'common'
+
+# Error handling
+error_handling:
+  no_sequence: 'Returns error if no sequence is provided'
+  amplicon_too_large: 'Returns warning if optimal amplicon size cannot be achieved'
+
+# Return value specification
+returns:
+  success: 'boolean - Whether primer design was successful'
+  forward: 'object - Forward primer details'
+  reverse: 'object - Reverse primer details'
+  ampliconSize: 'number - Expected amplicon size'
+  qpcrValidation: 'object - qPCR-specific validation results'
+  pairAnalysis: 'object - Primer pair compatibility analysis'

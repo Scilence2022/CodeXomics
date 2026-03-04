@@ -1,0 +1,99 @@
+# validate_primer.yaml
+name: 'validate_primer'
+version: '1.0.0'
+description: 'Validate a primer sequence against standard design rules including GC content, length, and poly-base runs.'
+category: 'primer'
+keywords: ['primer', 'validate', 'check', 'gc', 'length', 'quality']
+priority: 2
+
+# Tool execution metadata
+execution:
+  type: 'hybrid'
+  timeout: 3000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    sequence:
+      type: 'string'
+      description: 'Primer sequence to validate'
+      examples: ['ATGCGCTATCGATCGATCG', 'GCGCGCGCGCGCGCGCGCGC']
+    minGC:
+      type: 'number'
+      description: 'Minimum GC content percentage'
+      default: 40
+      minimum: 20
+      maximum: 80
+    maxGC:
+      type: 'number'
+      description: 'Maximum GC content percentage'
+      default: 60
+      minimum: 20
+      maximum: 80
+    minLength:
+      type: 'number'
+      description: 'Minimum length'
+      default: 15
+      minimum: 10
+      maximum: 50
+    maxLength:
+      type: 'number'
+      description: 'Maximum length'
+      default: 30
+      minimum: 10
+      maximum: 50
+    clientId:
+      type: 'string'
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: ['sequence']
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Validate this primer: ATGCGCTATCGATCGATCG'
+    tool_call: "validate_primer(sequence='ATGCGCTATCGATCGATCG')"
+    thought: 'User wants to validate a primer sequence against standard rules'
+    expected_result: 'Validation result with any issues found'
+
+  - user_query: 'Check if this primer is valid with GC between 45-55%'
+    tool_call: "validate_primer(sequence='ATGCGCTATCGATCGATCG', minGC=45, maxGC=55)"
+    thought: 'User wants validation with custom GC content range'
+    expected_result: 'Validation using custom GC parameters'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['design_pcr_primers', 'analyze_primer_structure']
+  alternatives: []
+  prerequisites: []
+  follow_up: ['analyze_primer_structure']
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ['primer', 'validate', 'quality', 'check']
+  complexity: 'simple'
+  usage_pattern: 'common'
+
+# Error handling
+error_handling:
+  empty_sequence: 'Returns error if sequence is empty'
+  invalid_characters: 'Returns warning for non-standard nucleotides'
+
+# Return value specification
+returns:
+  isValid: 'boolean - Whether primer passes all validation rules'
+  sequence: 'string - Cleaned sequence (uppercase, ATGC only)'
+  length: 'number - Primer length'
+  gcContent: 'number - GC content percentage'
+  tm: 'number - Calculated melting temperature'
+  issues: 'array - List of validation issues found'

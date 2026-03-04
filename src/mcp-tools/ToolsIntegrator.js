@@ -13,6 +13,7 @@ const ActionTools = require('./action/ActionTools');
 const UtilityTools = require('./utility/UtilityTools');
 const FileTools = require('./file/FileTools');
 const TrackSettingsTools = require('./track/TrackSettingsTools');
+const PrimerTools = require('./primer/PrimerTools');
 
 class ToolsIntegrator {
   constructor(server) {
@@ -29,6 +30,7 @@ class ToolsIntegrator {
     this.utilityTools = new UtilityTools(server);
     this.fileTools = new FileTools(server);
     this.trackSettingsTools = new TrackSettingsTools(server);
+    this.primerTools = new PrimerTools(server);
 
     // Combine all tools
     this.allTools = this.combineAllTools();
@@ -46,6 +48,7 @@ class ToolsIntegrator {
       ...this.utilityTools.getTools(),
       ...this.fileTools.getTools(),
       ...this.trackSettingsTools.getTools(),
+      ...this.primerTools.getTools(),
       // Multi-window management tools (server-side only)
       ...this.getWindowManagementTools(),
     };
@@ -106,9 +109,20 @@ class ToolsIntegrator {
   }
 
   async executeTool(toolName, parameters, clientId) {
+    // Handle tool aliases before looking up the tool
+    const toolAliases = {
+      'design_primers': 'design_primers_for_gene',
+    };
+    
+    const originalToolName = toolName;
+    if (toolAliases[toolName]) {
+      console.log(`🔄 [ToolsIntegrator] Mapping tool alias '${toolName}' -> '${toolAliases[toolName]}'`);
+      toolName = toolAliases[toolName];
+    }
+
     const tool = this.allTools[toolName];
     if (!tool) {
-      throw new Error(`Tool '${toolName}' not found`);
+      throw new Error(`Tool '${originalToolName}' not found`);
     }
 
     // Route to appropriate tool module based on tool name
@@ -248,6 +262,45 @@ class ToolsIntegrator {
         }
       }
 
+      // Primer design tools
+      if (this.primerTools.getTools()[toolName]) {
+        switch (toolName) {
+          case 'design_pcr_primers':
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+          case 'design_qpcr_primers':
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+          case 'design_primers_for_gene':
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+          case 'analyze_primer_structure':
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+          case 'analyze_primer_pair':
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+          case 'calculate_tm':
+            // Server-side basic calculation
+            if (parameters.method === 'basic') {
+              return {
+                tm: this.primerTools.calculateTm(parameters.sequence, { method: 'basic' }),
+                method: 'basic'
+              };
+            }
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+          case 'validate_primer':
+            // Server-side validation
+            return this.primerTools.validatePrimer(parameters.sequence, {
+              minGC: parameters.minGC,
+              maxGC: parameters.maxGC,
+              minLength: parameters.minLength,
+              maxLength: parameters.maxLength
+            });
+          case 'export_primers':
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+          case 'add_primer_to_track':
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+          default:
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+        }
+      }
+
       // Multi-window management tools (server-side, no client delegation needed)
       if (toolName === 'list_genome_windows') {
         return this.executeListGenomeWindows();
@@ -275,6 +328,11 @@ class ToolsIntegrator {
         name: 'Sequence Analysis',
         description: 'Tools for DNA/RNA sequence analysis and manipulation',
         tools: Object.keys(this.sequenceTools.getTools()),
+      },
+      primer: {
+        name: 'Primer Design',
+        description: 'Tools for PCR primer design, analysis, and validation',
+        tools: Object.keys(this.primerTools.getTools()),
       },
       protein: {
         name: 'Protein Structure',

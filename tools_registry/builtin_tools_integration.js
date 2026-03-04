@@ -358,6 +358,70 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // Primer Design Tools
+    this.builtInToolsMap.set('design_pcr_primers', {
+      method: 'designPCRPrimers',
+      category: 'primer',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('design_qpcr_primers', {
+      method: 'designqPCRPrimers',
+      category: 'primer',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('design_primers_for_gene', {
+      method: 'designPrimersForGene',
+      category: 'primer',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('analyze_primer_structure', {
+      method: 'analyzePrimerStructure',
+      category: 'primer',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('analyze_primer_pair', {
+      method: 'analyzePrimerPair',
+      category: 'primer',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('calculate_tm', {
+      method: 'calculateTm',
+      category: 'primer',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('validate_primer', {
+      method: 'validatePrimer',
+      category: 'primer',
+      type: 'built-in',
+      priority: 2,
+    });
+
+    this.builtInToolsMap.set('export_primers', {
+      method: 'exportPrimers',
+      category: 'primer',
+      type: 'built-in',
+      priority: 3,
+    });
+
+    this.builtInToolsMap.set('add_primer_to_track', {
+      method: 'addPrimerToTrack',
+      category: 'primer',
+      type: 'built-in',
+      priority: 2,
+    });
+
     console.log(`✅ Built-in Tools Integration: Mapped ${this.builtInToolsMap.size} built-in tools`);
   }
 

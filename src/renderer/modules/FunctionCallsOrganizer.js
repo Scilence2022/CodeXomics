@@ -295,6 +295,23 @@ class FunctionCallsOrganizer {
         description: 'External API calls and third-party integrations',
         functions: ['blast_sequence', 'uniprot_search', 'alphafold_search', 'alphafold_get_structure', 'evo2_design'],
       },
+
+      // 类别17: 引物设计类 - 中等优先级，计算密集型
+      primerDesign: {
+        priority: 3,
+        description: 'PCR primer design, analysis, and validation tools',
+        functions: [
+          'design_pcr_primers',
+          'design_qpcr_primers',
+          'design_primers_for_gene',
+          'analyze_primer_structure',
+          'analyze_primer_pair',
+          'calculate_tm',
+          'validate_primer',
+          'export_primers',
+          'add_primer_to_track',
+        ],
+      },
     };
 
     // 功能映射表
@@ -400,6 +417,7 @@ class FunctionCallsOrganizer {
       visualization: ['show', 'display', 'toggle', 'hide', 'visible', 'track'],
       sequence: ['sequence', 'dna', 'rna', 'protein', 'translate', 'gc content'],
       annotation: ['annotate', 'add', 'edit', 'delete', 'modify', 'create'],
+      primer: ['primer', 'pcr', 'qpcr', 'oligo', 'amplification', 'melting temperature', 'tm'],
     };
 
     const found = {};
@@ -434,6 +452,10 @@ class FunctionCallsOrganizer {
 
     if (keywords.annotation) {
       categories.push('dataManipulation');
+    }
+
+    if (keywords.primer) {
+      categories.push('primerDesign');
     }
 
     return categories;

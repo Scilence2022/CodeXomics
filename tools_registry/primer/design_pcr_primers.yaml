@@ -1,0 +1,135 @@
+# design_pcr_primers.yaml
+name: 'design_pcr_primers'
+version: '1.0.0'
+description: 'Design PCR primers for a DNA sequence or genomic region. Returns forward and reverse primers with Tm, GC content, and compatibility analysis.'
+category: 'primer'
+keywords: ['primer', 'pcr', 'design', 'amplification', 'forward', 'reverse', 'oligo']
+priority: 1
+
+# Tool execution metadata
+execution:
+  type: 'client'
+  timeout: 10000
+  retries: 2
+  requires_auth: false
+  requires_data: true
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    sequence:
+      type: 'string'
+      description: 'Target DNA sequence (ATGC only) or "current_region" to use visible genome region'
+      examples: ['ATGCGCTATCGATCGATCGATCG', 'current_region']
+    chromosome:
+      type: 'string'
+      description: 'Chromosome name (if using genomic coordinates instead of sequence)'
+      examples: ['chr1', 'NC_000913.3']
+    start:
+      type: 'number'
+      description: 'Start position (1-based, if using genomic coordinates)'
+      minimum: 1
+    end:
+      type: 'number'
+      description: 'End position (1-based, if using genomic coordinates)'
+      minimum: 1
+    targetTm:
+      type: 'number'
+      description: 'Target melting temperature in Celsius'
+      default: 60
+      minimum: 50
+      maximum: 70
+    tmTolerance:
+      type: 'number'
+      description: 'Acceptable Tm deviation'
+      default: 3
+      minimum: 0
+      maximum: 10
+    minLength:
+      type: 'number'
+      description: 'Minimum primer length'
+      default: 18
+      minimum: 15
+      maximum: 30
+    maxLength:
+      type: 'number'
+      description: 'Maximum primer length'
+      default: 25
+      minimum: 15
+      maximum: 40
+    minGC:
+      type: 'number'
+      description: 'Minimum GC content percentage'
+      default: 40
+      minimum: 20
+      maximum: 80
+    maxGC:
+      type: 'number'
+      description: 'Maximum GC content percentage'
+      default: 60
+      minimum: 20
+      maximum: 80
+    clientId:
+      type: 'string'
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: []
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Design PCR primers for this sequence: ATGCGCTATCGATCGATCGATCGATCG'
+    tool_call: "design_pcr_primers(sequence='ATGCGCTATCGATCGATCGATCGATCG', targetTm=60)"
+    thought: 'User wants to design PCR primers for a specific sequence with default parameters'
+    expected_result: 'Forward and reverse primers with Tm, GC content, and compatibility analysis'
+
+  - user_query: 'Design primers for the current genome region'
+    tool_call: "design_pcr_primers(sequence='current_region')"
+    thought: 'User wants primers for the currently visible genome region'
+    expected_result: 'Primers designed for the visible region with genomic coordinates'
+
+  - user_query: 'Design PCR primers for chromosome 1 from position 1000 to 2000'
+    tool_call: "design_pcr_primers(chromosome='chr1', start=1000, end=2000)"
+    thought: 'User wants primers for a specific genomic region by coordinates'
+    expected_result: 'Primers with positions relative to the specified genomic coordinates'
+
+  - user_query: 'Design primers with Tm of 65°C for the dnaA gene'
+    tool_call: "design_primers_for_gene(geneName='dnaA', targetTm=65)"
+    thought: 'User wants gene-specific primers with custom Tm - should use design_primers_for_gene'
+    expected_result: 'Primers designed specifically for the dnaA gene'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: ['get_sequence']
+  conflicts_with: []
+  enhances: ['design_qpcr_primers', 'analyze_primer_pair']
+  alternatives: ['design_qpcr_primers', 'design_primers_for_gene']
+  prerequisites: []
+  follow_up: ['analyze_primer_pair', 'validate_primer', 'add_primer_to_track']
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ['primer', 'pcr', 'design', 'core', 'molecular_biology']
+  complexity: 'complex'
+  usage_pattern: 'common'
+
+# Error handling
+error_handling:
+  no_sequence: 'Returns error if no sequence or region is specified'
+  sequence_too_short: 'Returns error if sequence is shorter than primer length requirements'
+  no_valid_primers: 'Returns warning if no primers meet criteria (may suggest relaxed parameters)'
+  invalid_coordinates: 'Returns error if genomic coordinates are invalid'
+
+# Return value specification
+returns:
+  success: 'boolean - Whether primer design was successful'
+  forward: 'object - Forward primer details (sequence, Tm, GC%, position)'
+  reverse: 'object - Reverse primer details (sequence, Tm, GC%, position)'
+  ampliconSize: 'number - Expected PCR product size in bp'
+  pairAnalysis: 'object - Primer pair compatibility analysis'
+  warnings: 'array - Any warnings about primer quality'

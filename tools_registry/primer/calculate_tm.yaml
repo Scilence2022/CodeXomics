@@ -1,0 +1,90 @@
+# calculate_tm.yaml
+name: 'calculate_tm'
+version: '1.0.0'
+description: 'Calculate melting temperature (Tm) of a DNA sequence using nearest-neighbor thermodynamics or other methods.'
+category: 'primer'
+keywords: ['primer', 'tm', 'melting', 'temperature', 'thermodynamics', 'nearest-neighbor']
+priority: 2
+
+# Tool execution metadata
+execution:
+  type: 'hybrid'
+  timeout: 3000
+  retries: 1
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+
+# Input parameters (JSON Schema format)
+parameters:
+  type: 'object'
+  properties:
+    sequence:
+      type: 'string'
+      description: 'DNA sequence'
+      examples: ['ATGCGCTATCG', 'GCGCGCGCGC']
+    method:
+      type: 'string'
+      description: 'Calculation method'
+      enum: ['nearest_neighbor', 'basic', 'salt_adjusted']
+      default: 'nearest_neighbor'
+    saltConc:
+      type: 'number'
+      description: 'Salt concentration in mM'
+      default: 50
+      minimum: 0
+      maximum: 1000
+    primerConc:
+      type: 'number'
+      description: 'Primer concentration in µM'
+      default: 0.5
+      minimum: 0.01
+      maximum: 100
+    clientId:
+      type: 'string'
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: ['sequence']
+
+# High-quality examples for few-shot learning
+sample_usages:
+  - user_query: 'Calculate Tm of this primer: ATGCGCTATCG'
+    tool_call: "calculate_tm(sequence='ATGCGCTATCG')"
+    thought: 'User wants melting temperature using default nearest-neighbor method'
+    expected_result: 'Tm value in Celsius with method used'
+
+  - user_query: 'What is the melting temperature using basic method?'
+    tool_call: "calculate_tm(sequence='ATGCGCTATCG', method='basic')"
+    thought: 'User specifically requests basic Tm calculation method'
+    expected_result: 'Tm calculated using basic formula'
+
+# Tool relationships and dependencies
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: ['validate_primer', 'design_pcr_primers']
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+
+# Performance and usage statistics
+metadata:
+  usage_count: 0
+  success_rate: 0.0
+  avg_execution_time: 0
+  last_used: null
+  tags: ['primer', 'tm', 'calculation', 'thermodynamics']
+  complexity: 'simple'
+  usage_pattern: 'common'
+
+# Error handling
+error_handling:
+  empty_sequence: 'Returns error if sequence is empty'
+  too_short: 'Returns warning if sequence is very short (< 8 bp)'
+
+# Return value specification
+returns:
+  tm: 'number - Melting temperature in Celsius'
+  method: 'string - Method used for calculation'
+  saltConc: 'number - Salt concentration used'
+  primerConc: 'number - Primer concentration used'

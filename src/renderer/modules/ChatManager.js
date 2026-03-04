@@ -9854,6 +9854,18 @@ ${coreTools}
       zoom_out: () => this.zoomOut(parameters),
       pan_left: () => this.panLeft(parameters),
       pan_right: () => this.panRight(parameters),
+
+      // Primer design tools
+      design_pcr_primers: () => this.designPCRPrimers(parameters),
+      design_qpcr_primers: () => this.designqPCRPrimers(parameters),
+      design_primers_for_gene: () => this.designPrimersForGene(parameters),
+      design_primers: () => this.designPrimersForGene(parameters), // Alias
+      analyze_primer_structure: () => this.analyzePrimerStructure(parameters),
+      analyze_primer_pair: () => this.analyzePrimerPair(parameters),
+      calculate_tm: () => this.calculateTm(parameters),
+      validate_primer: () => this.validatePrimer(parameters),
+      export_primers: () => this.exportPrimers(parameters),
+      add_primer_to_track: () => this.addPrimerToTrack(parameters),
     };
 
     if (localTools[toolName]) {
@@ -11972,6 +11984,48 @@ ${this.getPluginSystemInfo()}`;
           result = await this.executeActionFunction('getClipboardContent', parameters);
           break;
 
+        // Primer Design Tools
+        case 'design_pcr_primers':
+          result = await this.designPCRPrimers(parameters);
+          break;
+
+        case 'design_qpcr_primers':
+          result = await this.designqPCRPrimers(parameters);
+          break;
+
+        case 'design_primers_for_gene':
+          result = await this.designPrimersForGene(parameters);
+          break;
+
+        case 'design_primers':
+          // Alias for design_primers_for_gene
+          result = await this.designPrimersForGene(parameters);
+          break;
+
+        case 'analyze_primer_structure':
+          result = await this.analyzePrimerStructure(parameters);
+          break;
+
+        case 'analyze_primer_pair':
+          result = await this.analyzePrimerPair(parameters);
+          break;
+
+        case 'calculate_tm':
+          result = await this.calculateTm(parameters);
+          break;
+
+        case 'validate_primer':
+          result = await this.validatePrimer(parameters);
+          break;
+
+        case 'export_primers':
+          result = await this.exportPrimers(parameters);
+          break;
+
+        case 'add_primer_to_track':
+          result = await this.addPrimerToTrack(parameters);
+          break;
+
         // Plugin system functions
         default:
           // Check if this is a plugin tool
@@ -12346,6 +12400,17 @@ ${this.getPluginSystemInfo()}`;
       // Metabolic Pathways
       'show_metabolic_pathway',
       'find_pathway_genes',
+
+      // Primer Design
+      'design_pcr_primers',
+      'design_qpcr_primers',
+      'design_primers_for_gene',
+      'analyze_primer_structure',
+      'analyze_primer_pair',
+      'calculate_tm',
+      'validate_primer',
+      'export_primers',
+      'add_primer_to_track',
 
       // Action Manager - Sequence Editing
       'copy_sequence',
@@ -21475,5 +21540,415 @@ ${this.getPluginSystemInfo()}`;
       errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  /* --------------------------------------------------------- */
+  /*  PRIMER DESIGN TOOLS                                      */
+  /* --------------------------------------------------------- */
+
+  /**
+   * Design PCR primers for a sequence or region
+   */
+  async designPCRPrimers(parameters) {
+    const { sequence, chromosome, start, end, targetTm = 60, tmTolerance = 3, minLength = 18, maxLength = 25, minGC = 40, maxGC = 60 } = parameters;
+
+    // Get sequence if genomic coordinates provided
+    let targetSequence = sequence;
+    if (!targetSequence && chromosome && start && end) {
+      const seqResult = await this.getSequence({ chromosome, start, end });
+      targetSequence = seqResult.sequence;
+    }
+
+    // Use current region if specified
+    if (targetSequence === 'current_region') {
+      const state = this.getCurrentState();
+      if (state.viewingRegion) {
+        const seqResult = await this.getSequence({
+          chromosome: state.viewingRegion.chromosome,
+          start: state.viewingRegion.start,
+          end: state.viewingRegion.end
+        });
+        targetSequence = seqResult.sequence;
+      }
+    }
+
+    if (!targetSequence) {
+      throw new Error('No sequence provided. Please provide sequence, genomic coordinates, or use "current_region"');
+    }
+
+    // Use PrimerDesign module if available
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      const result = window.PrimerDesign.designPCRPrimers(targetSequence, {
+        targetTm, tmTolerance, minLength, maxLength, minGC, maxGC
+      });
+      return {
+        success: true,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    // Fallback to MicrobeGenomicsFunctions
+    if (typeof window !== 'undefined' && window.MicrobeGenomicsFunctions) {
+      const result = window.MicrobeGenomicsFunctions.designPCRPrimers(targetSequence, {
+        targetTm, tmTolerance, minLength, maxLength, minGC, maxGC
+      });
+      return {
+        success: true,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    throw new Error('Primer design module not available');
+  }
+
+  /**
+   * Design qPCR primers
+   */
+  async designqPCRPrimers(parameters) {
+    const { sequence, chromosome, start, end, targetTm = 60, maxAmpliconSize = 200 } = parameters;
+
+    let targetSequence = sequence;
+    if (!targetSequence && chromosome && start && end) {
+      const seqResult = await this.getSequence({ chromosome, start, end });
+      targetSequence = seqResult.sequence;
+    }
+
+    if (targetSequence === 'current_region') {
+      const state = this.getCurrentState();
+      if (state.viewingRegion) {
+        const seqResult = await this.getSequence({
+          chromosome: state.viewingRegion.chromosome,
+          start: state.viewingRegion.start,
+          end: state.viewingRegion.end
+        });
+        targetSequence = seqResult.sequence;
+      }
+    }
+
+    if (!targetSequence) {
+      throw new Error('No sequence provided');
+    }
+
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      const result = window.PrimerDesign.designqPCRPrimers(targetSequence, {
+        targetTm, maxAmpliconSize
+      });
+      return {
+        success: true,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    if (typeof window !== 'undefined' && window.MicrobeGenomicsFunctions) {
+      const result = window.MicrobeGenomicsFunctions.designqPCRPrimers(targetSequence, {
+        targetTm, maxAmpliconSize
+      });
+      return {
+        success: true,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    throw new Error('Primer design module not available');
+  }
+
+  /**
+   * Design primers for a specific gene
+   */
+  async designPrimersForGene(parameters) {
+    const { geneName, targetTm = 60, flankSize = 100 } = parameters;
+
+    if (!geneName) {
+      throw new Error('geneName parameter is required');
+    }
+
+    if (typeof window !== 'undefined' && window.MicrobeGenomicsFunctions) {
+      const result = window.MicrobeGenomicsFunctions.designPrimersForGene(geneName, {
+        targetTm, flankSize
+      });
+      return {
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    throw new Error('MicrobeGenomicsFunctions not available');
+  }
+
+  /**
+   * Analyze primer secondary structure
+   */
+  async analyzePrimerStructure(parameters) {
+    const { sequence, minStemLength = 3, maxLoopSize = 10 } = parameters;
+
+    if (!sequence) {
+      throw new Error('sequence parameter is required');
+    }
+
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      const hairpin = window.PrimerDesign.detectHairpin(sequence, { minStemLength, maxLoopSize });
+      const selfDimer = window.PrimerDesign.detectSelfDimer(sequence);
+
+      return {
+        success: true,
+        sequence: sequence,
+        hairpin: hairpin,
+        selfDimer: selfDimer,
+        hasIssues: hairpin.isProblematic || selfDimer.isProblematic,
+        recommendations: this.generatePrimerRecommendations(hairpin, selfDimer),
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    if (typeof window !== 'undefined' && window.MicrobeGenomicsFunctions) {
+      const result = window.MicrobeGenomicsFunctions.analyzePrimerStructure(sequence);
+      return {
+        success: true,
+        sequence: sequence,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    throw new Error('Primer analysis module not available');
+  }
+
+  /**
+   * Analyze primer pair compatibility
+   */
+  async analyzePrimerPair(parameters) {
+    const { forwardSequence, reverseSequence } = parameters;
+
+    if (!forwardSequence || !reverseSequence) {
+      throw new Error('Both forwardSequence and reverseSequence are required');
+    }
+
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      const result = window.PrimerDesign.analyzePrimerPair(forwardSequence, reverseSequence);
+      return {
+        success: true,
+        forwardSequence,
+        reverseSequence,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    if (typeof window !== 'undefined' && window.MicrobeGenomicsFunctions) {
+      const result = window.MicrobeGenomicsFunctions.analyzePrimerPair(forwardSequence, reverseSequence);
+      return {
+        success: true,
+        forwardSequence,
+        reverseSequence,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    throw new Error('Primer analysis module not available');
+  }
+
+  /**
+   * Calculate melting temperature
+   */
+  async calculateTm(parameters) {
+    const { sequence, method = 'nearest_neighbor', saltConc = 50, primerConc = 0.5 } = parameters;
+
+    if (!sequence) {
+      throw new Error('sequence parameter is required');
+    }
+
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      const tm = window.PrimerDesign.calculateTm(sequence, { method, saltConc, primerConc });
+      return {
+        success: true,
+        sequence: sequence,
+        tm: tm,
+        method: method,
+        saltConc: saltConc,
+        primerConc: primerConc,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    if (typeof window !== 'undefined' && window.MicrobeGenomicsFunctions) {
+      const tm = window.MicrobeGenomicsFunctions.calculateAdvancedTm(sequence, { method, saltConc, primerConc });
+      return {
+        success: true,
+        sequence: sequence,
+        tm: tm,
+        method: method,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    throw new Error('Tm calculation module not available');
+  }
+
+  /**
+   * Validate a primer sequence
+   */
+  async validatePrimer(parameters) {
+    const { sequence, minGC = 40, maxGC = 60, minLength = 15, maxLength = 30 } = parameters;
+
+    if (!sequence) {
+      throw new Error('sequence parameter is required');
+    }
+
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      const result = window.PrimerDesign.validatePrimer(sequence, { minGC, maxGC, minLength, maxLength });
+      return {
+        success: true,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    if (typeof window !== 'undefined' && window.MicrobeGenomicsFunctions) {
+      const result = window.MicrobeGenomicsFunctions.validatePrimer(sequence, { minGC, maxGC, minLength, maxLength });
+      return {
+        success: true,
+        ...result,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    throw new Error('Primer validation module not available');
+  }
+
+  /**
+   * Export primers in various formats
+   */
+  async exportPrimers(parameters) {
+    const { primerData, format = 'csv' } = parameters;
+
+    if (!primerData) {
+      throw new Error('primerData parameter is required');
+    }
+
+    if (typeof window !== 'undefined' && window.PrimerDesign) {
+      const exported = window.PrimerDesign.exportPrimers(primerData, format);
+      return {
+        success: true,
+        format: format,
+        data: exported,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    if (typeof window !== 'undefined' && window.MicrobeGenomicsFunctions) {
+      const exported = window.MicrobeGenomicsFunctions.exportPrimers(primerData, format);
+      return {
+        success: true,
+        format: format,
+        data: exported,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    throw new Error('Primer export module not available');
+  }
+
+  /**
+   * Add primers to genome browser as annotations
+   */
+  async addPrimerToTrack(parameters) {
+    const { forwardPrimer, reversePrimer, name, color = '#FF6B6B' } = parameters;
+
+    if (!forwardPrimer || !reversePrimer) {
+      throw new Error('Both forwardPrimer and reversePrimer are required');
+    }
+
+    const genomeBrowser = window.genomeBrowser;
+    if (!genomeBrowser) {
+      throw new Error('Genome browser not available');
+    }
+
+    const primerName = name || `Primer_${Date.now()}`;
+    const annotations = [];
+
+    // Add forward primer annotation
+    if (forwardPrimer.genomicPosition) {
+      annotations.push({
+        id: `${primerName}_forward`,
+        type: 'primer',
+        start: forwardPrimer.genomicPosition.start,
+        end: forwardPrimer.genomicPosition.end,
+        strand: '+',
+        qualifiers: {
+          name: `${primerName}_F`,
+          sequence: forwardPrimer.sequence,
+          tm: forwardPrimer.tm,
+          gc_content: forwardPrimer.gcContent,
+          direction: 'forward'
+        },
+        color: color
+      });
+    }
+
+    // Add reverse primer annotation
+    if (reversePrimer.genomicPosition) {
+      annotations.push({
+        id: `${primerName}_reverse`,
+        type: 'primer',
+        start: reversePrimer.genomicPosition.start,
+        end: reversePrimer.genomicPosition.end,
+        strand: '-',
+        qualifiers: {
+          name: `${primerName}_R`,
+          sequence: reversePrimer.sequence,
+          tm: reversePrimer.tm,
+          gc_content: reversePrimer.gcContent,
+          direction: 'reverse'
+        },
+        color: color
+      });
+    }
+
+    // Add annotations to genome browser
+    for (const annotation of annotations) {
+      genomeBrowser.addAnnotation(annotation);
+    }
+
+    // Refresh view
+    genomeBrowser.render();
+
+    return {
+      success: true,
+      primerName: primerName,
+      annotationsAdded: annotations.length,
+      forward: forwardPrimer,
+      reverse: reversePrimer,
+      message: `Added ${annotations.length} primer annotations to track`,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Generate recommendations based on primer structure analysis
+   */
+  generatePrimerRecommendations(hairpin, selfDimer) {
+    const recommendations = [];
+
+    if (hairpin.isProblematic) {
+      recommendations.push('Consider redesigning primer to avoid hairpin formation');
+      recommendations.push('Hairpin detected with stability: ' + hairpin.worstStability.toFixed(2) + ' kcal/mol');
+    }
+
+    if (selfDimer.isProblematic) {
+      recommendations.push('Primer may form self-dimers - consider redesign');
+      recommendations.push('Self-dimer severity: ' + selfDimer.worstSeverity);
+    }
+
+    if (recommendations.length === 0) {
+      recommendations.push('No significant secondary structure issues detected');
+      recommendations.push('Primer appears suitable for use');
+    }
+
+    return recommendations;
   }
 }

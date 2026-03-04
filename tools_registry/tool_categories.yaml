@@ -131,6 +131,19 @@ categories:
       - 'clipboard_operations'
     tools_count: 10
 
+  primer:
+    name: 'Primer Design'
+    description: 'Tools for PCR primer design, analysis, validation, and visualization'
+    icon: '🧪'
+    priority: 1
+    color: '#E91E63'
+    subcategories:
+      - 'pcr_primers'
+      - 'qpcr_primers'
+      - 'primer_analysis'
+      - 'primer_validation'
+    tools_count: 6
+
   system:
     name: 'System Management'
     description: 'Tools for system operations, working directory management, and environment setup'
