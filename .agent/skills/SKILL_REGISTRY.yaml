@@ -1,0 +1,204 @@
+# CodeXomics Agent Skills Registry
+# This file is the machine-readable index of all available agent skills.
+# AI agents and orchestration frameworks should parse this file to discover 
+# what skills are available before choosing a tool chain.
+#
+# Format version: 1.0.0
+# Directory: .agent/skills/
+
+registry_version: 1.0.0
+last_updated: "2026-03-17"
+
+# ─── Skill Index ──────────────────────────────────────────────────────────────
+skills:
+
+  - id: primer_design
+    file: primer_design.md
+    version: 1.0.0
+    category: primer_design
+    complexity: moderate
+    typical_duration_seconds: 30
+    requires_genome: true
+    requires_network: true      # BLAST validation needs internet
+    tags: [primers, pcr, amplification, cloning, qpcr]
+    triggers:
+      - "design primers"
+      - "PCR primers"
+      - "primer pair"
+      - "amplify"
+      - "qPCR primers"
+    mcp_tools_used:
+      - get_current_state
+      - search_gene_by_name
+      - jump_to_gene
+      - get_sequence
+      - compute_gc
+      - design_primers
+      - calculate_primer_properties
+      - find_primer_binding_sites
+      - blast_search
+      - add_primer_annotation
+
+  - id: gene_annotation_improvement
+    file: gene_annotation_improvement.md
+    version: 1.0.0
+    category: annotation
+    complexity: moderate
+    typical_duration_seconds: 45
+    requires_genome: true
+    requires_network: true
+    tags: [annotation, gene_function, uniprot, interpro, protein_domains]
+    triggers:
+      - "improve annotation"
+      - "gene function"
+      - "what does this gene do"
+      - "what protein is this"
+      - "annotate using databases"
+      - "enrich annotation"
+      - "protein domains"
+    mcp_tools_used:
+      - jump_to_gene
+      - get_gene_details
+      - get_coding_sequence
+      - translate_dna
+      - search_uniprot_database
+      - get_uniprot_entry
+      - analyze_interpro_domains
+      - search_alphafold_by_gene
+      - codon_usage_analysis
+      - get_nearby_features
+
+  - id: automated_research
+    file: automated_research.md
+    version: 1.0.0
+    category: research
+    complexity: high
+    typical_duration_seconds: 90
+    requires_genome: true
+    requires_network: true
+    tags: [research, comprehensive_analysis, gene_function, structural_biology, pathways]
+    triggers:
+      - "research this gene"
+      - "comprehensive analysis"
+      - "full analysis"
+      - "research report"
+      - "deep dive"
+      - "investigate"
+      - "what do we know about"
+    input_variants:
+      depth:
+        quick: "Phases 1-3 only (~15s): genomic context + sequence"
+        standard: "All phases (~60s): adds database queries and evolutionary context"
+        deep: "All phases + structure viewer (~120s): for publication-quality output"
+    mcp_tools_used:
+      - get_current_state
+      - get_genome_info
+      - jump_to_gene
+      - get_gene_details
+      - get_coding_sequence
+      - translate_dna
+      - compute_gc
+      - codon_usage_analysis
+      - predict_promoter
+      - get_nearby_features
+      - find_intergenic_regions
+      - get_operons
+      - search_uniprot_database
+      - get_uniprot_entry
+      - analyze_interpro_domains
+      - search_alphafold_by_gene
+      - open_alphafold_viewer
+      - blast_search
+
+  - id: variant_context_analysis
+    file: variant_context_analysis.md
+    version: 1.0.0
+    category: sequence_analysis
+    complexity: moderate
+    typical_duration_seconds: 30
+    requires_genome: true
+    requires_network: true
+    tags: [variants, snp, mutation, functional_impact, vcf]
+    triggers:
+      - "analyse variant"
+      - "SNP analysis"
+      - "mutation impact"
+      - "is this variant functional"
+      - "variant annotation"
+      - "what does this SNP do"
+    mcp_tools_used:
+      - navigate_to_position
+      - get_current_state
+      - get_nearby_features
+      - get_sequence
+      - compute_gc
+      - get_gene_details
+      - get_coding_sequence
+      - translate_dna
+      - find_restriction_sites
+      - search_sequence_motif
+      - search_uniprot_database
+      - analyze_interpro_domains
+
+  - id: operon_analysis
+    file: operon_analysis.md
+    version: 1.0.0
+    category: annotation
+    complexity: moderate
+    typical_duration_seconds: 45
+    requires_genome: true
+    requires_network: true
+    tags: [operon, co-regulation, prokaryote, gene_cluster, transcription]
+    triggers:
+      - "operon analysis"
+      - "co-regulated genes"
+      - "operon containing"
+      - "genes in same operon"
+      - "is this gene in an operon"
+      - "transcription unit"
+    note: "Primarily useful for prokaryotic genomes. Eukaryotic genomes rarely have operons."
+    mcp_tools_used:
+      - jump_to_gene
+      - get_gene_details
+      - get_operons
+      - find_intergenic_regions
+      - get_nearby_features
+      - get_sequence
+      - predict_promoter
+      - compute_gc
+      - search_uniprot_database
+      - analyze_interpro_domains
+      - search_sequence_motif
+
+# ─── Skill Selection Logic ────────────────────────────────────────────────────
+# Guidance for AI agents on how to choose between skills when triggers overlap:
+selection_guidance:
+  - scenario: "User asks about gene function with clear annotation gap"
+    prefer: gene_annotation_improvement
+    reason: "Targeted and fast; focused on improving a single gene's annotation"
+
+  - scenario: "User wants a comprehensive, publishable analysis of a gene"
+    prefer: automated_research
+    reason: "Covers all evidence types across multiple phases"
+
+  - scenario: "User wants to amplify a specific region in the lab"
+    prefer: primer_design
+    reason: "Includes experimental validation (BLAST, Tm, GC checks)"
+
+  - scenario: "User provides VCF coordinates or mentions SNP/mutation"
+    prefer: variant_context_analysis
+    reason: "Specifically designed for positional variant interpretation"
+
+  - scenario: "User asks about gene clusters or co-regulation in bacteria"
+    prefer: operon_analysis
+    reason: "Operons are prokaryote-specific; this skill handles the full workflow"
+
+  - scenario: "User asks what function a gene has (quick question)"
+    prefer: gene_annotation_improvement
+    depth: null
+    reason: "More targeted than automated_research for single function queries"
+
+  - scenario: "User wants to write a manuscript section about a gene"
+    prefer: automated_research
+    depth: deep
+    reason: "Produces publication-ready, structured output with citations"
