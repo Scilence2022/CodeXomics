@@ -102,7 +102,7 @@ class GeneralSettingsManager {
     // Use a more robust approach with multiple attempts
     const initializeTabsWithRetry = (attempts = 0, maxAttempts = 5) => {
       // Ensure the first tab is active by default
-      const firstTab = document.querySelector('#generalSettingsModal .settings-tabs .tab-btn[data-tab="appearance"]');
+      const firstTab = document.querySelector('#generalSettingsModal .llm-provider-tabs .tab-button[data-tab="appearance"]');
       const firstContent = document.getElementById('appearance-tab');
 
       console.log(`🔍 [GeneralSettings] Attempt ${attempts + 1}: Found first tab:`, !!firstTab);
@@ -110,7 +110,7 @@ class GeneralSettingsManager {
 
       if (firstTab && firstContent) {
         // Remove active from all tabs first
-        const allTabButtons = document.querySelectorAll('#generalSettingsModal .settings-tabs .tab-btn');
+        const allTabButtons = document.querySelectorAll('#generalSettingsModal .llm-provider-tabs .tab-button');
         const allTabContents = document.querySelectorAll('#generalSettingsModal .tab-content');
 
         console.log(`🔍 [GeneralSettings] Found ${allTabButtons.length} tab buttons`);
@@ -154,7 +154,7 @@ class GeneralSettingsManager {
           console.error('❌ [GeneralSettings] Failed to initialize tabs after all attempts');
 
           // Debug: List all available elements
-          const allTabs = document.querySelectorAll('#generalSettingsModal .tab-btn');
+          const allTabs = document.querySelectorAll('#generalSettingsModal .tab-button');
           const allContents = document.querySelectorAll('#generalSettingsModal .tab-content');
           console.log(
             '🔍 [GeneralSettings] All tab buttons found:',
@@ -496,7 +496,7 @@ class GeneralSettingsManager {
   setupTabHandlers() {
     console.log('🔄 [GeneralSettings] Setting up tab handlers');
 
-    const tabButtons = document.querySelectorAll('.settings-tabs .tab-btn');
+    const tabButtons = document.querySelectorAll('#generalSettingsModal .llm-provider-tabs .tab-button');
     console.log(`🔍 [GeneralSettings] Found ${tabButtons.length} tab buttons to bind events to`);
 
     if (tabButtons.length === 0) {
@@ -542,7 +542,7 @@ class GeneralSettingsManager {
       }
 
       // Update tab buttons
-      const tabButtons = document.querySelectorAll('.settings-tabs .tab-btn');
+      const tabButtons = document.querySelectorAll('#generalSettingsModal .llm-provider-tabs .tab-button');
       console.log(`🔍 [GeneralSettings] Found ${tabButtons.length} tab buttons to update`);
 
       tabButtons.forEach(btn => {
@@ -552,7 +552,7 @@ class GeneralSettingsManager {
       });
 
       // Update tab content
-      const tabContents = document.querySelectorAll('.settings-tabs .tab-content');
+      const tabContents = document.querySelectorAll('#generalSettingsModal .tab-content');
       console.log(`🔍 [GeneralSettings] Found ${tabContents.length} tab contents to update`);
 
       const targetContentId = `${tabName}-tab`;
@@ -566,8 +566,8 @@ class GeneralSettingsManager {
       console.log(`✅ [GeneralSettings] Successfully switched to tab: ${tabName}`);
 
       // Verify the switch worked
-      const activeButton = document.querySelector('.settings-tabs .tab-btn.active');
-      const activeContent = document.querySelector('.settings-tabs .tab-content.active');
+      const activeButton = document.querySelector('#generalSettingsModal .llm-provider-tabs .tab-button.active');
+      const activeContent = document.querySelector('#generalSettingsModal .tab-content.active');
 
       console.log(`🔍 [GeneralSettings] Verification - Active button: ${activeButton?.dataset.tab}`);
       console.log(`🔍 [GeneralSettings] Verification - Active content: ${activeContent?.id}`);
