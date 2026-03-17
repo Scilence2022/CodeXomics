@@ -1865,7 +1865,6 @@ class ChatManager {
   setupMCPServerEventHandlers() {
     this.mcpServerManager.on('serverConnected', data => {
       // [ChatManager] MCP Server connected
-      this.updateConnectionStatus(true);
       this.updateMCPStatus('connected');
     });
 
@@ -1873,7 +1872,6 @@ class ChatManager {
       // [ChatManager] MCP Server disconnected
       // Only update status to disconnected if no servers are connected
       if (this.mcpServerManager.getConnectedServersCount() === 0) {
-        this.updateConnectionStatus(false);
         this.updateMCPStatus('disconnected');
       } else {
         // Update button state even if some servers are still connected
@@ -1931,7 +1929,6 @@ class ChatManager {
       this.mcpSocket.onopen = () => {
         // [ChatManager] Connected to legacy MCP server
         this.isConnected = true;
-        this.updateConnectionStatus(true);
         this.updateMCPStatus('connected');
 
         // Send any pending messages
@@ -1951,7 +1948,6 @@ class ChatManager {
       this.mcpSocket.onclose = () => {
         // [ChatManager] Disconnected from legacy MCP server
         this.isConnected = false;
-        this.updateConnectionStatus(false);
         this.updateMCPStatus('disconnected');
 
         // Only attempt to reconnect if this is not a manual connection and auto-activation is enabled
@@ -1968,12 +1964,10 @@ class ChatManager {
 
       this.mcpSocket.onerror = error => {
         // [ChatManager] Legacy MCP connection error
-        this.updateConnectionStatus(false);
         this.updateMCPStatus('disconnected');
       };
     } catch (error) {
       // [ChatManager] Failed to setup legacy MCP connection
-      this.updateConnectionStatus(false);
       this.updateMCPStatus('disconnected');
     }
   }
@@ -1985,7 +1979,6 @@ class ChatManager {
       this.mcpSocket = null;
     }
     this.isConnected = false;
-    this.updateConnectionStatus(false);
     this.updateMCPStatus('disconnected');
   }
 
@@ -4524,10 +4517,6 @@ class ChatManager {
                             <i class="fas fa-users-cog"></i>
                             <span class="toggle-text">OFF</span>
                         </button>
-                        <div class="connection-status" id="connectionStatus">
-                            <i class="fas fa-circle"></i>
-                            <span>Connecting...</span>
-                        </div>
                     </div>
                     <div class="chat-controls">
                         <button id="dockChatBtn" class="btn btn-sm chat-btn" title="Dock to right side">
@@ -5224,22 +5213,6 @@ class ChatManager {
 
       // When minimizing/expanding, don't save position to avoid conflicts
       // Only save the minimized state preference if needed
-    }
-  }
-
-  updateConnectionStatus(connected) {
-    const statusElement = document.getElementById('connectionStatus');
-    if (statusElement) {
-      const icon = statusElement.querySelector('i');
-      const text = statusElement.querySelector('span');
-
-      if (connected) {
-        icon.className = 'fas fa-circle connected';
-        text.textContent = 'Connected';
-      } else {
-        icon.className = 'fas fa-circle disconnected';
-        text.textContent = 'Disconnected';
-      }
     }
   }
 

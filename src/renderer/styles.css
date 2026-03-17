@@ -4038,26 +4038,6 @@ path.svg-gene-element.selected.border-highlight text {
   gap: 8px;
 }
 
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  opacity: 0.9;
-}
-
-.connection-status i {
-  font-size: 8px;
-}
-
-.connection-status i.connected {
-  color: #10b981;
-  animation: pulse 2s infinite;
-}
-
-.connection-status i.disconnected {
-  color: #ef4444;
-}
 
 @keyframes pulse {
 
@@ -12938,17 +12918,6 @@ input:checked+.slider:before {
   overflow: hidden !important;
 }
 
-.connection-status {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  font-size: 10px !important;
-  opacity: 0.9 !important;
-  flex-shrink: 1 !important;
-  min-width: 0 !important;
-  overflow: hidden !important;
-  white-space: nowrap !important;
-}
 
 @media (max-width: 600px) {
   .chat-controls {
@@ -13011,20 +12980,6 @@ input:checked+.slider:before {
   font-weight: 600 !important;
 }
 
-.chat-title .connection-status {
-  font-size: 10px !important;
-  padding: 2px 4px !important;
-  margin: 0 2px !important;
-}
-
-.chat-title .connection-status i {
-  font-size: 8px !important;
-}
-
-.chat-title .connection-status span {
-  margin-left: 2px !important;
-  font-size: 9px !important;
-}
 
 .chat-title>.fas.fa-robot {
   margin-right: 4px !important;
@@ -13034,10 +12989,6 @@ input:checked+.slider:before {
 
 @media (max-width: 500px) {
   .chat-title .multi-agent-toggle .toggle-text {
-    display: none !important;
-  }
-
-  .chat-title .connection-status span {
     display: none !important;
   }
 }
@@ -13092,16 +13043,6 @@ input:checked+.slider:before {
     padding: 4px !important;
     justify-content: center !important;
     gap: 0 !important;
-  }
-
-  .connection-status span {
-    display: none !important;
-  }
-
-  .connection-status {
-    min-width: 12px !important;
-    max-width: 12px !important;
-    justify-content: center !important;
   }
 }
 
