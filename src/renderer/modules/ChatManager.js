@@ -5179,12 +5179,20 @@ class ChatManager {
 
   toggleChatMinimize() {
     const chatPanel = document.getElementById('llmChatPanel');
+    const minimizeBtn = document.getElementById('minimizeChatBtn');
+
     if (chatPanel) {
       const isMinimized = chatPanel.classList.contains('minimized');
+      const icon = minimizeBtn ? minimizeBtn.querySelector('i') : null;
 
       if (!isMinimized) {
         // Minimizing: move to bottom-left corner
         chatPanel.classList.add('minimized');
+
+        if (icon) {
+          icon.className = 'fas fa-window-maximize';
+          minimizeBtn.title = 'Expand window';
+        }
 
         // Calculate proper bottom position dynamically
         const statusBar = document.querySelector('.status-bar');
@@ -5206,6 +5214,12 @@ class ChatManager {
       } else {
         // Expanding: restore to original position
         chatPanel.classList.remove('minimized');
+
+        if (icon) {
+          icon.className = 'fas fa-minus';
+          minimizeBtn.title = 'Minimize window';
+        }
+
         chatPanel.style.bottom = '20px';
         chatPanel.style.left = 'auto';
         chatPanel.style.right = '20px';
