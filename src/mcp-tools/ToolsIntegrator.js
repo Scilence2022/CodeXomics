@@ -254,6 +254,28 @@ class ToolsIntegrator {
         }
       }
 
+      // Primer tools
+      if (this.primerTools.getTools()[toolName]) {
+        switch (toolName) {
+          case 'calculate_primer_properties':
+            return this.primerTools.calculateProperties(parameters.sequence);
+          case 'design_primers':
+            return this.primerTools.designPrimers(parameters.targetSequence, {
+              targetTm: parameters.targetTm,
+              minProductSize: parameters.minProductSize,
+            });
+          case 'find_primer_binding_sites':
+            return this.primerTools.findBindingSites(
+              parameters.primerSequence,
+              parameters.templateSequence,
+              parameters.maxMismatches
+            );
+          default:
+            // add_primer_annotation and any future UI tools go to client
+            return await this.primerTools.executeClientTool(toolName, parameters, clientId);
+        }
+      }
+
       // Annotation tools - delegate all to client
       if (this.annotationTools.getTools()[toolName]) {
         return await this.annotationTools.executeClientTool(toolName, parameters, clientId);
