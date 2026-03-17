@@ -455,7 +455,7 @@ class ChatBoxSettingsManager {
     modal.className = 'modal';
 
     modal.innerHTML = `
-            <div class="modal-content resizable" style="max-width: 800px;">
+            <div class="modal-content resizable llm-config-modal" style="max-width: 800px;">
                 <div class="modal-header">
                     <h3><i class="fas fa-comments"></i> ChatBox Settings</h3>
                     <div class="modal-controls">
@@ -472,25 +472,25 @@ class ChatBoxSettingsManager {
                 </div>
                 
                 <div class="modal-body">
-                    <div class="settings-tabs">
-                        <div class="tab-header">
-                            <button class="tab-btn active" data-tab="display">
-                                <i class="fas fa-eye"></i> Display
-                            </button>
-                            <button class="tab-btn" data-tab="behavior">
-                                <i class="fas fa-cogs"></i> Behavior
-                            </button>
-                            <button class="tab-btn" data-tab="models">
-                                <i class="fas fa-brain"></i> Models
-                            </button>
-                            <button class="tab-btn" data-tab="memory">
-                                <i class="fas fa-brain"></i> Memory
-                            </button>
-                            <button class="tab-btn" data-tab="advanced">
-                                <i class="fas fa-tools"></i> Advanced
-                            </button>
-                        </div>
-                        
+                    <div class="llm-provider-tabs">
+                        <button class="tab-button active" data-tab="display">
+                            <i class="fas fa-eye"></i> Display
+                        </button>
+                        <button class="tab-button" data-tab="behavior">
+                            <i class="fas fa-cogs"></i> Behavior
+                        </button>
+                        <button class="tab-button" data-tab="models">
+                            <i class="fas fa-brain"></i> Models
+                        </button>
+                        <button class="tab-button" data-tab="memory">
+                            <i class="fas fa-brain"></i> Memory
+                        </button>
+                        <button class="tab-button" data-tab="advanced">
+                            <i class="fas fa-tools"></i> Advanced
+                        </button>
+                    </div>
+                    
+                    <div class="llm-provider-config">
                         <!-- Display Tab -->
                         <div id="display-tab" class="tab-content active">
                             <div class="form-section">
@@ -965,7 +965,7 @@ class ChatBoxSettingsManager {
         `;
 
     // Add event listeners for tabs
-    const tabButtons = modal.querySelectorAll('.tab-btn');
+    const tabButtons = modal.querySelectorAll('.tab-button');
     const tabPanels = modal.querySelectorAll('.tab-content');
 
     tabButtons.forEach(button => {
