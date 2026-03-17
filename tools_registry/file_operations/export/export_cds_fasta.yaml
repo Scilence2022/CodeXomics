@@ -24,11 +24,11 @@ parameters:
     filename:
       type: string
       description: Output filename for the exported CDS FASTA file
-      default: "cds_sequences.fasta"
+      default: 'cds_sequences.fasta'
       examples:
-        - "all_cds.fasta"
-        - "selected_cds.fasta"
-        - "chromosome_cds.fasta"
+        - 'all_cds.fasta'
+        - 'selected_cds.fasta'
+        - 'chromosome_cds.fasta'
     include_gene_names:
       type: boolean
       description: Include gene names in FASTA headers
@@ -44,24 +44,24 @@ parameters:
     selection_type:
       type: string
       description: Which CDS sequences to export
-      enum: ["all", "selected", "current_view", "by_gene_name", "by_locus_tag"]
-      default: "all"
+      enum: ['all', 'selected', 'current_view', 'by_gene_name', 'by_locus_tag']
+      default: 'all'
     gene_names:
       type: array
       description: Specific gene names to export (when selection_type is by_gene_name)
       items:
         type: string
       examples:
-        - ["lacZ", "araA", "trpA"]
-        - ["gyrA", "rpoB"]
+        - ['lacZ', 'araA', 'trpA']
+        - ['gyrA', 'rpoB']
     locus_tags:
       type: array
       description: Specific locus tags to export (when selection_type is by_locus_tag)
       items:
         type: string
       examples:
-        - ["b0001", "b0002", "b0003"]
-        - ["EC_0001", "EC_0002"]
+        - ['b0001', 'b0002', 'b0003']
+        - ['EC_0001', 'EC_0002']
     wrap_length:
       type: integer
       description: Number of characters per line (0 = no wrapping)
@@ -89,10 +89,10 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["load_genome_file"]
-  alternatives: ["export_fasta_sequence", "export_protein_fasta"]
-  prerequisites: ["genome_data_loaded", "cds_annotations"]
-  follow_up: ["export_protein_fasta"]
+  enhances: ['load_genome_file']
+  alternatives: ['export_fasta_sequence', 'export_protein_fasta']
+  prerequisites: ['genome_data_loaded', 'cds_annotations']
+  follow_up: ['export_protein_fasta']
 metadata:
   usage_count: 0
   success_rate: 0
@@ -108,24 +108,24 @@ metadata:
   usage_pattern: frequent
 error_handling:
   no_cds_found:
-    error: "No CDS sequences found"
-    solution: "Load genome with CDS annotations or check selection criteria"
+    error: 'No CDS sequences found'
+    solution: 'Load genome with CDS annotations or check selection criteria'
     retry: false
   invalid_gene_names:
-    error: "Specified gene names not found"
-    solution: "Check gene names exist in the genome annotation"
+    error: 'Specified gene names not found'
+    solution: 'Check gene names exist in the genome annotation'
     retry: true
   export_failed:
-    error: "Failed to export CDS FASTA file"
-    solution: "Check file permissions and disk space"
+    error: 'Failed to export CDS FASTA file'
+    solution: 'Check file permissions and disk space'
     retry: true
 returns:
-  success: "boolean - Whether export was successful"
-  result: "object - Export results including:
+  success: 'boolean - Whether export was successful'
+  result: 'object - Export results including:
     - filename: string - Name of exported file
     - cdsCount: number - Number of CDS sequences exported
     - totalLength: number - Total length of all CDS sequences
     - fileSize: number - Size of exported file in bytes
-    - selectionType: string - Type of selection used"
-  error: "string - Error message if success is false"
-  error_type: "string - Type of error for proper handling"
+    - selectionType: string - Type of selection used'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

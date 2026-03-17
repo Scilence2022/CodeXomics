@@ -38,23 +38,24 @@ CodeXomics的动态工具注册系统是一个高度灵活、可扩展的架构�
 
 ```yaml
 categories:
-  file_loading:      # 文件加载操作
-  navigation:        # 导航与状态管理
-  sequence:          # 序列分析
-  protein:           # 蛋白质结构
-  database:          # 数据库集成
-  ai_analysis:       # AI驱动的分析
-  data_management:   # 数据管理
-  file_operations:   # 文件操作
-  pathway:           # 通路与BLAST
-  sequence_editing:  # 序列编辑
-  system:            # 系统管理
+  file_loading: # 文件加载操作
+  navigation: # 导航与状态管理
+  sequence: # 序列分析
+  protein: # 蛋白质结构
+  database: # 数据库集成
+  ai_analysis: # AI驱动的分析
+  data_management: # 数据管理
+  file_operations: # 文件操作
+  pathway: # 通路与BLAST
+  sequence_editing: # 序列编辑
+  system: # 系统管理
   plugin_management: # 插件管理
-  coordination:      # 多智能体协调
-  external_apis:     # 外部API集成
+  coordination: # 多智能体协调
+  external_apis: # 外部API集成
 ```
 
 每个类别包含：
+
 - 名称和描述
 - 图标和颜色标识
 - 优先级(1-3级)
@@ -66,19 +67,21 @@ categories:
 每个工具通过YAML文件定义，包含以下关键部分：
 
 1. **基本信息**
+
    ```yaml
-   name: "navigate_to_position"
-   version: "1.2.0"
-   description: "导航到基因组浏览器中的特定基因组坐标"
-   category: "navigation"
-   keywords: ["navigate", "position", "coordinates", "jump"]
+   name: 'navigate_to_position'
+   version: '1.2.0'
+   description: '导航到基因组浏览器中的特定基因组坐标'
+   category: 'navigation'
+   keywords: ['navigate', 'position', 'coordinates', 'jump']
    priority: 1
    ```
 
 2. **执行元数据**
+
    ```yaml
    execution:
-     type: "client"  # client/server/hybrid
+     type: 'client' # client/server/hybrid
      timeout: 5000
      retries: 3
      requires_auth: false
@@ -87,36 +90,39 @@ categories:
    ```
 
 3. **参数定义** (JSON Schema格式)
+
    ```yaml
    parameters:
-     type: "object"
+     type: 'object'
      properties:
        chromosome:
-         type: "string"
-         description: "染色体名称"
+         type: 'string'
+         description: '染色体名称'
        start:
-         type: "number"
-         description: "起始位置"
-     required: ["chromosome"]
+         type: 'number'
+         description: '起始位置'
+     required: ['chromosome']
    ```
 
 4. **示例用法**
+
    ```yaml
    sample_usages:
-     - user_query: "跳转到染色体1的1000-2000位置"
+     - user_query: '跳转到染色体1的1000-2000位置'
        tool_call: "navigate_to_position(chromosome='chr1', start=1000, end=2000)"
-       thought: "用户想要导航到特定的基因组区域"
-       expected_result: "浏览器视图更新显示指定区域"
+       thought: '用户想要导航到特定的基因组区域'
+       expected_result: '浏览器视图更新显示指定区域'
    ```
 
 5. **工具关系**
+
    ```yaml
    relationships:
      depends_on: []
      conflicts_with: []
-     enhances: ["get_current_state", "search_features"]
-     alternatives: ["jump_to_gene"]
-     follow_up: ["get_sequence", "analyze_region"]
+     enhances: ['get_current_state', 'search_features']
+     alternatives: ['jump_to_gene']
+     follow_up: ['get_sequence', 'analyze_region']
    ```
 
 6. **性能元数据**
@@ -125,9 +131,9 @@ categories:
      usage_count: 0
      success_rate: 0.0
      avg_execution_time: 0
-     tags: ["core", "navigation", "essential"]
-     complexity: "simple"
-     usage_pattern: "frequent"
+     tags: ['core', 'navigation', 'essential']
+     complexity: 'simple'
+     usage_pattern: 'frequent'
    ```
 
 ## 动态工具发现与加载
@@ -135,17 +141,18 @@ categories:
 ### 工具注册流程
 
 1. **初始化阶段**
+
    ```javascript
    async initializeRegistry() {
      // 1. 加载工具类别配置
      await this.loadToolCategories();
-     
+
      // 2. 预加载关键工具
      await this.preloadCriticalTools();
-     
+
      // 3. 递归查找工具文件
      await this.findToolFiles();
-     
+
      // 4. 验证和注册工具
      await this.validateAndRegisterTools();
    }
@@ -167,6 +174,7 @@ categories:
 系统实现了多层次工具检索机制：
 
 1. **基于类别的检索**
+
    ```javascript
    getToolsByCategory(categoryName) {
      return this.tools.filter(tool => tool.category === categoryName);
@@ -174,9 +182,10 @@ categories:
    ```
 
 2. **基于关键词的检索**
+
    ```javascript
    searchToolsByKeyword(keyword) {
-     return this.tools.filter(tool => 
+     return this.tools.filter(tool =>
        tool.keywords.includes(keyword.toLowerCase()) ||
        tool.name.toLowerCase().includes(keyword.toLowerCase())
      );
@@ -188,13 +197,13 @@ categories:
    async getRelevantTools(userQuery, context = {}) {
      // 1. 分析用户意图
      const intent = await this.analyzeUserIntent(userQuery);
-     
+
      // 2. 获取候选工具
      const candidates = this.getCandidateTools(intent);
-     
+
      // 3. 评分和排序
      const scored = this.scoreAndRankTools(candidates, intent, context);
-     
+
      // 4. 返回最相关的工具
      return scored.slice(0, 10);
    }
@@ -207,6 +216,7 @@ categories:
 系统使用多层次方法分析用户意图：
 
 1. **关键词匹配**
+
    ```javascript
    const intentKeywords = {
      navigation: ['navigate', 'go to', 'jump', 'move', 'position'],
@@ -233,29 +243,27 @@ categories:
 ```javascript
 function scoreTool(tool, intent, context) {
   let score = 0;
-  
+
   // 1. 类别匹配分数
   if (tool.category === intent.primaryCategory) {
     score += 40;
   }
-  
+
   // 2. 关键词匹配分数
-  const keywordMatches = tool.keywords.filter(k => 
-    intent.keywords.includes(k)
-  ).length;
+  const keywordMatches = tool.keywords.filter(k => intent.keywords.includes(k)).length;
   score += keywordMatches * 10;
-  
+
   // 3. 优先级分数
   score += (4 - tool.priority) * 5;
-  
+
   // 4. 上下文相关性分数
   if (context.genomeBrowser && tool.requires_data) {
     score += 15;
   }
-  
+
   // 5. 历史使用统计分数
   score += tool.metadata.usage_count * 0.1;
-  
+
   return score;
 }
 ```
@@ -292,14 +300,14 @@ async executeToolWithRouting(toolName, parameters, chatManagerInstance, clientId
         toolName, parameters, chatManagerInstance
       );
     }
-    
+
     // 2. 路由到外部工具执行
     if (chatManagerInstance.executeToolViaMCP) {
       return await chatManagerInstance.executeToolViaMCP(
         toolName, parameters, clientId
       );
     }
-    
+
     throw new Error(`工具执行处理器未找到: ${toolName}`);
   } catch (error) {
     console.error(`工具执行失败 ${toolName}:`, error);
@@ -335,6 +343,7 @@ async executeToolWithRouting(toolName, parameters, chatManagerInstance, clientId
 您是CodeXomics的高级AI助手，配备了${tools.length}个基于用户查询动态选择的工具。
 
 ## 🧬 当前上下文
+
 - **当前染色体**: ${context.genomeBrowser.currentChromosome}
 - **当前位置**: ${context.genomeBrowser.currentPosition}
 - **可见轨道**: ${context.genomeBrowser.visibleTracks.join(', ')}
@@ -385,15 +394,15 @@ function resolveDependencies(toolName, visited = new Set()) {
   if (visited.has(toolName)) {
     throw new Error(`检测到循环依赖: ${toolName}`);
   }
-  
+
   visited.add(toolName);
   const tool = this.getTool(toolName);
   const dependencies = [];
-  
+
   for (const dep of tool.relationships.depends_on) {
     dependencies.push(...resolveDependencies(dep, new Set(visited)));
   }
-  
+
   dependencies.push(toolName);
   return dependencies;
 }
@@ -422,26 +431,24 @@ function resolveDependencies(toolName, visited = new Set()) {
 ```javascript
 function trackToolUsage(toolName, success, executionTime) {
   const tool = this.getTool(toolName);
-  
+
   // 更新使用统计
   tool.metadata.usage_count++;
-  tool.metadata.avg_execution_time = 
-    (tool.metadata.avg_execution_time * (tool.metadata.usage_count - 1) + executionTime) / 
-    tool.metadata.usage_count;
-  
+  tool.metadata.avg_execution_time =
+    (tool.metadata.avg_execution_time * (tool.metadata.usage_count - 1) + executionTime) / tool.metadata.usage_count;
+
   // 更新成功率
   if (success) {
-    tool.metadata.success_rate = 
-      (tool.metadata.success_rate * (tool.metadata.usage_count - 1) + 1) / 
-      tool.metadata.usage_count;
+    tool.metadata.success_rate =
+      (tool.metadata.success_rate * (tool.metadata.usage_count - 1) + 1) / tool.metadata.usage_count;
   }
-  
+
   // 记录性能指标
   this.performanceMetrics.record({
     tool: toolName,
     success,
     executionTime,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 }
 ```
@@ -474,7 +481,7 @@ async executeWithFallback(toolName, parameters, context) {
     return await this.executeTool(toolName, parameters, context);
   } catch (error) {
     console.warn(`主要工具 ${toolName} 执行失败:`, error);
-    
+
     // 查找替代工具
     const alternatives = this.getAlternatives(toolName);
     for (const alt of alternatives) {
@@ -485,7 +492,7 @@ async executeWithFallback(toolName, parameters, context) {
         console.warn(`替代工具 ${alt} 也失败了:`, altError);
       }
     }
-    
+
     // 所有工具都失败，返回错误
     throw new Error(`工具执行失败: ${toolName} 及其替代工具均不可用`);
   }
@@ -519,18 +526,18 @@ async executeWithFallback(toolName, parameters, context) {
 async registerPlugin(pluginConfig) {
   // 1. 验证插件配置
   this.validatePluginConfig(pluginConfig);
-  
+
   // 2. 初始化插件
   const plugin = await this.initializePlugin(pluginConfig);
-  
+
   // 3. 注册插件工具
   for (const tool of plugin.tools) {
     await this.registerTool(tool, plugin);
   }
-  
+
   // 4. 更新插件索引
   this.pluginIndex.set(plugin.name, plugin);
-  
+
   // 5. 触发插件注册事件
   this.emit('pluginRegistered', plugin);
 }
@@ -600,25 +607,25 @@ async registerPlugin(pluginConfig) {
 class ToolDetectionBenchmark {
   async runBenchmark(testQueries) {
     const results = [];
-    
+
     for (const query of testQueries) {
       // 记录工具检测结果
       const detectionResult = await this.analyzeToolDetection(query);
-      
+
       // 记录最终工具选择
       const selectionResult = await this.analyzeToolSelection(query);
-      
+
       // 记录执行结果
       const executionResult = await this.analyzeExecution(query);
-      
+
       results.push({
         query,
         detection: detectionResult,
         selection: selectionResult,
-        execution: executionResult
+        execution: executionResult,
       });
     }
-    
+
     return this.analyzeResults(results);
   }
 }

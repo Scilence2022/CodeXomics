@@ -3,6 +3,7 @@
 ## Gene Navigation Tools - Corrected Selection Logic
 
 ### Problem Identified
+
 The LLM was incorrectly choosing `search_gene_by_name` over `jump_to_gene` for direct navigation requests like "navigate to lysC gene". This was caused by:
 
 1. **Wrong parameters in jump_to_gene**: Had `chromosome`, `start`, `end` instead of `geneName`
@@ -12,7 +13,9 @@ The LLM was incorrectly choosing `search_gene_by_name` over `jump_to_gene` for d
 ### Corrected Tool Hierarchy
 
 #### 1. `jump_to_gene` - PRIMARY Navigation Tool
+
 **Use for**: Direct navigation to known genes
+
 ```yaml
 Description: "Jump directly to a gene location by gene name or locus tag. This is the PRIMARY tool for navigating to genes when you know the gene name."
 Priority: 1
@@ -22,8 +25,10 @@ Examples:
   - "go to lacZ" → jump_to_gene(geneName='lacZ')
 ```
 
-#### 2. `search_gene_by_name` - FALLBACK Search Tool  
+#### 2. `search_gene_by_name` - FALLBACK Search Tool
+
 **Use for**: Fuzzy searches, partial matches, when jump_to_gene fails
+
 ```yaml
 Description: "Search for genes by name with partial matching support. Use as FALLBACK when jump_to_gene fails or for fuzzy matching."
 Priority: 2
@@ -35,12 +40,12 @@ Examples:
 
 ### Expected LLM Behavior After Fix
 
-| User Query | Correct Tool Selection | Reasoning |
-|------------|----------------------|-----------|
-| "navigate to lysC gene" | `jump_to_gene(geneName='lysC')` | Direct navigation with known gene name |
-| "go to lacZ" | `jump_to_gene(geneName='lacZ')` | Primary tool for direct gene navigation |
-| "find genes like ara" | `search_gene_by_name(name='ara', exact_match=false)` | Fuzzy search scenario |
-| "search for dnaA" | `jump_to_gene(geneName='dnaA')` | Even with "search" word, known gene = direct navigation |
+| User Query              | Correct Tool Selection                               | Reasoning                                               |
+| ----------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| "navigate to lysC gene" | `jump_to_gene(geneName='lysC')`                      | Direct navigation with known gene name                  |
+| "go to lacZ"            | `jump_to_gene(geneName='lacZ')`                      | Primary tool for direct gene navigation                 |
+| "find genes like ara"   | `search_gene_by_name(name='ara', exact_match=false)` | Fuzzy search scenario                                   |
+| "search for dnaA"       | `jump_to_gene(geneName='dnaA')`                      | Even with "search" word, known gene = direct navigation |
 
 ### Validation Test Cases
 

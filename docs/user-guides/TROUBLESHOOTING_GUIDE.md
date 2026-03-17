@@ -9,19 +9,21 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Application fails to launch or shows a white screen
 
 **Solutions**:
+
 1. **Check system requirements**:
    - Ensure you have sufficient RAM (6GB minimum)
    - Verify your operating system is supported
    - Update to the latest OS version if needed
 
 2. **Clear application data**:
+
    ```bash
    # macOS
    rm -rf ~/Library/Application\ Support/genome-ai-studio
-   
+
    # Windows
    del /s "%APPDATA%\genome-ai-studio"
-   
+
    # Linux
    rm -rf ~/.config/genome-ai-studio
    ```
@@ -36,6 +38,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: "Permission denied" or "Access is denied" errors
 
 **Solutions**:
+
 1. **Run as administrator** (Windows) or with `sudo` (Linux/macOS)
 2. **Check file permissions** for your data directory
 3. **Disable antivirus temporarily** during installation
@@ -46,6 +49,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: "Failed to load Electron" or framework-related errors
 
 **Solutions**:
+
 1. **Update Node.js** to the latest LTS version
 2. **Clear npm cache**:
    ```bash
@@ -64,6 +68,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: `SyntaxError: Unexpected token 'export'` or version-related errors
 
 **Solutions**:
+
 1. **Update to latest version** that includes the unified version management system
 2. **Clear module cache**:
    ```bash
@@ -77,6 +82,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Application becomes slow or crashes with large files
 
 **Solutions**:
+
 1. **Increase system memory** allocation
 2. **Close other applications** to free up RAM
 3. **Use streaming mode** for files larger than 500MB
@@ -88,6 +94,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Plugins not loading or marketplace errors
 
 **Solutions**:
+
 1. **Check plugin compatibility** with current version
 2. **Clear plugin cache**:
    ```bash
@@ -103,6 +110,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Chat doesn't work or returns errors
 
 **Solutions**:
+
 1. **Check API key configuration**:
    - Go to Options → Configure LLMs
    - Verify API key is correct and active
@@ -121,6 +129,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Conversation history not recording or analysis errors
 
 **Solutions**:
+
 1. **Check conversation recording settings**:
    - Open developer console (F12)
    - Look for conversation recording errors
@@ -143,6 +152,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Application becomes unresponsive with large genomic files
 
 **Solutions**:
+
 1. **Use file streaming** for files > 100MB
 2. **Enable BAM file handling** for sequencing data
 3. **Reduce visible track count** for large genomes
@@ -153,6 +163,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Files not loading or parsing errors
 
 **Solutions**:
+
 1. **Verify file format** is supported:
    - FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML
 2. **Check file integrity**:
@@ -165,6 +176,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: "File not found" errors with valid files
 
 **Solutions**:
+
 1. **Use absolute paths** instead of relative paths
 2. **Check for special characters** in file names
 3. **Verify file permissions** are readable
@@ -177,6 +189,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Tracks not displaying correctly or visual glitches
 
 **Solutions**:
+
 1. **Refresh track display**:
    - Right-click track → Refresh
    - Or reload the current view
@@ -195,6 +208,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Menu items not working or menu height errors
 
 **Solutions**:
+
 1. **Restart application** to reset menu state
 2. **Check for menu conflicts** between windows
 3. **Reset UI preferences**:
@@ -207,6 +221,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Project Manager not loading or view mode problems
 
 **Solutions**:
+
 1. **Check project file integrity**:
    - Verify .prj.GAI file is valid XML
    - Check for missing project files
@@ -227,6 +242,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: BLAST tools not working or database errors
 
 **Solutions**:
+
 1. **Install BLAST+ tools**:
    - Use Tools → Install BLAST+
    - Or install manually from NCBI
@@ -244,6 +260,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: Pathway viewer not loading or cytoscape errors
 
 **Solutions**:
+
 1. **Check internet connection** for CDN resources
 2. **Clear browser cache** in developer tools
 3. **Verify KGML file format** is valid XML
@@ -254,6 +271,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Symptoms**: "cytoscape is not defined" errors
 
 **Solutions**:
+
 1. **Check CDN availability**:
    - Verify internet connection
    - Wait for library loading timeout
@@ -269,11 +287,13 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 ### Developer Console Debugging
 
 **Access Developer Console**:
+
 - Press **F12** or **Ctrl+Shift+I**
 - Look for error messages in Console tab
 - Check Network tab for failed requests
 
 **Common Error Patterns**:
+
 1. **Module loading errors**: Check script loading order
 2. **API call failures**: Verify network connectivity
 3. **Memory errors**: Monitor memory usage in Performance tab
@@ -281,11 +301,13 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 ### Log File Analysis
 
 **Log Locations**:
+
 - **macOS**: `~/Library/Logs/genome-ai-studio/`
 - **Windows**: `%APPDATA%\genome-ai-studio\logs\`
 - **Linux**: `~/.config/genome-ai-studio/logs/`
 
 **Key Log Files**:
+
 - `main.log`: Main process errors
 - `renderer.log`: UI and visualization errors
 - `plugin.log`: Plugin-related issues
@@ -293,6 +315,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 ### Performance Optimization
 
 **For Large Datasets**:
+
 1. **Enable hardware acceleration** in system settings
 2. **Increase Node.js memory limit**:
    ```bash
@@ -302,6 +325,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 4. **Close unused tracks** and tools
 
 **For Slow Performance**:
+
 1. **Check system resource usage** (CPU, Memory)
 2. **Disable unnecessary features** temporarily
 3. **Restart application** to clear caches
@@ -321,6 +345,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 ### Reporting Bugs
 
 **Include in Bug Reports**:
+
 - Detailed steps to reproduce the issue
 - Expected vs actual behavior
 - System specifications
@@ -328,6 +353,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 - Screenshots or screen recordings
 
 **Where to Report**:
+
 - **GitHub Issues**: For bugs and feature requests
 - **Email Support**: For sensitive or complex issues
 - **Community Forums**: For general questions
@@ -335,6 +361,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 ### Emergency Recovery
 
 **Complete Reset** (last resort):
+
 1. **Backup important projects** and data
 2. **Uninstall application** completely
 3. **Clear all application data** directories
@@ -344,11 +371,13 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 ## 🔍 Diagnostic Commands
 
 ### Version Validation
+
 ```bash
 npm run version-validate
 ```
 
 ### System Health Check
+
 ```bash
 # Check Node.js version
 node --version
@@ -365,6 +394,7 @@ wmic OS get TotalVisibleMemorySize,FreePhysicalMemory /format:list
 ```
 
 ### Plugin System Check
+
 ```bash
 # Validate plugin system
 npm run test:plugins
@@ -376,6 +406,7 @@ curl -I https://genome-ai-studio-marketplace.com/api/health
 ## 📋 Quick Reference
 
 ### Common Keyboard Shortcuts
+
 - **F12**: Open Developer Console
 - **Ctrl+Shift+R**: Hard reload
 - **Ctrl+Shift+O**: Open project
@@ -383,6 +414,7 @@ curl -I https://genome-ai-studio-marketplace.com/api/health
 - **Ctrl+Plus/Minus**: Zoom
 
 ### Emergency Actions
+
 - **Force quit**: Ctrl+Alt+T (Task Manager)
 - **Safe mode**: Start with `--safe-mode` flag
 - **Reset settings**: Delete config directory
@@ -392,4 +424,4 @@ curl -I https://genome-ai-studio-marketplace.com/api/health
 
 **Still having issues?** Contact our support team with detailed information about your problem, including system specifications and error messages.
 
-*This guide covers CodeXomics v0.3.0-beta. Check for updates to both the application and this documentation.* 
+_This guide covers CodeXomics v0.3.0-beta. Check for updates to both the application and this documentation._

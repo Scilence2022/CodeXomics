@@ -15,13 +15,13 @@
 
 3. **Select Demo Dataset**
    You will see two demo options:
-   
+
    **Option 1: Basic Demo - p53 Tumor Suppressor Network**
    - 3 proteins (TP53, MDM2, ATM)
    - 2 protein-protein interactions
    - ~100ms render time
    - Perfect for quick functionality check
-   
+
    **Option 2: Complex Demo - DNA Damage Response Network**
    - 8 proteins involved in DNA repair
    - 8 interactions showing pathway cascade
@@ -50,13 +50,13 @@
    - Click the blue **"Test"** button
 
 2. **Select Demo Dataset**
-   
+
    **Option 1: Basic Demo - Glycolysis Initial Steps**
    - First 3 reactions of glycolysis
    - 5 nodes (compounds + reactions)
    - KEGG compound IDs: C00031, C00668, C00085
    - KEGG reaction IDs: R00299, R00771
-   
+
    **Option 2: Complex Demo - Complete Glycolysis Pathway**
    - Full pathway from glucose to pyruvate
    - 10 compounds, 8 reactions
@@ -78,13 +78,13 @@
    - Click the blue **"Test"** button
 
 2. **Select Demo Dataset**
-   
+
    **Option 1: Basic Demo - L-Arabinose Degradation**
    - E. coli sugar metabolism pathway
    - 5 nodes (compounds + reactions)
    - BioCyc nomenclature: L-ARABINOSE, ARAA-RXN, ARAB-RXN
    - Simple linear pathway
-   
+
    **Option 2: Complex Demo - TCA Cycle in E. coli**
    - Complete tricarboxylic acid cycle
    - 10 TCA cycle intermediates
@@ -110,13 +110,14 @@
 ✅ **SVG/Canvas element** appears in viz container  
 ✅ **Analysis panel** shows network statistics  
 ✅ **Execution time** is under 500ms for basic demos  
-✅ **No console errors** appear in browser DevTools  
+✅ **No console errors** appear in browser DevTools
 
 ### If Demo Window Doesn't Open
 
 **Problem**: Browser blocked popup window
 
 **Solution**:
+
 1. Look for popup blocker notification in browser address bar
 2. Click "Allow popups from this site"
 3. Click the "Test" button again
@@ -126,6 +127,7 @@
 **Problem**: Plugin not enabled or not installed
 
 **Solution**:
+
 1. Check plugin status badge shows "Enabled" (green)
 2. If disabled, click "Enable" button first
 3. If not installed, go to "Available Plugins" tab and install
@@ -135,6 +137,7 @@
 **Problem**: Plugin needs reinstallation
 
 **Solution**:
+
 1. Click "Uninstall" button
 2. Go to "Available Plugins" tab
 3. Click "Install" for the plugin
@@ -239,6 +242,7 @@ The **TCA cycle** (Krebs cycle) demo tests the plugin's ability to handle **cycl
 ### If Tests Pass ✅
 
 You can confidently use the plugin for your research:
+
 1. Prepare your data in the same format as demo data
 2. Use the plugin through Plugin Management or ChatBox
 3. Export visualizations for publication
@@ -246,6 +250,7 @@ You can confidently use the plugin for your research:
 ### If Tests Fail ❌
 
 Report the issue with these details:
+
 1. Which plugin failed
 2. Which demo dataset (basic or complex)
 3. Error message from console

@@ -1,114 +1,114 @@
-name: "get_loaded_files_list"
-version: "1.0.0"
-description: "Get list of all currently loaded files in the genome browser with their complete paths and metadata"
-category: "file_loading"
-subcategory: "file_management"
+name: 'get_loaded_files_list'
+version: '1.0.0'
+description: 'Get list of all currently loaded files in the genome browser with their complete paths and metadata'
+category: 'file_loading'
+subcategory: 'file_management'
 priority: 1
-keywords: ["files", "list", "loaded", "paths", "metadata", "current", "status"]
-execution_type: "built-in"
-complexity: "simple"
+keywords: ['files', 'list', 'loaded', 'paths', 'metadata', 'current', 'status']
+execution_type: 'built-in'
+complexity: 'simple'
 
 # Built-in tool implemented in ChatManager
 implementation:
-  type: "built-in"
-  method: "getLoadedFilesList"
-  class: "ChatManager"
-  
+  type: 'built-in'
+  method: 'getLoadedFilesList'
+  class: 'ChatManager'
+
 # Tool parameters
 parameters:
-  type: "object"
+  type: 'object'
   properties:
     includeMetadata:
-      type: "boolean"
-      description: "Include detailed file metadata (size, load time)"
+      type: 'boolean'
+      description: 'Include detailed file metadata (size, load time)'
       required: false
       default: true
   required: []
 
 # Return value specification
 returns:
-  type: "object"
+  type: 'object'
   properties:
     success:
-      type: "boolean"
-      description: "Whether the operation succeeded"
+      type: 'boolean'
+      description: 'Whether the operation succeeded'
     message:
-      type: "string"
-      description: "Human-readable result message"
+      type: 'string'
+      description: 'Human-readable result message'
     filesCount:
-      type: "integer"
-      description: "Number of loaded files"
+      type: 'integer'
+      description: 'Number of loaded files'
     files:
-      type: "array"
-      description: "Array of loaded file information objects"
+      type: 'array'
+      description: 'Array of loaded file information objects'
       items:
-        type: "object"
+        type: 'object'
         properties:
           name:
-            type: "string"
-            description: "File name"
+            type: 'string'
+            description: 'File name'
           path:
-            type: "string"
-            description: "Complete file path"
+            type: 'string'
+            description: 'Complete file path'
           type:
-            type: "string"
-            description: "File type (FASTA, GFF, VCF, etc.)"
+            type: 'string'
+            description: 'File type (FASTA, GFF, VCF, etc.)'
           size:
-            type: "integer"
-            description: "File size in bytes (if includeMetadata is true)"
+            type: 'integer'
+            description: 'File size in bytes (if includeMetadata is true)'
           sizeFormatted:
-            type: "string"
+            type: 'string'
             description: "Formatted file size (e.g., '12.45 MB')"
           loadedAt:
-            type: "string"
-            description: "ISO timestamp when file was loaded"
+            type: 'string'
+            description: 'ISO timestamp when file was loaded'
 
 # Usage examples
 sample_usages:
-  - user_query: "Show me all loaded files"
+  - user_query: 'Show me all loaded files'
     tool_call: '{"tool_name": "get_loaded_files_list", "parameters": {}}'
-    expected_result: "Returns list of all loaded files with full metadata"
-  
-  - user_query: "What files are currently loaded?"
+    expected_result: 'Returns list of all loaded files with full metadata'
+
+  - user_query: 'What files are currently loaded?'
     tool_call: '{"tool_name": "get_loaded_files_list", "parameters": {"includeMetadata": true}}'
-    expected_result: "Returns complete list with paths and metadata"
-    
-  - user_query: "List loaded files without metadata"
+    expected_result: 'Returns complete list with paths and metadata'
+
+  - user_query: 'List loaded files without metadata'
     tool_call: '{"tool_name": "get_loaded_files_list", "parameters": {"includeMetadata": false}}'
-    expected_result: "Returns basic file information only"
+    expected_result: 'Returns basic file information only'
 
 # Tool relationships
 relationships:
-  enhances: ["load_genome_file", "load_annotation_file", "load_variant_file"]
+  enhances: ['load_genome_file', 'load_annotation_file', 'load_variant_file']
   prerequisites: []
-  follow_up: ["get_current_state"]
+  follow_up: ['get_current_state']
 
 # Integration requirements
-integration_requirements: ["none"]
+integration_requirements: ['none']
 
 # Usage patterns and optimization
-usage_patterns: "frequent"
+usage_patterns: 'frequent'
 success_rate: 0.99
 average_execution_time: 10
 
 # Tool metadata
 metadata:
-  author: "CodeXomics"
-  created: "2024-12-10"
-  last_updated: "2024-12-10"
-  tags: ["file-management", "status", "core", "built-in"]
-  
+  author: 'CodeXomics'
+  created: '2024-12-10'
+  last_updated: '2024-12-10'
+  tags: ['file-management', 'status', 'core', 'built-in']
+
 # Performance considerations
 performance:
-  memory_usage: "minimal"
-  cpu_usage: "minimal"
+  memory_usage: 'minimal'
+  cpu_usage: 'minimal'
   network_required: false
   file_access: false
 
 # Error handling
 error_handling:
   common_errors:
-    - error: "Application not available"
-      solution: "Ensure genome browser is properly initialized"
-    - error: "No files loaded"
-      solution: "Load files first using load_genome_file or other file loading tools"
+    - error: 'Application not available'
+      solution: 'Ensure genome browser is properly initialized'
+    - error: 'No files loaded'
+      solution: 'Load files first using load_genome_file or other file loading tools'

@@ -1,6 +1,7 @@
 # Actions System Documentation
 
 ## Table of Contents
+
 1. [System Overview](#system-overview)
 2. [Architecture](#architecture)
 3. [Core Components](#core-components)
@@ -25,6 +26,7 @@ The Actions System is a comprehensive sequence editing framework in GenomeAIStud
 - **Conflict detection**: Identifies overlapping actions before execution
 
 ### Key Features
+
 - ✅ Queue-based action management
 - ✅ Clipboard system for sequence data
 - ✅ Automatic feature position adjustment
@@ -101,6 +103,7 @@ tools_registry/sequence_editing/
 **Location**: `src/renderer/modules/ActionManager.js`
 
 **Responsibilities**:
+
 - Queue management for sequence editing operations
 - Clipboard operations (copy/cut/paste)
 - Action execution with feature tracking
@@ -109,6 +112,7 @@ tools_registry/sequence_editing/
 - UI interaction
 
 **Key Properties**:
+
 ```javascript
 {
     actions: [],              // Action queue
@@ -122,26 +126,28 @@ tools_registry/sequence_editing/
 ```
 
 **Action Types**:
+
 ```javascript
 ACTION_TYPES = {
-    COPY_SEQUENCE: 'copy_sequence',
-    CUT_SEQUENCE: 'cut_sequence',
-    PASTE_SEQUENCE: 'paste_sequence',
-    DELETE_SEQUENCE: 'delete_sequence',
-    INSERT_SEQUENCE: 'insert_sequence',
-    REPLACE_SEQUENCE: 'replace_sequence',
-    SEQUENCE_EDIT: 'sequence_edit'
-}
+  COPY_SEQUENCE: 'copy_sequence',
+  CUT_SEQUENCE: 'cut_sequence',
+  PASTE_SEQUENCE: 'paste_sequence',
+  DELETE_SEQUENCE: 'delete_sequence',
+  INSERT_SEQUENCE: 'insert_sequence',
+  REPLACE_SEQUENCE: 'replace_sequence',
+  SEQUENCE_EDIT: 'sequence_edit',
+};
 ```
 
 **Status Types**:
+
 ```javascript
 STATUS = {
-    PENDING: 'pending',
-    EXECUTING: 'executing',
-    COMPLETED: 'completed',
-    FAILED: 'failed'
-}
+  PENDING: 'pending',
+  EXECUTING: 'executing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+};
 ```
 
 ### 2. ModernActionManager (Next Generation)
@@ -149,6 +155,7 @@ STATUS = {
 **Location**: `src/temp/modern/ModernActionManager.js`
 
 **Key Improvements**:
+
 - Command Pattern architecture
 - Event-driven design with EventBus
 - Reactive state management
@@ -158,6 +165,7 @@ STATUS = {
 - Performance metrics
 
 **Command Registration**:
+
 ```javascript
 Commands = {
     'action:setCursorPosition',  // Set cursor
@@ -175,6 +183,7 @@ Commands = {
 **Purpose**: Bridge between MCP server and client-side ActionManager
 
 **Methods**:
+
 - `copy_sequence()` - Copy to clipboard
 - `cut_sequence()` - Cut to clipboard
 - `paste_sequence()` - Paste from clipboard
@@ -194,13 +203,14 @@ Commands = {
 **Purpose**: State backup and restoration for undo/rollback
 
 **Checkpoint Types**:
+
 ```javascript
 CHECKPOINT_TYPES = {
-    MANUAL: 'manual',
-    AUTO: 'auto',
-    BEFORE_ACTION: 'before_action',
-    MILESTONE: 'milestone'
-}
+  MANUAL: 'manual',
+  AUTO: 'auto',
+  BEFORE_ACTION: 'before_action',
+  MILESTONE: 'milestone',
+};
 ```
 
 ---
@@ -212,15 +222,17 @@ CHECKPOINT_TYPES = {
 **Description**: Copy a genomic region to clipboard for later use
 
 **Parameters**:
+
 ```yaml
-chromosome: string     # Chromosome identifier
-start: number         # Start position (1-based)
-end: number          # End position (1-based)
-strand: string       # "+" or "-"
-include_annotations: boolean  # Include features
+chromosome: string # Chromosome identifier
+start: number # Start position (1-based)
+end: number # End position (1-based)
+strand: string # "+" or "-"
+include_annotations: boolean # Include features
 ```
 
 **Behavior**:
+
 - Extracts sequence from region
 - Stores in clipboard with metadata
 - Includes features if requested
@@ -228,13 +240,14 @@ include_annotations: boolean  # Include features
 - Non-destructive operation
 
 **Example**:
+
 ```javascript
-actionManager.addAction(
-    'copy_sequence',
-    'chr1:1000-2000(+)',
-    'Copy 1000 bp region',
-    { chromosome: 'chr1', start: 1000, end: 2000, strand: '+' }
-);
+actionManager.addAction('copy_sequence', 'chr1:1000-2000(+)', 'Copy 1000 bp region', {
+  chromosome: 'chr1',
+  start: 1000,
+  end: 2000,
+  strand: '+',
+});
 ```
 
 ### 2. CUT_SEQUENCE
@@ -244,6 +257,7 @@ actionManager.addAction(
 **Parameters**: Same as COPY_SEQUENCE
 
 **Behavior**:
+
 - Copies sequence to clipboard
 - Creates DELETE action automatically
 - Two-phase operation (copy + delete)
@@ -253,14 +267,16 @@ actionManager.addAction(
 **Description**: Insert clipboard content at position
 
 **Parameters**:
+
 ```yaml
 chromosome: string
-position: number     # Insert position
-start: number       # Or replacement start
-end: number        # Replacement end
+position: number # Insert position
+start: number # Or replacement start
+end: number # Replacement end
 ```
 
 **Behavior**:
+
 - **Insert mode**: position specified
 - **Replace mode**: start-end specified
 - Adjusts downstream feature positions
@@ -271,6 +287,7 @@ end: number        # Replacement end
 **Description**: Remove genomic region
 
 **Parameters**:
+
 ```yaml
 chromosome: string
 start: number
@@ -279,6 +296,7 @@ strand: string
 ```
 
 **Behavior**:
+
 - Removes sequence from region
 - Adjusts downstream features
 - Tracks deleted features
@@ -289,13 +307,15 @@ strand: string
 **Description**: Insert new sequence at position
 
 **Parameters**:
+
 ```yaml
 chromosome: string
 position: number
-sequence: string    # DNA sequence (ATGCN)
+sequence: string # DNA sequence (ATGCN)
 ```
 
 **Behavior**:
+
 - Validates sequence (ATGCN only)
 - Inserts at position
 - Shifts downstream features
@@ -306,6 +326,7 @@ sequence: string    # DNA sequence (ATGCN)
 **Description**: Replace region with new sequence
 
 **Parameters**:
+
 ```yaml
 chromosome: string
 start: number
@@ -315,6 +336,7 @@ strand: string
 ```
 
 **Behavior**:
+
 - Deletes original region
 - Inserts new sequence
 - May change region length
@@ -380,6 +402,7 @@ strand: string
    - Show progress UI
 
 2. **Execution Loop**:
+
    ```javascript
    for each pending action:
        - Execute on copy
@@ -397,12 +420,14 @@ strand: string
 ### Conflict Detection
 
 **Conflict Types**:
+
 - **Position Overlap**: Actions affect same region
 - **High Severity**: Delete/Cut overlaps
 - **Medium Severity**: Replace overlaps Insert/Paste
 - **Low Severity**: Insert/Paste overlaps
 
 **Resolution**:
+
 - Manual review required
 - User can proceed or cancel
 - Actions highlighted in UI
@@ -565,27 +590,32 @@ destroy() → void
 ### Strengths
 
 #### 1. **Comprehensive Feature Tracking**
+
 - ✅ Automatic feature position adjustment
 - ✅ Deep copying to prevent reference issues
 - ✅ Handles complex modifications (insert/delete/replace)
 
 #### 2. **Robust Execution Model**
+
 - ✅ Queue-based non-destructive editing
 - ✅ Backup/restore mechanism
 - ✅ Conflict detection
 - ✅ Progress tracking
 
 #### 3. **Rich Data Model**
+
 - ✅ Comprehensive clipboard data (sequence + features + metadata)
 - ✅ Detailed action history
 - ✅ GenBank export with full provenance
 
 #### 4. **MCP Integration**
+
 - ✅ External tool access
 - ✅ AI-friendly API
 - ✅ Well-documented tool registry
 
 #### 5. **Selection System**
+
 - ✅ Prioritized selection sources (manual > gene > viewport)
 - ✅ Multiple selection types supported
 - ✅ Automatic detection
@@ -593,7 +623,9 @@ destroy() → void
 ### Weaknesses & Issues
 
 #### 1. **Code Duplication**
+
 ❌ **Problem**: Two implementations (ActionManager + ModernActionManager)
+
 - Legacy `ActionManager.js`: 5918 lines
 - Modern `ModernActionManager.js`: 812 lines
 - Causes confusion about which to use
@@ -603,23 +635,28 @@ destroy() → void
 **Recommendation**: Choose one and deprecate the other
 
 #### 2. **Deprecated Features**
+
 ❌ **Problem**: `cursorPosition` marked as deprecated but still used
+
 ```javascript
 this.cursorPosition = 0; // DEPRECATED but still in use
-setCursorPosition(position) // DEPRECATED but public API
+setCursorPosition(position); // DEPRECATED but public API
 ```
 
 **Impact**: Low-Medium  
 **Recommendation**: Complete migration or formal removal
 
 #### 3. **Large File Size**
+
 ❌ **Problem**: ActionManager.js is 5918 lines
+
 - Hard to maintain
 - Difficult to understand
 - Many responsibilities mixed
 
 **Impact**: Medium  
 **Recommendation**: Split into modules:
+
 - `ActionQueue.js`
 - `ActionExecution.js`
 - `ActionFeatures.js`
@@ -627,7 +664,9 @@ setCursorPosition(position) // DEPRECATED but public API
 - `ActionUI.js`
 
 #### 4. **Inconsistent Error Handling**
+
 ❌ **Problem**: Mixed error handling strategies
+
 ```javascript
 // Sometimes throws
 throw new Error('...');
@@ -643,7 +682,9 @@ this.showNotification('...', 'error');
 **Recommendation**: Standardize error handling pattern
 
 #### 5. **Missing Type Safety**
+
 ❌ **Problem**: No TypeScript or JSDoc type annotations
+
 - Hard to know parameter types
 - Easy to make mistakes
 - No IDE autocomplete support
@@ -652,7 +693,9 @@ this.showNotification('...', 'error');
 **Recommendation**: Add comprehensive JSDoc comments
 
 #### 6. **Tight Coupling**
+
 ❌ **Problem**: Direct dependencies on genomeBrowser
+
 ```javascript
 this.genomeBrowser.showNotification(...)
 this.genomeBrowser.currentSequence[...]
@@ -662,7 +705,9 @@ this.genomeBrowser.currentSequence[...]
 **Recommendation**: Use dependency injection or event bus
 
 #### 7. **State Management Issues**
+
 ❌ **Problem**: State scattered across multiple properties
+
 - `this.actions`
 - `this.clipboard`
 - `this.cursorPosition`
@@ -673,7 +718,9 @@ this.genomeBrowser.currentSequence[...]
 **Recommendation**: Centralize state in single object with immutable updates
 
 #### 8. **Incomplete Modern Migration**
+
 ❌ **Problem**: ModernActionManager in `/temp/` folder
+
 - Unclear production status
 - Not fully integrated
 - Missing features vs legacy
@@ -682,10 +729,13 @@ this.genomeBrowser.currentSequence[...]
 **Recommendation**: Complete migration or remove
 
 #### 9. **Performance Concerns**
+
 ❌ **Problem**: Deep copying entire genome data
+
 ```javascript
 const executionGenomeData = JSON.parse(JSON.stringify(originalGenomeData));
 ```
+
 - Slow for large genomes
 - High memory usage
 
@@ -693,7 +743,9 @@ const executionGenomeData = JSON.parse(JSON.stringify(originalGenomeData));
 **Recommendation**: Use structural sharing or copy-on-write
 
 #### 10. **Limited Testing**
+
 ❌ **Problem**: No visible unit tests
+
 - Hard to refactor safely
 - Bug-prone
 - No regression detection
@@ -708,36 +760,39 @@ const executionGenomeData = JSON.parse(JSON.stringify(originalGenomeData));
 ### Critical Issues (P0)
 
 #### Issue 1: Performance - Deep Copying Large Genomes
+
 **Problem**: Entire genome data copied on each execution
+
 ```javascript
 const executionGenomeData = this.createGenomeDataCopy(originalGenomeData);
 ```
 
 **Solution**:
+
 ```javascript
 // Use structural sharing
 class GenomeDataProxy {
-    constructor(original) {
-        this.original = original;
-        this.modifications = new Map();
-    }
-    
-    getSequence(chr) {
-        return this.modifications.has(chr) 
-            ? this.modifications.get(chr)
-            : this.original.sequence[chr];
-    }
-    
-    modifySequence(chr, newSeq) {
-        this.modifications.set(chr, newSeq);
-    }
+  constructor(original) {
+    this.original = original;
+    this.modifications = new Map();
+  }
+
+  getSequence(chr) {
+    return this.modifications.has(chr) ? this.modifications.get(chr) : this.original.sequence[chr];
+  }
+
+  modifySequence(chr, newSeq) {
+    this.modifications.set(chr, newSeq);
+  }
 }
 ```
 
 #### Issue 2: Code Organization - Monolithic File
+
 **Problem**: 5918 lines in single file
 
 **Solution**: Split into modules
+
 ```
 ActionManager/
 ├── core/
@@ -761,9 +816,11 @@ ActionManager/
 ### High Priority Issues (P1)
 
 #### Issue 3: Type Safety
+
 **Problem**: No type annotations
 
 **Solution**: Add comprehensive JSDoc
+
 ```javascript
 /**
  * Add action to queue
@@ -788,9 +845,11 @@ addAction(type, target, details, metadata = {}) {
 ```
 
 #### Issue 4: Error Handling Consistency
+
 **Problem**: Mixed error strategies
 
 **Solution**: Standardize with error classes
+
 ```javascript
 class ActionError extends Error {
     constructor(message, code, details = {}) {
@@ -825,116 +884,122 @@ async executeAllActions() {
 ```
 
 #### Issue 5: Tight Coupling
+
 **Problem**: Direct genomeBrowser dependencies
 
 **Solution**: Dependency injection
+
 ```javascript
 class ActionManager {
-    constructor(dependencies) {
-        this.notifier = dependencies.notifier;
-        this.sequenceProvider = dependencies.sequenceProvider;
-        this.featureProvider = dependencies.featureProvider;
-        this.eventBus = dependencies.eventBus;
-    }
-    
-    showNotification(message, type) {
-        this.notifier.show(message, type);
-    }
-    
-    getCurrentSequence(chr) {
-        return this.sequenceProvider.getSequence(chr);
-    }
+  constructor(dependencies) {
+    this.notifier = dependencies.notifier;
+    this.sequenceProvider = dependencies.sequenceProvider;
+    this.featureProvider = dependencies.featureProvider;
+    this.eventBus = dependencies.eventBus;
+  }
+
+  showNotification(message, type) {
+    this.notifier.show(message, type);
+  }
+
+  getCurrentSequence(chr) {
+    return this.sequenceProvider.getSequence(chr);
+  }
 }
 
 // Usage
 const actionManager = new ActionManager({
-    notifier: genomeBrowser.notificationService,
-    sequenceProvider: genomeBrowser.sequenceService,
-    featureProvider: genomeBrowser.featureService,
-    eventBus: genomeBrowser.eventBus
+  notifier: genomeBrowser.notificationService,
+  sequenceProvider: genomeBrowser.sequenceService,
+  featureProvider: genomeBrowser.featureService,
+  eventBus: genomeBrowser.eventBus,
 });
 ```
 
 ### Medium Priority Issues (P2)
 
 #### Issue 6: State Management
+
 **Problem**: Scattered state
 
 **Solution**: Centralized state with reducer
+
 ```javascript
 class ActionState {
-    constructor() {
-        this.state = {
-            queue: [],
-            clipboard: null,
-            isExecuting: false,
-            modifications: new Map(),
-            originalAnnotations: null
+  constructor() {
+    this.state = {
+      queue: [],
+      clipboard: null,
+      isExecuting: false,
+      modifications: new Map(),
+      originalAnnotations: null,
+    };
+    this.listeners = new Set();
+  }
+
+  dispatch(action) {
+    const newState = this.reducer(this.state, action);
+    if (newState !== this.state) {
+      this.state = newState;
+      this.notify();
+    }
+  }
+
+  reducer(state, action) {
+    switch (action.type) {
+      case 'ADD_ACTION':
+        return {
+          ...state,
+          queue: [...state.queue, action.payload],
         };
-        this.listeners = new Set();
+      case 'SET_CLIPBOARD':
+        return {
+          ...state,
+          clipboard: action.payload,
+        };
+      // ... more cases
+      default:
+        return state;
     }
-    
-    dispatch(action) {
-        const newState = this.reducer(this.state, action);
-        if (newState !== this.state) {
-            this.state = newState;
-            this.notify();
-        }
-    }
-    
-    reducer(state, action) {
-        switch (action.type) {
-            case 'ADD_ACTION':
-                return {
-                    ...state,
-                    queue: [...state.queue, action.payload]
-                };
-            case 'SET_CLIPBOARD':
-                return {
-                    ...state,
-                    clipboard: action.payload
-                };
-            // ... more cases
-            default:
-                return state;
-        }
-    }
-    
-    subscribe(listener) {
-        this.listeners.add(listener);
-        return () => this.listeners.delete(listener);
-    }
-    
-    notify() {
-        this.listeners.forEach(listener => listener(this.state));
-    }
+  }
+
+  subscribe(listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  notify() {
+    this.listeners.forEach(listener => listener(this.state));
+  }
 }
 ```
 
 #### Issue 7: Missing Documentation
+
 **Problem**: No inline documentation for complex methods
 
 **Solution**: Add JSDoc for all public methods
+
 ```javascript
 /**
  * Collect comprehensive genomic data for a region including sequence,
  * features, variants, and reads. Creates deep copies to prevent
  * reference issues during action execution.
- * 
+ *
  * @param {string} chromosome - Chromosome identifier
  * @param {number} start - Start position (1-based, inclusive)
  * @param {number} end - End position (1-based, inclusive)
  * @param {string} strand - Strand direction ('+' or '-')
  * @param {Object} [executionGenomeData=null] - Optional execution copy to use
  * @returns {Promise<ComprehensiveData>} Comprehensive region data
- * 
+ *
  * @typedef {Object} ComprehensiveData
  * @property {RegionInfo} region - Region metadata
  * @property {Feature[]} features - Overlapping features
  * @property {Variant[]} variants - Overlapping variants
  * @property {Read[]} reads - Overlapping reads
  * @property {Object} metadata - Calculated metadata (GC%, types, counts)
- * 
+ *
  * @example
  * const data = await collectComprehensiveData('chr1', 1000, 2000, '+');
  * console.log(`Found ${data.features.length} features`);
@@ -945,65 +1010,68 @@ async collectComprehensiveData(chromosome, start, end, strand, executionGenomeDa
 ```
 
 #### Issue 8: Testing Infrastructure
+
 **Problem**: No unit tests
 
 **Solution**: Add comprehensive test suite
+
 ```javascript
 // tests/ActionManager.test.js
 describe('ActionManager', () => {
-    let actionManager;
-    let mockGenomeBrowser;
-    
-    beforeEach(() => {
-        mockGenomeBrowser = createMockGenomeBrowser();
-        actionManager = new ActionManager(mockGenomeBrowser);
+  let actionManager;
+  let mockGenomeBrowser;
+
+  beforeEach(() => {
+    mockGenomeBrowser = createMockGenomeBrowser();
+    actionManager = new ActionManager(mockGenomeBrowser);
+  });
+
+  describe('addAction', () => {
+    it('should add action to queue', () => {
+      const actionId = actionManager.addAction('copy_sequence', 'chr1:1000-2000(+)', 'Test copy', {
+        chromosome: 'chr1',
+        start: 1000,
+        end: 2000,
+      });
+
+      expect(actionManager.actions).toHaveLength(1);
+      expect(actionManager.actions[0].id).toBe(actionId);
     });
-    
-    describe('addAction', () => {
-        it('should add action to queue', () => {
-            const actionId = actionManager.addAction(
-                'copy_sequence',
-                'chr1:1000-2000(+)',
-                'Test copy',
-                { chromosome: 'chr1', start: 1000, end: 2000 }
-            );
-            
-            expect(actionManager.actions).toHaveLength(1);
-            expect(actionManager.actions[0].id).toBe(actionId);
-        });
-        
-        it('should validate action parameters', () => {
-            expect(() => {
-                actionManager.addAction(
-                    'copy_sequence',
-                    'chr1:2000-1000(+)', // Invalid: start > end
-                    'Invalid copy',
-                    { chromosome: 'chr1', start: 2000, end: 1000 }
-                );
-            }).toThrow(ActionValidationError);
-        });
+
+    it('should validate action parameters', () => {
+      expect(() => {
+        actionManager.addAction(
+          'copy_sequence',
+          'chr1:2000-1000(+)', // Invalid: start > end
+          'Invalid copy',
+          { chromosome: 'chr1', start: 2000, end: 1000 }
+        );
+      }).toThrow(ActionValidationError);
     });
-    
-    describe('executeAllActions', () => {
-        it('should execute pending actions in order', async () => {
-            // ... test implementation
-        });
-        
-        it('should detect conflicts', async () => {
-            // ... test implementation
-        });
-        
-        it('should rollback on error', async () => {
-            // ... test implementation
-        });
+  });
+
+  describe('executeAllActions', () => {
+    it('should execute pending actions in order', async () => {
+      // ... test implementation
     });
+
+    it('should detect conflicts', async () => {
+      // ... test implementation
+    });
+
+    it('should rollback on error', async () => {
+      // ... test implementation
+    });
+  });
 });
 ```
 
 ### Low Priority Issues (P3)
 
 #### Issue 9: UI/UX Improvements
+
 **Suggestions**:
+
 - Add keyboard shortcuts for common actions
 - Drag-and-drop action reordering
 - Action preview before execution
@@ -1011,7 +1079,9 @@ describe('ActionManager', () => {
 - Undo/redo with Ctrl+Z/Ctrl+Y
 
 #### Issue 10: Advanced Features
+
 **Suggestions**:
+
 - Action templates (save common sequences)
 - Batch action import from CSV/JSON
 - Action scheduling (execute at specific time)
@@ -1026,27 +1096,17 @@ describe('ActionManager', () => {
 
 ```javascript
 // ✅ GOOD: Use metadata for structured data
-actionManager.addAction(
-    actionManager.ACTION_TYPES.COPY_SEQUENCE,
-    'chr1:1000-2000(+)',
-    'Copy promoter region',
-    {
-        chromosome: 'chr1',
-        start: 1000,
-        end: 2000,
-        strand: '+',
-        feature: 'promoter',
-        reason: 'analysis'
-    }
-);
+actionManager.addAction(actionManager.ACTION_TYPES.COPY_SEQUENCE, 'chr1:1000-2000(+)', 'Copy promoter region', {
+  chromosome: 'chr1',
+  start: 1000,
+  end: 2000,
+  strand: '+',
+  feature: 'promoter',
+  reason: 'analysis',
+});
 
 // ❌ BAD: Unstructured details
-actionManager.addAction(
-    'copy',
-    'somewhere',
-    'copy some stuff',
-    {}
-);
+actionManager.addAction('copy', 'somewhere', 'copy some stuff', {});
 ```
 
 ### 2. Error Handling
@@ -1054,15 +1114,15 @@ actionManager.addAction(
 ```javascript
 // ✅ GOOD: Try-catch with specific errors
 try {
-    await actionManager.executeAllActions();
+  await actionManager.executeAllActions();
 } catch (error) {
-    if (error instanceof ActionValidationError) {
-        console.warn('Validation failed:', error.details);
-        // Show user-friendly message
-    } else {
-        console.error('Unexpected error:', error);
-        // Log to error tracking service
-    }
+  if (error instanceof ActionValidationError) {
+    console.warn('Validation failed:', error.details);
+    // Show user-friendly message
+  } else {
+    console.error('Unexpected error:', error);
+    // Log to error tracking service
+  }
 }
 
 // ❌ BAD: Silent failures
@@ -1117,7 +1177,7 @@ this.notifyActionsTrackUpdate();
 
 // ❌ BAD: Multiple redundant updates in loop
 for (const action of actions) {
-    this.updateUI(); // Called every iteration
+  this.updateUI(); // Called every iteration
 }
 ```
 
@@ -1243,6 +1303,7 @@ context.getService('eventBus').on('action:queued', handler);
 ## Conclusion
 
 The Actions System is a powerful and comprehensive framework for genomic sequence editing with strong features for:
+
 - Non-destructive editing workflow
 - Automatic feature tracking
 - Conflict detection
@@ -1252,6 +1313,7 @@ The Actions System is a powerful and comprehensive framework for genomic sequenc
 **Major Weaknesses**: Large codebase, dual implementations, performance concerns
 
 **Recommended Priority**:
+
 1. **P0**: Address performance issues (deep copying)
 2. **P0**: Consolidate dual implementations
 3. **P1**: Add type safety and documentation

@@ -13,6 +13,7 @@ This checklist ensures that new tools are properly integrated into GenomeAIStudi
 **File:** `/tools_registry/{category}/{tool_name}.yaml`
 
 **Requirements:**
+
 - [ ] Complete tool specification with all required fields:
   - `name`: Tool name (snake_case)
   - `version`: Semantic version (e.g., "1.0.0")
@@ -33,6 +34,7 @@ This checklist ensures that new tools are properly integrated into GenomeAIStudi
   - Test parsing: `node tools_registry/test_yaml_parsing.js`
 
 **Common Issues:**
+
 ```yaml
 # ❌ INCORRECT - Unquoted string with colon
 description: Type of features to analyze (default: CDS)
@@ -50,15 +52,16 @@ description: "Type of features to analyze (default CDS)"
 **Requirements:**
 
 #### 2A. Tool Method Implementation ⭐ MOST IMPORTANT
+
 ```javascript
 /**
  * Tool description
  */
 async yourToolName(params) {
     const { param1, param2 } = params;
-    
+
     // Implementation
-    
+
     return {
         success: true,
         // ... results
@@ -67,6 +70,7 @@ async yourToolName(params) {
 ```
 
 #### 2B. executeToolByName() Switch Case ⭐⭐ CRITICAL - MOST COMMONLY FORGOTTEN!
+
 **Location:** ~line 9200-10100
 
 **Important:** This is the **ONLY switch statement** you need to update!
@@ -79,6 +83,7 @@ case 'your_tool_name':
 ```
 
 **How to Find the Right Location:**
+
 1. Search for `async executeToolByName(toolName, parameters)`
 2. Find the main `switch (toolName)` statement
 3. Add your case alphabetically or by category
@@ -86,6 +91,7 @@ case 'your_tool_name':
 **Note:** After recent refactoring (2025-10-18), the legacy `executeToolRequest` method now delegates to `executeToolByName`, so you **no longer need to update multiple switch statements**. Just add your tool to executeToolByName and it will work everywhere!
 
 #### 2C. Response Formatting (Optional but Recommended)
+
 **Location:** `formatToolResultForDisplay()` method ~line 7300-7500
 
 ```javascript
@@ -97,6 +103,7 @@ case 'your_tool_name':
 ```
 
 **Verification:**
+
 ```bash
 # Search for your tool in all switch statements
 grep -n "case 'your_tool_name':" src/renderer/modules/ChatManager.js
@@ -112,6 +119,7 @@ grep -n "case 'your_tool_name':" src/renderer/modules/ChatManager.js
 **Location:** `functionCategories` object, find appropriate category
 
 **Example:**
+
 ```javascript
 dataManipulation: {
     priority: 3,
@@ -125,6 +133,7 @@ dataManipulation: {
 ```
 
 **Available Categories:**
+
 - `browserActions` (priority 1)
 - `dataRetrieval` (priority 2)
 - `sequenceAnalysis` (priority 3)
@@ -144,16 +153,18 @@ dataManipulation: {
 **Location:** `initializeBuiltInToolsMapping()` method
 
 **Example:**
+
 ```javascript
 this.builtInToolsMap.set('your_tool_name', {
-    method: 'yourToolName',      // ChatManager method name (camelCase)
-    category: 'data_management', // Tool category
-    type: 'built-in',
-    priority: 2
+  method: 'yourToolName', // ChatManager method name (camelCase)
+  category: 'data_management', // Tool category
+  type: 'built-in',
+  priority: 2,
 });
 ```
 
 **Verification:**
+
 ```javascript
 // Check if tool is registered
 const integration = new BuiltInToolsIntegration();
@@ -165,12 +176,14 @@ console.log(integration.isBuiltInTool('your_tool_name')); // Should be true
 ### ✅ Step 5: Testing & Verification
 
 #### 5A. YAML Parsing Test
+
 ```bash
 cd tools_registry
 node test_yaml_parsing.js
 ```
 
 **Expected Output:**
+
 ```
 ✅ YAML parsed successfully!
 Tool details:
@@ -179,12 +192,14 @@ Tool details:
 ```
 
 #### 5B. Integration Verification
+
 ```bash
 cd tools_registry
 node verify_codon_analysis_enhancement.js
 ```
 
 **Expected Output:**
+
 ```
 Total Tests: 19
 ✅ Passed: 19
@@ -194,6 +209,7 @@ Success Rate: 100.00%
 #### 5C. Manual Browser Testing
 
 1. **Start the application:**
+
    ```bash
    npm start
    ```
@@ -226,6 +242,7 @@ Success Rate: 100.00%
 **Cause:** Tool not registered in [executeToolByName()](file:///Users/song/Github-Repos/GenomeAIStudio/src/renderer/modules/ChatManager.js#L9297-L10127) switch statement
 
 **Solution:**
+
 1. Open `src/renderer/modules/ChatManager.js`
 2. Find `async executeToolByName(toolName, parameters)`
 3. Find the main `switch (toolName)` block
@@ -241,6 +258,7 @@ Success Rate: 100.00%
 **Cause:** YAML syntax error (usually unquoted strings with colons)
 
 **Solution:**
+
 - Quote all description strings containing colons
 - Use `|` for multi-line strings
 - Verify with: `node tools_registry/test_yaml_parsing.js`
@@ -250,6 +268,7 @@ Success Rate: 100.00%
 **Cause:** Not registered in `builtin_tools_integration.js`
 
 **Solution:**
+
 - Add to `builtInToolsMap` in `builtin_tools_integration.js`
 - Verify category and priority are correct
 
@@ -258,6 +277,7 @@ Success Rate: 100.00%
 **Cause:** Not registered in `FunctionCallsOrganizer`
 
 **Solution:**
+
 - Add tool name to appropriate category in `FunctionCallsOrganizer.js`
 - Tool must be in at least one category to be discoverable
 
@@ -275,10 +295,8 @@ For a new tool called `analyze_protein_function`:
      - Add method: `async analyzeProteinFunction(params)`
      - Add switch case in `executeToolByName()`
      - Add formatting in `formatToolResultForDisplay()`
-   
    - `/src/renderer/modules/FunctionCallsOrganizer.js`
      - Add `'analyze_protein_function'` to category
-   
    - `/tools_registry/builtin_tools_integration.js`
      - Add `builtInToolsMap.set('analyze_protein_function', ...)`
 
@@ -300,18 +318,12 @@ const FunctionCallsOrganizer = require('./src/renderer/modules/FunctionCallsOrga
 
 // Test 1: Method exists
 const chatManager = new ChatManager();
-console.assert(
-    typeof chatManager.yourToolName === 'function',
-    '❌ Tool method not found in ChatManager'
-);
+console.assert(typeof chatManager.yourToolName === 'function', '❌ Tool method not found in ChatManager');
 
 // Test 2: Registered in organizer
 const organizer = new FunctionCallsOrganizer(chatManager);
 const category = organizer.getFunctionCategory('your_tool_name');
-console.assert(
-    category !== null,
-    '❌ Tool not registered in FunctionCallsOrganizer'
-);
+console.assert(category !== null, '❌ Tool not registered in FunctionCallsOrganizer');
 
 console.log('✅ All tool integration checks passed!');
 ```

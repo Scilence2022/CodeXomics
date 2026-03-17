@@ -224,6 +224,9 @@
             <button class="tab-settings-button" id="tabSettingsButton" title="Tab Settings">
                 <i class="fas fa-cog"></i>
             </button>
+            <button class="banner-toggle-button" id="toggleBannerButton" title="Toggle Banner">
+                <i class="fas fa-chevron-up"></i>
+            </button>
         </div>
 
         <!-- Toolbar -->
@@ -845,6 +848,14 @@
                         <div id="sequenceContent" class="sequence-content"></div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Chat Dock Splitter (visible when ChatBox is docked) -->
+            <div class="chat-dock-splitter" id="chatDockSplitter" style="display: none;">
+                <div class="chat-dock-splitter-handle">⋮</div>
+            </div>
+            <!-- Chat Dock Container (ChatBox moves here when docked) -->
+            <div class="chat-dock-container" id="chatDockContainer" style="display: none;">
             </div>
         </main>
 
@@ -2910,7 +2921,7 @@ Supported formats:
 
     <!-- General Settings Modal -->
     <div id="generalSettingsModal" class="modal">
-        <div class="modal-content resizable" style="max-width: none; width: 700px; min-width: 400px;">
+        <div class="modal-content resizable llm-config-modal" style="max-width: none; width: 700px; min-width: 400px;">
             <div class="modal-header">
                 <h3><i class="fas fa-cog"></i> General Settings</h3>
                 <div class="modal-controls">
@@ -2924,30 +2935,25 @@ Supported formats:
                 </div>
             </div>
             <div class="modal-body">
-                <div class="settings-tabs">
-                    <div class="tab-header">
-                        <button class="tab-btn active" data-tab="appearance">
-                            <i class="fas fa-palette"></i>
-                            Appearance
-                        </button>
-                        <button class="tab-btn" data-tab="performance">
-                            <i class="fas fa-tachometer-alt"></i>
-                            Performance
-                        </button>
-                        <button class="tab-btn" data-tab="features">
-                            <i class="fas fa-toggle-on"></i>
-                            Features
-                        </button>
-                        <button class="tab-btn" data-tab="export">
-                            <i class="fas fa-file-export"></i>
-                            Export/Import
-                        </button>
-                        <button class="tab-btn" data-tab="about">
-                            <i class="fas fa-info-circle"></i>
-                            About
-                        </button>
-                    </div>
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-tab="appearance">
+                        <i class="fas fa-palette"></i> Appearance
+                    </button>
+                    <button class="tab-button" data-tab="performance">
+                        <i class="fas fa-tachometer-alt"></i> Performance
+                    </button>
+                    <button class="tab-button" data-tab="features">
+                        <i class="fas fa-toggle-on"></i> Features
+                    </button>
+                    <button class="tab-button" data-tab="export">
+                        <i class="fas fa-file-export"></i> Export/Import
+                    </button>
+                    <button class="tab-button" data-tab="about">
+                        <i class="fas fa-info-circle"></i> About
+                    </button>
+                </div>
 
+                <div class="llm-provider-config">
                     <!-- Appearance Tab -->
                     <div id="appearance-tab" class="tab-content active">
                         <div class="settings-section">
@@ -3399,23 +3405,24 @@ Supported formats:
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button id="saveGeneralSettings" class="btn btn-primary">
-                    <i class="fas fa-save"></i>
-                    Save Settings
-                </button>
-                <button class="btn modal-close">Cancel</button>
-            </div>
-            <!-- Resize handles -->
-            <div class="resize-handle resize-handle-n"></div>
-            <div class="resize-handle resize-handle-s"></div>
-            <div class="resize-handle resize-handle-e"></div>
-            <div class="resize-handle resize-handle-w"></div>
-            <div class="resize-handle resize-handle-ne"></div>
-            <div class="resize-handle resize-handle-nw"></div>
-            <div class="resize-handle resize-handle-se"></div>
-            <div class="resize-handle resize-handle-sw"></div>
         </div>
+        <div class="modal-footer">
+            <button id="saveGeneralSettings" class="btn btn-primary">
+                <i class="fas fa-save"></i>
+                Save Settings
+            </button>
+            <button class="btn modal-close">Cancel</button>
+        </div>
+        <!-- Resize handles -->
+        <div class="resize-handle resize-handle-n"></div>
+        <div class="resize-handle resize-handle-s"></div>
+        <div class="resize-handle resize-handle-e"></div>
+        <div class="resize-handle resize-handle-w"></div>
+        <div class="resize-handle resize-handle-ne"></div>
+        <div class="resize-handle resize-handle-nw"></div>
+        <div class="resize-handle resize-handle-se"></div>
+        <div class="resize-handle resize-handle-sw"></div>
+    </div>
     </div>
 
     <!-- External Tools Configuration Modal -->

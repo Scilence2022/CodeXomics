@@ -1,6 +1,6 @@
 name: list_available_tools
 version: 1.0.0
-description: "List all available tools in the system, organized by category. Use this to discover what functionality is available or to get help with available commands."
+description: 'List all available tools in the system, organized by category. Use this to discover what functionality is available or to get help with available commands.'
 category: system
 keywords:
   - list
@@ -30,44 +30,44 @@ parameters:
       default: null
     include_details:
       type: boolean
-      description: "Whether to include detailed descriptions and parameters for each tool"
+      description: 'Whether to include detailed descriptions and parameters for each tool'
       default: false
     format:
       type: string
       description: "Output format: 'summary' for brief list, 'detailed' for full information"
-      enum: ["summary", "detailed"]
-      default: "summary"
+      enum: ['summary', 'detailed']
+      default: 'summary'
   required: []
 sample_usages:
-  - user_query: "List all available tools"
-    tool_call: "list_available_tools()"
-    thought: "User wants to see all available tools in the system"
-    expected_result: "Complete list of tools organized by category with names and brief descriptions"
+  - user_query: 'List all available tools'
+    tool_call: 'list_available_tools()'
+    thought: 'User wants to see all available tools in the system'
+    expected_result: 'Complete list of tools organized by category with names and brief descriptions'
 
-  - user_query: "What tools can I use?"
+  - user_query: 'What tools can I use?'
     tool_call: "list_available_tools(format='summary')"
-    thought: "User wants to discover available functionality"
-    expected_result: "Summary of all available tools grouped by category"
+    thought: 'User wants to discover available functionality'
+    expected_result: 'Summary of all available tools grouped by category'
 
-  - user_query: "Show me available commands"
-    tool_call: "list_available_tools()"
-    thought: "User wants to see what commands/tools are available"
-    expected_result: "List of all tools with their names and categories"
+  - user_query: 'Show me available commands'
+    tool_call: 'list_available_tools()'
+    thought: 'User wants to see what commands/tools are available'
+    expected_result: 'List of all tools with their names and categories'
 
-  - user_query: "What navigation tools are available?"
+  - user_query: 'What navigation tools are available?'
     tool_call: "list_available_tools(category='navigation')"
-    thought: "User wants to see navigation-specific tools only"
-    expected_result: "List of navigation tools including navigate_to_position, jump_to_gene, etc."
+    thought: 'User wants to see navigation-specific tools only'
+    expected_result: 'List of navigation tools including navigate_to_position, jump_to_gene, etc.'
 
-  - user_query: "Show all database tools with details"
+  - user_query: 'Show all database tools with details'
     tool_call: "list_available_tools(category='database', include_details=true)"
-    thought: "User wants detailed information about database tools"
-    expected_result: "Database tools with full descriptions and parameter information"
+    thought: 'User wants detailed information about database tools'
+    expected_result: 'Database tools with full descriptions and parameter information'
 
-  - user_query: "Help"
+  - user_query: 'Help'
     tool_call: "list_available_tools(format='summary')"
-    thought: "User needs help discovering available functionality"
-    expected_result: "Summary of available tool categories and their purposes"
+    thought: 'User needs help discovering available functionality'
+    expected_result: 'Summary of available tool categories and their purposes'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -87,10 +87,10 @@ metadata:
     - meta
   complexity: simple
   usage_pattern: occasional
-  recommendation: "Use this tool when the user asks about available functionality or needs help discovering tools"
+  recommendation: 'Use this tool when the user asks about available functionality or needs help discovering tools'
 error_handling:
-  client_error: "Returns error if system integration is not available"
-  no_data: "Returns available tools regardless of whether genome data is loaded"
+  client_error: 'Returns error if system integration is not available'
+  no_data: 'Returns available tools regardless of whether genome data is loaded'
 returns:
   success: boolean - Whether operation was successful
   total_tools: number - Total number of available tools

@@ -182,6 +182,7 @@ The installation process implements a multi-stage pipeline ensuring correctness 
 A critical architectural decision addresses the challenge of plugin persistence across application sessions. The implementation employs a multi-layer storage and synchronization strategy:
 
 **Storage Architecture**:
+
 ```
 localStorage (marketplaceSettings)
 ├── marketplace.installed: {
@@ -216,17 +217,17 @@ The system builds a complete dependency tree through recursive traversal with cy
 buildDependencyTree(plugin, visited = new Set(), depth = 0) {
     // Maximum depth protection prevents infinite recursion
     if (depth > MAX_DEPTH) throw CircularDependencyError;
-    
+
     // Cycle detection through visited set
     if (visited.has(plugin.id)) return cached;
-    
+
     // Recursive dependency resolution
     for (const dep of plugin.dependencies) {
         const compatibleVersion = await findCompatiblePlugin(dep);
         const depTree = await buildDependencyTree(compatibleVersion, visited, depth + 1);
         dependencies.push(depTree);
     }
-    
+
     return { plugin, dependencies, totalDependencies, depth };
 }
 ```
@@ -247,13 +248,13 @@ When multiple plugins require different versions of the same dependency, the res
 resolveVersionConflict(pluginId, versionRequirements) {
     // Strategy: Find highest version satisfying all constraints
     const sortedVersions = allVersions.sort(compareVersions);
-    
+
     for (const candidate of sortedVersions) {
         if (satisfiesAllConstraints(candidate, versionRequirements)) {
             return candidate;
         }
     }
-    
+
     // Fallback: use highest version with warning
     return sortedVersions[0];
 }
@@ -268,16 +269,16 @@ calculateInstallOrder(dependencyTree, resolvedVersions) {
     // Depth-first traversal with post-order emission
     const visit = (node) => {
         visiting.add(node.id);
-        
+
         for (const dep of node.dependencies) {
             visit(dep);
         }
-        
+
         visiting.delete(node.id);
         visited.add(node.id);
         installOrder.push(node);
     };
-    
+
     visit(dependencyTree);
     return installOrder;
 }
@@ -296,12 +297,12 @@ The system maintains a trusted source registry and evaluates plugin sources agai
 ```javascript
 evaluateSourceTrust(plugin) {
     const source = plugin.source;
-    
+
     // Check trusted source list
     if (trustedSources.has(source.id)) {
         return { trusted: true, level: 'verified' };
     }
-    
+
     // Evaluate source characteristics
     const trustScore = calculateTrustScore({
         hasValidCertificate: source.certificate !== null,
@@ -309,7 +310,7 @@ evaluateSourceTrust(plugin) {
         reputationScore: source.reputation,
         communityEndorsements: source.endorsements
     });
-    
+
     return { trusted: trustScore > threshold, level: 'community' };
 }
 ```
@@ -328,7 +329,7 @@ analyzeCodePatterns(pluginCode) {
         /localStorage\./g,          // Storage access
         /\.innerHTML\s*=/g          // XSS vulnerability
     ];
-    
+
     for (const pattern of dangerousPatterns) {
         const matches = pluginCode.match(pattern);
         if (matches) {
@@ -351,7 +352,7 @@ Plugins must explicitly declare required permissions in their manifest. The vali
 validatePermissions(plugin) {
     const declaredPerms = plugin.permissions || [];
     const requiredPerms = detectRequiredPermissions(plugin.code);
-    
+
     // Check for permission mismatches
     for (const required of requiredPerms) {
         if (!declaredPerms.includes(required)) {
@@ -362,7 +363,7 @@ validatePermissions(plugin) {
             });
         }
     }
-    
+
     // Check for excessive permissions
     for (const declared of declaredPerms) {
         if (!requiredPerms.includes(declared)) {
@@ -411,16 +412,17 @@ The system periodically checks for plugin updates and classifies them by semanti
 determineUpdateType(currentVersion, newVersion) {
     const [currentMajor, currentMinor, currentPatch] = currentVersion.split('.');
     const [newMajor, newMinor, newPatch] = newVersion.split('.');
-    
+
     if (newMajor > currentMajor) return 'major';  // Breaking changes
     if (newMinor > currentMinor) return 'minor';  // New features
     if (newPatch > currentPatch) return 'patch';  // Bug fixes
-    
+
     return 'unknown';
 }
 ```
 
 This classification drives automatic update decisions:
+
 - **Patch updates**: Auto-install (bug fixes, security patches)
 - **Minor updates**: Auto-install (backward-compatible features)
 - **Major updates**: Require user approval (breaking changes)
@@ -437,9 +439,9 @@ createRollbackPoint(pluginId, installedPlugin) {
         timestamp: new Date(),
         metadata: structuredClone(installedPlugin)  // Deep copy
     };
-    
+
     rollbackHistory.unshift(rollbackPoint);
-    
+
     // Retain only recent rollback points (max 5)
     if (rollbackHistory.length > 5) {
         rollbackHistory.splice(5);
@@ -451,10 +453,10 @@ This enables instant rollback if an update introduces regressions:
 
 ```javascript
 async rollbackPlugin(pluginId, targetVersion = null) {
-    const rollbackPoint = targetVersion 
+    const rollbackPoint = targetVersion
         ? rollbackHistory.find(rp => rp.version === targetVersion)
         : rollbackHistory[0];  // Most recent
-    
+
     // Restore plugin to rollback state
     Object.assign(currentPlugin, rollbackPoint.metadata);
     await saveInstalledPluginsRegistry();
@@ -547,7 +549,7 @@ The ConfigManager implements debounced writes to minimize localStorage I/O:
 ```javascript
 set(key, value) {
     this.pendingChanges.set(key, value);
-    
+
     // Debounce: batch multiple changes into single write
     clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
@@ -609,15 +611,15 @@ During application initialization, the system performs explicit synchronization 
 async loadInstalledPlugins() {
     // 1. Wait for ConfigManager initialization
     await this.configManager.waitForInitialization();
-    
+
     // 2. Read from localStorage
     const installedData = this.configManager.get('marketplace.installed') || {};
-    
+
     // 3. Restore to in-memory registry
     for (const [id, plugin] of Object.entries(installedData)) {
         await this.restoreInstalledPlugin(id, plugin);
     }
-    
+
     // 4. Verify synchronization
     this.verifyRegistrySync();
 }
@@ -631,13 +633,13 @@ The Plugin Management UI implements pre-display synchronization to ensure consis
 async ensureMarketplacePluginsRestored() {
     const marketplace = window.pluginMarketplace;
     if (!marketplace) return;
-    
+
     await marketplace.waitForInitialization();
-    
+
     // Check for synchronization mismatch
     const marketplaceCount = marketplace.installedPlugins.size;
     const registryCount = this.countRegisteredPlugins();
-    
+
     if (marketplaceCount !== registryCount) {
         console.log('🔄 Detected registry mismatch, triggering restoration...');
         await marketplace.restoreInstalledPlugins();
@@ -655,13 +657,13 @@ Plugin installation bypasses debounced writes to ensure immediate persistence:
 async registerInstalledPlugin(plugin, installResult) {
     // 1. Update in-memory state
     this.installedPlugins.set(plugin.id, {...});
-    
+
     // 2. Immediate persistence (bypass debounce)
     const success = await this.configManager.setAndSaveImmediate(
         'marketplace.installed',
         Object.fromEntries(this.installedPlugins)
     );
-    
+
     if (!success) {
         // Rollback in-memory state on persistence failure
         this.installedPlugins.delete(plugin.id);
@@ -702,21 +704,21 @@ For visualization plugins, the provider creates both `visualize` and `renderNetw
 
 ```javascript
 if (plugin.type === 'visualization') {
-    schemas.push({
-        name: `${plugin.id}.visualize`,
-        description: `Visualize data using ${plugin.name}`,
-        parameters: {
-            type: 'object',
-            properties: {
-                data: {
-                    type: 'object',
-                    description: 'Data to visualize',
-                    properties: this.generateDataSchema(plugin.supportedDataTypes)
-                }
-            },
-            required: ['data']
-        }
-    });
+  schemas.push({
+    name: `${plugin.id}.visualize`,
+    description: `Visualize data using ${plugin.name}`,
+    parameters: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Data to visualize',
+          properties: this.generateDataSchema(plugin.supportedDataTypes),
+        },
+      },
+      required: ['data'],
+    },
+  });
 }
 ```
 
@@ -727,7 +729,7 @@ The system integrates with CodeXomics' Dynamic Tools Registry through the Plugin
 ```javascript
 generatePluginTools(pluginManager) {
     const tools = [];
-    
+
     // Generate tools from function plugins
     for (const [pluginId, plugin] of pluginManager.pluginRegistry.function) {
         for (const [funcName, funcDef] of Object.entries(plugin.functions)) {
@@ -743,7 +745,7 @@ generatePluginTools(pluginManager) {
             });
         }
     }
-    
+
     return tools;
 }
 ```
@@ -755,6 +757,7 @@ This integration enables the SmartExecutor to route function calls to plugins au
 The complete execution flow demonstrates the system's sophisticated request routing and response handling:
 
 1. **LLM Function Call Generation**: The LLM generates a function call based on available tools:
+
    ```json
    {
        "name": "protein-interaction-network.visualize",
@@ -768,13 +771,15 @@ The complete execution flow demonstrates the system's sophisticated request rout
    ```
 
 2. **SmartExecutor Routing**: The SmartExecutor detects the plugin-scoped tool name and routes to ChatManager:
+
    ```javascript
    if (toolName.includes('.')) {
-       return await this.chatManager.handlePluginFunctionCall(toolName, args);
+     return await this.chatManager.handlePluginFunctionCall(toolName, args);
    }
    ```
 
 3. **Plugin Resolution**: ChatManager delegates to PluginManagerV2:
+
    ```javascript
    async handlePluginFunctionCall(toolName, args) {
        const [pluginId, functionName] = toolName.split('.');
@@ -783,10 +788,11 @@ The complete execution flow demonstrates the system's sophisticated request rout
    ```
 
 4. **Executor Invocation**: PluginManagerV2 locates and invokes the plugin executor:
+
    ```javascript
    async executeVisualizationTool(toolName, parameters) {
        const plugin = this.pluginRegistry.visualization.get(pluginId);
-       
+
        if (plugin.executor && typeof plugin.executor === 'function') {
            const result = await plugin.executor(parameters.data);
            return result;  // HTMLElement for DOM insertion
@@ -797,7 +803,7 @@ The complete execution flow demonstrates the system's sophisticated request rout
 5. **Result Rendering**: ChatManager detects the HTMLElement result and renders appropriately:
    ```javascript
    if (result instanceof HTMLElement) {
-       this.displayVisualizationInChat(result, toolName);
+     this.displayVisualizationInChat(result, toolName);
    }
    ```
 
@@ -808,24 +814,25 @@ This end-to-end flow demonstrates the seamless integration between AI reasoning,
 Visualization plugins follow a specialized execution pattern reflecting the requirement to return renderable DOM elements rather than data structures. The research team established strict architectural requirements for visualization plugins to ensure consistent behavior:
 
 **Required Plugin Structure**:
+
 ```javascript
 class VisualizationPlugin {
-    activate(context) {
-        // Register visualization with executor function
-        context.registerVisualization({
-            id: 'plugin-id',
-            name: 'Plugin Name',
-            supportedDataTypes: ['protein-network', 'gene-network'],
-            executor: this.renderNetwork.bind(this)  // Bound rendering method
-        });
-    }
-    
-    async renderNetwork(data) {
-        // Create and return DOM element
-        const container = document.createElement('div');
-        // ... rendering logic ...
-        return container;  // Must return HTMLElement
-    }
+  activate(context) {
+    // Register visualization with executor function
+    context.registerVisualization({
+      id: 'plugin-id',
+      name: 'Plugin Name',
+      supportedDataTypes: ['protein-network', 'gene-network'],
+      executor: this.renderNetwork.bind(this), // Bound rendering method
+    });
+  }
+
+  async renderNetwork(data) {
+    // Create and return DOM element
+    const container = document.createElement('div');
+    // ... rendering logic ...
+    return container; // Must return HTMLElement
+  }
 }
 ```
 
@@ -850,12 +857,14 @@ Electron's ASAR packaging system introduces significant challenges for plugin sy
 The research team implemented a sophisticated dual-path resolution system addressing this challenge:
 
 **Development Environment Paths**:
+
 ```javascript
 Built-in Plugins: /path/to/project/src/renderer/modules/BuiltinPlugins/
 User Plugins:     /path/to/project/src/renderer/modules/Plugins/
 ```
 
 **Production Environment Paths**:
+
 ```javascript
 Built-in Plugins: app.asar/src/renderer/modules/BuiltinPlugins/ (read-only)
 User Plugins:     ~/Library/Application Support/CodeXomics/.genome-browser/plugins/ (writable)
@@ -865,37 +874,36 @@ The PluginPathResolver implements intelligent path detection:
 
 ```javascript
 class PluginPathResolver {
-    async initialize() {
-        this.isPackaged = window.electron?.isPackaged || false;
-        this.isDevelopment = !this.isPackaged;
-        
-        if (this.isPackaged) {
-            this.setupProductionPaths();
-        } else {
-            this.setupDevelopmentPaths();
-        }
+  async initialize() {
+    this.isPackaged = window.electron?.isPackaged || false;
+    this.isDevelopment = !this.isPackaged;
+
+    if (this.isPackaged) {
+      this.setupProductionPaths();
+    } else {
+      this.setupDevelopmentPaths();
     }
-    
-    getBuiltinPluginsPath() {
-        if (this.isPackaged) {
-            // Inside ASAR: read-only
-            return path.join(process.resourcesPath, 'app.asar', 
-                            'src', 'renderer', 'modules', 'BuiltinPlugins');
-        } else {
-            // Development: direct filesystem access
-            return path.join(__dirname, 'src', 'renderer', 'modules', 'BuiltinPlugins');
-        }
+  }
+
+  getBuiltinPluginsPath() {
+    if (this.isPackaged) {
+      // Inside ASAR: read-only
+      return path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'BuiltinPlugins');
+    } else {
+      // Development: direct filesystem access
+      return path.join(__dirname, 'src', 'renderer', 'modules', 'BuiltinPlugins');
     }
-    
-    getUserPluginsPath() {
-        if (this.isPackaged) {
-            // Production: user data directory (writable)
-            return path.join(app.getPath('userData'), '.genome-browser', 'plugins');
-        } else {
-            // Development: project directory
-            return path.join(__dirname, 'src', 'renderer', 'modules', 'Plugins');
-        }
+  }
+
+  getUserPluginsPath() {
+    if (this.isPackaged) {
+      // Production: user data directory (writable)
+      return path.join(app.getPath('userData'), '.genome-browser', 'plugins');
+    } else {
+      // Development: project directory
+      return path.join(__dirname, 'src', 'renderer', 'modules', 'Plugins');
     }
+  }
 }
 ```
 
@@ -906,16 +914,19 @@ This dual-path architecture ensures seamless plugin loading across development, 
 The system handles platform-specific path conventions across macOS, Windows, and Linux:
 
 **macOS**:
+
 ```
 ~/Library/Application Support/CodeXomics/.genome-browser/plugins/
 ```
 
 **Windows**:
+
 ```
 C:\Users\<username>\AppData\Roaming\CodeXomics\.genome-browser\plugins\
 ```
 
 **Linux**:
+
 ```
 ~/.config/CodeXomics/.genome-browser/plugins/
 ```
@@ -930,32 +941,32 @@ The PluginResourceManager implements sophisticated concurrency control preventin
 
 ```javascript
 class PluginResourceManager {
-    constructor(options) {
-        this.maxConcurrentExecutions = options.maxConcurrentExecutions || 5;
-        this.activeExecutions = new Set();
-        this.executionQueue = [];
-        this.executionHistory = [];
+  constructor(options) {
+    this.maxConcurrentExecutions = options.maxConcurrentExecutions || 5;
+    this.activeExecutions = new Set();
+    this.executionQueue = [];
+    this.executionHistory = [];
+  }
+
+  async executeWithResourceControl(pluginId, executor, params) {
+    // Wait if at capacity
+    while (this.activeExecutions.size >= this.maxConcurrentExecutions) {
+      await this.waitForAvailableSlot();
     }
-    
-    async executeWithResourceControl(pluginId, executor, params) {
-        // Wait if at capacity
-        while (this.activeExecutions.size >= this.maxConcurrentExecutions) {
-            await this.waitForAvailableSlot();
-        }
-        
-        // Reserve execution slot
-        const executionId = this.generateExecutionId();
-        this.activeExecutions.add(executionId);
-        
-        try {
-            const result = await executor(params);
-            this.recordSuccess(executionId, pluginId);
-            return result;
-        } finally {
-            this.activeExecutions.delete(executionId);
-            this.processQueue();  // Start next queued execution
-        }
+
+    // Reserve execution slot
+    const executionId = this.generateExecutionId();
+    this.activeExecutions.add(executionId);
+
+    try {
+      const result = await executor(params);
+      this.recordSuccess(executionId, pluginId);
+      return result;
+    } finally {
+      this.activeExecutions.delete(executionId);
+      this.processQueue(); // Start next queued execution
     }
+  }
 }
 ```
 
@@ -967,27 +978,28 @@ Following VS Code's activation event pattern, the system implements lazy plugin 
 
 ```javascript
 class ActivationEventsService {
-    registerActivationEvent(pluginId, event) {
-        this.activationEvents.set(pluginId, event);
+  registerActivationEvent(pluginId, event) {
+    this.activationEvents.set(pluginId, event);
+  }
+
+  async checkActivationConditions(event) {
+    const pluginsToActivate = [];
+
+    for (const [pluginId, activationEvent] of this.activationEvents) {
+      if (this.matchesEvent(event, activationEvent)) {
+        pluginsToActivate.push(pluginId);
+      }
     }
-    
-    async checkActivationConditions(event) {
-        const pluginsToActivate = [];
-        
-        for (const [pluginId, activationEvent] of this.activationEvents) {
-            if (this.matchesEvent(event, activationEvent)) {
-                pluginsToActivate.push(pluginId);
-            }
-        }
-        
-        for (const pluginId of pluginsToActivate) {
-            await this.activatePlugin(pluginId);
-        }
+
+    for (const pluginId of pluginsToActivate) {
+      await this.activatePlugin(pluginId);
     }
+  }
 }
 ```
 
 **Supported Activation Events**:
+
 - `onStartup`: Activate immediately during application startup
 - `onCommand:commandId`: Activate when specific command invoked
 - `onView:viewId`: Activate when specific view opened
@@ -1002,27 +1014,27 @@ The marketplace implements intelligent caching to minimize network requests and 
 
 ```javascript
 class PluginMarketplace {
-    async searchPlugins(query) {
-        // Check cache first
-        const cacheKey = this.generateCacheKey(query);
-        if (this.searchCache.has(cacheKey)) {
-            const cached = this.searchCache.get(cacheKey);
-            if (Date.now() - cached.timestamp < this.config.cacheTimeout) {
-                return cached.results;
-            }
-        }
-        
-        // Perform search
-        const results = await this.performSearch(query);
-        
-        // Cache results
-        this.searchCache.set(cacheKey, {
-            results,
-            timestamp: Date.now()
-        });
-        
-        return results;
+  async searchPlugins(query) {
+    // Check cache first
+    const cacheKey = this.generateCacheKey(query);
+    if (this.searchCache.has(cacheKey)) {
+      const cached = this.searchCache.get(cacheKey);
+      if (Date.now() - cached.timestamp < this.config.cacheTimeout) {
+        return cached.results;
+      }
     }
+
+    // Perform search
+    const results = await this.performSearch(query);
+
+    // Cache results
+    this.searchCache.set(cacheKey, {
+      results,
+      timestamp: Date.now(),
+    });
+
+    return results;
+  }
 }
 ```
 
@@ -1041,14 +1053,14 @@ async executePluginFunction(pluginId, functionName, params) {
         if (!plugin) {
             throw new PluginNotFoundError(pluginId);
         }
-        
+
         const result = await this.executeFunction(plugin, functionName, params);
         this.recordSuccess(pluginId, functionName);
         return result;
-        
+
     } catch (error) {
         this.recordFailure(pluginId, functionName, error);
-        
+
         // Emit error event for monitoring
         this.emitEvent('plugin-execution-error', {
             pluginId,
@@ -1056,7 +1068,7 @@ async executePluginFunction(pluginId, functionName, params) {
             error: error.message,
             stack: error.stack
         });
-        
+
         // Return graceful error response
         return {
             success: false,
@@ -1077,14 +1089,14 @@ The update manager implements automatic rollback when updates fail:
 async updatePlugin(pluginId, options) {
     // Create rollback point before update
     await this.createRollbackPoint(pluginId, installedPlugin);
-    
+
     try {
         await this.performUpdate(pluginId, updateInfo);
         this.recordUpdateSuccess(pluginId, updateInfo);
-        
+
     } catch (error) {
         console.error(`Update failed for ${pluginId}:`, error);
-        
+
         try {
             await this.rollbackPlugin(pluginId);
             console.log(`Successfully rolled back ${pluginId} after failed update`);
@@ -1097,7 +1109,7 @@ async updatePlugin(pluginId, options) {
                 rollbackError: rollbackError.message
             });
         }
-        
+
         this.recordUpdateFailure(pluginId, error);
         throw error;
     }
@@ -1111,6 +1123,7 @@ This transactional update pattern ensures that failed updates never leave plugin
 The system implements comprehensive validation at multiple stages:
 
 **Installation Validation**:
+
 ```javascript
 async validateForInstallation(installation) {
     const validation = {
@@ -1120,7 +1133,7 @@ async validateForInstallation(installation) {
         securityPassed: false,
         issues: []
     };
-    
+
     // Code syntax validation
     try {
         new Function(installation.codeGeneration.mainCode);
@@ -1128,19 +1141,19 @@ async validateForInstallation(installation) {
     } catch (error) {
         validation.issues.push(`Code syntax error: ${error.message}`);
     }
-    
+
     // Structure validation
     const structureCheck = this.validatePluginStructure(installation);
     validation.structureValid = structureCheck.valid;
-    
+
     // Permission validation
     const permissionCheck = await this.validatePermissions(installation.pluginInfo.permissions);
     validation.permissionsValid = permissionCheck.valid;
-    
+
     // Security check
     const securityCheck = await this.performSecurityCheck(installation.code);
     validation.securityPassed = securityCheck.safe;
-    
+
     return validation;
 }
 ```
@@ -1159,18 +1172,18 @@ Implement live plugin reloading during development, enabling plugin developers t
 
 ```javascript
 class HotReloadManager {
-    watchPluginDirectory(pluginPath) {
-        const watcher = chokidar.watch(pluginPath, {
-            persistent: true,
-            ignoreInitial: true
-        });
-        
-        watcher.on('change', async (changedPath) => {
-            const pluginId = this.getPluginIdFromPath(changedPath);
-            await this.reloadPlugin(pluginId);
-            this.emitEvent('plugin-reloaded', { pluginId });
-        });
-    }
+  watchPluginDirectory(pluginPath) {
+    const watcher = chokidar.watch(pluginPath, {
+      persistent: true,
+      ignoreInitial: true,
+    });
+
+    watcher.on('change', async changedPath => {
+      const pluginId = this.getPluginIdFromPath(changedPath);
+      await this.reloadPlugin(pluginId);
+      this.emitEvent('plugin-reloaded', { pluginId });
+    });
+  }
 }
 ```
 
@@ -1180,27 +1193,27 @@ Enhance security by executing plugins in isolated Web Worker contexts:
 
 ```javascript
 class SandboxedPluginExecutor {
-    async executeInSandbox(plugin, functionName, params) {
-        const worker = new Worker('plugin-sandbox-worker.js');
-        
-        return new Promise((resolve, reject) => {
-            worker.postMessage({
-                type: 'execute',
-                pluginCode: plugin.code,
-                functionName,
-                params
-            });
-            
-            worker.onmessage = (event) => {
-                if (event.data.type === 'success') {
-                    resolve(event.data.result);
-                } else {
-                    reject(new Error(event.data.error));
-                }
-                worker.terminate();
-            };
-        });
-    }
+  async executeInSandbox(plugin, functionName, params) {
+    const worker = new Worker('plugin-sandbox-worker.js');
+
+    return new Promise((resolve, reject) => {
+      worker.postMessage({
+        type: 'execute',
+        pluginCode: plugin.code,
+        functionName,
+        params,
+      });
+
+      worker.onmessage = event => {
+        if (event.data.type === 'success') {
+          resolve(event.data.result);
+        } else {
+          reject(new Error(event.data.error));
+        }
+        worker.terminate();
+      };
+    });
+  }
 }
 ```
 
@@ -1210,18 +1223,18 @@ Support multiple marketplace servers with automatic failover and plugin mirrorin
 
 ```javascript
 class FederatedMarketplace {
-    async searchWithFailover(query) {
-        for (const source of this.orderedSources) {
-            try {
-                const results = await source.search(query);
-                return results;
-            } catch (error) {
-                console.warn(`Source ${source.id} failed, trying next...`);
-                continue;
-            }
-        }
-        throw new Error('All marketplace sources unavailable');
+  async searchWithFailover(query) {
+    for (const source of this.orderedSources) {
+      try {
+        const results = await source.search(query);
+        return results;
+      } catch (error) {
+        console.warn(`Source ${source.id} failed, trying next...`);
+        continue;
+      }
     }
+    throw new Error('All marketplace sources unavailable');
+  }
 }
 ```
 
@@ -1240,7 +1253,7 @@ class MyPlugin extends PluginBase {
             executor: this.analyze.bind(this)
         });
     }
-    
+
     async analyze(params) {
         // Plugin implementation
     }
@@ -1257,12 +1270,12 @@ Implement collaborative filtering to recommend plugins based on usage patterns:
 
 ```javascript
 class PluginRecommendationEngine {
-    async getRecommendations(userId, installedPlugins) {
-        const userVector = this.buildUserVector(installedPlugins);
-        const similarUsers = await this.findSimilarUsers(userVector);
-        const recommendations = this.aggregateRecommendations(similarUsers);
-        return recommendations;
-    }
+  async getRecommendations(userId, installedPlugins) {
+    const userVector = this.buildUserVector(installedPlugins);
+    const similarUsers = await this.findSimilarUsers(userVector);
+    const recommendations = this.aggregateRecommendations(similarUsers);
+    return recommendations;
+  }
 }
 ```
 
@@ -1272,16 +1285,16 @@ Develop automated testing for plugin quality assurance:
 
 ```javascript
 class PluginTestingFramework {
-    async runTestSuite(plugin) {
-        const results = {
-            performance: await this.testPerformance(plugin),
-            correctness: await this.testCorrectness(plugin),
-            compatibility: await this.testCompatibility(plugin),
-            security: await this.testSecurity(plugin)
-        };
-        
-        return this.generateTestReport(results);
-    }
+  async runTestSuite(plugin) {
+    const results = {
+      performance: await this.testPerformance(plugin),
+      correctness: await this.testCorrectness(plugin),
+      compatibility: await this.testCompatibility(plugin),
+      security: await this.testSecurity(plugin),
+    };
+
+    return this.generateTestReport(results);
+  }
 }
 ```
 
@@ -1291,13 +1304,11 @@ For computationally intensive plugins, implement distributed execution across mu
 
 ```javascript
 class DistributedExecutor {
-    async executeDistributed(plugin, params) {
-        const chunks = this.partitionData(params);
-        const results = await Promise.all(
-            chunks.map(chunk => this.executeOnWorker(plugin, chunk))
-        );
-        return this.mergeResults(results);
-    }
+  async executeDistributed(plugin, params) {
+    const chunks = this.partitionData(params);
+    const results = await Promise.all(chunks.map(chunk => this.executeOnWorker(plugin, chunk)));
+    return this.mergeResults(results);
+  }
 }
 ```
 
@@ -1323,7 +1334,7 @@ class MinimalFunctionPlugin {
         this.id = 'my-analysis-plugin';
         this.version = '1.0.0';
     }
-    
+
     activate(context) {
         context.subscriptions.push(
             context.registerCommand('my-analysis.analyze', async (params) => {
@@ -1331,12 +1342,12 @@ class MinimalFunctionPlugin {
             })
         );
     }
-    
+
     async performAnalysis(params) {
         // Implementation
         return { results: [...] };
     }
-    
+
     deactivate() {
         // Cleanup
     }
@@ -1349,34 +1360,34 @@ module.exports = MinimalFunctionPlugin;
 
 ```javascript
 class MinimalVisualizationPlugin {
-    constructor() {
-        this.id = 'my-viz-plugin';
-        this.version = '1.0.0';
-    }
-    
-    activate(context) {
-        context.registerVisualization({
-            id: this.id,
-            name: 'My Visualization',
-            supportedDataTypes: ['generic'],
-            executor: this.renderVisualization.bind(this)
-        });
-    }
-    
-    async renderVisualization(data) {
-        const container = document.createElement('div');
-        container.style.width = '100%';
-        container.style.height = '400px';
-        
-        // Rendering logic
-        container.innerHTML = `<p>Visualizing ${data.length} items</p>`;
-        
-        return container;  // Must return HTMLElement
-    }
-    
-    deactivate() {
-        // Cleanup
-    }
+  constructor() {
+    this.id = 'my-viz-plugin';
+    this.version = '1.0.0';
+  }
+
+  activate(context) {
+    context.registerVisualization({
+      id: this.id,
+      name: 'My Visualization',
+      supportedDataTypes: ['generic'],
+      executor: this.renderVisualization.bind(this),
+    });
+  }
+
+  async renderVisualization(data) {
+    const container = document.createElement('div');
+    container.style.width = '100%';
+    container.style.height = '400px';
+
+    // Rendering logic
+    container.innerHTML = `<p>Visualizing ${data.length} items</p>`;
+
+    return container; // Must return HTMLElement
+  }
+
+  deactivate() {
+    // Cleanup
+  }
 }
 
 module.exports = MinimalVisualizationPlugin;
@@ -1386,32 +1397,32 @@ module.exports = MinimalVisualizationPlugin;
 
 ### Plugin Execution Latency
 
-| Operation | Latency | Notes |
-|-----------|---------|-------|
-| Built-in plugin function call | < 1ms | Direct function invocation |
-| External plugin function call | 2-5ms | Includes executor resolution |
-| Visualization rendering | 50-200ms | Depends on data complexity |
-| Plugin installation | 1-3s | Includes dependency resolution |
-| Plugin update check | 100-500ms | Network-dependent |
+| Operation                     | Latency   | Notes                          |
+| ----------------------------- | --------- | ------------------------------ |
+| Built-in plugin function call | < 1ms     | Direct function invocation     |
+| External plugin function call | 2-5ms     | Includes executor resolution   |
+| Visualization rendering       | 50-200ms  | Depends on data complexity     |
+| Plugin installation           | 1-3s      | Includes dependency resolution |
+| Plugin update check           | 100-500ms | Network-dependent              |
 
 ### Memory Footprint
 
-| Component | Memory Usage | Notes |
-|-----------|--------------|-------|
-| PluginManagerV2 core | ~2MB | Base overhead |
-| Per built-in plugin | ~50KB | Minimal metadata |
-| Per external plugin | ~500KB | Includes code and assets |
-| Plugin registry | ~100KB | For 20 plugins |
-| Marketplace cache | ~1MB | After typical usage |
+| Component            | Memory Usage | Notes                    |
+| -------------------- | ------------ | ------------------------ |
+| PluginManagerV2 core | ~2MB         | Base overhead            |
+| Per built-in plugin  | ~50KB        | Minimal metadata         |
+| Per external plugin  | ~500KB       | Includes code and assets |
+| Plugin registry      | ~100KB       | For 20 plugins           |
+| Marketplace cache    | ~1MB         | After typical usage      |
 
 ### Scalability Metrics
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Maximum concurrent executions | 5 | 10 |
-| Plugin count before slowdown | ~50 | ~200 |
-| Dependency resolution depth | 10 levels | 20 levels |
-| Cache hit rate | ~85% | ~95% |
+| Metric                        | Current   | Target    |
+| ----------------------------- | --------- | --------- |
+| Maximum concurrent executions | 5         | 10        |
+| Plugin count before slowdown  | ~50       | ~200      |
+| Dependency resolution depth   | 10 levels | 20 levels |
+| Cache hit rate                | ~85%      | ~95%      |
 
 ---
 

@@ -51,10 +51,10 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["navigate_to_position"]
-  alternatives: ["search_gene_by_name"]  # Use this as fallback if gene name not found
+  enhances: ['navigate_to_position']
+  alternatives: ['search_gene_by_name'] # Use this as fallback if gene name not found
   prerequisites: []
-  follow_up: ["get_sequence", "analyze_region"]
+  follow_up: ['get_sequence', 'analyze_region']
 metadata:
   usage_count: 0
   success_rate: 0
@@ -67,11 +67,11 @@ metadata:
     - primary
   complexity: simple
   usage_pattern: frequent
-  recommendation: "Use this as the PRIMARY tool for navigating to genes by name"
+  recommendation: 'Use this as the PRIMARY tool for navigating to genes by name'
 error_handling:
-  gene_not_found: "Returns error if gene name not found, suggest using search_gene_by_name as fallback"
-  invalid_gene_name: "Returns error if gene name is empty or invalid"
-  no_genome_loaded: "Returns error if no genome annotations are loaded"
+  gene_not_found: 'Returns error if gene name not found, suggest using search_gene_by_name as fallback'
+  invalid_gene_name: 'Returns error if gene name is empty or invalid'
+  no_genome_loaded: 'Returns error if no genome annotations are loaded'
 returns:
   success: boolean - Whether operation was successful
   message: string - Status message or error description

@@ -37,7 +37,7 @@ parameters:
     evalue:
       type: string
       description: E-value threshold
-      default: "0.01"
+      default: '0.01'
     maxTargets:
       type: integer
       description: Maximum number of hits to return
@@ -45,20 +45,20 @@ parameters:
     wordSize:
       type: string
       description: Word size for blastn searches
-      default: "11"
+      default: '11'
     matrix:
       type: string
       description: Scoring matrix for blastp searches
-      default: "BLOSUM62"
+      default: 'BLOSUM62'
   required:
     - sequence
     - blastType
     - database
 sample_usages:
-  - user_query: "Search this sequence in my local genome database"
+  - user_query: 'Search this sequence in my local genome database'
     tool_call: "blast_search_local(sequence='ATGC...', blastType='blastn', database='my_genome_db')"
-    thought: "User wants to search against locally created database"
-    expected_result: "BLAST results from local database search"
+    thought: 'User wants to search against locally created database'
+    expected_result: 'BLAST results from local database search'
 relationships:
   depends_on:
     - blast_validate_database
@@ -76,7 +76,7 @@ metadata:
   complexity: moderate
 error_handling:
   database_not_found: "Returns error if local database doesn't exist"
-  blast_not_installed: "Returns error if BLAST+ is not installed"
+  blast_not_installed: 'Returns error if BLAST+ is not installed'
 returns:
   success: boolean
   source: string - "Local BLAST+"

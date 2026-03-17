@@ -23,16 +23,16 @@ parameters:
     filename:
       type: string
       description: Output filename for the exported FASTA file
-      default: "sequences.fasta"
+      default: 'sequences.fasta'
       examples:
-        - "genome_sequences.fasta"
-        - "selected_genes.fasta"
-        - "chromosome_1.fasta"
+        - 'genome_sequences.fasta'
+        - 'selected_genes.fasta'
+        - 'chromosome_1.fasta'
     format:
       type: string
       description: FASTA format variant
-      enum: ["standard", "wrapped", "single_line"]
-      default: "standard"
+      enum: ['standard', 'wrapped', 'single_line']
+      default: 'standard'
     include_description:
       type: boolean
       description: Include sequence descriptions in FASTA headers
@@ -40,8 +40,8 @@ parameters:
     sequence_type:
       type: string
       description: Type of sequences to export
-      enum: ["all", "genes", "cds", "selected", "current_view"]
-      default: "all"
+      enum: ['all', 'genes', 'cds', 'selected', 'current_view']
+      default: 'all'
     wrap_length:
       type: integer
       description: Number of characters per line (0 = no wrapping)
@@ -69,9 +69,9 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["load_genome_file"]
-  alternatives: ["export_genbank_format", "export_cds_fasta"]
-  prerequisites: ["genome_data_loaded"]
+  enhances: ['load_genome_file']
+  alternatives: ['export_genbank_format', 'export_cds_fasta']
+  prerequisites: ['genome_data_loaded']
   follow_up: []
 metadata:
   usage_count: 0
@@ -87,24 +87,24 @@ metadata:
   usage_pattern: frequent
 error_handling:
   no_sequences:
-    error: "No sequences available for export"
-    solution: "Load genome data first or select sequences to export"
+    error: 'No sequences available for export'
+    solution: 'Load genome data first or select sequences to export'
     retry: false
   export_failed:
-    error: "Failed to export FASTA file"
-    solution: "Check file permissions and disk space"
+    error: 'Failed to export FASTA file'
+    solution: 'Check file permissions and disk space'
     retry: true
   invalid_format:
-    error: "Invalid FASTA format specified"
-    solution: "Use one of: standard, wrapped, single_line"
+    error: 'Invalid FASTA format specified'
+    solution: 'Use one of: standard, wrapped, single_line'
     retry: true
 returns:
-  success: "boolean - Whether export was successful"
-  result: "object - Export results including:
+  success: 'boolean - Whether export was successful'
+  result: 'object - Export results including:
     - filename: string - Name of exported file
     - sequenceCount: number - Number of sequences exported
     - fileSize: number - Size of exported file in bytes
     - exportType: string - Type of sequences exported
-    - format: string - FASTA format used"
-  error: "string - Error message if success is false"
-  error_type: "string - Type of error for proper handling"
+    - format: string - FASTA format used'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

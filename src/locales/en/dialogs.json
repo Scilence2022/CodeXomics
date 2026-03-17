@@ -1,138 +1,138 @@
 {
-    "openFile": {
-        "title": "Open File",
-        "selectGenome": "Select Genome File",
-        "selectAnnotation": "Select Annotation File",
-        "selectVariant": "Select Variant File",
-        "selectReads": "Select Reads File",
-        "selectAny": "Select File"
-    },
-    "saveFile": {
-        "title": "Save File",
-        "saveAs": "Save As"
-    },
-    "export": {
-        "title": "Export",
-        "selectDestination": "Select Destination",
-        "format": "Format",
-        "quality": "Quality",
-        "includeSequence": "Include Sequence",
-        "includeAnnotations": "Include Annotations"
-    },
-    "confirm": {
-        "title": "Confirm",
-        "delete": "Are you sure you want to delete this item?",
-        "discard": "Discard unsaved changes?",
-        "overwrite": "File already exists. Overwrite?",
-        "clearAll": "Clear all items?",
-        "exit": "Are you sure you want to exit?"
-    },
-    "error": {
-        "title": "Error",
-        "genericError": "An error occurred",
-        "fileLoadError": "Failed to load file",
-        "fileSaveError": "Failed to save file",
-        "connectionError": "Connection error"
-    },
-    "addFeature": {
-        "title": "Add Feature",
-        "name": "Feature Name",
-        "type": "Feature Type",
-        "start": "Start Position",
-        "end": "End Position",
-        "strand": "Strand",
-        "description": "Description",
-        "selectType": "Select feature type...",
-        "forward": "Forward (+)",
-        "reverse": "Reverse (-)",
-        "both": "Both"
-    },
-    "editFeature": {
-        "title": "Edit Feature",
-        "updateButton": "Update",
-        "deleteButton": "Delete Feature"
-    },
-    "insertSequence": {
-        "title": "Insert Sequence",
-        "position": "Position",
-        "sequence": "Sequence to Insert",
-        "placeholder": "Enter DNA sequence (A, T, G, C)..."
-    },
-    "replaceSequence": {
-        "title": "Replace Sequence",
-        "originalSequence": "Original Sequence",
-        "newSequence": "New Sequence",
-        "targetRegion": "Target Region"
-    },
-    "deleteSequence": {
-        "title": "Delete Sequence",
-        "startPosition": "Start Position",
-        "endPosition": "End Position",
-        "warning": "This action cannot be undone"
-    },
-    "search": {
-        "title": "Search",
-        "placeholder": "Enter search term...",
-        "geneNames": "Gene Names",
-        "sequences": "Sequences",
-        "annotations": "Annotations",
-        "caseSensitive": "Case Sensitive",
-        "wholeWord": "Whole Word",
-        "useRegex": "Use Regular Expression"
-    },
-    "advancedSearch": {
-        "title": "Advanced Search",
-        "searchIn": "Search In",
-        "chromosome": "Chromosome",
-        "all": "All",
-        "position": "Position Range",
-        "from": "From",
-        "to": "To",
-        "featureType": "Feature Type",
-        "strand": "Strand"
-    },
-    "settings": {
-        "title": "Settings",
-        "general": "General",
-        "appearance": "Appearance",
-        "language": "Language",
-        "theme": "Theme",
-        "fontSize": "Font Size",
-        "performance": "Performance",
-        "advanced": "Advanced"
-    },
-    "llmConfig": {
-        "title": "Configure LLM",
-        "provider": "Provider",
-        "model": "Model",
-        "apiKey": "API Key",
-        "endpoint": "Endpoint",
-        "temperature": "Temperature",
-        "maxTokens": "Max Tokens",
-        "testConnection": "Test Connection"
-    },
-    "about": {
-        "title": "About CodeXomics",
-        "version": "Version",
-        "copyright": "Copyright © 2024 Lifu Song",
-        "license": "MIT License",
-        "description": "An AI-powered bioinformatics analysis platform"
-    },
-    "checkpoint": {
-        "title": "Checkpoint",
-        "createCheckpoint": "Create Checkpoint",
-        "name": "Checkpoint Name",
-        "description": "Description",
-        "restore": "Restore",
-        "delete": "Delete",
-        "confirmRestore": "Restore this checkpoint? Current changes will be lost."
-    },
-    "actionList": {
-        "title": "Action List",
-        "pending": "Pending Actions",
-        "executed": "Executed Actions",
-        "executeAll": "Execute All",
-        "clearAll": "Clear All",
-        "exportActions": "Export Actions"
-    }
+  "openFile": {
+    "title": "Open File",
+    "selectGenome": "Select Genome File",
+    "selectAnnotation": "Select Annotation File",
+    "selectVariant": "Select Variant File",
+    "selectReads": "Select Reads File",
+    "selectAny": "Select File"
+  },
+  "saveFile": {
+    "title": "Save File",
+    "saveAs": "Save As"
+  },
+  "export": {
+    "title": "Export",
+    "selectDestination": "Select Destination",
+    "format": "Format",
+    "quality": "Quality",
+    "includeSequence": "Include Sequence",
+    "includeAnnotations": "Include Annotations"
+  },
+  "confirm": {
+    "title": "Confirm",
+    "delete": "Are you sure you want to delete this item?",
+    "discard": "Discard unsaved changes?",
+    "overwrite": "File already exists. Overwrite?",
+    "clearAll": "Clear all items?",
+    "exit": "Are you sure you want to exit?"
+  },
+  "error": {
+    "title": "Error",
+    "genericError": "An error occurred",
+    "fileLoadError": "Failed to load file",
+    "fileSaveError": "Failed to save file",
+    "connectionError": "Connection error"
+  },
+  "addFeature": {
+    "title": "Add Feature",
+    "name": "Feature Name",
+    "type": "Feature Type",
+    "start": "Start Position",
+    "end": "End Position",
+    "strand": "Strand",
+    "description": "Description",
+    "selectType": "Select feature type...",
+    "forward": "Forward (+)",
+    "reverse": "Reverse (-)",
+    "both": "Both"
+  },
+  "editFeature": {
+    "title": "Edit Feature",
+    "updateButton": "Update",
+    "deleteButton": "Delete Feature"
+  },
+  "insertSequence": {
+    "title": "Insert Sequence",
+    "position": "Position",
+    "sequence": "Sequence to Insert",
+    "placeholder": "Enter DNA sequence (A, T, G, C)..."
+  },
+  "replaceSequence": {
+    "title": "Replace Sequence",
+    "originalSequence": "Original Sequence",
+    "newSequence": "New Sequence",
+    "targetRegion": "Target Region"
+  },
+  "deleteSequence": {
+    "title": "Delete Sequence",
+    "startPosition": "Start Position",
+    "endPosition": "End Position",
+    "warning": "This action cannot be undone"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Enter search term...",
+    "geneNames": "Gene Names",
+    "sequences": "Sequences",
+    "annotations": "Annotations",
+    "caseSensitive": "Case Sensitive",
+    "wholeWord": "Whole Word",
+    "useRegex": "Use Regular Expression"
+  },
+  "advancedSearch": {
+    "title": "Advanced Search",
+    "searchIn": "Search In",
+    "chromosome": "Chromosome",
+    "all": "All",
+    "position": "Position Range",
+    "from": "From",
+    "to": "To",
+    "featureType": "Feature Type",
+    "strand": "Strand"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "appearance": "Appearance",
+    "language": "Language",
+    "theme": "Theme",
+    "fontSize": "Font Size",
+    "performance": "Performance",
+    "advanced": "Advanced"
+  },
+  "llmConfig": {
+    "title": "Configure LLM",
+    "provider": "Provider",
+    "model": "Model",
+    "apiKey": "API Key",
+    "endpoint": "Endpoint",
+    "temperature": "Temperature",
+    "maxTokens": "Max Tokens",
+    "testConnection": "Test Connection"
+  },
+  "about": {
+    "title": "About CodeXomics",
+    "version": "Version",
+    "copyright": "Copyright © 2024 Lifu Song",
+    "license": "MIT License",
+    "description": "An AI-powered bioinformatics analysis platform"
+  },
+  "checkpoint": {
+    "title": "Checkpoint",
+    "createCheckpoint": "Create Checkpoint",
+    "name": "Checkpoint Name",
+    "description": "Description",
+    "restore": "Restore",
+    "delete": "Delete",
+    "confirmRestore": "Restore this checkpoint? Current changes will be lost."
+  },
+  "actionList": {
+    "title": "Action List",
+    "pending": "Pending Actions",
+    "executed": "Executed Actions",
+    "executeAll": "Execute All",
+    "clearAll": "Clear All",
+    "exportActions": "Export Actions"
+  }
 }

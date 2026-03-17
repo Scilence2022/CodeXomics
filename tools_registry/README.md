@@ -7,6 +7,7 @@ This directory contains the complete tools registry for CodeXomics, implementing
 ## 🏗️ Architecture
 
 ### Core Principles
+
 - **Decoupling**: Tool definitions are completely separated from system prompts
 - **Dynamism**: Tools are retrieved and injected on-demand based on user intent
 - **Scalability**: Each tool has its own definition file for easy maintenance
@@ -126,47 +127,47 @@ Each tool is defined in a YAML file with the following structure:
 
 ```yaml
 # tool_name.yaml
-name: "tool_name"
-version: "1.0.0"
-description: "Clear, concise description of what the tool does"
-category: "category_name"
-keywords: ["keyword1", "keyword2", "keyword3"]
-priority: 1  # 1=high, 2=medium, 3=low
+name: 'tool_name'
+version: '1.0.0'
+description: 'Clear, concise description of what the tool does'
+category: 'category_name'
+keywords: ['keyword1', 'keyword2', 'keyword3']
+priority: 1 # 1=high, 2=medium, 3=low
 
 # Tool execution metadata
 execution:
-  type: "client"  # client, server, hybrid
-  timeout: 30000  # milliseconds
+  type: 'client' # client, server, hybrid
+  timeout: 30000 # milliseconds
   retries: 3
   requires_auth: false
 
 # Input parameters (JSON Schema format)
 parameters:
-  type: "object"
+  type: 'object'
   properties:
     param1:
-      type: "string"
-      description: "Parameter description"
+      type: 'string'
+      description: 'Parameter description'
       required: true
     param2:
-      type: "number"
-      description: "Optional parameter"
+      type: 'number'
+      description: 'Optional parameter'
       default: 0
-  required: ["param1"]
+  required: ['param1']
 
 # High-quality examples for few-shot learning
 sample_usages:
-  - user_query: "Example user query"
+  - user_query: 'Example user query'
     tool_call: "tool_name(param1='value1', param2=123)"
-    thought: "Why this tool was chosen"
-    expected_result: "What the user expects to see"
+    thought: 'Why this tool was chosen'
+    expected_result: 'What the user expects to see'
 
 # Tool relationships and dependencies
 relationships:
-  depends_on: ["other_tool1", "other_tool2"]
-  conflicts_with: ["conflicting_tool"]
-  enhances: ["enhanced_tool"]
-  alternatives: ["alternative_tool1", "alternative_tool2"]
+  depends_on: ['other_tool1', 'other_tool2']
+  conflicts_with: ['conflicting_tool']
+  enhances: ['enhanced_tool']
+  alternatives: ['alternative_tool1', 'alternative_tool2']
 
 # Performance and usage statistics
 metadata:
@@ -174,7 +175,7 @@ metadata:
   success_rate: 0.0
   avg_execution_time: 0
   last_used: null
-  tags: ["tag1", "tag2"]
+  tags: ['tag1', 'tag2']
 ```
 
 ## 🚀 Dynamic Tool Retrieval
@@ -200,6 +201,7 @@ The system uses intelligent tool retrieval based on:
 ## 🔄 Integration
 
 The tools registry integrates with:
+
 - **ChatManager**: Dynamic tool injection into system prompts
 - **MCP Server**: Tool execution and parameter validation
 - **Plugin System**: Plugin tool registration and management

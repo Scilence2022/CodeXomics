@@ -26,35 +26,35 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: "Specific chromosome/contig to analyze (optional, analyzes all chromosomes if not specified)"
+      description: 'Specific chromosome/contig to analyze (optional, analyzes all chromosomes if not specified)'
       examples:
-        - "U00096"
-        - "chromosome"
-        - "chr1"
+        - 'U00096'
+        - 'chromosome'
+        - 'chr1'
     featureType:
       type: string
-      description: "Type of features to analyze (default CDS)"
-      default: "CDS"
+      description: 'Type of features to analyze (default CDS)'
+      default: 'CDS'
       enum:
-        - "CDS"
-        - "gene"
-        - "mRNA"
+        - 'CDS'
+        - 'gene'
+        - 'mRNA'
     minLength:
       type: integer
-      description: "Minimum feature length in base pairs to include in analysis (default 300)"
+      description: 'Minimum feature length in base pairs to include in analysis (default 300)'
       default: 300
       minimum: 1
       maximum: 100000
     maxGenes:
       type: integer
-      description: "Maximum number of genes to analyze (optional, useful for large genomes)"
+      description: 'Maximum number of genes to analyze (optional, useful for large genomes)'
       minimum: 1
       examples:
         - 1000
         - 5000
     clientId:
       type: string
-      description: "Browser client ID for multi-window support"
+      description: 'Browser client ID for multi-window support'
       default: default
   required: []
 sample_usages:
@@ -77,10 +77,10 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["codon_usage_analysis"]
+  enhances: ['codon_usage_analysis']
   alternatives: []
-  prerequisites: ["Genome data must be loaded"]
-  follow_up: ["codon_usage_analysis"]
+  prerequisites: ['Genome data must be loaded']
+  follow_up: ['codon_usage_analysis']
 metadata:
   usage_count: 0
   success_rate: 0
@@ -94,20 +94,20 @@ metadata:
   usage_pattern: specialized
 error_handling:
   no_genome_data:
-    error: "No genome data loaded"
-    solution: "Load genome file and annotation data before performing genome-wide analysis"
+    error: 'No genome data loaded'
+    solution: 'Load genome file and annotation data before performing genome-wide analysis'
     retry: false
   no_features_found:
-    error: "No CDS features found matching criteria"
-    solution: "Check minLength parameter or verify annotation data is loaded correctly"
+    error: 'No CDS features found matching criteria'
+    solution: 'Check minLength parameter or verify annotation data is loaded correctly'
     retry: true
   analysis_failed:
-    error: "Genome-wide codon usage analysis failed"
-    solution: "Check genome data integrity and try again"
+    error: 'Genome-wide codon usage analysis failed'
+    solution: 'Check genome data integrity and try again'
     retry: true
   insufficient_data:
-    error: "Not enough features for meaningful genome-wide analysis"
-    solution: "Lower minLength threshold or load more complete annotation data"
+    error: 'Not enough features for meaningful genome-wide analysis'
+    solution: 'Lower minLength threshold or load more complete annotation data'
     retry: true
 returns:
   success: boolean - Whether operation was successful

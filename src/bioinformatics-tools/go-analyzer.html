@@ -1,874 +1,921 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gene Ontology Analyzer - CodeXomics</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
-        :root {
-            --primary-color: #8e44ad;
-            --secondary-color: #9b59b6;
-            --success-color: #27ae60;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --bp-color: #2e7d32;
-            --mf-color: #f57c00;
-            --cc-color: #1976d2;
-            --bg-primary: #f5f7fa;
-            --bg-secondary: #ffffff;
-            --text-primary: #2c3e50;
-            --text-secondary: #7f8c8d;
-            --border-color: #dee2e6;
-            --radius: 8px;
-            --shadow: 0 2px 10px rgba(0,0,0,0.1);
-            --shadow-hover: 0 4px 20px rgba(0,0,0,0.15);
+      :root {
+        --primary-color: #8e44ad;
+        --secondary-color: #9b59b6;
+        --success-color: #27ae60;
+        --warning-color: #f39c12;
+        --danger-color: #e74c3c;
+        --bp-color: #2e7d32;
+        --mf-color: #f57c00;
+        --cc-color: #1976d2;
+        --bg-primary: #f5f7fa;
+        --bg-secondary: #ffffff;
+        --text-primary: #2c3e50;
+        --text-secondary: #7f8c8d;
+        --border-color: #dee2e6;
+        --radius: 8px;
+        --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          'Segoe UI',
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: var(--text-primary);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+
+      .app-header {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        color: var(--text-primary);
+        padding: 20px 30px;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      .app-title {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .app-title i {
+        font-size: 2.5rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .title-text h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #8e44ad, #9b59b6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 5px;
+      }
+
+      .title-text p {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .header-btn {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+      }
+
+      .header-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
+      }
+
+      .main-container {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        min-height: calc(100vh - 100px);
+        max-width: 1600px;
+        margin: 0 auto;
+        gap: 24px;
+        padding: 24px;
+      }
+
+      .sidebar {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        padding: 24px;
+        overflow-y: auto;
+        height: fit-content;
+        position: sticky;
+        top: 120px;
+      }
+
+      .content-area {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        padding: 28px;
+        overflow-y: auto;
+      }
+
+      .form-section {
+        margin-bottom: 28px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid var(--border-color);
+      }
+
+      .form-section:last-child {
+        border-bottom: none;
+      }
+
+      .section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 18px;
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .section-title i {
+        font-size: 1.3rem;
+        padding: 8px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border-radius: 8px;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius);
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background: white;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.1);
+      }
+
+      textarea.form-control {
+        resize: vertical;
+        min-height: 120px;
+        font-family: 'Consolas', 'Monaco', monospace;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .checkbox-group {
+        margin-top: 8px;
+      }
+
+      .checkbox-group label {
+        display: block;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .checkbox-group label:hover {
+        color: var(--primary-color);
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--secondary-color), #8e44ad);
+        color: white;
+        width: 100%;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+      }
+
+      .btn-secondary {
+        background: #95a5a6;
+        color: white;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .btn-secondary:hover {
+        background: #7f8c8d;
+        transform: translateY(-2px);
+      }
+
+      #statusArea {
+        margin-bottom: 20px;
+      }
+
+      .status-message {
+        padding: 12px 16px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease;
+      }
+
+      .status-success {
+        background: #d4edda;
+        border-left: 4px solid var(--success-color);
+        color: #155724;
+      }
+
+      .status-error {
+        background: #f8d7da;
+        border-left: 4px solid var(--danger-color);
+        color: #721c24;
+      }
+
+      .status-info {
+        background: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        color: #0c5460;
+      }
+
+      .status-warning {
+        background: #fff3cd;
+        border-left: 4px solid var(--warning-color);
+        color: #856404;
+      }
+
+      #loadingIndicator {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        text-align: center;
+      }
+
+      .loading-spinner {
+        font-size: 3rem;
+        color: var(--secondary-color);
+        margin-bottom: 20px;
+      }
+
+      .loading-spinner i {
+        animation: spin 1s linear infinite;
+      }
+
+      .loading-message {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: var(--text-primary);
-            line-height: 1.6;
-            min-height: 100vh;
+        to {
+          transform: rotate(360deg);
         }
+      }
 
-        .app-header {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            color: var(--text-primary);
-            padding: 20px 30px;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+      @keyframes slideIn {
+        from {
+          transform: translateY(-10px);
+          opacity: 0;
         }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1600px;
-            margin: 0 auto;
+        to {
+          transform: translateY(0);
+          opacity: 1;
         }
+      }
 
-        .app-title {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+      .go-term-card {
+        background: white;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+      }
 
-        .app-title i {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+      .go-term-card:hover {
+        box-shadow: var(--shadow-hover);
+        transform: translateY(-2px);
+      }
 
-        .title-text h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #8e44ad, #9b59b6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 5px;
-        }
+      .go-term-card.BP {
+        border-left: 5px solid var(--bp-color);
+      }
 
-        .title-text p {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-        }
+      .go-term-card.MF {
+        border-left: 5px solid var(--mf-color);
+      }
 
-        .header-actions {
-            display: flex;
-            gap: 12px;
-        }
+      .go-term-card.CC {
+        border-left: 5px solid var(--cc-color);
+      }
 
-        .header-btn {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-        }
+      .go-term-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 12px;
+      }
 
-        .header-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
-        }
+      .go-term-id {
+        font-weight: 700;
+        color: var(--secondary-color);
+        font-size: 1.1rem;
+      }
 
+      .go-namespace-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: white;
+      }
+
+      .go-namespace-badge.BP {
+        background: var(--bp-color);
+      }
+
+      .go-namespace-badge.MF {
+        background: var(--mf-color);
+      }
+
+      .go-namespace-badge.CC {
+        background: var(--cc-color);
+      }
+
+      .go-term-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
+
+      .go-term-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: var(--bg-primary);
+        border-radius: var(--radius);
+      }
+
+      .stat-item i {
+        color: var(--secondary-color);
+      }
+
+      .go-term-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .btn-small {
+        padding: 8px 16px;
+        font-size: 13px;
+      }
+
+      #llmInterpretationPanel {
+        display: none;
+        background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+        border: 2px solid var(--secondary-color);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        animation: slideIn 0.3s ease;
+      }
+
+      .llm-interpretation-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .llm-interpretation-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.3rem;
+        color: var(--primary-color);
+      }
+
+      .llm-interpretation-header i {
+        color: var(--secondary-color);
+        font-size: 1.5rem;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: var(--radius);
+        transition: all 0.3s ease;
+      }
+
+      .close-btn:hover {
+        background: rgba(0, 0, 0, 0.1);
+        color: var(--primary-color);
+      }
+
+      .llm-interpretation-content {
+        background: white;
+        padding: 20px;
+        border-radius: var(--radius);
+        margin-bottom: 16px;
+        line-height: 1.8;
+      }
+
+      .interpretation-text {
+        color: var(--text-primary);
+      }
+
+      .interpretation-text strong {
+        color: var(--primary-color);
+      }
+
+      .interpretation-text code {
+        background: var(--bg-primary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Consolas', monospace;
+      }
+
+      .llm-interpretation-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--text-secondary);
+      }
+
+      .empty-state i {
+        font-size: 4rem;
+        opacity: 0.3;
+        margin-bottom: 20px;
+      }
+
+      .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
+
+      .namespace-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .namespace-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        border: 2px solid var(--border-color);
+      }
+
+      .namespace-card.BP {
+        border-top: 5px solid var(--bp-color);
+      }
+
+      .namespace-card.MF {
+        border-top: 5px solid var(--mf-color);
+      }
+
+      .namespace-card.CC {
+        border-top: 5px solid var(--cc-color);
+      }
+
+      .namespace-card-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+
+      .namespace-card-count {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+
+      .namespace-card.BP .namespace-card-count {
+        color: var(--bp-color);
+      }
+
+      .namespace-card.MF .namespace-card-count {
+        color: var(--mf-color);
+      }
+
+      .namespace-card.CC .namespace-card-count {
+        color: var(--cc-color);
+      }
+
+      @media (max-width: 1200px) {
         .main-container {
-            display: grid;
-            grid-template-columns: 400px 1fr;
-            min-height: calc(100vh - 100px);
-            max-width: 1600px;
-            margin: 0 auto;
-            gap: 24px;
-            padding: 24px;
+          grid-template-columns: 1fr;
         }
 
         .sidebar {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 24px;
-            overflow-y: auto;
-            height: fit-content;
-            position: sticky;
-            top: 120px;
-        }
-
-        .content-area {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 28px;
-            overflow-y: auto;
-        }
-
-        .form-section {
-            margin-bottom: 28px;
-            padding-bottom: 24px;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .form-section:last-child {
-            border-bottom: none;
-        }
-
-        .section-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 18px;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .section-title i {
-            font-size: 1.3rem;
-            padding: 8px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: 8px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid var(--border-color);
-            border-radius: var(--radius);
-            font-size: 14px;
-            font-family: inherit;
-            transition: all 0.3s ease;
-            background: white;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.1);
-        }
-
-        textarea.form-control {
-            resize: vertical;
-            min-height: 120px;
-            font-family: 'Consolas', 'Monaco', monospace;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .checkbox-group {
-            margin-top: 8px;
-        }
-
-        .checkbox-group label {
-            display: block;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .checkbox-group label:hover {
-            color: var(--primary-color);
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            font-family: inherit;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--secondary-color), #8e44ad);
-            color: white;
-            width: 100%;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
-        }
-
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-            width: 100%;
-            justify-content: center;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
-            transform: translateY(-2px);
-        }
-
-        #statusArea {
-            margin-bottom: 20px;
-        }
-
-        .status-message {
-            padding: 12px 16px;
-            border-radius: var(--radius);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideIn 0.3s ease;
-        }
-
-        .status-success {
-            background: #d4edda;
-            border-left: 4px solid var(--success-color);
-            color: #155724;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            border-left: 4px solid var(--danger-color);
-            color: #721c24;
-        }
-
-        .status-info {
-            background: #d1ecf1;
-            border-left: 4px solid #17a2b8;
-            color: #0c5460;
-        }
-
-        .status-warning {
-            background: #fff3cd;
-            border-left: 4px solid var(--warning-color);
-            color: #856404;
-        }
-
-        #loadingIndicator {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 60px 20px;
-            text-align: center;
-        }
-
-        .loading-spinner {
-            font-size: 3rem;
-            color: var(--secondary-color);
-            margin-bottom: 20px;
-        }
-
-        .loading-spinner i {
-            animation: spin 1s linear infinite;
-        }
-
-        .loading-message {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(-10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .go-term-card {
-            background: white;
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .go-term-card:hover {
-            box-shadow: var(--shadow-hover);
-            transform: translateY(-2px);
-        }
-
-        .go-term-card.BP {
-            border-left: 5px solid var(--bp-color);
-        }
-
-        .go-term-card.MF {
-            border-left: 5px solid var(--mf-color);
-        }
-
-        .go-term-card.CC {
-            border-left: 5px solid var(--cc-color);
-        }
-
-        .go-term-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 12px;
-        }
-
-        .go-term-id {
-            font-weight: 700;
-            color: var(--secondary-color);
-            font-size: 1.1rem;
-        }
-
-        .go-namespace-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: white;
-        }
-
-        .go-namespace-badge.BP {
-            background: var(--bp-color);
-        }
-
-        .go-namespace-badge.MF {
-            background: var(--mf-color);
-        }
-
-        .go-namespace-badge.CC {
-            background: var(--cc-color);
-        }
-
-        .go-term-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--text-primary);
-        }
-
-        .go-term-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            background: var(--bg-primary);
-            border-radius: var(--radius);
-        }
-
-        .stat-item i {
-            color: var(--secondary-color);
-        }
-
-        .go-term-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .btn-small {
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-
-        #llmInterpretationPanel {
-            display: none;
-            background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
-            border: 2px solid var(--secondary-color);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            animation: slideIn 0.3s ease;
-        }
-
-        .llm-interpretation-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-
-        .llm-interpretation-header h3 {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.3rem;
-            color: var(--primary-color);
-        }
-
-        .llm-interpretation-header i {
-            color: var(--secondary-color);
-            font-size: 1.5rem;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 8px;
-            border-radius: var(--radius);
-            transition: all 0.3s ease;
-        }
-
-        .close-btn:hover {
-            background: rgba(0,0,0,0.1);
-            color: var(--primary-color);
-        }
-
-        .llm-interpretation-content {
-            background: white;
-            padding: 20px;
-            border-radius: var(--radius);
-            margin-bottom: 16px;
-            line-height: 1.8;
-        }
-
-        .interpretation-text {
-            color: var(--text-primary);
-        }
-
-        .interpretation-text strong {
-            color: var(--primary-color);
-        }
-
-        .interpretation-text code {
-            background: var(--bg-primary);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Consolas', monospace;
-        }
-
-        .llm-interpretation-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-secondary);
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            opacity: 0.3;
-            margin-bottom: 20px;
-        }
-
-        .empty-state h3 {
-            font-size: 1.5rem;
-            margin-bottom: 12px;
-            color: var(--text-primary);
+          position: relative;
+          top: 0;
         }
 
         .namespace-summary {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
+          grid-template-columns: 1fr;
         }
-
-        .namespace-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            border: 2px solid var(--border-color);
-        }
-
-        .namespace-card.BP {
-            border-top: 5px solid var(--bp-color);
-        }
-
-        .namespace-card.MF {
-            border-top: 5px solid var(--mf-color);
-        }
-
-        .namespace-card.CC {
-            border-top: 5px solid var(--cc-color);
-        }
-
-        .namespace-card-title {
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
-        .namespace-card-count {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .namespace-card.BP .namespace-card-count {
-            color: var(--bp-color);
-        }
-
-        .namespace-card.MF .namespace-card-count {
-            color: var(--mf-color);
-        }
-
-        .namespace-card.CC .namespace-card-count {
-            color: var(--cc-color);
-        }
-
-        @media (max-width: 1200px) {
-            .main-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .sidebar {
-                position: relative;
-                top: 0;
-            }
-
-            .namespace-summary {
-                grid-template-columns: 1fr;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="app-header">
-        <div class="header-content">
-            <div class="app-title">
-                <i class="fas fa-project-diagram"></i>
-                <div class="title-text">
-                    <h1>Gene Ontology Analyzer</h1>
-                    <p>Functional Annotation and Enrichment Analysis</p>
-                </div>
-            </div>
-            <div class="header-actions">
-                <button class="header-btn" id="llmInterpretBtn" style="display: none;">
-                    <i class="fas fa-brain"></i>
-                    AI Interpret
-                </button>
-                <button class="header-btn" id="sendToChatBtn" style="display: none;">
-                    <i class="fas fa-comments"></i>
-                    Analyze in ChatBox
-                </button>
-            </div>
+      <div class="header-content">
+        <div class="app-title">
+          <i class="fas fa-project-diagram"></i>
+          <div class="title-text">
+            <h1>Gene Ontology Analyzer</h1>
+            <p>Functional Annotation and Enrichment Analysis</p>
+          </div>
         </div>
+        <div class="header-actions">
+          <button class="header-btn" id="llmInterpretBtn" style="display: none">
+            <i class="fas fa-brain"></i>
+            AI Interpret
+          </button>
+          <button class="header-btn" id="sendToChatBtn" style="display: none">
+            <i class="fas fa-comments"></i>
+            Analyze in ChatBox
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="main-container">
-        <div class="sidebar">
-            <div class="form-section">
-                <div class="section-title">
-                    <i class="fas fa-database"></i>
-                    Input Data
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Organism</label>
-                    <select class="form-control" id="organism">
-                        <option value="9606">Homo sapiens (Human)</option>
-                        <option value="10090">Mus musculus (Mouse)</option>
-                        <option value="7955">Danio rerio (Zebrafish)</option>
-                        <option value="7227">Drosophila melanogaster (Fruit fly)</option>
-                        <option value="6239">Caenorhabditis elegans (Worm)</option>
-                        <option value="3702">Arabidopsis thaliana (Plant)</option>
-                        <option value="559292">Saccharomyces cerevisiae (Yeast)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Gene List (one per line)</label>
-                    <textarea class="form-control" id="geneInput" 
-                        placeholder="Enter gene symbols:
+      <div class="sidebar">
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fas fa-database"></i>
+            Input Data
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Organism</label>
+            <select class="form-control" id="organism">
+              <option value="9606">Homo sapiens (Human)</option>
+              <option value="10090">Mus musculus (Mouse)</option>
+              <option value="7955">Danio rerio (Zebrafish)</option>
+              <option value="7227">Drosophila melanogaster (Fruit fly)</option>
+              <option value="6239">Caenorhabditis elegans (Worm)</option>
+              <option value="3702">Arabidopsis thaliana (Plant)</option>
+              <option value="559292">Saccharomyces cerevisiae (Yeast)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Gene List (one per line)</label>
+            <textarea
+              class="form-control"
+              id="geneInput"
+              placeholder="Enter gene symbols:
 TP53
 EGFR
 BRCA1
 MYC
-KRAS"></textarea>
-                </div>
-                
-                <button class="btn btn-primary" id="analyzeBtn">
-                    <i class="fas fa-play"></i>
-                    Analyze GO Terms
-                </button>
-            </div>
+KRAS"
+            ></textarea>
+          </div>
 
-            <div class="form-section">
-                <div class="section-title">
-                    <i class="fas fa-filter"></i>
-                    Analysis Options
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">GO Namespace</label>
-                    <div class="checkbox-group">
-                        <label>
-                            <input type="checkbox" id="includeBP" checked> 
-                            Biological Process (BP)
-                        </label>
-                        <label>
-                            <input type="checkbox" id="includeMF" checked> 
-                            Molecular Function (MF)
-                        </label>
-                        <label>
-                            <input type="checkbox" id="includeCC" checked> 
-                            Cellular Component (CC)
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">P-value Threshold</label>
-                    <input type="number" class="form-control" id="pValueThreshold" 
-                        value="0.05" step="0.01" min="0" max="1">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">FDR Threshold</label>
-                    <input type="number" class="form-control" id="fdrThreshold" 
-                        value="0.25" step="0.01" min="0" max="1">
-                </div>
-            </div>
-
-            <div class="form-section">
-                <div class="section-title">
-                    <i class="fas fa-tools"></i>
-                    Quick Actions
-                </div>
-                
-                <button class="btn btn-secondary" id="exampleBtn" style="margin-bottom: 10px;">
-                    <i class="fas fa-flask"></i>
-                    Load Example
-                </button>
-                
-                <button class="btn btn-secondary" id="clearBtn">
-                    <i class="fas fa-trash-alt"></i>
-                    Clear Results
-                </button>
-            </div>
+          <button class="btn btn-primary" id="analyzeBtn">
+            <i class="fas fa-play"></i>
+            Analyze GO Terms
+          </button>
         </div>
 
-        <div class="content-area">
-            <div id="statusArea"></div>
-            
-            <div id="llmInterpretationPanel"></div>
-            
-            <div id="loadingIndicator">
-                <div class="loading-spinner">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
-                <div class="loading-message">Analyzing GO enrichment...</div>
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fas fa-filter"></i>
+            Analysis Options
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">GO Namespace</label>
+            <div class="checkbox-group">
+              <label>
+                <input type="checkbox" id="includeBP" checked />
+                Biological Process (BP)
+              </label>
+              <label>
+                <input type="checkbox" id="includeMF" checked />
+                Molecular Function (MF)
+              </label>
+              <label>
+                <input type="checkbox" id="includeCC" checked />
+                Cellular Component (CC)
+              </label>
             </div>
-            
-            <div id="resultsContainer">
-                <div class="empty-state">
-                    <i class="fas fa-project-diagram"></i>
-                    <h3>No Analysis Results</h3>
-                    <p>Enter gene data and click "Analyze GO Terms" to perform functional enrichment analysis.</p>
-                </div>
-            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">P-value Threshold</label>
+            <input type="number" class="form-control" id="pValueThreshold" value="0.05" step="0.01" min="0" max="1" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">FDR Threshold</label>
+            <input type="number" class="form-control" id="fdrThreshold" value="0.25" step="0.01" min="0" max="1" />
+          </div>
         </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <i class="fas fa-tools"></i>
+            Quick Actions
+          </div>
+
+          <button class="btn btn-secondary" id="exampleBtn" style="margin-bottom: 10px">
+            <i class="fas fa-flask"></i>
+            Load Example
+          </button>
+
+          <button class="btn btn-secondary" id="clearBtn">
+            <i class="fas fa-trash-alt"></i>
+            Clear Results
+          </button>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <div id="statusArea"></div>
+
+        <div id="llmInterpretationPanel"></div>
+
+        <div id="loadingIndicator">
+          <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+          </div>
+          <div class="loading-message">Analyzing GO enrichment...</div>
+        </div>
+
+        <div id="resultsContainer">
+          <div class="empty-state">
+            <i class="fas fa-project-diagram"></i>
+            <h3>No Analysis Results</h3>
+            <p>Enter gene data and click "Analyze GO Terms" to perform functional enrichment analysis.</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="tool-menu-handler.js"></script>
     <script src="shared-analyzer-base.js"></script>
     <script>
-        class GOAnalyzer extends SharedAnalyzerBase {
-            constructor() {
-                super('Gene Ontology Analysis', {
-                    primaryColor: '#8e44ad',
-                    secondaryColor: '#9b59b6',
-                    icon: 'fa-project-diagram'
-                });
-                
-                this.init();
-                
-                // Notify window is ready
-                setTimeout(() => {
-                    this.ipcRenderer.send('window-ready', 'go-analyzer');
-                }, 100);
+      class GOAnalyzer extends SharedAnalyzerBase {
+        constructor() {
+          super('Gene Ontology Analysis', {
+            primaryColor: '#8e44ad',
+            secondaryColor: '#9b59b6',
+            icon: 'fa-project-diagram',
+          });
+
+          this.init();
+
+          // Notify window is ready
+          setTimeout(() => {
+            this.ipcRenderer.send('window-ready', 'go-analyzer');
+          }, 100);
+        }
+
+        init() {
+          document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeGO());
+          document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+          document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
+          document.getElementById('sendToChatBtn').addEventListener('click', () => this.sendCurrentToChatBox());
+        }
+
+        async analyzeGO() {
+          const geneInput = document.getElementById('geneInput').value.trim();
+          if (!geneInput) {
+            this.showStatus('Please enter gene data to analyze', 'warning');
+            return;
+          }
+
+          const genes = geneInput.split('\n').filter(g => g.trim());
+          const organism = document.getElementById('organism').value;
+          const includeBP = document.getElementById('includeBP').checked;
+          const includeMF = document.getElementById('includeMF').checked;
+          const includeCC = document.getElementById('includeCC').checked;
+          const pValueThreshold = parseFloat(document.getElementById('pValueThreshold').value);
+          const fdrThreshold = parseFloat(document.getElementById('fdrThreshold').value);
+
+          if (!includeBP && !includeMF && !includeCC) {
+            this.showStatus('Please select at least one GO namespace', 'warning');
+            return;
+          }
+
+          this.showLoading(true, 'Performing GO enrichment analysis...');
+          this.showStatus('Querying Gene Ontology database...', 'info');
+
+          try {
+            await this.delay(1000);
+
+            const results = await this.performGOEnrichment(genes, organism, {
+              includeBP,
+              includeMF,
+              includeCC,
+              pValueThreshold,
+              fdrThreshold,
+            });
+
+            this.currentResults = results;
+            this.displayResults(results);
+            this.showLoading(false);
+            this.showStatus(`Found ${results.enrichedTerms.length} enriched GO terms`, 'success');
+
+            // Show ChatBox integration button
+            document.getElementById('sendToChatBtn').style.display = 'block';
+            document.getElementById('llmInterpretBtn').style.display = 'block';
+          } catch (error) {
+            this.showLoading(false);
+            this.showStatus(`Analysis failed: ${error.message}`, 'error');
+          }
+        }
+
+        async performGOEnrichment(genes, organism, options) {
+          const goDatabase = this.getGODatabase();
+          const enrichedTerms = [];
+
+          for (const term of goDatabase) {
+            // Filter by namespace
+            if (term.namespace === 'BP' && !options.includeBP) continue;
+            if (term.namespace === 'MF' && !options.includeMF) continue;
+            if (term.namespace === 'CC' && !options.includeCC) continue;
+
+            const pValue = Math.random() * 0.1;
+            const fdr = pValue * (1 + Math.random() * 0.5);
+            const geneCount = Math.floor(Math.random() * genes.length) + 1;
+
+            if (pValue <= options.pValueThreshold && fdr <= options.fdrThreshold) {
+              enrichedTerms.push({
+                ...term,
+                pValue: pValue,
+                fdr: fdr,
+                geneCount: geneCount,
+                totalGenes: genes.length,
+                matchedGenes: genes.slice(0, geneCount),
+                enrichmentScore: (geneCount / genes.length) * 15,
+              });
             }
+          }
 
-            init() {
-                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeGO());
-                document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
-                document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
-                document.getElementById('sendToChatBtn').addEventListener('click', () => this.sendCurrentToChatBox());
-            }
+          enrichedTerms.sort((a, b) => a.pValue - b.pValue);
 
-            async analyzeGO() {
-                const geneInput = document.getElementById('geneInput').value.trim();
-                if (!geneInput) {
-                    this.showStatus('Please enter gene data to analyze', 'warning');
-                    return;
-                }
+          // Calculate namespace statistics
+          const statistics = {
+            biologicalProcess: enrichedTerms.filter(t => t.namespace === 'BP').length,
+            molecularFunction: enrichedTerms.filter(t => t.namespace === 'MF').length,
+            cellularComponent: enrichedTerms.filter(t => t.namespace === 'CC').length,
+          };
 
-                const genes = geneInput.split('\n').filter(g => g.trim());
-                const organism = document.getElementById('organism').value;
-                const includeBP = document.getElementById('includeBP').checked;
-                const includeMF = document.getElementById('includeMF').checked;
-                const includeCC = document.getElementById('includeCC').checked;
-                const pValueThreshold = parseFloat(document.getElementById('pValueThreshold').value);
-                const fdrThreshold = parseFloat(document.getElementById('fdrThreshold').value);
+          return {
+            organism: organism,
+            inputGenes: genes,
+            enrichedTerms: enrichedTerms,
+            statistics: statistics,
+            analysisDate: new Date().toISOString(),
+            parameters: options,
+          };
+        }
 
-                if (!includeBP && !includeMF && !includeCC) {
-                    this.showStatus('Please select at least one GO namespace', 'warning');
-                    return;
-                }
+        getGODatabase() {
+          return [
+            {
+              id: 'GO:0006915',
+              name: 'apoptotic process',
+              namespace: 'BP',
+              description: 'Programmed cell death pathway',
+            },
+            { id: 'GO:0007049', name: 'cell cycle', namespace: 'BP', description: 'Cell division and proliferation' },
+            { id: 'GO:0006281', name: 'DNA repair', namespace: 'BP', description: 'DNA damage response and repair' },
+            { id: 'GO:0006955', name: 'immune response', namespace: 'BP', description: 'Immune system activation' },
+            {
+              id: 'GO:0006350',
+              name: 'transcription, DNA-templated',
+              namespace: 'BP',
+              description: 'Gene expression regulation',
+            },
+            {
+              id: 'GO:0004672',
+              name: 'protein kinase activity',
+              namespace: 'MF',
+              description: 'Phosphorylation activity',
+            },
+            { id: 'GO:0003677', name: 'DNA binding', namespace: 'MF', description: 'DNA interaction' },
+            { id: 'GO:0005515', name: 'protein binding', namespace: 'MF', description: 'Protein-protein interaction' },
+            {
+              id: 'GO:0003700',
+              name: 'DNA-binding transcription factor activity',
+              namespace: 'MF',
+              description: 'Transcription regulation',
+            },
+            {
+              id: 'GO:0004674',
+              name: 'protein serine/threonine kinase activity',
+              namespace: 'MF',
+              description: 'Serine/threonine phosphorylation',
+            },
+            { id: 'GO:0005634', name: 'nucleus', namespace: 'CC', description: 'Nuclear localization' },
+            { id: 'GO:0005737', name: 'cytoplasm', namespace: 'CC', description: 'Cytoplasmic localization' },
+            { id: 'GO:0005886', name: 'plasma membrane', namespace: 'CC', description: 'Cell membrane' },
+            { id: 'GO:0005739', name: 'mitochondrion', namespace: 'CC', description: 'Mitochondrial localization' },
+            { id: 'GO:0016020', name: 'membrane', namespace: 'CC', description: 'Membrane-associated' },
+          ];
+        }
 
-                this.showLoading(true, 'Performing GO enrichment analysis...');
-                this.showStatus('Querying Gene Ontology database...', 'info');
-
-                try {
-                    await this.delay(1000);
-                    
-                    const results = await this.performGOEnrichment(genes, organism, {
-                        includeBP, includeMF, includeCC, pValueThreshold, fdrThreshold
-                    });
-                    
-                    this.currentResults = results;
-                    this.displayResults(results);
-                    this.showLoading(false);
-                    this.showStatus(`Found ${results.enrichedTerms.length} enriched GO terms`, 'success');
-                    
-                    // Show ChatBox integration button
-                    document.getElementById('sendToChatBtn').style.display = 'block';
-                    document.getElementById('llmInterpretBtn').style.display = 'block';
-                    
-                } catch (error) {
-                    this.showLoading(false);
-                    this.showStatus(`Analysis failed: ${error.message}`, 'error');
-                }
-            }
-
-            async performGOEnrichment(genes, organism, options) {
-                const goDatabase = this.getGODatabase();
-                const enrichedTerms = [];
-                
-                for (const term of goDatabase) {
-                    // Filter by namespace
-                    if (term.namespace === 'BP' && !options.includeBP) continue;
-                    if (term.namespace === 'MF' && !options.includeMF) continue;
-                    if (term.namespace === 'CC' && !options.includeCC) continue;
-                    
-                    const pValue = Math.random() * 0.1;
-                    const fdr = pValue * (1 + Math.random() * 0.5);
-                    const geneCount = Math.floor(Math.random() * genes.length) + 1;
-                    
-                    if (pValue <= options.pValueThreshold && fdr <= options.fdrThreshold) {
-                        enrichedTerms.push({
-                            ...term,
-                            pValue: pValue,
-                            fdr: fdr,
-                            geneCount: geneCount,
-                            totalGenes: genes.length,
-                            matchedGenes: genes.slice(0, geneCount),
-                            enrichmentScore: (geneCount / genes.length) * 15
-                        });
-                    }
-                }
-                
-                enrichedTerms.sort((a, b) => a.pValue - b.pValue);
-                
-                // Calculate namespace statistics
-                const statistics = {
-                    biologicalProcess: enrichedTerms.filter(t => t.namespace === 'BP').length,
-                    molecularFunction: enrichedTerms.filter(t => t.namespace === 'MF').length,
-                    cellularComponent: enrichedTerms.filter(t => t.namespace === 'CC').length
-                };
-                
-                return {
-                    organism: organism,
-                    inputGenes: genes,
-                    enrichedTerms: enrichedTerms,
-                    statistics: statistics,
-                    analysisDate: new Date().toISOString(),
-                    parameters: options
-                };
-            }
-
-            getGODatabase() {
-                return [
-                    { id: 'GO:0006915', name: 'apoptotic process', namespace: 'BP', description: 'Programmed cell death pathway' },
-                    { id: 'GO:0007049', name: 'cell cycle', namespace: 'BP', description: 'Cell division and proliferation' },
-                    { id: 'GO:0006281', name: 'DNA repair', namespace: 'BP', description: 'DNA damage response and repair' },
-                    { id: 'GO:0006955', name: 'immune response', namespace: 'BP', description: 'Immune system activation' },
-                    { id: 'GO:0006350', name: 'transcription, DNA-templated', namespace: 'BP', description: 'Gene expression regulation' },
-                    { id: 'GO:0004672', name: 'protein kinase activity', namespace: 'MF', description: 'Phosphorylation activity' },
-                    { id: 'GO:0003677', name: 'DNA binding', namespace: 'MF', description: 'DNA interaction' },
-                    { id: 'GO:0005515', name: 'protein binding', namespace: 'MF', description: 'Protein-protein interaction' },
-                    { id: 'GO:0003700', name: 'DNA-binding transcription factor activity', namespace: 'MF', description: 'Transcription regulation' },
-                    { id: 'GO:0004674', name: 'protein serine/threonine kinase activity', namespace: 'MF', description: 'Serine/threonine phosphorylation' },
-                    { id: 'GO:0005634', name: 'nucleus', namespace: 'CC', description: 'Nuclear localization' },
-                    { id: 'GO:0005737', name: 'cytoplasm', namespace: 'CC', description: 'Cytoplasmic localization' },
-                    { id: 'GO:0005886', name: 'plasma membrane', namespace: 'CC', description: 'Cell membrane' },
-                    { id: 'GO:0005739', name: 'mitochondrion', namespace: 'CC', description: 'Mitochondrial localization' },
-                    { id: 'GO:0016020', name: 'membrane', namespace: 'CC', description: 'Membrane-associated' }
-                ];
-            }
-
-            displayResults(results) {
-                const container = document.getElementById('resultsContainer');
-                if (!results || !results.enrichedTerms || results.enrichedTerms.length === 0) {
-                    container.innerHTML = `
+        displayResults(results) {
+          const container = document.getElementById('resultsContainer');
+          if (!results || !results.enrichedTerms || results.enrichedTerms.length === 0) {
+            container.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-project-diagram"></i>
                             <h3>No Enriched GO Terms Found</h3>
                             <p>No terms met the significance threshold. Try adjusting parameters.</p>
                         </div>
                     `;
-                    return;
-                }
-                
-                const namespaceSummaryHtml = `
+            return;
+          }
+
+          const namespaceSummaryHtml = `
                     <div class="namespace-summary">
                         <div class="namespace-card BP">
                             <div class="namespace-card-title">Biological Process</div>
@@ -887,8 +934,10 @@ KRAS"></textarea>
                         </div>
                     </div>
                 `;
-                
-                const termsHtml = results.enrichedTerms.map((term, index) => `
+
+          const termsHtml = results.enrichedTerms
+            .map(
+              (term, index) => `
                     <div class="go-term-card ${term.namespace}">
                         <div class="go-term-header">
                             <div>
@@ -934,77 +983,88 @@ KRAS"></textarea>
                             </button>
                         </div>
                     </div>
-                `).join('');
-                
-                container.innerHTML = namespaceSummaryHtml + termsHtml;
-            }
+                `
+            )
+            .join('');
 
-            viewGOTerm(goId) {
-                const url = `http://amigo.geneontology.org/amigo/term/${goId}`;
-                require('electron').shell.openExternal(url);
-            }
+          container.innerHTML = namespaceSummaryHtml + termsHtml;
+        }
 
-            askAboutTerm(goId) {
-                const term = this.currentResults.enrichedTerms.find(t => t.id === goId);
-                if (!term) return;
-                
-                const query = `Explain the biological significance of the GO term "${term.name}" (${term.id}) in ${term.namespace} namespace. The following genes are associated with this term: ${term.matchedGenes.join(', ')}. What does this tell us about their function?`;
-                this.sendToChatBox(query, { term, fullResults: this.currentResults });
-            }
+        viewGOTerm(goId) {
+          const url = `http://amigo.geneontology.org/amigo/term/${goId}`;
+          require('electron').shell.openExternal(url);
+        }
 
-            sendCurrentToChatBox() {
-                if (!this.currentResults) {
-                    this.showStatus('No results to send', 'warning');
-                    return;
-                }
-                
-                const topTerms = this.currentResults.enrichedTerms.slice(0, 5).map(t => 
-                    `${t.name} (${t.namespace})`
-                ).join(', ');
-                
-                const query = `I performed Gene Ontology enrichment analysis on ${this.currentResults.inputGenes.length} genes and found ${this.currentResults.enrichedTerms.length} enriched GO terms across ${this.currentResults.statistics.biologicalProcess} BP, ${this.currentResults.statistics.molecularFunction} MF, and ${this.currentResults.statistics.cellularComponent} CC categories. Top terms include: ${topTerms}. Please provide a comprehensive biological interpretation of these results.`;
-                
-                this.sendToChatBox(query, this.currentResults);
-            }
+        askAboutTerm(goId) {
+          const term = this.currentResults.enrichedTerms.find(t => t.id === goId);
+          if (!term) return;
 
-            buildDetailedQuery(data) {
-                const topBP = data.enrichedTerms.filter(t => t.namespace === 'BP').slice(0, 2).map(t => t.name).join(', ');
-                const topMF = data.enrichedTerms.filter(t => t.namespace === 'MF').slice(0, 2).map(t => t.name).join(', ');
-                
-                return `Provide detailed analysis of GO enrichment results. Biological Processes: ${topBP}. Molecular Functions: ${topMF}. What biological insights can we derive?`;
-            }
+          const query = `Explain the biological significance of the GO term "${term.name}" (${term.id}) in ${term.namespace} namespace. The following genes are associated with this term: ${term.matchedGenes.join(', ')}. What does this tell us about their function?`;
+          this.sendToChatBox(query, { term, fullResults: this.currentResults });
+        }
 
-            getResultCount(data) {
-                return data.enrichedTerms ? data.enrichedTerms.length : 0;
-            }
+        sendCurrentToChatBox() {
+          if (!this.currentResults) {
+            this.showStatus('No results to send', 'warning');
+            return;
+          }
 
-            loadExample() {
-                document.getElementById('geneInput').value = 'TP53\nEGFR\nBRCA1\nMYC\nKRAS\nPTEN\nRB1\nAPC';
-                document.getElementById('organism').value = '9606';
-                document.getElementById('includeBP').checked = true;
-                document.getElementById('includeMF').checked = true;
-                document.getElementById('includeCC').checked = true;
-                this.showStatus('Example data loaded', 'success');
-            }
+          const topTerms = this.currentResults.enrichedTerms
+            .slice(0, 5)
+            .map(t => `${t.name} (${t.namespace})`)
+            .join(', ');
 
-            clearResults() {
-                document.getElementById('resultsContainer').innerHTML = `
+          const query = `I performed Gene Ontology enrichment analysis on ${this.currentResults.inputGenes.length} genes and found ${this.currentResults.enrichedTerms.length} enriched GO terms across ${this.currentResults.statistics.biologicalProcess} BP, ${this.currentResults.statistics.molecularFunction} MF, and ${this.currentResults.statistics.cellularComponent} CC categories. Top terms include: ${topTerms}. Please provide a comprehensive biological interpretation of these results.`;
+
+          this.sendToChatBox(query, this.currentResults);
+        }
+
+        buildDetailedQuery(data) {
+          const topBP = data.enrichedTerms
+            .filter(t => t.namespace === 'BP')
+            .slice(0, 2)
+            .map(t => t.name)
+            .join(', ');
+          const topMF = data.enrichedTerms
+            .filter(t => t.namespace === 'MF')
+            .slice(0, 2)
+            .map(t => t.name)
+            .join(', ');
+
+          return `Provide detailed analysis of GO enrichment results. Biological Processes: ${topBP}. Molecular Functions: ${topMF}. What biological insights can we derive?`;
+        }
+
+        getResultCount(data) {
+          return data.enrichedTerms ? data.enrichedTerms.length : 0;
+        }
+
+        loadExample() {
+          document.getElementById('geneInput').value = 'TP53\nEGFR\nBRCA1\nMYC\nKRAS\nPTEN\nRB1\nAPC';
+          document.getElementById('organism').value = '9606';
+          document.getElementById('includeBP').checked = true;
+          document.getElementById('includeMF').checked = true;
+          document.getElementById('includeCC').checked = true;
+          this.showStatus('Example data loaded', 'success');
+        }
+
+        clearResults() {
+          document.getElementById('resultsContainer').innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-project-diagram"></i>
                         <h3>No Analysis Results</h3>
                         <p>Enter gene data and click "Analyze GO Terms" to perform functional enrichment analysis.</p>
                     </div>
                 `;
-                this.currentResults = null;
-                document.getElementById('sendToChatBtn').style.display = 'none';
-                document.getElementById('llmInterpretBtn').style.display = 'none';
-                this.showStatus('Results cleared', 'success');
-            }
+          this.currentResults = null;
+          document.getElementById('sendToChatBtn').style.display = 'none';
+          document.getElementById('llmInterpretBtn').style.display = 'none';
+          this.showStatus('Results cleared', 'success');
         }
+      }
 
-        // Initialize
-        window.analyzer = new GOAnalyzer();
-        window.toolMenuHandler = new ToolMenuHandler('Gene Ontology Analyzer', window.analyzer);
+      // Initialize
+      window.analyzer = new GOAnalyzer();
+      window.toolMenuHandler = new ToolMenuHandler('Gene Ontology Analyzer', window.analyzer);
     </script>
-</body>
+  </body>
 </html>

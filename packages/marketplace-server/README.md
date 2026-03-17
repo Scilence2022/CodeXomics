@@ -5,6 +5,7 @@ A RESTful API server for plugin distribution, discovery, and submission for the 
 ## Overview
 
 The Plugin Marketplace Server provides a centralized repository for bioinformatics plugins, enabling:
+
 - Plugin discovery and search
 - Plugin submission and review workflow
 - Dependency management
@@ -42,38 +43,45 @@ npm start
 ## API Endpoints
 
 ### Plugin Discovery
+
 - `GET /api/v1/plugins` - Search and list plugins
 - `GET /api/v1/plugins/:id` - Get plugin details
 - `GET /api/v1/categories` - List plugin categories
 
 ### Plugin Submission
+
 - `POST /api/v1/plugins/submit` - Submit a new plugin
 - `GET /api/v1/submissions` - List pending submissions
 - `POST /api/v1/submissions/:id/approve` - Approve a submission
 
 ### Server Management
+
 - `GET /api/v1/health` - Health check
 - `GET /api/v1/stats` - Server statistics
 - `GET /api/v1/config` - Server configuration
 
 ### Plugin Operations
+
 - `POST /api/v1/plugins/:id/download` - Track plugin download
 
 ## Configuration
 
 The server uses the following defaults:
+
 - **Port**: 3001 (MCP Server port + 1)
 - **Max File Size**: 50MB
 - **Allowed File Types**: .zip, .tar.gz, .json, .js, .md
 - **Max Files per Submission**: 5
 
 Configuration can be modified through:
+
 - Environment variables (`PORT`)
 - The CodeXomics application's marketplace configuration UI
 
 ## Data Storage
 
 Plugin data is stored in the `marketplace-data/` directory:
+
 ```
 marketplace-data/
 ├── plugins/          # Published plugin packages
@@ -84,6 +92,7 @@ marketplace-data/
 ## Development
 
 ### Dependencies
+
 - **express**: Web server framework
 - **cors**: Cross-origin resource sharing
 - **multer**: File upload handling
@@ -118,6 +127,7 @@ The marketplace server is designed to run alongside the CodeXomics Electron appl
 ## Architecture
 
 The server implements a stateless RESTful API with:
+
 - **In-memory metadata cache** for fast queries
 - **File-based persistence** for durability
 - **Pluggable validation** for security and quality checks
@@ -126,6 +136,7 @@ The server implements a stateless RESTful API with:
 ## Security
 
 The server includes:
+
 - File type validation
 - File size limits
 - Checksum verification support

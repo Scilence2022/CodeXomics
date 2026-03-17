@@ -35,11 +35,11 @@
 
 ## Deployment Summary
 
-- **Total Tools**: 88
-- **Valid Tools**: 88
-- **Categories**: 11
-- **Errors**: 0
-- **Warnings**: 0
+- **Total Tools**: 122
+- **Valid Tools**: 122
+- **Categories**: 16
+- **Errors**: 5
+- **Warnings**: 4
 
 ## Next Steps
 

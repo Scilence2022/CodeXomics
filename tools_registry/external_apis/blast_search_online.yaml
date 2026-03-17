@@ -47,7 +47,7 @@ parameters:
     evalue:
       type: string
       description: E-value threshold for reporting matches
-      default: "0.01"
+      default: '0.01'
     maxTargets:
       type: integer
       description: Maximum number of target sequences to return
@@ -57,14 +57,14 @@ parameters:
     - blastType
     - database
 sample_usages:
-  - user_query: "Search this DNA sequence against NCBI nucleotide database"
+  - user_query: 'Search this DNA sequence against NCBI nucleotide database'
     tool_call: "blast_search_online(sequence='ATGCGATCGATCG...', blastType='blastn', database='nt')"
-    thought: "User wants to perform NCBI BLAST search for nucleotide sequence"
-    expected_result: "BLAST search results with similar sequences from NCBI database"
-  - user_query: "BLAST this protein sequence against SwissProt"
+    thought: 'User wants to perform NCBI BLAST search for nucleotide sequence'
+    expected_result: 'BLAST search results with similar sequences from NCBI database'
+  - user_query: 'BLAST this protein sequence against SwissProt'
     tool_call: "blast_search_online(sequence='MKLAVLG...', blastType='blastp', database='swissprot')"
-    thought: "User wants to search protein sequence in curated SwissProt database"
-    expected_result: "Protein BLAST results with annotations from SwissProt"
+    thought: 'User wants to search protein sequence in curated SwissProt database'
+    expected_result: 'Protein BLAST results with annotations from SwissProt'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -90,9 +90,9 @@ metadata:
   complexity: moderate
   usage_pattern: frequent
 error_handling:
-  network_error: "Returns error if NCBI service is unavailable"
-  timeout_error: "Returns error if search exceeds 5 minute timeout"
-  invalid_sequence: "Returns error if sequence format is invalid"
+  network_error: 'Returns error if NCBI service is unavailable'
+  timeout_error: 'Returns error if search exceeds 5 minute timeout'
+  invalid_sequence: 'Returns error if sequence format is invalid'
 returns:
   success: boolean - Whether search completed successfully
   searchId: string - Unique search identifier

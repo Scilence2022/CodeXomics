@@ -11,11 +11,12 @@ graph TB
     E --> F[ChatManager.executeToolByName]
     F --> G{Switch Statement}
     G -->|NOT FOUND ❌| H[Unknown tool error]
-    
+
     style H fill:#ff6b6b,stroke:#c92a2a,color:#fff
 ```
 
 **Error:**
+
 ```
 ❌ Error: Unknown tool: analyze_interpro_domains
     at ChatManager.executeToolByName (ChatManager.js:9430)
@@ -42,12 +43,13 @@ graph TB
     L --> N[Mock Domain Data]
     M --> O[Success Response]
     N --> O
-    
+
     style H fill:#51cf66,stroke:#2f9e44,color:#fff
     style O fill:#51cf66,stroke:#2f9e44,color:#fff
 ```
 
 **Success:**
+
 ```
 ✅ Found 2 protein domains using InterPro analysis
    - Protein kinase domain (Pfam): 15-270
@@ -130,6 +132,7 @@ graph TB
 ### ✅ Added to ChatManager.js
 
 **5 Case Statements** (Lines 9472-9497):
+
 ```javascript
 case 'advanced_uniprot_search':
 case 'get_uniprot_entry':
@@ -139,6 +142,7 @@ case 'get_interpro_entry_details':
 ```
 
 **4 Method Implementations** (Lines 6534-6835):
+
 ```javascript
 async searchInterProEntry(parameters) { ... }
 async getInterProEntryDetails(parameters) { ... }
@@ -150,14 +154,14 @@ async getUniProtEntry(parameters) { ... }
 
 ## All 6 Database Tools
 
-| # | Tool Name | Method | Status |
-|---|-----------|--------|--------|
-| 1 | `search_uniprot_database` | `searchUniProtDatabase()` | ✅ Already existed |
-| 2 | `advanced_uniprot_search` | `advancedUniProtSearch()` | ✅ **NEW** |
-| 3 | `get_uniprot_entry` | `getUniProtEntry()` | ✅ **NEW** |
-| 4 | `analyze_interpro_domains` | `analyzeInterProDomains()` | ✅ **FIXED** |
-| 5 | `search_interpro_entry` | `searchInterProEntry()` | ✅ **NEW** |
-| 6 | `get_interpro_entry_details` | `getInterProEntryDetails()` | ✅ **NEW** |
+| #   | Tool Name                    | Method                      | Status             |
+| --- | ---------------------------- | --------------------------- | ------------------ |
+| 1   | `search_uniprot_database`    | `searchUniProtDatabase()`   | ✅ Already existed |
+| 2   | `advanced_uniprot_search`    | `advancedUniProtSearch()`   | ✅ **NEW**         |
+| 3   | `get_uniprot_entry`          | `getUniProtEntry()`         | ✅ **NEW**         |
+| 4   | `analyze_interpro_domains`   | `analyzeInterProDomains()`  | ✅ **FIXED**       |
+| 5   | `search_interpro_entry`      | `searchInterProEntry()`     | ✅ **NEW**         |
+| 6   | `get_interpro_entry_details` | `getInterProEntryDetails()` | ✅ **NEW**         |
 
 ---
 
@@ -169,6 +173,7 @@ node test_database_tools_integration.js
 ```
 
 **Expected Output:**
+
 ```
 ✅ Passed: 32/32
 📊 Pass Rate: 100.0%
@@ -186,22 +191,22 @@ node test_database_tools_integration.js
 analyze_interpro_domains({
   geneName: 'TP53',
   organism: 'Homo sapiens',
-  applications: ['Pfam', 'SMART']
-})
+  applications: ['Pfam', 'SMART'],
+});
 
 // Search InterPro entries
 search_interpro_entry({
   search_term: 'kinase',
   entry_type: 'domain',
-  max_results: 50
-})
+  max_results: 50,
+});
 
 // Get UniProt entry
 get_uniprot_entry({
   uniprot_id: 'P04637',
   include_sequence: true,
-  include_features: true
-})
+  include_features: true,
+});
 ```
 
 ---

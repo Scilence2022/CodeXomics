@@ -1,6 +1,6 @@
 name: toggle_track
 version: 1.0.0
-description: "Show or hide specific tracks in the genome browser (genes, GC content, sequence, etc.). Use this to control which genomic data layers are visible."
+description: 'Show or hide specific tracks in the genome browser (genes, GC content, sequence, etc.). Use this to control which genomic data layers are visible.'
 category: navigation
 keywords:
   - toggle
@@ -23,20 +23,20 @@ parameters:
   properties:
     track_name:
       type: string
-      description: "Name of the track to toggle"
+      description: 'Name of the track to toggle'
       examples:
-        - "genes"
-        - "gc"
-        - "sequence"
-        - "variants"
-        - "reads"
-        - "proteins"
-      enum: ["genes", "gc", "sequence", "variants", "reads", "proteins", "actions"]
+        - 'genes'
+        - 'gc'
+        - 'sequence'
+        - 'variants'
+        - 'reads'
+        - 'proteins'
+      enum: ['genes', 'gc', 'sequence', 'variants', 'reads', 'proteins', 'actions']
     action:
       type: string
-      description: "Action to perform on the track"
-      enum: ["show", "hide", "toggle"]
-      default: "toggle"
+      description: 'Action to perform on the track'
+      enum: ['show', 'hide', 'toggle']
+      default: 'toggle'
     clientId:
       type: string
       description: Browser client ID for multi-window support
@@ -44,27 +44,27 @@ parameters:
   required:
     - track_name
 sample_usages:
-  - user_query: "Hide the gene track"
+  - user_query: 'Hide the gene track'
     tool_call: "toggle_track(track_name='genes', action='hide')"
-    thought: "User wants to hide the genes track from the browser view"
-    expected_result: "Genes track becomes invisible in the browser"
-  
-  - user_query: "Show GC content"
+    thought: 'User wants to hide the genes track from the browser view'
+    expected_result: 'Genes track becomes invisible in the browser'
+
+  - user_query: 'Show GC content'
     tool_call: "toggle_track(track_name='gc', action='show')"
-    thought: "User wants to display the GC content track"
-    expected_result: "GC content track becomes visible in the browser"
-  
-  - user_query: "Toggle sequence display"
+    thought: 'User wants to display the GC content track'
+    expected_result: 'GC content track becomes visible in the browser'
+
+  - user_query: 'Toggle sequence display'
     tool_call: "toggle_track(track_name='sequence', action='toggle')"
-    thought: "User wants to toggle the sequence track visibility"
-    expected_result: "Sequence track switches between visible and hidden state"
+    thought: 'User wants to toggle the sequence track visibility'
+    expected_result: 'Sequence track switches between visible and hidden state'
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["get_current_state"]
+  enhances: ['get_current_state']
   alternatives: []
   prerequisites: []
-  follow_up: ["get_current_state"]
+  follow_up: ['get_current_state']
 metadata:
   usage_count: 0
   success_rate: 0
@@ -77,10 +77,10 @@ metadata:
     - ui control
   complexity: simple
   usage_pattern: common
-  recommendation: "Use to control which data layers are visible in the browser"
+  recommendation: 'Use to control which data layers are visible in the browser'
 error_handling:
-  invalid_track: "Returns error if track name is not recognized"
-  client_error: "Returns error if browser client is not available"
+  invalid_track: 'Returns error if track name is not recognized'
+  client_error: 'Returns error if browser client is not available'
 returns:
   success: boolean - Whether operation was successful
   track_name: string - Name of the affected track

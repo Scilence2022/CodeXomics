@@ -1,1050 +1,1069 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BLAST+ Tools Downloader - CodeXomics</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            overflow-x: hidden;
-        }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        overflow-x: hidden;
+      }
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            min-height: 100vh;
-        }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        min-height: 100vh;
+      }
 
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
+      .header {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
 
+      .header h1 {
+        color: #2c3e50;
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        font-weight: 700;
+      }
+
+      .header .subtitle {
+        color: #7f8c8d;
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+      }
+
+      .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .status-ready {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status-downloading {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+
+      .status-error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .status-complete {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      }
+
+      .card h2 {
+        color: #2c3e50;
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .system-info {
+        margin: 15px 0;
+      }
+
+      .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 15px;
+        margin: 8px 0;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border-left: 4px solid #007bff;
+      }
+
+      .info-label {
+        font-weight: 600;
+        color: #495057;
+      }
+
+      .info-value {
+        color: #6c757d;
+        font-family: 'Monaco', 'Menlo', monospace;
+      }
+
+      .version-info {
+        background: #e3f2fd;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 15px 0;
+        border-left: 4px solid #2196f3;
+      }
+
+      .download-info {
+        background: #f3e5f5;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 15px 0;
+        border-left: 4px solid #9c27b0;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        font-size: 1rem;
+        margin: 5px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+      }
+
+      .btn-success {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+        color: white;
+      }
+
+      .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+      }
+
+      .btn-secondary {
+        background: linear-gradient(135deg, #6c757d, #5a6268);
+        color: white;
+      }
+
+      .btn-warning {
+        background: linear-gradient(135deg, #ffc107, #ff9800);
+        color: white;
+      }
+
+      .btn-warning:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+      }
+
+      .btn-danger {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+      }
+
+      .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 25px;
+        background: #e9ecef;
+        border-radius: 12px;
+        overflow: hidden;
+        margin: 15px 0;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #007bff, #0056b3);
+        width: 0%;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .log-container {
+        background: #1e1e1e;
+        color: #e0e0e0;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+        font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+        font-size: 0.9rem;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #444;
+      }
+
+      .log-entry {
+        margin: 5px 0;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .log-timestamp {
+        color: #888;
+        min-width: 80px;
+        font-size: 0.8rem;
+      }
+
+      .log-level {
+        min-width: 50px;
+        font-weight: 600;
+      }
+
+      .log-info {
+        color: #17a2b8;
+      }
+      .log-success {
+        color: #28a745;
+      }
+      .log-warning {
+        color: #ffc107;
+      }
+      .log-error {
+        color: #dc3545;
+      }
+
+      .alert {
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin: 15px 0;
+        border-left: 4px solid;
+      }
+
+      .alert-info {
+        background: #e3f2fd;
+        border-left-color: #2196f3;
+        color: #0d47a1;
+      }
+
+      .alert-success {
+        background: #e8f5e8;
+        border-left-color: #4caf50;
+        color: #1b5e20;
+      }
+
+      .alert-warning {
+        background: #fff3cd;
+        border-left-color: #ff9800;
+        color: #e65100;
+      }
+
+      .fa-solid,
+      .fas {
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+      }
+
+      .spinning {
+        animation: spin 2s linear infinite;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .download-location {
+        background: rgba(255, 255, 255, 0.8);
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin: 15px 0;
+        font-family: monospace;
+        font-size: 13px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        word-break: break-all;
+      }
+
+      @media (max-width: 768px) {
         .header h1 {
-            color: #2c3e50;
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-
-        .header .subtitle {
-            color: #7f8c8d;
-            font-size: 1.1rem;
-            margin-bottom: 20px;
-        }
-
-        .status-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .status-ready {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-downloading {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-complete {
-            background: #d4edda;
-            color: #155724;
+          font-size: 2rem;
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+          padding: 20px;
         }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        .card h2 {
-            color: #2c3e50;
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .system-info {
-            margin: 15px 0;
-        }
-
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 15px;
-            margin: 8px 0;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border-left: 4px solid #007bff;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .info-value {
-            color: #6c757d;
-            font-family: 'Monaco', 'Menlo', monospace;
-        }
-
-        .version-info {
-            background: #e3f2fd;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 15px 0;
-            border-left: 4px solid #2196f3;
-        }
-
-        .download-info {
-            background: #f3e5f5;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 15px 0;
-            border-left: 4px solid #9c27b0;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            font-size: 1rem;
-            margin: 5px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #007bff, #0056b3);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #28a745, #1e7e34);
-            color: white;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #6c757d, #5a6268);
-            color: white;
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #ffc107, #ff9800);
-            color: white;
-        }
-
-        .btn-warning:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #dc3545, #c82333);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 25px;
-            background: #e9ecef;
-            border-radius: 12px;
-            overflow: hidden;
-            margin: 15px 0;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #007bff, #0056b3);
-            width: 0%;
-            transition: width 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .log-container {
-            background: #1e1e1e;
-            color: #e0e0e0;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-            font-size: 0.9rem;
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #444;
-        }
-
-        .log-entry {
-            margin: 5px 0;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .log-timestamp {
-            color: #888;
-            min-width: 80px;
-            font-size: 0.8rem;
-        }
-
-        .log-level {
-            min-width: 50px;
-            font-weight: 600;
-        }
-
-        .log-info { color: #17a2b8; }
-        .log-success { color: #28a745; }
-        .log-warning { color: #ffc107; }
-        .log-error { color: #dc3545; }
-
-        .alert {
-            padding: 15px 20px;
-            border-radius: 12px;
-            margin: 15px 0;
-            border-left: 4px solid;
-        }
-
-        .alert-info {
-            background: #e3f2fd;
-            border-left-color: #2196f3;
-            color: #0d47a1;
-        }
-
-        .alert-success {
-            background: #e8f5e8;
-            border-left-color: #4caf50;
-            color: #1b5e20;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            border-left-color: #ff9800;
-            color: #e65100;
-        }
-
-        .fa-solid, .fas {
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-        }
-
-        .spinning {
-            animation: spin 2s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .download-location {
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            font-family: monospace;
-            font-size: 13px;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            word-break: break-all;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .card {
-                padding: 20px;
-            }
-        }
+      }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-download"></i> BLAST+ Tools Downloader</h1>
-            <p class="subtitle">Download NCBI BLAST+ tools for your system</p>
-            <div id="statusIndicator" class="status-indicator status-ready">
-                <i class="fas fa-circle"></i>
-                Ready to Download
-            </div>
+      <div class="header">
+        <h1><i class="fas fa-download"></i> BLAST+ Tools Downloader</h1>
+        <p class="subtitle">Download NCBI BLAST+ tools for your system</p>
+        <div id="statusIndicator" class="status-indicator status-ready">
+          <i class="fas fa-circle"></i>
+          Ready to Download
+        </div>
+      </div>
+
+      <!-- System Information Card -->
+      <div class="card">
+        <h2><i class="fas fa-desktop"></i> System Information</h2>
+        <div class="system-info">
+          <div class="info-item">
+            <span class="info-label">Operating System:</span>
+            <span class="info-value" id="osInfo">Detecting...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Architecture:</span>
+            <span class="info-value" id="archInfo">Detecting...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Platform:</span>
+            <span class="info-value" id="platformInfo">Detecting...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Download Control Card -->
+      <div class="card">
+        <h2><i class="fas fa-cloud-download-alt"></i> Download Control</h2>
+
+        <div class="version-info">
+          <h4><i class="fas fa-tag"></i> BLAST+ Version Information</h4>
+          <p><strong>Latest Version:</strong> <span id="latestVersion">Checking...</span></p>
+          <p><strong>Release Date:</strong> <span id="releaseDate">Checking...</span></p>
+          <p><strong>Package Size:</strong> <span id="packageSize">Checking...</span></p>
         </div>
 
-        <!-- System Information Card -->
-        <div class="card">
-            <h2><i class="fas fa-desktop"></i> System Information</h2>
-            <div class="system-info">
-                <div class="info-item">
-                    <span class="info-label">Operating System:</span>
-                    <span class="info-value" id="osInfo">Detecting...</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Architecture:</span>
-                    <span class="info-value" id="archInfo">Detecting...</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Platform:</span>
-                    <span class="info-value" id="platformInfo">Detecting...</span>
-                </div>
-            </div>
+        <div class="download-info">
+          <h4><i class="fas fa-info-circle"></i> Download Information</h4>
+          <p><strong>Download URL:</strong> <span id="downloadUrl">Detecting optimal source...</span></p>
+          <p><strong>Save Location:</strong> <span id="savePath">Will be determined...</span></p>
         </div>
 
-        <!-- Download Control Card -->
-        <div class="card">
-            <h2><i class="fas fa-cloud-download-alt"></i> Download Control</h2>
-            
-            <div class="version-info">
-                <h4><i class="fas fa-tag"></i> BLAST+ Version Information</h4>
-                <p><strong>Latest Version:</strong> <span id="latestVersion">Checking...</span></p>
-                <p><strong>Release Date:</strong> <span id="releaseDate">Checking...</span></p>
-                <p><strong>Package Size:</strong> <span id="packageSize">Checking...</span></p>
-            </div>
+        <div style="margin: 20px 0; text-align: center">
+          <button id="downloadBtn" class="btn btn-success" onclick="startDownload()">
+            <i class="fas fa-download"></i>
+            Start Download
+          </button>
 
-            <div class="download-info">
-                <h4><i class="fas fa-info-circle"></i> Download Information</h4>
-                <p><strong>Download URL:</strong> <span id="downloadUrl">Detecting optimal source...</span></p>
-                <p><strong>Save Location:</strong> <span id="savePath">Will be determined...</span></p>
-            </div>
+          <button id="pauseBtn" class="btn btn-warning" onclick="pauseDownload()" disabled style="display: none">
+            <i class="fas fa-pause"></i>
+            Pause Download
+          </button>
 
-            <div style="margin: 20px 0; text-align: center;">
-                <button id="downloadBtn" class="btn btn-success" onclick="startDownload()">
-                    <i class="fas fa-download"></i>
-                    Start Download
-                </button>
-                
-                <button id="pauseBtn" class="btn btn-warning" onclick="pauseDownload()" disabled style="display: none;">
-                    <i class="fas fa-pause"></i>
-                    Pause Download
-                </button>
-                
-                <button id="resumeBtn" class="btn btn-primary" onclick="resumeDownload()" disabled style="display: none;">
-                    <i class="fas fa-play"></i>
-                    Resume Download
-                </button>
-                
-                <button id="cancelBtn" class="btn btn-danger" onclick="cancelDownload()" disabled style="display: none;">
-                    <i class="fas fa-times"></i>
-                    Cancel
-                </button>
-                
-                <button id="openFolderBtn" class="btn btn-secondary" onclick="openDownloadFolder()" disabled>
-                    <i class="fas fa-folder-open"></i>
-                    Open Download Folder
-                </button>
-            </div>
+          <button id="resumeBtn" class="btn btn-primary" onclick="resumeDownload()" disabled style="display: none">
+            <i class="fas fa-play"></i>
+            Resume Download
+          </button>
 
-            <!-- Progress Container -->
-            <div id="progressContainer" style="display: none;">
-                <h4 style="margin-bottom: 10px;"><i class="fas fa-tasks"></i> Download Progress</h4>
-                
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressBar">0%</div>
-                </div>
-                
-                <div id="currentStep" style="text-align: center; margin: 10px 0; font-weight: 600; color: #007bff;">
-                    Preparing download...
-                </div>
-            </div>
+          <button id="cancelBtn" class="btn btn-danger" onclick="cancelDownload()" disabled style="display: none">
+            <i class="fas fa-times"></i>
+            Cancel
+          </button>
 
-            <!-- Downloaded File Info -->
-            <div id="downloadedFileInfo" style="display: none;">
-                <div class="alert alert-success">
-                    <h4><i class="fas fa-check-circle"></i> Download Complete!</h4>
-                    <p><strong>Downloaded file:</strong> <span id="downloadedFileName"></span></p>
-                    <div class="download-location">
-                        <strong>Location:</strong> <span id="downloadedFilePath"></span>
-                    </div>
-                    <div style="margin-top: 15px;">
-                        <button class="btn btn-primary" onclick="openDownloadedFile()">
-                            <i class="fas fa-external-link-alt"></i> Open Downloaded File
-                        </button>
-                        <button class="btn btn-secondary" onclick="openDownloadFolder()">
-                            <i class="fas fa-folder-open"></i> Show in Folder
-                        </button>
-                    </div>
-                </div>
-            </div>
+          <button id="openFolderBtn" class="btn btn-secondary" onclick="openDownloadFolder()" disabled>
+            <i class="fas fa-folder-open"></i>
+            Open Download Folder
+          </button>
         </div>
 
-        <!-- Log Container -->
-        <div class="card">
-            <h2><i class="fas fa-terminal"></i> Download Log</h2>
-            <div class="log-container" id="logContainer">
-                <div class="log-entry">
-                    <span class="log-timestamp">00:00:00</span>
-                    <span class="log-level log-info">[INFO]</span>
-                    <span>BLAST+ Downloader initialized</span>
-                </div>
-            </div>
-            
-            <div style="margin-top: 15px;">
-                <button class="btn btn-secondary" onclick="clearLog()">
-                    <i class="fas fa-trash"></i>
-                    Clear Log
-                </button>
-                
-                <button class="btn btn-secondary" onclick="exportLog()">
-                    <i class="fas fa-file-export"></i>
-                    Export Log
-                </button>
-            </div>
+        <!-- Progress Container -->
+        <div id="progressContainer" style="display: none">
+          <h4 style="margin-bottom: 10px"><i class="fas fa-tasks"></i> Download Progress</h4>
+
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressBar">0%</div>
+          </div>
+
+          <div id="currentStep" style="text-align: center; margin: 10px 0; font-weight: 600; color: #007bff">
+            Preparing download...
+          </div>
         </div>
+
+        <!-- Downloaded File Info -->
+        <div id="downloadedFileInfo" style="display: none">
+          <div class="alert alert-success">
+            <h4><i class="fas fa-check-circle"></i> Download Complete!</h4>
+            <p><strong>Downloaded file:</strong> <span id="downloadedFileName"></span></p>
+            <div class="download-location"><strong>Location:</strong> <span id="downloadedFilePath"></span></div>
+            <div style="margin-top: 15px">
+              <button class="btn btn-primary" onclick="openDownloadedFile()">
+                <i class="fas fa-external-link-alt"></i> Open Downloaded File
+              </button>
+              <button class="btn btn-secondary" onclick="openDownloadFolder()">
+                <i class="fas fa-folder-open"></i> Show in Folder
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log Container -->
+      <div class="card">
+        <h2><i class="fas fa-terminal"></i> Download Log</h2>
+        <div class="log-container" id="logContainer">
+          <div class="log-entry">
+            <span class="log-timestamp">00:00:00</span>
+            <span class="log-level log-info">[INFO]</span>
+            <span>BLAST+ Downloader initialized</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 15px">
+          <button class="btn btn-secondary" onclick="clearLog()">
+            <i class="fas fa-trash"></i>
+            Clear Log
+          </button>
+
+          <button class="btn btn-secondary" onclick="exportLog()">
+            <i class="fas fa-file-export"></i>
+            Export Log
+          </button>
+        </div>
+      </div>
     </div>
 
     <script>
-        const { shell } = require('electron');
-        const os = require('os');
-        const path = require('path');
-        const fs = require('fs');
-        const https = require('https');
+      const { shell } = require('electron');
+      const os = require('os');
+      const path = require('path');
+      const fs = require('fs');
+      const https = require('https');
 
-        // Global variables
-        let downloadInProgress = false;
-        let downloadPaused = false;
-        let blastVersion = null;
-        let downloadUrl = null;
-        let savePath = null;
-        let downloadedFilePath = null;
-        let currentRequest = null;
-        let currentFileStream = null;
-        let downloadedBytes = 0;
-        let totalBytes = 0;
-        let tempFilePath = null;
+      // Global variables
+      let downloadInProgress = false;
+      let downloadPaused = false;
+      let blastVersion = null;
+      let downloadUrl = null;
+      let savePath = null;
+      let downloadedFilePath = null;
+      let currentRequest = null;
+      let currentFileStream = null;
+      let downloadedBytes = 0;
+      let totalBytes = 0;
+      let tempFilePath = null;
 
-        // Initialize the downloader
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeDownloader();
-        });
+      // Initialize the downloader
+      document.addEventListener('DOMContentLoaded', function () {
+        initializeDownloader();
+      });
 
-        function initializeDownloader() {
-            logMessage('Initializing BLAST+ downloader...', 'info');
-            detectSystemInfo();
-            checkLatestVersion();
-            determineSavePath();
+      function initializeDownloader() {
+        logMessage('Initializing BLAST+ downloader...', 'info');
+        detectSystemInfo();
+        checkLatestVersion();
+        determineSavePath();
+      }
+
+      function detectSystemInfo() {
+        logMessage('Detecting system information...', 'info');
+
+        const platform = os.platform();
+        const arch = os.arch();
+        const release = os.release();
+
+        let platformDisplay = platform;
+        let archDisplay = arch;
+
+        if (platform === 'darwin') {
+          platformDisplay = 'macOS';
+          if (arch === 'arm64') {
+            archDisplay = 'Apple Silicon (M1/M2)';
+          } else if (arch === 'x64') {
+            archDisplay = 'Intel x64';
+          }
+        } else if (platform === 'win32') {
+          platformDisplay = 'Windows';
+          archDisplay = arch === 'x64' ? 'x64 (64-bit)' : 'x32 (32-bit)';
+        } else if (platform === 'linux') {
+          platformDisplay = 'Linux';
+          if (arch === 'arm64' || arch === 'aarch64') {
+            archDisplay = 'ARM64/AArch64';
+          } else if (arch === 'x64') {
+            archDisplay = 'x64 (64-bit)';
+          }
         }
 
-        function detectSystemInfo() {
-            logMessage('Detecting system information...', 'info');
-            
-            const platform = os.platform();
-            const arch = os.arch();
-            const release = os.release();
+        document.getElementById('osInfo').textContent = `${platformDisplay} ${release}`;
+        document.getElementById('archInfo').textContent = archDisplay;
+        document.getElementById('platformInfo').textContent = process.platform;
 
-            let platformDisplay = platform;
-            let archDisplay = arch;
+        logMessage(`System detected: ${platformDisplay} ${archDisplay}`, 'success');
+      }
 
-            if (platform === 'darwin') {
-                platformDisplay = 'macOS';
-                if (arch === 'arm64') {
-                    archDisplay = 'Apple Silicon (M1/M2)';
-                } else if (arch === 'x64') {
-                    archDisplay = 'Intel x64';
-                }
-            } else if (platform === 'win32') {
-                platformDisplay = 'Windows';
-                archDisplay = arch === 'x64' ? 'x64 (64-bit)' : 'x32 (32-bit)';
-            } else if (platform === 'linux') {
-                platformDisplay = 'Linux';
-                if (arch === 'arm64' || arch === 'aarch64') {
-                    archDisplay = 'ARM64/AArch64';
-                } else if (arch === 'x64') {
-                    archDisplay = 'x64 (64-bit)';
-                }
-            }
+      async function checkLatestVersion() {
+        logMessage('Checking latest BLAST+ version...', 'info');
 
-            document.getElementById('osInfo').textContent = `${platformDisplay} ${release}`;
-            document.getElementById('archInfo').textContent = archDisplay;
-            document.getElementById('platformInfo').textContent = process.platform;
+        try {
+          const versionInfo = await fetchLatestBlastVersion();
+          blastVersion = versionInfo;
 
-            logMessage(`System detected: ${platformDisplay} ${archDisplay}`, 'success');
+          document.getElementById('latestVersion').textContent = blastVersion.version;
+          document.getElementById('releaseDate').textContent = blastVersion.releaseDate;
+          document.getElementById('packageSize').textContent = blastVersion.size;
+
+          logMessage(`Latest version found: ${blastVersion.version}`, 'success');
+          determineDownloadUrl();
+        } catch (error) {
+          logMessage('Failed to check latest version: ' + error.message, 'error');
+          document.getElementById('latestVersion').textContent = 'Error checking version';
+
+          // Fallback version
+          blastVersion = {
+            version: '2.16.0',
+            releaseDate: '2024-01-15',
+            size: '285 MB',
+          };
+
+          logMessage('Using fallback version: 2.16.0', 'warning');
+          determineDownloadUrl();
         }
+      }
 
-        async function checkLatestVersion() {
-            logMessage('Checking latest BLAST+ version...', 'info');
-            
-            try {
-                const versionInfo = await fetchLatestBlastVersion();
-                blastVersion = versionInfo;
+      async function fetchLatestBlastVersion() {
+        return new Promise((resolve, reject) => {
+          const ftpUrl = 'https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/VERSION';
 
-                document.getElementById('latestVersion').textContent = blastVersion.version;
-                document.getElementById('releaseDate').textContent = blastVersion.releaseDate;
-                document.getElementById('packageSize').textContent = blastVersion.size;
-
-                logMessage(`Latest version found: ${blastVersion.version}`, 'success');
-                determineDownloadUrl();
-            } catch (error) {
-                logMessage('Failed to check latest version: ' + error.message, 'error');
-                document.getElementById('latestVersion').textContent = 'Error checking version';
-                
-                // Fallback version
-                blastVersion = {
-                    version: '2.16.0',
-                    releaseDate: '2024-01-15',
-                    size: '285 MB'
-                };
-                
-                logMessage('Using fallback version: 2.16.0', 'warning');
-                determineDownloadUrl();
-            }
-        }
-
-        async function fetchLatestBlastVersion() {
-            return new Promise((resolve, reject) => {
-                const ftpUrl = 'https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/VERSION';
-                
-                https.get(ftpUrl, (res) => {
-                    let data = '';
-                    res.on('data', chunk => data += chunk);
-                    res.on('end', () => {
-                        try {
-                            const version = data.trim();
-                            const platform = os.platform();
-                            const arch = os.arch();
-                            
-                            let estimatedSize = '285 MB';
-                            if (platform === 'win32') {
-                                estimatedSize = arch === 'x64' ? '320 MB' : '290 MB';
-                            } else if (platform === 'darwin') {
-                                estimatedSize = arch === 'arm64' ? '275 MB' : '285 MB';
-                            }
-                            
-                            resolve({
-                                version: version,
-                                releaseDate: new Date().toISOString().split('T')[0],
-                                size: estimatedSize
-                            });
-                        } catch (error) {
-                            reject(new Error('Failed to parse version information'));
-                        }
-                    });
-                }).on('error', reject);
-            });
-        }
-
-        function determineDownloadUrl() {
-            const platform = os.platform();
-            const arch = os.arch();
-            
-            const baseUrl = 'https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/';
-            
-            let filename;
-            if (platform === 'win32') {
-                filename = arch === 'x64' ? 
-                    `ncbi-blast-${blastVersion.version}+-win64.exe` :
-                    `ncbi-blast-${blastVersion.version}+-win32.exe`;
-            } else if (platform === 'darwin') {
-                if (arch === 'arm64') {
-                    filename = `ncbi-blast-${blastVersion.version}+-aarch64-macosx.tar.gz`;
-                } else {
-                    filename = `ncbi-blast-${blastVersion.version}+-x64-macosx.tar.gz`;
-                }
-            } else if (platform === 'linux') {
-                if (arch === 'arm64' || arch === 'aarch64') {
-                    filename = `ncbi-blast-${blastVersion.version}+-aarch64-linux.tar.gz`;
-                } else if (arch === 'x64') {
-                    filename = `ncbi-blast-${blastVersion.version}+-x64-linux.tar.gz`;
-                } else {
-                    filename = `ncbi-blast-${blastVersion.version}+-linux.tar.gz`;
-                }
-            } else {
-                throw new Error(`Unsupported platform: ${platform} ${arch}`);
-            }
-
-            downloadUrl = baseUrl + filename;
-            document.getElementById('downloadUrl').textContent = downloadUrl;
-            
-            logMessage(`Download URL determined: ${filename}`, 'info');
-        }
-
-        function determineSavePath() {
-            const homeDir = os.homedir();
-            const downloadsDir = path.join(homeDir, 'Downloads');
-            
-            savePath = downloadsDir;
-            document.getElementById('savePath').textContent = savePath;
-            logMessage(`Save location: ${savePath}`, 'info');
-        }
-
-        async function startDownload() {
-            if (downloadInProgress) return;
-            
-            downloadInProgress = true;
-            downloadPaused = false;
-            downloadedBytes = 0;
-            logMessage('Starting BLAST+ download...', 'info');
-            updateStatus('Downloading...', 'downloading');
-            
-            // Update button states
-            document.getElementById('downloadBtn').disabled = true;
-            document.getElementById('downloadBtn').style.display = 'none';
-            document.getElementById('pauseBtn').disabled = false;
-            document.getElementById('pauseBtn').style.display = 'inline-flex';
-            document.getElementById('cancelBtn').disabled = false;
-            document.getElementById('cancelBtn').style.display = 'inline-flex';
-            document.getElementById('progressContainer').style.display = 'block';
-            document.getElementById('downloadedFileInfo').style.display = 'none';
-            
-            try {
-                const filePath = await downloadBlastPackage();
-                
-                if (!downloadPaused) {
-                    downloadedFilePath = filePath;
-                    const fileName = path.basename(filePath);
-                    
-                    document.getElementById('downloadedFileName').textContent = fileName;
-                    document.getElementById('downloadedFilePath').textContent = filePath;
-                    document.getElementById('downloadedFileInfo').style.display = 'block';
-                    document.getElementById('openFolderBtn').disabled = false;
-                    
-                    logMessage('BLAST+ download completed successfully!', 'success');
-                    updateStatus('Download complete', 'complete');
-                    
-                    // Reset buttons
-                    resetDownloadButtons();
-                }
-            } catch (error) {
-                if (error.message !== 'Download paused' && error.message !== 'Download cancelled') {
-                    logMessage('Download failed: ' + error.message, 'error');
-                    updateStatus('Download failed', 'error');
-                    resetDownloadButtons();
-                }
-            } finally {
-                if (!downloadPaused) {
-                    downloadInProgress = false;
-                }
-            }
-        }
-
-        function pauseDownload() {
-            if (!downloadInProgress || downloadPaused) return;
-            
-            downloadPaused = true;
-            
-            // Abort current request
-            if (currentRequest) {
-                currentRequest.destroy();
-                currentRequest = null;
-            }
-            
-            // Close file stream
-            if (currentFileStream) {
-                currentFileStream.end();
-                currentFileStream = null;
-            }
-            
-            logMessage('Download paused at ' + (downloadedBytes / 1024 / 1024).toFixed(2) + ' MB', 'warning');
-            updateStatus('Download paused', 'ready');
-            
-            // Update button states
-            document.getElementById('pauseBtn').disabled = true;
-            document.getElementById('pauseBtn').style.display = 'none';
-            document.getElementById('resumeBtn').disabled = false;
-            document.getElementById('resumeBtn').style.display = 'inline-flex';
-        }
-
-        async function resumeDownload() {
-            if (!downloadPaused) return;
-            
-            downloadPaused = false;
-            logMessage('Resuming download from ' + (downloadedBytes / 1024 / 1024).toFixed(2) + ' MB', 'info');
-            updateStatus('Downloading...', 'downloading');
-            
-            // Update button states
-            document.getElementById('resumeBtn').disabled = true;
-            document.getElementById('resumeBtn').style.display = 'none';
-            document.getElementById('pauseBtn').disabled = false;
-            document.getElementById('pauseBtn').style.display = 'inline-flex';
-            
-            try {
-                const filePath = await downloadBlastPackage(true);
-                
-                if (!downloadPaused) {
-                    downloadedFilePath = filePath;
-                    const fileName = path.basename(filePath);
-                    
-                    document.getElementById('downloadedFileName').textContent = fileName;
-                    document.getElementById('downloadedFilePath').textContent = filePath;
-                    document.getElementById('downloadedFileInfo').style.display = 'block';
-                    document.getElementById('openFolderBtn').disabled = false;
-                    
-                    logMessage('BLAST+ download completed successfully!', 'success');
-                    updateStatus('Download complete', 'complete');
-                    
-                    resetDownloadButtons();
-                }
-            } catch (error) {
-                if (error.message !== 'Download paused' && error.message !== 'Download cancelled') {
-                    logMessage('Download failed: ' + error.message, 'error');
-                    updateStatus('Download failed', 'error');
-                    resetDownloadButtons();
-                }
-            } finally {
-                if (!downloadPaused) {
-                    downloadInProgress = false;
-                }
-            }
-        }
-
-        function cancelDownload() {
-            if (!downloadInProgress) return;
-            
-            // Abort current request
-            if (currentRequest) {
-                currentRequest.destroy();
-                currentRequest = null;
-            }
-            
-            // Close file stream
-            if (currentFileStream) {
-                currentFileStream.end();
-                currentFileStream = null;
-            }
-            
-            // Delete partial file
-            if (tempFilePath && fs.existsSync(tempFilePath)) {
+          https
+            .get(ftpUrl, res => {
+              let data = '';
+              res.on('data', chunk => (data += chunk));
+              res.on('end', () => {
                 try {
-                    fs.unlinkSync(tempFilePath);
-                    logMessage('Partial download file deleted', 'info');
+                  const version = data.trim();
+                  const platform = os.platform();
+                  const arch = os.arch();
+
+                  let estimatedSize = '285 MB';
+                  if (platform === 'win32') {
+                    estimatedSize = arch === 'x64' ? '320 MB' : '290 MB';
+                  } else if (platform === 'darwin') {
+                    estimatedSize = arch === 'arm64' ? '275 MB' : '285 MB';
+                  }
+
+                  resolve({
+                    version: version,
+                    releaseDate: new Date().toISOString().split('T')[0],
+                    size: estimatedSize,
+                  });
                 } catch (error) {
-                    logMessage('Failed to delete partial file: ' + error.message, 'warning');
+                  reject(new Error('Failed to parse version information'));
                 }
-            }
-            
-            downloadInProgress = false;
-            downloadPaused = false;
-            downloadedBytes = 0;
-            totalBytes = 0;
-            tempFilePath = null;
-            
-            logMessage('Download cancelled', 'warning');
-            updateStatus('Download cancelled', 'ready');
-            
+              });
+            })
+            .on('error', reject);
+        });
+      }
+
+      function determineDownloadUrl() {
+        const platform = os.platform();
+        const arch = os.arch();
+
+        const baseUrl = 'https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/';
+
+        let filename;
+        if (platform === 'win32') {
+          filename =
+            arch === 'x64'
+              ? `ncbi-blast-${blastVersion.version}+-win64.exe`
+              : `ncbi-blast-${blastVersion.version}+-win32.exe`;
+        } else if (platform === 'darwin') {
+          if (arch === 'arm64') {
+            filename = `ncbi-blast-${blastVersion.version}+-aarch64-macosx.tar.gz`;
+          } else {
+            filename = `ncbi-blast-${blastVersion.version}+-x64-macosx.tar.gz`;
+          }
+        } else if (platform === 'linux') {
+          if (arch === 'arm64' || arch === 'aarch64') {
+            filename = `ncbi-blast-${blastVersion.version}+-aarch64-linux.tar.gz`;
+          } else if (arch === 'x64') {
+            filename = `ncbi-blast-${blastVersion.version}+-x64-linux.tar.gz`;
+          } else {
+            filename = `ncbi-blast-${blastVersion.version}+-linux.tar.gz`;
+          }
+        } else {
+          throw new Error(`Unsupported platform: ${platform} ${arch}`);
+        }
+
+        downloadUrl = baseUrl + filename;
+        document.getElementById('downloadUrl').textContent = downloadUrl;
+
+        logMessage(`Download URL determined: ${filename}`, 'info');
+      }
+
+      function determineSavePath() {
+        const homeDir = os.homedir();
+        const downloadsDir = path.join(homeDir, 'Downloads');
+
+        savePath = downloadsDir;
+        document.getElementById('savePath').textContent = savePath;
+        logMessage(`Save location: ${savePath}`, 'info');
+      }
+
+      async function startDownload() {
+        if (downloadInProgress) return;
+
+        downloadInProgress = true;
+        downloadPaused = false;
+        downloadedBytes = 0;
+        logMessage('Starting BLAST+ download...', 'info');
+        updateStatus('Downloading...', 'downloading');
+
+        // Update button states
+        document.getElementById('downloadBtn').disabled = true;
+        document.getElementById('downloadBtn').style.display = 'none';
+        document.getElementById('pauseBtn').disabled = false;
+        document.getElementById('pauseBtn').style.display = 'inline-flex';
+        document.getElementById('cancelBtn').disabled = false;
+        document.getElementById('cancelBtn').style.display = 'inline-flex';
+        document.getElementById('progressContainer').style.display = 'block';
+        document.getElementById('downloadedFileInfo').style.display = 'none';
+
+        try {
+          const filePath = await downloadBlastPackage();
+
+          if (!downloadPaused) {
+            downloadedFilePath = filePath;
+            const fileName = path.basename(filePath);
+
+            document.getElementById('downloadedFileName').textContent = fileName;
+            document.getElementById('downloadedFilePath').textContent = filePath;
+            document.getElementById('downloadedFileInfo').style.display = 'block';
+            document.getElementById('openFolderBtn').disabled = false;
+
+            logMessage('BLAST+ download completed successfully!', 'success');
+            updateStatus('Download complete', 'complete');
+
+            // Reset buttons
             resetDownloadButtons();
+          }
+        } catch (error) {
+          if (error.message !== 'Download paused' && error.message !== 'Download cancelled') {
+            logMessage('Download failed: ' + error.message, 'error');
+            updateStatus('Download failed', 'error');
+            resetDownloadButtons();
+          }
+        } finally {
+          if (!downloadPaused) {
+            downloadInProgress = false;
+          }
+        }
+      }
+
+      function pauseDownload() {
+        if (!downloadInProgress || downloadPaused) return;
+
+        downloadPaused = true;
+
+        // Abort current request
+        if (currentRequest) {
+          currentRequest.destroy();
+          currentRequest = null;
         }
 
-        function resetDownloadButtons() {
-            document.getElementById('downloadBtn').disabled = false;
-            document.getElementById('downloadBtn').style.display = 'inline-flex';
-            document.getElementById('pauseBtn').disabled = true;
-            document.getElementById('pauseBtn').style.display = 'none';
-            document.getElementById('resumeBtn').disabled = true;
-            document.getElementById('resumeBtn').style.display = 'none';
-            document.getElementById('cancelBtn').disabled = true;
-            document.getElementById('cancelBtn').style.display = 'none';
+        // Close file stream
+        if (currentFileStream) {
+          currentFileStream.end();
+          currentFileStream = null;
         }
 
-        async function downloadBlastPackage(resume = false) {
-            logMessage(`${resume ? 'Resuming' : 'Starting'} download from ${downloadUrl}`, 'info');
-            
-            return new Promise((resolve, reject) => {
-                const filename = path.basename(downloadUrl);
-                const filePath = path.join(savePath, filename);
-                tempFilePath = filePath + '.download';
-                
-                logMessage(`Saving to: ${filePath}`, 'info');
-                
-                // Check if complete file already exists
-                if (fs.existsSync(filePath) && !resume) {
-                    logMessage(`File already exists, verifying...`, 'info');
-                    const stats = fs.statSync(filePath);
-                    if (stats.size > 100 * 1024 * 1024) {
-                        logMessage(`Using existing file: ${filename}`, 'success');
-                        updateProgress(100, 'Download complete');
-                        resolve(filePath);
-                        return;
-                    } else {
-                        logMessage(`Existing file incomplete, re-downloading...`, 'warning');
-                        fs.unlinkSync(filePath);
-                    }
-                }
-                
-                // Check for partial download
-                let startByte = 0;
-                if (resume && fs.existsSync(tempFilePath)) {
-                    const stats = fs.statSync(tempFilePath);
-                    startByte = stats.size;
-                    downloadedBytes = startByte;
-                    logMessage(`Found partial download: ${(startByte / 1024 / 1024).toFixed(2)} MB`, 'info');
-                } else if (!resume && fs.existsSync(tempFilePath)) {
-                    // Clean up old partial downloads
-                    fs.unlinkSync(tempFilePath);
-                    downloadedBytes = 0;
-                }
-                
-                // Create or append to file stream
-                const fileOptions = resume && startByte > 0 ? { flags: 'a' } : { flags: 'w' };
-                currentFileStream = fs.createWriteStream(tempFilePath, fileOptions);
-                
-                // Prepare request options with range header
-                const requestOptions = {
-                    headers: startByte > 0 ? { 'Range': `bytes=${startByte}-` } : {}
-                };
-                
-                currentRequest = https.get(downloadUrl, requestOptions, (response) => {
-                    // Handle redirects
-                    if (response.statusCode === 302 || response.statusCode === 301) {
-                        logMessage(`Following redirect...`, 'info');
-                        currentRequest = https.get(response.headers.location, requestOptions, handleResponse);
-                        return;
-                    }
-                    
-                    handleResponse(response);
-                });
-                
-                function handleResponse(response) {
-                    // Check for partial content or full content
-                    if (response.statusCode !== 200 && response.statusCode !== 206) {
-                        currentFileStream.close();
-                        fs.unlink(tempFilePath, () => {});
-                        reject(new Error(`Download failed: HTTP ${response.statusCode}`));
-                        return;
-                    }
-                    
-                    // Get total size
-                    if (response.statusCode === 206) {
-                        // Partial content - parse content-range header
-                        const contentRange = response.headers['content-range'];
-                        if (contentRange) {
-                            const match = contentRange.match(/bytes\s+(\d+)-(\d+)\/(\d+)/);
-                            if (match) {
-                                totalBytes = parseInt(match[3]);
-                            }
-                        }
-                    } else {
-                        // Full content
-                        totalBytes = parseInt(response.headers['content-length'] || '0');
-                    }
-                    
-                    let lastLogTime = 0;
-                    
-                    logMessage(`${resume ? 'Resuming' : 'Starting'} download: ${(totalBytes/1024/1024).toFixed(1)}MB total, ${(downloadedBytes/1024/1024).toFixed(1)}MB downloaded`, 'info');
-                    
-                    response.on('data', (chunk) => {
-                        if (downloadPaused) {
-                            response.destroy();
-                            return;
-                        }
-                        
-                        downloadedBytes += chunk.length;
-                        const now = Date.now();
-                        
-                        if (totalBytes > 0) {
-                            const percent = (downloadedBytes / totalBytes * 100).toFixed(1);
-                            updateProgress(percent, `Downloading: ${percent}%`);
-                            
-                            if (now - lastLogTime > 2000) {
-                                const mbDownloaded = (downloadedBytes/1024/1024).toFixed(1);
-                                const mbTotal = (totalBytes/1024/1024).toFixed(1);
-                                logMessage(`Download progress: ${percent}% (${mbDownloaded}MB/${mbTotal}MB)`, 'info');
-                                lastLogTime = now;
-                            }
-                        }
-                    });
-                    
-                    response.pipe(currentFileStream);
-                    
-                    currentFileStream.on('finish', () => {
-                        currentFileStream.close();
-                        
-                        if (downloadPaused) {
-                            logMessage('Download paused - partial file saved', 'info');
-                            reject(new Error('Download paused'));
-                            return;
-                        }
-                        
-                        // Rename temp file to final file
-                        try {
-                            if (fs.existsSync(filePath)) {
-                                fs.unlinkSync(filePath);
-                            }
-                            fs.renameSync(tempFilePath, filePath);
-                            
-                            const finalSize = fs.statSync(filePath).size;
-                            logMessage(`Download completed: ${filename} (${(finalSize/1024/1024).toFixed(1)}MB)`, 'success');
-                            updateProgress(100, 'Download complete');
-                            
-                            // Clean up
-                            currentRequest = null;
-                            currentFileStream = null;
-                            tempFilePath = null;
-                            
-                            resolve(filePath);
-                        } catch (error) {
-                            reject(new Error(`Failed to finalize download: ${error.message}`));
-                        }
-                    });
-                    
-                    currentFileStream.on('error', (error) => {
-                        fs.unlink(tempFilePath, () => {});
-                        reject(new Error(`File write error: ${error.message}`));
-                    });
-                }
-                
-                currentRequest.on('error', (error) => {
-                    if (currentFileStream) {
-                        currentFileStream.close();
-                    }
-                    
-                    if (!downloadPaused) {
-                        fs.unlink(tempFilePath, () => {});
-                        reject(new Error(`Download error: ${error.message}`));
-                    } else {
-                        reject(new Error('Download paused'));
-                    }
-                });
-                
-                currentRequest.setTimeout(30000, () => {
-                    currentRequest.destroy();
-                    if (currentFileStream) {
-                        currentFileStream.close();
-                    }
-                    
-                    if (!downloadPaused) {
-                        fs.unlink(tempFilePath, () => {});
-                        reject(new Error('Download timeout (30 seconds)'));
-                    }
-                });
-            });
+        logMessage('Download paused at ' + (downloadedBytes / 1024 / 1024).toFixed(2) + ' MB', 'warning');
+        updateStatus('Download paused', 'ready');
+
+        // Update button states
+        document.getElementById('pauseBtn').disabled = true;
+        document.getElementById('pauseBtn').style.display = 'none';
+        document.getElementById('resumeBtn').disabled = false;
+        document.getElementById('resumeBtn').style.display = 'inline-flex';
+      }
+
+      async function resumeDownload() {
+        if (!downloadPaused) return;
+
+        downloadPaused = false;
+        logMessage('Resuming download from ' + (downloadedBytes / 1024 / 1024).toFixed(2) + ' MB', 'info');
+        updateStatus('Downloading...', 'downloading');
+
+        // Update button states
+        document.getElementById('resumeBtn').disabled = true;
+        document.getElementById('resumeBtn').style.display = 'none';
+        document.getElementById('pauseBtn').disabled = false;
+        document.getElementById('pauseBtn').style.display = 'inline-flex';
+
+        try {
+          const filePath = await downloadBlastPackage(true);
+
+          if (!downloadPaused) {
+            downloadedFilePath = filePath;
+            const fileName = path.basename(filePath);
+
+            document.getElementById('downloadedFileName').textContent = fileName;
+            document.getElementById('downloadedFilePath').textContent = filePath;
+            document.getElementById('downloadedFileInfo').style.display = 'block';
+            document.getElementById('openFolderBtn').disabled = false;
+
+            logMessage('BLAST+ download completed successfully!', 'success');
+            updateStatus('Download complete', 'complete');
+
+            resetDownloadButtons();
+          }
+        } catch (error) {
+          if (error.message !== 'Download paused' && error.message !== 'Download cancelled') {
+            logMessage('Download failed: ' + error.message, 'error');
+            updateStatus('Download failed', 'error');
+            resetDownloadButtons();
+          }
+        } finally {
+          if (!downloadPaused) {
+            downloadInProgress = false;
+          }
+        }
+      }
+
+      function cancelDownload() {
+        if (!downloadInProgress) return;
+
+        // Abort current request
+        if (currentRequest) {
+          currentRequest.destroy();
+          currentRequest = null;
         }
 
-        function openDownloadedFile() {
-            if (downloadedFilePath) {
-                shell.openPath(downloadedFilePath);
-                logMessage('Opening downloaded file...', 'info');
-            }
+        // Close file stream
+        if (currentFileStream) {
+          currentFileStream.end();
+          currentFileStream = null;
         }
 
-        function openDownloadFolder() {
-            if (downloadedFilePath) {
-                shell.showItemInFolder(downloadedFilePath);
-                logMessage('Opened download location', 'info');
+        // Delete partial file
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+          try {
+            fs.unlinkSync(tempFilePath);
+            logMessage('Partial download file deleted', 'info');
+          } catch (error) {
+            logMessage('Failed to delete partial file: ' + error.message, 'warning');
+          }
+        }
+
+        downloadInProgress = false;
+        downloadPaused = false;
+        downloadedBytes = 0;
+        totalBytes = 0;
+        tempFilePath = null;
+
+        logMessage('Download cancelled', 'warning');
+        updateStatus('Download cancelled', 'ready');
+
+        resetDownloadButtons();
+      }
+
+      function resetDownloadButtons() {
+        document.getElementById('downloadBtn').disabled = false;
+        document.getElementById('downloadBtn').style.display = 'inline-flex';
+        document.getElementById('pauseBtn').disabled = true;
+        document.getElementById('pauseBtn').style.display = 'none';
+        document.getElementById('resumeBtn').disabled = true;
+        document.getElementById('resumeBtn').style.display = 'none';
+        document.getElementById('cancelBtn').disabled = true;
+        document.getElementById('cancelBtn').style.display = 'none';
+      }
+
+      async function downloadBlastPackage(resume = false) {
+        logMessage(`${resume ? 'Resuming' : 'Starting'} download from ${downloadUrl}`, 'info');
+
+        return new Promise((resolve, reject) => {
+          const filename = path.basename(downloadUrl);
+          const filePath = path.join(savePath, filename);
+          tempFilePath = filePath + '.download';
+
+          logMessage(`Saving to: ${filePath}`, 'info');
+
+          // Check if complete file already exists
+          if (fs.existsSync(filePath) && !resume) {
+            logMessage(`File already exists, verifying...`, 'info');
+            const stats = fs.statSync(filePath);
+            if (stats.size > 100 * 1024 * 1024) {
+              logMessage(`Using existing file: ${filename}`, 'success');
+              updateProgress(100, 'Download complete');
+              resolve(filePath);
+              return;
             } else {
-                shell.openPath(savePath);
-                logMessage('Opened downloads folder', 'info');
+              logMessage(`Existing file incomplete, re-downloading...`, 'warning');
+              fs.unlinkSync(filePath);
             }
-        }
+          }
 
-        function updateProgress(percentage, stepName) {
-            const progressBar = document.getElementById('progressBar');
-            const currentStep = document.getElementById('currentStep');
-            
-            progressBar.style.width = percentage + '%';
-            progressBar.textContent = Math.round(percentage) + '%';
-            currentStep.textContent = stepName;
-        }
+          // Check for partial download
+          let startByte = 0;
+          if (resume && fs.existsSync(tempFilePath)) {
+            const stats = fs.statSync(tempFilePath);
+            startByte = stats.size;
+            downloadedBytes = startByte;
+            logMessage(`Found partial download: ${(startByte / 1024 / 1024).toFixed(2)} MB`, 'info');
+          } else if (!resume && fs.existsSync(tempFilePath)) {
+            // Clean up old partial downloads
+            fs.unlinkSync(tempFilePath);
+            downloadedBytes = 0;
+          }
 
-        function updateStatus(message, status) {
-            const statusIndicator = document.getElementById('statusIndicator');
-            statusIndicator.className = `status-indicator status-${status}`;
-            statusIndicator.innerHTML = `<i class="fas fa-circle"></i> ${message}`;
-        }
+          // Create or append to file stream
+          const fileOptions = resume && startByte > 0 ? { flags: 'a' } : { flags: 'w' };
+          currentFileStream = fs.createWriteStream(tempFilePath, fileOptions);
 
-        function logMessage(message, level = 'info') {
-            const logContainer = document.getElementById('logContainer');
-            const timestamp = new Date().toLocaleTimeString();
-            
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            logEntry.innerHTML = `
+          // Prepare request options with range header
+          const requestOptions = {
+            headers: startByte > 0 ? { Range: `bytes=${startByte}-` } : {},
+          };
+
+          currentRequest = https.get(downloadUrl, requestOptions, response => {
+            // Handle redirects
+            if (response.statusCode === 302 || response.statusCode === 301) {
+              logMessage(`Following redirect...`, 'info');
+              currentRequest = https.get(response.headers.location, requestOptions, handleResponse);
+              return;
+            }
+
+            handleResponse(response);
+          });
+
+          function handleResponse(response) {
+            // Check for partial content or full content
+            if (response.statusCode !== 200 && response.statusCode !== 206) {
+              currentFileStream.close();
+              fs.unlink(tempFilePath, () => {});
+              reject(new Error(`Download failed: HTTP ${response.statusCode}`));
+              return;
+            }
+
+            // Get total size
+            if (response.statusCode === 206) {
+              // Partial content - parse content-range header
+              const contentRange = response.headers['content-range'];
+              if (contentRange) {
+                const match = contentRange.match(/bytes\s+(\d+)-(\d+)\/(\d+)/);
+                if (match) {
+                  totalBytes = parseInt(match[3]);
+                }
+              }
+            } else {
+              // Full content
+              totalBytes = parseInt(response.headers['content-length'] || '0');
+            }
+
+            let lastLogTime = 0;
+
+            logMessage(
+              `${resume ? 'Resuming' : 'Starting'} download: ${(totalBytes / 1024 / 1024).toFixed(1)}MB total, ${(downloadedBytes / 1024 / 1024).toFixed(1)}MB downloaded`,
+              'info'
+            );
+
+            response.on('data', chunk => {
+              if (downloadPaused) {
+                response.destroy();
+                return;
+              }
+
+              downloadedBytes += chunk.length;
+              const now = Date.now();
+
+              if (totalBytes > 0) {
+                const percent = ((downloadedBytes / totalBytes) * 100).toFixed(1);
+                updateProgress(percent, `Downloading: ${percent}%`);
+
+                if (now - lastLogTime > 2000) {
+                  const mbDownloaded = (downloadedBytes / 1024 / 1024).toFixed(1);
+                  const mbTotal = (totalBytes / 1024 / 1024).toFixed(1);
+                  logMessage(`Download progress: ${percent}% (${mbDownloaded}MB/${mbTotal}MB)`, 'info');
+                  lastLogTime = now;
+                }
+              }
+            });
+
+            response.pipe(currentFileStream);
+
+            currentFileStream.on('finish', () => {
+              currentFileStream.close();
+
+              if (downloadPaused) {
+                logMessage('Download paused - partial file saved', 'info');
+                reject(new Error('Download paused'));
+                return;
+              }
+
+              // Rename temp file to final file
+              try {
+                if (fs.existsSync(filePath)) {
+                  fs.unlinkSync(filePath);
+                }
+                fs.renameSync(tempFilePath, filePath);
+
+                const finalSize = fs.statSync(filePath).size;
+                logMessage(`Download completed: ${filename} (${(finalSize / 1024 / 1024).toFixed(1)}MB)`, 'success');
+                updateProgress(100, 'Download complete');
+
+                // Clean up
+                currentRequest = null;
+                currentFileStream = null;
+                tempFilePath = null;
+
+                resolve(filePath);
+              } catch (error) {
+                reject(new Error(`Failed to finalize download: ${error.message}`));
+              }
+            });
+
+            currentFileStream.on('error', error => {
+              fs.unlink(tempFilePath, () => {});
+              reject(new Error(`File write error: ${error.message}`));
+            });
+          }
+
+          currentRequest.on('error', error => {
+            if (currentFileStream) {
+              currentFileStream.close();
+            }
+
+            if (!downloadPaused) {
+              fs.unlink(tempFilePath, () => {});
+              reject(new Error(`Download error: ${error.message}`));
+            } else {
+              reject(new Error('Download paused'));
+            }
+          });
+
+          currentRequest.setTimeout(30000, () => {
+            currentRequest.destroy();
+            if (currentFileStream) {
+              currentFileStream.close();
+            }
+
+            if (!downloadPaused) {
+              fs.unlink(tempFilePath, () => {});
+              reject(new Error('Download timeout (30 seconds)'));
+            }
+          });
+        });
+      }
+
+      function openDownloadedFile() {
+        if (downloadedFilePath) {
+          shell.openPath(downloadedFilePath);
+          logMessage('Opening downloaded file...', 'info');
+        }
+      }
+
+      function openDownloadFolder() {
+        if (downloadedFilePath) {
+          shell.showItemInFolder(downloadedFilePath);
+          logMessage('Opened download location', 'info');
+        } else {
+          shell.openPath(savePath);
+          logMessage('Opened downloads folder', 'info');
+        }
+      }
+
+      function updateProgress(percentage, stepName) {
+        const progressBar = document.getElementById('progressBar');
+        const currentStep = document.getElementById('currentStep');
+
+        progressBar.style.width = percentage + '%';
+        progressBar.textContent = Math.round(percentage) + '%';
+        currentStep.textContent = stepName;
+      }
+
+      function updateStatus(message, status) {
+        const statusIndicator = document.getElementById('statusIndicator');
+        statusIndicator.className = `status-indicator status-${status}`;
+        statusIndicator.innerHTML = `<i class="fas fa-circle"></i> ${message}`;
+      }
+
+      function logMessage(message, level = 'info') {
+        const logContainer = document.getElementById('logContainer');
+        const timestamp = new Date().toLocaleTimeString();
+
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        logEntry.innerHTML = `
                 <span class="log-timestamp">${timestamp}</span>
                 <span class="log-level log-${level}">[${level.toUpperCase()}]</span>
                 <span>${message}</span>
             `;
-            
-            logContainer.appendChild(logEntry);
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
 
-        function clearLog() {
-            const logContainer = document.getElementById('logContainer');
-            logContainer.innerHTML = '';
-            logMessage('Log cleared', 'info');
-        }
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
 
-        function exportLog() {
-            const logContainer = document.getElementById('logContainer');
-            const logText = logContainer.innerText;
-            
-            const blob = new Blob([logText], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `blast-download-log-${Date.now()}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            logMessage('Log exported', 'success');
-        }
+      function clearLog() {
+        const logContainer = document.getElementById('logContainer');
+        logContainer.innerHTML = '';
+        logMessage('Log cleared', 'info');
+      }
+
+      function exportLog() {
+        const logContainer = document.getElementById('logContainer');
+        const logText = logContainer.innerText;
+
+        const blob = new Blob([logText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `blast-download-log-${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        logMessage('Log exported', 'success');
+      }
     </script>
-</body>
+  </body>
 </html>

@@ -1,138 +1,138 @@
 {
-    "openFile": {
-        "title": "打开文件",
-        "selectGenome": "选择基因组文件",
-        "selectAnnotation": "选择注释文件",
-        "selectVariant": "选择变异文件",
-        "selectReads": "选择读段文件",
-        "selectAny": "选择文件"
-    },
-    "saveFile": {
-        "title": "保存文件",
-        "saveAs": "另存为"
-    },
-    "export": {
-        "title": "导出",
-        "selectDestination": "选择目标位置",
-        "format": "格式",
-        "quality": "质量",
-        "includeSequence": "包含序列",
-        "includeAnnotations": "包含注释"
-    },
-    "confirm": {
-        "title": "确认",
-        "delete": "确定要删除此项目吗？",
-        "discard": "放弃未保存的更改？",
-        "overwrite": "文件已存在。是否覆盖？",
-        "clearAll": "清除所有项目？",
-        "exit": "确定要退出吗？"
-    },
-    "error": {
-        "title": "错误",
-        "genericError": "发生错误",
-        "fileLoadError": "文件加载失败",
-        "fileSaveError": "文件保存失败",
-        "connectionError": "连接错误"
-    },
-    "addFeature": {
-        "title": "添加特征",
-        "name": "特征名称",
-        "type": "特征类型",
-        "start": "起始位置",
-        "end": "结束位置",
-        "strand": "链",
-        "description": "描述",
-        "selectType": "选择特征类型...",
-        "forward": "正链 (+)",
-        "reverse": "负链 (-)",
-        "both": "双链"
-    },
-    "editFeature": {
-        "title": "编辑特征",
-        "updateButton": "更新",
-        "deleteButton": "删除特征"
-    },
-    "insertSequence": {
-        "title": "插入序列",
-        "position": "位置",
-        "sequence": "待插入序列",
-        "placeholder": "输入 DNA 序列 (A, T, G, C)..."
-    },
-    "replaceSequence": {
-        "title": "替换序列",
-        "originalSequence": "原始序列",
-        "newSequence": "新序列",
-        "targetRegion": "目标区域"
-    },
-    "deleteSequence": {
-        "title": "删除序列",
-        "startPosition": "起始位置",
-        "endPosition": "结束位置",
-        "warning": "此操作无法撤销"
-    },
-    "search": {
-        "title": "搜索",
-        "placeholder": "输入搜索词...",
-        "geneNames": "基因名称",
-        "sequences": "序列",
-        "annotations": "注释",
-        "caseSensitive": "区分大小写",
-        "wholeWord": "全字匹配",
-        "useRegex": "使用正则表达式"
-    },
-    "advancedSearch": {
-        "title": "高级搜索",
-        "searchIn": "搜索范围",
-        "chromosome": "染色体",
-        "all": "全部",
-        "position": "位置范围",
-        "from": "从",
-        "to": "到",
-        "featureType": "特征类型",
-        "strand": "链"
-    },
-    "settings": {
-        "title": "设置",
-        "general": "常规",
-        "appearance": "外观",
-        "language": "语言",
-        "theme": "主题",
-        "fontSize": "字体大小",
-        "performance": "性能",
-        "advanced": "高级"
-    },
-    "llmConfig": {
-        "title": "配置 LLM",
-        "provider": "提供商",
-        "model": "模型",
-        "apiKey": "API 密钥",
-        "endpoint": "端点",
-        "temperature": "温度",
-        "maxTokens": "最大令牌数",
-        "testConnection": "测试连接"
-    },
-    "about": {
-        "title": "关于 CodeXomics",
-        "version": "版本",
-        "copyright": "版权所有 © 2024 宋礼富",
-        "license": "MIT 许可证",
-        "description": "AI 驱动的生物信息学分析平台"
-    },
-    "checkpoint": {
-        "title": "检查点",
-        "createCheckpoint": "创建检查点",
-        "name": "检查点名称",
-        "description": "描述",
-        "restore": "恢复",
-        "delete": "删除",
-        "confirmRestore": "恢复此检查点？当前更改将丢失。"
-    },
-    "actionList": {
-        "title": "操作列表",
-        "pending": "待执行操作",
-        "executed": "已执行操作",
-        "executeAll": "执行全部",
-        "clearAll": "清除全部",
-        "exportActions": "导出操作"
-    }
+  "openFile": {
+    "title": "打开文件",
+    "selectGenome": "选择基因组文件",
+    "selectAnnotation": "选择注释文件",
+    "selectVariant": "选择变异文件",
+    "selectReads": "选择读段文件",
+    "selectAny": "选择文件"
+  },
+  "saveFile": {
+    "title": "保存文件",
+    "saveAs": "另存为"
+  },
+  "export": {
+    "title": "导出",
+    "selectDestination": "选择目标位置",
+    "format": "格式",
+    "quality": "质量",
+    "includeSequence": "包含序列",
+    "includeAnnotations": "包含注释"
+  },
+  "confirm": {
+    "title": "确认",
+    "delete": "确定要删除此项目吗？",
+    "discard": "放弃未保存的更改？",
+    "overwrite": "文件已存在。是否覆盖？",
+    "clearAll": "清除所有项目？",
+    "exit": "确定要退出吗？"
+  },
+  "error": {
+    "title": "错误",
+    "genericError": "发生错误",
+    "fileLoadError": "文件加载失败",
+    "fileSaveError": "文件保存失败",
+    "connectionError": "连接错误"
+  },
+  "addFeature": {
+    "title": "添加特征",
+    "name": "特征名称",
+    "type": "特征类型",
+    "start": "起始位置",
+    "end": "结束位置",
+    "strand": "链",
+    "description": "描述",
+    "selectType": "选择特征类型...",
+    "forward": "正链 (+)",
+    "reverse": "负链 (-)",
+    "both": "双链"
+  },
+  "editFeature": {
+    "title": "编辑特征",
+    "updateButton": "更新",
+    "deleteButton": "删除特征"
+  },
+  "insertSequence": {
+    "title": "插入序列",
+    "position": "位置",
+    "sequence": "待插入序列",
+    "placeholder": "输入 DNA 序列 (A, T, G, C)..."
+  },
+  "replaceSequence": {
+    "title": "替换序列",
+    "originalSequence": "原始序列",
+    "newSequence": "新序列",
+    "targetRegion": "目标区域"
+  },
+  "deleteSequence": {
+    "title": "删除序列",
+    "startPosition": "起始位置",
+    "endPosition": "结束位置",
+    "warning": "此操作无法撤销"
+  },
+  "search": {
+    "title": "搜索",
+    "placeholder": "输入搜索词...",
+    "geneNames": "基因名称",
+    "sequences": "序列",
+    "annotations": "注释",
+    "caseSensitive": "区分大小写",
+    "wholeWord": "全字匹配",
+    "useRegex": "使用正则表达式"
+  },
+  "advancedSearch": {
+    "title": "高级搜索",
+    "searchIn": "搜索范围",
+    "chromosome": "染色体",
+    "all": "全部",
+    "position": "位置范围",
+    "from": "从",
+    "to": "到",
+    "featureType": "特征类型",
+    "strand": "链"
+  },
+  "settings": {
+    "title": "设置",
+    "general": "常规",
+    "appearance": "外观",
+    "language": "语言",
+    "theme": "主题",
+    "fontSize": "字体大小",
+    "performance": "性能",
+    "advanced": "高级"
+  },
+  "llmConfig": {
+    "title": "配置 LLM",
+    "provider": "提供商",
+    "model": "模型",
+    "apiKey": "API 密钥",
+    "endpoint": "端点",
+    "temperature": "温度",
+    "maxTokens": "最大令牌数",
+    "testConnection": "测试连接"
+  },
+  "about": {
+    "title": "关于 CodeXomics",
+    "version": "版本",
+    "copyright": "版权所有 © 2024 宋礼富",
+    "license": "MIT 许可证",
+    "description": "AI 驱动的生物信息学分析平台"
+  },
+  "checkpoint": {
+    "title": "检查点",
+    "createCheckpoint": "创建检查点",
+    "name": "检查点名称",
+    "description": "描述",
+    "restore": "恢复",
+    "delete": "删除",
+    "confirmRestore": "恢复此检查点？当前更改将丢失。"
+  },
+  "actionList": {
+    "title": "操作列表",
+    "pending": "待执行操作",
+    "executed": "已执行操作",
+    "executeAll": "执行全部",
+    "clearAll": "清除全部",
+    "exportActions": "导出操作"
+  }
 }

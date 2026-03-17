@@ -20,6 +20,7 @@ Welcome to the **CodeXomics Plugin Development Guide**! This comprehensive guide
 ### What are Plugins?
 
 Plugins are modular extensions that enhance CodeXomics's functionality. They can:
+
 - Add new analysis tools and algorithms
 - Integrate with external databases and services
 - Provide custom visualization components
@@ -126,115 +127,115 @@ The `manifest.json` file defines your plugin:
  * @version 1.0.0
  */
 class MyAwesomePlugin {
-    constructor(app, api) {
-        this.app = app;
-        this.api = api;
-        this.name = 'My Awesome Plugin';
-        this.version = '1.0.0';
-        this.initialized = false;
+  constructor(app, api) {
+    this.app = app;
+    this.api = api;
+    this.name = 'My Awesome Plugin';
+    this.version = '1.0.0';
+    this.initialized = false;
+  }
+
+  /**
+   * Initialize the plugin
+   */
+  async initialize() {
+    try {
+      // Setup plugin resources
+      await this.setupResources();
+
+      // Register UI components
+      this.registerUI();
+
+      // Register AI functions
+      this.registerAIFunctions();
+
+      this.initialized = true;
+      console.log(`${this.name} initialized successfully`);
+    } catch (error) {
+      console.error(`Failed to initialize ${this.name}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Setup plugin resources
+   */
+  async setupResources() {
+    // Initialize data structures, load assets, etc.
+  }
+
+  /**
+   * Register UI components
+   */
+  registerUI() {
+    // Add menu items, toolbar buttons, panels, etc.
+    this.api.ui.addMenuItem({
+      label: 'My Analysis Tool',
+      action: () => this.openAnalysisTool(),
+      category: 'Tools',
+    });
+  }
+
+  /**
+   * Register AI-callable functions
+   */
+  registerAIFunctions() {
+    this.api.ai.registerFunction({
+      name: 'analyzeSequence',
+      description: 'Analyze DNA sequence with my awesome algorithm',
+      parameters: {
+        sequence: { type: 'string', required: true },
+        options: { type: 'object', required: false },
+      },
+      execute: this.analyzeSequence.bind(this),
+    });
+  }
+
+  /**
+   * Main analysis function
+   */
+  async analyzeSequence(params) {
+    const { sequence, options = {} } = params;
+
+    // Validate input
+    if (!sequence || typeof sequence !== 'string') {
+      throw new Error('Invalid sequence provided');
     }
 
-    /**
-     * Initialize the plugin
-     */
-    async initialize() {
-        try {
-            // Setup plugin resources
-            await this.setupResources();
-            
-            // Register UI components
-            this.registerUI();
-            
-            // Register AI functions
-            this.registerAIFunctions();
-            
-            this.initialized = true;
-            console.log(`${this.name} initialized successfully`);
-        } catch (error) {
-            console.error(`Failed to initialize ${this.name}:`, error);
-            throw error;
-        }
-    }
+    // Perform analysis
+    const results = await this.performAnalysis(sequence, options);
 
-    /**
-     * Setup plugin resources
-     */
-    async setupResources() {
-        // Initialize data structures, load assets, etc.
-    }
+    // Return results in standard format
+    return {
+      success: true,
+      data: results,
+      metadata: {
+        plugin: this.name,
+        version: this.version,
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
 
-    /**
-     * Register UI components
-     */
-    registerUI() {
-        // Add menu items, toolbar buttons, panels, etc.
-        this.api.ui.addMenuItem({
-            label: 'My Analysis Tool',
-            action: () => this.openAnalysisTool(),
-            category: 'Tools'
-        });
-    }
+  /**
+   * Open analysis tool interface
+   */
+  openAnalysisTool() {
+    const panel = this.api.ui.createPanel({
+      title: 'My Analysis Tool',
+      content: this.createAnalysisUI(),
+      width: 800,
+      height: 600,
+    });
 
-    /**
-     * Register AI-callable functions
-     */
-    registerAIFunctions() {
-        this.api.ai.registerFunction({
-            name: 'analyzeSequence',
-            description: 'Analyze DNA sequence with my awesome algorithm',
-            parameters: {
-                sequence: { type: 'string', required: true },
-                options: { type: 'object', required: false }
-            },
-            execute: this.analyzeSequence.bind(this)
-        });
-    }
+    panel.show();
+  }
 
-    /**
-     * Main analysis function
-     */
-    async analyzeSequence(params) {
-        const { sequence, options = {} } = params;
-        
-        // Validate input
-        if (!sequence || typeof sequence !== 'string') {
-            throw new Error('Invalid sequence provided');
-        }
-
-        // Perform analysis
-        const results = await this.performAnalysis(sequence, options);
-        
-        // Return results in standard format
-        return {
-            success: true,
-            data: results,
-            metadata: {
-                plugin: this.name,
-                version: this.version,
-                timestamp: new Date().toISOString()
-            }
-        };
-    }
-
-    /**
-     * Open analysis tool interface
-     */
-    openAnalysisTool() {
-        const panel = this.api.ui.createPanel({
-            title: 'My Analysis Tool',
-            content: this.createAnalysisUI(),
-            width: 800,
-            height: 600
-        });
-        
-        panel.show();
-    }
-
-    /**
-     * Create analysis UI
-     */
-    createAnalysisUI() {
-        return `
+  /**
+   * Create analysis UI
+   */
+  createAnalysisUI() {
+    return `
             <div class="my-plugin-panel">
                 <h3>Sequence Analysis</h3>
                 <textarea id="sequence-input" placeholder="Enter DNA sequence..."></textarea>
@@ -242,59 +243,59 @@ class MyAwesomePlugin {
                 <div id="results-area"></div>
             </div>
         `;
-    }
+  }
 
-    /**
-     * Perform the actual analysis
-     */
-    async performAnalysis(sequence, options) {
-        // Implement your analysis algorithm here
-        return {
-            length: sequence.length,
-            gcContent: this.calculateGCContent(sequence),
-            composition: this.analyzeComposition(sequence)
-        };
-    }
+  /**
+   * Perform the actual analysis
+   */
+  async performAnalysis(sequence, options) {
+    // Implement your analysis algorithm here
+    return {
+      length: sequence.length,
+      gcContent: this.calculateGCContent(sequence),
+      composition: this.analyzeComposition(sequence),
+    };
+  }
 
-    /**
-     * Calculate GC content
-     */
-    calculateGCContent(sequence) {
-        const gcCount = (sequence.match(/[GC]/gi) || []).length;
-        return (gcCount / sequence.length) * 100;
-    }
+  /**
+   * Calculate GC content
+   */
+  calculateGCContent(sequence) {
+    const gcCount = (sequence.match(/[GC]/gi) || []).length;
+    return (gcCount / sequence.length) * 100;
+  }
 
-    /**
-     * Analyze sequence composition
-     */
-    analyzeComposition(sequence) {
-        const composition = { A: 0, T: 0, G: 0, C: 0 };
-        for (const base of sequence.toUpperCase()) {
-            if (composition.hasOwnProperty(base)) {
-                composition[base]++;
-            }
-        }
-        return composition;
+  /**
+   * Analyze sequence composition
+   */
+  analyzeComposition(sequence) {
+    const composition = { A: 0, T: 0, G: 0, C: 0 };
+    for (const base of sequence.toUpperCase()) {
+      if (composition.hasOwnProperty(base)) {
+        composition[base]++;
+      }
     }
+    return composition;
+  }
 
-    /**
-     * Cleanup when plugin is deactivated
-     */
-    async deactivate() {
-        // Clean up resources, remove UI elements, etc.
-        this.api.ui.removeAllComponents(this.name);
-        this.initialized = false;
-    }
+  /**
+   * Cleanup when plugin is deactivated
+   */
+  async deactivate() {
+    // Clean up resources, remove UI elements, etc.
+    this.api.ui.removeAllComponents(this.name);
+    this.initialized = false;
+  }
 }
 
 // Export plugin class
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = MyAwesomePlugin;
+  module.exports = MyAwesomePlugin;
 }
 
 // Browser export
 if (typeof window !== 'undefined') {
-    window.MyAwesomePlugin = MyAwesomePlugin;
+  window.MyAwesomePlugin = MyAwesomePlugin;
 }
 ```
 
@@ -303,6 +304,7 @@ if (typeof window !== 'undefined') {
 ### Setting Up Development
 
 1. **Clone the plugin template**:
+
 ```bash
 git clone https://github.com/genome-ai-studio/plugin-template.git my-plugin
 cd my-plugin
@@ -310,6 +312,7 @@ npm install
 ```
 
 2. **Configure development environment**:
+
 ```bash
 # Link to local CodeXomics for testing
 npm link ../GenomeAIStudio
@@ -319,6 +322,7 @@ npm run dev
 ```
 
 3. **Set up testing**:
+
 ```bash
 # Run plugin tests
 npm test
@@ -341,28 +345,28 @@ npm run test:coverage
 ```javascript
 // webpack.config.js for plugin development
 module.exports = {
-    entry: './plugin.js',
-    output: {
-        filename: 'plugin.bundle.js',
-        library: 'MyPlugin',
-        libraryTarget: 'umd'
-    },
-    externals: {
-        'genome-ai-studio': 'GenomeAIStudio'
-    },
-    module: {
-        rules: [
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use: 'babel-loader'
-            },
-            {
-                test: /\.css$/,
-                use: ['style-loader', 'css-loader']
-            }
-        ]
-    }
+  entry: './plugin.js',
+  output: {
+    filename: 'plugin.bundle.js',
+    library: 'MyPlugin',
+    libraryTarget: 'umd',
+  },
+  externals: {
+    'genome-ai-studio': 'GenomeAIStudio',
+  },
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: 'babel-loader',
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
+      },
+    ],
+  },
 };
 ```
 
@@ -371,15 +375,17 @@ module.exports = {
 ### Core API Objects
 
 #### App Context
+
 ```javascript
 // Access to main application
-this.app.fileManager    // File operations
-this.app.trackRenderer  // Visualization
-this.app.navigationManager // Navigation
-this.app.chatManager    // AI integration
+this.app.fileManager; // File operations
+this.app.trackRenderer; // Visualization
+this.app.navigationManager; // Navigation
+this.app.chatManager; // AI integration
 ```
 
 #### Plugin API
+
 ```javascript
 // UI Methods
 this.api.ui.addMenuItem(options)
@@ -406,18 +412,18 @@ this.api.utils.downloadFile(data, filename)
 
 ```javascript
 // Listen to application events
-this.api.events.on('genome-loaded', (genome) => {
-    console.log('New genome loaded:', genome.name);
+this.api.events.on('genome-loaded', genome => {
+  console.log('New genome loaded:', genome.name);
 });
 
-this.api.events.on('region-selected', (region) => {
-    console.log('Region selected:', region);
+this.api.events.on('region-selected', region => {
+  console.log('Region selected:', region);
 });
 
 // Emit custom events
 this.api.events.emit('plugin-analysis-complete', {
-    plugin: this.name,
-    results: analysisResults
+  plugin: this.name,
+  results: analysisResults,
 });
 ```
 
@@ -432,8 +438,8 @@ const variants = this.api.data.getVariants();
 // Work with selected regions
 const selectedRegion = this.api.data.getSelectedRegion();
 if (selectedRegion) {
-    const sequence = this.api.data.getSequence(selectedRegion);
-    // Process sequence
+  const sequence = this.api.data.getSequence(selectedRegion);
+  // Process sequence
 }
 
 // Export data
@@ -447,40 +453,42 @@ this.api.data.exportAnnotations('gff', selectedRegion);
 
 ```javascript
 class CustomVisualization {
-    constructor(container, data, options) {
-        this.container = container;
-        this.data = data;
-        this.options = options;
-        this.svg = null;
-    }
+  constructor(container, data, options) {
+    this.container = container;
+    this.data = data;
+    this.options = options;
+    this.svg = null;
+  }
 
-    render() {
-        // Create SVG visualization
-        this.svg = d3.select(this.container)
-            .append('svg')
-            .attr('width', this.options.width)
-            .attr('height', this.options.height);
+  render() {
+    // Create SVG visualization
+    this.svg = d3
+      .select(this.container)
+      .append('svg')
+      .attr('width', this.options.width)
+      .attr('height', this.options.height);
 
-        // Render your custom visualization
-        this.renderChart();
-    }
+    // Render your custom visualization
+    this.renderChart();
+  }
 
-    renderChart() {
-        // Implement custom D3.js visualization
-        const chart = this.svg.selectAll('.data-point')
-            .data(this.data)
-            .enter()
-            .append('circle')
-            .attr('class', 'data-point')
-            .attr('r', 5)
-            .attr('cx', d => d.x)
-            .attr('cy', d => d.y);
-    }
+  renderChart() {
+    // Implement custom D3.js visualization
+    const chart = this.svg
+      .selectAll('.data-point')
+      .data(this.data)
+      .enter()
+      .append('circle')
+      .attr('class', 'data-point')
+      .attr('r', 5)
+      .attr('cx', d => d.x)
+      .attr('cy', d => d.y);
+  }
 
-    update(newData) {
-        this.data = newData;
-        this.renderChart();
-    }
+  update(newData) {
+    this.data = newData;
+    this.renderChart();
+  }
 }
 ```
 
@@ -489,36 +497,36 @@ class CustomVisualization {
 ```javascript
 // Register sophisticated AI functions
 this.api.ai.registerFunction({
-    name: 'predictGeneFunction',
-    description: 'Predict gene function using machine learning',
-    parameters: {
-        sequence: { 
-            type: 'string', 
-            required: true,
-            description: 'DNA sequence to analyze'
-        },
-        model: { 
-            type: 'string', 
-            required: false,
-            default: 'default',
-            enum: ['default', 'prokaryotic', 'eukaryotic']
-        },
-        confidence: {
-            type: 'number',
-            required: false,
-            default: 0.8,
-            minimum: 0.0,
-            maximum: 1.0
-        }
+  name: 'predictGeneFunction',
+  description: 'Predict gene function using machine learning',
+  parameters: {
+    sequence: {
+      type: 'string',
+      required: true,
+      description: 'DNA sequence to analyze',
     },
-    execute: async (params) => {
-        const prediction = await this.mlModel.predict(params);
-        return {
-            prediction: prediction.function,
-            confidence: prediction.confidence,
-            evidence: prediction.evidence
-        };
-    }
+    model: {
+      type: 'string',
+      required: false,
+      default: 'default',
+      enum: ['default', 'prokaryotic', 'eukaryotic'],
+    },
+    confidence: {
+      type: 'number',
+      required: false,
+      default: 0.8,
+      minimum: 0.0,
+      maximum: 1.0,
+    },
+  },
+  execute: async params => {
+    const prediction = await this.mlModel.predict(params);
+    return {
+      prediction: prediction.function,
+      confidence: prediction.confidence,
+      evidence: prediction.evidence,
+    };
+  },
 });
 ```
 
@@ -526,36 +534,36 @@ this.api.ai.registerFunction({
 
 ```javascript
 class DatabaseConnector {
-    constructor(config) {
-        this.config = config;
-        this.connected = false;
-    }
+  constructor(config) {
+    this.config = config;
+    this.connected = false;
+  }
 
-    async connect() {
-        try {
-            this.connection = await this.establishConnection();
-            this.connected = true;
-        } catch (error) {
-            throw new Error(`Database connection failed: ${error.message}`);
-        }
+  async connect() {
+    try {
+      this.connection = await this.establishConnection();
+      this.connected = true;
+    } catch (error) {
+      throw new Error(`Database connection failed: ${error.message}`);
     }
+  }
 
-    async query(sql, params) {
-        if (!this.connected) {
-            await this.connect();
-        }
-        return await this.connection.query(sql, params);
+  async query(sql, params) {
+    if (!this.connected) {
+      await this.connect();
     }
+    return await this.connection.query(sql, params);
+  }
 
-    async searchGenes(criteria) {
-        const sql = `
+  async searchGenes(criteria) {
+    const sql = `
             SELECT gene_id, symbol, description, organism
             FROM genes 
             WHERE description LIKE ? 
             AND organism = ?
         `;
-        return await this.query(sql, [`%${criteria.keyword}%`, criteria.organism]);
-    }
+    return await this.query(sql, [`%${criteria.keyword}%`, criteria.organism]);
+  }
 }
 ```
 
@@ -569,29 +577,30 @@ const MyAwesomePlugin = require('../../plugin.js');
 const mockAPI = require('../mocks/api-mock.js');
 
 describe('MyAwesomePlugin', () => {
-    let plugin;
-    let mockApp;
+  let plugin;
+  let mockApp;
 
-    beforeEach(() => {
-        mockApp = { /* mock app object */ };
-        plugin = new MyAwesomePlugin(mockApp, mockAPI);
-    });
+  beforeEach(() => {
+    mockApp = {
+      /* mock app object */
+    };
+    plugin = new MyAwesomePlugin(mockApp, mockAPI);
+  });
 
-    test('should initialize correctly', async () => {
-        await plugin.initialize();
-        expect(plugin.initialized).toBe(true);
-    });
+  test('should initialize correctly', async () => {
+    await plugin.initialize();
+    expect(plugin.initialized).toBe(true);
+  });
 
-    test('should calculate GC content correctly', () => {
-        const sequence = 'ATGCGCTA';
-        const gcContent = plugin.calculateGCContent(sequence);
-        expect(gcContent).toBe(50);
-    });
+  test('should calculate GC content correctly', () => {
+    const sequence = 'ATGCGCTA';
+    const gcContent = plugin.calculateGCContent(sequence);
+    expect(gcContent).toBe(50);
+  });
 
-    test('should handle invalid sequence', async () => {
-        await expect(plugin.analyzeSequence({ sequence: null }))
-            .rejects.toThrow('Invalid sequence provided');
-    });
+  test('should handle invalid sequence', async () => {
+    await expect(plugin.analyzeSequence({ sequence: null })).rejects.toThrow('Invalid sequence provided');
+  });
 });
 ```
 
@@ -602,26 +611,26 @@ describe('MyAwesomePlugin', () => {
 const PluginTestFramework = require('genome-ai-studio/test-framework');
 
 describe('Plugin Integration Tests', () => {
-    let testFramework;
+  let testFramework;
 
-    beforeAll(async () => {
-        testFramework = new PluginTestFramework();
-        await testFramework.setup();
+  beforeAll(async () => {
+    testFramework = new PluginTestFramework();
+    await testFramework.setup();
+  });
+
+  test('should integrate with AI system', async () => {
+    const plugin = await testFramework.loadPlugin('./plugin.js');
+    const result = await testFramework.callAIFunction('analyzeSequence', {
+      sequence: 'ATGCGCTAG',
     });
 
-    test('should integrate with AI system', async () => {
-        const plugin = await testFramework.loadPlugin('./plugin.js');
-        const result = await testFramework.callAIFunction('analyzeSequence', {
-            sequence: 'ATGCGCTAG'
-        });
-        
-        expect(result.success).toBe(true);
-        expect(result.data).toHaveProperty('gcContent');
-    });
+    expect(result.success).toBe(true);
+    expect(result.data).toHaveProperty('gcContent');
+  });
 
-    afterAll(async () => {
-        await testFramework.cleanup();
-    });
+  afterAll(async () => {
+    await testFramework.cleanup();
+  });
 });
 ```
 
@@ -632,24 +641,24 @@ describe('Plugin Integration Tests', () => {
 const DEBUG = true;
 
 class MyAwesomePlugin {
-    debug(message, data) {
-        if (DEBUG) {
-            console.log(`[${this.name}] ${message}`, data);
-        }
+  debug(message, data) {
+    if (DEBUG) {
+      console.log(`[${this.name}] ${message}`, data);
     }
+  }
 
-    async analyzeSequence(params) {
-        this.debug('Starting sequence analysis', { params });
-        
-        try {
-            const results = await this.performAnalysis(params.sequence);
-            this.debug('Analysis complete', { results });
-            return results;
-        } catch (error) {
-            this.debug('Analysis failed', { error });
-            throw error;
-        }
+  async analyzeSequence(params) {
+    this.debug('Starting sequence analysis', { params });
+
+    try {
+      const results = await this.performAnalysis(params.sequence);
+      this.debug('Analysis complete', { results });
+      return results;
+    } catch (error) {
+      this.debug('Analysis failed', { error });
+      throw error;
     }
+  }
 }
 ```
 
@@ -698,10 +707,7 @@ gai-cli publish --version 1.0.0 --description "Initial release"
 {
   "category": "analysis",
   "tags": ["genomics", "sequence-analysis", "machine-learning"],
-  "screenshots": [
-    "assets/screenshot-1.png",
-    "assets/screenshot-2.png"
-  ],
+  "screenshots": ["assets/screenshot-1.png", "assets/screenshot-2.png"],
   "demo": {
     "enabled": true,
     "sampleData": "assets/sample-data.json"
@@ -786,38 +792,38 @@ gai-cli publish --version 1.0.0 --description "Initial release"
 
 ```javascript
 class SequenceAnalyzerPlugin {
-    constructor(app, api) {
-        this.app = app;
-        this.api = api;
-        this.name = 'Sequence Analyzer';
-    }
+  constructor(app, api) {
+    this.app = app;
+    this.api = api;
+    this.name = 'Sequence Analyzer';
+  }
 
-    async initialize() {
-        this.api.ai.registerFunction({
-            name: 'analyzeBasicStats',
-            description: 'Calculate basic sequence statistics',
-            parameters: {
-                sequence: { type: 'string', required: true }
-            },
-            execute: this.analyzeBasicStats.bind(this)
-        });
-    }
+  async initialize() {
+    this.api.ai.registerFunction({
+      name: 'analyzeBasicStats',
+      description: 'Calculate basic sequence statistics',
+      parameters: {
+        sequence: { type: 'string', required: true },
+      },
+      execute: this.analyzeBasicStats.bind(this),
+    });
+  }
 
-    analyzeBasicStats({ sequence }) {
-        return {
-            length: sequence.length,
-            gcContent: this.calculateGC(sequence),
-            composition: this.getComposition(sequence),
-            melting_temperature: this.calculateTm(sequence)
-        };
-    }
+  analyzeBasicStats({ sequence }) {
+    return {
+      length: sequence.length,
+      gcContent: this.calculateGC(sequence),
+      composition: this.getComposition(sequence),
+      melting_temperature: this.calculateTm(sequence),
+    };
+  }
 
-    calculateGC(sequence) {
-        const gc = (sequence.match(/[GC]/gi) || []).length;
-        return (gc / sequence.length * 100).toFixed(2);
-    }
+  calculateGC(sequence) {
+    const gc = (sequence.match(/[GC]/gi) || []).length;
+    return ((gc / sequence.length) * 100).toFixed(2);
+  }
 
-    // Additional methods...
+  // Additional methods...
 }
 ```
 
@@ -825,66 +831,66 @@ class SequenceAnalyzerPlugin {
 
 ```javascript
 class GenomeCircosPlugin {
-    constructor(app, api) {
-        this.app = app;
-        this.api = api;
-        this.name = 'Circos Visualizer';
-    }
+  constructor(app, api) {
+    this.app = app;
+    this.api = api;
+    this.name = 'Circos Visualizer';
+  }
 
-    async initialize() {
-        this.api.ui.addMenuItem({
-            label: 'Circos Plot',
-            action: () => this.createCircosPlot(),
-            category: 'Visualization'
-        });
-    }
+  async initialize() {
+    this.api.ui.addMenuItem({
+      label: 'Circos Plot',
+      action: () => this.createCircosPlot(),
+      category: 'Visualization',
+    });
+  }
 
-    createCircosPlot() {
-        const panel = this.api.ui.createPanel({
-            title: 'Circos Genome Plot',
-            content: '<div id="circos-container"></div>',
-            width: 800,
-            height: 800
-        });
+  createCircosPlot() {
+    const panel = this.api.ui.createPanel({
+      title: 'Circos Genome Plot',
+      content: '<div id="circos-container"></div>',
+      width: 800,
+      height: 800,
+    });
 
-        panel.onShow(() => {
-            this.renderCircos('#circos-container');
-        });
+    panel.onShow(() => {
+      this.renderCircos('#circos-container');
+    });
 
-        panel.show();
-    }
+    panel.show();
+  }
 
-    renderCircos(container) {
-        // Implement Circos visualization using D3.js
-        const svg = d3.select(container)
-            .append('svg')
-            .attr('width', 800)
-            .attr('height', 800);
+  renderCircos(container) {
+    // Implement Circos visualization using D3.js
+    const svg = d3.select(container).append('svg').attr('width', 800).attr('height', 800);
 
-        // Render circular genome plot
-        this.drawChromosomes(svg);
-        this.drawGenes(svg);
-        this.drawConnections(svg);
-    }
+    // Render circular genome plot
+    this.drawChromosomes(svg);
+    this.drawGenes(svg);
+    this.drawConnections(svg);
+  }
 
-    // Circos rendering methods...
+  // Circos rendering methods...
 }
 ```
 
 ## 🔗 Resources
 
 ### Documentation Links
+
 - [Plugin API Reference](API_DOCUMENTATION.md)
 - [Testing Framework Guide](../implementation-summaries/PLUGIN_TEST_FRAMEWORK_IMPLEMENTATION.md)
 - [Security Guidelines](SECURITY_GUIDELINES.md)
 - [UI Design Guide](UI_DESIGN_GUIDE.md)
 
 ### Example Repositories
+
 - [Plugin Template](https://github.com/genome-ai-studio/plugin-template)
 - [Example Plugins](https://github.com/genome-ai-studio/example-plugins)
 - [Community Plugins](https://github.com/genome-ai-studio/community-plugins)
 
 ### Community Resources
+
 - [Plugin Developer Forum](https://forum.genome-ai-studio.com/plugins)
 - [Discord Channel](https://discord.gg/genome-ai-studio)
 - [Monthly Developer Meetups](https://meetup.com/genome-ai-studio-devs)
@@ -892,12 +898,14 @@ class GenomeCircosPlugin {
 ## 📞 Support
 
 ### Getting Help
+
 - **Documentation**: Check this guide and API docs
 - **GitHub Issues**: Report bugs and ask questions
 - **Community Forum**: Connect with other developers
 - **Email Support**: developer-support@genome-ai-studio.com
 
 ### Contributing to Plugin Ecosystem
+
 - Share your plugins with the community
 - Contribute to core plugin infrastructure
 - Write tutorials and examples
@@ -907,4 +915,4 @@ class GenomeCircosPlugin {
 
 **Happy plugin development!** 🚀
 
-*This guide covers CodeXomics v0.3.0-beta plugin development. For the latest updates and API changes, check the project repository.* 
+_This guide covers CodeXomics v0.3.0-beta plugin development. For the latest updates and API changes, check the project repository._

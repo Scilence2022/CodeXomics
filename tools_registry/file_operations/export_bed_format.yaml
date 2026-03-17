@@ -1,0 +1,53 @@
+name: export_bed_format
+version: 1.0.0
+description: Export feature annotations in BED format to specified file path
+category: file_operations
+keywords:
+  - export
+  - bed
+  - annotations
+  - features
+  - track
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Use export_bed_format to analyze genomic data
+    tool_call: export_bed_format(parameter1='value1', parameter2='value2')
+    thought: User wants to use export_bed_format for export feature annotations in bed format to specified file path
+    expected_result: Result from export_bed_format analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - core
+    - essential
+  complexity: simple
+  usage_pattern: frequent
+error_handling: {}
+returns:
+  success: boolean - Whether operation was successful
+  result: object - Operation result

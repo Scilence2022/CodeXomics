@@ -9,30 +9,36 @@ All preparations for the v0.522beta release have been completed successfully!
 ## 📋 What Has Been Done
 
 ### ✓ Git Tag Created and Pushed
+
 - **Tag:** `v0.522beta`
 - **Commit:** `00265a7`
 - **Message:** "Release v0.522beta - Beta release with ProGenFixer integration and improved LLM model organization"
 - **Status:** ✅ Pushed to GitHub
 
 ### ✓ Documentation Created
+
 - **CHANGELOG.md** - Permanent changelog for the project
 - **RELEASE_NOTES_v0.522beta.md** - Detailed release notes for this version
 - **Status:** ✅ Committed and pushed
 
 ### ✓ Build Artifacts Generated
+
 All distribution packages have been built successfully:
 
 #### macOS
+
 - ✅ `CodeXomics-0.522.0-beta-x64.dmg` (139 MB) - Intel Mac
 - ✅ `CodeXomics-0.522.0-beta-arm64.dmg` (134 MB) - Apple Silicon
 - ✅ `CodeXomics-0.522.0-beta-mac.zip` (133 MB) - Universal zip
 - ✅ `CodeXomics-0.522.0-beta-arm64-mac.zip` (129 MB) - ARM64 zip
 
 #### Windows
+
 - ✅ `CodeXomics Setup 0.522.0-beta.exe` (207 MB) - Installer
 - ✅ `CodeXomics 0.522.0-beta.exe` (207 MB) - Portable
 
 #### Linux
+
 - ✅ `CodeXomics-0.522.0-beta.AppImage` (144 MB) - AppImage
 - ✅ `codexomics_0.522.0-beta_amd64.deb` (93 MB) - Debian package
 - ✅ `codexomics_0.522.0-beta_amd64.snap` (124 MB) - Snap package
@@ -48,7 +54,9 @@ Since GitHub CLI (`gh`) is not installed, you'll need to create the release manu
 ### Step-by-Step Guide:
 
 #### 1. Go to GitHub Releases Page
+
 Open your browser and navigate to:
+
 ```
 https://github.com/Scilence2022/CodeXomics/releases/new
 ```
@@ -58,6 +66,7 @@ https://github.com/Scilence2022/CodeXomics/releases/new
 **Choose a tag:** Select `v0.522beta` from the dropdown (it's already pushed)
 
 **Release title:**
+
 ```
 CodeXomics v0.522beta - Beta Release
 ```
@@ -74,11 +83,13 @@ This is a beta release featuring new external tool integrations, improved LLM mo
 ## ✨ New Features
 
 ### 🔧 ProGenFixer Integration
+
 - Added **ProGenFixer** external tool for protein engineering and sequence optimization
 - Direct access via Tools menu with keyboard shortcut `Cmd/Ctrl+Shift+P`
 - URL: https://progenfixer.biodesign.ac.cn
 
 ### 🤖 LLM Model Improvements
+
 - **Reorganized SiliconFlow models** by source and parameter size
 - Added **Kimi K2 Pro** model: `Pro/moonshotai/Kimi-K2-Instruct-0905`
 - Grouped models by provider with emoji identifiers:
@@ -89,6 +100,7 @@ This is a beta release featuring new external tool integrations, improved LLM mo
   - 🎯 Yi Series (01.AI)
 
 ### 📊 Enhanced Testing
+
 - Improved benchmark UI with accurate test count display
 - Enhanced tool parsing detection for flexible success cases
 - Added comprehensive data export workflow tests
@@ -117,14 +129,17 @@ https://github.com/Scilence2022/CodeXomics/issues
 Download the appropriate package for your platform from the Assets section below.
 
 ### macOS
+
 - **Intel (x64):** CodeXomics-0.522.0-beta-x64.dmg
 - **Apple Silicon (arm64):** CodeXomics-0.522.0-beta-arm64.dmg
 
 ### Windows
+
 - **Installer:** CodeXomics Setup 0.522.0-beta.exe
 - **Portable:** CodeXomics 0.522.0-beta.exe
 
 ### Linux
+
 - **AppImage:** CodeXomics-0.522.0-beta.AppImage
 - **Debian:** codexomics_0.522.0-beta_amd64.deb
 - **Snap:** codexomics_0.522.0-beta_amd64.snap
@@ -139,16 +154,19 @@ Download the appropriate package for your platform from the Assets section below
 Click "Attach binaries by dropping them here or selecting them" and upload these files from the `dist/` folder:
 
 **macOS:**
+
 - `CodeXomics-0.522.0-beta-x64.dmg`
 - `CodeXomics-0.522.0-beta-arm64.dmg`
 - `CodeXomics-0.522.0-beta-mac.zip`
 - `CodeXomics-0.522.0-beta-arm64-mac.zip`
 
 **Windows:**
+
 - `CodeXomics Setup 0.522.0-beta.exe`
 - `CodeXomics 0.522.0-beta.exe`
 
 **Linux:**
+
 - `CodeXomics-0.522.0-beta.AppImage`
 - `codexomics_0.522.0-beta_amd64.deb`
 - `codexomics_0.522.0-beta_amd64.snap`

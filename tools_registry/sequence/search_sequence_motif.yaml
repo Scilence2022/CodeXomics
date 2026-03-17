@@ -1,8 +1,8 @@
 name: search_sequence_motif
 version: 1.1.0
-description: "Search for specific sequence motifs or patterns within genomic regions. Supports exact matches, IUPAC ambiguity codes, and regular expressions."
+description: 'Search for specific sequence motifs or patterns within genomic regions. Supports exact matches, IUPAC ambiguity codes, and regular expressions.'
 category: sequence
-keywords: ["motif", "pattern", "search", "sequence", "binding site", "regulatory element"]
+keywords: ['motif', 'pattern', 'search', 'sequence', 'binding site', 'regulatory element']
 priority: 1
 execution:
   type: client
@@ -16,54 +16,54 @@ parameters:
   properties:
     motif:
       type: string
-      description: "Motif pattern to search for (supports IUPAC codes: N=any, R=A/G, Y=C/T, etc.)"
-      examples: ["TATAAA", "GGATCC", "NNNATGNN", "CANNTG"]
+      description: 'Motif pattern to search for (supports IUPAC codes: N=any, R=A/G, Y=C/T, etc.)'
+      examples: ['TATAAA', 'GGATCC', 'NNNATGNN', 'CANNTG']
     chromosome:
       type: string
-      description: "Chromosome to search in (optional, searches current view if not specified)"
-      examples: ["chr1", "NC_000913.3", "U00096"]
+      description: 'Chromosome to search in (optional, searches current view if not specified)'
+      examples: ['chr1', 'NC_000913.3', 'U00096']
     start:
       type: number
-      description: "Start position for search region (optional)"
+      description: 'Start position for search region (optional)'
       minimum: 1
     end:
       type: number
-      description: "End position for search region (optional)"
+      description: 'End position for search region (optional)'
       minimum: 1
     strand:
       type: string
-      enum: ["+", "-", "both"]
-      description: "Strand to search on"
-      default: "both"
+      enum: ['+', '-', 'both']
+      description: 'Strand to search on'
+      default: 'both'
     max_mismatches:
       type: number
-      description: "Maximum allowed mismatches (0 for exact match)"
+      description: 'Maximum allowed mismatches (0 for exact match)'
       minimum: 0
       default: 0
     case_sensitive:
       type: boolean
-      description: "Whether search should be case sensitive"
+      description: 'Whether search should be case sensitive'
       default: false
     clientId:
       type: string
-      description: "Browser client ID for multi-window support"
-      default: "default"
-  required: ["motif"]
+      description: 'Browser client ID for multi-window support'
+      default: 'default'
+  required: ['motif']
 sample_usages:
-  - user_query: "Find all TATA box sequences in this region"
+  - user_query: 'Find all TATA box sequences in this region'
     tool_call: "search_sequence_motif(motif='TATAAA', chromosome='chr1', start=1000, end=50000)"
-    thought: "User wants to find TATA box promoter elements in a specific genomic region"
-    expected_result: "List of TATA box positions with exact coordinates and strand information"
-  
-  - user_query: "Search for EcoRI restriction sites"
+    thought: 'User wants to find TATA box promoter elements in a specific genomic region'
+    expected_result: 'List of TATA box positions with exact coordinates and strand information'
+
+  - user_query: 'Search for EcoRI restriction sites'
     tool_call: "search_sequence_motif(motif='GAATTC', strand='both', max_mismatches=0)"
-    thought: "User wants to find EcoRI cut sites on both strands with exact matches"
-    expected_result: "All EcoRI recognition sequences with cutting positions"
-  
-  - user_query: "Find E-box binding sites with some variation"
+    thought: 'User wants to find EcoRI cut sites on both strands with exact matches'
+    expected_result: 'All EcoRI recognition sequences with cutting positions'
+
+  - user_query: 'Find E-box binding sites with some variation'
     tool_call: "search_sequence_motif(motif='CANNTG', max_mismatches=1, case_sensitive=false)"
-    thought: "User wants to find E-box motifs with IUPAC codes allowing for some variation"
-    expected_result: "E-box sequences with positions, allowing for single nucleotide variations"
+    thought: 'User wants to find E-box motifs with IUPAC codes allowing for some variation'
+    expected_result: 'E-box sequences with positions, allowing for single nucleotide variations'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -86,10 +86,10 @@ error_handling:
   invalid_sequence: Returns error if sequence is invalid
   empty_sequence: Returns error if sequence is empty
 returns:
-  success: "boolean - Whether motif search was successful"
-  matches: "array - List of motif matches with positions, sequences, and strands"
-  motif_searched: "string - The motif pattern that was searched"
-  total_matches: "number - Total number of matches found"
-  search_region: "object - Chromosome, start, and end positions searched"
-  strand_searched: "string - Which strand(s) were searched"
-  parameters_used: "object - Search parameters applied (mismatches, case sensitivity)"
+  success: 'boolean - Whether motif search was successful'
+  matches: 'array - List of motif matches with positions, sequences, and strands'
+  motif_searched: 'string - The motif pattern that was searched'
+  total_matches: 'number - Total number of matches found'
+  search_region: 'object - Chromosome, start, and end positions searched'
+  strand_searched: 'string - Which strand(s) were searched'
+  parameters_used: 'object - Search parameters applied (mismatches, case sensitivity)'

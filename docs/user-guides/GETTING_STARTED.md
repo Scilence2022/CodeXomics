@@ -5,12 +5,14 @@ Welcome to **CodeXomics v0.529beta**! This guide will help you get up and runnin
 ## 📋 Prerequisites
 
 ### System Requirements
+
 - **Operating System**: macOS 10.14+, Windows 10+, or Linux (Ubuntu 18.04+)
 - **Memory**: 6GB RAM minimum, 12GB recommended
 - **Storage**: 1GB for application, additional space for data and plugins
 - **Network**: Internet connection for AI services and database access
 
 ### Optional Requirements
+
 - **AI Services**: API keys for OpenAI, Anthropic, or Google Gemini (for AI chat features)
 - **BLAST+**: For sequence alignment tools (can be installed through the app)
 
@@ -34,17 +36,20 @@ Welcome to **CodeXomics v0.529beta**! This guide will help you get up and runnin
 ### Option 2: Build from Source
 
 1. **Clone the repository**:
+
 ```bash
 git clone https://github.com/Scilence2022/CodeXomics.git
 cd CodeXomics
 ```
 
 2. **Install dependencies**:
+
 ```bash
 npm install
 ```
 
 3. **Run the application**:
+
 ```bash
 npm start
 ```
@@ -52,19 +57,23 @@ npm start
 ## 🎯 First Launch
 
 ### 1. Initial Setup
+
 When you first launch CodeXomics, you'll see the welcome screen with options to:
+
 - Load a genome file
 - Open annotation files
 - Import variant data
 - Open sequencing reads
 
 ### 2. Loading Your First Genome
+
 1. Click **"Load File"** in the toolbar or use the welcome screen
 2. Select your genome file (FASTA, GenBank, etc.)
 3. The application will process and display your genomic data
 4. Use the navigation controls to explore your genome
 
 ### 3. Basic Navigation
+
 - **Zoom**: Use the zoom controls or mouse wheel
 - **Pan**: Drag the visualization to move around
 - **Search**: Use the search bar to find specific genes or regions
@@ -75,6 +84,7 @@ When you first launch CodeXomics, you'll see the welcome screen with options to:
 The AI assistant provides natural language interaction with your genomic data.
 
 ### 1. Configure AI Provider
+
 1. Go to **Options → Configure LLMs**
 2. Choose your preferred AI provider:
    - **OpenAI** (GPT-4, GPT-3.5)
@@ -83,11 +93,13 @@ The AI assistant provides natural language interaction with your genomic data.
    - **Local LLM** (Ollama, etc.)
 
 ### 2. Add API Credentials
+
 1. Enter your API key for your chosen provider
 2. Test the connection
 3. Save the configuration
 
 ### 3. Start Chatting
+
 - Use the chat panel to ask questions about your data
 - Example queries:
   - "Show me all ribosomal genes"
@@ -97,18 +109,22 @@ The AI assistant provides natural language interaction with your genomic data.
 ## 📁 Working with Projects
 
 ### Creating a New Project
+
 1. Go to **File → New Project**
 2. Choose a project template or start blank
 3. Set up your project directory structure
 4. Add your genomic data files
 
 ### Opening Existing Projects
+
 1. Use **File → Open Project** (Ctrl+Shift+O)
 2. Select a `.prj.GAI` project file
 3. The project will load with all associated data
 
 ### Project View Modes
+
 Switch between different project views:
+
 - **Grid View**: Visual grid of files and folders
 - **List View**: Detailed list with metadata
 - **Details View**: Comprehensive information table
@@ -116,23 +132,27 @@ Switch between different project views:
 ## 🔬 Core Features Overview
 
 ### 1. Genome Visualization
+
 - **Interactive tracks** for genes, variants, reads, and more
 - **Real-time navigation** with smooth zooming and panning
 - **Customizable track heights** and ordering
 - **Multi-format support** for various data types
 
 ### 2. Analysis Tools
+
 - **BLAST searches** with integrated database management
 - **Sequence analysis** tools for GC content, translation, etc.
 - **Protein structure visualization** with AlphaFold integration
 - **Pathway analysis** with KGML viewer
 
 ### 3. Data Export
+
 - Export sequences in multiple formats (FASTA, GenBank, etc.)
 - Export visualizations as images
 - Export analysis results as tables
 
 ### 4. Plugin System
+
 - Browse and install plugins from the marketplace
 - Extend functionality with community-developed tools
 - Create custom plugins for specialized analyses
@@ -168,12 +188,14 @@ Switch between different project views:
 ## 🎛️ Interface Overview
 
 ### Main Window Components
+
 - **Header Toolbar**: File operations, zoom controls, search
 - **Track Panel**: Genomic data visualization tracks
 - **Side Panel**: Gene details, chat interface, file browser
 - **Status Bar**: Current position, statistics, system status
 
 ### Keyboard Shortcuts
+
 - **Ctrl+O**: Open file
 - **Ctrl+S**: Save project
 - **Ctrl+F**: Search
@@ -184,12 +206,14 @@ Switch between different project views:
 ## 🔧 Customization
 
 ### Track Settings
+
 - Adjust track heights by dragging resize handles
 - Reorder tracks by dragging them up and down
 - Toggle track visibility using the sidebar controls
 - Customize colors and display options
 
 ### UI Preferences
+
 - Adjust zoom sensitivity
 - Configure search behavior
 - Set default file locations
@@ -198,18 +222,22 @@ Switch between different project views:
 ## 📚 Learning Resources
 
 ### Tutorials
+
 - **[User Guide](USER_GUIDE.md)** - Comprehensive user guide
 - **[BLAST Guide](../reference/BLAST_GUIDE.md)** - Sequence alignment tools
 - **[Plugin Development](../developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md)** - Working with plugins
 
 ### Example Data
+
 The application includes sample data for testing:
+
 - E. coli genome with annotations
 - Example VCF files with variants
 - Sample KGML pathway files
 - Protein structure examples
 
 ### Video Tutorials
+
 - Basic navigation and visualization
 - Setting up AI chat integration
 - Working with plugins
@@ -218,16 +246,19 @@ The application includes sample data for testing:
 ## 🆘 Getting Help
 
 ### Troubleshooting
+
 - Check the **[Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)** for common issues
 - Verify system requirements and dependencies
 - Check the error console in developer tools
 
 ### Support Channels
+
 - **GitHub Issues**: Report bugs or request features
 - **Documentation**: Comprehensive guides and API docs
 - **Community**: Join discussions and share experiences
 
 ### FAQ
+
 - **Q**: Can I use CodeXomics without an internet connection?
   **A**: Yes, core features work offline. AI chat and some database features require internet.
 
@@ -249,6 +280,7 @@ Now that you're set up, explore these advanced features:
 ## 📝 Feedback
 
 We'd love to hear about your experience! Please:
+
 - Report any issues you encounter
 - Suggest new features or improvements
 - Share your analysis workflows
@@ -258,4 +290,4 @@ We'd love to hear about your experience! Please:
 
 **Happy analyzing!** 🧬
 
-*This guide covers CodeXomics v0.529beta. For the latest updates, check the [project repository](https://github.com/Scilence2022/CodeXomics).* 
+_This guide covers CodeXomics v0.529beta. For the latest updates, check the [project repository](https://github.com/Scilence2022/CodeXomics)._

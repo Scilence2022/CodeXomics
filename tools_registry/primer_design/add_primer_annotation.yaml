@@ -1,0 +1,37 @@
+name: add_primer_annotation
+description: "Add an interactive primer display to the genome track"
+category: primer_design
+subcategory: display
+execution_type: client
+priority: 1
+complexity: moderate
+tags:
+  - primer
+  - visualization
+  - annotation
+parameters:
+  type: object
+  properties:
+    name:
+      type: string
+      description: "Name of the primer (e.g., Fwd_1)"
+    chromosome:
+      type: string
+      description: "Chromosome/replicon ID where the primer binds"
+    start:
+      type: number
+      description: "Start position (5' end)"
+    end:
+      type: number
+      description: "End position (3' end)"
+    strand:
+      type: string
+      description: "Strand (+ or -)"
+    description:
+      type: string
+      description: "Optional description or properties"
+  required:
+    - name
+    - chromosome
+    - start
+    - end

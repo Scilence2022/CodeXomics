@@ -22,6 +22,41 @@ let mainWindow;
 let unifiedMCPServer = null;
 let unifiedServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
 
+// Multi-window genome support: Window Registry
+// Tracks all main genome browser windows by windowId
+const windowRegistry = new Map(); // windowId → { window: BrowserWindow, genomeName: string, createdAt: Date }
+let windowIdCounter = 0;
+
+function generateWindowId() {
+  return `win_${++windowIdCounter}`;
+}
+
+// Register a genome browser window in the registry
+function registerGenomeWindow(windowId, browserWindow) {
+  windowRegistry.set(windowId, {
+    window: browserWindow,
+    genomeName: null,
+    createdAt: new Date(),
+  });
+  console.log(`📋 [WindowRegistry] Registered window: ${windowId} (total: ${windowRegistry.size})`);
+
+  // If MCP server is running, register the window with it
+  if (unifiedMCPServer) {
+    unifiedMCPServer.registerWindow(windowId, browserWindow);
+  }
+}
+
+// Unregister a genome browser window from the registry
+function unregisterGenomeWindow(windowId) {
+  windowRegistry.delete(windowId);
+  console.log(`📋 [WindowRegistry] Unregistered window: ${windowId} (total: ${windowRegistry.size})`);
+
+  // If MCP server is running, unregister the window
+  if (unifiedMCPServer) {
+    unifiedMCPServer.unregisterWindow(windowId);
+  }
+}
+
 // 为生物信息学工具窗口创建独立菜单
 // 存储各个工具窗口的菜单模板
 let toolMenuTemplates = new Map();
@@ -34,48 +69,52 @@ let fileOpenQueue = [];
 function createCircosPlotterMenu(circosWindow) {
   const template = [
     // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
-    ...(process.platform === 'darwin' ? [{
-      label: 'CodeXomics',
-      submenu: [
-        {
-          label: 'About Circos Genome Plotter',
-          click: () => {
-            circosWindow.webContents.send('circos-menu-action', 'about');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Preferences',
-          accelerator: 'Cmd+,',
-          click: () => {
-            circosWindow.webContents.send('circos-menu-action', 'preferences');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: `Hide ${APP_NAME}`,
-          accelerator: 'Cmd+H',
-          role: 'hide'
-        },
-        {
-          label: 'Hide Others',
-          accelerator: 'Cmd+Shift+H',
-          role: 'hideothers'
-        },
-        {
-          label: 'Show All',
-          role: 'unhide'
-        },
-        { type: 'separator' },
-        {
-          label: `Quit ${APP_NAME}`,
-          accelerator: 'Cmd+Q',
-          click: () => {
-            app.quit();
-          }
-        }
-      ]
-    }] : []),
+    ...(process.platform === 'darwin'
+      ? [
+          {
+            label: 'CodeXomics',
+            submenu: [
+              {
+                label: 'About Circos Genome Plotter',
+                click: () => {
+                  circosWindow.webContents.send('circos-menu-action', 'about');
+                },
+              },
+              { type: 'separator' },
+              {
+                label: 'Preferences',
+                accelerator: 'Cmd+,',
+                click: () => {
+                  circosWindow.webContents.send('circos-menu-action', 'preferences');
+                },
+              },
+              { type: 'separator' },
+              {
+                label: `Hide ${APP_NAME}`,
+                accelerator: 'Cmd+H',
+                role: 'hide',
+              },
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: `Quit ${APP_NAME}`,
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
+      : []),
     {
       label: 'File',
       submenu: [
@@ -84,7 +123,7 @@ function createCircosPlotterMenu(circosWindow) {
           accelerator: 'CmdOrCtrl+N',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'new-project');
-          }
+          },
         },
         {
           label: 'Open Project...',
@@ -95,28 +134,28 @@ function createCircosPlotterMenu(circosWindow) {
               filters: [
                 { name: 'Circos Project Files', extensions: ['prj.GAI', 'genomeproj'] },
                 { name: 'JSON Files', extensions: ['json'] },
-                { name: 'All Files', extensions: ['*'] }
-              ]
+                { name: 'All Files', extensions: ['*'] },
+              ],
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
               circosWindow.webContents.send('circos-menu-action', 'open-project', result.filePaths[0]);
             }
-          }
+          },
         },
         {
           label: 'Save Project',
           accelerator: 'CmdOrCtrl+S',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'save-project');
-          }
+          },
         },
         {
           label: 'Save Project As...',
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'save-project-as');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -129,13 +168,13 @@ function createCircosPlotterMenu(circosWindow) {
                   properties: ['openFile'],
                   filters: [
                     { name: 'FASTA Files', extensions: ['fasta', 'fa', 'fas', 'fna'] },
-                    { name: 'All Files', extensions: ['*'] }
-                  ]
+                    { name: 'All Files', extensions: ['*'] },
+                  ],
                 });
                 if (!result.canceled && result.filePaths.length > 0) {
                   circosWindow.webContents.send('circos-menu-action', 'import-fasta', result.filePaths[0]);
                 }
-              }
+              },
             },
             {
               label: 'Annotations (GFF/GFF3)',
@@ -144,13 +183,13 @@ function createCircosPlotterMenu(circosWindow) {
                   properties: ['openFile'],
                   filters: [
                     { name: 'GFF Files', extensions: ['gff', 'gff3', 'gtf'] },
-                    { name: 'All Files', extensions: ['*'] }
-                  ]
+                    { name: 'All Files', extensions: ['*'] },
+                  ],
                 });
                 if (!result.canceled && result.filePaths.length > 0) {
                   circosWindow.webContents.send('circos-menu-action', 'import-gff', result.filePaths[0]);
                 }
-              }
+              },
             },
             {
               label: 'GenBank File',
@@ -159,15 +198,15 @@ function createCircosPlotterMenu(circosWindow) {
                   properties: ['openFile'],
                   filters: [
                     { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
-                    { name: 'All Files', extensions: ['*'] }
-                  ]
+                    { name: 'All Files', extensions: ['*'] },
+                  ],
                 });
                 if (!result.canceled && result.filePaths.length > 0) {
                   circosWindow.webContents.send('circos-menu-action', 'import-genbank', result.filePaths[0]);
                 }
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
@@ -177,40 +216,42 @@ function createCircosPlotterMenu(circosWindow) {
               label: 'SVG Image',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'export-svg');
-              }
+              },
             },
             {
               label: 'PNG Image',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'export-png');
-              }
+              },
             },
             {
               label: 'PDF Document',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'export-pdf');
-              }
+              },
             },
             { type: 'separator' },
             {
               label: 'Data (JSON)',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'export-data');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
-        ...(process.platform !== 'darwin' ? [
-          { type: 'separator' },
-          {
-            label: 'Exit',
-            accelerator: 'Ctrl+Q',
-            click: () => {
-              app.quit();
-            }
-          }
-        ] : [])
-      ]
+        ...(process.platform !== 'darwin'
+          ? [
+              { type: 'separator' },
+              {
+                label: 'Exit',
+                accelerator: 'Ctrl+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ]
+          : []),
+      ],
     },
     {
       label: 'View',
@@ -220,28 +261,28 @@ function createCircosPlotterMenu(circosWindow) {
           accelerator: 'CmdOrCtrl+Plus',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'zoom-in');
-          }
+          },
         },
         {
           label: 'Zoom Out',
           accelerator: 'CmdOrCtrl+-',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'zoom-out');
-          }
+          },
         },
         {
           label: 'Fit to Window',
           accelerator: 'CmdOrCtrl+0',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'fit-to-window');
-          }
+          },
         },
         {
           label: 'Reset View',
           accelerator: 'CmdOrCtrl+R',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'reset-view');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -249,7 +290,7 @@ function createCircosPlotterMenu(circosWindow) {
           accelerator: 'CmdOrCtrl+G',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'toggle-genes');
-          }
+          },
         },
         {
           label: 'Data Tracks',
@@ -259,23 +300,23 @@ function createCircosPlotterMenu(circosWindow) {
               accelerator: 'CmdOrCtrl+1',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'toggle-gc-content');
-              }
+              },
             },
             {
               label: 'GC Skew',
               accelerator: 'CmdOrCtrl+2',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'toggle-gc-skew');
-              }
+              },
             },
             {
               label: 'WIG Data',
               accelerator: 'CmdOrCtrl+3',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'toggle-wig-data');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
@@ -283,9 +324,9 @@ function createCircosPlotterMenu(circosWindow) {
           accelerator: 'F5',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'refresh');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Tools',
@@ -297,21 +338,21 @@ function createCircosPlotterMenu(circosWindow) {
               label: 'Gene Density Analysis',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'gene-density-analysis');
-              }
+              },
             },
             {
               label: 'Gene Type Distribution',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'gene-type-distribution');
-              }
+              },
             },
             {
               label: 'Gene Expression Analysis',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'gene-expression-analysis');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         {
           label: 'Sequence Analysis',
@@ -320,21 +361,21 @@ function createCircosPlotterMenu(circosWindow) {
               label: 'GC Content Analysis',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'gc-content-analysis');
-              }
+              },
             },
             {
               label: 'Sequence Complexity',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'sequence-complexity');
-              }
+              },
             },
             {
               label: 'Repeat Analysis',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'repeat-analysis');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         {
           label: 'Comparative Genomics',
@@ -343,21 +384,21 @@ function createCircosPlotterMenu(circosWindow) {
               label: 'Synteny Analysis',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'synteny-analysis');
-              }
+              },
             },
             {
               label: 'Ortholog Detection',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'ortholog-detection');
-              }
+              },
             },
             {
               label: 'Evolutionary Analysis',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'evolutionary-analysis');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
@@ -368,29 +409,29 @@ function createCircosPlotterMenu(circosWindow) {
               accelerator: 'CmdOrCtrl+Shift+O',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'ai-optimization');
-              }
+              },
             },
             {
               label: 'Pattern Recognition',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'pattern-recognition');
-              }
+              },
             },
             {
               label: 'Automated Insights',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'automated-insights');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         {
           label: 'Custom Annotations',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'custom-annotations');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Data',
@@ -402,27 +443,27 @@ function createCircosPlotterMenu(circosWindow) {
               label: 'Add Track',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'add-track');
-              }
+              },
             },
             {
               label: 'Remove Track',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'remove-track');
-              }
+              },
             },
             {
               label: 'Reorder Tracks',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'reorder-tracks');
-              }
+              },
             },
             {
               label: 'Track Settings',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'track-settings');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         {
           label: 'Gene Filtering',
@@ -431,36 +472,36 @@ function createCircosPlotterMenu(circosWindow) {
               label: 'By Type',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'filter-by-type');
-              }
+              },
             },
             {
               label: 'By Expression',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'filter-by-expression');
-              }
+              },
             },
             {
               label: 'By Location',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'filter-by-location');
-              }
+              },
             },
             {
               label: 'Custom Filter',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'custom-filter');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
           label: 'Data Validation',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'data-validation');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Settings',
@@ -472,21 +513,21 @@ function createCircosPlotterMenu(circosWindow) {
               label: 'Color Themes',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'color-themes');
-              }
+              },
             },
             {
               label: 'Track Heights',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'track-heights');
-              }
+              },
             },
             {
               label: 'Font Settings',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'font-settings');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         {
           label: 'Performance',
@@ -495,21 +536,21 @@ function createCircosPlotterMenu(circosWindow) {
               label: 'Rendering Mode',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'rendering-mode');
-              }
+              },
             },
             {
               label: 'Memory Usage',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'memory-usage');
-              }
+              },
             },
             {
               label: 'Update Frequency',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'update-frequency');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         {
           label: 'Advanced',
@@ -518,23 +559,23 @@ function createCircosPlotterMenu(circosWindow) {
               label: 'Window Size',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'window-size');
-              }
+              },
             },
             {
               label: 'Export Quality',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'export-quality');
-              }
+              },
             },
             {
               label: 'Debug Mode',
               click: () => {
                 circosWindow.webContents.send('circos-menu-action', 'debug-mode');
-              }
-            }
-          ]
-        }
-      ]
+              },
+            },
+          ],
+        },
+      ],
     },
     {
       label: 'Help',
@@ -543,36 +584,36 @@ function createCircosPlotterMenu(circosWindow) {
           label: 'Documentation',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'documentation');
-          }
+          },
         },
         {
           label: 'Tutorials',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'tutorials');
-          }
+          },
         },
         {
           label: 'Keyboard Shortcuts',
           accelerator: 'CmdOrCtrl+?',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'keyboard-shortcuts');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'About Circos Plotter',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'about');
-          }
+          },
         },
         {
           label: 'Report Issue',
           click: () => {
             circosWindow.webContents.send('circos-menu-action', 'report-issue');
-          }
-        }
-      ]
-    }
+          },
+        },
+      ],
+    },
   ];
 
   const menu = Menu.buildFromTemplate(template);
@@ -583,48 +624,52 @@ function createCircosPlotterMenu(circosWindow) {
 function createToolWindowMenu(toolWindow, toolName) {
   const template = [
     // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
-    ...(process.platform === 'darwin' ? [{
-      label: 'CodeXomics',
-      submenu: [
-        {
-          label: `About ${toolName}`,
-          click: () => {
-            toolWindow.webContents.send('tool-menu-action', 'about', toolName);
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Preferences',
-          accelerator: 'Cmd+,',
-          click: () => {
-            toolWindow.webContents.send('tool-menu-action', 'preferences');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: `Hide ${APP_NAME}`,
-          accelerator: 'Cmd+H',
-          role: 'hide'
-        },
-        {
-          label: 'Hide Others',
-          accelerator: 'Cmd+Shift+H',
-          role: 'hideothers'
-        },
-        {
-          label: 'Show All',
-          role: 'unhide'
-        },
-        { type: 'separator' },
-        {
-          label: `Quit ${APP_NAME}`,
-          accelerator: 'Cmd+Q',
-          click: () => {
-            app.quit();
-          }
-        }
-      ]
-    }] : []),
+    ...(process.platform === 'darwin'
+      ? [
+          {
+            label: 'CodeXomics',
+            submenu: [
+              {
+                label: `About ${toolName}`,
+                click: () => {
+                  toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+                },
+              },
+              { type: 'separator' },
+              {
+                label: 'Preferences',
+                accelerator: 'Cmd+,',
+                click: () => {
+                  toolWindow.webContents.send('tool-menu-action', 'preferences');
+                },
+              },
+              { type: 'separator' },
+              {
+                label: `Hide ${APP_NAME}`,
+                accelerator: 'Cmd+H',
+                role: 'hide',
+              },
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: `Quit ${APP_NAME}`,
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
+      : []),
     {
       label: 'File',
       submenu: [
@@ -633,7 +678,7 @@ function createToolWindowMenu(toolWindow, toolName) {
           accelerator: 'CmdOrCtrl+N',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'new-analysis');
-          }
+          },
         },
         {
           label: 'Open Data File',
@@ -646,14 +691,14 @@ function createToolWindowMenu(toolWindow, toolName) {
                 { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
                 { name: 'JSON Files', extensions: ['json'] },
                 { name: 'XML Files', extensions: ['xml'] },
-                { name: 'All Files', extensions: ['*'] }
-              ]
+                { name: 'All Files', extensions: ['*'] },
+              ],
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
               toolWindow.webContents.send('tool-menu-action', 'open-file', result.filePaths[0]);
             }
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -661,34 +706,36 @@ function createToolWindowMenu(toolWindow, toolName) {
           accelerator: 'CmdOrCtrl+S',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'save-results');
-          }
+          },
         },
         {
           label: 'Export Data',
           accelerator: 'CmdOrCtrl+E',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'export-data');
-          }
+          },
         },
         { type: 'separator' },
-        ...(process.platform !== 'darwin' ? [
-          {
-            label: 'Exit',
-            accelerator: 'Ctrl+Q',
-            click: () => {
-              app.quit();
-            }
-          }
-        ] : [
-          {
-            label: 'Close Window',
-            accelerator: 'Cmd+W',
-            click: () => {
-              toolWindow.close();
-            }
-          }
-        ])
-      ]
+        ...(process.platform !== 'darwin'
+          ? [
+              {
+                label: 'Exit',
+                accelerator: 'Ctrl+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ]
+          : [
+              {
+                label: 'Close Window',
+                accelerator: 'Cmd+W',
+                click: () => {
+                  toolWindow.close();
+                },
+              },
+            ]),
+      ],
     },
     {
       label: 'Edit',
@@ -698,21 +745,21 @@ function createToolWindowMenu(toolWindow, toolName) {
           accelerator: 'CmdOrCtrl+C',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'copy');
-          }
+          },
         },
         {
           label: 'Paste',
           accelerator: 'CmdOrCtrl+V',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'paste');
-          }
+          },
         },
         {
           label: 'Cut',
           accelerator: 'CmdOrCtrl+X',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'cut');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -720,7 +767,7 @@ function createToolWindowMenu(toolWindow, toolName) {
           accelerator: 'CmdOrCtrl+A',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'select-all');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -728,16 +775,16 @@ function createToolWindowMenu(toolWindow, toolName) {
           accelerator: 'CmdOrCtrl+F',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'find');
-          }
+          },
         },
         {
           label: 'Find Next',
           accelerator: 'F3',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'find-next');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'View',
@@ -750,27 +797,23 @@ function createToolWindowMenu(toolWindow, toolName) {
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { type: 'separator' },
-        ...(process.platform === 'darwin' ? [
-          { role: 'togglefullscreen' }
-        ] : [
-          { role: 'togglefullscreen' }
-        ]),
+        ...(process.platform === 'darwin' ? [{ role: 'togglefullscreen' }] : [{ role: 'togglefullscreen' }]),
         { type: 'separator' },
         {
           label: 'Refresh Data',
           accelerator: 'F5',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'refresh-data');
-          }
+          },
         },
         {
           label: 'Clear Results',
           accelerator: 'CmdOrCtrl+Shift+C',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'clear-results');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Analysis',
@@ -780,14 +823,14 @@ function createToolWindowMenu(toolWindow, toolName) {
           accelerator: 'CmdOrCtrl+R',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'run-analysis');
-          }
+          },
         },
         {
           label: 'Stop Analysis',
           accelerator: 'Escape',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'stop-analysis');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -795,50 +838,52 @@ function createToolWindowMenu(toolWindow, toolName) {
           accelerator: 'CmdOrCtrl+L',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'load-sample');
-          }
+          },
         },
         {
           label: 'Reset Parameters',
           accelerator: 'CmdOrCtrl+Shift+R',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'reset-parameters');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Options',
       submenu: [
-        ...(process.platform !== 'darwin' ? [
-          {
-            label: 'Preferences',
-            accelerator: 'Ctrl+,',
-            click: () => {
-              toolWindow.webContents.send('tool-menu-action', 'preferences');
-            }
-          },
-          { type: 'separator' }
-        ] : []),
+        ...(process.platform !== 'darwin'
+          ? [
+              {
+                label: 'Preferences',
+                accelerator: 'Ctrl+,',
+                click: () => {
+                  toolWindow.webContents.send('tool-menu-action', 'preferences');
+                },
+              },
+              { type: 'separator' },
+            ]
+          : []),
         {
           label: 'Analysis Settings',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'analysis-settings');
-          }
+          },
         },
         {
           label: 'Output Format',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'output-format');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'Advanced Options',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'advanced-options');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Window',
@@ -846,14 +891,14 @@ function createToolWindowMenu(toolWindow, toolName) {
         {
           label: 'Minimize',
           accelerator: 'CmdOrCtrl+M',
-          role: 'minimize'
+          role: 'minimize',
         },
         {
           label: 'Close',
           accelerator: 'CmdOrCtrl+W',
           click: () => {
             toolWindow.close();
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -863,56 +908,58 @@ function createToolWindowMenu(toolWindow, toolName) {
             if (mainWindow) {
               mainWindow.focus();
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Help',
       submenu: [
-        ...(process.platform !== 'darwin' ? [
-          {
-            label: `About ${toolName}`,
-            click: () => {
-              toolWindow.webContents.send('tool-menu-action', 'about', toolName);
-            }
-          },
-          { type: 'separator' }
-        ] : []),
+        ...(process.platform !== 'darwin'
+          ? [
+              {
+                label: `About ${toolName}`,
+                click: () => {
+                  toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+                },
+              },
+              { type: 'separator' },
+            ]
+          : []),
         {
           label: 'User Guide',
           accelerator: 'F1',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'user-guide');
-          }
+          },
         },
         {
           label: 'Tool Documentation',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'documentation');
-          }
+          },
         },
         {
           label: 'Online Resources',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'online-resources');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'Report Issue',
           click: () => {
             require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/issues');
-          }
+          },
         },
         {
           label: 'Contact Support',
           click: () => {
             toolWindow.webContents.send('tool-menu-action', 'contact-support');
-          }
-        }
-      ]
-    }
+          },
+        },
+      ],
+    },
   ];
 
   // 存储工具窗口的菜单模板
@@ -952,48 +999,52 @@ function createToolWindowMenu(toolWindow, toolName) {
 function createEvo2WindowMenu(evo2Window) {
   const template = [
     // macOS app menu
-    ...(process.platform === 'darwin' ? [{
-      label: 'Evo2 Designer',
-      submenu: [
-        {
-          label: 'About Evo2 Designer',
-          click: () => {
-            evo2Window.webContents.send('evo2-menu-action', 'about');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Preferences',
-          accelerator: 'Cmd+,',
-          click: () => {
-            evo2Window.webContents.send('evo2-menu-action', 'preferences');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Hide Evo2 Designer',
-          accelerator: 'Cmd+H',
-          role: 'hide'
-        },
-        {
-          label: 'Hide Others',
-          accelerator: 'Cmd+Shift+H',
-          role: 'hideothers'
-        },
-        {
-          label: 'Show All',
-          role: 'unhide'
-        },
-        { type: 'separator' },
-        {
-          label: 'Quit',
-          accelerator: 'Cmd+Q',
-          click: () => {
-            app.quit();
-          }
-        }
-      ]
-    }] : []),
+    ...(process.platform === 'darwin'
+      ? [
+          {
+            label: 'Evo2 Designer',
+            submenu: [
+              {
+                label: 'About Evo2 Designer',
+                click: () => {
+                  evo2Window.webContents.send('evo2-menu-action', 'about');
+                },
+              },
+              { type: 'separator' },
+              {
+                label: 'Preferences',
+                accelerator: 'Cmd+,',
+                click: () => {
+                  evo2Window.webContents.send('evo2-menu-action', 'preferences');
+                },
+              },
+              { type: 'separator' },
+              {
+                label: 'Hide Evo2 Designer',
+                accelerator: 'Cmd+H',
+                role: 'hide',
+              },
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: 'Quit',
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
+      : []),
 
     // File Menu
     {
@@ -1004,7 +1055,7 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+N',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'new-project');
-          }
+          },
         },
         {
           label: 'Open Sequence File',
@@ -1017,21 +1068,21 @@ function createEvo2WindowMenu(evo2Window) {
                 { name: 'GenBank Files', extensions: ['gb', 'gbk'] },
                 { name: 'Text Files', extensions: ['txt'] },
                 { name: 'JSON Files', extensions: ['json'] },
-                { name: 'All Files', extensions: ['*'] }
-              ]
+                { name: 'All Files', extensions: ['*'] },
+              ],
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
               evo2Window.webContents.send('evo2-menu-action', 'open-sequence-file', result.filePaths[0]);
             }
-          }
+          },
         },
         {
           label: 'Import from Clipboard',
           accelerator: 'CmdOrCtrl+Shift+V',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'import-clipboard');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1039,14 +1090,14 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+S',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'save-design');
-          }
+          },
         },
         {
           label: 'Save As...',
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'save-as');
-          }
+          },
         },
         {
           label: 'Export Results',
@@ -1055,50 +1106,52 @@ function createEvo2WindowMenu(evo2Window) {
               label: 'Export as FASTA',
               click: () => {
                 evo2Window.webContents.send('evo2-menu-action', 'export-fasta');
-              }
+              },
             },
             {
               label: 'Export as GenBank',
               click: () => {
                 evo2Window.webContents.send('evo2-menu-action', 'export-genbank');
-              }
+              },
             },
             {
               label: 'Export as JSON',
               click: () => {
                 evo2Window.webContents.send('evo2-menu-action', 'export-json');
-              }
+              },
             },
             {
               label: 'Export Analysis Report',
               click: () => {
                 evo2Window.webContents.send('evo2-menu-action', 'export-report');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
-        ...(process.platform !== 'darwin' ? [
-          {
-            label: 'Exit',
-            accelerator: 'Ctrl+Q',
-            click: () => {
-              evo2Window.close();
-            }
-          }
-        ] : [
-          {
-            label: 'Close Window',
-            accelerator: 'Cmd+W',
-            click: () => {
-              evo2Window.close();
-            }
-          }
-        ])
-      ]
+        ...(process.platform !== 'darwin'
+          ? [
+              {
+                label: 'Exit',
+                accelerator: 'Ctrl+Q',
+                click: () => {
+                  evo2Window.close();
+                },
+              },
+            ]
+          : [
+              {
+                label: 'Close Window',
+                accelerator: 'Cmd+W',
+                click: () => {
+                  evo2Window.close();
+                },
+              },
+            ]),
+      ],
     },
 
-    // Edit Menu  
+    // Edit Menu
     {
       label: 'Edit',
       submenu: [
@@ -1107,14 +1160,14 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+Z',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'undo');
-          }
+          },
         },
         {
           label: 'Redo',
           accelerator: 'CmdOrCtrl+Y',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'redo');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1122,21 +1175,21 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+C',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'copy');
-          }
+          },
         },
         {
           label: 'Paste',
           accelerator: 'CmdOrCtrl+V',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'paste');
-          }
+          },
         },
         {
           label: 'Cut',
           accelerator: 'CmdOrCtrl+X',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'cut');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1144,7 +1197,7 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+A',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'select-all');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1152,23 +1205,23 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+Shift+C',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'copy-sequence');
-          }
+          },
         },
         {
           label: 'Paste Sequence',
           accelerator: 'CmdOrCtrl+Shift+V',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'paste-sequence');
-          }
+          },
         },
         {
           label: 'Clear Input',
           accelerator: 'CmdOrCtrl+Delete',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'clear-input');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // Generation Menu
@@ -1180,35 +1233,35 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+G',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'generate-sequence');
-          }
+          },
         },
         {
           label: 'Predict Function',
           accelerator: 'CmdOrCtrl+P',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'predict-function');
-          }
+          },
         },
         {
           label: 'Design CRISPR System',
           accelerator: 'CmdOrCtrl+R',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'design-crispr');
-          }
+          },
         },
         {
           label: 'Optimize Sequence',
           accelerator: 'CmdOrCtrl+Shift+O',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'optimize-sequence');
-          }
+          },
         },
         {
           label: 'Analyze Essentiality',
           accelerator: 'CmdOrCtrl+E',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'analyze-essentiality');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1216,9 +1269,9 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+.',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'stop-generation');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // Tools Menu
@@ -1230,13 +1283,13 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+Alt+C',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'configure-api');
-          }
+          },
         },
         {
           label: 'Test API Connection',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'test-api-connection');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1244,15 +1297,15 @@ function createEvo2WindowMenu(evo2Window) {
           accelerator: 'CmdOrCtrl+H',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'show-history');
-          }
+          },
         },
         {
           label: 'Clear History',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'clear-history');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // View Menu
@@ -1267,37 +1320,37 @@ function createEvo2WindowMenu(evo2Window) {
               accelerator: '1',
               click: () => {
                 evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'generate');
-              }
+              },
             },
             {
               label: 'Function Prediction',
               accelerator: '2',
               click: () => {
                 evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'predict');
-              }
+              },
             },
             {
               label: 'CRISPR Design',
               accelerator: '3',
               click: () => {
                 evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'crispr');
-              }
+              },
             },
             {
               label: 'Sequence Optimization',
               accelerator: '4',
               click: () => {
                 evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'optimize');
-              }
+              },
             },
             {
               label: 'Essentiality Analysis',
               accelerator: '5',
               click: () => {
                 evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'essentiality');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         { role: 'reload' },
@@ -1308,8 +1361,8 @@ function createEvo2WindowMenu(evo2Window) {
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { type: 'separator' },
-        { role: 'togglefullscreen' }
-      ]
+        { role: 'togglefullscreen' },
+      ],
     },
 
     // Window Menu
@@ -1317,12 +1370,7 @@ function createEvo2WindowMenu(evo2Window) {
       label: 'Window',
       submenu: [
         { role: 'minimize' },
-        ...(process.platform === 'darwin' ? [
-          { type: 'separator' },
-          { role: 'front' }
-        ] : [
-          { role: 'close' }
-        ]),
+        ...(process.platform === 'darwin' ? [{ type: 'separator' }, { role: 'front' }] : [{ role: 'close' }]),
         { type: 'separator' },
         {
           label: 'Open Main CodeXomics',
@@ -1332,9 +1380,9 @@ function createEvo2WindowMenu(evo2Window) {
               mainWindow.focus();
               mainWindow.show();
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // Help Menu
@@ -1345,30 +1393,30 @@ function createEvo2WindowMenu(evo2Window) {
           label: 'Evo2 User Guide',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'show-user-guide');
-          }
+          },
         },
         {
           label: 'NVIDIA Evo2 Documentation',
           click: () => {
             require('electron').shell.openExternal('https://docs.api.nvidia.com/nim/reference/arc-evo2-40b');
-          }
+          },
         },
         {
           label: 'Keyboard Shortcuts',
           accelerator: 'CmdOrCtrl+?',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'show-shortcuts');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'About Evo2 Designer',
           click: () => {
             evo2Window.webContents.send('evo2-menu-action', 'about');
-          }
-        }
-      ]
-    }
+          },
+        },
+      ],
+    },
   ];
 
   // Set window focus event to activate this menu
@@ -1397,6 +1445,9 @@ function createEvo2WindowMenu(evo2Window) {
 }
 
 function createWindow() {
+  // Generate a unique window ID for multi-window support
+  const windowId = generateWindowId();
+
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -1408,11 +1459,17 @@ function createWindow() {
       contextIsolation: false,
       enableRemoteModule: true,
       webSecurity: false,
-      cache: false
+      cache: false,
     },
     icon: path.join(__dirname, '../assets/icon.png'),
-    show: false
+    show: false,
   });
+
+  // Store windowId on the BrowserWindow object for easy lookup
+  mainWindow.windowId = windowId;
+
+  // Register in window registry
+  registerGenomeWindow(windowId, mainWindow);
 
   // Load the app
   mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
@@ -1420,6 +1477,9 @@ function createWindow() {
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+
+    // Send windowId to renderer process for MCPBridge identification
+    mainWindow.webContents.send('set-window-id', windowId);
 
     // Initialize RPC interface after window is ready
     genomeStudioRPC.setMainWindow(mainWindow);
@@ -1447,6 +1507,7 @@ function createWindow() {
 
   // Handle window closed
   mainWindow.on('closed', () => {
+    unregisterGenomeWindow(windowId);
     mainWindow = null;
     currentActiveWindow = null;
   });
@@ -1455,9 +1516,12 @@ function createWindow() {
 // Helper function to get the current active main window
 function getCurrentMainWindow() {
   // First try to use the tracked current active window
-  if (currentActiveWindow && !currentActiveWindow.isDestroyed() &&
+  if (
+    currentActiveWindow &&
+    !currentActiveWindow.isDestroyed() &&
     currentActiveWindow.getTitle().includes('CodeXomics') &&
-    !currentActiveWindow.getTitle().includes('Project Manager')) {
+    !currentActiveWindow.getTitle().includes('Project Manager')
+  ) {
     return currentActiveWindow;
   }
 
@@ -1467,10 +1531,8 @@ function getCurrentMainWindow() {
   }
 
   // Last resort: find any main window
-  const mainWindows = BrowserWindow.getAllWindows().filter(win =>
-    !win.isDestroyed() &&
-    win.getTitle().includes('CodeXomics') &&
-    !win.getTitle().includes('Project Manager')
+  const mainWindows = BrowserWindow.getAllWindows().filter(
+    win => !win.isDestroyed() && win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
   );
 
   return mainWindows.length > 0 ? mainWindows[0] : null;
@@ -1505,14 +1567,14 @@ function getCustomExternalToolsMenuItems() {
         type: tool.type,
         id: tool.id,
         name: tool.name,
-        url: tool.url
+        url: tool.url,
       };
 
       menuItems.push({
         label: tool.name,
         click: () => {
           createCustomExternalToolWindow(toolData);
-        }
+        },
       });
     });
   }
@@ -1524,48 +1586,52 @@ function getCustomExternalToolsMenuItems() {
 function createMenu() {
   const template = [
     // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
-    ...(process.platform === 'darwin' ? [{
-      label: 'CodeXomics',
-      submenu: [
-        {
-          label: 'About CodeXomics',
-          click: () => {
-            sendToCurrentMainWindow('show-about');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Preferences',
-          accelerator: 'Cmd+,',
-          click: () => {
-            sendToCurrentMainWindow('general-settings');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Hide CodeXomics',
-          accelerator: 'Cmd+H',
-          role: 'hide'
-        },
-        {
-          label: 'Hide Others',
-          accelerator: 'Cmd+Shift+H',
-          role: 'hideothers'
-        },
-        {
-          label: 'Show All',
-          role: 'unhide'
-        },
-        { type: 'separator' },
-        {
-          label: 'Quit CodeXomics',
-          accelerator: 'Cmd+Q',
-          click: () => {
-            app.quit();
-          }
-        }
-      ]
-    }] : []),
+    ...(process.platform === 'darwin'
+      ? [
+          {
+            label: 'CodeXomics',
+            submenu: [
+              {
+                label: 'About CodeXomics',
+                click: () => {
+                  sendToCurrentMainWindow('show-about');
+                },
+              },
+              { type: 'separator' },
+              {
+                label: 'Preferences',
+                accelerator: 'Cmd+,',
+                click: () => {
+                  sendToCurrentMainWindow('general-settings');
+                },
+              },
+              { type: 'separator' },
+              {
+                label: 'Hide CodeXomics',
+                accelerator: 'Cmd+H',
+                role: 'hide',
+              },
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: 'Quit CodeXomics',
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
+      : []),
     {
       label: 'File',
       submenu: [
@@ -1577,14 +1643,14 @@ function createMenu() {
             createProjectManagerWindow();
             // Send event to trigger new project modal after window is ready
             setTimeout(() => {
-              const projectManagerWindow = BrowserWindow.getAllWindows().find(
-                win => win.getTitle().includes('Project Manager')
+              const projectManagerWindow = BrowserWindow.getAllWindows().find(win =>
+                win.getTitle().includes('Project Manager')
               );
               if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
                 projectManagerWindow.webContents.send('create-new-project');
               }
             }, 500);
-          }
+          },
         },
         {
           label: 'Open File',
@@ -1593,20 +1659,23 @@ function createMenu() {
             const result = await dialog.showOpenDialog(mainWindow, {
               properties: ['openFile'],
               filters: [
-                { name: 'All Genome Files', extensions: ['fasta', 'fa', 'gb', 'gbk', 'genbank', 'gff', 'gtf', 'bed', 'vcf', 'bam', 'sam'] },
+                {
+                  name: 'All Genome Files',
+                  extensions: ['fasta', 'fa', 'gb', 'gbk', 'genbank', 'gff', 'gtf', 'bed', 'vcf', 'bam', 'sam'],
+                },
                 { name: 'FASTA Files', extensions: ['fasta', 'fa'] },
                 { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
                 { name: 'Annotation Files', extensions: ['gff', 'gtf', 'bed'] },
                 { name: 'Variant Files', extensions: ['vcf'] },
                 { name: 'Alignment Files', extensions: ['bam', 'sam'] },
-                { name: 'All Files', extensions: ['*'] }
-              ]
+                { name: 'All Files', extensions: ['*'] },
+              ],
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
               sendToCurrentMainWindow('file-opened', result.filePaths[0]);
             }
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1614,7 +1683,7 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+P',
           click: () => {
             createProjectManagerWindow();
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1632,36 +1701,36 @@ function createMenu() {
                   { name: 'CodeXomics Project Files', extensions: ['GAI', 'prj.GAI'] },
                   { name: 'XML Files', extensions: ['xml'] },
                   { name: 'Project Files', extensions: ['genomeproj', 'json'] },
-                  { name: 'All Files', extensions: ['*'] }
+                  { name: 'All Files', extensions: ['*'] },
                 ],
-                title: 'Open Project'
+                title: 'Open Project',
               });
 
               if (!result.canceled && result.filePaths.length > 0) {
                 // Send the file path to the Project Manager window
-                const projectManagerWindow = BrowserWindow.getAllWindows().find(
-                  win => win.getTitle().includes('Project Manager')
+                const projectManagerWindow = BrowserWindow.getAllWindows().find(win =>
+                  win.getTitle().includes('Project Manager')
                 );
                 if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
                   projectManagerWindow.webContents.send('load-project-from-menu', result.filePaths[0]);
                 }
               }
             }, 100);
-          }
+          },
         },
         {
           label: 'Save Project',
           accelerator: 'CmdOrCtrl+S',
           click: () => {
             sendToCurrentMainWindow('save-current-project');
-          }
+          },
         },
         {
           label: 'Save Project As...',
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => {
             sendToCurrentMainWindow('save-project-as');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1670,21 +1739,23 @@ function createMenu() {
           submenu: [
             {
               label: 'No recent projects',
-              enabled: false
-            }
-          ]
+              enabled: false,
+            },
+          ],
         },
-        ...(process.platform !== 'darwin' ? [
-          { type: 'separator' },
-          {
-            label: 'Exit',
-            accelerator: 'Ctrl+Q',
-            click: () => {
-              app.quit();
-            }
-          }
-        ] : [])
-      ]
+        ...(process.platform !== 'darwin'
+          ? [
+              { type: 'separator' },
+              {
+                label: 'Exit',
+                accelerator: 'Ctrl+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ]
+          : []),
+      ],
     },
     {
       label: 'Search && Edit',
@@ -1694,21 +1765,21 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+F',
           click: () => {
             sendToCurrentMainWindow('show-search');
-          }
+          },
         },
         {
           label: 'Go to Position',
           accelerator: 'CmdOrCtrl+G',
           click: () => {
             sendToCurrentMainWindow('show-goto');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'Configure Search',
           click: () => {
             sendToCurrentMainWindow('configure-search');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1716,14 +1787,14 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+U',
           click: () => {
             createUniProtWindow();
-          }
+          },
         },
         {
           label: 'Search NCBI Database',
           accelerator: 'CmdOrCtrl+Shift+N',
           click: () => {
             createNCBIWindow();
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1731,14 +1802,14 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+C',
           click: () => {
             sendToCurrentMainWindow('menu-copy');
-          }
+          },
         },
         {
           label: 'Paste',
           accelerator: 'CmdOrCtrl+V',
           click: () => {
             sendToCurrentMainWindow('menu-paste');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1746,9 +1817,9 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+A',
           click: () => {
             sendToCurrentMainWindow('menu-select-all');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'View',
@@ -1768,28 +1839,28 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+1',
           click: () => {
             sendToCurrentMainWindow('show-panel', 'fileInfoSection');
-          }
+          },
         },
         {
           label: 'Show Navigation',
           accelerator: 'CmdOrCtrl+2',
           click: () => {
             sendToCurrentMainWindow('show-panel', 'navigationSection');
-          }
+          },
         },
         {
           label: 'Show Statistics',
           accelerator: 'CmdOrCtrl+3',
           click: () => {
             sendToCurrentMainWindow('show-panel', 'statisticsSection');
-          }
+          },
         },
         {
           label: 'Show All Panels',
           accelerator: 'CmdOrCtrl+Shift+A',
           click: () => {
             sendToCurrentMainWindow('show-all-panels');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1797,14 +1868,14 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+4',
           click: () => {
             sendToCurrentMainWindow('show-panel', 'tracksSection');
-          }
+          },
         },
         {
           label: 'Show Features Panel',
           accelerator: 'CmdOrCtrl+5',
           click: () => {
             sendToCurrentMainWindow('show-panel', 'featuresSection');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1812,9 +1883,9 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+R',
           click: () => {
             sendToCurrentMainWindow('open-resource-manager');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Action',
@@ -1824,35 +1895,35 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+C',
           click: () => {
             sendToCurrentMainWindow('action-copy-sequence');
-          }
+          },
         },
         {
           label: 'Cut Sequence',
           accelerator: 'CmdOrCtrl+Shift+X',
           click: () => {
             sendToCurrentMainWindow('action-cut-sequence');
-          }
+          },
         },
         {
           label: 'Paste Sequence',
           accelerator: 'CmdOrCtrl+Shift+V',
           click: () => {
             sendToCurrentMainWindow('action-paste-sequence');
-          }
+          },
         },
         {
           label: 'Del Sequence',
           accelerator: 'CmdOrCtrl+Shift+D',
           click: () => {
             sendToCurrentMainWindow('action-delete-sequence');
-          }
+          },
         },
         {
           label: 'Insert Sequence',
           accelerator: 'CmdOrCtrl+Shift+I',
           click: () => {
             sendToCurrentMainWindow('action-insert-sequence');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1860,14 +1931,14 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+L',
           click: () => {
             sendToCurrentMainWindow('show-action-list');
-          }
+          },
         },
         {
           label: 'Execute All Actions',
           accelerator: 'CmdOrCtrl+Shift+E',
           click: () => {
             sendToCurrentMainWindow('execute-all-actions');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1875,16 +1946,16 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+P',
           click: () => {
             sendToCurrentMainWindow('create-checkpoint');
-          }
+          },
         },
         {
           label: 'Rollback to Checkpoint',
           accelerator: 'CmdOrCtrl+Shift+R',
           click: () => {
             sendToCurrentMainWindow('rollback-checkpoint');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Tools',
@@ -1894,7 +1965,7 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+C',
           click: () => {
             createCircosWindow();
-          }
+          },
         },
 
         { type: 'separator' },
@@ -1903,21 +1974,21 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+K',
           click: () => {
             createKEGGWindow();
-          }
+          },
         },
         {
           label: 'Gene Ontology (GO) Analyzer',
           accelerator: 'CmdOrCtrl+Alt+G',
           click: () => {
             createGOWindow();
-          }
+          },
         },
         {
           label: 'InterPro Domain Analysis',
           accelerator: 'CmdOrCtrl+Shift+I',
           click: () => {
             createInterProWindow();
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1925,34 +1996,34 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+W',
           click: async () => {
             await createDeepGeneResearchWindow();
-          }
+          },
         },
         {
           label: 'CHOPCHOP CRISPR Toolbox',
           accelerator: 'CmdOrCtrl+Shift+C',
           click: async () => {
             await createChopchopWindow();
-          }
+          },
         },
         {
           label: 'ProGenFixer',
           accelerator: 'CmdOrCtrl+Shift+P',
           click: async () => {
             await createProGenFixerWindow();
-          }
+          },
         },
         {
           label: 'Download BLAST+ Tools',
           accelerator: 'CmdOrCtrl+Alt+B',
           click: () => {
             createBlastDownloaderWindow();
-          }
+          },
         },
         {
           label: 'Configure BLAST Tools',
           click: () => {
             createBlastConfigWindow();
-          }
+          },
         },
         // Add custom external tools dynamically
         ...(global.customExternalTools ? getCustomExternalToolsMenuItems() : []),
@@ -1962,7 +2033,7 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Alt+T',
           click: () => {
             sendToCurrentMainWindow('configure-external-tools');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -1975,7 +2046,7 @@ function createMenu() {
               click: async () => {
                 await startUnifiedMCPServer();
                 updateMCPServerMenu();
-              }
+              },
             },
             {
               label: 'Stop CodeXomics MCP Server',
@@ -1984,31 +2055,31 @@ function createMenu() {
               click: async () => {
                 await stopUnifiedMCPServer();
                 updateMCPServerMenu();
-              }
+              },
             },
             { type: 'separator' },
             {
               label: `Status: ${unifiedServerStatus}`,
               id: 'mcp-server-status',
-              enabled: false
+              enabled: false,
             },
             {
               label: 'CodeXomics MCP Server Monitor',
               accelerator: 'CmdOrCtrl+Alt+M',
               click: () => {
                 createMCPServerMonitorWindow();
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
           label: 'External MCP Servers',
           click: () => {
             sendToCurrentMainWindow('mcp-settings');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Options',
@@ -2017,36 +2088,36 @@ function createMenu() {
           label: 'Configure LLMs',
           click: () => {
             sendToCurrentMainWindow('configure-llms');
-          }
+          },
         },
         {
           label: 'Multi-Agent Settings',
           click: () => {
             sendToCurrentMainWindow('multi-agent-settings');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'ChatBox Settings',
           click: () => {
             sendToCurrentMainWindow('chatbox-settings');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'MCP Server Settings',
           click: () => {
             sendToCurrentMainWindow('mcp-settings');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'General Settings',
           click: () => {
             sendToCurrentMainWindow('general-settings');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Plugins',
@@ -2056,15 +2127,15 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Alt+P',
           click: () => {
             sendToCurrentMainWindow('show-plugin-management');
-          }
+          },
         },
         {
           label: 'Plugin Marketplace',
           click: () => {
             sendToCurrentMainWindow('show-plugin-marketplace');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Window',
@@ -2072,7 +2143,7 @@ function createMenu() {
         {
           label: 'Minimize',
           accelerator: 'CmdOrCtrl+M',
-          role: 'minimize'
+          role: 'minimize',
         },
         {
           label: 'Close',
@@ -2082,7 +2153,7 @@ function createMenu() {
             if (focusedWindow) {
               focusedWindow.close();
             }
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -2093,98 +2164,102 @@ function createMenu() {
               accelerator: 'CmdOrCtrl+Alt+L',
               click: () => {
                 arrangeWindowsOptimal();
-              }
+              },
             },
             {
               label: 'Side by Side (50% + 50%)',
               accelerator: 'CmdOrCtrl+Alt+S',
               click: () => {
                 arrangeWindowsSideBySide();
-              }
+              },
             },
             {
               label: 'Main Window Focus',
               accelerator: 'CmdOrCtrl+Alt+M',
               click: () => {
                 arrangeMainWindowFocus();
-              }
+              },
             },
             {
               label: 'Project Manager Focus',
               accelerator: 'CmdOrCtrl+Alt+P',
               click: () => {
                 arrangeProjectManagerFocus();
-              }
+              },
             },
             { type: 'separator' },
             {
               label: 'Stack Vertically',
               click: () => {
                 arrangeWindowsVertical();
-              }
+              },
             },
             {
               label: 'Cascade Windows',
               click: () => {
                 arrangeWindowsCascade();
-              }
+              },
             },
             { type: 'separator' },
             {
               label: 'Reset to Default Positions',
               click: () => {
                 resetWindowPositions();
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
-        ...(process.platform === 'darwin' ? [
-          { type: 'separator' },
-          {
-            label: 'Bring All to Front',
-            role: 'front'
-          }
-        ] : [])
-      ]
+        ...(process.platform === 'darwin'
+          ? [
+              { type: 'separator' },
+              {
+                label: 'Bring All to Front',
+                role: 'front',
+              },
+            ]
+          : []),
+      ],
     },
     {
       label: 'Help',
       submenu: [
-        ...(process.platform !== 'darwin' ? [
-          {
-            label: `About ${APP_NAME}`,
-            click: () => {
-              const currentWindow = getCurrentMainWindow();
-              dialog.showMessageBox(currentWindow || null, {
-                type: 'info',
-                title: `About ${APP_NAME}`,
-                message: VERSION_INFO.appTitle,
-                detail: 'A modern AI-powered genome analysis studio built with Electron'
-              });
-            }
-          },
-          { type: 'separator' }
-        ] : []),
+        ...(process.platform !== 'darwin'
+          ? [
+              {
+                label: `About ${APP_NAME}`,
+                click: () => {
+                  const currentWindow = getCurrentMainWindow();
+                  dialog.showMessageBox(currentWindow || null, {
+                    type: 'info',
+                    title: `About ${APP_NAME}`,
+                    message: VERSION_INFO.appTitle,
+                    detail: 'A modern AI-powered genome analysis studio built with Electron',
+                  });
+                },
+              },
+              { type: 'separator' },
+            ]
+          : []),
         {
           label: 'User Guide',
           accelerator: 'F1',
           click: () => {
             sendToCurrentMainWindow('show-user-guide');
-          }
+          },
         },
         {
           label: 'Documentation',
           click: () => {
             require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/docs');
-          }
+          },
         },
         {
           label: 'Report Issue',
           click: () => {
             require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/issues');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     // 添加 CodeXomics 品牌菜单项（仅在 macOS 上）
     {
@@ -2199,39 +2274,39 @@ function createMenu() {
               title: `About ${APP_NAME}`,
               message: VERSION_INFO.appTitle,
               detail: 'An intelligent genome analysis platform with AI-powered features.',
-              buttons: ['OK']
+              buttons: ['OK'],
             });
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'Services',
           role: 'services',
-          submenu: []
+          submenu: [],
         },
         { type: 'separator' },
         {
           label: `Hide ${APP_NAME}`,
           accelerator: 'Command+H',
-          role: 'hide'
+          role: 'hide',
         },
         {
           label: 'Hide Others',
           accelerator: 'Command+Shift+H',
-          role: 'hideothers'
+          role: 'hideothers',
         },
         {
           label: 'Show All',
-          role: 'unhide'
+          role: 'unhide',
         },
         { type: 'separator' },
         {
           label: `Quit ${APP_NAME}`,
           accelerator: 'Command+Q',
-          click: () => app.quit()
-        }
-      ]
-    }
+          click: () => app.quit(),
+        },
+      ],
+    },
   ];
 
   const menu = Menu.buildFromTemplate(template);
@@ -2258,7 +2333,7 @@ function setupEnvironmentVariables() {
     path.join(homeDir, 'Applications', 'blast+', 'bin'),
     path.join(homeDir, '.local', 'blast+', 'bin'),
     path.join(homeDir, '.local', 'bin'),
-    '/opt/blast+/bin'
+    '/opt/blast+/bin',
   ];
 
   // Add common BLAST+ paths to PATH
@@ -2298,7 +2373,7 @@ app.whenReady().then(async () => {
   try {
     await i18n.init();
     // Setup IPC handlers for language change events
-    i18n.setupIPC((newLang) => {
+    i18n.setupIPC(newLang => {
       // Notify all windows about language change
       BrowserWindow.getAllWindows().forEach(win => {
         win.webContents.send('language-changed', newLang);
@@ -2404,10 +2479,12 @@ app.on('open-file', (event, filePath) => {
 // This needs to be set up before app.whenReady() but we'll check in whenReady too
 const commandLineFiles = process.argv.slice(1).filter(arg => {
   // Filter out electron executable and flags
-  return !arg.startsWith('--') &&
+  return (
+    !arg.startsWith('--') &&
     !arg.includes('electron') &&
     arg !== '.' &&
-    (arg.endsWith('.gbk') || arg.endsWith('.gb') || arg.endsWith('.genbank') || arg.endsWith('.gbff'));
+    (arg.endsWith('.gbk') || arg.endsWith('.gb') || arg.endsWith('.genbank') || arg.endsWith('.gbff'))
+  );
 });
 
 if (commandLineFiles.length > 0) {
@@ -2455,16 +2532,15 @@ ipcMain.on('tool-execution', async (event, data) => {
       requestId,
       toolName,
       parameters,
-      clientId
+      clientId,
     });
-
   } catch (error) {
     console.error('❌ [Main] Tool execution forwarding failed:', error);
     // Send error response back to MCP server
     event.sender.send('tool-response', {
       requestId,
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -2502,7 +2578,7 @@ ipcMain.handle('get-plugin-paths', async () => {
   return {
     isDevelopment,
     builtinPluginsPath,
-    userPluginsPath
+    userPluginsPath,
   };
 });
 
@@ -2537,7 +2613,7 @@ ipcMain.handle('list-plugins', async (event, pluginPath) => {
       .map(item => ({
         id: item.name,
         path: path.join(pluginPath, item.name),
-        hasManifest: fs.existsSync(path.join(pluginPath, item.name, 'plugin.json'))
+        hasManifest: fs.existsSync(path.join(pluginPath, item.name, 'plugin.json')),
       }));
 
     return { success: true, plugins };
@@ -2556,8 +2632,8 @@ ipcMain.handle('select-plugin-file', async () => {
     properties: ['openFile', 'openDirectory'],
     filters: [
       { name: 'Plugin Files', extensions: ['js', 'zip'] },
-      { name: 'All Files', extensions: ['*'] }
-    ]
+      { name: 'All Files', extensions: ['*'] },
+    ],
   });
   return result;
 });
@@ -2573,12 +2649,12 @@ ipcMain.handle('get-plugin-file-info', async (event, filePath) => {
       isDirectory: stats.isDirectory(),
       isFile: stats.isFile(),
       size: stats.size,
-      modified: stats.mtime
+      modified: stats.mtime,
     };
   } catch (error) {
     return {
       exists: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -2613,13 +2689,13 @@ ipcMain.handle('scan-plugin-directory', async () => {
         return {
           isDevelopment,
           builtinPluginsPath: path.join(__dirname, 'renderer', 'modules', 'Plugins'),
-          userPluginsPath: path.join(__dirname, 'renderer', 'modules', 'Plugins', 'UserInstalled')
+          userPluginsPath: path.join(__dirname, 'renderer', 'modules', 'Plugins', 'UserInstalled'),
         };
       } else {
         return {
           isDevelopment,
           builtinPluginsPath: path.join(process.resourcesPath, 'app.asar', 'src', 'renderer', 'modules', 'Plugins'),
-          userPluginsPath: path.join(app.getPath('userData'), 'plugins')
+          userPluginsPath: path.join(app.getPath('userData'), 'plugins'),
         };
       }
     })();
@@ -2629,7 +2705,7 @@ ipcMain.handle('scan-plugin-directory', async () => {
     // Scan both plugin directories
     const dirsToScan = [
       { path: paths.builtinPluginsPath, type: 'builtin' },
-      { path: paths.userPluginsPath, type: 'user' }
+      { path: paths.userPluginsPath, type: 'user' },
     ];
 
     for (const dirInfo of dirsToScan) {
@@ -2660,7 +2736,7 @@ ipcMain.handle('scan-plugin-directory', async () => {
                 path: itemPath,
                 hasManifest: true,
                 functions: manifest.functions || [],
-                main: manifest.main || 'index.js'
+                main: manifest.main || 'index.js',
               });
             } catch (error) {
               console.error(`Failed to parse manifest for ${item.name}:`, error);
@@ -2704,7 +2780,7 @@ ipcMain.handle('scan-plugin-directory', async () => {
               file: item.name,
               path: itemPath,
               hasManifest: false,
-              isStandalone: true
+              isStandalone: true,
             });
           } catch (error) {
             console.error(`Failed to read plugin file ${item.name}:`, error);
@@ -2718,15 +2794,15 @@ ipcMain.handle('scan-plugin-directory', async () => {
       plugins,
       paths: {
         builtinPluginsPath: paths.builtinPluginsPath,
-        userPluginsPath: paths.userPluginsPath
-      }
+        userPluginsPath: paths.userPluginsPath,
+      },
     };
   } catch (error) {
     console.error('Failed to scan plugin directory:', error);
     return {
       success: false,
       error: error.message,
-      plugins: []
+      plugins: [],
     };
   }
 });
@@ -2758,8 +2834,8 @@ ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
             description: pkg.description || 'No description',
             version: pkg.version,
             author: pkg.author || 'Unknown',
-            main: pkg.main || 'index.js'
-          }
+            main: pkg.main || 'index.js',
+          },
         };
       }
     } else if (stats.isFile() && pluginPath.endsWith('.js')) {
@@ -2773,7 +2849,7 @@ ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
         description: 'No description',
         version: '1.0.0',
         author: 'Unknown',
-        functions: []
+        functions: [],
       };
 
       // Extract metadata from JSDoc comments
@@ -2786,7 +2862,9 @@ ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
       }
 
       // Try to extract function names
-      const functionMatches = content.match(/(?:async\s+)?function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?function|(?:async\s+)?(\w+)\s*\(/g);
+      const functionMatches = content.match(
+        /(?:async\s+)?function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?function|(?:async\s+)?(\w+)\s*\(/g
+      );
       if (functionMatches) {
         metadata.functions = functionMatches.map(match => {
           const name = match.match(/\w+/g)[match.includes('function') ? 1 : 0];
@@ -2799,13 +2877,13 @@ ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
 
     return {
       success: false,
-      error: 'Not a valid plugin file or directory'
+      error: 'Not a valid plugin file or directory',
     };
   } catch (error) {
     console.error('Failed to load plugin metadata:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -2823,12 +2901,12 @@ ipcMain.handle('extract-plugin-zip', async (event, zipPath) => {
     // For now, return error indicating zip extraction not implemented
     return {
       success: false,
-      error: 'ZIP extraction not yet implemented. Please extract manually and select the plugin directory.'
+      error: 'ZIP extraction not yet implemented. Please extract manually and select the plugin directory.',
     };
   } catch (error) {
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -2940,14 +3018,12 @@ ipcMain.handle('write-plugin-files', async (event, options) => {
           // If adm-zip is not available or extraction fails, keep the ZIP for manual extraction
           console.log(`[Main] ZIP extraction not available, keeping ZIP file: ${extractError.message}`);
         }
-
       } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
         // Binary data (ArrayBuffer/TypedArray) - should not normally reach here after IPC
         const zipPath = path.join(installPath, `${pluginId}.zip`);
         const buffer = Buffer.from(data);
         fs.writeFileSync(zipPath, buffer);
         console.log(`[Main] Wrote binary data (${buffer.length} bytes): ${zipPath}`);
-
       } else if (typeof data === 'object' && !Array.isArray(data)) {
         // JSON package (mock package with files object)
         for (const [filename, content] of Object.entries(data)) {
@@ -2983,14 +3059,13 @@ ipcMain.handle('write-plugin-files', async (event, options) => {
     return {
       success: true,
       installPath,
-      files: fs.readdirSync(installPath)
+      files: fs.readdirSync(installPath),
     };
-
   } catch (error) {
     console.error(`[Main] Failed to write plugin files for ${pluginId}:`, error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -3008,7 +3083,7 @@ ipcMain.handle('load-plugin-from-disk', async (event, options) => {
     if (!fs.existsSync(installPath)) {
       return {
         success: false,
-        error: `Plugin directory not found: ${installPath}`
+        error: `Plugin directory not found: ${installPath}`,
       };
     }
 
@@ -3017,7 +3092,7 @@ ipcMain.handle('load-plugin-from-disk', async (event, options) => {
     if (!fs.existsSync(manifestPath)) {
       return {
         success: false,
-        error: `Plugin manifest not found: ${manifestPath}`
+        error: `Plugin manifest not found: ${manifestPath}`,
       };
     }
 
@@ -3041,14 +3116,13 @@ ipcMain.handle('load-plugin-from-disk', async (event, options) => {
       manifest,
       files,
       indexContent,
-      installPath
+      installPath,
     };
-
   } catch (error) {
     console.error(`[Main] Failed to load plugin ${pluginId}:`, error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -3067,14 +3141,14 @@ ipcMain.handle('delete-plugin-files', async (event, options) => {
       console.log(`[Main] Plugin directory doesn't exist, nothing to delete: ${installPath}`);
       return {
         success: true,
-        message: 'Plugin directory already deleted'
+        message: 'Plugin directory already deleted',
       };
     }
 
     // Recursively delete the plugin directory
-    const deleteRecursive = (dirPath) => {
+    const deleteRecursive = dirPath => {
       if (fs.existsSync(dirPath)) {
-        fs.readdirSync(dirPath).forEach((file) => {
+        fs.readdirSync(dirPath).forEach(file => {
           const curPath = path.join(dirPath, file);
           if (fs.lstatSync(curPath).isDirectory()) {
             deleteRecursive(curPath);
@@ -3093,14 +3167,13 @@ ipcMain.handle('delete-plugin-files', async (event, options) => {
     return {
       success: true,
       pluginId,
-      deletedPath: installPath
+      deletedPath: installPath,
     };
-
   } catch (error) {
     console.error(`[Main] Failed to delete plugin ${pluginId}:`, error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -3120,7 +3193,7 @@ ipcMain.handle('read-file', async (event, filePath) => {
         success: false,
         error: 'BAM files are binary format and should be handled by specialized BAM reader.',
         isBamFile: true,
-        fileSize: stats.size
+        fileSize: stats.size,
       };
     }
 
@@ -3131,7 +3204,7 @@ ipcMain.handle('read-file', async (event, filePath) => {
         success: false,
         error: `File is too large (${fileSizeMB.toFixed(1)} MB) to read into memory. Use streaming mode instead.`,
         requiresStreaming: true,
-        fileSize: stats.size
+        fileSize: stats.size,
       };
     }
 
@@ -3180,7 +3253,7 @@ ipcMain.handle('write-file', async (event, filePath, content) => {
         success: true,
         filePath: filePath,
         fileName: path.basename(filePath),
-        fileSize: stats.size
+        fileSize: stats.size,
       };
     } else {
       throw new Error('File was not created successfully');
@@ -3208,10 +3281,10 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
     return new Promise((resolve, reject) => {
       const stream = fs.createReadStream(filePath, {
         encoding: 'utf8',
-        highWaterMark: chunkSize
+        highWaterMark: chunkSize,
       });
 
-      stream.on('data', (chunk) => {
+      stream.on('data', chunk => {
         try {
           totalRead += Buffer.byteLength(chunk, 'utf8');
           buffer += chunk;
@@ -3231,8 +3304,11 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
           event.sender.send('file-read-progress', { progress, totalRead, fileSize });
 
           // Log progress for very large files
-          if (totalRead % (50 * 1024 * 1024) === 0) { // Every 50MB
-            console.log(`Stream progress: ${(totalRead / (1024 * 1024)).toFixed(1)} MB / ${(fileSize / (1024 * 1024)).toFixed(1)} MB`);
+          if (totalRead % (50 * 1024 * 1024) === 0) {
+            // Every 50MB
+            console.log(
+              `Stream progress: ${(totalRead / (1024 * 1024)).toFixed(1)} MB / ${(fileSize / (1024 * 1024)).toFixed(1)} MB`
+            );
           }
         } catch (chunkError) {
           console.error('Error processing chunk:', chunkError);
@@ -3260,7 +3336,7 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
         }
       });
 
-      stream.on('error', (error) => {
+      stream.on('error', error => {
         console.error('Stream error:', error);
         reject({ success: false, error: `File read error: ${error.message}` });
       });
@@ -3280,8 +3356,8 @@ ipcMain.handle('get-file-info', async (event, filePath) => {
         size: stats.size,
         modified: stats.mtime,
         name: path.basename(filePath),
-        extension: path.extname(filePath)
-      }
+        extension: path.extname(filePath),
+      },
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -3300,13 +3376,32 @@ ipcMain.handle('select-attachment-files', async (event, options = {}) => {
     const result = await dialog.showOpenDialog(null, {
       title: options.title || 'Select Attachment Files',
       filters: options.filters || [
-        { name: 'All Supported Files', extensions: ['pdf', 'md', 'txt', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'json', 'html'] },
+        {
+          name: 'All Supported Files',
+          extensions: [
+            'pdf',
+            'md',
+            'txt',
+            'png',
+            'jpg',
+            'jpeg',
+            'gif',
+            'svg',
+            'doc',
+            'docx',
+            'xls',
+            'xlsx',
+            'csv',
+            'json',
+            'html',
+          ],
+        },
         { name: 'Documents', extensions: ['pdf', 'doc', 'docx', 'txt', 'md'] },
         { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg'] },
         { name: 'Data Files', extensions: ['csv', 'json', 'xls', 'xlsx'] },
-        { name: 'All Files', extensions: ['*'] }
+        { name: 'All Files', extensions: ['*'] },
       ],
-      properties: options.properties || ['openFile', 'multiSelections']
+      properties: options.properties || ['openFile', 'multiSelections'],
     });
 
     if (result.canceled) {
@@ -3316,9 +3411,8 @@ ipcMain.handle('select-attachment-files', async (event, options = {}) => {
     return {
       success: true,
       filePaths: result.filePaths,
-      fileCount: result.filePaths.length
+      fileCount: result.filePaths.length,
     };
-
   } catch (error) {
     console.error('Error selecting attachment files:', error);
     return { success: false, error: error.message };
@@ -3356,9 +3450,8 @@ ipcMain.handle('copy-attachment-file', async (event, sourcePath, targetDir, file
       success: true,
       targetPath: targetPath,
       filename: targetFilename,
-      size: stats.size
+      size: stats.size,
     };
-
   } catch (error) {
     console.error('Error copying attachment file:', error);
     return { success: false, error: error.message };
@@ -3383,7 +3476,6 @@ ipcMain.handle('delete-attachment-file', async (event, filePath) => {
     console.log(`🗑️ Attachment deleted: ${filePath}`);
 
     return { success: true, message: 'Attachment deleted successfully' };
-
   } catch (error) {
     console.error('Error deleting attachment file:', error);
     return { success: false, error: error.message };
@@ -3408,7 +3500,6 @@ ipcMain.handle('open-attachment-file', async (event, filePath) => {
 
     console.log(`📂 Opened attachment: ${filePath}`);
     return { success: true };
-
   } catch (error) {
     console.error('Error opening attachment file:', error);
     return { success: false, error: error.message };
@@ -3418,7 +3509,7 @@ ipcMain.handle('open-attachment-file', async (event, filePath) => {
 /**
  * Get the base storage path for gene attachments
  */
-ipcMain.handle('get-attachments-storage-path', async (event) => {
+ipcMain.handle('get-attachments-storage-path', async event => {
   try {
     // Use app's user data directory for attachments storage
     const userDataPath = app.getPath('userData');
@@ -3431,9 +3522,8 @@ ipcMain.handle('get-attachments-storage-path', async (event) => {
 
     return {
       success: true,
-      path: attachmentsPath
+      path: attachmentsPath,
     };
-
   } catch (error) {
     console.error('Error getting attachments storage path:', error);
     return { success: false, error: error.message };
@@ -3478,10 +3568,10 @@ ipcMain.handle('download-internet-file', async (event, options) => {
 
     const fullPath = path.join(destDir, extractedFilename);
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const file = fs.createWriteStream(fullPath);
 
-      const request = protocol.get(url, (response) => {
+      const request = protocol.get(url, response => {
         // Handle redirects
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           console.log(`📥 [Download] Following redirect to: ${response.headers.location}`);
@@ -3492,7 +3582,7 @@ ipcMain.handle('download-internet-file', async (event, options) => {
           ipcMain.emit('download-internet-file', event, {
             url: response.headers.location,
             destinationPath,
-            filename
+            filename,
           });
           return;
         }
@@ -3502,7 +3592,7 @@ ipcMain.handle('download-internet-file', async (event, options) => {
           fs.unlinkSync(fullPath);
           resolve({
             success: false,
-            error: `HTTP Error: ${response.statusCode} ${response.statusMessage}`
+            error: `HTTP Error: ${response.statusCode} ${response.statusMessage}`,
           });
           return;
         }
@@ -3510,7 +3600,7 @@ ipcMain.handle('download-internet-file', async (event, options) => {
         const contentLength = parseInt(response.headers['content-length'], 10);
         let downloadedBytes = 0;
 
-        response.on('data', (chunk) => {
+        response.on('data', chunk => {
           downloadedBytes += chunk.length;
           if (contentLength) {
             const progress = Math.round((downloadedBytes / contentLength) * 100);
@@ -3519,7 +3609,7 @@ ipcMain.handle('download-internet-file', async (event, options) => {
               url,
               progress,
               downloadedBytes,
-              totalBytes: contentLength
+              totalBytes: contentLength,
             });
           }
         });
@@ -3535,12 +3625,12 @@ ipcMain.handle('download-internet-file', async (event, options) => {
             filePath: fullPath,
             filename: extractedFilename,
             fileSize: stats.size,
-            url: url
+            url: url,
           });
         });
       });
 
-      request.on('error', (error) => {
+      request.on('error', error => {
         file.close();
         if (fs.existsSync(fullPath)) {
           fs.unlinkSync(fullPath);
@@ -3558,7 +3648,6 @@ ipcMain.handle('download-internet-file', async (event, options) => {
         resolve({ success: false, error: 'Download timeout (60 seconds)' });
       });
     });
-
   } catch (error) {
     console.error(`❌ [Download] Error:`, error);
     return { success: false, error: error.message };
@@ -3603,14 +3692,14 @@ ipcMain.handle('open-markdown-viewer', async (event, options) => {
         nodeIntegration: false,
         contextIsolation: true,
         enableRemoteModule: false,
-        preload: path.join(__dirname, 'preload.js')
+        preload: path.join(__dirname, 'preload.js'),
       },
       title: windowTitle,
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       resizable: true,
       minimizable: true,
       maximizable: true,
-      show: false
+      show: false,
     });
 
     // Load markdown viewer HTML
@@ -3630,7 +3719,7 @@ ipcMain.handle('open-markdown-viewer', async (event, options) => {
         content: content,
         filePath: filePath,
         fileName: fileName,
-        title: windowTitle
+        title: windowTitle,
       });
     });
 
@@ -3644,9 +3733,8 @@ ipcMain.handle('open-markdown-viewer', async (event, options) => {
       success: true,
       filePath: filePath,
       fileName: fileName,
-      windowTitle: windowTitle
+      windowTitle: windowTitle,
     };
-
   } catch (error) {
     console.error(`❌ [Markdown Viewer] Error:`, error);
     return { success: false, error: error.message };
@@ -3766,7 +3854,6 @@ function createMarkdownViewerHTML(content, title) {
 
 // ===== End Utility Tools IPC Handlers =====
 
-
 // Handle directory selection for benchmark default directory
 ipcMain.handle('show-directory-dialog', async (event, options = {}) => {
   try {
@@ -3774,21 +3861,21 @@ ipcMain.handle('show-directory-dialog', async (event, options = {}) => {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openDirectory'],
       title: options.title || 'Select Directory',
-      defaultPath: options.defaultPath || undefined
+      defaultPath: options.defaultPath || undefined,
     });
 
     if (!result.canceled && result.filePaths.length > 0) {
       return {
         success: true,
         canceled: false,
-        filePaths: result.filePaths
+        filePaths: result.filePaths,
       };
     }
 
     return {
       success: true,
       canceled: true,
-      filePaths: []
+      filePaths: [],
     };
   } catch (error) {
     console.error('Error in show-directory-dialog:', error);
@@ -3796,7 +3883,7 @@ ipcMain.handle('show-directory-dialog', async (event, options = {}) => {
       success: false,
       error: error.message,
       canceled: true,
-      filePaths: []
+      filePaths: [],
     };
   }
 });
@@ -3832,7 +3919,7 @@ async function startUnifiedMCPServer() {
       mainWindow.webContents.send('mcp-server-status-changed', {
         status: 'running',
         httpPort: 3002,
-        wsPort: 3003
+        wsPort: 3003,
       });
     }
 
@@ -3870,7 +3957,7 @@ async function stopUnifiedMCPServer() {
     // Notify renderer process
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('mcp-server-status-changed', {
-        status: 'stopped'
+        status: 'stopped',
       });
     }
 
@@ -3923,9 +4010,9 @@ function createMCPServerMonitorWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
     },
-    icon: path.join(__dirname, '../assets/icon.png')
+    icon: path.join(__dirname, '../assets/icon.png'),
   });
 
   // Load the MCP Server Monitor HTML
@@ -3943,7 +4030,7 @@ function createMCPServerMonitorWindow() {
       isRunning: unifiedServerStatus === 'running',
       httpPort: unifiedServerStatus === 'running' ? 3002 : null,
       wsPort: unifiedServerStatus === 'running' ? 3003 : null,
-      connectedClients: unifiedMCPServer ? unifiedMCPServer.getConnectedClientsCount() : 0
+      connectedClients: unifiedMCPServer ? unifiedMCPServer.getConnectedClientsCount() : 0,
     });
   });
 }
@@ -3964,7 +4051,7 @@ ipcMain.handle('mcp-server-start', async () => {
         status: 'running',
         serverType: 'unified-claude-mcp',
         httpPort: 3002,
-        wsPort: 3003
+        wsPort: 3003,
       };
     }
 
@@ -3978,11 +4065,22 @@ ipcMain.handle('mcp-server-start', async () => {
       // Create Unified Claude MCP server with ports 3002 and 3003, and main window
       unifiedMCPServer = new UnifiedClaudeMCPServer(3002, 3003, mainWindow);
 
+      // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
+      unifiedMCPServer.setMainWindowRegistry(windowRegistry);
+
       // Start the server
       await unifiedMCPServer.start();
 
       unifiedServerStatus = 'running';
       console.log('Unified Claude MCP Server started successfully on ports 3002 (HTTP) and 3003 (WebSocket)');
+
+      // Multi-window support: Also populate the server's local IPC registry for routing
+      for (const [windowId, info] of windowRegistry.entries()) {
+        if (info.window && !info.window.isDestroyed()) {
+          unifiedMCPServer.registerWindow(windowId, info.window);
+          console.log(`📋 [MCP Server] Registered existing window for IPC routing: ${windowId}`);
+        }
+      }
 
       return {
         success: true,
@@ -3990,7 +4088,7 @@ ipcMain.handle('mcp-server-start', async () => {
         status: 'running',
         serverType: 'unified-claude-mcp',
         httpPort: 3002,
-        wsPort: 3003
+        wsPort: 3003,
       };
     } catch (error) {
       unifiedServerStatus = 'stopped';
@@ -4000,7 +4098,7 @@ ipcMain.handle('mcp-server-start', async () => {
       return {
         success: false,
         message: `Failed to start Unified Claude MCP Server: ${error.message}`,
-        status: 'stopped'
+        status: 'stopped',
       };
     }
   } catch (error) {
@@ -4027,7 +4125,7 @@ ipcMain.handle('mcp-server-stop', async () => {
         success: true,
         message: 'Unified Claude MCP Server stopped successfully',
         status: 'stopped',
-        serverType: 'unified-claude-mcp'
+        serverType: 'unified-claude-mcp',
       };
     }
 
@@ -4054,12 +4152,46 @@ ipcMain.handle('mcp-server-status', async () => {
     serverType: unifiedServerStatus === 'running' ? 'unified-claude-mcp' : 'none',
     httpPort: unifiedServerStatus === 'running' ? 3002 : null,
     wsPort: unifiedServerStatus === 'running' ? 3003 : null,
-    connectedClients: unifiedMCPServer ? unifiedMCPServer.getConnectedClientsCount() : 0
+    connectedClients: unifiedMCPServer ? unifiedMCPServer.getConnectedClientsCount() : 0,
   };
 });
 
+// Multi-window genome support: IPC handlers for window registry
+ipcMain.handle('list-genome-windows', async () => {
+  return Array.from(windowRegistry.entries()).map(([id, info]) => ({
+    windowId: id,
+    genomeName: info.genomeName,
+    isFocused: info.window && !info.window.isDestroyed() ? info.window.isFocused() : false,
+    isDestroyed: info.window ? info.window.isDestroyed() : true,
+  }));
+});
+
+// Renderer calls this when a genome file is loaded to update the registry
+ipcMain.on('update-window-genome-name', (event, { windowId, genomeName }) => {
+  const entry = windowRegistry.get(windowId);
+  if (entry) {
+    entry.genomeName = genomeName;
+    console.log(`📋 [WindowRegistry] Updated genome name for ${windowId}: ${genomeName}`);
+  }
+});
+
+// Get the windowId for the sender window
+ipcMain.handle('get-window-id', async event => {
+  const senderWindow = BrowserWindow.fromWebContents(event.sender);
+  if (senderWindow && senderWindow.windowId) {
+    return senderWindow.windowId;
+  }
+  // Fallback: find in registry
+  for (const [windowId, info] of windowRegistry.entries()) {
+    if (info.window && !info.window.isDestroyed() && info.window.webContents === event.sender) {
+      return windowId;
+    }
+  }
+  return null;
+});
+
 // Handle opening resource manager
-ipcMain.on('open-resource-manager', (event) => {
+ipcMain.on('open-resource-manager', event => {
   try {
     // Create new window for the resource manager
     const resourceManagerWindow = new BrowserWindow({
@@ -4069,14 +4201,14 @@ ipcMain.on('open-resource-manager', (event) => {
         nodeIntegration: false,
         contextIsolation: true,
         enableRemoteModule: false,
-        preload: path.join(__dirname, 'preload.js')
+        preload: path.join(__dirname, 'preload.js'),
       },
       title: 'Resource Manager - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       resizable: true,
       minimizable: true,
       maximizable: true,
-      show: false
+      show: false,
     });
 
     // Load the resource manager HTML
@@ -4100,7 +4232,6 @@ ipcMain.on('open-resource-manager', (event) => {
     resourceManagerWindow.on('closed', () => {
       console.log('Resource Manager window closed');
     });
-
   } catch (error) {
     console.error('Failed to open Resource Manager:', error);
   }
@@ -4125,9 +4256,9 @@ ipcMain.handle('get-loaded-resources', async () => {
         metadata: {
           organism: 'Escherichia coli K-12',
           version: 'RefSeq',
-          source: 'NCBI'
-        }
-      }
+          source: 'NCBI',
+        },
+      },
     ];
 
     return { success: true, resources: mockResources };
@@ -4187,9 +4318,12 @@ ipcMain.handle('select-and-load-file', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile'],
       filters: [
-        { name: 'Genome Files', extensions: ['fasta', 'fa', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'fastq', 'fq'] },
-        { name: 'All Files', extensions: ['*'] }
-      ]
+        {
+          name: 'Genome Files',
+          extensions: ['fasta', 'fa', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'fastq', 'fq'],
+        },
+        { name: 'All Files', extensions: ['*'] },
+      ],
     });
 
     if (!result.canceled && result.filePaths.length > 0) {
@@ -4231,11 +4365,11 @@ ipcMain.handle('openDebugTool', async (event, fileName) => {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: `Debug Tool - ${fileName}`,
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
-      show: false
+      show: false,
     });
 
     // Construct path to debug tool file
@@ -4285,11 +4419,11 @@ function createCircosWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'Circos Genome Plotter - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
-      show: false
+      show: false,
     });
 
     const circosPath = path.join(__dirname, 'circos-plotter.html');
@@ -4329,16 +4463,13 @@ function createCircosWindow() {
         }
       }
     });
-
   } catch (error) {
     console.error('Failed to open Circos Genome Plotter:', error);
   }
 }
 
-
-
 // Handle genome data requests from Circos Plotter
-ipcMain.handle('get-circos-genome-data', async (event) => {
+ipcMain.handle('get-circos-genome-data', async event => {
   try {
     // Get the sender window (Circos window)
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
@@ -4688,11 +4819,11 @@ function createKEGGWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'KEGG Pathway Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     keggWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/kegg-analyzer.html'));
@@ -4708,7 +4839,6 @@ function createKEGGWindow() {
     keggWindow.on('closed', () => {
       console.log('KEGG Pathway Analysis window closed');
     });
-
   } catch (error) {
     console.error('Failed to open KEGG Pathway Analysis:', error);
   }
@@ -4726,11 +4856,11 @@ function createGOWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'Gene Ontology (GO) Analyzer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     goWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/go-analyzer.html'));
@@ -4746,7 +4876,6 @@ function createGOWindow() {
     goWindow.on('closed', () => {
       console.log('GO Analyzer window closed');
     });
-
   } catch (error) {
     console.error('Failed to open GO Analyzer:', error);
   }
@@ -4764,11 +4893,11 @@ function createUniProtWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'Search UniProt Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     uniprotWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/uniprot-search.html'));
@@ -4784,7 +4913,6 @@ function createUniProtWindow() {
     uniprotWindow.on('closed', () => {
       console.log('UniProt Search window closed');
     });
-
   } catch (error) {
     console.error('Failed to open UniProt Search:', error);
   }
@@ -4802,11 +4930,11 @@ function createInterProWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'InterPro Domain Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     interproWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/interpro-analyzer.html'));
@@ -4822,7 +4950,6 @@ function createInterProWindow() {
     interproWindow.on('closed', () => {
       console.log('InterPro Analyzer window closed');
     });
-
   } catch (error) {
     console.error('Failed to open InterPro Analyzer:', error);
   }
@@ -4840,11 +4967,11 @@ function createNCBIWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'Search NCBI Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     ncbiWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/ncbi-browser.html'));
@@ -4860,12 +4987,10 @@ function createNCBIWindow() {
     ncbiWindow.on('closed', () => {
       console.log('NCBI Browser window closed');
     });
-
   } catch (error) {
     console.error('Failed to open NCBI Browser:', error);
   }
 }
-
 
 // ========== ANALYSIS TOOLS ==========
 
@@ -4881,11 +5006,11 @@ function createSTRINGWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'STRING Protein Networks - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     stringWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/string-networks.html'));
@@ -4901,7 +5026,6 @@ function createSTRINGWindow() {
     stringWindow.on('closed', () => {
       console.log('STRING Networks window closed');
     });
-
   } catch (error) {
     console.error('Failed to open STRING Networks:', error);
   }
@@ -4919,11 +5043,11 @@ function createDAVIDWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'DAVID Functional Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     davidWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/david-analyzer.html'));
@@ -4939,7 +5063,6 @@ function createDAVIDWindow() {
     davidWindow.on('closed', () => {
       console.log('DAVID Analyzer window closed');
     });
-
   } catch (error) {
     console.error('Failed to open DAVID Analyzer:', error);
   }
@@ -4957,11 +5080,11 @@ function createReactomeWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'Reactome Pathway Browser - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     reactomeWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/reactome-browser.html'));
@@ -4977,7 +5100,6 @@ function createReactomeWindow() {
     reactomeWindow.on('closed', () => {
       console.log('Reactome Browser window closed');
     });
-
   } catch (error) {
     console.error('Failed to open Reactome Browser:', error);
   }
@@ -4995,11 +5117,11 @@ function createPDBWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'PDB Structure Viewer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     pdbWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/pdb-viewer.html'));
@@ -5015,13 +5137,10 @@ function createPDBWindow() {
     pdbWindow.on('closed', () => {
       console.log('PDB Structure Viewer window closed');
     });
-
   } catch (error) {
     console.error('Failed to open PDB Structure Viewer:', error);
   }
 }
-
-
 
 // Create Evo2 Design Window
 function createEvo2Window() {
@@ -5035,11 +5154,11 @@ function createEvo2Window() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'NVIDIA Evo2 DNA Designer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     evo2Window.loadFile(path.join(__dirname, 'bioinformatics-tools/evo2-designer.html'));
@@ -5055,7 +5174,6 @@ function createEvo2Window() {
     evo2Window.on('closed', () => {
       console.log('Evo2 Design window closed');
     });
-
   } catch (error) {
     console.error('Failed to open Evo2 Design:', error);
   }
@@ -5073,11 +5191,11 @@ function createGeneAnnotationRefineWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'Gene Annotation Refine - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
 
     geneAnnotationRefineWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/gene-annotation-refine.html'));
@@ -5093,7 +5211,6 @@ function createGeneAnnotationRefineWindow() {
     geneAnnotationRefineWindow.on('closed', () => {
       console.log('Gene Annotation Refine window closed');
     });
-
   } catch (error) {
     console.error('Failed to open Gene Annotation Refine:', error);
   }
@@ -5111,14 +5228,14 @@ function createBlastDownloaderWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'BLAST+ Tools Downloader - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
       resizable: true,
       minimizable: true,
-      maximizable: true
+      maximizable: true,
     });
 
     blastDownloaderWindow.loadFile(path.join(__dirname, 'blast-downloader.html'));
@@ -5142,7 +5259,6 @@ function createBlastDownloaderWindow() {
     });
 
     console.log('BLAST+ Downloader window created');
-
   } catch (error) {
     console.error('Failed to open BLAST+ Downloader:', error);
   }
@@ -5160,14 +5276,14 @@ function createBlastConfigWindow() {
         nodeIntegration: true,
         contextIsolation: false,
         enableRemoteModule: true,
-        webSecurity: false
+        webSecurity: false,
       },
       title: 'Configure BLAST Tools - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
       resizable: true,
       minimizable: true,
-      maximizable: false
+      maximizable: false,
     });
 
     blastConfigWindow.loadFile(path.join(__dirname, 'blast-config.html'));
@@ -5191,7 +5307,6 @@ function createBlastConfigWindow() {
     });
 
     console.log('BLAST Configuration window created');
-
   } catch (error) {
     console.error('Failed to open BLAST Configuration:', error);
   }
@@ -5201,48 +5316,52 @@ function createBlastConfigWindow() {
 function createDeepGeneResearchMenu(deepGeneResearchWindow) {
   const template = [
     // macOS app menu
-    ...(process.platform === 'darwin' ? [{
-      label: 'CodeXomics',
-      submenu: [
-        {
-          label: 'About Deep Gene Research',
-          click: () => {
-            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Preferences',
-          accelerator: 'Cmd+,',
-          click: () => {
-            deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'preferences');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: `Hide ${APP_NAME}`,
-          accelerator: 'Cmd+H',
-          role: 'hide'
-        },
-        {
-          label: 'Hide Others',
-          accelerator: 'Cmd+Shift+H',
-          role: 'hideothers'
-        },
-        {
-          label: 'Show All',
-          role: 'unhide'
-        },
-        { type: 'separator' },
-        {
-          label: `Quit ${APP_NAME}`,
-          accelerator: 'Cmd+Q',
-          click: () => {
-            app.quit();
-          }
-        }
-      ]
-    }] : []),
+    ...(process.platform === 'darwin'
+      ? [
+          {
+            label: 'CodeXomics',
+            submenu: [
+              {
+                label: 'About Deep Gene Research',
+                click: () => {
+                  deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
+                },
+              },
+              { type: 'separator' },
+              {
+                label: 'Preferences',
+                accelerator: 'Cmd+,',
+                click: () => {
+                  deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'preferences');
+                },
+              },
+              { type: 'separator' },
+              {
+                label: `Hide ${APP_NAME}`,
+                accelerator: 'Cmd+H',
+                role: 'hide',
+              },
+              {
+                label: 'Hide Others',
+                accelerator: 'Cmd+Shift+H',
+                role: 'hideothers',
+              },
+              {
+                label: 'Show All',
+                role: 'unhide',
+              },
+              { type: 'separator' },
+              {
+                label: `Quit ${APP_NAME}`,
+                accelerator: 'Cmd+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ],
+          },
+        ]
+      : []),
     {
       label: 'File',
       submenu: [
@@ -5251,14 +5370,14 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           accelerator: 'CmdOrCtrl+N',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'new-analysis');
-          }
+          },
         },
         {
           label: 'Open',
           accelerator: 'CmdOrCtrl+O',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'open');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -5266,34 +5385,36 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           accelerator: 'CmdOrCtrl+S',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'save-results');
-          }
+          },
         },
         {
           label: 'Export Data',
           accelerator: 'CmdOrCtrl+E',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'export-data');
-          }
+          },
         },
         { type: 'separator' },
-        ...(process.platform !== 'darwin' ? [
-          {
-            label: 'Exit',
-            accelerator: 'Ctrl+Q',
-            click: () => {
-              app.quit();
-            }
-          }
-        ] : [
-          {
-            label: 'Close Window',
-            accelerator: 'Cmd+W',
-            click: () => {
-              deepGeneResearchWindow.close();
-            }
-          }
-        ])
-      ]
+        ...(process.platform !== 'darwin'
+          ? [
+              {
+                label: 'Exit',
+                accelerator: 'Ctrl+Q',
+                click: () => {
+                  app.quit();
+                },
+              },
+            ]
+          : [
+              {
+                label: 'Close Window',
+                accelerator: 'Cmd+W',
+                click: () => {
+                  deepGeneResearchWindow.close();
+                },
+              },
+            ]),
+      ],
     },
     {
       label: 'Edit',
@@ -5303,21 +5424,21 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           accelerator: 'CmdOrCtrl+C',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'copy');
-          }
+          },
         },
         {
           label: 'Paste',
           accelerator: 'CmdOrCtrl+V',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'paste');
-          }
+          },
         },
         {
           label: 'Cut',
           accelerator: 'CmdOrCtrl+X',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'cut');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -5325,7 +5446,7 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           accelerator: 'CmdOrCtrl+A',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'select-all');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -5333,16 +5454,16 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           accelerator: 'CmdOrCtrl+F',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'find');
-          }
+          },
         },
         {
           label: 'Find Next',
           accelerator: 'F3',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'find-next');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'View',
@@ -5352,21 +5473,21 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           accelerator: 'CmdOrCtrl+R',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'reload');
-          }
+          },
         },
         {
           label: 'Force Reload',
           accelerator: 'CmdOrCtrl+Shift+R',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'force-reload');
-          }
+          },
         },
         {
           label: 'Toggle Developer Tools',
           accelerator: 'F12',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'toggle-dev-tools');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -5374,21 +5495,21 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           accelerator: 'CmdOrCtrl+0',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'reset-zoom');
-          }
+          },
         },
         {
           label: 'Zoom In',
           accelerator: 'CmdOrCtrl+Plus',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'zoom-in');
-          }
+          },
         },
         {
           label: 'Zoom Out',
           accelerator: 'CmdOrCtrl+-',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'zoom-out');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -5396,9 +5517,9 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           accelerator: 'F11',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'toggle-fullscreen');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Tools',
@@ -5411,7 +5532,7 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
               mainWindow.focus();
               mainWindow.show();
             }
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -5419,56 +5540,58 @@ function createDeepGeneResearchMenu(deepGeneResearchWindow) {
           accelerator: 'F5',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'reload');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: 'Help',
       submenu: [
-        ...(process.platform !== 'darwin' ? [
-          {
-            label: 'About Deep Gene Research',
-            click: () => {
-              deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
-            }
-          },
-          { type: 'separator' }
-        ] : []),
+        ...(process.platform !== 'darwin'
+          ? [
+              {
+                label: 'About Deep Gene Research',
+                click: () => {
+                  deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'about');
+                },
+              },
+              { type: 'separator' },
+            ]
+          : []),
         {
           label: 'User Guide',
           accelerator: 'F1',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'user-guide');
-          }
+          },
         },
         {
           label: 'Tool Documentation',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'documentation');
-          }
+          },
         },
         {
           label: 'Online Resources',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'online-resources');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'Report Issue',
           click: () => {
             require('electron').shell.openExternal('https://github.com/Scilence2022/CodeXomics/issues');
-          }
+          },
         },
         {
           label: 'Contact Support',
           click: () => {
             deepGeneResearchWindow.webContents.send('deep-gene-research-menu-action', 'contact-support');
-          }
-        }
-      ]
-    }
+          },
+        },
+      ],
+    },
   ];
 
   // Store menu template
@@ -5520,18 +5643,24 @@ async function createProGenFixerWindow() {
           console.log('✅ Using ProGenFixer URL from settings:', progenFixerUrl);
         } else {
           console.log('⚠️ No ProGenFixer URL found in settings, using default:', progenFixerUrl);
-          showSettingsWarning('ProGenFixer URL not configured',
-            'Using default URL (https://progenfixer.biodesign.ac.cn). You can configure the URL in General Settings → Features → External Tools.');
+          showSettingsWarning(
+            'ProGenFixer URL not configured',
+            'Using default URL (https://progenfixer.biodesign.ac.cn). You can configure the URL in General Settings → Features → External Tools.'
+          );
         }
       } else {
         console.log('⚠️ Main window not available, using default URL:', progenFixerUrl);
-        showSettingsWarning('Main window not available',
-          'Using default URL (https://progenfixer.biodesign.ac.cn). Please ensure the main window is open.');
+        showSettingsWarning(
+          'Main window not available',
+          'Using default URL (https://progenfixer.biodesign.ac.cn). Please ensure the main window is open.'
+        );
       }
     } catch (error) {
       console.warn('❌ Failed to get ProGenFixer URL from settings, using default:', error.message);
-      showSettingsError('Failed to load ProGenFixer settings',
-        `Using default URL (https://progenfixer.biodesign.ac.cn) due to error: ${error.message}. Please check your settings configuration.`);
+      showSettingsError(
+        'Failed to load ProGenFixer settings',
+        `Using default URL (https://progenfixer.biodesign.ac.cn) due to error: ${error.message}. Please check your settings configuration.`
+      );
     }
 
     console.log('🔧 Creating ProGenFixer window with URL:', progenFixerUrl);
@@ -5549,7 +5678,7 @@ async function createProGenFixerWindow() {
         allowRunningInsecureContent: true,
         // Enable clipboard and keyboard functionality
         experimentalFeatures: true,
-        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
+        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
       },
       title: 'ProGenFixer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5557,7 +5686,7 @@ async function createProGenFixerWindow() {
       resizable: true,
       minimizable: true,
       maximizable: true,
-      closable: true
+      closable: true,
     });
 
     console.log('✅ ProGenFixer BrowserWindow created successfully');
@@ -5649,7 +5778,6 @@ async function createProGenFixerWindow() {
     });
 
     console.log('🎯 ProGenFixer window creation process completed');
-
   } catch (error) {
     console.error('❌ Error creating ProGenFixer window:', error);
     console.error('❌ Error stack:', error.stack);
@@ -5688,19 +5816,25 @@ async function createDeepGeneResearchWindow(params = {}) {
         } else {
           console.log('⚠️ No Deep Gene Research URL found in settings, using default:', deepGeneResearchUrl);
           // Show notification to user about using default URL
-          showSettingsWarning('Deep Gene Research URL not configured',
-            'Using default URL (http://43.196.74.134:3000). You can configure the URL in General Settings → Features → External Tools.');
+          showSettingsWarning(
+            'Deep Gene Research URL not configured',
+            'Using default URL (http://43.196.74.134:3000). You can configure the URL in General Settings → Features → External Tools.'
+          );
         }
       } else {
         console.log('⚠️ Main window not available, using default URL:', deepGeneResearchUrl);
-        showSettingsWarning('Main window not available',
-          'Using default URL (http://43.196.74.134:3000). Please ensure the main window is open.');
+        showSettingsWarning(
+          'Main window not available',
+          'Using default URL (http://43.196.74.134:3000). Please ensure the main window is open.'
+        );
       }
     } catch (error) {
       console.warn('❌ Failed to get Deep Gene Research URL from settings, using default:', error.message);
       // Show error notification to user
-      showSettingsError('Failed to load Deep Gene Research settings',
-        `Using default URL (http://43.196.74.134:3000) due to error: ${error.message}. Please check your settings configuration.`);
+      showSettingsError(
+        'Failed to load Deep Gene Research settings',
+        `Using default URL (http://43.196.74.134:3000) due to error: ${error.message}. Please check your settings configuration.`
+      );
     }
 
     // Add parameters to URL if provided
@@ -5730,7 +5864,7 @@ async function createDeepGeneResearchWindow(params = {}) {
         allowRunningInsecureContent: true,
         // Enable clipboard and keyboard functionality
         experimentalFeatures: true,
-        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
+        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
       },
       title: 'Deep Gene Research - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5738,7 +5872,7 @@ async function createDeepGeneResearchWindow(params = {}) {
       resizable: true,
       minimizable: true,
       maximizable: true,
-      autoHideMenuBar: false
+      autoHideMenuBar: false,
     });
 
     console.log('✅ Deep Gene Research BrowserWindow created successfully');
@@ -5893,7 +6027,6 @@ async function createDeepGeneResearchWindow(params = {}) {
     }, 4000);
 
     console.log('🎯 Deep Gene Research window creation process completed');
-
   } catch (error) {
     console.error('Error creating Deep Gene Research window:', error);
 
@@ -5931,18 +6064,24 @@ async function createChopchopWindow() {
           console.log('✅ Using CHOPCHOP URL from settings:', chopchopUrl);
         } else {
           console.log('⚠️ No CHOPCHOP URL found in settings, using default:', chopchopUrl);
-          showSettingsWarning('CHOPCHOP URL not configured',
-            'Using default URL (https://chopchop.cbu.uib.no/). You can configure the URL in General Settings → Features → External Tools.');
+          showSettingsWarning(
+            'CHOPCHOP URL not configured',
+            'Using default URL (https://chopchop.cbu.uib.no/). You can configure the URL in General Settings → Features → External Tools.'
+          );
         }
       } else {
         console.log('⚠️ Main window not available, using default URL:', chopchopUrl);
-        showSettingsWarning('Main window not available',
-          'Using default URL (https://chopchop.cbu.uib.no/). Please ensure the main window is open.');
+        showSettingsWarning(
+          'Main window not available',
+          'Using default URL (https://chopchop.cbu.uib.no/). Please ensure the main window is open.'
+        );
       }
     } catch (error) {
       console.warn('❌ Failed to get CHOPCHOP URL from settings, using default:', error.message);
-      showSettingsError('Failed to load CHOPCHOP settings',
-        `Using default URL (https://chopchop.cbu.uib.no/) due to error: ${error.message}. Please check your settings configuration.`);
+      showSettingsError(
+        'Failed to load CHOPCHOP settings',
+        `Using default URL (https://chopchop.cbu.uib.no/) due to error: ${error.message}. Please check your settings configuration.`
+      );
     }
 
     console.log('🔧 Creating CHOPCHOP window with URL:', chopchopUrl);
@@ -5960,7 +6099,7 @@ async function createChopchopWindow() {
         allowRunningInsecureContent: true,
         // Enable clipboard and keyboard functionality
         experimentalFeatures: true,
-        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
+        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
       },
       title: 'CHOPCHOP CRISPR Toolbox - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5968,7 +6107,7 @@ async function createChopchopWindow() {
       resizable: true,
       minimizable: true,
       maximizable: true,
-      closable: true
+      closable: true,
     });
 
     console.log('✅ CHOPCHOP BrowserWindow created successfully');
@@ -6010,8 +6149,10 @@ async function createChopchopWindow() {
       console.error('❌ CHOPCHOP window failed to load:', errorDescription);
       console.error('❌ Error code:', errorCode);
       console.error('❌ Validated URL:', validatedURL);
-      showSettingsError('Failed to load CHOPCHOP CRISPR Toolbox',
-        `Could not load ${validatedURL}. Please check the URL in General Settings → Features → External Tools.`);
+      showSettingsError(
+        'Failed to load CHOPCHOP CRISPR Toolbox',
+        `Could not load ${validatedURL}. Please check the URL in General Settings → Features → External Tools.`
+      );
     });
 
     // Add additional event listeners for debugging
@@ -6055,12 +6196,10 @@ async function createChopchopWindow() {
     }, 1000);
 
     console.log('🎯 CHOPCHOP window creation process completed');
-
   } catch (error) {
     console.error('❌ Error creating CHOPCHOP window:', error);
     console.error('❌ Error stack:', error.stack);
-    showSettingsError('Error opening CHOPCHOP CRISPR Toolbox',
-      `Failed to open CHOPCHOP window: ${error.message}`);
+    showSettingsError('Error opening CHOPCHOP CRISPR Toolbox', `Failed to open CHOPCHOP window: ${error.message}`);
   }
 }
 
@@ -6088,7 +6227,7 @@ async function createCustomExternalToolWindow(toolData) {
         webSecurity: false,
         allowRunningInsecureContent: true,
         experimentalFeatures: true,
-        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite'
+        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
       },
       title: `${toolData.name} - CodeXomics`,
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -6096,7 +6235,7 @@ async function createCustomExternalToolWindow(toolData) {
       resizable: true,
       minimizable: true,
       maximizable: true,
-      closable: true
+      closable: true,
     });
 
     // Load the tool URL
@@ -6117,16 +6256,16 @@ async function createCustomExternalToolWindow(toolData) {
     // Handle navigation errors
     customToolWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
       console.error(`❌ Custom external tool failed to load: ${errorDescription}`);
-      showSettingsError(`Failed to load ${toolData.name}`,
-        `Could not load ${validatedURL}. Please check the URL configuration.`);
+      showSettingsError(
+        `Failed to load ${toolData.name}`,
+        `Could not load ${validatedURL}. Please check the URL configuration.`
+      );
     });
 
     console.log(`✅ Custom external tool window created: ${toolData.name}`);
-
   } catch (error) {
     console.error(`❌ Error creating custom external tool window for ${toolData.name}:`, error);
-    showSettingsError(`Error opening ${toolData.name}`,
-      `Failed to open ${toolData.name}: ${error.message}`);
+    showSettingsError(`Error opening ${toolData.name}`, `Failed to open ${toolData.name}: ${error.message}`);
   }
 }
 
@@ -6157,7 +6296,6 @@ ipcMain.on('open-ncbi-window', () => {
   console.log('IPC: Opening NCBI window...');
   createNCBIWindow();
 });
-
 
 ipcMain.on('open-string-window', () => {
   console.log('IPC: Opening STRING window...');
@@ -6244,7 +6382,7 @@ ipcMain.on('analyze-in-chatbox', (event, request) => {
       query: request.query,
       toolName: request.toolName,
       data: request.data,
-      timestamp: request.timestamp
+      timestamp: request.timestamp,
     });
 
     console.log(`[ChatBox Integration] Forwarded request to ChatBox from ${request.toolName}`);
@@ -6260,7 +6398,8 @@ ipcMain.on('request-llm-interpretation', (event, request) => {
   const mainWindow = getCurrentMainWindow();
   if (mainWindow && mainWindow.webContents) {
     // Format the interpretation request
-    const interpretQuery = `Please provide a detailed biological interpretation of the following ${request.toolName} results:\n\n` +
+    const interpretQuery =
+      `Please provide a detailed biological interpretation of the following ${request.toolName} results:\n\n` +
       `Analysis Type: ${request.context.analysisType}\n` +
       `Number of Results: ${request.context.resultCount}\n\n` +
       `Please explain the biological significance and functional implications of these findings.`;
@@ -6270,7 +6409,7 @@ ipcMain.on('request-llm-interpretation', (event, request) => {
       data: request.data,
       context: request.context,
       toolName: request.toolName,
-      responseTarget: event.sender
+      responseTarget: event.sender,
     });
 
     console.log(`[ChatBox Integration] Sent interpretation request to ChatBox`);
@@ -6284,7 +6423,7 @@ ipcMain.on('llm-interpretation-response', (event, response) => {
   if (response.targetWindow && response.targetWindow.send) {
     response.targetWindow.send('llm-interpretation-result', {
       interpretation: response.interpretation,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 });
@@ -6298,7 +6437,7 @@ ipcMain.on('send-to-analyzer', (event, request) => {
     results: request.data,
     source: 'chatbox',
     originalQuery: request.originalQuery,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 
   // Open the appropriate analyzer window
@@ -6382,7 +6521,7 @@ function showSettingsWarning(title, message) {
       type: 'warning',
       title: title,
       message: message,
-      duration: 5000
+      duration: 5000,
     });
   }
 }
@@ -6394,7 +6533,7 @@ function showSettingsError(title, message) {
       type: 'error',
       title: title,
       message: message,
-      duration: 8000
+      duration: 8000,
     });
   }
 }
@@ -6538,7 +6677,7 @@ ipcMain.handle('evo2-set-analysis-history', async (event, history) => {
 });
 
 // IPC handler for BLAST installation check
-ipcMain.on('check-blast-installation', (event) => {
+ipcMain.on('check-blast-installation', event => {
   console.log('IPC: Checking BLAST installation...');
   const { exec } = require('child_process');
   const path = require('path');
@@ -6547,7 +6686,7 @@ ipcMain.on('check-blast-installation', (event) => {
 
   // Function to check BLAST+ at specific path
   function checkBlastAtPath(blastPath) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const command = `"${blastPath}" -version`;
       console.log('Checking BLAST at:', command);
 
@@ -6561,7 +6700,7 @@ ipcMain.on('check-blast-installation', (event) => {
             found: true,
             version: version,
             path: blastPath,
-            output: stdout
+            output: stdout,
           });
         }
       });
@@ -6579,7 +6718,7 @@ ipcMain.on('check-blast-installation', (event) => {
       path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'),
       path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'),
       path.join(homeDir, '.local', 'bin', 'blastn'),
-      '/opt/blast+/bin/blastn'
+      '/opt/blast+/bin/blastn',
     ];
 
     // First try direct command execution (for PATH-based installations)
@@ -6610,33 +6749,35 @@ ipcMain.on('check-blast-installation', (event) => {
   }
 
   // Execute the search
-  findBlastExecutable().then(result => {
-    if (result.found) {
-      event.sender.send('blast-check-result', {
-        installed: true,
-        message: `BLAST+ installed successfully (version ${result.version})`,
-        version: result.version,
-        path: result.path,
-        output: result.output
-      });
-    } else {
+  findBlastExecutable()
+    .then(result => {
+      if (result.found) {
+        event.sender.send('blast-check-result', {
+          installed: true,
+          message: `BLAST+ installed successfully (version ${result.version})`,
+          version: result.version,
+          path: result.path,
+          output: result.output,
+        });
+      } else {
+        event.sender.send('blast-check-result', {
+          installed: false,
+          message: 'BLAST+ not found or not installed',
+          error: result.error,
+        });
+      }
+    })
+    .catch(error => {
       event.sender.send('blast-check-result', {
         installed: false,
-        message: 'BLAST+ not found or not installed',
-        error: result.error
+        message: 'Error checking BLAST+ installation',
+        error: error.message,
       });
-    }
-  }).catch(error => {
-    event.sender.send('blast-check-result', {
-      installed: false,
-      message: 'Error checking BLAST+ installation',
-      error: error.message
     });
-  });
 });
 
 // IPC handler for system requirements check
-ipcMain.on('system-requirements-check', (event) => {
+ipcMain.on('system-requirements-check', event => {
   console.log('IPC: Checking system requirements...');
   const os = require('os');
   const { exec } = require('child_process');
@@ -6646,9 +6787,9 @@ ipcMain.on('system-requirements-check', (event) => {
     arch: os.arch(),
     release: os.release(),
     nodeVersion: process.version,
-    totalMemory: (os.totalmem() / (1024 ** 3)).toFixed(2) + ' GB',
-    freeMemory: (os.freemem() / (1024 ** 3)).toFixed(2) + ' GB',
-    cpus: os.cpus().length
+    totalMemory: (os.totalmem() / 1024 ** 3).toFixed(2) + ' GB',
+    freeMemory: (os.freemem() / 1024 ** 3).toFixed(2) + ' GB',
+    cpus: os.cpus().length,
   };
 
   // Check disk space
@@ -6661,7 +6802,7 @@ ipcMain.on('system-requirements-check', (event) => {
           total: diskInfo[1],
           used: diskInfo[2],
           available: diskInfo[3],
-          usage: diskInfo[4]
+          usage: diskInfo[4],
         };
       }
     }
@@ -6672,12 +6813,12 @@ ipcMain.on('system-requirements-check', (event) => {
         minimumMemory: '4 GB',
         recommendedMemory: '8 GB',
         minimumDiskSpace: '1 GB',
-        supportedPlatforms: ['Windows', 'macOS', 'Linux']
+        supportedPlatforms: ['Windows', 'macOS', 'Linux'],
       },
       status: {
         memoryOk: parseFloat(systemInfo.totalMemory) >= 4,
-        platformSupported: ['win32', 'darwin', 'linux'].includes(os.platform())
-      }
+        platformSupported: ['win32', 'darwin', 'linux'].includes(os.platform()),
+      },
     });
   });
 });
@@ -6695,9 +6836,10 @@ ipcMain.on('focus-main-window', () => {
 
 // Create Project Manager Window
 function createProjectManagerWindow() {
-  try {  // Check if Project Manager window already exists in this process
-    const existingPMWindow = BrowserWindow.getAllWindows().find(win =>
-      win.getTitle().includes('Project Manager') && !win.isDestroyed()
+  try {
+    // Check if Project Manager window already exists in this process
+    const existingPMWindow = BrowserWindow.getAllWindows().find(
+      win => win.getTitle().includes('Project Manager') && !win.isDestroyed()
     );
 
     if (existingPMWindow) {
@@ -6714,14 +6856,14 @@ function createProjectManagerWindow() {
         nodeIntegration: false,
         contextIsolation: true,
         enableRemoteModule: false,
-        preload: path.join(__dirname, 'preload.js')
+        preload: path.join(__dirname, 'preload.js'),
       },
       title: 'Project Manager - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       resizable: true,
       minimizable: true,
       maximizable: true,
-      show: false
+      show: false,
     });
 
     // ... existing code ...
@@ -6741,8 +6883,8 @@ function createProjectManagerWindow() {
     // Handle window focus lost - revert to main menu if main window exists
     projectManagerWindow.on('blur', () => {
       // Find any main window (including newly created ones)
-      const mainWindows = BrowserWindow.getAllWindows().filter(win =>
-        win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
+      const mainWindows = BrowserWindow.getAllWindows().filter(
+        win => win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
       );
 
       if (mainWindows.length > 0) {
@@ -6782,8 +6924,8 @@ function createProjectManagerWindow() {
     // Handle window closed - revert to main menu
     projectManagerWindow.on('closed', () => {
       console.log('Project Manager window closed - reverting to main menu');
-      const mainWindow = BrowserWindow.getAllWindows().find(win =>
-        win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
+      const mainWindow = BrowserWindow.getAllWindows().find(
+        win => win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager')
       );
       if (mainWindow && !mainWindow.isDestroyed()) {
         createMenu(); // Restore main window menu
@@ -6793,7 +6935,6 @@ function createProjectManagerWindow() {
     console.log('Project Manager window created successfully with independent menu');
 
     return projectManagerWindow;
-
   } catch (error) {
     console.error('Failed to open Project Manager:', error);
   }
@@ -6811,7 +6952,7 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+N',
           click: () => {
             projectManagerWindow.webContents.send('menu-new-project');
-          }
+          },
         },
         {
           label: 'Open Project...',
@@ -6823,25 +6964,25 @@ function createProjectManagerMenu(projectManagerWindow) {
                 { name: 'CodeXomics Project Files', extensions: ['GAI', 'prj.GAI'] },
                 { name: 'XML Files', extensions: ['xml'] },
                 { name: 'Project Files', extensions: ['genomeproj', 'json'] },
-                { name: 'All Files', extensions: ['*'] }
+                { name: 'All Files', extensions: ['*'] },
               ],
-              title: 'Open Project'
+              title: 'Open Project',
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
               projectManagerWindow.webContents.send('menu-open-project', result.filePaths[0]);
             }
-          }
+          },
         },
         {
           label: 'Open Recent',
           submenu: [
             {
               label: 'No Recent Projects',
-              enabled: false
-            }
+              enabled: false,
+            },
             // Recent projects will be dynamically populated
-          ]
+          ],
         },
         { type: 'separator' },
         {
@@ -6849,14 +6990,14 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+S',
           click: () => {
             projectManagerWindow.webContents.send('menu-save-project');
-          }
+          },
         },
         {
           label: 'Save Project As...',
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => {
             projectManagerWindow.webContents.send('menu-save-project-as');
-          }
+          },
         },
         {
           label: 'Export Project',
@@ -6865,21 +7006,21 @@ function createProjectManagerMenu(projectManagerWindow) {
               label: 'Export as XML',
               click: () => {
                 projectManagerWindow.webContents.send('menu-export-xml');
-              }
+              },
             },
             {
               label: 'Export as JSON',
               click: () => {
                 projectManagerWindow.webContents.send('menu-export-json');
-              }
+              },
             },
             {
               label: 'Export Project Archive',
               click: () => {
                 projectManagerWindow.webContents.send('menu-export-archive');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
@@ -6889,16 +7030,36 @@ function createProjectManagerMenu(projectManagerWindow) {
             const result = await dialog.showOpenDialog(projectManagerWindow, {
               properties: ['openFile', 'multiSelections'],
               filters: [
-                { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] },
-                { name: 'All Files', extensions: ['*'] }
+                {
+                  name: 'Genome Files',
+                  extensions: [
+                    'fasta',
+                    'fa',
+                    'fas',
+                    'gff',
+                    'gff3',
+                    'gtf',
+                    'vcf',
+                    'bam',
+                    'sam',
+                    'wig',
+                    'bw',
+                    'bigwig',
+                    'bed',
+                    'gb',
+                    'gbk',
+                    'gbff',
+                  ],
+                },
+                { name: 'All Files', extensions: ['*'] },
               ],
-              title: 'Import Files to Project'
+              title: 'Import Files to Project',
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
               projectManagerWindow.webContents.send('menu-import-files', result.filePaths);
             }
-          }
+          },
         },
         {
           label: 'Import Project...',
@@ -6907,15 +7068,15 @@ function createProjectManagerMenu(projectManagerWindow) {
               properties: ['openFile'],
               filters: [
                 { name: 'Project Files', extensions: ['prj.GAI', 'xml', 'json', 'genomeproj'] },
-                { name: 'All Files', extensions: ['*'] }
+                { name: 'All Files', extensions: ['*'] },
               ],
-              title: 'Import Project'
+              title: 'Import Project',
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
               projectManagerWindow.webContents.send('menu-import-project', result.filePaths[0]);
             }
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -6923,16 +7084,16 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+W',
           click: () => {
             projectManagerWindow.webContents.send('menu-close-project');
-          }
+          },
         },
         {
           label: 'Close Window',
           accelerator: process.platform === 'darwin' ? 'Cmd+Shift+W' : 'Ctrl+Shift+W',
           click: () => {
             projectManagerWindow.close();
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // Search && Edit Menu
@@ -6944,14 +7105,14 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+F',
           click: () => {
             projectManagerWindow.webContents.send('menu-find-files');
-          }
+          },
         },
         {
           label: 'Find and Replace...',
           accelerator: 'CmdOrCtrl+H',
           click: () => {
             projectManagerWindow.webContents.send('menu-find-replace');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -6959,14 +7120,14 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+Z',
           click: () => {
             projectManagerWindow.webContents.send('menu-undo');
-          }
+          },
         },
         {
           label: 'Redo',
           accelerator: process.platform === 'darwin' ? 'Cmd+Shift+Z' : 'Ctrl+Y',
           click: () => {
             projectManagerWindow.webContents.send('menu-redo');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -6974,21 +7135,21 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+X',
           click: () => {
             projectManagerWindow.webContents.send('menu-cut');
-          }
+          },
         },
         {
           label: 'Copy',
           accelerator: 'CmdOrCtrl+C',
           click: () => {
             projectManagerWindow.webContents.send('menu-copy');
-          }
+          },
         },
         {
           label: 'Paste',
           accelerator: 'CmdOrCtrl+V',
           click: () => {
             projectManagerWindow.webContents.send('menu-paste');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -6996,16 +7157,16 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+A',
           click: () => {
             projectManagerWindow.webContents.send('menu-select-all');
-          }
+          },
         },
         {
           label: 'Clear Selection',
           accelerator: 'Escape',
           click: () => {
             projectManagerWindow.webContents.send('menu-clear-selection');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // View Menu
@@ -7017,7 +7178,7 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'F5',
           click: () => {
             projectManagerWindow.webContents.send('menu-refresh');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -7029,23 +7190,23 @@ function createProjectManagerMenu(projectManagerWindow) {
               checked: true,
               click: () => {
                 projectManagerWindow.webContents.send('menu-view-mode', 'grid');
-              }
+              },
             },
             {
               label: 'List View',
               type: 'radio',
               click: () => {
                 projectManagerWindow.webContents.send('menu-view-mode', 'list');
-              }
+              },
             },
             {
               label: 'Details View',
               type: 'radio',
               click: () => {
                 projectManagerWindow.webContents.send('menu-view-mode', 'details');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         {
           label: 'Sort By',
@@ -7056,46 +7217,46 @@ function createProjectManagerMenu(projectManagerWindow) {
               checked: true,
               click: () => {
                 projectManagerWindow.webContents.send('menu-sort-by', 'name');
-              }
+              },
             },
             {
               label: 'Date Modified',
               type: 'radio',
               click: () => {
                 projectManagerWindow.webContents.send('menu-sort-by', 'modified');
-              }
+              },
             },
             {
               label: 'Size',
               type: 'radio',
               click: () => {
                 projectManagerWindow.webContents.send('menu-sort-by', 'size');
-              }
+              },
             },
             {
               label: 'Type',
               type: 'radio',
               click: () => {
                 projectManagerWindow.webContents.send('menu-sort-by', 'type');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
           label: 'Show Hidden Files',
           type: 'checkbox',
-          click: (menuItem) => {
+          click: menuItem => {
             projectManagerWindow.webContents.send('menu-toggle-hidden-files', menuItem.checked);
-          }
+          },
         },
         {
           label: 'Show File Extensions',
           type: 'checkbox',
           checked: true,
-          click: (menuItem) => {
+          click: menuItem => {
             projectManagerWindow.webContents.send('menu-toggle-file-extensions', menuItem.checked);
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -7103,14 +7264,14 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'F8',
           click: () => {
             projectManagerWindow.webContents.send('menu-toggle-sidebar');
-          }
+          },
         },
         {
           label: 'Toggle Details Panel',
           accelerator: 'F9',
           click: () => {
             projectManagerWindow.webContents.send('menu-toggle-details-panel');
-          }
+          },
         },
         {
           label: 'Toggle Full Screen',
@@ -7118,7 +7279,7 @@ function createProjectManagerMenu(projectManagerWindow) {
           click: () => {
             const isFullScreen = projectManagerWindow.isFullScreen();
             projectManagerWindow.setFullScreen(!isFullScreen);
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -7126,23 +7287,23 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: process.platform === 'darwin' ? 'Cmd+Alt+I' : 'Ctrl+Shift+I',
           click: () => {
             projectManagerWindow.webContents.toggleDevTools();
-          }
+          },
         },
         {
           label: 'Reload',
           accelerator: 'CmdOrCtrl+R',
           click: () => {
             projectManagerWindow.webContents.reload();
-          }
+          },
         },
         {
           label: 'Force Reload',
           accelerator: 'CmdOrCtrl+Shift+R',
           click: () => {
             projectManagerWindow.webContents.reloadIgnoringCache();
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // Project Menu
@@ -7154,13 +7315,13 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+Shift+P',
           click: () => {
             projectManagerWindow.webContents.send('menu-project-properties');
-          }
+          },
         },
         {
           label: 'Project Statistics',
           click: () => {
             projectManagerWindow.webContents.send('menu-project-statistics');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -7168,7 +7329,7 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+Shift+N',
           click: () => {
             projectManagerWindow.webContents.send('menu-create-folder');
-          }
+          },
         },
         {
           label: 'Organize Files',
@@ -7177,49 +7338,49 @@ function createProjectManagerMenu(projectManagerWindow) {
               label: 'Auto-organize by Type',
               click: () => {
                 projectManagerWindow.webContents.send('menu-auto-organize');
-              }
+              },
             },
             {
               label: 'Group by Date',
               click: () => {
                 projectManagerWindow.webContents.send('menu-group-by-date');
-              }
+              },
             },
             {
               label: 'Clean Empty Folders',
               click: () => {
                 projectManagerWindow.webContents.send('menu-clean-empty-folders');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
           label: 'Backup Project',
           click: () => {
             projectManagerWindow.webContents.send('menu-backup-project');
-          }
+          },
         },
         {
           label: 'Restore from Backup',
           click: () => {
             projectManagerWindow.webContents.send('menu-restore-backup');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'Archive Project',
           click: () => {
             projectManagerWindow.webContents.send('menu-archive-project');
-          }
+          },
         },
         {
           label: 'Delete Project',
           click: () => {
             projectManagerWindow.webContents.send('menu-delete-project');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // Tools Menu
@@ -7230,19 +7391,19 @@ function createProjectManagerMenu(projectManagerWindow) {
           label: 'Validate Files',
           click: () => {
             projectManagerWindow.webContents.send('menu-validate-files');
-          }
+          },
         },
         {
           label: 'Find Duplicates',
           click: () => {
             projectManagerWindow.webContents.send('menu-find-duplicates');
-          }
+          },
         },
         {
           label: 'Check File Integrity',
           click: () => {
             projectManagerWindow.webContents.send('menu-check-integrity');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -7252,21 +7413,21 @@ function createProjectManagerMenu(projectManagerWindow) {
               label: 'FASTA to GenBank',
               click: () => {
                 projectManagerWindow.webContents.send('menu-convert-fasta-genbank');
-              }
+              },
             },
             {
               label: 'GFF to BED',
               click: () => {
                 projectManagerWindow.webContents.send('menu-convert-gff-bed');
-              }
+              },
             },
             {
               label: 'Custom Conversion...',
               click: () => {
                 projectManagerWindow.webContents.send('menu-custom-conversion');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         {
           label: 'Batch Operations',
@@ -7275,21 +7436,21 @@ function createProjectManagerMenu(projectManagerWindow) {
               label: 'Batch Rename',
               click: () => {
                 projectManagerWindow.webContents.send('menu-batch-rename');
-              }
+              },
             },
             {
               label: 'Batch Move',
               click: () => {
                 projectManagerWindow.webContents.send('menu-batch-move');
-              }
+              },
             },
             {
               label: 'Batch Delete',
               click: () => {
                 projectManagerWindow.webContents.send('menu-batch-delete');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
@@ -7297,13 +7458,13 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+Alt+B',
           click: () => {
             createBlastDownloaderWindow();
-          }
+          },
         },
         {
           label: 'Configure BLAST Tools',
           click: () => {
             createBlastConfigWindow();
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -7313,21 +7474,21 @@ function createProjectManagerMenu(projectManagerWindow) {
               label: 'Open in Genome Viewer',
               click: () => {
                 projectManagerWindow.webContents.send('menu-open-genome-viewer');
-              }
+              },
             },
             {
               label: 'Open in External Editor',
               click: () => {
                 projectManagerWindow.webContents.send('menu-open-external-editor');
-              }
+              },
             },
             {
               label: 'Open in File Explorer',
               click: () => {
                 projectManagerWindow.webContents.send('menu-open-file-explorer');
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         { type: 'separator' },
         {
@@ -7335,9 +7496,9 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: process.platform === 'darwin' ? 'Cmd+,' : 'Ctrl+,',
           click: () => {
             projectManagerWindow.webContents.send('menu-preferences');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // Download Menu - copied from main window
@@ -7348,31 +7509,31 @@ function createProjectManagerMenu(projectManagerWindow) {
           label: 'NCBI Databases',
           click: () => {
             createGenomicDownloadWindow('ncbi-unified');
-          }
+          },
         },
         {
           label: 'EMBL-EBI Databases',
           click: () => {
             createGenomicDownloadWindow('embl-unified');
-          }
+          },
         },
         {
           label: 'DDBJ Sequences',
           click: () => {
             createGenomicDownloadWindow('ddbj-sequences');
-          }
+          },
         },
         {
           label: 'UniProt Proteins',
           click: () => {
             createGenomicDownloadWindow('uniprot-proteins');
-          }
+          },
         },
         {
           label: 'KEGG Pathways',
           click: () => {
             createGenomicDownloadWindow('kegg-pathways');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -7380,9 +7541,9 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+Shift+D',
           click: () => {
             createGenomicDownloadWindow('bulk-manager');
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
 
     // Window Menu - cloned from main window
@@ -7392,7 +7553,7 @@ function createProjectManagerMenu(projectManagerWindow) {
         {
           label: 'Minimize',
           accelerator: 'CmdOrCtrl+M',
-          role: 'minimize'
+          role: 'minimize',
         },
         {
           label: 'Close',
@@ -7402,7 +7563,7 @@ function createProjectManagerMenu(projectManagerWindow) {
             if (focusedWindow) {
               focusedWindow.close();
             }
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -7413,59 +7574,61 @@ function createProjectManagerMenu(projectManagerWindow) {
               accelerator: 'CmdOrCtrl+Alt+L',
               click: () => {
                 arrangeWindowsOptimal();
-              }
+              },
             },
             {
               label: 'Side by Side (50% + 50%)',
               accelerator: 'CmdOrCtrl+Alt+S',
               click: () => {
                 arrangeWindowsSideBySide();
-              }
+              },
             },
             {
               label: 'Main Window Focus',
               accelerator: 'CmdOrCtrl+Alt+M',
               click: () => {
                 arrangeMainWindowFocus();
-              }
+              },
             },
             {
               label: 'Project Manager Focus',
               accelerator: 'CmdOrCtrl+Alt+P',
               click: () => {
                 arrangeProjectManagerFocus();
-              }
+              },
             },
             { type: 'separator' },
             {
               label: 'Stack Vertically',
               click: () => {
                 arrangeWindowsVertical();
-              }
+              },
             },
             {
               label: 'Cascade Windows',
               click: () => {
                 arrangeWindowsCascade();
-              }
+              },
             },
             { type: 'separator' },
             {
               label: 'Reset to Default Positions',
               click: () => {
                 resetWindowPositions();
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
-        ...(process.platform === 'darwin' ? [
-          { type: 'separator' },
-          {
-            label: 'Bring All to Front',
-            role: 'front'
-          }
-        ] : [])
-      ]
+        ...(process.platform === 'darwin'
+          ? [
+              { type: 'separator' },
+              {
+                label: 'Bring All to Front',
+                role: 'front',
+              },
+            ]
+          : []),
+      ],
     },
 
     // Help Menu
@@ -7477,56 +7640,56 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'F1',
           click: () => {
             projectManagerWindow.webContents.send('menu-help');
-          }
+          },
         },
         {
           label: 'Keyboard Shortcuts',
           accelerator: 'CmdOrCtrl+/',
           click: () => {
             projectManagerWindow.webContents.send('menu-keyboard-shortcuts');
-          }
+          },
         },
         {
           label: 'User Guide',
           click: () => {
             projectManagerWindow.webContents.send('menu-user-guide');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'File Format Support',
           click: () => {
             projectManagerWindow.webContents.send('menu-file-formats');
-          }
+          },
         },
         {
           label: 'Best Practices',
           click: () => {
             projectManagerWindow.webContents.send('menu-best-practices');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'Report Issue',
           click: () => {
             projectManagerWindow.webContents.send('menu-report-issue');
-          }
+          },
         },
         {
           label: 'Send Feedback',
           click: () => {
             projectManagerWindow.webContents.send('menu-send-feedback');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'About Project Manager',
           click: () => {
             projectManagerWindow.webContents.send('menu-about');
-          }
-        }
-      ]
-    }
+          },
+        },
+      ],
+    },
   ];
 
   // Add platform-specific menu adjustments
@@ -7539,7 +7702,7 @@ function createProjectManagerMenu(projectManagerWindow) {
           label: 'About Project Manager',
           click: () => {
             projectManagerWindow.webContents.send('menu-about');
-          }
+          },
         },
         { type: 'separator' },
         {
@@ -7547,22 +7710,22 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'Cmd+,',
           click: () => {
             projectManagerWindow.webContents.send('menu-preferences');
-          }
+          },
         },
         { type: 'separator' },
         {
           label: 'Hide Project Manager',
           accelerator: 'Cmd+H',
-          role: 'hide'
+          role: 'hide',
         },
         {
           label: 'Hide Others',
           accelerator: 'Cmd+Alt+H',
-          role: 'hideothers'
+          role: 'hideothers',
         },
         {
           label: 'Show All',
-          role: 'unhide'
+          role: 'unhide',
         },
         { type: 'separator' },
         {
@@ -7570,9 +7733,9 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'Cmd+Q',
           click: () => {
             projectManagerWindow.close();
-          }
-        }
-      ]
+          },
+        },
+      ],
     });
   }
 
@@ -7590,11 +7753,12 @@ ipcMain.handle('show-project-open-dialog', async (event, projectName) => {
       defaultId: 0,
       title: 'Open Project',
       message: `Open "${projectName}"?`,
-      detail: `Choose how to open this project:\n\n` +
+      detail:
+        `Choose how to open this project:\n\n` +
         `• Open in Current Window: Close current project and open new project here\n` +
         `• Open in New Window: Keep current project and open new project in a new application instance\n` +
         `• Cancel: Don't open the project`,
-      noLink: true
+      noLink: true,
     });
 
     return { success: true, choice: response }; // 0 = current, 1 = new, 2 = cancel
@@ -7619,7 +7783,7 @@ ipcMain.handle('open-project-in-new-process', async (event, filePath) => {
     // Start new process with project file path as argument
     const child = spawn(electronPath, [appPath, '--open-project', filePath], {
       detached: true,
-      stdio: 'ignore'
+      stdio: 'ignore',
     });
 
     child.unref();
@@ -7640,7 +7804,7 @@ ipcMain.handle('selectProjectDirectory', async () => {
     const { dialog } = require('electron');
     const result = await dialog.showOpenDialog(null, {
       properties: ['openDirectory', 'createDirectory'],
-      title: 'Select Project Location'
+      title: 'Select Project Location',
     });
 
     if (!result.canceled && result.filePaths.length > 0) {
@@ -7663,9 +7827,9 @@ ipcMain.handle('selectProjectFile', async () => {
         { name: 'CodeXomics Project Files', extensions: ['GAI', 'prj.GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj', 'json'] },
-        { name: 'All Files', extensions: ['*'] }
+        { name: 'All Files', extensions: ['*'] },
       ],
-      title: 'Open Project File'
+      title: 'Open Project File',
     });
 
     if (!result.canceled && result.filePaths.length > 0) {
@@ -7686,9 +7850,29 @@ ipcMain.handle('selectMultipleFiles', async () => {
       properties: ['openFile', 'multiSelections'],
       filters: [
         { name: 'All Files', extensions: ['*'] },
-        { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bw', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] }
+        {
+          name: 'Genome Files',
+          extensions: [
+            'fasta',
+            'fa',
+            'fas',
+            'gff',
+            'gff3',
+            'gtf',
+            'vcf',
+            'bam',
+            'sam',
+            'wig',
+            'bw',
+            'bigwig',
+            'bed',
+            'gb',
+            'gbk',
+            'gbff',
+          ],
+        },
       ],
-      title: 'Select Files to Add'
+      title: 'Select Files to Add',
     });
 
     if (!result.canceled && result.filePaths.length > 0) {
@@ -7710,9 +7894,9 @@ ipcMain.handle('selectFastaFile', async () => {
       filters: [
         { name: 'FASTA files', extensions: ['fasta', 'fa', 'fas'] },
         { name: 'Text files', extensions: ['txt'] },
-        { name: 'All files', extensions: ['*'] }
+        { name: 'All files', extensions: ['*'] },
       ],
-      title: 'Select FASTA file for BLAST database'
+      title: 'Select FASTA file for BLAST database',
     });
 
     if (!result.canceled && result.filePaths.length > 0) {
@@ -7865,7 +8049,7 @@ ipcMain.handle('renameFileInProject', async (event, currentPath, newFileName) =>
       success: true,
       newPath: newFilePath,
       oldPath: currentPath,
-      message: 'File renamed successfully'
+      message: 'File renamed successfully',
     };
   } catch (error) {
     console.error('Error renaming file:', error);
@@ -7883,7 +8067,7 @@ ipcMain.handle('lockProjectFile', async (event, filePath) => {
     if (projectFileLocks.has(filePath)) {
       return {
         success: false,
-        error: 'File is already locked by another instance of CodeXomics'
+        error: 'File is already locked by another instance of CodeXomics',
       };
     }
 
@@ -7899,27 +8083,25 @@ ipcMain.handle('lockProjectFile', async (event, filePath) => {
       projectFileLocks.set(filePath, {
         lockId: lockId,
         lockedAt: new Date().toISOString(),
-        processId: process.pid
+        processId: process.pid,
       });
 
       console.log(`🔒 Project file locked: ${filePath} (ID: ${lockId})`);
       return { success: true, lockId: lockId };
-
     } catch (fileError) {
       if (fileError.code === 'EBUSY' || fileError.code === 'EACCES') {
         return {
           success: false,
-          error: 'File is currently being used by another application'
+          error: 'File is currently being used by another application',
         };
       }
       throw fileError;
     }
-
   } catch (error) {
     console.error('Error locking project file:', error);
     return {
       success: false,
-      error: `Failed to lock file: ${error.message}`
+      error: `Failed to lock file: ${error.message}`,
     };
   }
 });
@@ -7938,7 +8120,7 @@ ipcMain.handle('unlockProjectFile', async (event, filePath, lockId) => {
       console.warn(`Lock ID mismatch for file: ${filePath}`);
       return {
         success: false,
-        error: 'Invalid lock ID'
+        error: 'Invalid lock ID',
       };
     }
 
@@ -7947,12 +8129,11 @@ ipcMain.handle('unlockProjectFile', async (event, filePath, lockId) => {
     console.log(`🔓 Project file unlocked: ${filePath} (ID: ${lockId})`);
 
     return { success: true };
-
   } catch (error) {
     console.error('Error unlocking project file:', error);
     return {
       success: false,
-      error: `Failed to unlock file: ${error.message}`
+      error: `Failed to unlock file: ${error.message}`,
     };
   }
 });
@@ -7995,7 +8176,6 @@ ipcMain.handle('createProjectFolder', async (event, projectName, folderName) => 
     } else {
       return { success: false, error: 'Folder already exists' };
     }
-
   } catch (error) {
     console.error('Error creating project folder:', error);
     return { success: false, error: error.message };
@@ -8073,7 +8253,7 @@ ipcMain.handle('checkMainWindowStatus', async () => {
   try {
     if (mainWindow && !mainWindow.isDestroyed()) {
       // Send request to main window to check if it has a file open
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         const timeout = setTimeout(() => {
           resolve({ hasOpenFile: false, error: 'Timeout' });
         }, 1000);
@@ -8096,6 +8276,9 @@ ipcMain.handle('checkMainWindowStatus', async () => {
 // Handle creating new main window with file
 ipcMain.handle('createNewMainWindow', async (event, filePath) => {
   try {
+    // Generate a unique window ID for multi-window support
+    const windowId = generateWindowId();
+
     // Create a new main window with identical configuration to the original
     const newMainWindow = new BrowserWindow({
       width: 1400,
@@ -8107,11 +8290,17 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
-        cache: false
+        cache: false,
       },
       icon: path.join(__dirname, '../assets/icon.png'),
-      show: false
+      show: false,
     });
+
+    // Store windowId on the BrowserWindow object for easy lookup
+    newMainWindow.windowId = windowId;
+
+    // Register in window registry
+    registerGenomeWindow(windowId, newMainWindow);
 
     // Set up the new window with same initialization as original main window
     newMainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
@@ -8134,6 +8323,8 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
         // Window is fully loaded, wait for DOM and modules to be ready
         setTimeout(() => {
           console.log('Checking if new window is ready for file loading...');
+          // Send windowId to renderer process for MCPBridge identification
+          newMainWindow.webContents.send('set-window-id', windowId);
           // Send a test message to verify the window is responsive
           newMainWindow.webContents.send('ping-test');
 
@@ -8153,7 +8344,7 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
       newMainWindow.focus();
       currentActiveWindow = newMainWindow;
       createMenu(); // Set main window menu immediately
-      console.log('New window shown and focused with main menu set');
+      console.log(`New window shown and focused with main menu set (windowId: ${windowId})`);
     });
 
     // Open DevTools to debug UI issues (same as original main window)
@@ -8164,19 +8355,20 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
       if (currentActiveWindow !== newMainWindow) {
         currentActiveWindow = newMainWindow;
         createMenu(); // Set main window menu when focused
-        console.log('New window focused - set main menu');
+        console.log(`New window focused - set main menu (windowId: ${windowId})`);
       }
     });
 
     // Handle window closed
     newMainWindow.on('closed', () => {
-      console.log('New main window closed');
+      console.log(`New main window closed (windowId: ${windowId})`);
+      unregisterGenomeWindow(windowId);
       if (currentActiveWindow === newMainWindow) {
         currentActiveWindow = null;
       }
     });
 
-    return { success: true, message: 'New window created with file' };
+    return { success: true, message: 'New window created with file', windowId };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -8216,9 +8408,14 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
         const relativeFilePath = relativePath ? path.join(relativePath, item) : item;
 
         // Skip hidden files, temp files, and system files
-        if (item.startsWith('.') || item.startsWith('~') ||
-          item.includes('.tmp') || item.includes('.temp') ||
-          item.endsWith('.prj.GAI') || item.endsWith('.genomeproj')) {
+        if (
+          item.startsWith('.') ||
+          item.startsWith('~') ||
+          item.includes('.tmp') ||
+          item.includes('.temp') ||
+          item.endsWith('.prj.GAI') ||
+          item.endsWith('.genomeproj')
+        ) {
           return;
         }
 
@@ -8245,23 +8442,23 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
                 autoDiscovered: true,
                 discoveredDate: new Date().toISOString(),
                 relativePath: relativeFilePath,
-                absolutePath: itemPath // Keep absolute path for system operations
+                absolutePath: itemPath, // Keep absolute path for system operations
               });
             }
 
             // Recursively scan subdirectories
             scanDirectory(itemPath, relativeFilePath, newFolderPath);
-
           } else if (stats.isFile()) {
             // Process file
             const tempId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const projectRelativePath = getProjectRelativePath(itemPath, projectPath);
 
             // Check if this file path already exists (use relative path for comparison)
-            const isDuplicate = existingFileIds.some(existingPath =>
-              existingPath === projectRelativePath ||
-              existingPath === itemPath ||
-              existingPath.endsWith(relativeFilePath)
+            const isDuplicate = existingFileIds.some(
+              existingPath =>
+                existingPath === projectRelativePath ||
+                existingPath === itemPath ||
+                existingPath.endsWith(relativeFilePath)
             );
 
             if (!isDuplicate) {
@@ -8288,9 +8485,9 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
                     created: stats.birthtime ? stats.birthtime.toISOString() : null,
                     modified: stats.mtime.toISOString(),
                     accessed: stats.atime.toISOString(),
-                    size: stats.size
-                  }
-                }
+                    size: stats.size,
+                  },
+                },
               });
             }
           }
@@ -8317,10 +8514,9 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
       summary: {
         files: newFiles.length,
         folders: newFolders.length,
-        total: newFiles.length + newFolders.length
-      }
+        total: newFiles.length + newFolders.length,
+      },
     };
-
   } catch (error) {
     console.error('Error scanning project folder:', error);
     return { success: false, error: error.message };
@@ -8331,37 +8527,37 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
 function getFolderIcon(folderName) {
   const name = folderName.toLowerCase();
   const iconMap = {
-    'genomes': '🧬',
-    'genome': '🧬',
-    'annotations': '📋',
-    'annotation': '📋',
-    'variants': '🔄',
-    'variant': '🔄',
-    'reads': '📊',
-    'read': '📊',
-    'analysis': '📈',
-    'analyses': '📈',
-    'results': '📈',
-    'output': '📤',
-    'outputs': '📤',
-    'input': '📥',
-    'inputs': '📥',
-    'data': '💾',
-    'database': '🗃️',
-    'databases': '🗃️',
-    'tools': '🔧',
-    'scripts': '📝',
-    'logs': '📄',
-    'temp': '🗂️',
-    'tmp': '🗂️',
-    'backup': '💾',
-    'archive': '📦',
-    'downloads': '⬇️',
-    'upload': '⬆️',
-    'uploads': '⬆️',
-    'config': '⚙️',
-    'configuration': '⚙️',
-    'settings': '⚙️'
+    genomes: '🧬',
+    genome: '🧬',
+    annotations: '📋',
+    annotation: '📋',
+    variants: '🔄',
+    variant: '🔄',
+    reads: '📊',
+    read: '📊',
+    analysis: '📈',
+    analyses: '📈',
+    results: '📈',
+    output: '📤',
+    outputs: '📤',
+    input: '📥',
+    inputs: '📥',
+    data: '💾',
+    database: '🗃️',
+    databases: '🗃️',
+    tools: '🔧',
+    scripts: '📝',
+    logs: '📄',
+    temp: '🗂️',
+    tmp: '🗂️',
+    backup: '💾',
+    archive: '📦',
+    downloads: '⬇️',
+    upload: '⬆️',
+    uploads: '⬆️',
+    config: '⚙️',
+    configuration: '⚙️',
+    settings: '⚙️',
   };
 
   // Check for exact matches first
@@ -8384,20 +8580,20 @@ function getFolderIcon(folderName) {
 function getFileTypeFromExtension(fileName) {
   const ext = fileName.toLowerCase().split('.').pop();
   const typeMap = {
-    'fasta': ['fasta', 'fa', 'fas'],
-    'gff': ['gff', 'gff3', 'gtf'],
-    'vcf': ['vcf'],
-    'bam': ['bam', 'sam'],
-    'wig': ['wig', 'bw', 'bigwig'],
-    'bed': ['bed'],
-    'genbank': ['gb', 'gbk', 'gbff'],
-    'fastq': ['fastq', 'fq'],
-    'txt': ['txt', 'text'],
-    'csv': ['csv'],
-    'tsv': ['tsv'],
-    'json': ['json'],
-    'xml': ['xml'],
-    'html': ['html', 'htm']
+    fasta: ['fasta', 'fa', 'fas'],
+    gff: ['gff', 'gff3', 'gtf'],
+    vcf: ['vcf'],
+    bam: ['bam', 'sam'],
+    wig: ['wig', 'bw', 'bigwig'],
+    bed: ['bed'],
+    genbank: ['gb', 'gbk', 'gbff'],
+    fastq: ['fastq', 'fq'],
+    txt: ['txt', 'text'],
+    csv: ['csv'],
+    tsv: ['tsv'],
+    json: ['json'],
+    xml: ['xml'],
+    html: ['html', 'htm'],
   };
 
   for (const [type, extensions] of Object.entries(typeMap)) {
@@ -8416,9 +8612,9 @@ ipcMain.handle('saveFile', async (event, fileName, content) => {
       defaultPath: fileName,
       filters: [
         { name: 'XML Files', extensions: ['xml'] },
-        { name: 'All Files', extensions: ['*'] }
+        { name: 'All Files', extensions: ['*'] },
       ],
-      title: 'Save Project File'
+      title: 'Save Project File',
     });
 
     if (!result.canceled && result.filePath) {
@@ -8453,9 +8649,9 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
         { name: 'CodeXomics Project Files', extensions: ['GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj'] },
-        { name: 'All Files', extensions: ['*'] }
+        { name: 'All Files', extensions: ['*'] },
       ],
-      title: 'Save Project File'
+      title: 'Save Project File',
     });
 
     if (!result.canceled && result.filePath) {
@@ -8510,16 +8706,19 @@ ipcMain.handle('createTempFile', async (event, fileName, content) => {
     fs.writeFileSync(tempFilePath, content, 'utf8');
 
     // Schedule file deletion after 5 minutes
-    setTimeout(() => {
-      try {
-        if (fs.existsSync(tempFilePath)) {
-          fs.unlinkSync(tempFilePath);
-          console.log('Cleaned up temp file:', tempFilePath);
+    setTimeout(
+      () => {
+        try {
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+            console.log('Cleaned up temp file:', tempFilePath);
+          }
+        } catch (err) {
+          console.error('Error cleaning up temp file:', err);
         }
-      } catch (err) {
-        console.error('Error cleaning up temp file:', err);
-      }
-    }, 5 * 60 * 1000);
+      },
+      5 * 60 * 1000
+    );
 
     return { success: true, filePath: tempFilePath };
   } catch (error) {
@@ -8538,8 +8737,8 @@ ipcMain.handle('getFileInfo', async (event, filePath) => {
       info: {
         size: stats.size,
         mtime: stats.mtime.toISOString(),
-        name: fileName
-      }
+        name: fileName,
+      },
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -8590,34 +8789,40 @@ function updateRecentProjectsMenu(recentProjects = []) {
   recentProjectsMenuItem.submenu.clear();
 
   if (recentProjects.length === 0) {
-    recentProjectsMenuItem.submenu.append(new MenuItem({
-      label: 'No recent projects',
-      enabled: false
-    }));
+    recentProjectsMenuItem.submenu.append(
+      new MenuItem({
+        label: 'No recent projects',
+        enabled: false,
+      })
+    );
   } else {
     // Add recent projects
     recentProjects.slice(0, 10).forEach((project, index) => {
-      recentProjectsMenuItem.submenu.append(new MenuItem({
-        label: `${project.name}`,
-        accelerator: index < 9 ? `CmdOrCtrl+${index + 1}` : undefined,
-        click: () => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('open-recent-project', project);
-          }
-        }
-      }));
+      recentProjectsMenuItem.submenu.append(
+        new MenuItem({
+          label: `${project.name}`,
+          accelerator: index < 9 ? `CmdOrCtrl+${index + 1}` : undefined,
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('open-recent-project', project);
+            }
+          },
+        })
+      );
     });
 
     // Add separator and clear menu item
     recentProjectsMenuItem.submenu.append(new MenuItem({ type: 'separator' }));
-    recentProjectsMenuItem.submenu.append(new MenuItem({
-      label: 'Clear Recent Projects',
-      click: () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('clear-recent-projects');
-        }
-      }
-    }));
+    recentProjectsMenuItem.submenu.append(
+      new MenuItem({
+        label: 'Clear Recent Projects',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('clear-recent-projects');
+          }
+        },
+      })
+    );
   }
 }
 
@@ -8672,14 +8877,13 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
       success: true,
       newPath: targetPath,
       projectDir: projectDir,
-      targetFolder: targetFolderDir
+      targetFolder: targetFolderDir,
     };
-
   } catch (error) {
     console.error('Error copying file to project:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -8697,7 +8901,7 @@ ipcMain.handle('createNewProjectStructure', async (event, location, projectName)
     if (fs.existsSync(projectDir)) {
       return {
         success: false,
-        error: `Project directory "${projectName}" already exists at this location`
+        error: `Project directory "${projectName}" already exists at this location`,
       };
     }
 
@@ -8723,14 +8927,13 @@ ipcMain.handle('createNewProjectStructure', async (event, location, projectName)
       success: true,
       projectFilePath: projectFilePath,
       dataFolderPath: projectDir, // 项目目录即为数据目录
-      projectDir: projectDir
+      projectDir: projectDir,
     };
-
   } catch (error) {
     console.error('❌ Error creating project structure:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -8759,12 +8962,11 @@ ipcMain.handle('saveProjectToSpecificFile', async (event, filePath, content) => 
     } else {
       throw new Error('File was not created successfully');
     }
-
   } catch (error) {
     console.error('❌ Error saving project to specific file:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -8775,23 +8977,22 @@ ipcMain.handle('saveProjectAs', async (event, defaultProjectName) => {
     const { dialog } = require('electron');
     const result = await dialog.showOpenDialog(null, {
       properties: ['openDirectory'],
-      title: 'Select Directory to Save Project'
+      title: 'Select Directory to Save Project',
     });
 
     if (!result.canceled && result.filePaths.length > 0) {
       return {
         success: true,
-        selectedDirectory: result.filePaths[0]
+        selectedDirectory: result.filePaths[0],
       };
     }
 
     return { success: false, canceled: true };
-
   } catch (error) {
     console.error('Error in save project as dialog:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -8831,12 +9032,11 @@ ipcMain.handle('save-refined-annotation', async (event, data) => {
     } else {
       throw new Error(result.error || 'Failed to save annotation');
     }
-
   } catch (error) {
     console.error('Error saving refined annotation:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -8861,14 +9061,13 @@ ipcMain.handle('checkProjectExists', async (event, directory, projectName) => {
       folderExists: folderExists,
       projectFilePath: newFileExists ? newProjectFilePath : oldProjectFilePath,
       dataFolderPath: projectDir,
-      isNewStructure: newFileExists
+      isNewStructure: newFileExists,
     };
-
   } catch (error) {
     console.error('Error checking project exists:', error);
     return {
       exists: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -8900,14 +9099,13 @@ ipcMain.handle('copyProject', async (event, sourceProjectFile, sourceDataFolder,
     return {
       success: true,
       targetProjectFile: targetProjectFile,
-      targetDataFolder: targetProjectDir
+      targetDataFolder: targetProjectDir,
     };
-
   } catch (error) {
     console.error('Error copying project:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -8947,11 +9145,11 @@ function createGenomicDownloadWindow(downloadType) {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, 'preload.js')
+        preload: path.join(__dirname, 'preload.js'),
       },
       icon: path.join(__dirname, '../assets/icon.png'),
       title: `Download Genomic Data - ${downloadType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
-      show: false
+      show: false,
     });
 
     // Set menu for the download window - fix the menu creation
@@ -9026,7 +9224,6 @@ function createGenomicDownloadWindow(downloadType) {
 
     console.log('Genomic Download window created successfully');
     return downloadWindow;
-
   } catch (error) {
     console.error('Failed to create Genomic Download window:', error);
   }
@@ -9402,19 +9599,19 @@ ipcMain.handle('selectDirectory', async () => {
   try {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openDirectory'],
-      title: 'Select Output Directory'
+      title: 'Select Output Directory',
     });
 
     return {
       success: true,
       canceled: result.canceled,
-      filePath: result.canceled ? null : result.filePaths[0]
+      filePath: result.canceled ? null : result.filePaths[0],
     };
   } catch (error) {
     console.error('Error selecting directory:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -9479,9 +9676,19 @@ function categorizeGenomicFile(filePath, url, database) {
     case '.ffn':
     case '.faa':
       // Further categorize FASTA files based on content indicators
-      if (baseName.includes('protein') || baseName.includes('prot') || baseName.includes('aa') || extension === '.faa') {
+      if (
+        baseName.includes('protein') ||
+        baseName.includes('prot') ||
+        baseName.includes('aa') ||
+        extension === '.faa'
+      ) {
         return 'proteins';
-      } else if (baseName.includes('cds') || baseName.includes('mrna') || baseName.includes('transcript') || extension === '.ffn') {
+      } else if (
+        baseName.includes('cds') ||
+        baseName.includes('mrna') ||
+        baseName.includes('transcript') ||
+        extension === '.ffn'
+      ) {
         return 'transcripts';
       } else if (baseName.includes('genome') || baseName.includes('chromosome') || extension === '.fna') {
         return 'genomes';
@@ -9555,7 +9762,7 @@ function categorizeGenomicFile(filePath, url, database) {
 }
 
 ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     try {
       const https = require('https');
       const http = require('http');
@@ -9594,7 +9801,9 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
         if (category) {
           // Create categorized subdirectory
           targetDir = path.join(projectInfo.dataFolderPath, category);
-          console.log(`📁 Intelligent categorization: ${fileName} -> ${category}/ (database: ${databaseType || 'auto-detected'})`);
+          console.log(
+            `📁 Intelligent categorization: ${fileName} -> ${category}/ (database: ${databaseType || 'auto-detected'})`
+          );
         } else {
           // Place in root directory for unclassifiable files
           targetDir = projectInfo.dataFolderPath;
@@ -9618,7 +9827,7 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
 
       const file = fs.createWriteStream(finalOutputPath);
 
-      const request = client.get(url, (response) => {
+      const request = client.get(url, response => {
         // 处理重定向
         if (response.statusCode === 301 || response.statusCode === 302) {
           const redirectUrl = response.headers.location;
@@ -9626,7 +9835,7 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
 
           // 递归处理重定向
           const redirectClient = redirectUrl.startsWith('https:') ? https : http;
-          const redirectRequest = redirectClient.get(redirectUrl, (redirectResponse) => {
+          const redirectRequest = redirectClient.get(redirectUrl, redirectResponse => {
             if (redirectResponse.statusCode === 200) {
               redirectResponse.pipe(file);
 
@@ -9638,23 +9847,23 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
                 if (projectInfo && projectInfo.dataFolderPath) {
                   // Send file addition notification to project manager
                   const allWindows = BrowserWindow.getAllWindows();
-                  const projectManagerWindow = allWindows.find(win =>
-                    win.getTitle().includes('Project Manager') ||
-                    win.webContents.getURL().includes('project-manager')
+                  const projectManagerWindow = allWindows.find(
+                    win =>
+                      win.getTitle().includes('Project Manager') || win.webContents.getURL().includes('project-manager')
                   );
 
                   if (projectManagerWindow) {
                     const relativePath = path.relative(projectInfo.dataFolderPath, finalOutputPath);
-                    const category = projectInfo.downloadContext ?
-                      categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database) :
-                      categorizeGenomicFile(finalOutputPath, url, null);
+                    const category = projectInfo.downloadContext
+                      ? categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database)
+                      : categorizeGenomicFile(finalOutputPath, url, null);
 
                     projectManagerWindow.webContents.send('file-downloaded', {
                       filePath: finalOutputPath,
                       relativePath: relativePath,
                       category: category || 'uncategorized',
                       projectPath: projectInfo.dataFolderPath,
-                      downloadContext: projectInfo.downloadContext || {}
+                      downloadContext: projectInfo.downloadContext || {},
                     });
 
                     console.log(`📢 Notified project manager about new file: ${relativePath} → ${category}/`);
@@ -9664,8 +9873,13 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
                 resolve({
                   success: true,
                   filePath: finalOutputPath,
-                  category: projectInfo ? categorizeGenomicFile(finalOutputPath, url,
-                    projectInfo.downloadContext ? projectInfo.downloadContext.database : null) : null
+                  category: projectInfo
+                    ? categorizeGenomicFile(
+                        finalOutputPath,
+                        url,
+                        projectInfo.downloadContext ? projectInfo.downloadContext.database : null
+                      )
+                    : null,
                 });
               });
             } else {
@@ -9673,20 +9887,19 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
               fs.unlinkSync(finalOutputPath); // 删除空文件
               resolve({
                 success: false,
-                error: `HTTP ${redirectResponse.statusCode}: ${redirectResponse.statusMessage}`
+                error: `HTTP ${redirectResponse.statusCode}: ${redirectResponse.statusMessage}`,
               });
             }
           });
 
-          redirectRequest.on('error', (error) => {
+          redirectRequest.on('error', error => {
             file.close();
             fs.unlinkSync(finalOutputPath);
             resolve({
               success: false,
-              error: error.message
+              error: error.message,
             });
           });
-
         } else if (response.statusCode === 200) {
           response.pipe(file);
 
@@ -9698,23 +9911,23 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
             if (projectInfo && projectInfo.dataFolderPath) {
               // Send file addition notification to project manager
               const allWindows = BrowserWindow.getAllWindows();
-              const projectManagerWindow = allWindows.find(win =>
-                win.getTitle().includes('Project Manager') ||
-                win.webContents.getURL().includes('project-manager')
+              const projectManagerWindow = allWindows.find(
+                win =>
+                  win.getTitle().includes('Project Manager') || win.webContents.getURL().includes('project-manager')
               );
 
               if (projectManagerWindow) {
                 const relativePath = path.relative(projectInfo.dataFolderPath, finalOutputPath);
-                const category = projectInfo.downloadContext ?
-                  categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database) :
-                  categorizeGenomicFile(finalOutputPath, url, null);
+                const category = projectInfo.downloadContext
+                  ? categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database)
+                  : categorizeGenomicFile(finalOutputPath, url, null);
 
                 projectManagerWindow.webContents.send('file-downloaded', {
                   filePath: finalOutputPath,
                   relativePath: relativePath,
                   category: category || 'uncategorized',
                   projectPath: projectInfo.dataFolderPath,
-                  downloadContext: projectInfo.downloadContext || {}
+                  downloadContext: projectInfo.downloadContext || {},
                 });
 
                 console.log(`📢 Notified project manager about new file: ${relativePath} → ${category}/`);
@@ -9724,8 +9937,13 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
             resolve({
               success: true,
               filePath: finalOutputPath,
-              category: projectInfo ? categorizeGenomicFile(finalOutputPath, url,
-                projectInfo.downloadContext ? projectInfo.downloadContext.database : null) : null
+              category: projectInfo
+                ? categorizeGenomicFile(
+                    finalOutputPath,
+                    url,
+                    projectInfo.downloadContext ? projectInfo.downloadContext.database : null
+                  )
+                : null,
             });
           });
         } else {
@@ -9733,38 +9951,37 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
           fs.unlinkSync(finalOutputPath); // 删除空文件
           resolve({
             success: false,
-            error: `HTTP ${response.statusCode}: ${response.statusMessage}`
+            error: `HTTP ${response.statusCode}: ${response.statusMessage}`,
           });
         }
       });
 
-      request.on('error', (error) => {
+      request.on('error', error => {
         file.close();
         if (fs.existsSync(finalOutputPath)) {
           fs.unlinkSync(finalOutputPath);
         }
         resolve({
           success: false,
-          error: error.message
+          error: error.message,
         });
       });
 
-      file.on('error', (error) => {
+      file.on('error', error => {
         file.close();
         if (fs.existsSync(finalOutputPath)) {
           fs.unlinkSync(finalOutputPath);
         }
         resolve({
           success: false,
-          error: error.message
+          error: error.message,
         });
       });
-
     } catch (error) {
       console.error('Download error:', error);
       resolve({
         success: false,
-        error: error.message
+        error: error.message,
       });
     }
   });
@@ -9787,16 +10004,11 @@ function getDisplayWorkArea() {
 function getMainWindows() {
   const allWindows = BrowserWindow.getAllWindows();
 
-  const mainWindow = allWindows.find(win =>
-    win.getTitle().includes('CodeXomics') &&
-    !win.getTitle().includes('Project Manager') &&
-    !win.isDestroyed()
+  const mainWindow = allWindows.find(
+    win => win.getTitle().includes('CodeXomics') && !win.getTitle().includes('Project Manager') && !win.isDestroyed()
   );
 
-  const projectManagerWindow = allWindows.find(win =>
-    win.getTitle().includes('Project Manager') &&
-    !win.isDestroyed()
-  );
+  const projectManagerWindow = allWindows.find(win => win.getTitle().includes('Project Manager') && !win.isDestroyed());
 
   return { mainWindow, projectManagerWindow };
 }
@@ -9818,14 +10030,14 @@ function arrangeWindowsOptimal() {
 
   // 计算窗口尺寸
   const pmWidth = Math.floor(totalWidth * 0.25); // Project Manager 25%
-  const mainWidth = totalWidth - pmWidth;        // Main Window 75%
+  const mainWidth = totalWidth - pmWidth; // Main Window 75%
 
   // 设置主窗口位置和大小
   mainWindow.setBounds({
     x: pmWidth,
     y: 0,
     width: mainWidth,
-    height: totalHeight
+    height: totalHeight,
   });
 
   // 如果Project Manager存在，设置其位置和大小
@@ -9834,7 +10046,7 @@ function arrangeWindowsOptimal() {
       x: 0,
       y: 0,
       width: pmWidth,
-      height: totalHeight
+      height: totalHeight,
     });
   } else {
     // 如果Project Manager不存在，创建它
@@ -9845,7 +10057,7 @@ function arrangeWindowsOptimal() {
           x: 0,
           y: 0,
           width: pmWidth,
-          height: totalHeight
+          height: totalHeight,
         });
       });
     }
@@ -9873,7 +10085,7 @@ function arrangeWindowsSideBySide() {
     x: halfWidth,
     y: 0,
     width: halfWidth,
-    height: workArea.height
+    height: workArea.height,
   });
 
   // Project Manager左侧50%
@@ -9882,7 +10094,7 @@ function arrangeWindowsSideBySide() {
       x: 0,
       y: 0,
       width: halfWidth,
-      height: workArea.height
+      height: workArea.height,
     });
   } else {
     const newPMWindow = createProjectManagerWindow();
@@ -9892,7 +10104,7 @@ function arrangeWindowsSideBySide() {
           x: 0,
           y: 0,
           width: halfWidth,
-          height: workArea.height
+          height: workArea.height,
         });
       });
     }
@@ -9918,7 +10130,7 @@ function arrangeMainWindowFocus() {
     x: pmWidth,
     y: 0,
     width: mainWidth,
-    height: workArea.height
+    height: workArea.height,
   });
 
   if (projectManagerWindow) {
@@ -9926,7 +10138,7 @@ function arrangeMainWindowFocus() {
       x: 0,
       y: 0,
       width: pmWidth,
-      height: workArea.height
+      height: workArea.height,
     });
   }
 
@@ -9950,7 +10162,7 @@ function arrangeProjectManagerFocus() {
     x: pmWidth,
     y: 0,
     width: mainWidth,
-    height: workArea.height
+    height: workArea.height,
   });
 
   if (projectManagerWindow) {
@@ -9958,7 +10170,7 @@ function arrangeProjectManagerFocus() {
       x: 0,
       y: 0,
       width: pmWidth,
-      height: workArea.height
+      height: workArea.height,
     });
     projectManagerWindow.focus();
   } else {
@@ -9969,7 +10181,7 @@ function arrangeProjectManagerFocus() {
           x: 0,
           y: 0,
           width: pmWidth,
-          height: workArea.height
+          height: workArea.height,
         });
         newPMWindow.focus();
       });
@@ -9995,7 +10207,7 @@ function arrangeWindowsVertical() {
     x: 0,
     y: 0,
     width: workArea.width,
-    height: halfHeight
+    height: halfHeight,
   });
 
   // Project Manager下半部分
@@ -10004,7 +10216,7 @@ function arrangeWindowsVertical() {
       x: 0,
       y: halfHeight,
       width: workArea.width,
-      height: halfHeight
+      height: halfHeight,
     });
   } else {
     const newPMWindow = createProjectManagerWindow();
@@ -10014,7 +10226,7 @@ function arrangeWindowsVertical() {
           x: 0,
           y: halfHeight,
           width: workArea.width,
-          height: halfHeight
+          height: halfHeight,
         });
       });
     }
@@ -10042,7 +10254,7 @@ function arrangeWindowsCascade() {
     x: 0,
     y: 0,
     width: windowWidth,
-    height: windowHeight
+    height: windowHeight,
   });
 
   // Project Manager偏移位置
@@ -10051,7 +10263,7 @@ function arrangeWindowsCascade() {
       x: offset,
       y: offset,
       width: windowWidth,
-      height: windowHeight
+      height: windowHeight,
     });
   }
 
@@ -10070,7 +10282,7 @@ function resetWindowPositions() {
       x: 100,
       y: 100,
       width: 1200,
-      height: 800
+      height: 800,
     });
     mainWindow.center();
   }
@@ -10080,7 +10292,7 @@ function resetWindowPositions() {
       x: 150,
       y: 150,
       width: 1200,
-      height: 800
+      height: 800,
     });
     projectManagerWindow.center();
   }
@@ -10119,10 +10331,10 @@ function openTestFile(filename) {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true
+        enableRemoteModule: true,
       },
       title: `Test: ${filename}`,
-      icon: path.join(__dirname, 'assets', 'icon.png')
+      icon: path.join(__dirname, 'assets', 'icon.png'),
     });
 
     // Load the test file
@@ -10146,7 +10358,6 @@ function openTestFile(filename) {
       console.error(`Failed to load test file ${filename}:`, errorDescription);
       dialog.showErrorBox('Load Error', `Failed to load test file "${filename}": ${errorDescription}`);
     });
-
   } catch (error) {
     console.error('Error opening test file:', error);
     dialog.showErrorBox('Error', `Failed to open test file "${filename}": ${error.message}`);
@@ -10163,7 +10374,7 @@ ipcMain.handle('getProjectDirectoryName', async () => {
       'CodeXomics Projects',
       'CodeXomics Projects',
       'GenomeExplorer Projects',
-      'Genome Explorer Projects'
+      'Genome Explorer Projects',
     ];
 
     for (const name of possibleNames) {
@@ -10178,7 +10389,6 @@ ipcMain.handle('getProjectDirectoryName', async () => {
     const defaultName = PROJECT_DIRECTORY_NAME;
     console.log(`📁 Using default project directory name: ${defaultName}`);
     return { success: true, directoryName: defaultName };
-
   } catch (error) {
     console.error('Error getting project directory name:', error);
     return { success: false, error: error.message };

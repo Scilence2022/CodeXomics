@@ -3,165 +3,171 @@
  * 支持可视化插件的Tools菜单集成和一致的UI风格
  */
 class PluginTestFramework {
-    constructor(pluginManager, configManager) {
-        this.pluginManager = pluginManager;
-        this.configManager = configManager;
-        this.testWindows = new Map(); // 存储测试窗口引用
-        this.demoWindows = new Map(); // 存储演示窗口引用
-        
-        // 初始化菜单集成
-        this.initializeToolsMenuIntegration();
-        
-        console.log('PluginTestFramework initialized');
+  constructor(pluginManager, configManager) {
+    this.pluginManager = pluginManager;
+    this.configManager = configManager;
+    this.testWindows = new Map(); // 存储测试窗口引用
+    this.demoWindows = new Map(); // 存储演示窗口引用
+
+    // 初始化菜单集成
+    this.initializeToolsMenuIntegration();
+
+    console.log('PluginTestFramework initialized');
+  }
+
+  /**
+   * 为可视化插件在Tools菜单中注册菜单项
+   */
+  initializeToolsMenuIntegration() {
+    // 监听Tools菜单请求
+    window.addEventListener('plugin-tools-menu-request', event => {
+      this.openVisualizationTool(event.detail.pluginId);
+    });
+  }
+
+  /**
+   * 获取所有可视化插件的菜单项
+   */
+  getVisualizationMenuItems() {
+    const visualizationPlugins = this.pluginManager.getAvailableVisualizations();
+    return visualizationPlugins.map(plugin => ({
+      id: plugin.id,
+      name: plugin.name,
+      description: plugin.description,
+      icon: this.getPluginIcon(plugin.id),
+      category: this.getPluginCategory(plugin.id),
+    }));
+  }
+
+  /**
+   * 获取插件图标
+   */
+  getPluginIcon(pluginId) {
+    const iconMap = {
+      'network-graph': 'fas fa-project-diagram',
+      'protein-interaction-network': 'fas fa-share-alt-square',
+      'gene-regulatory-network': 'fas fa-sitemap',
+      'phylogenetic-tree': 'fas fa-tree',
+      'gc-content-plot': 'fas fa-chart-line',
+      heatmap: 'fas fa-th',
+      'sequence-alignment': 'fas fa-align-left',
+      'dot-plot': 'fas fa-chart-scatter',
+    };
+    return iconMap[pluginId] || 'fas fa-chart-bar';
+  }
+
+  /**
+   * 获取插件分类
+   */
+  getPluginCategory(pluginId) {
+    const categoryMap = {
+      'network-graph': 'Network Analysis',
+      'protein-interaction-network': 'Network Analysis',
+      'gene-regulatory-network': 'Network Analysis',
+      'phylogenetic-tree': 'Phylogenetics',
+      'gc-content-plot': 'Sequence Analysis',
+      heatmap: 'Data Visualization',
+      'sequence-alignment': 'Sequence Analysis',
+      'dot-plot': 'Comparative Analysis',
+    };
+    return categoryMap[pluginId] || 'General';
+  }
+
+  /**
+   * 打开插件测试界面
+   */
+  openPluginTestInterface(pluginId, pluginData, pluginType) {
+    // 如果窗口已经打开，聚焦到该窗口
+    if (this.testWindows.has(pluginId)) {
+      this.testWindows.get(pluginId).focus();
+      return;
     }
 
-    /**
-     * 为可视化插件在Tools菜单中注册菜单项
-     */
-    initializeToolsMenuIntegration() {
-        // 监听Tools菜单请求
-        window.addEventListener('plugin-tools-menu-request', (event) => {
-            this.openVisualizationTool(event.detail.pluginId);
-        });
+    // 创建新的测试窗口
+    const testWindow = this.createTestWindow(pluginId, pluginData, pluginType);
+    this.testWindows.set(pluginId, testWindow);
+
+    // 窗口关闭时清理引用
+    testWindow.addEventListener('beforeunload', () => {
+      this.testWindows.delete(pluginId);
+    });
+  }
+
+  /**
+   * 打开可视化工具界面
+   */
+  openVisualizationTool(pluginId) {
+    // 如果演示窗口已经打开，聚焦到该窗口
+    if (this.demoWindows.has(pluginId)) {
+      this.demoWindows.get(pluginId).focus();
+      return;
     }
 
-    /**
-     * 获取所有可视化插件的菜单项
-     */
-    getVisualizationMenuItems() {
-        const visualizationPlugins = this.pluginManager.getAvailableVisualizations();
-        return visualizationPlugins.map(plugin => ({
-            id: plugin.id,
-            name: plugin.name,
-            description: plugin.description,
-            icon: this.getPluginIcon(plugin.id),
-            category: this.getPluginCategory(plugin.id)
-        }));
+    const plugin = this.pluginManager.visualizationPlugins.get(pluginId);
+    if (!plugin) {
+      console.error(`Visualization plugin ${pluginId} not found`);
+      return;
     }
 
-    /**
-     * 获取插件图标
-     */
-    getPluginIcon(pluginId) {
-        const iconMap = {
-            'network-graph': 'fas fa-project-diagram',
-            'protein-interaction-network': 'fas fa-share-alt-square',
-            'gene-regulatory-network': 'fas fa-sitemap',
-            'phylogenetic-tree': 'fas fa-tree',
-            'gc-content-plot': 'fas fa-chart-line',
-            'heatmap': 'fas fa-th',
-            'sequence-alignment': 'fas fa-align-left',
-            'dot-plot': 'fas fa-chart-scatter'
-        };
-        return iconMap[pluginId] || 'fas fa-chart-bar';
-    }
+    // 创建演示窗口
+    const demoWindow = this.createVisualizationDemoWindow(pluginId, plugin);
+    this.demoWindows.set(pluginId, demoWindow);
 
-    /**
-     * 获取插件分类
-     */
-    getPluginCategory(pluginId) {
-        const categoryMap = {
-            'network-graph': 'Network Analysis',
-            'protein-interaction-network': 'Network Analysis',
-            'gene-regulatory-network': 'Network Analysis',
-            'phylogenetic-tree': 'Phylogenetics',
-            'gc-content-plot': 'Sequence Analysis',
-            'heatmap': 'Data Visualization',
-            'sequence-alignment': 'Sequence Analysis',
-            'dot-plot': 'Comparative Analysis'
-        };
-        return categoryMap[pluginId] || 'General';
-    }
+    // 窗口关闭时清理引用
+    demoWindow.addEventListener('beforeunload', () => {
+      this.demoWindows.delete(pluginId);
+    });
+  }
 
-    /**
-     * 打开插件测试界面
-     */
-    openPluginTestInterface(pluginId, pluginData, pluginType) {
-        // 如果窗口已经打开，聚焦到该窗口
-        if (this.testWindows.has(pluginId)) {
-            this.testWindows.get(pluginId).focus();
-            return;
-        }
+  /**
+   * 创建测试窗口
+   */
+  createTestWindow(pluginId, pluginData, pluginType) {
+    const testWindow = window.open(
+      '',
+      '_blank',
+      'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no'
+    );
 
-        // 创建新的测试窗口
-        const testWindow = this.createTestWindow(pluginId, pluginData, pluginType);
-        this.testWindows.set(pluginId, testWindow);
+    const windowTitle = `${pluginData.name} - Plugin Test Suite`;
 
-        // 窗口关闭时清理引用
-        testWindow.addEventListener('beforeunload', () => {
-            this.testWindows.delete(pluginId);
-        });
-    }
+    testWindow.document.write(this.generateTestWindowHTML(pluginId, pluginData, pluginType, windowTitle));
+    testWindow.document.close();
+    testWindow.focus();
 
-    /**
-     * 打开可视化工具界面
-     */
-    openVisualizationTool(pluginId) {
-        // 如果演示窗口已经打开，聚焦到该窗口
-        if (this.demoWindows.has(pluginId)) {
-            this.demoWindows.get(pluginId).focus();
-            return;
-        }
+    // 注入测试脚本
+    this.injectTestScript(testWindow, pluginId, pluginData, pluginType);
 
-        const plugin = this.pluginManager.visualizationPlugins.get(pluginId);
-        if (!plugin) {
-            console.error(`Visualization plugin ${pluginId} not found`);
-            return;
-        }
+    return testWindow;
+  }
 
-        // 创建演示窗口
-        const demoWindow = this.createVisualizationDemoWindow(pluginId, plugin);
-        this.demoWindows.set(pluginId, demoWindow);
+  /**
+   * 创建可视化演示窗口
+   */
+  createVisualizationDemoWindow(pluginId, pluginData) {
+    const demoWindow = window.open(
+      '',
+      '_blank',
+      'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no'
+    );
 
-        // 窗口关闭时清理引用
-        demoWindow.addEventListener('beforeunload', () => {
-            this.demoWindows.delete(pluginId);
-        });
-    }
+    const windowTitle = `${pluginData.name} - Visualization Tool`;
 
-    /**
-     * 创建测试窗口
-     */
-    createTestWindow(pluginId, pluginData, pluginType) {
-        const testWindow = window.open('', '_blank', 
-            'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
-        
-        const windowTitle = `${pluginData.name} - Plugin Test Suite`;
-        
-        testWindow.document.write(this.generateTestWindowHTML(pluginId, pluginData, pluginType, windowTitle));
-        testWindow.document.close();
-        testWindow.focus();
+    demoWindow.document.write(this.generateVisualizationDemoHTML(pluginId, pluginData, windowTitle));
+    demoWindow.document.close();
+    demoWindow.focus();
 
-        // 注入测试脚本
-        this.injectTestScript(testWindow, pluginId, pluginData, pluginType);
+    // 注入演示脚本
+    this.injectVisualizationScript(demoWindow, pluginId, pluginData);
 
-        return testWindow;
-    }
+    return demoWindow;
+  }
 
-    /**
-     * 创建可视化演示窗口
-     */
-    createVisualizationDemoWindow(pluginId, pluginData) {
-        const demoWindow = window.open('', '_blank', 
-            'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
-        
-        const windowTitle = `${pluginData.name} - Visualization Tool`;
-        
-        demoWindow.document.write(this.generateVisualizationDemoHTML(pluginId, pluginData, windowTitle));
-        demoWindow.document.close();
-        demoWindow.focus();
-
-        // 注入演示脚本
-        this.injectVisualizationScript(demoWindow, pluginId, pluginData);
-
-        return demoWindow;
-    }
-
-    /**
-     * 生成测试窗口HTML
-     */
-    generateTestWindowHTML(pluginId, pluginData, pluginType, title) {
-        return `
+  /**
+   * 生成测试窗口HTML
+   */
+  generateTestWindowHTML(pluginId, pluginData, pluginType, title) {
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -180,13 +186,13 @@ class PluginTestFramework {
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </body>
 </html>`;
-    }
+  }
 
-    /**
-     * 生成可视化演示窗口HTML
-     */
-    generateVisualizationDemoHTML(pluginId, pluginData, title) {
-        return `
+  /**
+   * 生成可视化演示窗口HTML
+   */
+  generateVisualizationDemoHTML(pluginId, pluginData, title) {
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -206,61 +212,59 @@ class PluginTestFramework {
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </body>
 </html>`;
-    }
+  }
 
-    /**
-     * 获取插件的示例数据
-     */
-    getPluginSampleData(pluginId, pluginType) {
-        const sampleDataMap = {
-            // 函数插件示例数据
-            'genomic-analysis': {
-                'analyzeGCContent': {
-                    chromosome: 'chr1',
-                    start: 1000,
-                    end: 5000,
-                    windowSize: 100
-                },
-                'findMotifs': {
-                    chromosome: 'chr1',
-                    start: 1000,
-                    end: 3000,
-                    motif: 'GAATTC'
-                }
-            },
-            // 可视化插件示例数据
-            'network-graph': {
-                networkType: 'generic',
-                nodes: [
-                    { id: 'A', name: 'Node A', size: 10, color: '#4ECDC4' },
-                    { id: 'B', name: 'Node B', size: 12, color: '#45B7D1' },
-                    { id: 'C', name: 'Node C', size: 8, color: '#F7DC6F' }
-                ],
-                edges: [
-                    { source: 'A', target: 'B', weight: 0.8 },
-                    { source: 'B', target: 'C', weight: 0.6 }
-                ]
-            },
-            'protein-interaction-network': {
-                networkType: 'protein-interaction',
-                nodes: [
-                    { id: 'TP53', name: 'TP53', type: 'protein', size: 15, color: '#E74C3C' },
-                    { id: 'MDM2', name: 'MDM2', type: 'protein', size: 12, color: '#3498DB' }
-                ],
-                edges: [
-                    { source: 'TP53', target: 'MDM2', weight: 0.9, type: 'physical' }
-                ]
-            }
-        };
+  /**
+   * 获取插件的示例数据
+   */
+  getPluginSampleData(pluginId, pluginType) {
+    const sampleDataMap = {
+      // 函数插件示例数据
+      'genomic-analysis': {
+        analyzeGCContent: {
+          chromosome: 'chr1',
+          start: 1000,
+          end: 5000,
+          windowSize: 100,
+        },
+        findMotifs: {
+          chromosome: 'chr1',
+          start: 1000,
+          end: 3000,
+          motif: 'GAATTC',
+        },
+      },
+      // 可视化插件示例数据
+      'network-graph': {
+        networkType: 'generic',
+        nodes: [
+          { id: 'A', name: 'Node A', size: 10, color: '#4ECDC4' },
+          { id: 'B', name: 'Node B', size: 12, color: '#45B7D1' },
+          { id: 'C', name: 'Node C', size: 8, color: '#F7DC6F' },
+        ],
+        edges: [
+          { source: 'A', target: 'B', weight: 0.8 },
+          { source: 'B', target: 'C', weight: 0.6 },
+        ],
+      },
+      'protein-interaction-network': {
+        networkType: 'protein-interaction',
+        nodes: [
+          { id: 'TP53', name: 'TP53', type: 'protein', size: 15, color: '#E74C3C' },
+          { id: 'MDM2', name: 'MDM2', type: 'protein', size: 12, color: '#3498DB' },
+        ],
+        edges: [{ source: 'TP53', target: 'MDM2', weight: 0.9, type: 'physical' }],
+      },
+    };
 
-        return sampleDataMap[pluginId] || {};
-    }
+    return sampleDataMap[pluginId] || {};
+  }
 
-    /**
-     * 生成测试头部
-     */
-    generateTestHeader(pluginData, pluginType) {
-        return `
+  /**
+   * 生成测试头部
+   */
+  generateTestHeader(pluginData, pluginType) {
+    return `
         <div class="test-header">
             <div class="header-logo">
                 <i class="${this.getPluginIcon(pluginData.id)}"></i>
@@ -275,13 +279,13 @@ class PluginTestFramework {
                 </div>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成测试仪表板
-     */
-    generateTestDashboard() {
-        return `
+  /**
+   * 生成测试仪表板
+   */
+  generateTestDashboard() {
+    return `
         <div class="test-dashboard">
             <div class="dashboard-cards">
                 <div class="card test-status">
@@ -318,13 +322,13 @@ class PluginTestFramework {
                 </div>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成测试内容区域
-     */
-    generateTestContent(pluginId, pluginData, pluginType) {
-        return `
+  /**
+   * 生成测试内容区域
+   */
+  generateTestContent(pluginId, pluginData, pluginType) {
+    return `
         <div class="test-content">
             <div class="content-tabs">
                 <button class="tab-button active" data-tab="overview">
@@ -361,13 +365,13 @@ class PluginTestFramework {
                 ${this.generateLogsContent()}
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成概览内容
-     */
-    generateOverviewContent(pluginData, pluginType) {
-        return `
+  /**
+   * 生成概览内容
+   */
+  generateOverviewContent(pluginData, pluginType) {
+    return `
         <div class="overview-section">
             <div class="plugin-details">
                 <h3>Plugin Information</h3>
@@ -398,13 +402,13 @@ class PluginTestFramework {
                 </div>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成测试内容
-     */
-    generateTestsContent(pluginId, pluginData, pluginType) {
-        return `
+  /**
+   * 生成测试内容
+   */
+  generateTestsContent(pluginId, pluginData, pluginType) {
+    return `
         <div class="tests-section">
             <div class="test-controls">
                 <button class="test-btn primary" onclick="runAllTests()">
@@ -421,16 +425,16 @@ class PluginTestFramework {
                 ${this.generateTestList(pluginId, pluginData, pluginType)}
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成演示内容
-     */
-    generateDemoContent(pluginId, pluginData) {
-        if (this.demoGenerator) {
-            return this.demoGenerator.generateDemoInterface(pluginId, pluginData);
-        }
-        return `
+  /**
+   * 生成演示内容
+   */
+  generateDemoContent(pluginId, pluginData) {
+    if (this.demoGenerator) {
+      return this.demoGenerator.generateDemoInterface(pluginId, pluginData);
+    }
+    return `
         <div class="demo-section">
             <div class="demo-placeholder">
                 <i class="fas fa-play-circle"></i>
@@ -439,13 +443,13 @@ class PluginTestFramework {
                 <button class="demo-btn" onclick="startDemo()">Start Demo</button>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成日志内容
-     */
-    generateLogsContent() {
-        return `
+  /**
+   * 生成日志内容
+   */
+  generateLogsContent() {
+    return `
         <div class="logs-section">
             <div class="logs-header">
                 <h3>Test Execution Logs</h3>
@@ -462,13 +466,13 @@ class PluginTestFramework {
                 </div>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成演示头部
-     */
-    generateDemoHeader(pluginData) {
-        return `
+  /**
+   * 生成演示头部
+   */
+  generateDemoHeader(pluginData) {
+    return `
         <div class="demo-header">
             <div class="demo-title">
                 <h1><i class="${this.getPluginIcon(pluginData.id)}"></i> ${pluginData.name}</h1>
@@ -485,13 +489,13 @@ class PluginTestFramework {
                 </button>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成演示控制面板
-     */
-    generateDemoControls(pluginId, pluginData) {
-        return `
+  /**
+   * 生成演示控制面板
+   */
+  generateDemoControls(pluginId, pluginData) {
+    return `
         <div class="demo-controls-panel">
             <div class="controls-section">
                 <h3>Controls</h3>
@@ -511,39 +515,39 @@ class PluginTestFramework {
                 </div>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成可视化区域
-     */
-    generateVisualizationArea(pluginId) {
-        return `
+  /**
+   * 生成可视化区域
+   */
+  generateVisualizationArea(pluginId) {
+    return `
         <div class="visualization-main" id="visualizationMain">
             <div class="viz-placeholder">
                 <i class="fas fa-chart-bar"></i>
                 <p>Visualization will appear here</p>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 生成演示底部
-     */
-    generateDemoFooter() {
-        return `
+  /**
+   * 生成演示底部
+   */
+  generateDemoFooter() {
+    return `
         <div class="demo-footer">
             <div class="footer-info">
                 <span>GenomeExplorer Plugin Framework</span>
                 <span>© 2024 GenomeExplorer Team</span>
             </div>
         </div>`;
-    }
+  }
 
-    /**
-     * 测试窗口样式
-     */
-    getTestWindowStyles() {
-        return `
+  /**
+   * 测试窗口样式
+   */
+  getTestWindowStyles() {
+    return `
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -704,13 +708,15 @@ class PluginTestFramework {
                 font-weight: 600;
             }
         `;
-    }
+  }
 
-    /**
-     * 可视化演示样式
-     */
-    getVisualizationDemoStyles() {
-        return this.getTestWindowStyles() + `
+  /**
+   * 可视化演示样式
+   */
+  getVisualizationDemoStyles() {
+    return (
+      this.getTestWindowStyles() +
+      `
             .demo-framework-container {
                 min-height: 100vh;
                 background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
@@ -765,14 +771,15 @@ class PluginTestFramework {
                 font-size: 4rem;
                 margin-bottom: 1rem;
             }
-        `;
-    }
+        `
+    );
+  }
 
-    /**
-     * 注入测试脚本
-     */
-    injectTestScript(testWindow, pluginId, pluginData, pluginType) {
-        testWindow.eval(`
+  /**
+   * 注入测试脚本
+   */
+  injectTestScript(testWindow, pluginId, pluginData, pluginType) {
+    testWindow.eval(`
             // Tab switching functionality
             function switchTab(tabName) {
                 const tabs = document.querySelectorAll('.tab-button');
@@ -813,13 +820,13 @@ class PluginTestFramework {
             
             console.log('Test framework loaded for plugin: ${pluginId}');
         `);
-    }
+  }
 
-    /**
-     * 注入可视化脚本
-     */
-    injectVisualizationScript(demoWindow, pluginId, pluginData) {
-        demoWindow.eval(`
+  /**
+   * 注入可视化脚本
+   */
+  injectVisualizationScript(demoWindow, pluginId, pluginData) {
+    demoWindow.eval(`
             console.log('Visualization demo loaded for: ${pluginId}');
             
             function refreshDemo() {
@@ -842,12 +849,12 @@ class PluginTestFramework {
                 console.log('Resetting demo...');
             }
         `);
-    }
+  }
 
-    // 其他辅助方法...
-    generateTestList(pluginId, pluginData, pluginType) {
-        // 简单的测试列表生成
-        return `
+  // 其他辅助方法...
+  generateTestList(pluginId, pluginData, pluginType) {
+    // 简单的测试列表生成
+    return `
         <div class="test-item">
             <div class="test-name">Basic Functionality Test</div>
             <div class="test-status pending">Pending</div>
@@ -856,10 +863,10 @@ class PluginTestFramework {
             <div class="test-name">Error Handling Test</div>
             <div class="test-status pending">Pending</div>
         </div>`;
-    }
+  }
 }
 
 // 导出
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PluginTestFramework;
-} 
+  module.exports = PluginTestFramework;
+}

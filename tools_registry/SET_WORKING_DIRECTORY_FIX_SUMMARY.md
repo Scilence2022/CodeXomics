@@ -3,6 +3,7 @@
 ## 🚨 Problem Identified
 
 The user reported that when using the prompt:
+
 ```
 Set working directory to test data directory: /Users/song/Documents/Genome-AI-Studio-Projects/test_data/
 ```
@@ -14,15 +15,18 @@ The LLM incorrectly called `load_genome_file` instead of `set_working_directory`
 After investigating the dynamic tools registry system, I identified three key issues:
 
 ### 1. **Missing System Intent Category**
+
 - The `intentKeywords` mapping in `registry_manager.js` was missing a `system` category
 - Working directory management keywords had no proper intent classification
 - Queries with "working directory" keywords weren't triggering system management intent
 
 ### 2. **Inadequate Built-in Tool Pattern Recognition**
+
 - The `analyzeBuiltInToolRelevance` method in `builtin_tools_integration.js` lacked specific patterns for working directory management
 - Directory management keywords weren't being properly detected
 
 ### 3. **Missing System Category in Non-Dynamic Mode**
+
 - The non-dynamic system prompt generation didn't prioritize `system` category tools
 - Missing display names and icons for system management tools
 
@@ -31,6 +35,7 @@ After investigating the dynamic tools registry system, I identified three key is
 ### 1. Enhanced Intent Analysis (`registry_manager.js`)
 
 **Added System Intent Category:**
+
 ```javascript
 system: [
     'set', 'change', 'working directory', 'current directory', 'working dir', 'current dir',
@@ -41,6 +46,7 @@ system: [
 ```
 
 **Enhanced getIntentKeywords Method:**
+
 ```javascript
 system: [
     'set', 'change', 'working', 'directory', 'folder', 'path', 'cd', 'current',
@@ -52,27 +58,32 @@ system: [
 ### 2. Improved Built-in Tool Detection (`builtin_tools_integration.js`)
 
 **Added Working Directory Pattern Recognition:**
+
 ```javascript
 // Check for system management patterns (working directory, etc.)
-if (/\b(set|change|working|directory|folder|path|cd|current)\b/i.test(query) &&
-    (/\b(working\s+directory|current\s+directory|set\s+directory|change\s+directory)\b/i.test(query) ||
-     /\b(working\s+dir|current\s+dir|set\s+working|change\s+working)\b/i.test(query))) {
-    relevantTools.push({
-        name: 'set_working_directory',
-        confidence: 0.9,
-        reason: 'Working directory management keywords detected'
-    });
+if (
+  /\b(set|change|working|directory|folder|path|cd|current)\b/i.test(query) &&
+  (/\b(working\s+directory|current\s+directory|set\s+directory|change\s+directory)\b/i.test(query) ||
+    /\b(working\s+dir|current\s+dir|set\s+working|change\s+working)\b/i.test(query))
+) {
+  relevantTools.push({
+    name: 'set_working_directory',
+    confidence: 0.9,
+    reason: 'Working directory management keywords detected',
+  });
 }
 ```
 
 ### 3. Enhanced System Integration (`system_integration.js`)
 
 **Prioritized System Category:**
+
 ```javascript
 const priorityOrder = ['system', 'file_loading', 'file_operations', 'navigation', ...];
 ```
 
 **Added System Category Support:**
+
 ```javascript
 getCategoryDisplayName(categoryName) {
     const displayNames = {
@@ -94,24 +105,27 @@ getCategoryIcon(categoryName) {
 Created and ran comprehensive test script (`test_working_directory_fix.js`) with multiple working directory queries:
 
 ### Test Queries:
+
 - "Set working directory to test data directory: /Users/song/Documents/Genome-AI-Studio-Projects/test_data/"
 - "Change working directory to /Users/data/genome-files"
 - "Set current working directory to /tmp/work"
 - "cd to test directory /Users/song/test"
 
 ### Results:
+
 ```
 ✅ System intent category added: true
-✅ Tool detection working: true  
+✅ Tool detection working: true
 ✅ Non-dynamic prompt integration: true
 
 🚀 ALL TESTS PASSED! Working directory tool detection is fixed.
 ```
 
 ### Detailed Performance:
+
 - **System Intent Detection**: Primary intent correctly identified as `system` with confidence 0.25
 - **Built-in Tool Analysis**: `set_working_directory` detected with high confidence 0.90
-- **Tool Execution Strategy**: 
+- **Tool Execution Strategy**:
   - Execution mode: `hybrid`
   - Confidence: 0.90
   - Primary tools: `set_working_directory`
@@ -120,12 +134,14 @@ Created and ran comprehensive test script (`test_working_directory_fix.js`) with
 ## 🎯 Impact
 
 ### Before Fix:
+
 - Working directory queries triggered file loading intent
 - `load_genome_file` was incorrectly selected due to path pattern matching
 - No system management intent classification
 - Poor user experience for directory management operations
 
 ### After Fix:
+
 - Working directory queries correctly trigger system intent
 - `set_working_directory` tool is properly detected and prioritized
 - Built-in tool analysis achieves 90% confidence for directory management
@@ -134,11 +150,13 @@ Created and ran comprehensive test script (`test_working_directory_fix.js`) with
 ## 🔧 Technical Details
 
 ### Files Modified:
+
 1. **`tools_registry/registry_manager.js`**: Added system intent keywords and mapping
 2. **`tools_registry/builtin_tools_integration.js`**: Enhanced pattern recognition
 3. **`tools_registry/system_integration.js`**: Added system category support and prioritization
 
 ### Architecture Components Involved:
+
 - **Intent Analysis Engine**: Now properly classifies system management queries
 - **Built-in Tools Integration**: Enhanced with working directory pattern detection
 - **System Prompt Generation**: Both dynamic and non-dynamic modes include system tools
@@ -149,6 +167,7 @@ Created and ran comprehensive test script (`test_working_directory_fix.js`) with
 To verify the fix is working:
 
 1. **Run Test Script:**
+
    ```bash
    cd /Users/song/Github-Repos/GenomeAIStudio/tools_registry
    node test_working_directory_fix.js

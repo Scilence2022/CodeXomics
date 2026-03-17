@@ -31,14 +31,14 @@ parameters:
       description: Include custom created databases
       default: true
 sample_usages:
-  - user_query: "What BLAST databases are available?"
-    tool_call: "blast_list_databases()"
-    thought: "User wants to see all available databases"
-    expected_result: "Complete list of online, local, and custom databases"
-  - user_query: "Show me only local BLAST databases"
-    tool_call: "blast_list_databases(includeOnline=false, includeLocal=true, includeCustom=false)"
-    thought: "User wants to see only locally installed databases"
-    expected_result: "List of local databases only"
+  - user_query: 'What BLAST databases are available?'
+    tool_call: 'blast_list_databases()'
+    thought: 'User wants to see all available databases'
+    expected_result: 'Complete list of online, local, and custom databases'
+  - user_query: 'Show me only local BLAST databases'
+    tool_call: 'blast_list_databases(includeOnline=false, includeLocal=true, includeCustom=false)'
+    thought: 'User wants to see only locally installed databases'
+    expected_result: 'List of local databases only'
 relationships:
   enhances:
     - blast_search_local

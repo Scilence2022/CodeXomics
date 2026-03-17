@@ -23,11 +23,11 @@ parameters:
     filename:
       type: string
       description: Output filename for the exported GenBank file
-      default: "genome.gbk"
+      default: 'genome.gbk'
       examples:
-        - "annotated_genome.gbk"
-        - "chromosome_1.gbk"
-        - "selected_region.gbk"
+        - 'annotated_genome.gbk'
+        - 'chromosome_1.gbk'
+        - 'selected_region.gbk'
     include_features:
       type: boolean
       description: Include feature annotations in GenBank format
@@ -41,13 +41,13 @@ parameters:
       description: Types of features to include
       items:
         type: string
-        enum: ["gene", "CDS", "tRNA", "rRNA", "misc_feature", "regulatory", "all"]
-      default: ["all"]
+        enum: ['gene', 'CDS', 'tRNA', 'rRNA', 'misc_feature', 'regulatory', 'all']
+      default: ['all']
     export_range:
       type: string
       description: Range of genome to export
-      enum: ["all", "current_view", "selected_features", "custom_range"]
-      default: "all"
+      enum: ['all', 'current_view', 'selected_features', 'custom_range']
+      default: 'all'
     start_position:
       type: integer
       description: Start position for custom range export
@@ -77,9 +77,9 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["load_genome_file"]
-  alternatives: ["export_fasta_sequence", "export_gff_annotations"]
-  prerequisites: ["genome_data_loaded"]
+  enhances: ['load_genome_file']
+  alternatives: ['export_fasta_sequence', 'export_gff_annotations']
+  prerequisites: ['genome_data_loaded']
   follow_up: []
 metadata:
   usage_count: 0
@@ -95,24 +95,24 @@ metadata:
   usage_pattern: common
 error_handling:
   no_data:
-    error: "No genome data available for export"
-    solution: "Load genome file first"
+    error: 'No genome data available for export'
+    solution: 'Load genome file first'
     retry: false
   export_failed:
-    error: "Failed to export GenBank file"
-    solution: "Check file permissions and available disk space"
+    error: 'Failed to export GenBank file'
+    solution: 'Check file permissions and available disk space'
     retry: true
   invalid_range:
-    error: "Invalid export range specified"
-    solution: "Check start and end positions are valid"
+    error: 'Invalid export range specified'
+    solution: 'Check start and end positions are valid'
     retry: true
 returns:
-  success: "boolean - Whether export was successful"
-  result: "object - Export results including:
+  success: 'boolean - Whether export was successful'
+  result: 'object - Export results including:
     - filename: string - Name of exported file
     - featureCount: number - Number of features exported
     - sequenceLength: number - Length of exported sequence
     - fileSize: number - Size of exported file in bytes
-    - exportRange: string - Range of genome exported"
-  error: "string - Error message if success is false"
-  error_type: "string - Type of error for proper handling"
+    - exportRange: string - Range of genome exported'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

@@ -21,7 +21,7 @@ The actual functional plugins in CodeXomics are not file-based plugins stored in
 The `PluginManagerV2` class defines and registers plugins through code during initialization. The `loadBuiltinPlugins()` method orchestrates this process by calling three specialized registration methods:
 
 1. **registerBuiltinFunctionPlugins()** - Registers computational analysis plugins
-2. **registerBuiltinVisualizationPlugins()** - Registers visualization rendering plugins  
+2. **registerBuiltinVisualizationPlugins()** - Registers visualization rendering plugins
 3. **registerBuiltinUtilityPlugins()** - Registers utility and helper plugins
 
 #### Current Built-in Plugins
@@ -29,6 +29,7 @@ The `PluginManagerV2` class defines and registers plugins through code during in
 The system currently includes the following built-in plugins, each with multiple functions:
 
 **Genomic Analysis Suite (Plugin ID: `genomic-analysis`)**
+
 - Version: 2.0.0
 - Category: sequence-analysis
 - Functions:
@@ -38,13 +39,15 @@ The system currently includes the following built-in plugins, each with multiple
   - `compareRegions`: Multi-region comparative analysis with multiple metrics
 
 **Phylogenetic Analysis (Plugin ID: `phylogenetic-analysis`)**
-- Version: 2.0.0  
+
+- Version: 2.0.0
 - Category: evolutionary-analysis
 - Functions:
   - `buildPhylogeneticTree`: Tree construction using neighbor-joining, UPGMA, or maximum likelihood methods
   - `calculateEvolutionaryDistance`: Multiple distance calculation models (Hamming, Jukes-Cantor, Kimura)
 
 **Machine Learning Analysis (Plugin ID: `ml-analysis`)**
+
 - Version: 2.0.0
 - Category: machine-learning
 - Functions:
@@ -53,6 +56,7 @@ The system currently includes the following built-in plugins, each with multiple
   - `clusterSequences`: K-means, hierarchical, and DBSCAN clustering
 
 **Comparative Genomics (Plugin ID: `comparative-genomics`)**
+
 - Version: 2.0.0
 - Category: comparative-analysis
 - Functions:
@@ -60,6 +64,7 @@ The system currently includes the following built-in plugins, each with multiple
   - `identifyOrthologousGenes`: Ortholog identification across species
 
 **Visualization Plugins**
+
 - `phylogenetic-tree-viz`: Interactive phylogenetic tree rendering
 - `sequence-alignment-viz`: Multiple sequence alignment viewer
 - `gc-content-plot`: GC distribution visualization
@@ -68,6 +73,7 @@ The system currently includes the following built-in plugins, each with multiple
 - `dot-plot-viz`: Sequence similarity dot plots
 
 **Utility Plugins**
+
 - `sequence-utils`: Reverse complement, translation, and sequence manipulation
 
 This comprehensive suite of built-in plugins provides core bioinformatics functionality without requiring external plugin files. The total plugin count typically exceeds 10 plugins with over 20 functions.
@@ -82,22 +88,22 @@ The `loadAvailablePlugins()` method in `PluginManagementUI.js` (lines 943-987) c
 
 ```javascript
 const availablePlugins = [
-    {
-        id: 'sequence-alignment-plugin',
-        name: 'Sequence Alignment Plugin',
-        description: 'Advanced sequence alignment and comparison tools',
-        version: '1.0.0',
-        author: 'Community',
-        file: 'SequenceAlignmentPlugin.js'
-    },
-    {
-        id: 'phylogenetic-analysis-plugin',
-        name: 'Phylogenetic Analysis Plugin',
-        description: 'Enhanced phylogenetic tree construction and analysis',
-        version: '1.2.0',
-        author: 'Research Team',
-        file: 'PhylogeneticAnalysisPlugin.js'
-    }
+  {
+    id: 'sequence-alignment-plugin',
+    name: 'Sequence Alignment Plugin',
+    description: 'Advanced sequence alignment and comparison tools',
+    version: '1.0.0',
+    author: 'Community',
+    file: 'SequenceAlignmentPlugin.js',
+  },
+  {
+    id: 'phylogenetic-analysis-plugin',
+    name: 'Phylogenetic Analysis Plugin',
+    description: 'Enhanced phylogenetic tree construction and analysis',
+    version: '1.2.0',
+    author: 'Research Team',
+    file: 'PhylogeneticAnalysisPlugin.js',
+  },
 ];
 ```
 
@@ -214,24 +220,24 @@ Modify the placeholder plugins to clearly indicate they're examples:
 
 ```javascript
 const availablePlugins = [
-    {
-        id: 'example-sequence-alignment',
-        name: 'Example: Sequence Alignment Plugin',
-        description: 'Example plugin demonstrating how external plugins can extend functionality',
-        version: '1.0.0',
-        author: 'Community Example',
-        file: 'SequenceAlignmentPlugin.js',
-        isExample: true
-    },
-    {
-        id: 'example-phylogenetic',
-        name: 'Example: Phylogenetic Analysis Plugin',
-        description: 'Example plugin showing additional phylogenetic analysis features',
-        version: '1.2.0',
-        author: 'Research Team Example',
-        file: 'PhylogeneticAnalysisPlugin.js',
-        isExample: true
-    }
+  {
+    id: 'example-sequence-alignment',
+    name: 'Example: Sequence Alignment Plugin',
+    description: 'Example plugin demonstrating how external plugins can extend functionality',
+    version: '1.0.0',
+    author: 'Community Example',
+    file: 'SequenceAlignmentPlugin.js',
+    isExample: true,
+  },
+  {
+    id: 'example-phylogenetic',
+    name: 'Example: Phylogenetic Analysis Plugin',
+    description: 'Example plugin showing additional phylogenetic analysis features',
+    version: '1.2.0',
+    author: 'Research Team Example',
+    file: 'PhylogeneticAnalysisPlugin.js',
+    isExample: true,
+  },
 ];
 ```
 
@@ -240,7 +246,7 @@ const availablePlugins = [
 Display a banner in the "Available Plugins" tab explaining the current state:
 
 ```
-ℹ️ External plugin loading is coming soon! 
+ℹ️ External plugin loading is coming soon!
 The plugins shown below are examples to demonstrate the plugin marketplace concept.
 Built-in plugins are already available in the "Installed" tab.
 ```
@@ -248,6 +254,7 @@ Built-in plugins are already available in the "Installed" tab.
 **3. Update UI Copy**
 
 Change tab labels to be more descriptive:
+
 - "Available Plugins" → "Plugin Directory (External)"
 - "Installed Plugins" → "Active Plugins (Built-in & Loaded)"
 
@@ -268,7 +275,7 @@ async loadAvailablePlugins() {
     const pluginDir = path.join(__dirname, 'Plugins');
     const files = await fs.readdir(pluginDir);
     const plugins = [];
-    
+
     for (const file of files) {
         if (file.endsWith('.js') && file !== 'index.js') {
             try {
@@ -280,7 +287,7 @@ async loadAvailablePlugins() {
             }
         }
     }
-    
+
     return plugins;
 }
 ```
@@ -331,75 +338,75 @@ If a developer wanted to create an external plugin today (even though the loadin
 // src/renderer/modules/Plugins/CustomAnalysisPlugin.js
 
 class CustomAnalysisPlugin {
-    constructor() {
-        this.id = 'custom-analysis';
-        this.name = 'Custom Analysis Plugin';
-        this.version = '1.0.0';
-        this.author = 'Your Name';
-        this.description = 'Custom genomic analysis tools';
-        this.type = 'function';
-        this.category = 'custom-analysis';
-    }
-    
-    // Plugin metadata
-    getMetadata() {
-        return {
-            id: this.id,
-            name: this.name,
-            version: this.version,
-            author: this.author,
-            description: this.description,
-            type: this.type,
-            category: this.category
-        };
-    }
-    
-    // Define available functions
-    getFunctions() {
-        return {
-            customAnalyze: {
-                description: 'Perform custom analysis',
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        sequence: { type: 'string', description: 'Input sequence' },
-                        threshold: { type: 'number', default: 0.5 }
-                    },
-                    required: ['sequence']
-                },
-                executor: this.customAnalyze.bind(this)
-            }
-        };
-    }
-    
-    // Function implementation
-    async customAnalyze(params) {
-        const { sequence, threshold } = params;
-        
-        // Your analysis logic here
-        const result = {
-            length: sequence.length,
-            analysisScore: Math.random(),
-            passesThreshold: Math.random() > threshold
-        };
-        
-        return result;
-    }
-    
-    // Optional: Initialization logic
-    async initialize(app, api) {
-        console.log(`${this.name} initialized`);
-    }
-    
-    // Optional: Cleanup logic
-    async destroy() {
-        console.log(`${this.name} destroyed`);
-    }
+  constructor() {
+    this.id = 'custom-analysis';
+    this.name = 'Custom Analysis Plugin';
+    this.version = '1.0.0';
+    this.author = 'Your Name';
+    this.description = 'Custom genomic analysis tools';
+    this.type = 'function';
+    this.category = 'custom-analysis';
+  }
+
+  // Plugin metadata
+  getMetadata() {
+    return {
+      id: this.id,
+      name: this.name,
+      version: this.version,
+      author: this.author,
+      description: this.description,
+      type: this.type,
+      category: this.category,
+    };
+  }
+
+  // Define available functions
+  getFunctions() {
+    return {
+      customAnalyze: {
+        description: 'Perform custom analysis',
+        parameters: {
+          type: 'object',
+          properties: {
+            sequence: { type: 'string', description: 'Input sequence' },
+            threshold: { type: 'number', default: 0.5 },
+          },
+          required: ['sequence'],
+        },
+        executor: this.customAnalyze.bind(this),
+      },
+    };
+  }
+
+  // Function implementation
+  async customAnalyze(params) {
+    const { sequence, threshold } = params;
+
+    // Your analysis logic here
+    const result = {
+      length: sequence.length,
+      analysisScore: Math.random(),
+      passesThreshold: Math.random() > threshold,
+    };
+
+    return result;
+  }
+
+  // Optional: Initialization logic
+  async initialize(app, api) {
+    console.log(`${this.name} initialized`);
+  }
+
+  // Optional: Cleanup logic
+  async destroy() {
+    console.log(`${this.name} destroyed`);
+  }
 }
 
 // Export for loading system
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = CustomAnalysisPlugin;
+  module.exports = CustomAnalysisPlugin;
 }
 ```
 
@@ -420,25 +427,30 @@ For developers, the plugin development guide and examples provide clear specific
 ## Appendix: Built-in Plugin Function Catalog
 
 ### Genomic Analysis Suite Functions
+
 1. `genomic-analysis.analyzeGCContent` - Window-based GC content analysis
 2. `genomic-analysis.findMotifs` - Pattern matching with mismatches
 3. `genomic-analysis.calculateDiversity` - Shannon/Simpson diversity
 4. `genomic-analysis.compareRegions` - Multi-region comparison
 
 ### Phylogenetic Analysis Functions
+
 5. `phylogenetic-analysis.buildPhylogeneticTree` - Tree construction
 6. `phylogenetic-analysis.calculateEvolutionaryDistance` - Distance metrics
 
 ### Machine Learning Functions
+
 7. `ml-analysis.predictGeneFunction` - AI-based prediction
 8. `ml-analysis.classifySequence` - Sequence classification
 9. `ml-analysis.clusterSequences` - Clustering analysis
 
 ### Comparative Genomics Functions
+
 10. `comparative-genomics.compareGenomes` - Genome comparison
 11. `comparative-genomics.identifyOrthologousGenes` - Ortholog detection
 
 ### Visualization Plugins
+
 12. `phylogenetic-tree-viz` - Tree visualization
 13. `sequence-alignment-viz` - Alignment viewer
 14. `gc-content-plot` - GC distribution plots
@@ -447,6 +459,7 @@ For developers, the plugin development guide and examples provide clear specific
 17. `dot-plot-viz` - Sequence dot plots
 
 ### Utility Functions
+
 18. `sequence-utils.reverseComplement` - Reverse complement
 19. `sequence-utils.translateSequence` - DNA to protein translation
 

@@ -1,0 +1,53 @@
+name: load_reads_file
+version: 1.0.0
+description: Load alignment files in SAM or BAM format directly by file path
+category: file_operations
+keywords:
+  - load
+  - reads
+  - sam
+  - bam
+  - alignment
+priority: 1
+execution:
+  type: client
+  timeout: 15000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+sample_usages:
+  - user_query: Use load_reads_file to analyze genomic data
+    tool_call: load_reads_file(parameter1='value1', parameter2='value2')
+    thought: User wants to use load_reads_file for load alignment files in sam or bam format directly by file path
+    expected_result: Result from load_reads_file analysis
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - file_operations
+    - core
+    - essential
+  complexity: simple
+  usage_pattern: frequent
+error_handling: {}
+returns:
+  success: boolean - Whether operation was successful
+  result: object - Operation result

@@ -7,18 +7,22 @@ This guide explains how to integrate the dynamic tools registry system with the 
 ## 🏗️ Architecture Summary
 
 ### Before (Anti-pattern)
+
 ```
 ChatManager → Massive System Prompt (5000+ lines) → LLM
 ```
+
 - All tools hardcoded in system prompt
 - Difficult to maintain and update
 - Poor performance due to context size
 - No intelligent tool selection
 
 ### After (Best Practice)
+
 ```
 ChatManager → Dynamic Tool Retrieval → Relevant Tools Only → LLM
 ```
+
 - Tools defined in separate YAML files
 - Intelligent tool selection based on user intent
 - Dynamic system prompt generation
@@ -66,63 +70,60 @@ Replace the existing `getBaseSystemMessage()` method in `ChatManager.js`:
 const SystemIntegration = require('./tools_registry/system_integration');
 
 class ChatManager {
-    constructor(app, configManager = null) {
-        // ... existing code ...
-        
-        // Initialize dynamic tools system
-        this.dynamicTools = new SystemIntegration();
-        this.initializeDynamicTools();
-    }
+  constructor(app, configManager = null) {
+    // ... existing code ...
 
-    async initializeDynamicTools() {
-        try {
-            await this.dynamicTools.initialize();
-            console.log('✅ Dynamic Tools System integrated');
-        } catch (error) {
-            console.error('❌ Dynamic Tools System failed:', error);
-        }
-    }
+    // Initialize dynamic tools system
+    this.dynamicTools = new SystemIntegration();
+    this.initializeDynamicTools();
+  }
 
-    async getBaseSystemMessage() {
-        try {
-            // Get current context
-            const context = this.getCurrentContext();
-            
-            // Generate dynamic system prompt
-            const promptData = await this.dynamicTools.generateDynamicSystemPrompt(
-                this.getLastUserQuery(),
-                context
-            );
-            
-            return promptData.systemPrompt;
-        } catch (error) {
-            console.error('Failed to generate dynamic system message:', error);
-            return this.getFallbackSystemMessage();
-        }
+  async initializeDynamicTools() {
+    try {
+      await this.dynamicTools.initialize();
+      console.log('✅ Dynamic Tools System integrated');
+    } catch (error) {
+      console.error('❌ Dynamic Tools System failed:', error);
     }
+  }
 
-    getCurrentContext() {
-        return {
-            hasData: this.app?.genomeData?.isLoaded || false,
-            hasNetwork: navigator.onLine,
-            hasAuth: this.configManager?.hasValidAPIKey() || false,
-            currentCategory: this.getCurrentCategory(),
-            loadedGenome: this.app?.genomeData?.genomeInfo || null
-        };
+  async getBaseSystemMessage() {
+    try {
+      // Get current context
+      const context = this.getCurrentContext();
+
+      // Generate dynamic system prompt
+      const promptData = await this.dynamicTools.generateDynamicSystemPrompt(this.getLastUserQuery(), context);
+
+      return promptData.systemPrompt;
+    } catch (error) {
+      console.error('Failed to generate dynamic system message:', error);
+      return this.getFallbackSystemMessage();
     }
+  }
 
-    getLastUserQuery() {
-        // Extract from conversation history
-        if (this.conversationHistory.length === 0) return '';
-        const lastMessage = this.conversationHistory[this.conversationHistory.length - 1];
-        return lastMessage.role === 'user' ? lastMessage.content : '';
-    }
+  getCurrentContext() {
+    return {
+      hasData: this.app?.genomeData?.isLoaded || false,
+      hasNetwork: navigator.onLine,
+      hasAuth: this.configManager?.hasValidAPIKey() || false,
+      currentCategory: this.getCurrentCategory(),
+      loadedGenome: this.app?.genomeData?.genomeInfo || null,
+    };
+  }
 
-    getFallbackSystemMessage() {
-        return `# CodeXomics - Fallback Mode
+  getLastUserQuery() {
+    // Extract from conversation history
+    if (this.conversationHistory.length === 0) return '';
+    const lastMessage = this.conversationHistory[this.conversationHistory.length - 1];
+    return lastMessage.role === 'user' ? lastMessage.content : '';
+  }
+
+  getFallbackSystemMessage() {
+    return `# CodeXomics - Fallback Mode
         // ... fallback system message ...
         `;
-    }
+  }
 }
 ```
 
@@ -134,15 +135,15 @@ Enhance tool execution with usage tracking:
 async executeTool(toolName, parameters, clientId) {
     const startTime = Date.now();
     let success = false;
-    
+
     try {
         // Execute tool using existing MCP system
         const result = await this.executeToolViaMCP(toolName, parameters, clientId);
         success = true;
-        
+
         // Track tool usage for optimization
         this.dynamicTools.trackToolUsage(toolName, success, Date.now() - startTime);
-        
+
         return result;
     } catch (error) {
         // Track failed tool usage
@@ -181,24 +182,28 @@ getIntegrationStatus() {
 ## 🚀 Benefits
 
 ### 1. **Maintainability**
+
 - Each tool is independently maintainable
 - Easy to add new tools without system changes
 - Version control for individual tools
 - Clear separation of concerns
 
 ### 2. **Performance**
+
 - Only relevant tools loaded into context
 - Reduced system prompt size (90% reduction)
 - Faster LLM response times
 - Intelligent tool selection
 
 ### 3. **Scalability**
+
 - Easy to add new tool categories
 - Support for thousands of tools
 - Hot reloading of tool definitions
 - Plugin-based architecture
 
 ### 4. **Intelligence**
+
 - User intent analysis
 - Context-aware tool selection
 - Usage pattern optimization
@@ -207,12 +212,14 @@ getIntegrationStatus() {
 ## 📊 Performance Metrics
 
 ### Before Integration
+
 - System prompt size: ~5000 lines
 - Tool loading time: ~2-3 seconds
 - Context utilization: 80-90%
 - Maintenance complexity: High
 
 ### After Integration
+
 - System prompt size: ~200-500 lines (dynamic)
 - Tool loading time: ~200-500ms
 - Context utilization: 40-60%
@@ -221,35 +228,40 @@ getIntegrationStatus() {
 ## 🔄 Tool Lifecycle
 
 ### 1. **Tool Definition**
+
 ```yaml
 # tools_registry/category/tool_name.yaml
-name: "tool_name"
-version: "1.0.0"
-description: "Tool description"
-category: "category"
-keywords: ["keyword1", "keyword2"]
+name: 'tool_name'
+version: '1.0.0'
+description: 'Tool description'
+category: 'category'
+keywords: ['keyword1', 'keyword2']
 priority: 1
 # ... parameters, examples, relationships
 ```
 
 ### 2. **Tool Discovery**
+
 - Automatic scanning of YAML files
 - Category-based organization
 - Metadata extraction and indexing
 
 ### 3. **Tool Selection**
+
 - User intent analysis
 - Context matching
 - Priority scoring
 - Relationship consideration
 
 ### 4. **Tool Execution**
+
 - Parameter validation
 - MCP integration
 - Usage tracking
 - Error handling
 
 ### 5. **Tool Optimization**
+
 - Usage statistics collection
 - Performance monitoring
 - Automatic retry logic
@@ -260,23 +272,26 @@ priority: 1
 ### Adding a New Tool
 
 1. **Create Tool Definition**
+
    ```bash
    # Create YAML file in appropriate category
    touch tools_registry/category/new_tool.yaml
    ```
 
 2. **Define Tool Properties**
+
    ```yaml
-   name: "new_tool"
-   version: "1.0.0"
-   description: "Description of the new tool"
-   category: "category"
-   keywords: ["keyword1", "keyword2"]
+   name: 'new_tool'
+   version: '1.0.0'
+   description: 'Description of the new tool'
+   category: 'category'
+   keywords: ['keyword1', 'keyword2']
    priority: 1
    # ... complete definition
    ```
 
 3. **Test Tool Integration**
+
    ```javascript
    // Test tool retrieval
    const tools = await dynamicTools.searchTools('new_tool');
@@ -291,12 +306,14 @@ priority: 1
 ### Updating Existing Tools
 
 1. **Modify YAML Definition**
+
    ```bash
    # Edit tool definition
    vim tools_registry/category/tool_name.yaml
    ```
 
 2. **Clear Cache**
+
    ```javascript
    // Clear tool cache for immediate effect
    dynamicTools.clearCache();
@@ -312,18 +329,21 @@ priority: 1
 ## 🔍 Monitoring and Analytics
 
 ### Tool Usage Statistics
+
 ```javascript
 const stats = chatManager.getToolUsageStats();
 console.log('Most used tools:', stats);
 ```
 
 ### Registry Health Check
+
 ```javascript
 const status = chatManager.getIntegrationStatus();
 console.log('Registry status:', status);
 ```
 
 ### Performance Monitoring
+
 ```javascript
 const registryStats = await chatManager.dynamicTools.getRegistryStats();
 console.log('Registry performance:', registryStats);
@@ -351,17 +371,19 @@ console.log('Registry performance:', registryStats);
 ### Debug Mode
 
 Enable debug logging:
+
 ```javascript
 // In registry_manager.js
 const DEBUG = true;
 if (DEBUG) {
-    console.log('Tool selection debug:', debugInfo);
+  console.log('Tool selection debug:', debugInfo);
 }
 ```
 
 ## 📈 Future Enhancements
 
 ### Planned Features
+
 - **Machine Learning**: AI-powered tool recommendation
 - **A/B Testing**: Tool performance optimization
 - **Analytics Dashboard**: Usage pattern visualization
@@ -369,6 +391,7 @@ if (DEBUG) {
 - **Hot Reloading**: Live tool updates without restart
 
 ### Extension Points
+
 - Custom tool categories
 - Plugin-based tool loading
 - External tool registries
@@ -389,6 +412,7 @@ This architecture follows industry best practices and positions CodeXomics for f
 ---
 
 **Next Steps:**
+
 1. Follow the integration steps above
 2. Test the system with sample queries
 3. Monitor performance and usage

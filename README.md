@@ -27,6 +27,7 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 ## ✨ Key Features
 
 ### 🤖 **Multi-Agent AI System**
+
 - **Collaborative Intelligence** - Multiple AI agents working together for complex genomic analysis
 - **MCP Integration** - Model Context Protocol for seamless tool integration
 - **Conversation Evolution v2** - Advanced conversation tracking and analysis system
@@ -35,6 +36,7 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Benchmark Testing** - Comprehensive AI evaluation with 22+ test cases across 6 categories
 
 ### 🧬 **Advanced Genome Visualization**
+
 - **Dynamic SVG-based GC Content/Skew** - Crisp, scalable visualization with adaptive window sizing
 - **Interactive Tracks** - Genes, sequences, variants, reads, and proteins with resizable heights
 - **Multi-format Support** - FASTA, GenBank, GFF/GTF, BED, VCF, BAM/SAM files
@@ -44,6 +46,7 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Multiple View Modes** - Grid, List, and Details views for project management
 
 ### 🔌 **Advanced Plugin System**
+
 - **Modular Architecture** - Complete plugin system with PluginManager, SmartExecutor, and FunctionCallsOrganizer
 - **AI Integration** - Plugins automatically callable by ChatBox LLM using JSON function calling
 - **Security Sandbox** - Safe execution environment with parameter validation
@@ -52,14 +55,16 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Core Plugins** - Biological Networks, Comparative Genomics, Metabolic Pathways, and more
 
 ### 🔧 **External Tools Integration**
+
 - **ProGenFixer** - Protein engineering and sequence optimization tool
-- **Deep Gene Research** - Advanced gene analysis and research platform  
+- **Deep Gene Research** - Advanced gene analysis and research platform
 - **CHOPCHOP** - CRISPR design and analysis tool
 - **Customizable Tools** - Add your own external bioinformatics tools
 - **Keyboard Shortcuts** - Quick access to frequently used tools
 - **Session Management** - Persistent tool windows and state
 
-### 🧪 **Benchmark Testing Interface** 
+### 🧪 **Benchmark Testing Interface**
+
 - **Comprehensive AI Evaluation** - 22+ test cases across 6 genomic analysis categories
 - **Manual Test Interaction** - Interactive dialogs for human verification and scoring
 - **Triple Classification System** - Automatic/manual evaluation, simple/complex tasks, 5 task types
@@ -69,6 +74,7 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Multi-Agent Testing** - Evaluate multi-agent collaboration and coordination
 
 ### 🤖 **AI-Powered Assistant**
+
 - **Natural Language Queries** - Ask questions about genes, functions, and genomic regions
 - **Dynamic Tool Registry** - Intelligent tool selection based on user intent and context
 - **Conversation Evolution** - Advanced conversation recording and analysis system
@@ -79,6 +85,7 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Context-Aware Tools** - Tools adapt to current genome state and user queries
 
 ### 🔬 **Professional Analysis Tools**
+
 - **KGML Pathway Viewer** - Complete KEGG pathway visualization tool with dynamic interaction
 - **STRING Protein Networks** - Protein-protein interaction network analysis
 - **Enhanced Gene Details** - Support for 50+ biological databases with automatic link detection
@@ -88,6 +95,7 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Export Capabilities** - FASTA, GenBank, GFF, BED, and protein sequences
 
 ### 🗂️ **Project Management**
+
 - **XML Project Format** - Save and load projects with ".prj.GAI" extension
 - **Multiple View Modes** - Grid, List, and Details views for different workflows
 - **Simple Mode** - Compact interface for streamlined workflows
@@ -95,6 +103,7 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 - **Project Templates** - Pre-configured project setups for common workflows
 
 ### 📊 **Enhanced User Experience**
+
 - **Modular Architecture** - Clean, maintainable codebase with separated concerns
 - **Responsive Design** - Works seamlessly across different screen sizes
 - **Keyboard Shortcuts** - Efficient navigation and operation shortcuts
@@ -108,14 +117,17 @@ A modern, cross-platform bioinformatics analysis platform built with Electron, f
 Download the latest version (v0.529beta) for your platform:
 
 #### macOS
+
 - **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics-0.529.0-beta-x64.dmg)**: `CodeXomics-0.529.0-beta-x64.dmg`
 - **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics-0.529.0-beta-arm64.dmg)**: `CodeXomics-0.529.0-beta-arm64.dmg`
 
-#### Windows  
+#### Windows
+
 - **[Installer](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics%20Setup%200.529.0-beta.exe)**: `CodeXomics Setup 0.529.0-beta.exe`
 - **[Portable](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics%200.529.0-beta.exe)**: `CodeXomics 0.529.0-beta.exe`
 
 #### Linux
+
 - **[AppImage](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/CodeXomics-0.529.0-beta.AppImage)**: `CodeXomics-0.529.0-beta.AppImage`
 - **[Debian](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/codexomics_0.529.0-beta_amd64.deb)**: `codexomics_0.529.0-beta_amd64.deb`
 - **[Snap](https://github.com/Scilence2022/CodeXomics/releases/download/v0.529beta/codexomics_0.529.0-beta_amd64.snap)**: `codexomics_0.529.0-beta_amd64.snap`
@@ -123,6 +135,7 @@ Download the latest version (v0.529beta) for your platform:
 **📋 All Downloads**: [GitHub Releases Page](https://github.com/Scilence2022/CodeXomics/releases/tag/v0.529beta)
 
 ### **Build from Source**
+
 ```bash
 # Clone the repository
 git clone https://github.com/Scilence2022/CodeXomics.git
@@ -149,10 +162,11 @@ npm run build
 ## 📖 Quick Start
 
 ### **1. Install and Launch**
+
 ```bash
 # Download for your platform from releases
 # macOS: Open DMG and drag to Applications
-# Windows: Run installer or portable exe  
+# Windows: Run installer or portable exe
 # Linux: Make AppImage executable or install deb/snap
 
 # Or build from source
@@ -163,6 +177,7 @@ npm start
 ```
 
 ### **2. Configure AI Models**
+
 ```
 Options → Configure LLMs
 ├── Add API keys (OpenAI, Anthropic, Google, SiliconFlow)
@@ -172,6 +187,7 @@ Options → Configure LLMs
 ```
 
 ### **3. Load Genomic Data**
+
 ```
 File → Load File
 ├── Genome: FASTA, GenBank
@@ -181,12 +197,14 @@ File → Load File
 ```
 
 ### **4. Start Analyzing**
+
 - **Ask AI**: "Find all DNA polymerase genes"
 - **Use Tools**: Tools → ProGenFixer, KGML Viewer, STRING Networks
 - **Run Benchmarks**: Benchmark & Debug → Open Benchmark
 - **Create Projects**: File → New Project
 
 ### **5. Advanced Features**
+
 - **Multi-Agent Mode**: Enable collaborative AI analysis
 - **External Tools**: Quick access via keyboard shortcuts
 - **Plugin Marketplace**: Install community plugins
@@ -195,20 +213,23 @@ File → Load File
 ## 🎯 Core Features
 
 ### **File Format Support**
-| Format | Type | Import | Export | Notes |
-|--------|------|---------|---------|-------|
-| **FASTA** | Genome | ✅ | ✅ | Primary genome sequences |
-| **GenBank** | Genome + Annotations | ✅ | ✅ | Complete genomic records |
-| **GFF/GTF** | Annotations | ✅ | ✅ | Gene and feature annotations |
-| **BED** | Regions | ✅ | ✅ | Genomic intervals and features |
-| **VCF** | Variants | ✅ | ❌ | SNPs and structural variants |
-| **SAM/BAM** | Alignments | ✅ | ❌ | Read mapping data |
-| **WIG** | Track Data | ✅ | ✅ | Multi-track support and merging |
-| **KGML** | Pathways | ✅ | ✅ | KEGG pathway visualization |
-| **PRJ.GAI** | Projects | ✅ | ✅ | Complete project files |
+
+| Format      | Type                 | Import | Export | Notes                           |
+| ----------- | -------------------- | ------ | ------ | ------------------------------- |
+| **FASTA**   | Genome               | ✅     | ✅     | Primary genome sequences        |
+| **GenBank** | Genome + Annotations | ✅     | ✅     | Complete genomic records        |
+| **GFF/GTF** | Annotations          | ✅     | ✅     | Gene and feature annotations    |
+| **BED**     | Regions              | ✅     | ✅     | Genomic intervals and features  |
+| **VCF**     | Variants             | ✅     | ❌     | SNPs and structural variants    |
+| **SAM/BAM** | Alignments           | ✅     | ❌     | Read mapping data               |
+| **WIG**     | Track Data           | ✅     | ✅     | Multi-track support and merging |
+| **KGML**    | Pathways             | ✅     | ✅     | KEGG pathway visualization      |
+| **PRJ.GAI** | Projects             | ✅     | ✅     | Complete project files          |
 
 ### **Enhanced Database Integration**
+
 Gene Details sidebar now supports 50+ biological databases:
+
 - **Sequence Databases**: GenBank, RefSeq, UniProt
 - **Functional Annotation**: GO, InterPro, Pfam, EC numbers
 - **Literature**: PubMed, bioRxiv, DOI links, ORCID
@@ -218,6 +239,7 @@ Gene Details sidebar now supports 50+ biological databases:
 - **Chemical/Drug**: PubChem, ChEBI, ChEMBL
 
 ### **AI Integration with Dynamic Tool Registry**
+
 ```
 User: "Find all DNA polymerase genes"
 AI: [Dynamically selects search tools and displays results]
@@ -239,21 +261,25 @@ AI: [Opens comprehensive benchmark interface for AI evaluation]
 ```
 
 ### **Benchmark Testing System**
+
 Comprehensive AI evaluation with 22 test cases:
+
 - **Navigation Tests** - Browser navigation and position jumping
-- **Analysis Tests** - Sequence analysis and GC content calculation  
+- **Analysis Tests** - Sequence analysis and GC content calculation
 - **Data Loading Tests** - File loading and parsing verification
 - **Search Tests** - Gene search and result validation
 - **External Database Tests** - API integration and data retrieval
 - **Workflow Tests** - Multi-step genomic analysis processes
 
 **Manual Test Features:**
+
 - Interactive verification dialogs with step-by-step checklists
 - Flexible scoring system (0-10 points based on complexity)
 - Real-time progress tracking and detailed reporting
 - Export capabilities for test results and LLM interactions
 
 ### **Visualization Tracks**
+
 - **🧬 Genes & Features** - Annotations with directional arrows and detailed information
 - **🔤 Sequence** - DNA sequence with customizable display density
 - **📊 GC Content & Skew** - Dynamic SVG visualization with adaptive window sizing
@@ -266,6 +292,7 @@ Comprehensive AI evaluation with 22 test cases:
 ## 🔌 Plugin System
 
 ### **Available Plugins**
+
 - **Biological Networks Plugin** - Network analysis and visualization
 - **Comparative Genomics Plugin** - Multi-genome comparison tools
 - **Metabolic Pathways Plugin** - Pathway analysis and visualization
@@ -273,33 +300,35 @@ Comprehensive AI evaluation with 22 test cases:
 - **Population Genomics Plugin** - Population-level analysis tools
 
 ### **Plugin Development**
+
 ```javascript
 // Example plugin structure
 const MyPlugin = {
-    id: 'my-plugin',
-    name: 'My Custom Plugin',
-    version: '1.0.0',
-    
-    functions: {
-        analyzeSequence: {
-            description: 'Analyze DNA sequence',
-            parameters: {
-                sequence: { type: 'string', required: true }
-            },
-            execute: async (params) => {
-                // Plugin logic here
-                return { result: 'analysis complete' };
-            }
-        }
+  id: 'my-plugin',
+  name: 'My Custom Plugin',
+  version: '1.0.0',
+
+  functions: {
+    analyzeSequence: {
+      description: 'Analyze DNA sequence',
+      parameters: {
+        sequence: { type: 'string', required: true },
+      },
+      execute: async params => {
+        // Plugin logic here
+        return { result: 'analysis complete' };
+      },
     },
-    
-    initialize: () => {
-        // Plugin initialization
-    }
+  },
+
+  initialize: () => {
+    // Plugin initialization
+  },
 };
 ```
 
 ### **Plugin Installation**
+
 1. Access Plugin Marketplace from the menu
 2. Browse available plugins
 3. Click "Install" for desired plugins
@@ -308,6 +337,7 @@ const MyPlugin = {
 ## 🎮 Usage Examples
 
 ### **Basic Navigation**
+
 ```bash
 # Search for genes
 Type "lacZ" in search bar → Press Enter
@@ -320,6 +350,7 @@ Use View menu or toolbar buttons for Grid/List/Details
 ```
 
 ### **Advanced Tools**
+
 ```bash
 # Open KGML Pathway Viewer
 Tools → KGML Pathway Viewer (Ctrl+Shift+K)
@@ -332,6 +363,7 @@ Click any gene to see enhanced database cross-references
 ```
 
 ### **Project Management**
+
 ```bash
 # Create new project
 File → New Project → Choose template
@@ -344,6 +376,7 @@ View → Grid/List/Details or use toolbar buttons
 ```
 
 ### **AI Interaction with Dynamic Tool Registry**
+
 ```
 Enhanced Queries with Intelligent Tool Selection:
 - "Show me all ribosomal genes" → [Selects gene search tools]
@@ -361,7 +394,9 @@ Enhanced Queries with Intelligent Tool Selection:
 ## ⚙️ Configuration
 
 ### **AI Assistant Setup**
+
 1. **OpenAI Configuration**:
+
    ```json
    {
      "provider": "openai",
@@ -382,7 +417,9 @@ Enhanced Queries with Intelligent Tool Selection:
    ```
 
 ### **Application Settings**
+
 Configuration files stored in: `~/.codexomics/`
+
 - `config.json` - Main application settings
 - `llm-config.json` - AI provider configurations
 - `ui-preferences.json` - Interface customizations
@@ -391,6 +428,7 @@ Configuration files stored in: `~/.codexomics/`
 - `projects.json` - Project management settings
 
 ### **Project Structure**
+
 ```
 Documents/GenomeExplorer Projects/
 ├── ProjectName/
@@ -402,6 +440,7 @@ Documents/GenomeExplorer Projects/
 ## 🛠️ Development
 
 ### **Architecture Overview**
+
 ```
 src/
 ├── main/                       # Electron main process
@@ -437,6 +476,7 @@ src/
 ```
 
 ### **Plugin System Architecture**
+
 ```
 Plugin System Components:
 ├── PluginManager.js              # Core plugin management
@@ -448,6 +488,7 @@ Plugin System Components:
 ```
 
 ### **Dynamic Tool Registry Architecture**
+
 ```
 Dynamic Tool Registry Components:
 ├── registry_manager.js           # Core registry management
@@ -470,6 +511,7 @@ Dynamic Tool Registry Components:
 ## 🧪 Testing
 
 ### **Test Structure**
+
 ```
 test/
 ├── unit-tests/                 # Individual component tests
@@ -479,13 +521,16 @@ test/
 ```
 
 ### **Sample Data**
+
 The application includes enhanced sample data:
+
 - **E. coli genome** - Complete bacterial genome with annotations
 - **KGML pathways** - Example pathway files for visualization
 - **Protein networks** - STRING interaction data
 - **Test sequences** - Various sequence formats and features
 
 ### **Testing Commands**
+
 ```bash
 # Run all tests
 npm test
@@ -504,26 +549,31 @@ npm run test:plugin-framework
 ### **Common Issues**
 
 **Plugin System Issues**:
+
 - Verify plugin installation through Plugin Marketplace
 - Check plugin compatibility with current version
 - Review plugin logs in developer console
 
 **AI Assistant not responding**:
+
 - Check API key configuration in Settings
 - Verify internet connection for cloud providers
 - Test connection using the "Test Connection" button
 
 **KGML Viewer Issues**:
+
 - Ensure KGML file is valid XML format
 - Check file permissions and accessibility
 - Verify pathway data completeness
 
 **Project Loading Problems**:
+
 - Check .prj.GAI file integrity
 - Verify project directory structure
 - Ensure all referenced files are accessible
 
 **Performance issues**:
+
 - Reduce visible track count for large genomes
 - Use Simple Mode for better performance
 - Close unused visualization tools
@@ -531,11 +581,13 @@ npm run test:plugin-framework
 ### **Advanced Troubleshooting**
 
 **Conversation Evolution Issues**:
+
 - Check conversation recording in developer console
 - Verify storage permissions
 - Reset conversation history if needed
 
 **Database Link Issues**:
+
 - Verify internet connection for external databases
 - Check if database URLs are accessible
 - Report broken links for database updates
@@ -543,6 +595,7 @@ npm run test:plugin-framework
 ## 📊 Performance
 
 ### **Optimization Features**
+
 - **SVG Rendering** - Hardware-accelerated graphics for smooth performance
 - **Lazy Loading** - Components load only when needed
 - **Plugin Sandboxing** - Isolated execution prevents conflicts
@@ -551,6 +604,7 @@ npm run test:plugin-framework
 - **Simple Mode** - Reduced UI complexity for better performance
 
 ### **System Requirements**
+
 - **RAM**: 6GB minimum, 12GB recommended (increased for plugin system)
 - **Storage**: 1GB for application, additional space for plugins and data
 - **CPU**: Modern multi-core processor recommended
@@ -560,6 +614,7 @@ npm run test:plugin-framework
 ## 🚀 Future Roadmap
 
 ### **Planned Features**
+
 - **Enhanced Plugin Marketplace** - Advanced plugin discovery and ratings
 - **Multi-genome comparison** - Compare multiple genomes side-by-side
 - **Advanced AI models** - Integration with specialized biological AI models
@@ -568,6 +623,7 @@ npm run test:plugin-framework
 - **Real-time collaboration** - Multi-user editing and analysis
 
 ### **Long-term Vision**
+
 - **Advanced analytics** - Machine learning-powered genomic insights
 - **Mobile support** - Tablet and mobile device compatibility
 - **Distributed computing** - Large-scale analysis capabilities
@@ -586,6 +642,7 @@ npm run test:plugin-framework
 We welcome contributions from the genomics and bioinformatics community!
 
 ### **How to Contribute**
+
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
@@ -593,12 +650,14 @@ We welcome contributions from the genomics and bioinformatics community!
 5. Open a Pull Request
 
 ### **Plugin Development**
+
 1. **Study existing plugins** in `src/renderer/modules/Plugins/`
 2. **Follow plugin API** specifications
 3. **Test with Plugin Test Framework**
 4. **Submit to Plugin Marketplace**
 
 ### **Development Guidelines**
+
 - Follow existing code style and patterns
 - Add documentation for new features
 - Include tests for new functionality
@@ -644,5 +703,4 @@ Made with ❤️ by the CodeXomics Team
 
 [⬆ Back to Top](#-codexomics)
 
-</div> 
-
+</div>

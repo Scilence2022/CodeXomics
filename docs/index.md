@@ -14,37 +14,37 @@ CodeXomics is a modern, cross-platform bioinformatics analysis platform featurin
 
 <div class="grid cards" markdown>
 
--   :material-rocket-launch:{ .lg .middle } **Get Started**
+- :material-rocket-launch:{ .lg .middle } **Get Started**
 
-    ---
+  ***
 
-    Install and configure CodeXomics in minutes
+  Install and configure CodeXomics in minutes
 
-    [:octicons-arrow-right-24: Getting Started](user-guides/GETTING_STARTED.md)
+  [:octicons-arrow-right-24: Getting Started](user-guides/GETTING_STARTED.md)
 
--   :material-book-open-variant:{ .lg .middle } **User Guide**
+- :material-book-open-variant:{ .lg .middle } **User Guide**
 
-    ---
+  ***
 
-    Comprehensive guide to all features
+  Comprehensive guide to all features
 
-    [:octicons-arrow-right-24: User Guide](user-guides/USER_GUIDE.md)
+  [:octicons-arrow-right-24: User Guide](user-guides/USER_GUIDE.md)
 
--   :material-code-tags:{ .lg .middle } **Developer Guide**
+- :material-code-tags:{ .lg .middle } **Developer Guide**
 
-    ---
+  ***
 
-    Build plugins and contribute to CodeXomics
+  Build plugins and contribute to CodeXomics
 
-    [:octicons-arrow-right-24: Developer Guide](developer-guides/DEVELOPER_GUIDE.md)
+  [:octicons-arrow-right-24: Developer Guide](developer-guides/DEVELOPER_GUIDE.md)
 
--   :material-cog:{ .lg .middle } **Architecture**
+- :material-cog:{ .lg .middle } **Architecture**
 
-    ---
+  ***
 
-    Technical deep-dives into system design
+  Technical deep-dives into system design
 
-    [:octicons-arrow-right-24: Architecture](architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md)
+  [:octicons-arrow-right-24: Architecture](architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md)
 
 </div>
 
@@ -53,21 +53,25 @@ CodeXomics is a modern, cross-platform bioinformatics analysis platform featurin
 ## Key Features
 
 ### 🤖 Multi-Agent AI System
+
 - Collaborative intelligence with multiple AI agents
 - MCP integration for seamless tool integration
 - Support for OpenAI, Anthropic, Google Gemini, and local LLMs
 
 ### 🧬 Advanced Genome Visualization
+
 - Dynamic SVG-based GC content/skew visualization
 - Interactive tracks for genes, sequences, variants, and reads
 - Multi-format support (FASTA, GenBank, GFF, VCF, BAM)
 
 ### 🔌 Plugin System
+
 - Modular architecture with plugin marketplace
 - AI-callable plugins via JSON function calling
 - Security sandbox with parameter validation
 
 ### 🔧 External Tools Integration
+
 - ProGenFixer, Deep Gene Research, CHOPCHOP
 - Customizable external bioinformatics tools
 - Session management and keyboard shortcuts
@@ -76,12 +80,12 @@ CodeXomics is a modern, cross-platform bioinformatics analysis platform featurin
 
 ## Quick Links
 
-| Resource | Description |
-|----------|-------------|
-| [Installation](user-guides/GETTING_STARTED.md#installation) | Download and install |
-| [Configuration](user-guides/USER_GUIDE.md#ai-assistant) | Set up AI providers |
-| [Plugin Development](developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md) | Build custom plugins |
-| [API Reference](architecture/PLUGIN_SYSTEM_DEEP_ANALYSIS.md) | Technical documentation |
+| Resource                                                           | Description             |
+| ------------------------------------------------------------------ | ----------------------- |
+| [Installation](user-guides/GETTING_STARTED.md#installation)        | Download and install    |
+| [Configuration](user-guides/USER_GUIDE.md#ai-assistant)            | Set up AI providers     |
+| [Plugin Development](developer-guides/PLUGIN_DEVELOPMENT_GUIDE.md) | Build custom plugins    |
+| [API Reference](architecture/PLUGIN_SYSTEM_DEEP_ANALYSIS.md)       | Technical documentation |
 
 ---
 
@@ -93,4 +97,4 @@ CodeXomics is a modern, cross-platform bioinformatics analysis platform featurin
 
 ---
 
-*Made with ❤️ by the CodeXomics Team*
+_Made with ❤️ by the CodeXomics Team_

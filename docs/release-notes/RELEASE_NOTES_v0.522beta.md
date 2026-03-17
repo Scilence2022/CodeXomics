@@ -11,12 +11,14 @@
 We're excited to share the **first beta release** of CodeXomics - a bioinformatics analysis platform that integrates AI capabilities with traditional genome analysis tools. This beta focuses on core genome visualization and basic AI integration, with several experimental features under development.
 
 **What's ready for testing:**
+
 - 🧬 **Genome visualization** with multi-track support
 - 🤖 **Basic AI integration** with multiple LLM providers
 - 📊 **Testing framework** for AI evaluation
 - 💻 **Cross-platform support** (macOS, Windows, Linux)
 
 **What's experimental:**
+
 - 🚧 **Multi-agent coordination** (early development)
 - 🚧 **External tools** (prototype implementations)
 - 🚧 **Plugin system** (basic framework)
@@ -26,9 +28,10 @@ We're excited to share the **first beta release** of CodeXomics - a bioinformati
 
 ## ✅ Current Stable Features
 
-*These features are tested and ready for community use in this beta release.*
+_These features are tested and ready for community use in this beta release._
 
 ### 🧬 **Core Genome Visualization**
+
 - **Canvas & SVG Rendering**: Hardware-accelerated, scalable visualizations
 - **Multi-Track System**: Genes, sequences, variants, and reads visualization
 - **Interactive Navigation**: Smooth zooming, panning, and real-time updates
@@ -36,18 +39,21 @@ We're excited to share the **first beta release** of CodeXomics - a bioinformati
 - **Context Persistence**: Track states saved across sessions
 
 ### 🤖 **Basic AI Integration**
+
 - **LLM Provider Support**: OpenAI, Anthropic, Google Gemini integration
 - **SiliconFlow & OpenRounter Support**: Open-source LLM models (Qwen, DeepSeek, Kimi, GLM, Yi)
 - **Natural Language Queries**: Basic genome analysis through chat interface
 - **Configuration Management**: LLM settings and API key management
 
 ### 📊 **Testing Framework**
+
 - **AI Benchmark Suite**: 22+ test cases for AI evaluation
 - **Manual Testing Interface**: Interactive verification system
 - **Performance Metrics**: Basic AI performance tracking
 - **Test Reporting**: Export test results and logs
 
 ### 💻 **Platform Foundation**
+
 - **Cross-Platform Support**: macOS, Windows, Linux compatibility
 - **Project Management**: Basic project save/load functionality
 - **Documentation**: Comprehensive user and developer guides
@@ -57,15 +63,17 @@ We're excited to share the **first beta release** of CodeXomics - a bioinformati
 
 ## 🚧 Features Under Development
 
-*These features are implemented but require significant refinement and testing before full release.*
+_These features are implemented but require significant refinement and testing before full release._
 
-### 🤖 **Multi-Agent AI System** *(Early Development)*
+### 🤖 **Multi-Agent AI System** _(Early Development)_
+
 - **Status**: Basic framework implemented, needs extensive testing
 - **Current State**: Simple AI coordination, limited agent specialization
 - **Limitations**: Not fully reliable for complex workflows
 - **Future Plans**: Enhanced agent coordination, improved reliability
 
-### 🔧 **External Tools Integration** *(Prototype Stage)*
+### 🔧 **External Tools Integration** _(Prototype Stage)_
+
 - **KGML Pathway Viewer**: Basic implementation, needs UI improvements
 - **STRING Networks**: Initial integration, requires better data handling
 - **ProGenFixer**: Basic browser window integration
@@ -73,34 +81,39 @@ We're excited to share the **first beta release** of CodeXomics - a bioinformati
 - **CHOPCHOP**: Basic external tool access
 - **Status**: These tools need significant development for production use
 
-### 🔌 **Plugin System** *(Early Framework)*
+### 🔌 **Plugin System** _(Early Framework)_
+
 - **Status**: Basic plugin architecture exists but incomplete
 - **Current State**: Simple plugin loading, basic API
 - **Limitations**: No marketplace, limited security validation
 - **Future Plans**: Full marketplace, comprehensive plugin API
 
-### 🌐 **MCP Integration** *(Experimental)*
+### 🌐 **MCP Integration** _(Experimental)_
+
 - **Status**: Initial implementation, highly experimental
 - **Current State**: Basic protocol support
 - **Limitations**: Limited tool interoperability
 - **Future Plans**: Full MCP compliance, enhanced tool coordination
 
 ### ⚠️ **Important Note**
+
 These development features are included for testing purposes only. They may be unstable, incomplete, or require significant changes based on community feedback.
 
 ---
 
 ## 💻 **Engineering Practices**
 
-*CodeXomics is built with modern engineering practices to ensure reliability and maintainability.*
+_CodeXomics is built with modern engineering practices to ensure reliability and maintainability._
 
 ### **Version Management**
+
 - Centralized version control with synchronization
 - Clear beta designation: **v0.522beta**
 - Consistent versioning across components
 - Structured release management
 
 ### **Code Organization**
+
 - Modular, maintainable codebase
 - Test coverage with validation
 - Debugging capabilities with detailed logging
@@ -108,6 +121,7 @@ These development features are included for testing purposes only. They may be u
 - Legacy code cleanup for performance
 
 ### **Documentation**
+
 - **User Guide**: 742 lines of detailed instructions
 - **Developer Guide**: 831 lines covering architecture and contribution
 - **Organized Documentation**: Well-structured and searchable
@@ -117,9 +131,10 @@ These development features are included for testing purposes only. They may be u
 
 ## 📦 **Download & Installation**
 
-*Download CodeXomics v0.522beta for your platform and start testing the first beta release.*
+_Download CodeXomics v0.522beta for your platform and start testing the first beta release._
 
 ### **macOS** 🍎
+
 - **[Intel (x64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-x64.dmg)** - CodeXomics-0.522.0-beta-x64.dmg (139 MB)
 - **[Apple Silicon (arm64)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-arm64.dmg)** - CodeXomics-0.522.0-beta-arm64.dmg (134 MB)
 - **[Universal Zip](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-mac.zip)** - CodeXomics-0.522.0-beta-mac.zip (133 MB)
@@ -127,11 +142,13 @@ These development features are included for testing purposes only. They may be u
 - **Installation**: Open DMG and drag to Applications folder, or extract ZIP
 
 ### **Windows** 🪟
+
 - **[Installer (Recommended)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics.Setup.0.522.0-beta.exe)** - CodeXomics.Setup.0.522.0-beta.exe (209 MB)
 - **[Portable Version](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics.0.522.0-beta.exe)** - CodeXomics.0.522.0-beta.exe (208 MB)
 - **Installation**: Run installer or extract portable version
 
 ### **Linux** 🐧
+
 - **[AppImage (Universal)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta.AppImage)** - CodeXomics-0.522.0-beta.AppImage (145 MB)
 - **[Debian/Ubuntu](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/codexomics_0.522.0-beta_amd64.deb)** - codexomics_0.522.0-beta_amd64.deb (94 MB)
 - **[Snap Package](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/codexomics_0.522.0-beta_amd64.snap)** - codexomics_0.522.0-beta_amd64.snap (124 MB)
@@ -140,17 +157,20 @@ These development features are included for testing purposes only. They may be u
 ### **📋 Installation Instructions**
 
 **macOS:**
+
 1. Download the appropriate DMG file for your Mac (Intel or Apple Silicon)
 2. Open the DMG file
 3. Drag CodeXomics to your Applications folder
 4. Right-click and select "Open" the first time (bypass Gatekeeper)
 
 **Windows:**
+
 1. Download the installer version (recommended)
 2. Run the installer and follow the setup wizard
 3. Or download portable version and extract to desired location
 
 **Linux:**
+
 1. **AppImage**: Download, make executable (`chmod +x`), and run
 2. **Debian/Ubuntu**: Install with `sudo dpkg -i codexomics_0.522.0-beta_amd64.deb`
 3. **Snap**: Install with `sudo snap install codexomics_0.522.0-beta_amd64.snap --dangerous`
@@ -162,9 +182,10 @@ These development features are included for testing purposes only. They may be u
 
 ## 🧪 **Beta Release Information**
 
-*This first beta release is designed for testing, feedback, and community validation.*
+_This first beta release is designed for testing, feedback, and community validation._
 
 **Purpose of Beta:**
+
 - **Testing & Validation**: We're seeking community feedback on features and usability
 - **Performance Evaluation**: Test AI systems across different research scenarios
 - **Compatibility Testing**: Validate cross-platform functionality and file format support
@@ -172,6 +193,7 @@ These development features are included for testing purposes only. They may be u
 - **Community Input**: Help us understand diverse research needs and use cases
 
 **Beta Stability:**
+
 - ✅ Core features tested and functional
 - ✅ AI systems validated with multiple test cases
 - ✅ Cross-platform compatibility verified
@@ -179,6 +201,7 @@ These development features are included for testing purposes only. They may be u
 - ⚠️ Some features may need refinement based on feedback
 
 **How to Help:**
+
 - **Test Features**: Try different analysis workflows
 - **Report Issues**: [GitHub Issues](https://github.com/Scilence2022/CodeXomics/issues)
 - **Share Feedback**: Let us know what works and what needs improvement
@@ -200,33 +223,38 @@ These development features are included for testing purposes only. They may be u
 
 ## 📋 **Development Summary**
 
-*This first beta release represents our initial milestone in developing an AI-integrated bioinformatics platform for community testing.*
+_This first beta release represents our initial milestone in developing an AI-integrated bioinformatics platform for community testing._
 
 **🎯 Core Development:**
+
 - Multi-agent AI system implementation
 - Dynamic tool registry development
 - MCP integration and protocol handling
 - Cross-platform Electron application
 
 **🧬 Bioinformatics Features:**
+
 - Genome visualization engine
 - External tool integration framework
 - File format support (FASTA, GenBank, GFF, VCF, BAM, etc.)
 - Database connectivity and API integration
 
 **🤖 AI System Implementation:**
+
 - LLM provider integration (8+ platforms)
 - Tool selection algorithms
 - Conversation tracking
 - Benchmark testing framework
 
 **📊 Quality & Testing:**
+
 - Test suite development
 - Cross-platform compatibility
 - Documentation organization
 - Performance optimization
 
 **Recent Development:**
+
 - Documentation organization and structure
 - Version system standardization
 - Release preparation and validation
@@ -241,6 +269,7 @@ These development features are included for testing purposes only. They may be u
 **Goal:** Enhancing bioinformatics research through AI integration
 
 **Acknowledgments:**
+
 - The bioinformatics community for inspiration and feedback
 - AI research community for foundational technologies
 - Open source contributors and beta testers
@@ -251,34 +280,39 @@ These development features are included for testing purposes only. They may be u
 
 **MIT License** - See [LICENSE](LICENSE) file for details
 
-*CodeXomics is proudly open source, enabling the global research community to build upon and improve this pioneering platform.*
+_CodeXomics is proudly open source, enabling the global research community to build upon and improve this pioneering platform._
 
 ---
 
 ## 🗺️ **Development Roadmap**
 
-*Planned development priorities based on community feedback and testing results.*
+_Planned development priorities based on community feedback and testing results._
 
-### **Phase 1: Core Stability** *(Next 1-2 months)*
+### **Phase 1: Core Stability** _(Next 1-2 months)_
+
 - **Multi-Agent System**: Improve reliability and coordination
 - **External Tools**: Stabilize KGML Pathway Viewer and STRING Networks
 - **Plugin System**: Complete basic plugin architecture
 - **Bug Fixes**: Address issues reported by beta testers
 
-### **Phase 2: Feature Completion** *(2-4 months)*
+### **Phase 2: Feature Completion** _(2-4 months)_
+
 - **MCP Integration**: Full Model Context Protocol compliance
 - **Tool Coordination**: Enhanced AI-driven tool selection
 - **Plugin Marketplace**: Community plugin discovery and installation
 - **Advanced AI Features**: Improved multi-agent workflows
 
-### **Phase 3: Advanced Capabilities** *(4-6 months)*
+### **Phase 3: Advanced Capabilities** _(4-6 months)_
+
 - **Real-time Collaboration**: Multi-user analysis sessions
 - **Cloud Integration**: Distributed computing capabilities
 - **Specialized AI Models**: Domain-specific biological AI
 - **Advanced Visualization**: Enhanced genome browser features
 
 ### **Community Priorities**
+
 Development priorities will be adjusted based on:
+
 - Beta tester feedback and reported issues
 - Community feature requests and use cases
 - Performance and stability requirements
@@ -292,9 +326,10 @@ Development priorities will be adjusted based on:
 
 **CodeXomics v0.522beta** aims to enhance bioinformatics research by combining artificial intelligence with traditional genomic analysis tools.
 
-*We appreciate your help in testing and improving this platform.* 🧬✨🤖
+_We appreciate your help in testing and improving this platform._ 🧬✨🤖
 
 ### **🚀 Quick Download**
+
 - **[macOS (Intel)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-x64.dmg)** | **[macOS (Apple Silicon)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta-arm64.dmg)**
 - **[Windows (Installer)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics%20Setup%200.522.0-beta.exe)** | **[Windows (Portable)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics%200.522.0-beta.exe)**
 - **[Linux (AppImage)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/CodeXomics-0.522.0-beta.AppImage)** | **[Linux (Debian)](https://github.com/Scilence2022/CodeXomics/releases/download/v0.522beta/codexomics_0.522.0-beta_amd64.deb)**

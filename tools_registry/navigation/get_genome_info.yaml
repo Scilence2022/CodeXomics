@@ -1,6 +1,6 @@
 name: get_genome_info
 version: 1.0.0
-description: "Get comprehensive information about the loaded genome including chromosomes, annotations, statistics, and metadata. Use this to understand the available genomic data."
+description: 'Get comprehensive information about the loaded genome including chromosomes, annotations, statistics, and metadata. Use this to understand the available genomic data.'
 category: navigation
 keywords:
   - genome
@@ -23,15 +23,15 @@ parameters:
   properties:
     include_statistics:
       type: boolean
-      description: "Whether to include detailed genome statistics"
+      description: 'Whether to include detailed genome statistics'
       default: true
     include_annotations:
       type: boolean
-      description: "Whether to include annotation summary"
+      description: 'Whether to include annotation summary'
       default: true
     include_chromosomes:
       type: boolean
-      description: "Whether to include chromosome details"
+      description: 'Whether to include chromosome details'
       default: true
     clientId:
       type: string
@@ -39,27 +39,27 @@ parameters:
       default: default
   required: []
 sample_usages:
-  - user_query: "What genome is loaded?"
-    tool_call: "get_genome_info(include_statistics=true)"
-    thought: "User wants basic information about the currently loaded genome"
-    expected_result: "Genome name, organism, chromosomes, and basic statistics"
-  
-  - user_query: "Tell me about the chromosomes"
-    tool_call: "get_genome_info(include_chromosomes=true, include_statistics=false)"
-    thought: "User specifically wants chromosome information"
-    expected_result: "List of chromosomes with names, lengths, and features"
-  
-  - user_query: "Show genome overview"
-    tool_call: "get_genome_info()"
-    thought: "User wants comprehensive genome information"
-    expected_result: "Complete genome overview including all available details"
+  - user_query: 'What genome is loaded?'
+    tool_call: 'get_genome_info(include_statistics=true)'
+    thought: 'User wants basic information about the currently loaded genome'
+    expected_result: 'Genome name, organism, chromosomes, and basic statistics'
+
+  - user_query: 'Tell me about the chromosomes'
+    tool_call: 'get_genome_info(include_chromosomes=true, include_statistics=false)'
+    thought: 'User specifically wants chromosome information'
+    expected_result: 'List of chromosomes with names, lengths, and features'
+
+  - user_query: 'Show genome overview'
+    tool_call: 'get_genome_info()'
+    thought: 'User wants comprehensive genome information'
+    expected_result: 'Complete genome overview including all available details'
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["get_current_state"]
+  enhances: ['get_current_state']
   alternatives: []
   prerequisites: []
-  follow_up: ["navigate_to_position", "jump_to_gene"]
+  follow_up: ['navigate_to_position', 'jump_to_gene']
 metadata:
   usage_count: 0
   success_rate: 0
@@ -72,10 +72,10 @@ metadata:
     - overview
   complexity: simple
   usage_pattern: occasional
-  recommendation: "Use to understand available genomic data before analysis"
+  recommendation: 'Use to understand available genomic data before analysis'
 error_handling:
-  no_genome: "Returns error if no genome is currently loaded"
-  client_error: "Returns error if browser client is not available"
+  no_genome: 'Returns error if no genome is currently loaded'
+  client_error: 'Returns error if browser client is not available'
 returns:
   success: boolean - Whether operation was successful
   genome_name: string - Name/identifier of the loaded genome

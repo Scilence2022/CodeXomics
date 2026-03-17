@@ -17,7 +17,7 @@ feat: Implement dynamic tools registry system with intelligent tool selection
 
 Categories implemented:
 - Navigation & State Management (8 tools)
-- Sequence Analysis (8 tools) 
+- Sequence Analysis (8 tools)
 - Protein Structure (6 tools)
 - Database Integration (6 tools)
 - AI-Powered Analysis (5 tools)

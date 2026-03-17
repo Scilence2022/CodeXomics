@@ -15,6 +15,7 @@ This occurred even for plugins that were clearly visible in the marketplace list
 The issue stemmed from an **incorrect lookup priority order** in the `viewPluginDetails()` method. The original implementation had three fallback strategies but they were ordered inefficiently:
 
 ### Original (Broken) Order:
+
 1. **Marketplace Installed Registry** (`marketplace.installedPlugins`)
 2. **Marketplace API Search** (`marketplace.searchPlugins()`)
 3. **Plugin Manager Registry** (`pluginManager.pluginRegistry`)
@@ -23,6 +24,7 @@ The issue stemmed from an **incorrect lookup priority order** in the `viewPlugin
 
 **Issue 1: Marketplace API Returned Empty Results**
 The marketplace API search was returning 0 plugins because:
+
 - The search cache was stale or empty
 - The marketplace server wasn't properly indexing installed plugins
 - API responses showed: `{success: true, pluginCount: 0, hasData: true}`
@@ -59,6 +61,7 @@ Final: Comprehensive Error with Debug Info
 #### 1. Registry-First Approach
 
 The Plugin Manager Registry is now checked FIRST because:
+
 - It contains the live, runtime-registered plugins
 - It's immediately available without network calls
 - It's the authoritative source for what's currently loaded in the system
@@ -67,17 +70,17 @@ The Plugin Manager Registry is now checked FIRST because:
 ```javascript
 // PRIORITY 1: Check plugin manager registry FIRST
 if (this.marketplace && this.marketplace.pluginManager) {
-    const registry = this.marketplace.pluginManager.pluginRegistry;
-    if (registry) {
-        const vizPlugin = registry.visualization?.get(pluginId);
-        const funcPlugin = registry.function?.get(pluginId);
-        pluginData = vizPlugin || funcPlugin;
-        
-        if (pluginData) {
-            source = 'plugin-manager-registry';
-            console.log(`✅ Found plugin in ${vizPlugin ? 'visualization' : 'function'} registry`);
-        }
+  const registry = this.marketplace.pluginManager.pluginRegistry;
+  if (registry) {
+    const vizPlugin = registry.visualization?.get(pluginId);
+    const funcPlugin = registry.function?.get(pluginId);
+    pluginData = vizPlugin || funcPlugin;
+
+    if (pluginData) {
+      source = 'plugin-manager-registry';
+      console.log(`✅ Found plugin in ${vizPlugin ? 'visualization' : 'function'} registry`);
     }
+  }
 }
 ```
 
@@ -87,15 +90,16 @@ Comprehensive logging now tracks exactly where the lookup succeeds or fails:
 
 ```javascript
 console.log('🔍 Checking plugin manager registry...', {
-    hasRegistry: !!registry,
-    hasVisualization: !!registry?.visualization,
-    hasFunction: !!registry?.function,
-    vizSize: registry?.visualization?.size || 0,
-    funcSize: registry?.function?.size || 0
+  hasRegistry: !!registry,
+  hasVisualization: !!registry?.visualization,
+  hasFunction: !!registry?.function,
+  vizSize: registry?.visualization?.size || 0,
+  funcSize: registry?.function?.size || 0,
 });
 ```
 
 This allows developers to immediately see:
+
 - Whether the registry exists
 - How many plugins are in each registry type
 - Which registry (visualization vs function) contains the plugin
@@ -120,16 +124,17 @@ When all lookups fail, the system now provides detailed diagnostic information:
 
 ```javascript
 console.error('🔍 Debug info:', {
-    hasMarketplace: !!this.marketplace,
-    hasPluginManager: !!this.marketplace?.pluginManager,
-    hasRegistry: !!this.marketplace?.pluginManager?.pluginRegistry,
-    vizPlugins: Array.from(this.marketplace.pluginManager.pluginRegistry.visualization.keys()),
-    funcPlugins: Array.from(this.marketplace.pluginManager.pluginRegistry.function.keys()),
-    installedPlugins: Array.from(this.marketplace.installedPlugins.keys())
+  hasMarketplace: !!this.marketplace,
+  hasPluginManager: !!this.marketplace?.pluginManager,
+  hasRegistry: !!this.marketplace?.pluginManager?.pluginRegistry,
+  vizPlugins: Array.from(this.marketplace.pluginManager.pluginRegistry.visualization.keys()),
+  funcPlugins: Array.from(this.marketplace.pluginManager.pluginRegistry.function.keys()),
+  installedPlugins: Array.from(this.marketplace.installedPlugins.keys()),
 });
 ```
 
 This shows:
+
 - All available visualization plugins
 - All available function plugins
 - All marketplace-tracked installed plugins
@@ -272,6 +277,7 @@ Show Error Alert with Troubleshooting Steps
 ### Reliability Comparison:
 
 **Plugin Manager Registry** (Priority 1):
+
 - ✅ Always up-to-date with runtime state
 - ✅ No network latency
 - ✅ Guaranteed to reflect currently loaded plugins
@@ -279,12 +285,14 @@ Show Error Alert with Troubleshooting Steps
 - ✅ Contains full plugin instance with all methods
 
 **Marketplace Installed Map** (Priority 2):
+
 - ⚠️ May lag behind runtime state
 - ✅ No network latency
 - ⚠️ Contains manifest data, not full instance
 - ✅ Direct map access (O(1) lookup)
 
 **Marketplace API Search** (Priority 3):
+
 - ❌ Subject to network issues
 - ❌ May have stale cache
 - ❌ Requires async operation
@@ -294,11 +302,13 @@ Show Error Alert with Troubleshooting Steps
 ### Performance Impact:
 
 **Before (API-First Approach)**:
+
 - Average time: 200-500ms (network latency)
 - Failure rate: ~30% (API issues, cache problems)
 - User experience: Slow, unreliable
 
 **After (Registry-First Approach)**:
+
 - Average time: <5ms (local lookup)
 - Failure rate: <1% (only if plugin truly not registered)
 - User experience: Instant, reliable
@@ -334,6 +344,7 @@ Show Error Alert with Troubleshooting Steps
 ### Manual Testing Steps:
 
 1. **Installed Plugin (Visualization)**:
+
    ```
    - Install string-network-explorer
    - Click Details button
@@ -342,6 +353,7 @@ Show Error Alert with Troubleshooting Steps
    ```
 
 2. **Installed Plugin (Function)**:
+
    ```
    - Install protein-interaction-network
    - Click Details button
@@ -350,6 +362,7 @@ Show Error Alert with Troubleshooting Steps
    ```
 
 3. **Uninstalled Plugin (Marketplace Available)**:
+
    ```
    - Browse marketplace (don't install)
    - Click Details on available plugin
@@ -358,6 +371,7 @@ Show Error Alert with Troubleshooting Steps
    ```
 
 4. **Missing Plugin**:
+
    ```
    - Manually trigger Details for non-existent ID
    - ❌ Should show error with debug info
@@ -397,11 +411,13 @@ Show Error Alert with Troubleshooting Steps
 **Method Changed**: `viewPluginDetails(pluginId)`
 
 **Line Changes**:
+
 - +83 lines added (comprehensive logging and reordered logic)
 - -29 lines removed (simplified old approach)
 - Total: +54 net lines
 
 **Backward Compatibility**: ✅ Fully backward compatible
+
 - Same method signature
 - Same return behavior
 - Enhanced error handling
@@ -410,12 +426,14 @@ Show Error Alert with Troubleshooting Steps
 ## Related Issues
 
 This fix addresses:
+
 - Plugin details not loading for installed plugins
 - Reliance on unreliable marketplace API
 - Insufficient error diagnostics
 - Poor user experience on network failures
 
 This complements:
+
 - Installation status badges (shows which plugins are installed)
 - Update indicators (shows which plugins need updates)
 - One-click updates (keeps plugins current)
@@ -432,5 +450,6 @@ The registry-first approach aligns with the principle that **runtime state is th
 **Date**: 2025-12-05  
 **Author**: GenomeAIStudio Team  
 **Related Documents**:
+
 - `/docs/implementation-summaries/plugin/MARKETPLACE_PLUGIN_STATUS_AND_UPDATES.md`
 - `/docs/architecture/PLUGIN_DEMO_ARCHITECTURE.md`

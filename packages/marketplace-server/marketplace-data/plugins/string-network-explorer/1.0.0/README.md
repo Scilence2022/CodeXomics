@@ -11,18 +11,21 @@ STRING Network Explorer is a powerful CodeXomics plugin that integrates with the
 ## Features
 
 ### 🔍 Database Integration
+
 - **Direct STRING API Access**: Query the STRING database in real-time
 - **Multi-Species Support**: Search protein interactions across different organisms
 - **Confidence Filtering**: Filter interactions by confidence score (0-1000)
 - **Network Type Selection**: Choose between physical and functional interactions
 
 ### 📊 Network Analysis
+
 - **Interactive Network Search**: Search proteins by identifier or name
 - **Interaction Partners**: Find all interaction partners for query proteins
 - **Functional Enrichment**: Perform GO enrichment analysis (Process, Component, Function)
 - **Combined Scores**: Access detailed interaction evidence scores
 
 ### 🎨 Visualization
+
 - **Interactive Network Graphs**: SVG-based interactive network visualization
 - **Multiple Layout Algorithms**:
   - Force-directed layout
@@ -51,32 +54,38 @@ Ask CodeXomics AI to search and visualize protein networks:
 ### Via Commands
 
 #### Search Protein Interactions
+
 ```javascript
-string-explorer.search({
-  proteins: ["TP53", "MDM2", "ATM"],
-  species: "9606",  // Human
-  requiredScore: 400,
-  networkType: "physical"
-})
+string -
+  explorer.search({
+    proteins: ['TP53', 'MDM2', 'ATM'],
+    species: '9606', // Human
+    requiredScore: 400,
+    networkType: 'physical',
+  });
 ```
 
 #### Get Protein Network
+
 ```javascript
-string-explorer.getNetwork({
-  proteins: ["BRCA1"],
-  species: "9606",
-  requiredScore: 600,
-  limit: 50
-})
+string -
+  explorer.getNetwork({
+    proteins: ['BRCA1'],
+    species: '9606',
+    requiredScore: 600,
+    limit: 50,
+  });
 ```
 
 #### Get Enrichment Analysis
+
 ```javascript
-string-explorer.getEnrichment({
-  proteins: ["EGFR", "MYC", "KRAS", "PIK3CA"],
-  species: "9606",
-  categories: ["Process", "Component", "Function"]
-})
+string -
+  explorer.getEnrichment({
+    proteins: ['EGFR', 'MYC', 'KRAS', 'PIK3CA'],
+    species: '9606',
+    categories: ['Process', 'Component', 'Function'],
+  });
 ```
 
 ## API Reference
@@ -84,9 +93,11 @@ string-explorer.getEnrichment({
 ### Commands
 
 #### `string-explorer.search`
+
 Search for protein interactions in STRING database.
 
 **Parameters:**
+
 - `proteins` (Array<string>): List of protein identifiers
 - `species` (string, optional): NCBI taxonomy ID (default: "9606" for human)
 - `requiredScore` (number, optional): Minimum confidence score 0-1000 (default: 400)
@@ -95,9 +106,11 @@ Search for protein interactions in STRING database.
 **Returns:** Network data with nodes and edges
 
 #### `string-explorer.getNetwork`
+
 Retrieve detailed protein network including interaction partners.
 
 **Parameters:**
+
 - `proteins` (Array<string>): List of protein identifiers
 - `species` (string, optional): NCBI taxonomy ID (default: "9606")
 - `requiredScore` (number, optional): Minimum confidence score (default: 400)
@@ -106,9 +119,11 @@ Retrieve detailed protein network including interaction partners.
 **Returns:** Extended network data
 
 #### `string-explorer.getEnrichment`
+
 Perform functional enrichment analysis.
 
 **Parameters:**
+
 - `proteins` (Array<string>): List of protein identifiers
 - `species` (string, optional): NCBI taxonomy ID (default: "9606")
 - `categories` (Array<string>, optional): Enrichment categories (default: ["Process", "Component", "Function"])
@@ -162,6 +177,7 @@ Perform functional enrichment analysis.
 ## Species Codes
 
 Common NCBI taxonomy IDs:
+
 - `9606`: Homo sapiens (Human)
 - `10090`: Mus musculus (Mouse)
 - `10116`: Rattus norvegicus (Rat)
@@ -188,6 +204,7 @@ Install via CodeXomics Plugin Marketplace:
 ## Security
 
 This plugin:
+
 - ✅ Uses secure HTTPS connections to STRING API
 - ✅ Sandboxed execution environment
 - ✅ No local data storage of sensitive information
@@ -198,9 +215,11 @@ This plugin:
 If you use this plugin in your research, please cite:
 
 **STRING Database:**
+
 > Szklarczyk D, et al. (2023) The STRING database in 2023: protein-protein association networks and functional enrichment analyses for any sequenced genome of interest. Nucleic Acids Res. 51:D638-D646.
 
 **CodeXomics:**
+
 > CodeXomics Team. STRING Network Explorer Plugin v1.0.0. https://github.com/codexomics/string-network-explorer
 
 ## Support
@@ -216,6 +235,7 @@ MIT License - see LICENSE file for details
 ## Changelog
 
 ### Version 1.0.0 (2024-12-05)
+
 - Initial release
 - STRING API integration
 - Interactive network visualization

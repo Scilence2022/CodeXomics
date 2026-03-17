@@ -1,56 +1,56 @@
 # download_internet_file.yaml
-name: "download_internet_file"
-version: "1.0.0"
-description: "Download a file from the internet (URL) to a local path. Useful for downloading reports, data files, images, or any other files accessible via HTTP/HTTPS URLs."
-category: "utility"
-keywords: ["download", "internet", "url", "file", "http", "https", "fetch", "save"]
+name: 'download_internet_file'
+version: '1.0.0'
+description: 'Download a file from the internet (URL) to a local path. Useful for downloading reports, data files, images, or any other files accessible via HTTP/HTTPS URLs.'
+category: 'utility'
+keywords: ['download', 'internet', 'url', 'file', 'http', 'https', 'fetch', 'save']
 priority: 2
 
 # Tool execution metadata
 execution:
-  type: "client"
+  type: 'client'
   timeout: 120000
   retries: 2
   requires_auth: false
 
 # Input parameters (JSON Schema format)
 parameters:
-  type: "object"
+  type: 'object'
   properties:
     url:
-      type: "string"
-      description: "The complete URL of the file to download (must start with http:// or https://)"
+      type: 'string'
+      description: 'The complete URL of the file to download (must start with http:// or https://)'
       required: true
     destinationPath:
-      type: "string"
-      description: "The local directory path where the file should be saved. If not provided, defaults to the system Downloads folder."
+      type: 'string'
+      description: 'The local directory path where the file should be saved. If not provided, defaults to the system Downloads folder.'
       required: false
     filename:
-      type: "string"
-      description: "Custom filename for the downloaded file. If not provided, the filename is extracted from the URL."
+      type: 'string'
+      description: 'Custom filename for the downloaded file. If not provided, the filename is extracted from the URL.'
       required: false
-  required: ["url"]
+  required: ['url']
 
 # High-quality examples for few-shot learning
 sample_usages:
-  - user_query: "Download the genome file from https://example.com/genome.fasta"
+  - user_query: 'Download the genome file from https://example.com/genome.fasta'
     tool_call: "download_internet_file(url='https://example.com/genome.fasta')"
-    thought: "User wants to download a file from a URL. The download_internet_file tool is perfect for this."
-    expected_result: "The genome.fasta file is downloaded to the Downloads folder"
-  - user_query: "Save the report from this URL to my project folder: https://server.com/research_report.md"
+    thought: 'User wants to download a file from a URL. The download_internet_file tool is perfect for this.'
+    expected_result: 'The genome.fasta file is downloaded to the Downloads folder'
+  - user_query: 'Save the report from this URL to my project folder: https://server.com/research_report.md'
     tool_call: "download_internet_file(url='https://server.com/research_report.md', destinationPath='/path/to/project')"
-    thought: "User wants to download a file to a specific location"
-    expected_result: "The research_report.md file is saved to the specified project folder"
-  - user_query: "Fetch the data file and name it results.csv"
+    thought: 'User wants to download a file to a specific location'
+    expected_result: 'The research_report.md file is saved to the specified project folder'
+  - user_query: 'Fetch the data file and name it results.csv'
     tool_call: "download_internet_file(url='https://api.example.com/data', filename='results.csv')"
-    thought: "User wants to download and rename the file"
-    expected_result: "The file is downloaded and saved as results.csv"
+    thought: 'User wants to download and rename the file'
+    expected_result: 'The file is downloaded and saved as results.csv'
 
 # Tool relationships and dependencies
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["view_markdown_file"]
+  enhances: ['view_markdown_file']
   alternatives: []
 
 # Performance and usage statistics
@@ -59,4 +59,4 @@ metadata:
   success_rate: 0.0
   avg_execution_time: 5000
   last_used: null
-  tags: ["file", "download", "internet", "utility"]
+  tags: ['file', 'download', 'internet', 'utility']

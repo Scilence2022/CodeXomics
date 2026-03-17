@@ -7,42 +7,16 @@
   "category": "pathway-analysis",
   "type": "visualization",
   "main": "index.js",
-  "tags": [
-    "KEGG",
-    "pathway",
-    "metabolism",
-    "metabolic",
-    "visualization",
-    "database",
-    "biochemical"
-  ],
-  "keywords": [
-    "KEGG",
-    "pathway",
-    "metabolism",
-    "metabolic",
-    "visualization",
-    "database",
-    "gene",
-    "compound"
-  ],
+  "tags": ["KEGG", "pathway", "metabolism", "metabolic", "visualization", "database", "biochemical"],
+  "keywords": ["KEGG", "pathway", "metabolism", "metabolic", "visualization", "database", "gene", "compound"],
   "dependencies": [],
   "homepage": "https://github.com/codexomics/kegg-pathway-viewer",
   "repository": "https://github.com/codexomics/kegg-pathway-viewer.git",
   "license": "MIT",
-  "supportedDataTypes": [
-    "metabolic-pathway",
-    "kegg-pathway",
-    "pathway-data",
-    "generic"
-  ],
+  "supportedDataTypes": ["metabolic-pathway", "kegg-pathway", "pathway-data", "generic"],
   "compatibility": {
     "genomeExplorer": ">=2.0.0",
-    "platforms": [
-      "windows",
-      "macos",
-      "linux"
-    ]
+    "platforms": ["windows", "macos", "linux"]
   },
   "contributes": {
     "visualizations": {
@@ -50,11 +24,7 @@
         "id": "kegg-pathway",
         "name": "KEGG Metabolic Pathway",
         "description": "Visualize metabolic pathways from KEGG database with genes, compounds, and reactions",
-        "supportedDataTypes": [
-          "metabolic-pathway",
-          "kegg-pathway",
-          "pathway-data"
-        ]
+        "supportedDataTypes": ["metabolic-pathway", "kegg-pathway", "pathway-data"]
       }
     },
     "commands": [

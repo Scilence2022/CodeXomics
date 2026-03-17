@@ -2,179 +2,203 @@
  * ResizableModalManager - Handles resizable modal functionality
  */
 class ResizableModalManager {
-    constructor() {
-        this.resizing = false;
-        this.currentHandle = null;
-        this.startX = 0;
-        this.startY = 0;
-        this.startWidth = 0;
-        this.startHeight = 0;
-        this.startLeft = 0;
-        this.startTop = 0;
-        
-        this.initializeEventListeners();
-        console.log('ResizableModalManager initialized');
-    }
+  constructor() {
+    this.resizing = false;
+    this.currentHandle = null;
+    this.startX = 0;
+    this.startY = 0;
+    this.startWidth = 0;
+    this.startHeight = 0;
+    this.startLeft = 0;
+    this.startTop = 0;
 
-    initializeEventListeners() {
-        // Handle mouse events for resizing
-        document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        
-        // Prevent text selection during resize
-        document.addEventListener('selectstart', (e) => {
-            if (this.resizing) {
-                e.preventDefault();
-            }
-        });
-    }
+    this.initializeEventListeners();
+    console.log('ResizableModalManager initialized');
+  }
 
-    /**
-     * Make a modal resizable
-     */
-    makeResizable(modalSelector) {
-        const modal = document.querySelector(modalSelector);
-        if (!modal) {
-            console.warn(`Modal not found: ${modalSelector}`);
-            return;
-        }
+  initializeEventListeners() {
+    // Handle mouse events for resizing
+    document.addEventListener('mousedown', e => this.handleMouseDown(e));
+    document.addEventListener('mousemove', e => this.handleMouseMove(e));
+    document.addEventListener('mouseup', e => this.handleMouseUp(e));
 
-        const modalContent = modal.querySelector('.modal-content.resizable');
-        if (!modalContent) {
-            console.warn(`Modal content not found or not resizable: ${modalSelector}`);
-            return;
-        }
-
-        // Set initial size (1.5x width increase)
-        const baseWidth = 500; // Default modal width
-        const increasedWidth = Math.round(baseWidth * 1.5);
-        modalContent.style.width = `${increasedWidth}px`;
-        modalContent.style.maxWidth = 'none'; // Override max-width for resizable modals
-
-        console.log(`Made modal resizable: ${modalSelector} with initial width: ${increasedWidth}px`);
-    }
-
-    handleMouseDown(e) {
-        const handle = e.target.closest('.resize-handle');
-        if (!handle) return;
-
+    // Prevent text selection during resize
+    document.addEventListener('selectstart', e => {
+      if (this.resizing) {
         e.preventDefault();
-        this.startResize(handle, e);
+      }
+    });
+  }
+
+  /**
+   * Make a modal resizable
+   */
+  makeResizable(modalSelector) {
+    const modal = document.querySelector(modalSelector);
+    if (!modal) {
+      console.warn(`Modal not found: ${modalSelector}`);
+      return;
     }
 
-    startResize(handle, e) {
-        this.resizing = true;
-        this.currentHandle = handle;
-        const modalContent = handle.closest('.modal-content');
-        
-        if (!modalContent) return;
-
-        // Get current dimensions and position
-        const rect = modalContent.getBoundingClientRect();
-        this.startX = e.clientX;
-        this.startY = e.clientY;
-        this.startWidth = rect.width;
-        this.startHeight = rect.height;
-        this.startLeft = rect.left;
-        this.startTop = rect.top;
-
-        // Add visual feedback
-        modalContent.style.transition = 'none';
-        document.body.style.cursor = handle.style.cursor;
-        document.body.style.userSelect = 'none';
+    const modalContent = modal.querySelector('.modal-content.resizable');
+    if (!modalContent) {
+      console.warn(`Modal content not found or not resizable: ${modalSelector}`);
+      return;
     }
 
-    handleMouseMove(e) {
-        if (!this.resizing || !this.currentHandle) return;
+    // Set initial size (1.5x width increase)
+    const baseWidth = 500; // Default modal width
+    const increasedWidth = Math.round(baseWidth * 1.5);
+    modalContent.style.width = `${increasedWidth}px`;
+    modalContent.style.maxWidth = 'none'; // Override max-width for resizable modals
 
-        e.preventDefault();
+    console.log(`Made modal resizable: ${modalSelector} with initial width: ${increasedWidth}px`);
+  }
 
-        const modalContent = this.currentHandle.closest('.modal-content');
-        if (!modalContent) return;
+  handleMouseDown(e) {
+    const handle = e.target.closest('.resize-handle');
+    if (!handle) return;
 
-        const deltaX = e.clientX - this.startX;
-        const deltaY = e.clientY - this.startY;
-        const handleClass = this.currentHandle.className;
+    e.preventDefault();
+    this.startResize(handle, e);
+  }
 
-        let newWidth = this.startWidth;
-        let newHeight = this.startHeight;
-        let newLeft = this.startLeft;
-        let newTop = this.startTop;
+  startResize(handle, e) {
+    this.resizing = true;
+    this.currentHandle = handle;
+    const modalContent = handle.closest('.modal-content');
 
-        // Calculate new dimensions based on handle type
-        if (handleClass.includes('resize-handle-e') || handleClass.includes('resize-handle-ne') || handleClass.includes('resize-handle-se')) {
-            newWidth = this.startWidth + deltaX;
-        }
-        if (handleClass.includes('resize-handle-w') || handleClass.includes('resize-handle-nw') || handleClass.includes('resize-handle-sw')) {
-            newWidth = this.startWidth - deltaX;
-            newLeft = this.startLeft + deltaX;
-        }
-        if (handleClass.includes('resize-handle-s') || handleClass.includes('resize-handle-se') || handleClass.includes('resize-handle-sw')) {
-            newHeight = this.startHeight + deltaY;
-        }
-        if (handleClass.includes('resize-handle-n') || handleClass.includes('resize-handle-ne') || handleClass.includes('resize-handle-nw')) {
-            newHeight = this.startHeight - deltaY;
-            newTop = this.startTop + deltaY;
-        }
+    if (!modalContent) return;
 
-        // Apply constraints
-        const minWidth = 400;
-        const minHeight = 300;
-        const maxWidth = Math.max(window.innerWidth * 3, 2000); // Allow much wider than screen for multi-monitor setups
-        const maxHeight = Math.max(window.innerHeight * 2, 1200); // Allow much taller for better usability
+    // Get current dimensions and position
+    const rect = modalContent.getBoundingClientRect();
+    this.startX = e.clientX;
+    this.startY = e.clientY;
+    this.startWidth = rect.width;
+    this.startHeight = rect.height;
+    this.startLeft = rect.left;
+    this.startTop = rect.top;
 
-        newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
-        newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+    // Add visual feedback
+    modalContent.style.transition = 'none';
+    document.body.style.cursor = handle.style.cursor;
+    document.body.style.userSelect = 'none';
+  }
 
-        // Apply new dimensions
-        modalContent.style.width = `${newWidth}px`;
-        modalContent.style.height = `${newHeight}px`;
-        
-        // Apply position changes for handles that affect position
-        if (handleClass.includes('resize-handle-w') || handleClass.includes('resize-handle-nw') || handleClass.includes('resize-handle-sw')) {
-            modalContent.style.left = `${newLeft}px`;
-        }
-        if (handleClass.includes('resize-handle-n') || handleClass.includes('resize-handle-ne') || handleClass.includes('resize-handle-nw')) {
-            modalContent.style.top = `${newTop}px`;
-        }
+  handleMouseMove(e) {
+    if (!this.resizing || !this.currentHandle) return;
+
+    e.preventDefault();
+
+    const modalContent = this.currentHandle.closest('.modal-content');
+    if (!modalContent) return;
+
+    const deltaX = e.clientX - this.startX;
+    const deltaY = e.clientY - this.startY;
+    const handleClass = this.currentHandle.className;
+
+    let newWidth = this.startWidth;
+    let newHeight = this.startHeight;
+    let newLeft = this.startLeft;
+    let newTop = this.startTop;
+
+    // Calculate new dimensions based on handle type
+    if (
+      handleClass.includes('resize-handle-e') ||
+      handleClass.includes('resize-handle-ne') ||
+      handleClass.includes('resize-handle-se')
+    ) {
+      newWidth = this.startWidth + deltaX;
+    }
+    if (
+      handleClass.includes('resize-handle-w') ||
+      handleClass.includes('resize-handle-nw') ||
+      handleClass.includes('resize-handle-sw')
+    ) {
+      newWidth = this.startWidth - deltaX;
+      newLeft = this.startLeft + deltaX;
+    }
+    if (
+      handleClass.includes('resize-handle-s') ||
+      handleClass.includes('resize-handle-se') ||
+      handleClass.includes('resize-handle-sw')
+    ) {
+      newHeight = this.startHeight + deltaY;
+    }
+    if (
+      handleClass.includes('resize-handle-n') ||
+      handleClass.includes('resize-handle-ne') ||
+      handleClass.includes('resize-handle-nw')
+    ) {
+      newHeight = this.startHeight - deltaY;
+      newTop = this.startTop + deltaY;
     }
 
-    handleMouseUp(e) {
-        if (!this.resizing) return;
+    // Apply constraints
+    const minWidth = 400;
+    const minHeight = 300;
+    const maxWidth = Math.max(window.innerWidth * 3, 2000); // Allow much wider than screen for multi-monitor setups
+    const maxHeight = Math.max(window.innerHeight * 2, 1200); // Allow much taller for better usability
 
-        // Clean up
-        if (this.currentHandle) {
-            const modalContent = this.currentHandle.closest('.modal-content');
-            if (modalContent) {
-                modalContent.style.transition = '';
-            }
-        }
+    newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+    newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
 
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
+    // Apply new dimensions
+    modalContent.style.width = `${newWidth}px`;
+    modalContent.style.height = `${newHeight}px`;
 
-        this.resizing = false;
-        this.currentHandle = null;
+    // Apply position changes for handles that affect position
+    if (
+      handleClass.includes('resize-handle-w') ||
+      handleClass.includes('resize-handle-nw') ||
+      handleClass.includes('resize-handle-sw')
+    ) {
+      modalContent.style.left = `${newLeft}px`;
+    }
+    if (
+      handleClass.includes('resize-handle-n') ||
+      handleClass.includes('resize-handle-ne') ||
+      handleClass.includes('resize-handle-nw')
+    ) {
+      modalContent.style.top = `${newTop}px`;
+    }
+  }
+
+  handleMouseUp(e) {
+    if (!this.resizing) return;
+
+    // Clean up
+    if (this.currentHandle) {
+      const modalContent = this.currentHandle.closest('.modal-content');
+      if (modalContent) {
+        modalContent.style.transition = '';
+      }
     }
 
-    /**
-     * Reset modal size to default
-     */
-    resetSize(modalSelector) {
-        const modal = document.querySelector(modalSelector);
-        const modalContent = modal?.querySelector('.modal-content.resizable');
-        
-        if (!modalContent) return;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
 
-        // Reset to default size (1.5x width)
-        const baseWidth = 500;
-        const increasedWidth = Math.round(baseWidth * 1.5);
-        
-        modalContent.style.width = `${increasedWidth}px`;
-        modalContent.style.height = '';
-        modalContent.style.left = '';
-        modalContent.style.top = '';
-        modalContent.style.maxWidth = 'none';
-    }
-} 
+    this.resizing = false;
+    this.currentHandle = null;
+  }
+
+  /**
+   * Reset modal size to default
+   */
+  resetSize(modalSelector) {
+    const modal = document.querySelector(modalSelector);
+    const modalContent = modal?.querySelector('.modal-content.resizable');
+
+    if (!modalContent) return;
+
+    // Reset to default size (1.5x width)
+    const baseWidth = 500;
+    const increasedWidth = Math.round(baseWidth * 1.5);
+
+    modalContent.style.width = `${increasedWidth}px`;
+    modalContent.style.height = '';
+    modalContent.style.left = '';
+    modalContent.style.top = '';
+    modalContent.style.maxWidth = 'none';
+  }
+}

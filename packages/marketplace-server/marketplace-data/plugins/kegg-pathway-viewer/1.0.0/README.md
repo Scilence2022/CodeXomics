@@ -11,12 +11,14 @@ KEGG Pathway Viewer is a comprehensive CodeXomics plugin that integrates with th
 ## Features
 
 ### 🔍 Database Integration
+
 - **KEGG REST API Access**: Query the KEGG database in real-time
 - **Multi-Organism Support**: Search pathways across different organisms
 - **Pathway Search**: Find pathways by keyword or identifier
 - **KGML Parsing**: Parse and visualize KEGG Markup Language data
 
 ### 📊 Pathway Analysis
+
 - **Pathway Search**: Search pathways by keyword
 - **Detailed Pathway Information**: Retrieve comprehensive pathway data
 - **Gene-Pathway Mapping**: Find all pathways containing specific genes
@@ -24,6 +26,7 @@ KEGG Pathway Viewer is a comprehensive CodeXomics plugin that integrates with th
 - **Reaction Details**: Access enzymatic reaction information
 
 ### 🎨 Visualization
+
 - **Interactive Pathway Diagrams**: SVG-based pathway visualization
 - **Multiple Layout Modes**:
   - Hierarchical layout
@@ -55,33 +58,41 @@ Ask CodeXomics AI to search and visualize pathways:
 ### Via Commands
 
 #### Search Pathway
+
 ```javascript
-kegg-viewer.searchPathway({
-  keyword: "glycolysis",
-  organism: "hsa"  // Human
-})
+kegg -
+  viewer.searchPathway({
+    keyword: 'glycolysis',
+    organism: 'hsa', // Human
+  });
 ```
 
 #### Get Pathway Details
+
 ```javascript
-kegg-viewer.getPathwayDetails({
-  pathwayId: "hsa00010"  // Glycolysis
-})
+kegg -
+  viewer.getPathwayDetails({
+    pathwayId: 'hsa00010', // Glycolysis
+  });
 ```
 
 #### Find Pathways by Gene
+
 ```javascript
-kegg-viewer.findPathwaysByGene({
-  gene: "BRCA1",
-  organism: "hsa"
-})
+kegg -
+  viewer.findPathwaysByGene({
+    gene: 'BRCA1',
+    organism: 'hsa',
+  });
 ```
 
 #### Get Compound Information
+
 ```javascript
-kegg-viewer.getCompoundInfo({
-  compoundId: "C00031"  // D-Glucose
-})
+kegg -
+  viewer.getCompoundInfo({
+    compoundId: 'C00031', // D-Glucose
+  });
 ```
 
 ## API Reference
@@ -89,35 +100,43 @@ kegg-viewer.getCompoundInfo({
 ### Commands
 
 #### `kegg-viewer.searchPathway`
+
 Search for pathways by keyword in KEGG database.
 
 **Parameters:**
+
 - `keyword` (string): Search keyword
 - `organism` (string, optional): KEGG organism code (default: "hsa" for human)
 
 **Returns:** List of matching pathways
 
 #### `kegg-viewer.getPathwayDetails`
+
 Retrieve detailed pathway information including KGML data.
 
 **Parameters:**
+
 - `pathwayId` (string): KEGG pathway identifier (e.g., "hsa00010")
 
 **Returns:** Pathway details with nodes, edges, and metadata
 
 #### `kegg-viewer.findPathwaysByGene`
+
 Find all pathways containing a specific gene.
 
 **Parameters:**
+
 - `gene` (string): Gene identifier
 - `organism` (string, optional): KEGG organism code (default: "hsa")
 
 **Returns:** List of pathways containing the gene
 
 #### `kegg-viewer.getCompoundInfo`
+
 Retrieve detailed compound information.
 
 **Parameters:**
+
 - `compoundId` (string): KEGG compound ID (e.g., "C00031")
 
 **Returns:** Compound details from KEGG
@@ -184,6 +203,7 @@ Retrieve detailed compound information.
 ## Organism Codes
 
 Common KEGG organism codes:
+
 - `hsa`: Homo sapiens (Human)
 - `mmu`: Mus musculus (Mouse)
 - `rno`: Rattus norvegicus (Rat)
@@ -195,6 +215,7 @@ Common KEGG organism codes:
 ## Pathway Categories
 
 KEGG organizes pathways into categories:
+
 - **Metabolism**: Carbohydrate, lipid, amino acid, nucleotide metabolism
 - **Genetic Information Processing**: Transcription, translation, replication
 - **Environmental Information Processing**: Signal transduction, membrane transport
@@ -220,6 +241,7 @@ Install via CodeXomics Plugin Marketplace:
 ## Security
 
 This plugin:
+
 - ✅ Uses secure HTTPS connections to KEGG REST API
 - ✅ Sandboxed execution environment
 - ✅ No local data storage of sensitive information
@@ -230,9 +252,11 @@ This plugin:
 If you use this plugin in your research, please cite:
 
 **KEGG Database:**
+
 > Kanehisa M, Furumichi M, Sato Y, Kawashima M, Ishiguro-Watanabe M. (2023) KEGG for taxonomy-based analysis of pathways and genomes. Nucleic Acids Res. 51:D587-D592.
 
 **CodeXomics:**
+
 > CodeXomics Team. KEGG Pathway Viewer Plugin v1.0.0. https://github.com/codexomics/kegg-pathway-viewer
 
 ## Known Limitations
@@ -254,6 +278,7 @@ MIT License - see LICENSE file for details
 ## Changelog
 
 ### Version 1.0.0 (2024-12-05)
+
 - Initial release
 - KEGG REST API integration
 - Interactive pathway visualization

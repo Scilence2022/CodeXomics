@@ -17,12 +17,14 @@ The system was attempting to load demo files from the marketplace server's data 
 The problem stemmed from a fundamental misunderstanding of where plugins are stored in the CodeXomics architecture:
 
 **Marketplace Server Directory** (`packages/marketplace-server/marketplace-data/plugins/`):
+
 - This is the **source repository** for available plugins
 - Used by the marketplace server to serve plugin listings and downloads
 - Contains the canonical versions of plugins before installation
 - **Not accessible** after plugin installation in production builds
 
 **Actual Plugin Installation Directory** (Managed by `PluginPathResolver`):
+
 - Development: `src/renderer/modules/Plugins/UserInstalled/`
 - Production: User data directory (e.g., `~/.genome-browser/plugins/`)
 - This is where plugins are **actually copied and executed** from
@@ -50,6 +52,7 @@ resolvePluginBasePath() {
 ### Path Resolution in Different Environments
 
 **Development Environment:**
+
 ```
 Marketplace Source: /Users/song/Github-Repos/GenomeAIStudio_1/packages/marketplace-server/marketplace-data/plugins/
 Installed Plugins:  /Users/song/Github-Repos/GenomeAIStudio_1/src/renderer/modules/Plugins/UserInstalled/
@@ -58,6 +61,7 @@ Installed Plugins:  /Users/song/Github-Repos/GenomeAIStudio_1/src/renderer/modul
 ```
 
 **Production Environment (ASAR Packaged):**
+
 ```
 Marketplace Source: Not included in build (only serves during development)
 Installed Plugins:  ~/.genome-browser/plugins/  (or platform-specific user data dir)
@@ -83,6 +87,7 @@ When a plugin is installed, the complete plugin directory (including demo.js, ma
 Replaced the static `pluginBasePath` with dynamic path resolution:
 
 **Before:**
+
 ```javascript
 constructor(pluginManager) {
     this.pluginManager = pluginManager;
@@ -96,6 +101,7 @@ resolvePluginBasePath() {
 ```
 
 **After:**
+
 ```javascript
 constructor(pluginManager) {
     this.pluginManager = pluginManager;
@@ -144,39 +150,41 @@ resolvePluginDemoPath(pluginId, version) {
 Modified `loadPluginDemo()` to use the new path resolver and prefer require() over fetch():
 
 **Before** (Fetch-First Approach):
+
 ```javascript
 const demoPath = `${this.pluginBasePath}/${pluginId}/${version}/demo.js`;
 
 try {
-    // Try browser-style script loading
-    const response = await fetch(`file://${demoPath}`);
-    // ...
+  // Try browser-style script loading
+  const response = await fetch(`file://${demoPath}`);
+  // ...
 } catch (fetchError) {
-    // Fallback to require()
-    DemoClass = require(demoPath);
+  // Fallback to require()
+  DemoClass = require(demoPath);
 }
 ```
 
 **After** (Require-First Approach):
+
 ```javascript
 const demoPath = this.resolvePluginDemoPath(pluginId, version);
 
 if (!demoPath) {
-    console.warn(`⚠️ Could not resolve demo path for ${pluginId}`);
-    return null;
+  console.warn(`⚠️ Could not resolve demo path for ${pluginId}`);
+  return null;
 }
 
 try {
-    // Try Node.js require() for Electron renderer process
-    DemoClass = require(demoPath);
-    
-    // Handle ES module default export
-    if (DemoClass && DemoClass.__esModule && DemoClass.default) {
-        DemoClass = DemoClass.default;
-    }
+  // Try Node.js require() for Electron renderer process
+  DemoClass = require(demoPath);
+
+  // Handle ES module default export
+  if (DemoClass && DemoClass.__esModule && DemoClass.default) {
+    DemoClass = DemoClass.default;
+  }
 } catch (requireError) {
-    // Fallback to browser-style fetch
-    // ...
+  // Fallback to browser-style fetch
+  // ...
 }
 ```
 
@@ -254,6 +262,7 @@ graph TD
 ### Path Resolution Flow
 
 **Development Environment:**
+
 ```
 pluginManager.pathResolver.getUserPluginsPath()
   → "src/renderer/modules/Plugins/UserInstalled"
@@ -266,6 +275,7 @@ require(path)
 ```
 
 **Production Environment:**
+
 ```
 pluginManager.pathResolver.getUserPluginsPath()
   → "/Users/username/.genome-browser/plugins"
@@ -292,12 +302,12 @@ The installation process should ensure demo.js is included:
 ```javascript
 // In PluginMarketplace.installPlugin()
 const filesToCopy = [
-    'manifest.json',
-    'index.js',
-    'demo.js',        // ✅ Ensure demo.js is copied
-    'package.json',   // if exists
-    'README.md',      // if exists
-    // ... other files
+  'manifest.json',
+  'index.js',
+  'demo.js', // ✅ Ensure demo.js is copied
+  'package.json', // if exists
+  'README.md', // if exists
+  // ... other files
 ];
 ```
 
@@ -306,10 +316,12 @@ const filesToCopy = [
 ### Scenario 1: Development Environment - Plugin with Demo
 
 **Setup:**
+
 - Plugin installed to: `src/renderer/modules/Plugins/UserInstalled/protein-interaction-network/1.8.3/`
 - demo.js exists in installation directory
 
 **Expected Behavior:**
+
 ```
 🔍 Attempting to load demo module: .../UserInstalled/protein-interaction-network/1.8.3/demo.js
   Trying require() for installed plugin demo...
@@ -320,10 +332,12 @@ const filesToCopy = [
 ### Scenario 2: Production Environment (ASAR) - Plugin with Demo
 
 **Setup:**
+
 - Plugin installed to: `~/.genome-browser/plugins/protein-interaction-network/1.8.3/`
 - demo.js exists in user data directory
 
 **Expected Behavior:**
+
 ```
 🔍 Attempting to load demo module: ~/.genome-browser/plugins/protein-interaction-network/1.8.3/demo.js
   Trying require() for installed plugin demo...
@@ -334,10 +348,12 @@ const filesToCopy = [
 ### Scenario 3: Plugin Without Demo (Fallback)
 
 **Setup:**
+
 - Plugin installed but demo.js not included
 - Or PluginPathResolver not initialized
 
 **Expected Behavior:**
+
 ```
 ⚠️ Could not resolve demo path for protein-interaction-network
   PluginPathResolver may not be initialized
@@ -367,11 +383,13 @@ The system gracefully falls back to centralized demo data, maintaining backward 
 ### Line Changes
 
 **PluginRealTestDemonstrator.js:**
+
 - Lines added: +67
 - Lines removed: -26
 - Net change: +41 lines
 
 **protein-interaction-network/demo.js:**
+
 - Lines added: +322 (new file)
 
 ## Backward Compatibility
@@ -385,12 +403,12 @@ The fix maintains full backward compatibility through:
 
 **Compatibility Matrix:**
 
-| Condition | Behavior |
-|-----------|----------|
-| PluginPathResolver initialized + demo.js exists | ✅ Load plugin-specific demo |
-| PluginPathResolver initialized + demo.js missing | ⚠️ Fallback to legacy demo |
-| PluginPathResolver not initialized | ⚠️ Fallback to legacy demo |
-| Neither modular nor legacy demo available | ❌ Error with clear message |
+| Condition                                        | Behavior                     |
+| ------------------------------------------------ | ---------------------------- |
+| PluginPathResolver initialized + demo.js exists  | ✅ Load plugin-specific demo |
+| PluginPathResolver initialized + demo.js missing | ⚠️ Fallback to legacy demo   |
+| PluginPathResolver not initialized               | ⚠️ Fallback to legacy demo   |
+| Neither modular nor legacy demo available        | ❌ Error with clear message  |
 
 ## Performance Implications
 
@@ -400,10 +418,12 @@ The fix maintains full backward compatibility through:
 - **After**: require() → direct filesystem access
 
 **Estimated Performance Gain:**
+
 - Development: ~50-100ms faster (no fetch overhead)
 - Production: ~20-50ms faster (optimized module loading)
 
 **Memory Impact:**
+
 - Cached demo modules stored in `demoModules` Map
 - One-time load per plugin, then reused
 - Minimal memory footprint (~few KB per demo module)
@@ -413,6 +433,7 @@ The fix maintains full backward compatibility through:
 ### Recommended Improvements
 
 1. **Automatic Demo Installation Verification**:
+
    ```javascript
    async verifyDemoInstallation(pluginId) {
        const demoPath = this.resolvePluginDemoPath(pluginId, version);

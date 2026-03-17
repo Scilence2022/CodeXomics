@@ -1,52 +1,52 @@
 # view_markdown_file.yaml
-name: "view_markdown_file"
-version: "1.0.0"
-description: "Open and view a markdown (.md) file in a dedicated viewer window with syntax highlighting. The viewer renders markdown content with proper formatting, code highlighting, and a dark theme."
-category: "utility"
-keywords: ["markdown", "view", "display", "reader", "document", "md", "preview", "render"]
+name: 'view_markdown_file'
+version: '1.0.0'
+description: 'Open and view a markdown (.md) file in a dedicated viewer window with syntax highlighting. The viewer renders markdown content with proper formatting, code highlighting, and a dark theme.'
+category: 'utility'
+keywords: ['markdown', 'view', 'display', 'reader', 'document', 'md', 'preview', 'render']
 priority: 2
 
 # Tool execution metadata
 execution:
-  type: "client"
+  type: 'client'
   timeout: 10000
   retries: 1
   requires_auth: false
 
 # Input parameters (JSON Schema format)
 parameters:
-  type: "object"
+  type: 'object'
   properties:
     filePath:
-      type: "string"
-      description: "The absolute path to the markdown file to view"
+      type: 'string'
+      description: 'The absolute path to the markdown file to view'
       required: true
     title:
-      type: "string"
-      description: "Optional custom title for the viewer window. Defaults to the filename."
+      type: 'string'
+      description: 'Optional custom title for the viewer window. Defaults to the filename.'
       required: false
-  required: ["filePath"]
+  required: ['filePath']
 
 # High-quality examples for few-shot learning
 sample_usages:
-  - user_query: "Open the README.md file"
+  - user_query: 'Open the README.md file'
     tool_call: "view_markdown_file(filePath='/path/to/README.md')"
-    thought: "User wants to view a markdown file. The view_markdown_file tool opens it in a dedicated viewer."
-    expected_result: "A markdown viewer window opens displaying the formatted README content"
-  - user_query: "Show me the research report in the markdown viewer"
+    thought: 'User wants to view a markdown file. The view_markdown_file tool opens it in a dedicated viewer.'
+    expected_result: 'A markdown viewer window opens displaying the formatted README content'
+  - user_query: 'Show me the research report in the markdown viewer'
     tool_call: "view_markdown_file(filePath='/path/to/Gene_BRCA1_Research_Report.md', title='BRCA1 Gene Research Report')"
-    thought: "User wants to view a research report markdown file with a custom title"
-    expected_result: "A viewer window opens with the specified title showing the formatted report"
-  - user_query: "Display the documentation file"
+    thought: 'User wants to view a research report markdown file with a custom title'
+    expected_result: 'A viewer window opens with the specified title showing the formatted report'
+  - user_query: 'Display the documentation file'
     tool_call: "view_markdown_file(filePath='/project/docs/guide.md')"
-    thought: "User wants to view documentation"
-    expected_result: "The documentation is rendered and displayed in the markdown viewer"
+    thought: 'User wants to view documentation'
+    expected_result: 'The documentation is rendered and displayed in the markdown viewer'
 
 # Tool relationships and dependencies
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["download_internet_file"]
+  enhances: ['download_internet_file']
   alternatives: []
 
 # Performance and usage statistics
@@ -55,4 +55,4 @@ metadata:
   success_rate: 0.0
   avg_execution_time: 500
   last_used: null
-  tags: ["markdown", "viewer", "document", "utility"]
+  tags: ['markdown', 'viewer', 'document', 'utility']

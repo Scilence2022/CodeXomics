@@ -24,23 +24,23 @@ parameters:
     filename:
       type: string
       description: Output filename for the exported GFF file
-      default: "annotations.gff3"
+      default: 'annotations.gff3'
       examples:
-        - "genome_annotations.gff3"
-        - "selected_features.gff3"
-        - "chromosome_1.gff3"
+        - 'genome_annotations.gff3'
+        - 'selected_features.gff3'
+        - 'chromosome_1.gff3'
     gff_version:
       type: string
       description: GFF format version
-      enum: ["gff3", "gtf"]
-      default: "gff3"
+      enum: ['gff3', 'gtf']
+      default: 'gff3'
     feature_types:
       type: array
       description: Types of features to include
       items:
         type: string
-        enum: ["gene", "CDS", "exon", "tRNA", "rRNA", "misc_feature", "regulatory", "repeat_region", "all"]
-      default: ["all"]
+        enum: ['gene', 'CDS', 'exon', 'tRNA', 'rRNA', 'misc_feature', 'regulatory', 'repeat_region', 'all']
+      default: ['all']
     include_sequences:
       type: boolean
       description: Include FASTA sequences at the end of GFF file
@@ -48,15 +48,15 @@ parameters:
     export_range:
       type: string
       description: Range of genome to export
-      enum: ["all", "current_view", "selected_features", "custom_range", "by_chromosome"]
-      default: "all"
+      enum: ['all', 'current_view', 'selected_features', 'custom_range', 'by_chromosome']
+      default: 'all'
     chromosome:
       type: string
       description: Specific chromosome to export (when export_range is by_chromosome)
       examples:
-        - "chromosome"
-        - "chr1"
-        - "U00096"
+        - 'chromosome'
+        - 'chr1'
+        - 'U00096'
     start_position:
       type: integer
       description: Start position for custom range export
@@ -70,13 +70,13 @@ parameters:
       description: Specific attributes to include in GFF output
       items:
         type: string
-        enum: ["ID", "Name", "gene", "locus_tag", "product", "protein_id", "db_xref", "ec_number", "all"]
-      default: ["all"]
+        enum: ['ID', 'Name', 'gene', 'locus_tag', 'product', 'protein_id', 'db_xref', 'ec_number', 'all']
+      default: ['all']
     sort_by:
       type: string
       description: Sort features by position or type
-      enum: ["position", "type", "none"]
-      default: "position"
+      enum: ['position', 'type', 'none']
+      default: 'position'
     clientId:
       type: string
       description: Browser client ID for multi-window support
@@ -98,9 +98,9 @@ sample_usages:
 relationships:
   depends_on: []
   conflicts_with: []
-  enhances: ["load_genome_file"]
-  alternatives: ["export_genbank_format", "export_bed_format"]
-  prerequisites: ["genome_data_loaded", "annotations_available"]
+  enhances: ['load_genome_file']
+  alternatives: ['export_genbank_format', 'export_bed_format']
+  prerequisites: ['genome_data_loaded', 'annotations_available']
   follow_up: []
 metadata:
   usage_count: 0
@@ -117,25 +117,25 @@ metadata:
   usage_pattern: common
 error_handling:
   no_annotations:
-    error: "No annotations available for export"
-    solution: "Load genome file with annotations"
+    error: 'No annotations available for export'
+    solution: 'Load genome file with annotations'
     retry: false
   invalid_range:
-    error: "Invalid export range specified"
-    solution: "Check start and end positions are valid"
+    error: 'Invalid export range specified'
+    solution: 'Check start and end positions are valid'
     retry: true
   export_failed:
-    error: "Failed to export GFF file"
-    solution: "Check file permissions and disk space"
+    error: 'Failed to export GFF file'
+    solution: 'Check file permissions and disk space'
     retry: true
 returns:
-  success: "boolean - Whether export was successful"
-  result: "object - Export results including:
+  success: 'boolean - Whether export was successful'
+  result: 'object - Export results including:
     - filename: string - Name of exported file
     - featureCount: number - Number of features exported
     - featureTypes: array - Types of features included
     - fileSize: number - Size of exported file in bytes
     - gffVersion: string - GFF format version used
-    - exportRange: string - Range of genome exported"
-  error: "string - Error message if success is false"
-  error_type: "string - Type of error for proper handling"
+    - exportRange: string - Range of genome exported'
+  error: 'string - Error message if success is false'
+  error_type: 'string - Type of error for proper handling'

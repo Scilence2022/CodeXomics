@@ -189,7 +189,7 @@
           "chromosome": "E.coli",
           "start": 3000000,
           "end": 3500000,
-          "value": 0.50
+          "value": 0.5
         },
         {
           "chromosome": "E.coli",
@@ -256,4 +256,4 @@
     "version": "RefSeq NC_000913.3",
     "created": "2024-12-06"
   }
-} 
+}

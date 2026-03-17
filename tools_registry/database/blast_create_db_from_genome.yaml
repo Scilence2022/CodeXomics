@@ -34,14 +34,14 @@ parameters:
   required:
     - chromosome
 sample_usages:
-  - user_query: "Create a BLAST database from the loaded chromosome"
+  - user_query: 'Create a BLAST database from the loaded chromosome'
     tool_call: "blast_create_db_from_genome(chromosome='chr1')"
-    thought: "User wants to create database from currently loaded genome data"
-    expected_result: "BLAST database created from genome chromosome"
-  - user_query: "Make a searchable database for E. coli K-12 genome"
+    thought: 'User wants to create database from currently loaded genome data'
+    expected_result: 'BLAST database created from genome chromosome'
+  - user_query: 'Make a searchable database for E. coli K-12 genome'
     tool_call: "blast_create_db_from_genome(chromosome='NC_000913', dbName='ecoli_k12_db')"
-    thought: "User wants custom database from loaded E. coli genome"
-    expected_result: "E. coli K-12 database created and ready"
+    thought: 'User wants custom database from loaded E. coli genome'
+    expected_result: 'E. coli K-12 database created and ready'
 relationships:
   depends_on:
     - get_genome_info
@@ -57,7 +57,7 @@ metadata:
   complexity: simple
 error_handling:
   chromosome_not_found: "Returns error if chromosome doesn't exist in loaded genome"
-  no_genome_loaded: "Returns error if no genome is currently loaded"
+  no_genome_loaded: 'Returns error if no genome is currently loaded'
 returns:
   success: boolean
   database: object
