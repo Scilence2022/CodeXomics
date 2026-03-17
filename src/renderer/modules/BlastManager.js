@@ -953,16 +953,17 @@ class BlastManager {
   }
 
   initializeResizable() {
-    // Initialize resizable functionality for BLAST Search modal
+    // Initialize resizable functionality for BLAST Search and Results modals
     try {
       if (window.resizableModalManager) {
         window.resizableModalManager.makeResizable('#blastSearchModal');
-        console.log('BlastManager: BLAST Search modal made resizable');
+        window.resizableModalManager.makeResizable('#blastResultsModal');
+        console.log('BlastManager: BLAST modals made resizable');
       } else {
         console.warn('BlastManager: ResizableModalManager not available');
       }
     } catch (error) {
-      console.error('BlastManager: Error initializing resizable modal:', error);
+      console.error('BlastManager: Error initializing resizable modals:', error);
     }
   }
 
@@ -2031,11 +2032,10 @@ class BlastManager {
                                             <tr>
                                                 <td><strong>Source:</strong></td>
                                                 <td>
-                                                    ${
-                                                      database.source === 'quick'
-                                                        ? '<span class="badge badge-success">Quick Creation</span>'
-                                                        : '<span class="badge badge-secondary">Custom File</span>'
-                                                    }
+                                                    ${database.source === 'quick'
+        ? '<span class="badge badge-success">Quick Creation</span>'
+        : '<span class="badge badge-secondary">Custom File</span>'
+      }
                                                 </td>
                                             </tr>
                                         </table>
@@ -2049,9 +2049,8 @@ class BlastManager {
                                             </tr>
                                         </table>
                                         
-                                        ${
-                                          database.sourceGenome
-                                            ? `
+                                        ${database.sourceGenome
+        ? `
                                             <h6><i class="fas fa-dna"></i> Source Information</h6>
                                             <table class="table table-sm table-borderless">
                                                 <tr>
@@ -2060,89 +2059,82 @@ class BlastManager {
                                                 </tr>
                                             </table>
                                         `
-                                            : ''
-                                        }
+        : ''
+      }
                                     </div>
                                 </div>
                                 
-                                ${
-                                  database.dbPath || database.outputDir
-                                    ? `
+                                ${database.dbPath || database.outputDir
+        ? `
                                     <div class="row mt-3">
                                         <div class="col-12">
                                             <h6><i class="fas fa-folder-open"></i> File Locations</h6>
                                             <table class="table table-sm table-borderless">
-                                                ${
-                                                  database.outputDir
-                                                    ? `
+                                                ${database.outputDir
+          ? `
                                                     <tr>
                                                         <td><strong>Database Directory:</strong></td>
                                                          <td><code>${this.escapeHtml(database.outputDir)}</code></td>
                                                     </tr>
                                                 `
-                                                    : ''
-                                                }
-                                                ${
-                                                  database.dbPath
-                                                    ? `
+          : ''
+        }
+                                                ${database.dbPath
+          ? `
                                                     <tr>
                                                         <td><strong>Database Path:</strong></td>
                                                         <td><code>${this.escapeHtml(database.dbPath)}</code></td>
                                                     </tr>
                                                 `
-                                                    : ''
-                                                }
+          : ''
+        }
                                             </table>
                                         </div>
                                     </div>
                                 `
-                                    : ''
-                                }
+        : ''
+      }
                                 
-                                ${
-                                  database.note || database.error
-                                    ? `
+                                ${database.note || database.error
+        ? `
                                     <div class="row mt-3">
                                         <div class="col-12">
                                             <h6><i class="fas fa-sticky-note"></i> Additional Information</h6>
-                                            ${
-                                              database.note
-                                                ? `
+                                            ${database.note
+          ? `
                                                 <div class="alert alert-info">
                                                     <i class="fas fa-info-circle"></i> ${this.escapeHtml(database.note)}
                                                 </div>
                                             `
-                                                : ''
-                                            }
-                                            ${
-                                              database.error
-                                                ? `
+          : ''
+        }
+                                            ${database.error
+          ? `
                                                 <div class="alert alert-danger">
                                                     <i class="fas fa-exclamation-triangle"></i> <strong>Error:</strong> ${this.escapeHtml(database.error)}
                                                 </div>
                                             `
-                                                : ''
-                                            }
+          : ''
+        }
                                         </div>
                                     </div>
                                 `
-                                    : ''
-                                }
+        : ''
+      }
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">
                                 <i class="fas fa-times"></i> Close
                             </button>
-                            ${
-                              database.outputDir && database.status === 'ready'
-                                ? `
+                            ${database.outputDir && database.status === 'ready'
+        ? `
                                 <button type="button" class="btn btn-primary" onclick="window.blastManager.openDatabaseDirectory('${dbId}')">
                                     <i class="fas fa-folder-open"></i> Open Directory
                                 </button>
                             `
-                                : ''
-                            }
+        : ''
+      }
                         </div>
                     </div>
                 </div>
@@ -3541,8 +3533,7 @@ class BlastManager {
     const modal = document.getElementById('blastResultsModal');
     if (modal) {
       modal.classList.add('show', 'blast-modal-no-overlay');
-      // Initialize resizable functionality
-      this.initializeResizableModal();
+      // Resizable functionality is now initialized centrally upon app load
     }
   }
 
@@ -3551,119 +3542,6 @@ class BlastManager {
     if (modal) {
       modal.classList.remove('show');
     }
-  }
-
-  initializeResizableModal() {
-    const modal = document.getElementById('blastResultsModal');
-    const modalContent = modal.querySelector('.modal-content');
-
-    if (!modalContent) return;
-
-    // Add resize indicator
-    this.addResizeIndicator(modalContent);
-
-    // Add resize event listeners
-    this.addResizeListeners(modalContent);
-
-    // Store original dimensions for reset functionality
-    if (!modalContent.dataset.originalWidth) {
-      modalContent.dataset.originalWidth = modalContent.style.width || '95vw';
-      modalContent.dataset.originalHeight = modalContent.style.height || '90vh';
-    }
-  }
-
-  addResizeIndicator(modalContent) {
-    // Remove existing indicator if any
-    const existingIndicator = modalContent.querySelector('.resize-indicator');
-    if (existingIndicator) {
-      existingIndicator.remove();
-    }
-
-    // Create resize indicator
-    const indicator = document.createElement('div');
-    indicator.className = 'resize-indicator';
-    indicator.innerHTML = '<i class="fas fa-expand-arrows-alt"></i>';
-    indicator.style.cssText = `
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            width: 20px;
-            height: 20px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: #666;
-            cursor: se-resize;
-            z-index: 1001;
-            transition: all 0.2s ease;
-        `;
-
-    modalContent.appendChild(indicator);
-
-    // Add hover effect
-    indicator.addEventListener('mouseenter', () => {
-      indicator.style.background = 'rgba(0, 0, 0, 0.2)';
-      indicator.style.color = '#333';
-    });
-
-    indicator.addEventListener('mouseleave', () => {
-      indicator.style.background = 'rgba(0, 0, 0, 0.1)';
-      indicator.style.color = '#666';
-    });
-  }
-
-  addResizeListeners(modalContent) {
-    let isResizing = false;
-    let startX, startY, startWidth, startHeight;
-
-    const handleMouseDown = e => {
-      if (
-        e.target.classList.contains('resize-indicator') ||
-        (e.target === modalContent &&
-          e.offsetX > modalContent.offsetWidth - 20 &&
-          e.offsetY > modalContent.offsetHeight - 20)
-      ) {
-        isResizing = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        startWidth = parseInt(window.getComputedStyle(modalContent).width, 10);
-        startHeight = parseInt(window.getComputedStyle(modalContent).height, 10);
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-        e.preventDefault();
-      }
-    };
-
-    const handleMouseMove = e => {
-      if (!isResizing) return;
-
-      const newWidth = startWidth + e.clientX - startX;
-      const newHeight = startHeight + e.clientY - startY;
-
-      // Apply constraints
-      const minWidth = 600;
-      const minHeight = 400;
-      const maxWidth = window.innerWidth * 0.95;
-      const maxHeight = window.innerHeight * 0.95;
-
-      const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-      const constrainedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
-
-      modalContent.style.width = constrainedWidth + 'px';
-      modalContent.style.height = constrainedHeight + 'px';
-    };
-
-    const handleMouseUp = () => {
-      isResizing = false;
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    modalContent.addEventListener('mousedown', handleMouseDown);
   }
 
   selectBlastType(blastType) {
@@ -5200,9 +5078,8 @@ class BlastManager {
                     </div>
                 </div>
                 
-                ${
-                  results.isRealResults === false && results.errorMessage
-                    ? `
+                ${results.isRealResults === false && results.errorMessage
+        ? `
                 <div class="error-info">
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle"></i>
@@ -5210,8 +5087,8 @@ class BlastManager {
                     </div>
                 </div>
                 `
-                    : ''
-                }
+        : ''
+      }
                 
                 <div class="query-summary">
                     <div class="query-info">
@@ -5229,14 +5106,13 @@ class BlastManager {
                                 <span class="label">Search Time:</span>
                                 <span class="value">${results.timestamp ? new Date(results.timestamp).toLocaleString() : new Date().toLocaleString()}</span>
                             </div>
-                            ${
-                              results.jobId
-                                ? `<div class="query-detail">
+                            ${results.jobId
+        ? `<div class="query-detail">
                                 <span class="label">Job ID:</span>
                                 <span class="value">${results.jobId}</span>
                             </div>`
-                                : ''
-                            }
+        : ''
+      }
                         </div>
                     </div>
                     
@@ -5283,8 +5159,8 @@ class BlastManager {
                             <select id="organismFilter" class="form-control">
                                 <option value="">All organisms</option>
                                 ${this.getUniqueOrganisms(results.hits)
-                                  .map(org => `<option value="${org}">${org}</option>`)
-                                  .join('')}
+        .map(org => `<option value="${org}">${org}</option>`)
+        .join('')}
                             </select>
                         </div>
                     </div>
@@ -5517,13 +5393,12 @@ class BlastManager {
                                 <span class="meta-item">
                                     <i class="fas fa-ruler"></i> ${hit.length.toLocaleString()} ${this.currentResults.queryInfo.type === 'Protein' ? 'aa' : 'bp'}
                                 </span>
-                                ${
-                                  hit.taxonomyId
-                                    ? `<span class="meta-item">
+                                ${hit.taxonomyId
+        ? `<span class="meta-item">
                                     <i class="fas fa-sitemap"></i> TaxID: ${hit.taxonomyId}
                                 </span>`
-                                    : ''
-                                }
+        : ''
+      }
                             </div>
                         </div>
                         
@@ -5585,14 +5460,13 @@ class BlastManager {
                             <span class="stat-label">Identities:</span>
                             <span class="stat-value">${hit.identityCount}/${hit.alignmentLength} (${hit.identity})</span>
                         </div>
-                        ${
-                          hit.gaps
-                            ? `<div class="stat">
+                        ${hit.gaps
+        ? `<div class="stat">
                             <span class="stat-label">Gaps:</span>
                             <span class="stat-value">${hit.gaps}/${hit.alignmentLength} (${((hit.gaps / hit.alignmentLength) * 100).toFixed(1)}%)</span>
                         </div>`
-                            : ''
-                        }
+        : ''
+      }
                     </div>
                 </div>
                 
@@ -5679,8 +5553,8 @@ class BlastManager {
                 <h6><i class="fas fa-layer-group"></i> Multiple HSPs (${hsps.length})</h6>
                 <div class="hsps-list">
                     ${hsps
-                      .map(
-                        (hsp, index) => `
+        .map(
+          (hsp, index) => `
                         <div class="hsp-item">
                             <div class="hsp-header">
                                 <span class="hsp-number">HSP ${index + 1}</span>
@@ -5692,8 +5566,8 @@ class BlastManager {
                             </div>
                         </div>
                     `
-                      )
-                      .join('')}
+        )
+        .join('')}
                 </div>
             </div>
         `;
@@ -5936,24 +5810,22 @@ class BlastManager {
                     <div class="modal-body">
                         <div class="raw-output-controls mb-3">
                             <div class="btn-group" role="group">
-                                ${
-                                  this.searchResults.rawText
-                                    ? `
+                                ${this.searchResults.rawText
+        ? `
                                 <button class="btn btn-outline-primary active" onclick="this.parentElement.parentElement.nextElementSibling.querySelector('.raw-text').style.display='block'; this.parentElement.parentElement.nextElementSibling.querySelector('.raw-xml').style.display='none'; this.parentElement.querySelectorAll('.btn').forEach(b => b.classList.remove('active')); this.classList.add('active');">
                                     <i class="fas fa-align-left"></i> Text Format
                                 </button>
                                 `
-                                    : ''
-                                }
-                                ${
-                                  this.searchResults.rawXML
-                                    ? `
+        : ''
+      }
+                                ${this.searchResults.rawXML
+        ? `
                                 <button class="btn btn-outline-primary ${!this.searchResults.rawText ? 'active' : ''}" onclick="this.parentElement.parentElement.nextElementSibling.querySelector('.raw-xml').style.display='block'; this.parentElement.parentElement.nextElementSibling.querySelector('.raw-text').style.display='none'; this.parentElement.querySelectorAll('.btn').forEach(b => b.classList.remove('active')); this.classList.add('active');">
                                     <i class="fas fa-code"></i> XML Format
                                 </button>
                                 `
-                                    : ''
-                                }
+        : ''
+      }
                                 <button class="btn btn-outline-success" onclick="navigator.clipboard.writeText(this.parentElement.parentElement.nextElementSibling.querySelector('[style*=block] pre, pre').textContent); alert('Copied to clipboard!');">
                                     <i class="fas fa-copy"></i> Copy
                                 </button>
@@ -5972,27 +5844,24 @@ class BlastManager {
                             </div>
                         </div>
                         <div class="raw-output-content">
-                            ${
-                              this.searchResults.rawText
-                                ? `
+                            ${this.searchResults.rawText
+        ? `
                             <div class="raw-text" style="display: ${this.searchResults.rawXML ? 'block' : 'block'};">
                                 <pre class="raw-output-pre">${this.escapeHtml(this.searchResults.rawText)}</pre>
                             </div>
                             `
-                                : ''
-                            }
-                            ${
-                              this.searchResults.rawXML
-                                ? `
+        : ''
+      }
+                            ${this.searchResults.rawXML
+        ? `
                             <div class="raw-xml" style="display: ${this.searchResults.rawText ? 'none' : 'block'};">
                                 <pre class="raw-output-pre">${this.escapeHtml(this.searchResults.rawXML)}</pre>
                             </div>
                             `
-                                : ''
-                            }
-                            ${
-                              !this.searchResults.rawText && !this.searchResults.rawXML
-                                ? `
+        : ''
+      }
+                            ${!this.searchResults.rawText && !this.searchResults.rawXML
+        ? `
                             <div class="no-raw-output">
                                 <div class="alert alert-info">
                                     <i class="fas fa-info-circle"></i>
@@ -6002,8 +5871,8 @@ class BlastManager {
                                 </div>
                             </div>
                             `
-                                : ''
-                            }
+        : ''
+      }
                         </div>
                     </div>
                     <div class="modal-footer">

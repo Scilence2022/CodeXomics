@@ -10317,7 +10317,6 @@ input:checked+.slider:before {
   min-width: 600px;
   min-height: 400px;
   position: relative;
-  resize: both;
   overflow: auto;
 }
 
@@ -10328,42 +10327,8 @@ input:checked+.slider:before {
   /* Account for header height */
 }
 
-/* Resize handle styling */
-.blast-results-content::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 20px;
-  height: 20px;
-  background: linear-gradient(-45deg,
-      transparent 30%,
-      #ccc 30%,
-      #ccc 40%,
-      transparent 40%,
-      transparent 60%,
-      #ccc 60%,
-      #ccc 70%,
-      transparent 70%);
-  cursor: se-resize;
-  z-index: 1000;
-}
-
-.blast-results-content:hover::after {
-  background: linear-gradient(-45deg,
-      transparent 30%,
-      #999 30%,
-      #999 40%,
-      transparent 40%,
-      transparent 60%,
-      #999 60%,
-      #999 70%,
-      transparent 70%);
-}
-
-/* Make modal resizable */
+/* Make modal resizable - properties managed by ResizableModalManager but keeping limits */
 #blastResultsModal .modal-content {
-  resize: both;
   overflow: auto;
   min-width: 600px;
   min-height: 400px;
@@ -10375,41 +10340,7 @@ input:checked+.slider:before {
 #blastResultsModal.modal.collapsed .modal-content {
   min-height: auto !important;
   max-height: 80px !important;
-  resize: none;
   overflow: hidden;
-}
-
-/* Resize handle for modal */
-#blastResultsModal .modal-content::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 20px;
-  height: 20px;
-  background: linear-gradient(-45deg,
-      transparent 30%,
-      #ccc 30%,
-      #ccc 40%,
-      transparent 40%,
-      transparent 60%,
-      #ccc 60%,
-      #ccc 70%,
-      transparent 70%);
-  cursor: se-resize;
-  z-index: 1000;
-}
-
-#blastResultsModal .modal-content:hover::after {
-  background: linear-gradient(-45deg,
-      transparent 30%,
-      #999 30%,
-      #999 40%,
-      transparent 40%,
-      transparent 60%,
-      #999 60%,
-      #999 70%,
-      transparent 70%);
 }
 
 .results-controls {
