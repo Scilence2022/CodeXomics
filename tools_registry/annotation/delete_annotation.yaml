@@ -1,0 +1,39 @@
+name: delete_annotation
+version: 1.0.0
+description: Delete a genome annotation by identifier with change tracking
+category: annotation
+subcategory: annotation_crud
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    identifier:
+      type: string
+      description: The locus_tag, gene name, or protein_id of the annotation to delete.
+    chromosome:
+      type: string
+      description: Chromosome name (optional).
+    agent:
+      type: string
+      description: Identity of the agent making this deletion.
+      default: mcp-agent
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - identifier
+
+metadata:
+  added_in: phase1
+  integration: openclaw
+  priority: high
+  tags:
+    - annotation
+    - crud
+    - delete
+    - change-tracking

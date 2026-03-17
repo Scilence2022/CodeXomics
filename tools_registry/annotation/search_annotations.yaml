@@ -1,0 +1,45 @@
+name: search_annotations
+version: 1.0.0
+description: Full-text search across annotation fields (product, gene, note, locus_tag, etc.)
+category: annotation
+subcategory: annotation_search
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    query:
+      type: string
+      description: Search query string. Case-insensitive search across qualifier fields.
+    chromosome:
+      type: string
+      description: Limit search to a specific chromosome (optional).
+    type:
+      type: string
+      description: Filter by feature type (optional).
+    fields:
+      type: array
+      description: Specific qualifier fields to search in (optional, defaults to all).
+      items:
+        type: string
+    limit:
+      type: number
+      description: Maximum number of results (default 50).
+      default: 50
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - query
+
+metadata:
+  added_in: phase1
+  integration: openclaw
+  priority: high
+  tags:
+    - annotation
+    - search

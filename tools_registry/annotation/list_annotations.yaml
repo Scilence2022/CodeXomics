@@ -1,0 +1,80 @@
+name: list_annotations
+version: 1.0.0
+description: List genome annotations in a specified region or chromosome with filtering by feature type
+category: annotation
+subcategory: annotation_crud
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Chromosome/replicon name. If omitted, uses the current chromosome.
+    start:
+      type: number
+      description: Start position to filter annotations (optional).
+    end:
+      type: number
+      description: End position to filter annotations (optional).
+    type:
+      type: string
+      description: Feature type filter (e.g., "CDS", "gene", "rRNA", "tRNA", "misc_feature").
+    limit:
+      type: number
+      description: Maximum number of annotations to return (default 100, 0 for no limit).
+      default: 100
+    offset:
+      type: number
+      description: Number of annotations to skip for pagination.
+      default: 0
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+
+returns:
+  type: object
+  properties:
+    success:
+      type: boolean
+    chromosome:
+      type: string
+    total:
+      type: number
+    count:
+      type: number
+    annotations:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          type:
+            type: string
+          start:
+            type: number
+          end:
+            type: number
+          strand:
+            type: number
+          locus_tag:
+            type: string
+          gene:
+            type: string
+          product:
+            type: string
+
+metadata:
+  added_in: phase1
+  integration: openclaw
+  priority: high
+  tags:
+    - annotation
+    - crud
+    - read

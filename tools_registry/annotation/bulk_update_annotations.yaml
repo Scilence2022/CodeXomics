@@ -1,0 +1,56 @@
+name: bulk_update_annotations
+version: 1.0.0
+description: Update multiple annotations in a single operation with change tracking
+category: annotation
+subcategory: annotation_crud
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    updates:
+      type: array
+      description: Array of update objects, each with identifier and updates fields.
+      items:
+        type: object
+        properties:
+          identifier:
+            type: string
+            description: The locus_tag or gene name of the annotation to update.
+          chromosome:
+            type: string
+            description: Chromosome name (optional).
+          updates:
+            type: object
+            description: Object of fields to update.
+        required:
+          - identifier
+          - updates
+    agent:
+      type: string
+      description: Identity of the agent making these changes.
+      default: mcp-agent
+    evidence:
+      type: array
+      description: Evidence references for all updates in this batch.
+      items:
+        type: string
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - updates
+
+metadata:
+  added_in: phase1
+  integration: openclaw
+  priority: medium
+  tags:
+    - annotation
+    - crud
+    - batch
+    - change-tracking

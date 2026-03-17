@@ -1,0 +1,48 @@
+name: update_annotation
+version: 1.0.0
+description: Update fields of an existing genome annotation with change tracking
+category: annotation
+subcategory: annotation_crud
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    identifier:
+      type: string
+      description: The locus_tag, gene name, or protein_id identifying the annotation to update.
+    chromosome:
+      type: string
+      description: Chromosome name (optional).
+    updates:
+      type: object
+      description: Object of fields to update. Keys are qualifier names, values are new values.
+    agent:
+      type: string
+      description: Identity of the agent making this change.
+      default: mcp-agent
+    evidence:
+      type: array
+      description: Evidence references supporting this change.
+      items:
+        type: string
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - identifier
+    - updates
+
+metadata:
+  added_in: phase1
+  integration: openclaw
+  priority: high
+  tags:
+    - annotation
+    - crud
+    - update
+    - change-tracking

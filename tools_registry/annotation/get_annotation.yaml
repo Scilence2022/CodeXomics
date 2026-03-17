@@ -1,0 +1,46 @@
+name: get_annotation
+version: 1.0.0
+description: Get detailed information about a specific annotation by locus_tag, gene name, or protein_id
+category: annotation
+subcategory: annotation_crud
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    identifier:
+      type: string
+      description: The locus_tag, gene name, or protein_id of the annotation to retrieve.
+    chromosome:
+      type: string
+      description: Chromosome name (optional, searches all if omitted).
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required:
+    - identifier
+
+returns:
+  type: object
+  properties:
+    success:
+      type: boolean
+    identifier:
+      type: string
+    chromosome:
+      type: string
+    annotation:
+      type: object
+
+metadata:
+  added_in: phase1
+  integration: openclaw
+  priority: high
+  tags:
+    - annotation
+    - crud
+    - read

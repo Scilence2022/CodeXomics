@@ -13,6 +13,7 @@ const ActionTools = require('./action/ActionTools');
 const UtilityTools = require('./utility/UtilityTools');
 const FileTools = require('./file/FileTools');
 const TrackSettingsTools = require('./track/TrackSettingsTools');
+const AnnotationTools = require('./annotation/AnnotationTools');
 
 class ToolsIntegrator {
     constructor(server) {
@@ -29,6 +30,7 @@ class ToolsIntegrator {
         this.utilityTools = new UtilityTools(server);
         this.fileTools = new FileTools(server);
         this.trackSettingsTools = new TrackSettingsTools(server);
+        this.annotationTools = new AnnotationTools(server);
 
         // Combine all tools
         this.allTools = this.combineAllTools();
@@ -45,7 +47,8 @@ class ToolsIntegrator {
             ...this.actionTools.getTools(),
             ...this.utilityTools.getTools(),
             ...this.fileTools.getTools(),
-            ...this.trackSettingsTools.getTools()
+            ...this.trackSettingsTools.getTools(),
+            ...this.annotationTools.getTools()
         };
     }
 
@@ -110,8 +113,6 @@ class ToolsIntegrator {
                 // as ChatManager.searchUniProtDatabase etc. have full implementations
                 return await this.databaseTools.executeClientTool(toolName, parameters, clientId);
             }
-
-
 
             // Data tools
             if (this.dataTools.getTools()[toolName]) {
@@ -216,6 +217,11 @@ class ToolsIntegrator {
                 }
             }
 
+            // Annotation tools - delegate all to client
+            if (this.annotationTools.getTools()[toolName]) {
+                return await this.annotationTools.executeClientTool(toolName, parameters, clientId);
+            }
+
             throw new Error(`Tool execution handler not found for '${toolName}'`);
 
         } catch (error) {
@@ -263,6 +269,11 @@ class ToolsIntegrator {
                 name: 'Utility Tools',
                 description: 'Utility tools for file download and viewing operations',
                 tools: Object.keys(this.utilityTools.getTools())
+            },
+            annotation: {
+                name: 'Annotation Management',
+                description: 'Tools for reading, updating, searching, and tracking changes to genome annotations',
+                tools: Object.keys(this.annotationTools.getTools())
             }
         };
     }

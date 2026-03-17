@@ -1,0 +1,34 @@
+name: get_annotation_history
+version: 1.0.0
+description: Retrieve change history for a specific annotation or the entire genome
+category: annotation
+subcategory: change_tracking
+
+execution:
+  type: client-side
+  requires_data: false
+
+parameters:
+  type: object
+  properties:
+    identifier:
+      type: string
+      description: Locus_tag or gene name to get history for. If omitted, returns all history.
+    limit:
+      type: number
+      description: Maximum number of history records (default 50).
+      default: 50
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support
+      default: default
+  required: []
+
+metadata:
+  added_in: phase1
+  integration: openclaw
+  priority: medium
+  tags:
+    - annotation
+    - change-tracking
+    - audit

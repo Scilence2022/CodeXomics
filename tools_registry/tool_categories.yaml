@@ -94,6 +94,18 @@ categories:
       - "region_analysis"
     tools_count: 3
 
+  annotation:
+    name: "Annotation Management"
+    description: "CRUD operations for genome annotations with full-text search and change tracking for AI agent integration"
+    icon: "🏷️"
+    priority: 1
+    color: "#8E24AA"
+    subcategories:
+      - "annotation_crud"
+      - "annotation_search"
+      - "change_tracking"
+    tools_count: 7
+
   file_operations:
     name: "File Operations"
     description: "Tools for file input/output operations including data export and file format conversion"
