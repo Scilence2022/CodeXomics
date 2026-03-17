@@ -16482,22 +16482,21 @@ ${this.getPluginSystemInfo()}`;
         const undockThreshold = 80; // Pixels to drag before auto-undock
 
         if (dragDistance > undockThreshold) {
-          // Auto-trigger undock
-          isDragging = false; // Stop dragging to prevent further processing
+          // Auto-trigger undock but maintain dragging state
           this.hideUndockIndicator();
 
-          // Perform undock and position at current mouse location
+          // Perform undock
           this.undockChat();
 
-          // Position the floating window near the mouse cursor
-          setTimeout(() => {
-            const chatPanel = document.getElementById('llmChatPanel');
-            if (chatPanel) {
-              chatPanel.style.left = Math.max(0, e.clientX - 100) + 'px';
-              chatPanel.style.top = Math.max(0, e.clientY - 20) + 'px';
-              this.saveChatPosition();
-            }
-          }, 0);
+          // Re-calculate drag variables so dragging continues seamlessly in floating mode
+          // 100px and 20px are center-offsets so the mouse is roughly on the title bar
+          startLeft = Math.max(0, e.clientX - 100);
+          startTop = Math.max(0, e.clientY - 20);
+          startX = e.clientX;
+          startY = e.clientY;
+
+          chatPanel.style.left = startLeft + 'px';
+          chatPanel.style.top = startTop + 'px';
         } else if (dragDistance > 30) {
           // Show indicator when getting close to threshold
           this.showUndockIndicator();
