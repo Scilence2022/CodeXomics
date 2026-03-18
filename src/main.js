@@ -24,39 +24,292 @@ let mainWindow;
 let unifiedMCPServer = null;
 let unifiedServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
 
-// Multi-window genome support: Window Registry
-// Tracks all main genome browser windows by windowId
-const windowRegistry = new Map(); // windowId → { window: BrowserWindow, genomeName: string, createdAt: Date }
+// Multi-window genome support: Enhanced Window Registry
+// Tracks all main genome browser windows by windowId with comprehensive state management
+const windowRegistry = new Map(); // windowId → { window: BrowserWindow, genomeName: string, createdAt: Date, status: string, lastUpdate: Date, retryCount: number }
 let windowIdCounter = 0;
 
+// Pending registration queue for windows that couldn't be registered immediately
+const pendingRegistrations = new Map(); // windowId → { window: BrowserWindow, resolve: function, reject: function, retryCount: number }
+const MAX_REGISTRATION_RETRIES = 3;
+const REGISTRATION_RETRY_DELAY_MS = 500;
+
+// Cleanup interval reference
+let windowCleanupInterval = null;
+
 function generateWindowId() {
-  return `win_${++windowIdCounter}`;
+  return `win_${++windowIdCounter}_${Date.now()}`;
 }
 
-// Register a genome browser window in the registry
-function registerGenomeWindow(windowId, browserWindow) {
-  windowRegistry.set(windowId, {
-    window: browserWindow,
-    genomeName: null,
-    createdAt: new Date(),
+// Enhanced window registration with status tracking and retry logic
+function registerGenomeWindow(windowId, browserWindow, options = {}) {
+  const { skipMCPRegistration = false, skipResolve = false } = options;
+
+  return new Promise((resolve, reject) => {
+    // Check if window is already registered
+    if (windowRegistry.has(windowId)) {
+      console.warn(`📋 [WindowRegistry] Window ${windowId} already registered, updating reference`);
+      const existing = windowRegistry.get(windowId);
+      existing.window = browserWindow;
+      existing.lastUpdate = new Date();
+      existing.status = 'updated';
+      if (!skipResolve) resolve({ windowId, status: 'updated', isNew: false });
+      return;
+    }
+
+    // Validate window object
+    if (!browserWindow || typeof browserWindow.isDestroyed !== 'function') {
+      console.error(`📋 [WindowRegistry] Invalid window object for ${windowId}`);
+      if (!skipResolve) reject(new Error('Invalid window object'));
+      return;
+    }
+
+    // Store registration promise for deferred resolution
+    if (!skipResolve) {
+      pendingRegistrations.set(windowId, { window: browserWindow, resolve, reject, retryCount: 0 });
+    }
+
+    // Check if window is destroyed before registration
+    if (browserWindow.isDestroyed()) {
+      console.error(`📋 [WindowRegistry] Cannot register destroyed window: ${windowId}`);
+      pendingRegistrations.delete(windowId);
+      if (!skipResolve) reject(new Error('Window is destroyed'));
+      return;
+    }
+
+    // Register window with comprehensive metadata
+    const registrationInfo = {
+      window: browserWindow,
+      genomeName: null,
+      createdAt: new Date(),
+      lastUpdate: new Date(),
+      status: 'registering',
+      retryCount: 0,
+      isMainWindow: browserWindow === mainWindow,
+    };
+
+    windowRegistry.set(windowId, registrationInfo);
+
+    // Set up automatic cleanup when window is destroyed
+    browserWindow.on('closed', () => {
+      console.log(`📋 [WindowRegistry] Window closed event detected for ${windowId}`);
+      cleanupWindowRegistration(windowId);
+    });
+
+    // Register with MCP server if running and not skipped
+    if (!skipMCPRegistration && unifiedMCPServer) {
+      try {
+        unifiedMCPServer.registerWindow(windowId, browserWindow);
+        console.log(`📋 [WindowRegistry] MCP registration successful for ${windowId}`);
+      } catch (mcpError) {
+        console.warn(`📋 [WindowRegistry] MCP registration failed for ${windowId}: ${mcpError.message}`);
+      }
+    }
+
+    // Update status to registered
+    registrationInfo.status = 'registered';
+    pendingRegistrations.delete(windowId);
+
+    console.log(`📋 [WindowRegistry] Registered window: ${windowId} (total: ${windowRegistry.size}, status: ${registrationInfo.status})`);
+
+    if (!skipResolve) resolve({ windowId, status: 'registered', isNew: true });
   });
-  console.log(`📋 [WindowRegistry] Registered window: ${windowId} (total: ${windowRegistry.size})`);
+}
 
-  // If MCP server is running, register the window with it
-  if (unifiedMCPServer) {
-    unifiedMCPServer.registerWindow(windowId, browserWindow);
+// Unregister a genome browser window from the registry with cleanup
+function unregisterGenomeWindow(windowId) {
+  const entry = windowRegistry.get(windowId);
+
+  if (!entry) {
+    console.warn(`📋 [WindowRegistry] Window ${windowId} not found in registry`);
+    pendingRegistrations.delete(windowId);
+    return;
+  }
+
+  // Unregister from MCP server if running
+  if (unifiedMCPServer && entry.window && !entry.window.isDestroyed()) {
+    try {
+      unifiedMCPServer.unregisterWindow(windowId);
+    } catch (error) {
+      console.warn(`📋 [WindowRegistry] MCP unregistration error for ${windowId}: ${error.message}`);
+    }
+  }
+
+  // Remove from registry
+  windowRegistry.delete(windowId);
+  pendingRegistrations.delete(windowId);
+
+  console.log(`📋 [WindowRegistry] Unregistered window: ${windowId} (remaining: ${windowRegistry.size})`);
+}
+
+// Cleanup window registration (called when window is closed)
+function cleanupWindowRegistration(windowId) {
+  const entry = windowRegistry.get(windowId);
+
+  if (entry) {
+    // Update status to destroyed
+    entry.status = 'destroyed';
+    entry.lastUpdate = new Date();
+
+    console.log(`📋 [WindowRegistry] Cleaning up destroyed window: ${windowId}`);
+
+    // Unregister from MCP server
+    if (unifiedMCPServer) {
+      try {
+        unifiedMCPServer.unregisterWindow(windowId);
+      } catch (error) {
+        console.warn(`📋 [WindowRegistry] MCP cleanup error for ${windowId}: ${error.message}`);
+      }
+    }
+
+    // Remove from registry
+    windowRegistry.delete(windowId);
+    pendingRegistrations.delete(windowId);
+
+    console.log(`📋 [WindowRegistry] Cleanup complete for ${windowId} (remaining: ${windowRegistry.size})`);
   }
 }
 
-// Unregister a genome browser window from the registry
-function unregisterGenomeWindow(windowId) {
-  windowRegistry.delete(windowId);
-  console.log(`📋 [WindowRegistry] Unregistered window: ${windowId} (total: ${windowRegistry.size})`);
+// Deferred registration with retry logic for windows that aren't ready yet
+function registerGenomeWindowDeferred(windowId, browserWindow, maxRetries = MAX_REGISTRATION_RETRIES) {
+  return new Promise((resolve, reject) => {
+    let retryCount = 0;
 
-  // If MCP server is running, unregister the window
-  if (unifiedMCPServer) {
-    unifiedMCPServer.unregisterWindow(windowId);
+    const attemptRegistration = () => {
+      // Check if window is destroyed
+      if (browserWindow.isDestroyed()) {
+        console.warn(`📋 [WindowRegistry] Deferred registration aborted: window ${windowId} destroyed`);
+        reject(new Error('Window destroyed before registration'));
+        return;
+      }
+
+      // Check if window webContents is ready
+      if (!browserWindow.webContents || browserWindow.webContents.isLoading()) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(`📋 [WindowRegistry] Deferred registration attempt ${retryCount}/${maxRetries} for ${windowId} (window still loading)`);
+          setTimeout(attemptRegistration, REGISTRATION_RETRY_DELAY_MS);
+          return;
+        } else {
+          console.warn(`📋 [WindowRegistry] Deferred registration max retries reached for ${windowId}, registering anyway`);
+        }
+      }
+
+      // Attempt registration
+      try {
+        registerGenomeWindow(windowId, browserWindow)
+          .then(result => {
+            console.log(`📋 [WindowRegistry] Deferred registration successful for ${windowId}`);
+            resolve(result);
+          })
+          .catch(error => {
+            console.error(`📋 [WindowRegistry] Deferred registration failed for ${windowId}: ${error.message}`);
+            reject(error);
+          });
+      } catch (error) {
+        console.error(`📋 [WindowRegistry] Deferred registration exception for ${windowId}: ${error.message}`);
+        reject(error);
+      }
+    };
+
+    attemptRegistration();
+  });
+}
+
+// Start periodic cleanup of destroyed windows
+function startWindowCleanupInterval(intervalMs = 10000) {
+  if (windowCleanupInterval) {
+    clearInterval(windowCleanupInterval);
   }
+
+  windowCleanupInterval = setInterval(() => {
+    let cleanedCount = 0;
+
+    for (const [windowId, info] of windowRegistry.entries()) {
+      if (info.window && info.window.isDestroyed()) {
+        console.log(`📋 [WindowRegistry] Periodic cleanup found destroyed window: ${windowId}`);
+        cleanupWindowRegistration(windowId);
+        cleanedCount++;
+      }
+    }
+
+    if (cleanedCount > 0) {
+      console.log(`📋 [WindowRegistry] Periodic cleanup removed ${cleanedCount} destroyed windows`);
+    }
+  }, intervalMs);
+
+  console.log(`📋 [WindowRegistry] Started periodic cleanup interval (${intervalMs}ms)`);
+}
+
+// Stop periodic cleanup
+function stopWindowCleanupInterval() {
+  if (windowCleanupInterval) {
+    clearInterval(windowCleanupInterval);
+    windowCleanupInterval = null;
+    console.log(`📋 [WindowRegistry] Stopped periodic cleanup interval`);
+  }
+}
+
+// Get comprehensive window registry status for diagnostics
+function getWindowRegistryStatus() {
+  const windows = [];
+  let validCount = 0;
+  let destroyedCount = 0;
+  let pendingCount = pendingRegistrations.size;
+
+  for (const [windowId, info] of windowRegistry.entries()) {
+    const isDestroyed = info.window ? info.window.isDestroyed() : true;
+    if (isDestroyed) destroyedCount++;
+    else validCount++;
+
+    windows.push({
+      windowId,
+      genomeName: info.genomeName,
+      status: info.status,
+      isDestroyed,
+      createdAt: info.createdAt ? info.createdAt.toISOString() : null,
+      lastUpdate: info.lastUpdate ? info.lastUpdate.toISOString() : null,
+      age: info.createdAt ? Date.now() - info.createdAt.getTime() : null,
+    });
+  }
+
+  return {
+    total: windowRegistry.size,
+    valid: validCount,
+    destroyed: destroyedCount,
+    pending: pendingCount,
+    windows,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+// Ensure all windows are properly registered with MCP server
+function syncWindowsWithMCPServer() {
+  if (!unifiedMCPServer) {
+    console.log(`📋 [WindowRegistry] MCP server not available, skipping sync`);
+    return { synced: 0, failed: 0 };
+  }
+
+  let synced = 0;
+  let failed = 0;
+
+  for (const [windowId, info] of windowRegistry.entries()) {
+    if (!info.window || info.window.isDestroyed()) {
+      console.warn(`📋 [WindowRegistry] Skipping sync for destroyed window: ${windowId}`);
+      continue;
+    }
+
+    try {
+      unifiedMCPServer.registerWindow(windowId, info.window);
+      synced++;
+    } catch (error) {
+      console.error(`📋 [WindowRegistry] Failed to sync window ${windowId} with MCP: ${error.message}`);
+      failed++;
+    }
+  }
+
+  console.log(`📋 [WindowRegistry] MCP sync complete: ${synced} synced, ${failed} failed`);
+  return { synced, failed };
 }
 
 // 为生物信息学工具窗口创建独立菜单
@@ -1473,8 +1726,9 @@ function createWindow() {
   // Store windowId on the BrowserWindow object for easy lookup
   mainWindow.windowId = windowId;
 
-  // Register in window registry
-  registerGenomeWindow(windowId, mainWindow);
+  // Register in window registry with enhanced error handling
+  registerGenomeWindow(windowId, mainWindow, { skipResolve: true });
+  console.log(`📋 [createMainWindow] Window ${windowId} registered in registry`);
 
   // Load the app
   mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
@@ -1510,11 +1764,23 @@ function createWindow() {
     }
   });
 
-  // Handle window closed
+  // Handle window closed - cleanup is handled automatically via the 'closed' event listener in registerGenomeWindow
   mainWindow.on('closed', () => {
+    console.log(`📋 [createMainWindow] Window ${windowId} closed`);
     unregisterGenomeWindow(windowId);
     mainWindow = null;
     currentActiveWindow = null;
+  });
+
+  // Handle errors
+  mainWindow.webContents.on('crashed', (event, killed) => {
+    console.error(`📋 [createMainWindow] Window ${windowId} crashed (killed: ${killed})`);
+    cleanupWindowRegistration(windowId);
+  });
+
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    console.error(`📋 [createMainWindow] Window ${windowId} render process gone: ${details.reason}`);
+    cleanupWindowRegistration(windowId);
   });
 }
 
@@ -3938,13 +4204,12 @@ async function startUnifiedMCPServer() {
     unifiedServerStatus = 'running';
     console.log('Unified Claude MCP Server started successfully on ports 3002 (HTTP) and 3003 (WebSocket)');
 
-    // Multi-window support: Also populate the server's local IPC registry for routing
-    for (const [windowId, info] of windowRegistry.entries()) {
-      if (info.window && !info.window.isDestroyed()) {
-        unifiedMCPServer.registerWindow(windowId, info.window);
-        console.log(`📋 [MCP Server] Registered existing window for IPC routing: ${windowId}`);
-      }
-    }
+    // Start periodic window cleanup to handle any windows that weren't properly unregistered
+    startWindowCleanupInterval();
+
+    // Multi-window support: Also populate the server's local IPC registry for routing with enhanced sync
+    const syncResult = syncWindowsWithMCPServer();
+    console.log(`📋 [MCP Server] Window sync result: ${syncResult.synced} synced, ${syncResult.failed} failed`);
 
     // Notify renderer process
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -3977,6 +4242,9 @@ async function stopUnifiedMCPServer() {
     }
 
     unifiedServerStatus = 'stopping';
+
+    // Stop the periodic cleanup interval
+    stopWindowCleanupInterval();
 
     if (unifiedMCPServer) {
       await unifiedMCPServer.stop();
@@ -4198,7 +4466,9 @@ ipcMain.handle('list-genome-windows', async () => {
       genomeName: info.genomeName || null,
       isFocused: info.window.isFocused(),
       isDestroyed: false,
+      status: info.status,
       createdAt: info.createdAt ? info.createdAt.toISOString() : null,
+      lastUpdate: info.lastUpdate ? info.lastUpdate.toISOString() : null,
     }));
   
   // Only log in debug mode or when windows count changes significantly
@@ -4207,6 +4477,19 @@ ipcMain.handle('list-genome-windows', async () => {
   }
   
   return result;
+});
+
+// Get comprehensive window registry status for diagnostics
+ipcMain.handle('get-window-registry-status', async () => {
+  const status = getWindowRegistryStatus();
+  console.log(`📋 [IPC] Window registry status: ${status.valid} valid, ${status.destroyed} destroyed, ${status.pending} pending`);
+  return status;
+});
+
+// Sync all windows with MCP server
+ipcMain.handle('sync-mcp-windows', async () => {
+  const result = syncWindowsWithMCPServer();
+  return { success: true, ...result };
 });
 
 // Focus a specific genome window by windowId (used by ChatBox AI agent)
@@ -4239,22 +4522,45 @@ ipcMain.on('update-window-genome-name', (event, { windowId, genomeName }) => {
   const entry = windowRegistry.get(windowId);
   if (entry) {
     entry.genomeName = genomeName;
-    console.log(`📋 [WindowRegistry] Updated genome name for ${windowId}: ${genomeName}`);
+    entry.lastUpdate = new Date();
+    entry.status = 'genome-loaded';
+    console.log(`📋 [WindowRegistry] Updated genome name for ${windowId}: ${genomeName} (status: ${entry.status})`);
+  } else {
+    console.warn(`📋 [WindowRegistry] Window ${windowId} not found when updating genome name`);
   }
 });
 
 // Get the windowId for the sender window
 ipcMain.handle('get-window-id', async event => {
   const senderWindow = BrowserWindow.fromWebContents(event.sender);
-  if (senderWindow && senderWindow.windowId) {
+
+  if (!senderWindow) {
+    console.warn(`📋 [IPC] get-window-id: sender window not found`);
+    return null;
+  }
+
+  if (senderWindow.windowId) {
     return senderWindow.windowId;
   }
-  // Fallback: find in registry
+
+  // Fallback: find in registry by webContents
   for (const [windowId, info] of windowRegistry.entries()) {
     if (info.window && !info.window.isDestroyed() && info.window.webContents === event.sender) {
+      console.log(`📋 [IPC] get-window-id: found ${windowId} via registry fallback`);
       return windowId;
     }
   }
+
+  // Last resort: try to find by window ID stored on webContents
+  const allWindows = BrowserWindow.getAllWindows();
+  for (const win of allWindows) {
+    if (!win.isDestroyed() && win.webContents === event.sender && win.windowId) {
+      console.log(`📋 [IPC] get-window-id: found ${win.windowId} via BrowserWindow.getAllWindows()`);
+      return win.windowId;
+    }
+  }
+
+  console.warn(`📋 [IPC] get-window-id: window not found in registry (${windowRegistry.size} windows registered)`);
   return null;
 });
 
@@ -8371,9 +8677,12 @@ ipcMain.handle('checkMainWindowStatus', async () => {
 
 // Handle creating new main window with file
 ipcMain.handle('createNewMainWindow', async (event, filePath) => {
+  let windowId = null;
+
   try {
     // Generate a unique window ID for multi-window support
-    const windowId = generateWindowId();
+    windowId = generateWindowId();
+    console.log(`📋 [createNewMainWindow] Creating new window with ID: ${windowId}`);
 
     // Create a new main window with identical configuration to the original
     const newMainWindow = new BrowserWindow({
@@ -8397,8 +8706,9 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
     // Store windowId on the BrowserWindow object for easy lookup
     newMainWindow.windowId = windowId;
 
-    // Register in window registry
-    registerGenomeWindow(windowId, newMainWindow);
+    // Register in window registry with skipResolve since we're handling async
+    registerGenomeWindow(windowId, newMainWindow, { skipResolve: true });
+    console.log(`📋 [createNewMainWindow] Window ${windowId} registered in registry`);
 
     // Set up the new window with same initialization as original main window
     newMainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
@@ -8413,14 +8723,14 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
 
     newMainWindow.webContents.on('did-finish-load', () => {
       if (reloadCount < maxReloads) {
-        console.log(`New window reload cycle ${reloadCount + 1}/${maxReloads}`);
+        console.log(`📋 [createNewMainWindow] Reload cycle ${reloadCount + 1}/${maxReloads} for ${windowId}`);
         reloadCount++;
         newMainWindow.webContents.reload();
       } else {
-        console.log('New window fully loaded, waiting for complete initialization');
+        console.log(`📋 [createNewMainWindow] Window ${windowId} fully loaded, waiting for complete initialization`);
         // Window is fully loaded, wait for DOM and modules to be ready
         setTimeout(() => {
-          console.log('Checking if new window is ready for file loading...');
+          console.log(`📋 [createNewMainWindow] Sending initialization events to ${windowId}`);
           // Send windowId to renderer process for MCPBridge identification
           newMainWindow.webContents.send('set-window-id', windowId);
           // Send a test message to verify the window is responsive
@@ -8428,7 +8738,7 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
 
           // Wait a bit more and then send the file
           setTimeout(() => {
-            console.log('Sending load-file event to new window with path:', filePath);
+            console.log(`📋 [createNewMainWindow] Sending load-file event to ${windowId}: ${filePath}`);
             newMainWindow.webContents.send('load-file', filePath);
           }, 500);
         }, 1500); // Extended delay for complete module initialization
@@ -8437,12 +8747,13 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
 
     // Show window when ready
     newMainWindow.once('ready-to-show', () => {
+      console.log(`📋 [createNewMainWindow] Window ${windowId} ready to show`);
       newMainWindow.show();
       // Set focus to new window and ensure proper menu
       newMainWindow.focus();
       currentActiveWindow = newMainWindow;
       createMenu(); // Set main window menu immediately
-      console.log(`New window shown and focused with main menu set (windowId: ${windowId})`);
+      console.log(`📋 [createNewMainWindow] Window ${windowId} shown and focused with main menu set`);
     });
 
     // Open DevTools to debug UI issues (same as original main window)
@@ -8453,21 +8764,36 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
       if (currentActiveWindow !== newMainWindow) {
         currentActiveWindow = newMainWindow;
         createMenu(); // Set main window menu when focused
-        console.log(`New window focused - set main menu (windowId: ${windowId})`);
+        console.log(`📋 [createNewMainWindow] Window ${windowId} focused - set main menu`);
       }
     });
 
-    // Handle window closed
+    // Handle window closed - cleanup is handled automatically via the 'closed' event listener in registerGenomeWindow
     newMainWindow.on('closed', () => {
-      console.log(`New main window closed (windowId: ${windowId})`);
+      console.log(`📋 [createNewMainWindow] Window ${windowId} closed`);
       unregisterGenomeWindow(windowId);
       if (currentActiveWindow === newMainWindow) {
         currentActiveWindow = null;
       }
     });
 
+    // Handle errors
+    newMainWindow.webContents.on('crashed', (event, killed) => {
+      console.error(`📋 [createNewMainWindow] Window ${windowId} crashed (killed: ${killed})`);
+      cleanupWindowRegistration(windowId);
+    });
+
+    newMainWindow.webContents.on('render-process-gone', (event, details) => {
+      console.error(`📋 [createNewMainWindow] Window ${windowId} render process gone: ${details.reason}`);
+      cleanupWindowRegistration(windowId);
+    });
+
     return { success: true, message: 'New window created with file', windowId };
   } catch (error) {
+    console.error(`📋 [createNewMainWindow] Error creating window: ${error.message}`);
+    if (windowId) {
+      cleanupWindowRegistration(windowId);
+    }
     return { success: false, error: error.message };
   }
 });
