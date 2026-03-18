@@ -284,7 +284,7 @@ class ToolsIntegrator {
 
       // Multi-window management tools (server-side, no client delegation needed)
       if (toolName === 'list_genome_windows') {
-        return this.executeListGenomeWindows();
+        return await this.executeListGenomeWindows();
       }
       if (toolName === 'switch_active_window') {
         return this.executeSwitchActiveWindow(parameters);
@@ -536,12 +536,10 @@ class ToolsIntegrator {
   }
 
   /**
-   * List all open genome browser windows (server-side, no client delegation)
+   * List all open genome browser windows and fetch their current loaded status
    */
-  executeListGenomeWindows() {
+  async executeListGenomeWindows() {
     console.log(`[ToolsIntegrator] executeListGenomeWindows called`);
-    console.log(`[ToolsIntegrator] this.server: ${this.server ? 'exists' : 'null'}`);
-    console.log(`[ToolsIntegrator] this.server.listWindows: ${this.server?.listWindows ? 'exists' : 'null'}`);
 
     if (!this.server || !this.server.listWindows) {
       console.log(`[ToolsIntegrator] Window registry not available`);
@@ -551,13 +549,55 @@ class ToolsIntegrator {
       };
     }
 
-    console.log(`[ToolsIntegrator] Calling this.server.listWindows()`);
-    const windows = this.server.listWindows();
-    console.log(`[ToolsIntegrator] listWindows returned: ${windows.length} windows`);
+    const baseWindows = this.server.listWindows();
+    const enrichedWindows = [];
+
+    // Asynchronously ping each connected window to ask what genome is loaded
+    for (const win of baseWindows) {
+      const enrichedWin = { ...win };
+
+      if (win.hasWsClient) {
+        try {
+          console.log(`[ToolsIntegrator] Fetching current state for window ${win.windowId}...`);
+
+          // Use a short 2000ms timeout so we don't hang the whole list if one window is extremely slow/frozen
+          const statePromise = this.server.executeToolOnClient('get_current_state', { windowId: win.windowId }, null);
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000));
+
+          const rawState = await Promise.race([statePromise, timeoutPromise]);
+
+          // InternalMCPServer wraps ChatManager results in { success: true, result: { ... } }
+          const state = (rawState && rawState.result) ? rawState.result : rawState;
+
+          if (state && state.currentChromosome) {
+            enrichedWin.genomeName = state.currentChromosome;
+            enrichedWin.isGenomeLoaded = true;
+          } else if (state && state.loadedFiles && state.loadedFiles.length > 0) {
+            // Fallback if chromosome is null but files are loaded
+            enrichedWin.genomeName = state.loadedFiles[0];
+            enrichedWin.isGenomeLoaded = true;
+          } else {
+            enrichedWin.genomeName = 'No genome loaded';
+            enrichedWin.isGenomeLoaded = false;
+          }
+
+        } catch (error) {
+          console.log(`[ToolsIntegrator] Could not fetch state for window ${win.windowId}:`, error.message);
+          enrichedWin.genomeName = 'Unknown status (error fetching)';
+          enrichedWin.isGenomeLoaded = false;
+        }
+      } else {
+        enrichedWin.genomeName = 'No active connection';
+        enrichedWin.isGenomeLoaded = false;
+      }
+      enrichedWindows.push(enrichedWin);
+    }
+
+    console.log(`[ToolsIntegrator] listWindows returned: ${enrichedWindows.length} enriched windows`);
     return {
       success: true,
-      windowCount: windows.length,
-      windows: windows,
+      windowCount: enrichedWindows.length,
+      windows: enrichedWindows,
     };
   }
 
