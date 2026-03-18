@@ -9,7 +9,7 @@ app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-dev-shm-usage');
 const path = require('path');
 const fs = require('fs');
-const UnifiedClaudeMCPServer = require('./mcp-server-claude-unified');
+const UnifiedMCPServer = require('./mcp-server');
 const codeXomicsRPC = require('./codexomics-rpc');
 const VERSION_INFO = require('./version');
 const i18n = require('./i18n/i18n-main');
@@ -4193,7 +4193,7 @@ async function startUnifiedMCPServer() {
     unifiedServerStatus = 'starting';
 
     // Create Unified Claude MCP server with ports 3002 and 3003, and main window
-    unifiedMCPServer = new UnifiedClaudeMCPServer(3002, 3003, mainWindow);
+    unifiedMCPServer = new UnifiedMCPServer(3002, 3003, mainWindow);
 
     // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
     unifiedMCPServer.setMainWindowRegistry(windowRegistry);
@@ -4363,7 +4363,7 @@ ipcMain.handle('mcp-server-start', async () => {
 
     try {
       // Create Unified Claude MCP server with ports 3002 and 3003, and main window
-      unifiedMCPServer = new UnifiedClaudeMCPServer(3002, 3003, mainWindow);
+      unifiedMCPServer = new UnifiedMCPServer(3002, 3003, mainWindow);
 
       // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
       unifiedMCPServer.setMainWindowRegistry(windowRegistry);

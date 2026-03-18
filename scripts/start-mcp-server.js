@@ -7,14 +7,14 @@
  * using the official Claude MCP TypeScript SDK for proper protocol compliance.
  */
 
-const StandardClaudeMCPServer = require('../src/mcp-server-claude-unified.js');
+const StandardMCPServer = require('../src/mcp-server.js');
 
 // Use stderr for all output to avoid interfering with JSON-RPC on stdout
 process.stderr.write('🧬 Starting CodeXomics MCP Server...\n');
 process.stderr.write('📋 Using official Claude MCP TypeScript SDK\n');
 process.stderr.write('\n');
 
-const server = new StandardClaudeMCPServer();
+const server = new StandardMCPServer();
 
 // Start the server
 server.start().catch(error => {
