@@ -849,11 +849,12 @@ class ChatManager {
    * @param {string} parameters.filePath - Direct file path (optional)
    * @param {boolean} parameters.showFileDialog - Whether to show file dialog (default: false)
    * @param {string} parameters.fileType - File type hint ('gff', 'bed', 'auto')
+   * @param {boolean} parameters.mergeWithExisting - Whether to merge with existing annotations (default: false)
    * @returns {Object} Load result
    */
   async loadAnnotationFile(parameters = {}) {
     try {
-      const { filePath, showFileDialog = false, fileType = 'auto' } = parameters;
+      const { filePath, showFileDialog = false, fileType = 'auto', mergeWithExisting = false } = parameters;
 
       // [ChatManager] Loading annotation file
 
@@ -871,8 +872,8 @@ class ChatManager {
           }
         }
 
-        // Load file directly
-        await this.app.fileManager.loadFile(filePath);
+        // Load file directly with merge option
+        await this.app.fileManager.loadFile(filePath, { mergeWithExisting });
 
         return {
           success: true,

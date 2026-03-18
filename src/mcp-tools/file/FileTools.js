@@ -50,6 +50,11 @@ class FileTools {
               description: 'Open file dialog instead of using filePath',
               default: false,
             },
+            mergeWithExisting: {
+              type: 'boolean',
+              description: 'Merge with existing Genes & Features track instead of creating new track',
+              default: false,
+            },
           },
         },
       },
