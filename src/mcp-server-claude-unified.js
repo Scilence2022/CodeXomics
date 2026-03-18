@@ -459,7 +459,8 @@ class StandardClaudeMCPServer {
 
               clearTimeout(authTimeout);
               authenticated = true;
-              const clientWindowId = message.windowId || 'default';
+              // Use a unique temporary ID if windowId is not yet available to avoid overwriting other connecting windows
+              const clientWindowId = message.windowId || `pending_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
               sessionId = `internal_${clientWindowId}_${Date.now()}`;
               connectionId = `internal_client_${sessionId}`;
 
@@ -569,8 +570,8 @@ class StandardClaudeMCPServer {
 
           // Handle late re-identification for multi-window support (when windowId is assigned via IPC)
           if (authenticated && message.type === 'internal-client') {
-            const newWindowId = message.windowId || 'default';
-            if (ws.windowId !== newWindowId) {
+            const newWindowId = message.windowId;
+            if (newWindowId && ws.windowId !== newWindowId) {
               console.log(`[MCP Server] Internal client re-identified from ${ws.windowId} to ${newWindowId}`);
 
               // Remove old mapping if it was pointing to this exact websocket
@@ -648,7 +649,7 @@ class StandardClaudeMCPServer {
         this.wsConnections.delete(ws);
 
         // Clean up internal client reference if this was the internal client
-        if (ws.windowId && this.internalClients.has(ws.windowId)) {
+        if (ws.windowId && this.internalClients.get(ws.windowId) === ws) {
           console.log(`🔌 Internal CodeXomics client disconnected (windowId: ${ws.windowId})`);
           this.internalClients.delete(ws.windowId);
         }

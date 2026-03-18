@@ -35,8 +35,9 @@ class MCPBridge {
   setWindowId(windowId) {
     this.windowId = windowId;
     console.log(`[MCPBridge] Window ID set to: ${windowId}`);
-    // If already connected, re-identify with the new windowId
-    if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+    // If socket is open, immediately inform the server of the new identity
+    // (even if we haven't received 'internal-client-connected' yet)
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(
         JSON.stringify({
           type: 'internal-client',
