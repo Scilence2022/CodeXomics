@@ -4187,13 +4187,9 @@ ipcMain.handle('mcp-server-status', async () => {
 
 // Multi-window genome support: IPC handlers for window registry
 ipcMain.handle('list-genome-windows', async () => {
-  console.log(`📋 [IPC] list-genome-windows called, windowRegistry size: ${windowRegistry.size}`);
+  // Filter out destroyed windows and map to result format
   const result = Array.from(windowRegistry.entries())
-    .filter(([id, info]) => {
-      const hasWindow = info.window && !info.window.isDestroyed();
-      console.log(`📋 [IPC] Window ${id}: hasWindow=${!!info.window}, isDestroyed=${info.window?.isDestroyed()}, passing=${hasWindow}`);
-      return hasWindow;
-    })
+    .filter(([id, info]) => info.window && !info.window.isDestroyed())
     .map(([id, info]) => ({
       windowId: id,
       genomeName: info.genomeName || null,
@@ -4201,7 +4197,12 @@ ipcMain.handle('list-genome-windows', async () => {
       isDestroyed: false,
       createdAt: info.createdAt ? info.createdAt.toISOString() : null,
     }));
-  console.log(`📋 [IPC] Returning ${result.length} windows`);
+  
+  // Only log in debug mode or when windows count changes significantly
+  if (process.env.DEBUG_MCP || result.length !== windowRegistry.size) {
+    console.log(`📋 [IPC] list-genome-windows: ${result.length} active windows`);
+  }
+  
   return result;
 });
 

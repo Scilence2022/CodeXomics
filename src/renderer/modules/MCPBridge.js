@@ -8,7 +8,8 @@
 class MCPBridge {
   constructor(options = {}) {
     this.wsUrl = options.wsUrl || 'ws://localhost:3003';
-    this.reconnectInterval = options.reconnectInterval || 5000;
+    this.baseReconnectInterval = options.baseReconnectInterval || 5000; // Base interval: 5 seconds
+    this.maxReconnectInterval = options.maxReconnectInterval || 60000; // Max interval: 60 seconds
     this.ws = null;
     this.connected = false;
     this.internalMCPServer = null;
@@ -168,7 +169,7 @@ class MCPBridge {
   }
 
   /**
-   * Schedule reconnection attempt
+   * Schedule reconnection attempt with exponential backoff
    */
   scheduleReconnect() {
     if (this.reconnectTimer) {
@@ -182,10 +183,21 @@ class MCPBridge {
       return;
     }
 
+    // Calculate exponential backoff interval
+    // Formula: baseInterval * 2^attempts, capped at maxReconnectInterval
+    const backoffInterval = Math.min(
+      this.maxReconnectInterval,
+      this.baseReconnectInterval * Math.pow(2, Math.min(this.connectionAttempts - 1, 5))
+    );
+
+    if (!this.quiet) {
+      console.log(`[MCPBridge] Reconnecting in ${(backoffInterval / 1000).toFixed(1)}s (attempt ${this.connectionAttempts})`);
+    }
+
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();
-    }, this.reconnectInterval);
+    }, backoffInterval);
   }
 
   /**
