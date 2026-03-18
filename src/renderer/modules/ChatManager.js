@@ -4957,7 +4957,7 @@ class ChatManager {
       const chatSection = document.createElement('div');
       chatSection.className = 'toolbar-section';
       chatSection.innerHTML = `
-                <label>AI Assistant:</label>
+                <label>AI</label>
                 <button id="toggleChatBtn" class="btn btn-sm toggle-btn">
                     <i class="fas fa-robot"></i>
                 </button>
