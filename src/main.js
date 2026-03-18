@@ -1459,6 +1459,7 @@ function createWindow() {
       contextIsolation: false,
       enableRemoteModule: true,
       webSecurity: false,
+      allowRunningInsecureContent: true,
       cache: false,
       partition: `persist:codexomics-${windowId}`,
       serviceWorkers: false,
@@ -4431,6 +4432,8 @@ ipcMain.handle('openDebugTool', async (event, fileName) => {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: `Debug Tool - ${fileName}`,
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -4485,6 +4488,8 @@ function createCircosWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'Circos Genome Plotter - CodeXomics',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -4885,6 +4890,8 @@ function createKEGGWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'KEGG Pathway Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -4922,6 +4929,8 @@ function createGOWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'Gene Ontology (GO) Analyzer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -4959,6 +4968,8 @@ function createUniProtWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'Search UniProt Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -4996,6 +5007,8 @@ function createInterProWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'InterPro Domain Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5033,6 +5046,8 @@ function createNCBIWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'Search NCBI Database - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5072,6 +5087,8 @@ function createSTRINGWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'STRING Protein Networks - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5109,6 +5126,8 @@ function createDAVIDWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'DAVID Functional Analysis - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5146,6 +5165,8 @@ function createReactomeWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'Reactome Pathway Browser - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5183,6 +5204,8 @@ function createPDBWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'PDB Structure Viewer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5220,6 +5243,8 @@ function createEvo2Window() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'NVIDIA Evo2 DNA Designer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5257,6 +5282,8 @@ function createGeneAnnotationRefineWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'Gene Annotation Refine - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5294,6 +5321,8 @@ function createBlastDownloaderWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'BLAST+ Tools Downloader - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5342,6 +5371,8 @@ function createBlastConfigWindow() {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
       },
       title: 'Configure BLAST Tools - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
@@ -5740,7 +5771,6 @@ async function createProGenFixerWindow() {
         contextIsolation: true,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
-        allowRunningInsecureContent: true,
         // Enable clipboard and keyboard functionality
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
@@ -5926,7 +5956,6 @@ async function createDeepGeneResearchWindow(params = {}) {
         contextIsolation: true,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
-        allowRunningInsecureContent: true,
         // Enable clipboard and keyboard functionality
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
@@ -6161,7 +6190,6 @@ async function createChopchopWindow() {
         contextIsolation: true,
         enableRemoteModule: false,
         webSecurity: false, // Allow loading external URLs
-        allowRunningInsecureContent: true,
         // Enable clipboard and keyboard functionality
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
@@ -6290,6 +6318,7 @@ async function createCustomExternalToolWindow(toolData) {
         contextIsolation: true,
         enableRemoteModule: false,
         webSecurity: false,
+
         allowRunningInsecureContent: true,
         experimentalFeatures: true,
         enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
@@ -8355,6 +8384,8 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
         contextIsolation: false,
         enableRemoteModule: true,
         webSecurity: false,
+
+        allowRunningInsecureContent: true,
         cache: false,
       },
       icon: path.join(__dirname, '../assets/icon.png'),
