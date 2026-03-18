@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * GenomeExplorer Plugin Marketplace Server
+ * CodeXomics Plugin Marketplace Server
  * Simple RESTful API server for plugin distribution
  */
 
@@ -856,7 +856,7 @@ async function startServer() {
 
   app.listen(PORT, () => {
     console.log(`
-🚀 GenomeExplorer Plugin Marketplace Server v1.1.0
+🚀 CodeXomics Plugin Marketplace Server v1.1.0
 📡 Server running on http://localhost:${PORT}
 📚 API Documentation: http://localhost:${PORT}/api/v1/health
 🔍 Plugin Search: http://localhost:${PORT}/api/v1/plugins

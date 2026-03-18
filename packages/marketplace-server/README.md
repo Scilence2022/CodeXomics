@@ -1,4 +1,4 @@
-# GenomeExplorer Plugin Marketplace Server
+# CodeXomics Plugin Marketplace Server
 
 A RESTful API server for plugin distribution, discovery, and submission for the CodeXomics platform.
 

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# GenomeExplorer Plugin Marketplace Server Startup Script
+# CodeXomics Plugin Marketplace Server Startup Script
 # This script sets up and starts the plugin marketplace server with submission support
 
-echo "🚀 Starting GenomeExplorer Plugin Marketplace Server..."
+echo "🚀 Starting CodeXomics Plugin Marketplace Server..."
 
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
