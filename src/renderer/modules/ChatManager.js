@@ -1183,7 +1183,12 @@ class ChatManager {
    */
   async downloadInternetFile(parameters = {}) {
     try {
-      const { url, destinationPath, filename } = parameters;
+      let { url, destinationPath, filename } = parameters;
+
+      // Strip backticks and whitespace from URL
+      if (url) {
+        url = url.replace(/[`\s]/g, '');
+      }
 
       console.log(`📥 [ChatManager] Downloading file from: ${url}`);
 
