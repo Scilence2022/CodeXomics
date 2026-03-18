@@ -10,7 +10,7 @@ app.commandLine.appendSwitch('disable-dev-shm-usage');
 const path = require('path');
 const fs = require('fs');
 const UnifiedClaudeMCPServer = require('./mcp-server-claude-unified');
-const genomeStudioRPC = require('./genome-studio-rpc');
+const codeXomicsRPC = require('./codexomics-rpc');
 const VERSION_INFO = require('./version');
 const i18n = require('./i18n/i18n-main');
 
@@ -1741,8 +1741,8 @@ function createWindow() {
     mainWindow.webContents.send('set-window-id', windowId);
 
     // Initialize RPC interface after window is ready
-    genomeStudioRPC.setMainWindow(mainWindow);
-    genomeStudioRPC.initialize();
+    codeXomicsRPC.setMainWindow(mainWindow);
+    codeXomicsRPC.initialize();
 
     // Process any files that were queued before window was ready
     setTimeout(() => {
