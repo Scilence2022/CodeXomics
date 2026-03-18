@@ -1,10 +1,10 @@
 const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electron');
 
-// Add GPU and WebGL fixes for Windows
-app.commandLine.appendSwitch('ignore-gpu-blacklist');
-app.commandLine.appendSwitch('enable-webgl');
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('use-angle', 'gl');
+// Disable sandbox and GPU acceleration for compatibility
+app.commandLine.appendSwitch('no-sandbox');
+app.commandLine.appendSwitch('disable-gpu');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('disable-dev-shm-usage');
 const path = require('path');
 const fs = require('fs');
 const UnifiedClaudeMCPServer = require('./mcp-server-claude-unified');
@@ -1460,6 +1460,8 @@ function createWindow() {
       enableRemoteModule: true,
       webSecurity: false,
       cache: false,
+      partition: `persist:codexomics-${windowId}`,
+      serviceWorkers: false,
     },
     icon: path.join(__dirname, '../assets/icon.png'),
     show: false,
