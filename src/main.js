@@ -1,9 +1,11 @@
 const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electron');
 
-// Disable sandbox and GPU acceleration for compatibility
+// Disable sandbox for compatibility
+// Note: GPU acceleration is required for WebGL support in 3D protein structure viewer
 app.commandLine.appendSwitch('no-sandbox');
-app.commandLine.appendSwitch('disable-gpu');
-app.commandLine.appendSwitch('disable-software-rasterizer');
+// GPU acceleration is intentionally enabled to support WebGL for PDB viewer
+// app.commandLine.appendSwitch('disable-gpu');
+// app.commandLine.appendSwitch('disable-software-rasterizer');
 app.commandLine.appendSwitch('disable-dev-shm-usage');
 const path = require('path');
 const fs = require('fs');
