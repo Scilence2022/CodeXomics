@@ -1196,9 +1196,31 @@ class ChatManager {
         throw new Error('URL is required for download');
       }
 
-      // Call the Electron API to download the file
+      // Try to use electronAPI first (for windows with preload script)
       if (window.electronAPI && window.electronAPI.downloadInternetFile) {
         const result = await window.electronAPI.downloadInternetFile({
+          url,
+          destinationPath,
+          filename,
+        });
+
+        if (result.success) {
+          return {
+            success: true,
+            message: `Successfully downloaded file to: ${result.filePath}`,
+            filePath: result.filePath,
+            filename: result.filename,
+            fileSize: result.fileSize,
+            url: url,
+            tool: 'download_internet_file',
+          };
+        } else {
+          throw new Error(result.error || 'Download failed');
+        }
+      }
+      // Fallback: use ipcRenderer directly (for main window with nodeIntegration)
+      else if (window.ipcRenderer) {
+        const result = await window.ipcRenderer.invoke('download-internet-file', {
           url,
           destinationPath,
           filename,
