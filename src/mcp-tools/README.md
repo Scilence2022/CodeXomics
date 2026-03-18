@@ -102,7 +102,6 @@ src/mcp-tools/
 ├── sequence/           # Sequence Analysis Tools
 ├── protein/            # Protein Structure Tools
 ├── database/           # Database Integration Tools
-├── evo2/              # AI-Powered Analysis Tools (NVIDIA EVO2)
 ├── data/              # Data Management Tools
 ├── pathway/           # Pathway Analysis & BLAST Tools
 ├── ToolsIntegrator.js # Main tools coordinator
@@ -166,19 +165,8 @@ Tools for accessing biological databases:
 - `search_interpro_entry` - Search InterPro entries
 - `get_interpro_entry_details` - Get InterPro details
 
-### 5. AI-Powered Analysis (5 tools)
 
-**Location:** `evo2/Evo2Tools.js`
-
-NVIDIA EVO2 AI tools for sequence generation and analysis:
-
-- `evo2_generate_sequence` - Generate DNA sequences
-- `evo2_predict_function` - Predict gene function
-- `evo2_design_crispr` - Design CRISPR systems
-- `evo2_optimize_sequence` - Optimize sequences
-- `evo2_analyze_essentiality` - Analyze gene essentiality
-
-### 6. Data Management (4 tools)
+### 5. Data Management (4 tools)
 
 **Location:** `data/DataTools.js`
 
@@ -189,7 +177,7 @@ Tools for data annotation, export, and analysis:
 - `export_data` - Export data
 - `codon_usage_analysis` - Analyze codon usage
 
-### 7. Pathway & Search (3 tools)
+### 6. Pathway & Search (3 tools)
 
 **Location:** `pathway/PathwayTools.js`
 
