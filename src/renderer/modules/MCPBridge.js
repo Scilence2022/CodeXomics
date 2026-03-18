@@ -48,6 +48,24 @@ class MCPBridge {
   }
 
   /**
+   * Report the currently loaded genome to the MCP server
+   * Allows list_genome_windows to accurately describe the active window
+   */
+  reportGenomeLoaded(genomeName) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(
+        JSON.stringify({
+          type: 'genome-loaded',
+          genomeName: genomeName,
+        })
+      );
+    } else {
+      // Store to send once connected
+      this.pendingGenomeName = genomeName;
+    }
+  }
+
+  /**
    * Start automatic connection attempts
    */
   start() {
@@ -97,6 +115,16 @@ class MCPBridge {
             windowId: this.windowId,
           })
         );
+
+        if (this.pendingGenomeName) {
+          this.ws.send(
+            JSON.stringify({
+              type: 'genome-loaded',
+              genomeName: this.pendingGenomeName,
+            })
+          );
+          this.pendingGenomeName = null;
+        }
 
         // Keep connection alive to prevent server's ConnectionHealthMonitor from marking it stale
         this.pingInterval = setInterval(() => {

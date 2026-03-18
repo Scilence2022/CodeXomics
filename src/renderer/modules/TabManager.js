@@ -1052,8 +1052,8 @@ class TabManager {
     console.log(`Updated all tabs with new genome data from: ${filename}`);
 
     // Multi-window support: Report the loaded genome name to main process for WindowRegistry
+    const genomeName = filename ? require('path').basename(filename) : Object.keys(genomeData)[0] || 'Unknown';
     if (this.genomeBrowser.windowId && typeof ipcRenderer !== 'undefined') {
-      const genomeName = filename ? require('path').basename(filename) : Object.keys(genomeData)[0] || 'Unknown';
       ipcRenderer.send('update-window-genome-name', {
         windowId: this.genomeBrowser.windowId,
         genomeName: genomeName,
@@ -1061,6 +1061,11 @@ class TabManager {
       console.log(
         `📋 [TabManager] Reported genome name to main process: ${genomeName} (window: ${this.genomeBrowser.windowId})`
       );
+    }
+
+    // Also notify standalone MCP Bridge if available
+    if (window.mcpBridge) {
+      window.mcpBridge.reportGenomeLoaded(genomeName);
     }
 
     // Update position visualizations for all tabs

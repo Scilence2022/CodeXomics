@@ -620,6 +620,13 @@ class StandardClaudeMCPServer {
             return;
           }
 
+          // Handle genome loaded updates from internal client
+          if (message.type === 'genome-loaded') {
+            console.log(`[MCP Server] Client ${ws.windowId || connectionId} loaded genome: ${message.genomeName}`);
+            ws.genomeName = message.genomeName;
+            return;
+          }
+
           console.log('📥 WebSocket message:', message);
 
           // Handle MCP-style messages
@@ -1594,20 +1601,21 @@ class StandardClaudeMCPServer {
       if (!win || win.isDestroyed()) continue;
       windows.push({
         windowId,
-        genomeName: entry.genomeName || null,
+        genomeName: entry.genomeName || 'No genome loaded',
         isFocused: win.isFocused(),
         hasWsClient: this.internalClients.has(windowId),
         isDestroyed: false,
       });
     }
 
-    // Fallback: If not linked to main process registry, or some internal clients aren't in registry yet
-    for (const [windowId, client] of this.internalClients.entries()) {
-      if (!windows.find(w => w.windowId === windowId)) {
+    // Fall back to standalone WebSocket clients if no registries are available or populated
+    if (windows.length === 0 && this.internalClients.size > 0) {
+      console.log(`[MCP Server] Using fallback: listing ${this.internalClients.size} standalone internal clients as windows.`);
+      for (const [windowId, ws] of this.internalClients.entries()) {
         windows.push({
           windowId,
-          genomeName: 'Connected via CodeXomics',
-          isFocused: false, // Cannot accurately determine focus in standalone mode
+          genomeName: ws.genomeName || 'No genome loaded',
+          isFocused: this.internalClient === ws,
           hasWsClient: true,
           isDestroyed: false,
         });
