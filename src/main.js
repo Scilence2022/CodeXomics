@@ -3215,8 +3215,20 @@ ipcMain.handle('read-file', async (event, filePath) => {
       console.warn(`Reading large file into memory: ${fileSizeMB.toFixed(1)} MB`);
     }
 
-    const data = fs.readFileSync(filePath, 'utf8');
-    return { success: true, data };
+    // Check if this is a gzip compressed file
+    const isGzipped = extension === '.gz';
+    
+    if (isGzipped) {
+      // For gzipped files, we need to decompress them
+      const zlib = require('zlib');
+      const compressedData = fs.readFileSync(filePath);
+      const decompressedData = zlib.gunzipSync(compressedData);
+      const data = decompressedData.toString('utf8');
+      return { success: true, data, isGzipped: true };
+    } else {
+      const data = fs.readFileSync(filePath, 'utf8');
+      return { success: true, data };
+    }
   } catch (error) {
     return { success: false, error: error.message };
   }

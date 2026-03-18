@@ -517,14 +517,24 @@ class FileManager {
 
       // Check file size and warn for very large files (excluding SAM/BAM which use dynamic loading)
       const fileSizeMB = fileInfo.info.size / (1024 * 1024);
-      const extension = fileInfo.info.extension.toLowerCase();
+      let extension = fileInfo.info.extension.toLowerCase();
+      
+      // Handle gzipped files - check original extension
+      let isGzipped = false;
+      if (extension === '.gz') {
+        isGzipped = true;
+        const fileName = fileInfo.info.name;
+        const baseName = fileName.replace(/\.gz$/i, '');
+        extension = baseName.includes('.') ? '.' + baseName.split('.').pop().toLowerCase() : '.gz';
+      }
 
       // Get streaming threshold from track settings for consistent behavior
       const readsSettings = this.genomeBrowser.trackRenderer.getTrackSettings('reads');
       const streamingThreshold = readsSettings.streamingThreshold || 50;
 
       // Skip warning for SAM/BAM files since they use dynamic loading and can handle large files efficiently
-      const usesDynamicLoading = extension === '.sam' || extension === '.bam';
+      // Also skip for gzipped files as they will be decompressed
+      const usesDynamicLoading = extension === '.sam' || extension === '.bam' || isGzipped;
 
       if (fileSizeMB > streamingThreshold && !usesDynamicLoading) {
         const proceed = confirm(
@@ -545,7 +555,8 @@ class FileManager {
       // Use streaming for files > threshold, but ONLY for SAM files (not BAM files)
       // BAM files should always use loadFileRegular() -> parseBAM() -> BamReader
       // SAM files can be extremely large and benefit from streaming even at smaller sizes
-      const shouldUseStreaming = extension === '.sam' && fileSizeMB > streamingThreshold;
+      // Gzipped files are handled separately via decompression
+      const shouldUseStreaming = extension === '.sam' && fileSizeMB > streamingThreshold && !isGzipped;
 
       if (shouldUseStreaming) {
         console.log(`Using streaming mode for large SAM file: ${fileSizeMB.toFixed(1)} MB`);
@@ -731,8 +742,20 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
   }
 
   async parseFile(options = {}) {
-    const extension = this.currentFile.info.extension.toLowerCase();
+    let extension = this.currentFile.info.extension.toLowerCase();
     console.log('🔍 parseFile() called with extension:', extension, 'and options:', options);
+
+    // Handle gzipped files - extract the original extension
+    let isGzipped = false;
+    if (extension === '.gz') {
+      isGzipped = true;
+      // Get the original extension from the filename (e.g., .gbk.gz -> .gbk)
+      const fileName = this.currentFile.info.name;
+      const baseName = fileName.replace(/\.gz$/i, '');
+      const originalExtension = baseName.includes('.') ? '.' + baseName.split('.').pop().toLowerCase() : '';
+      console.log('📦 Detected gzipped file, original extension:', originalExtension);
+      extension = originalExtension || '.gz';
+    }
 
     switch (extension) {
       case '.fasta':
@@ -772,7 +795,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         break;
       default:
         throw new Error(
-          `Unsupported file format: ${extension}. Supported formats: FASTA (.fasta, .fa), GenBank (.gb, .gbk, .gbff), GFF (.gff, .gtf), BED (.bed), VCF (.vcf), SAM (.sam), WIG (.wig), BigWig (.bw, .bigwig). Note: BAM files require conversion to SAM format first.`
+          `Unsupported file format: ${extension}${isGzipped ? ' (gzipped)' : ''}. Supported formats: FASTA (.fasta, .fa), GenBank (.gb, .gbk, .gbff), GFF (.gff, .gtf), BED (.bed), VCF (.vcf), SAM (.sam), WIG (.wig), BigWig (.bw, .bigwig). Compressed files (.gz) are also supported.`
         );
     }
   }
