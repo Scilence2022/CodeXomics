@@ -9825,6 +9825,7 @@ ${coreTools}
       set_working_directory: () => this.setWorkingDirectory(parameters),
       list_available_tools: () => this.listAvailableTools(parameters),
       download_internet_file: () => this.downloadInternetFile(parameters),
+      utility_download_internet_file: () => this.downloadInternetFile(parameters),
 
       // Action system tools (if available)
       copy_sequence: () => this.executeActionTool('copy_sequence', parameters),
