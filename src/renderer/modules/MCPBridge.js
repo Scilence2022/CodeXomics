@@ -62,6 +62,10 @@ class MCPBridge {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -92,6 +96,13 @@ class MCPBridge {
             windowId: this.windowId,
           })
         );
+
+        // Keep connection alive to prevent server's ConnectionHealthMonitor from marking it stale
+        this.pingInterval = setInterval(() => {
+          if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 15000); // 15 seconds
       };
 
       this.ws.onmessage = event => {
@@ -99,6 +110,11 @@ class MCPBridge {
       };
 
       this.ws.onclose = () => {
+        if (this.pingInterval) {
+          clearInterval(this.pingInterval);
+          this.pingInterval = null;
+        }
+
         if (this.connected) {
           console.log('[MCPBridge] Disconnected from MCP server');
         }

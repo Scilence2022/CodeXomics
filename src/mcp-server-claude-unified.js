@@ -567,6 +567,29 @@ class StandardClaudeMCPServer {
           // Update activity
           this.healthMonitor.updateActivity(connectionId);
 
+          // Handle late re-identification for multi-window support (when windowId is assigned via IPC)
+          if (authenticated && message.type === 'internal-client') {
+            const newWindowId = message.windowId || 'default';
+            if (ws.windowId !== newWindowId) {
+              console.log(`[MCP Server] Internal client re-identified from ${ws.windowId} to ${newWindowId}`);
+
+              // Remove old mapping if it was pointing to this exact websocket
+              if (ws.windowId && this.internalClients.get(ws.windowId) === ws) {
+                this.internalClients.delete(ws.windowId);
+              }
+
+              // Set new mapping
+              this.internalClients.set(newWindowId, ws);
+              ws.windowId = newWindowId;
+
+              // Update legacy tracking reference if applicable
+              if (this.internalClient === ws) {
+                this.internalClientId = `internal_client_${newWindowId}`;
+              }
+            }
+            return; // Don't process this message further
+          }
+
           // Handle tool execution results from internal client
           if (message.type === 'tool-execution-result') {
             const { requestId, result, error } = message;
@@ -587,6 +610,13 @@ class StandardClaudeMCPServer {
               console.warn(`⚠️ Received tool result for unknown requestId: ${requestId}`);
             }
             return; // Don't process further
+          }
+
+          // Handle simple ping messages from internal client to keep connection alive
+          if (message.type === 'ping') {
+            // Already updated activity via this.healthMonitor.updateActivity(connectionId)
+            ws.send(JSON.stringify({ type: 'pong' }));
+            return;
           }
 
           console.log('📥 WebSocket message:', message);

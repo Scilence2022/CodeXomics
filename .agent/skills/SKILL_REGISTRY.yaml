@@ -170,6 +170,25 @@ skills:
       - analyze_interpro_domains
       - search_sequence_motif
 
+  - id: multi_window_routing
+    file: multi_window_routing.md
+    version: 1.0.0
+    category: workspace_management
+    complexity: low
+    typical_duration_seconds: 5
+    requires_genome: false
+    requires_network: false
+    tags: [multi_window, connections, workspace, comparative_genomics]
+    triggers:
+      - "list open windows"
+      - "what genomes are open"
+      - "switch to window"
+      - "compare genomes"
+      - "search in all open genomes"
+    mcp_tools_used:
+      - list_genome_windows
+      - switch_active_window
+
 # ─── Skill Selection Logic ────────────────────────────────────────────────────
 # Guidance for AI agents on how to choose between skills when triggers overlap:
 selection_guidance:
@@ -202,3 +221,7 @@ selection_guidance:
     prefer: automated_research
     depth: deep
     reason: "Produces publication-ready, structured output with citations"
+
+  - scenario: "User wants to query multiple open genomes or compare regions across different windows"
+    prefer: multi_window_routing
+    reason: "Handles the necessary context switching between different MCP client connections"

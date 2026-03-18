@@ -25,7 +25,8 @@ With Skills:      AI agent → SKILL_REGISTRY.yaml → expert workflow → relia
 ├── gene_annotation_improvement.md  ← Evidence-based annotation enrichment
 ├── automated_research.md        ← Comprehensive gene research report
 ├── variant_context_analysis.md  ← Genomic variant functional context
-└── operon_analysis.md           ← Prokaryotic operon characterization
+├── operon_analysis.md           ← Prokaryotic operon characterization
+└── multi_window_routing.md      ← Manage routing to multiple open genome windows
 ```
 
 ## Available Skills
@@ -37,6 +38,7 @@ With Skills:      AI agent → SKILL_REGISTRY.yaml → expert workflow → relia
 | [automated_research](automated_research.md) | "research", "comprehensive analysis", "deep dive" | 18 | ~90s |
 | [variant_context_analysis](variant_context_analysis.md) | "variant", "SNP", "mutation impact" | 12 | ~30s |
 | [operon_analysis](operon_analysis.md) | "operon", "co-regulated genes" | 11 | ~45s |
+| [multi_window_routing](multi_window_routing.md) | "list open windows", "switch to window", "compare genomes" | 2 | ~5s |
 
 ## How AI Agents Should Use Skills
 
