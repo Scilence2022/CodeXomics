@@ -3220,9 +3220,13 @@ ipcMain.handle('read-file', async (event, filePath) => {
     
     if (isGzipped) {
       // For gzipped files, we need to decompress them
+      // Use async decompression to avoid blocking the main process
       const zlib = require('zlib');
+      const { promisify } = require('util');
+      const gunzip = promisify(zlib.gunzip);
+      
       const compressedData = fs.readFileSync(filePath);
-      const decompressedData = zlib.gunzipSync(compressedData);
+      const decompressedData = await gunzip(compressedData);
       const data = decompressedData.toString('utf8');
       return { success: true, data, isGzipped: true };
     } else {
