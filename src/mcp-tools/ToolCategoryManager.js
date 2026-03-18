@@ -27,9 +27,8 @@ class ToolCategoryManager {
       'reverse_complement',
       'codon_usage_analysis',
 
-      // Multi-window management tools (server-side only)
-      'list_genome_windows',
-      'switch_active_window',
+      // Note: list_genome_windows and switch_active_window moved to clientSideTools
+      // because they need to query the Electron app's window registry via WebSocket
     ]);
 
     // Tools that require client-side execution (browser context)
@@ -85,6 +84,10 @@ class ToolCategoryManager {
 
       // BLAST (requires local tool installation)
       'blast_search',
+
+      // Multi-window management tools (require Electron app connection)
+      'list_genome_windows',
+      'switch_active_window',
     ]);
 
     // Tool execution modes

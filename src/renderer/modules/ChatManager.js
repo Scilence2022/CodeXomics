@@ -9514,6 +9514,8 @@ Primer Tools:
         'get_selected_gene',
         'get_current_region_details',
         'get_sequence_selection',
+        'list_genome_windows',
+        'switch_active_window',
       ],
       'SEQUENCE ANALYSIS': [
         'get_coding_sequence',
@@ -9864,6 +9866,10 @@ ${coreTools}
       zoom_out: () => this.zoomOut(parameters),
       pan_left: () => this.panLeft(parameters),
       pan_right: () => this.panRight(parameters),
+
+      // Multi-window management tools (IPC-based, no MCP server required)
+      list_genome_windows: () => this.listGenomeWindows(parameters),
+      switch_active_window: () => this.switchActiveWindow(parameters),
     };
 
     if (localTools[toolName]) {
@@ -9936,6 +9942,69 @@ ${coreTools}
     this.app.navigationManager.navigateNext(amount);
     const state = this.getCurrentState();
     return { success: true, message: 'Panned right', newRange: state.viewingRegion };
+  }
+
+  /**
+   * List all open genome browser windows via IPC to main process
+   * Works without MCP server - directly queries the window registry
+   */
+  async listGenomeWindows(parameters = {}) {
+    console.log(`[ChatManager] listGenomeWindows called`);
+    console.log(`[ChatManager] this.app.windowId: ${this.app.windowId}`);
+    try {
+      // Use Electron IPC to query the main process window registry
+      let ipc;
+      try {
+        ipc = typeof ipcRenderer !== 'undefined' ? ipcRenderer : require('electron').ipcRenderer;
+      } catch (e) {
+        ipc = require('electron').ipcRenderer;
+      }
+
+      console.log(`[ChatManager] Calling ipc.invoke('list-genome-windows')`);
+      const windows = await ipc.invoke('list-genome-windows');
+      console.log(`[ChatManager] IPC returned ${windows.length} windows:`, windows);
+
+      return {
+        success: true,
+        windowCount: windows.length,
+        windows: windows,
+        currentWindowId: this.app.windowId || null,
+      };
+    } catch (error) {
+      console.error('[ChatManager] listGenomeWindows error:', error);
+      return {
+        success: false,
+        error: error.message,
+        windowCount: 0,
+        windows: [],
+      };
+    }
+  }
+
+  /**
+   * Switch focus to a specific genome browser window via IPC
+   * Works without MCP server - directly sends focus command to main process
+   */
+  async switchActiveWindow(parameters = {}) {
+    const { windowId } = parameters;
+    if (!windowId) {
+      return { success: false, error: 'windowId parameter is required. Use list_genome_windows to see available IDs.' };
+    }
+
+    try {
+      let ipc;
+      try {
+        ipc = typeof ipcRenderer !== 'undefined' ? ipcRenderer : require('electron').ipcRenderer;
+      } catch (e) {
+        ipc = require('electron').ipcRenderer;
+      }
+
+      const result = await ipc.invoke('focus-genome-window', windowId);
+      return result;
+    } catch (error) {
+      console.error('[ChatManager] switchActiveWindow error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**
@@ -15448,406 +15517,406 @@ ${this.getPluginSystemInfo()}`;
     };
   }
 
-// === NEW ANNOTATION METHODS ===
+  // === NEW ANNOTATION METHODS ===
 
-_getChangeTracker() {
-        if (!this._annotationChangeTracker) {
-            if (typeof AnnotationChangeTracker !== 'undefined') {
-                this._annotationChangeTracker = new AnnotationChangeTracker();
-            } else {
-                // Fallback: create a minimal no-op tracker
-                this._annotationChangeTracker = {
-                    recordChange: () => ({}),
-                    recordMultiFieldUpdate: () => [],
-                    getHistory: () => [],
-                    getAllChanges: () => [],
-                    getSummary: () => ({ totalChanges: 0 }),
-                    exportChangelog: () => '[]',
-                    clearHistory: () => { },
-                    size: 0,
-                };
-            }
-        }
-        return this._annotationChangeTracker;
-    }
-
-async listAnnotations(params) {
-        const { chromosome, start, end, type, limit = 100, offset = 0 } = params;
-
-        if (!this.app.currentAnnotations) {
-            throw new Error('No annotations loaded');
-        }
-
-        const chr = chromosome || this.app.currentChromosome;
-        const annotations = chr
-            ? (this.app.currentAnnotations[chr] || [])
-            : Object.values(this.app.currentAnnotations).flat();
-
-        let filtered = annotations;
-
-        // Filter by region
-        if (start !== undefined && end !== undefined) {
-            filtered = filtered.filter(a =>
-                a.start <= end && a.end >= start
-            );
-        }
-
-        // Filter by type
-        if (type) {
-            filtered = filtered.filter(a =>
-                a.type && a.type.toLowerCase() === type.toLowerCase()
-            );
-        }
-
-        const total = filtered.length;
-        const paged = limit > 0 ? filtered.slice(offset, offset + limit) : filtered;
-
-        return {
-            success: true,
-            chromosome: chr || 'all',
-            total,
-            offset,
-            limit,
-            count: paged.length,
-            annotations: paged.map(a => ({
-                id: a.id,
-                type: a.type,
-                start: a.start,
-                end: a.end,
-                strand: a.strand,
-                locus_tag: a.qualifiers?.locus_tag || null,
-                gene: a.qualifiers?.gene || null,
-                product: a.qualifiers?.product || null,
-            })),
+  _getChangeTracker() {
+    if (!this._annotationChangeTracker) {
+      if (typeof AnnotationChangeTracker !== 'undefined') {
+        this._annotationChangeTracker = new AnnotationChangeTracker();
+      } else {
+        // Fallback: create a minimal no-op tracker
+        this._annotationChangeTracker = {
+          recordChange: () => ({}),
+          recordMultiFieldUpdate: () => [],
+          getHistory: () => [],
+          getAllChanges: () => [],
+          getSummary: () => ({ totalChanges: 0 }),
+          exportChangelog: () => '[]',
+          clearHistory: () => { },
+          size: 0,
         };
+      }
+    }
+    return this._annotationChangeTracker;
+  }
+
+  async listAnnotations(params) {
+    const { chromosome, start, end, type, limit = 100, offset = 0 } = params;
+
+    if (!this.app.currentAnnotations) {
+      throw new Error('No annotations loaded');
     }
 
-async getAnnotation(params) {
-        const { identifier, chromosome } = params;
+    const chr = chromosome || this.app.currentChromosome;
+    const annotations = chr
+      ? (this.app.currentAnnotations[chr] || [])
+      : Object.values(this.app.currentAnnotations).flat();
 
-        if (!this.app.currentAnnotations) {
-            throw new Error('No annotations loaded');
-        }
+    let filtered = annotations;
 
-        const found = this._findAnnotation(identifier, chromosome);
-        if (!found) {
-            throw new Error(`Annotation "${identifier}" not found`);
-        }
-
-        const a = found.annotation;
-        return {
-            success: true,
-            identifier,
-            chromosome: found.chromosome,
-            annotation: {
-                id: a.id,
-                type: a.type,
-                start: a.start,
-                end: a.end,
-                strand: a.strand,
-                qualifiers: a.qualifiers || {},
-                length: a.end - a.start + 1,
-            },
-        };
+    // Filter by region
+    if (start !== undefined && end !== undefined) {
+      filtered = filtered.filter(a =>
+        a.start <= end && a.end >= start
+      );
     }
 
-async updateAnnotation(params) {
-        const { identifier, chromosome, updates, agent = 'mcp-agent', evidence = [] } = params;
-
-        if (!this.app.currentAnnotations) {
-            throw new Error('No annotations loaded');
-        }
-
-        const found = this._findAnnotation(identifier, chromosome);
-        if (!found) {
-            throw new Error(`Annotation "${identifier}" not found`);
-        }
-
-        const annotation = found.annotation;
-        const oldValues = {};
-
-        // Capture old values and apply updates
-        for (const [field, newValue] of Object.entries(updates)) {
-            if (field === 'start' || field === 'end' || field === 'strand' || field === 'type') {
-                // Top-level fields
-                oldValues[field] = annotation[field];
-                annotation[field] = newValue;
-            } else {
-                // Qualifier fields
-                if (!annotation.qualifiers) annotation.qualifiers = {};
-                oldValues[field] = annotation.qualifiers[field] || null;
-                annotation.qualifiers[field] = newValue;
-            }
-        }
-
-        // Record changes
-        const tracker = this._getChangeTracker();
-        tracker.recordMultiFieldUpdate(
-            identifier,
-            found.chromosome,
-            updates,
-            oldValues,
-            agent,
-            'mcp',
-            evidence
-        );
-
-        return {
-            success: true,
-            annotationId: identifier,
-            chromosome: found.chromosome,
-            updatedFields: Object.keys(updates),
-            updatedAnnotation: {
-                id: annotation.id,
-                type: annotation.type,
-                start: annotation.start,
-                end: annotation.end,
-                strand: annotation.strand,
-                qualifiers: annotation.qualifiers,
-            },
-            message: `Updated ${Object.keys(updates).length} field(s) on annotation "${identifier}"`,
-        };
+    // Filter by type
+    if (type) {
+      filtered = filtered.filter(a =>
+        a.type && a.type.toLowerCase() === type.toLowerCase()
+      );
     }
 
-async searchAnnotations(params) {
-        const { query, chromosome, type, fields, limit = 50 } = params;
+    const total = filtered.length;
+    const paged = limit > 0 ? filtered.slice(offset, offset + limit) : filtered;
 
-        if (!this.app.currentAnnotations) {
-            throw new Error('No annotations loaded');
-        }
+    return {
+      success: true,
+      chromosome: chr || 'all',
+      total,
+      offset,
+      limit,
+      count: paged.length,
+      annotations: paged.map(a => ({
+        id: a.id,
+        type: a.type,
+        start: a.start,
+        end: a.end,
+        strand: a.strand,
+        locus_tag: a.qualifiers?.locus_tag || null,
+        gene: a.qualifiers?.gene || null,
+        product: a.qualifiers?.product || null,
+      })),
+    };
+  }
 
-        const lowerQuery = query.toLowerCase();
-        const searchFields = fields || ['product', 'gene', 'note', 'locus_tag', 'db_xref', 'protein_id', 'EC_number'];
-        const results = [];
+  async getAnnotation(params) {
+    const { identifier, chromosome } = params;
 
-        const chromosomes = chromosome
-            ? [chromosome]
-            : Object.keys(this.app.currentAnnotations);
-
-        for (const chr of chromosomes) {
-            const annotations = this.app.currentAnnotations[chr] || [];
-            for (const a of annotations) {
-                if (type && a.type && a.type.toLowerCase() !== type.toLowerCase()) continue;
-
-                let matched = false;
-                const matchedFields = [];
-
-                for (const field of searchFields) {
-                    const val = a.qualifiers?.[field];
-                    if (val && String(val).toLowerCase().includes(lowerQuery)) {
-                        matched = true;
-                        matchedFields.push(field);
-                    }
-                }
-
-                if (matched) {
-                    results.push({
-                        chromosome: chr,
-                        id: a.id,
-                        type: a.type,
-                        start: a.start,
-                        end: a.end,
-                        strand: a.strand,
-                        locus_tag: a.qualifiers?.locus_tag || null,
-                        gene: a.qualifiers?.gene || null,
-                        product: a.qualifiers?.product || null,
-                        matchedFields,
-                    });
-                }
-
-                if (limit > 0 && results.length >= limit) break;
-            }
-            if (limit > 0 && results.length >= limit) break;
-        }
-
-        return {
-            success: true,
-            query,
-            total: results.length,
-            results,
-        };
+    if (!this.app.currentAnnotations) {
+      throw new Error('No annotations loaded');
     }
 
-async bulkUpdateAnnotations(params) {
-        const { updates: updatesList, agent = 'mcp-agent', evidence = [] } = params;
-
-        if (!this.app.currentAnnotations) {
-            throw new Error('No annotations loaded');
-        }
-
-        const results = [];
-        const errors = [];
-
-        for (const item of updatesList) {
-            try {
-                const result = await this.updateAnnotation({
-                    identifier: item.identifier,
-                    chromosome: item.chromosome,
-                    updates: item.updates,
-                    agent,
-                    evidence,
-                });
-                results.push({ identifier: item.identifier, success: true });
-            } catch (error) {
-                errors.push({ identifier: item.identifier, error: error.message });
-            }
-        }
-
-        return {
-            success: errors.length === 0,
-            totalRequested: updatesList.length,
-            successCount: results.length,
-            errorCount: errors.length,
-            results,
-            errors,
-            message: `Updated ${results.length}/${updatesList.length} annotations`,
-        };
+    const found = this._findAnnotation(identifier, chromosome);
+    if (!found) {
+      throw new Error(`Annotation "${identifier}" not found`);
     }
 
-async getAnnotationHistory(params) {
-        const { identifier, limit = 50 } = params;
-        const tracker = this._getChangeTracker();
+    const a = found.annotation;
+    return {
+      success: true,
+      identifier,
+      chromosome: found.chromosome,
+      annotation: {
+        id: a.id,
+        type: a.type,
+        start: a.start,
+        end: a.end,
+        strand: a.strand,
+        qualifiers: a.qualifiers || {},
+        length: a.end - a.start + 1,
+      },
+    };
+  }
 
-        if (identifier) {
-            const history = tracker.getHistory(identifier, limit);
-            return {
-                success: true,
-                identifier,
-                total: history.length,
-                changes: history,
-            };
+  async updateAnnotation(params) {
+    const { identifier, chromosome, updates, agent = 'mcp-agent', evidence = [] } = params;
+
+    if (!this.app.currentAnnotations) {
+      throw new Error('No annotations loaded');
+    }
+
+    const found = this._findAnnotation(identifier, chromosome);
+    if (!found) {
+      throw new Error(`Annotation "${identifier}" not found`);
+    }
+
+    const annotation = found.annotation;
+    const oldValues = {};
+
+    // Capture old values and apply updates
+    for (const [field, newValue] of Object.entries(updates)) {
+      if (field === 'start' || field === 'end' || field === 'strand' || field === 'type') {
+        // Top-level fields
+        oldValues[field] = annotation[field];
+        annotation[field] = newValue;
+      } else {
+        // Qualifier fields
+        if (!annotation.qualifiers) annotation.qualifiers = {};
+        oldValues[field] = annotation.qualifiers[field] || null;
+        annotation.qualifiers[field] = newValue;
+      }
+    }
+
+    // Record changes
+    const tracker = this._getChangeTracker();
+    tracker.recordMultiFieldUpdate(
+      identifier,
+      found.chromosome,
+      updates,
+      oldValues,
+      agent,
+      'mcp',
+      evidence
+    );
+
+    return {
+      success: true,
+      annotationId: identifier,
+      chromosome: found.chromosome,
+      updatedFields: Object.keys(updates),
+      updatedAnnotation: {
+        id: annotation.id,
+        type: annotation.type,
+        start: annotation.start,
+        end: annotation.end,
+        strand: annotation.strand,
+        qualifiers: annotation.qualifiers,
+      },
+      message: `Updated ${Object.keys(updates).length} field(s) on annotation "${identifier}"`,
+    };
+  }
+
+  async searchAnnotations(params) {
+    const { query, chromosome, type, fields, limit = 50 } = params;
+
+    if (!this.app.currentAnnotations) {
+      throw new Error('No annotations loaded');
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const searchFields = fields || ['product', 'gene', 'note', 'locus_tag', 'db_xref', 'protein_id', 'EC_number'];
+    const results = [];
+
+    const chromosomes = chromosome
+      ? [chromosome]
+      : Object.keys(this.app.currentAnnotations);
+
+    for (const chr of chromosomes) {
+      const annotations = this.app.currentAnnotations[chr] || [];
+      for (const a of annotations) {
+        if (type && a.type && a.type.toLowerCase() !== type.toLowerCase()) continue;
+
+        let matched = false;
+        const matchedFields = [];
+
+        for (const field of searchFields) {
+          const val = a.qualifiers?.[field];
+          if (val && String(val).toLowerCase().includes(lowerQuery)) {
+            matched = true;
+            matchedFields.push(field);
+          }
         }
 
-        const allChanges = tracker.getAllChanges({ limit });
-        const summary = tracker.getSummary();
-        return {
-            success: true,
-            total: allChanges.length,
-            summary,
-            changes: allChanges,
-        };
+        if (matched) {
+          results.push({
+            chromosome: chr,
+            id: a.id,
+            type: a.type,
+            start: a.start,
+            end: a.end,
+            strand: a.strand,
+            locus_tag: a.qualifiers?.locus_tag || null,
+            gene: a.qualifiers?.gene || null,
+            product: a.qualifiers?.product || null,
+            matchedFields,
+          });
+        }
+
+        if (limit > 0 && results.length >= limit) break;
+      }
+      if (limit > 0 && results.length >= limit) break;
     }
+
+    return {
+      success: true,
+      query,
+      total: results.length,
+      results,
+    };
+  }
+
+  async bulkUpdateAnnotations(params) {
+    const { updates: updatesList, agent = 'mcp-agent', evidence = [] } = params;
+
+    if (!this.app.currentAnnotations) {
+      throw new Error('No annotations loaded');
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const item of updatesList) {
+      try {
+        const result = await this.updateAnnotation({
+          identifier: item.identifier,
+          chromosome: item.chromosome,
+          updates: item.updates,
+          agent,
+          evidence,
+        });
+        results.push({ identifier: item.identifier, success: true });
+      } catch (error) {
+        errors.push({ identifier: item.identifier, error: error.message });
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      totalRequested: updatesList.length,
+      successCount: results.length,
+      errorCount: errors.length,
+      results,
+      errors,
+      message: `Updated ${results.length}/${updatesList.length} annotations`,
+    };
+  }
+
+  async getAnnotationHistory(params) {
+    const { identifier, limit = 50 } = params;
+    const tracker = this._getChangeTracker();
+
+    if (identifier) {
+      const history = tracker.getHistory(identifier, limit);
+      return {
+        success: true,
+        identifier,
+        total: history.length,
+        changes: history,
+      };
+    }
+
+    const allChanges = tracker.getAllChanges({ limit });
+    const summary = tracker.getSummary();
+    return {
+      success: true,
+      total: allChanges.length,
+      summary,
+      changes: allChanges,
+    };
+  }
 
 
 
   // 7. ANNOTATION MANAGEMENT (CRUD)
   async editAnnotation(params) {
-        const { annotationId, updates } = params;
+    const { annotationId, updates } = params;
 
-        if (!this.app.currentAnnotations) {
-            throw new Error('No annotations loaded');
-        }
+    if (!this.app.currentAnnotations) {
+      throw new Error('No annotations loaded');
+    }
 
-        let annotationFound = false;
-        let updatedAnnotation = null;
-        let foundChr = null;
+    let annotationFound = false;
+    let updatedAnnotation = null;
+    let foundChr = null;
 
-        // Find and update annotation across all chromosomes
-        Object.keys(this.app.currentAnnotations).forEach(chr => {
-            const annotations = this.app.currentAnnotations[chr];
-            const annotationIndex = annotations.findIndex(a =>
-                a.id === annotationId ||
-                a.qualifiers?.locus_tag === annotationId ||
-                a.qualifiers?.gene === annotationId
-            );
+    // Find and update annotation across all chromosomes
+    Object.keys(this.app.currentAnnotations).forEach(chr => {
+      const annotations = this.app.currentAnnotations[chr];
+      const annotationIndex = annotations.findIndex(a =>
+        a.id === annotationId ||
+        a.qualifiers?.locus_tag === annotationId ||
+        a.qualifiers?.gene === annotationId
+      );
 
-            if (annotationIndex !== -1) {
-                annotationFound = true;
-                foundChr = chr;
-                const annotation = annotations[annotationIndex];
+      if (annotationIndex !== -1) {
+        annotationFound = true;
+        foundChr = chr;
+        const annotation = annotations[annotationIndex];
 
-                // Capture old values for change tracking
-                const oldValues = {};
-                Object.keys(updates).forEach(key => {
-                    if (key === 'qualifiers') {
-                        oldValues[key] = { ...annotation.qualifiers };
-                    } else {
-                        oldValues[key] = annotation[key];
-                    }
-                });
-
-                // Apply updates
-                Object.keys(updates).forEach(key => {
-                    if (key === 'qualifiers') {
-                        annotation.qualifiers = { ...annotation.qualifiers, ...updates.qualifiers };
-                    } else {
-                        annotation[key] = updates[key];
-                    }
-                });
-
-                // Track changes
-                const tracker = this._getChangeTracker();
-                tracker.recordMultiFieldUpdate(annotationId, chr, updates, oldValues, 'chatbox', 'chatbox');
-
-                updatedAnnotation = annotation;
-                annotations[annotationIndex] = annotation;
-            }
+        // Capture old values for change tracking
+        const oldValues = {};
+        Object.keys(updates).forEach(key => {
+          if (key === 'qualifiers') {
+            oldValues[key] = { ...annotation.qualifiers };
+          } else {
+            oldValues[key] = annotation[key];
+          }
         });
 
-        if (!annotationFound) {
-            throw new Error(`Annotation "${annotationId}" not found`);
-        }
+        // Apply updates
+        Object.keys(updates).forEach(key => {
+          if (key === 'qualifiers') {
+            annotation.qualifiers = { ...annotation.qualifiers, ...updates.qualifiers };
+          } else {
+            annotation[key] = updates[key];
+          }
+        });
 
-        return {
-            success: true,
-            annotationId: annotationId,
-            updatedAnnotation: updatedAnnotation,
-            message: `Updated annotation "${annotationId}"`
-        };
+        // Track changes
+        const tracker = this._getChangeTracker();
+        tracker.recordMultiFieldUpdate(annotationId, chr, updates, oldValues, 'chatbox', 'chatbox');
+
+        updatedAnnotation = annotation;
+        annotations[annotationIndex] = annotation;
+      }
+    });
+
+    if (!annotationFound) {
+      throw new Error(`Annotation "${annotationId}" not found`);
     }
+
+    return {
+      success: true,
+      annotationId: annotationId,
+      updatedAnnotation: updatedAnnotation,
+      message: `Updated annotation "${annotationId}"`
+    };
+  }
 
   async deleteAnnotation(params) {
-        // Support both 'annotationId' (ChatBox) and 'identifier' (MCP) parameter names
-        const annotationId = params.annotationId || params.identifier;
-        const agent = params.agent || 'chatbox';
+    // Support both 'annotationId' (ChatBox) and 'identifier' (MCP) parameter names
+    const annotationId = params.annotationId || params.identifier;
+    const agent = params.agent || 'chatbox';
 
-        if (!this.app.currentAnnotations) {
-            throw new Error('No annotations loaded');
-        }
+    if (!this.app.currentAnnotations) {
+      throw new Error('No annotations loaded');
+    }
 
-        let annotationFound = false;
-        let deletedAnnotation = null;
+    let annotationFound = false;
+    let deletedAnnotation = null;
 
-        // Find and delete annotation across all chromosomes
-        Object.keys(this.app.currentAnnotations).forEach(chr => {
-            const annotations = this.app.currentAnnotations[chr];
-            const annotationIndex = annotations.findIndex(a =>
-                a.id === annotationId ||
-                a.qualifiers?.locus_tag === annotationId ||
-                a.qualifiers?.gene === annotationId ||
-                a.qualifiers?.protein_id === annotationId
-            );
+    // Find and delete annotation across all chromosomes
+    Object.keys(this.app.currentAnnotations).forEach(chr => {
+      const annotations = this.app.currentAnnotations[chr];
+      const annotationIndex = annotations.findIndex(a =>
+        a.id === annotationId ||
+        a.qualifiers?.locus_tag === annotationId ||
+        a.qualifiers?.gene === annotationId ||
+        a.qualifiers?.protein_id === annotationId
+      );
 
-            if (annotationIndex !== -1) {
-                annotationFound = true;
-                deletedAnnotation = annotations[annotationIndex];
+      if (annotationIndex !== -1) {
+        annotationFound = true;
+        deletedAnnotation = annotations[annotationIndex];
 
-                // Track the deletion
-                const tracker = this._getChangeTracker();
-                tracker.recordChange({
-                    action: 'delete',
-                    annotationId,
-                    chromosome: chr,
-                    oldValue: { ...deletedAnnotation },
-                    agent,
-                    source: agent === 'mcp-agent' ? 'mcp' : 'chatbox',
-                });
-
-                annotations.splice(annotationIndex, 1);
-            }
+        // Track the deletion
+        const tracker = this._getChangeTracker();
+        tracker.recordChange({
+          action: 'delete',
+          annotationId,
+          chromosome: chr,
+          oldValue: { ...deletedAnnotation },
+          agent,
+          source: agent === 'mcp-agent' ? 'mcp' : 'chatbox',
         });
 
-        if (!annotationFound) {
-            throw new Error(`Annotation "${annotationId}" not found`);
-        }
+        annotations.splice(annotationIndex, 1);
+      }
+    });
 
-        return {
-            success: true,
-            annotationId: annotationId,
-            deletedAnnotation: deletedAnnotation,
-            message: `Deleted annotation "${annotationId}"`
-        };
+    if (!annotationFound) {
+      throw new Error(`Annotation "${annotationId}" not found`);
     }
+
+    return {
+      success: true,
+      annotationId: annotationId,
+      deletedAnnotation: deletedAnnotation,
+      message: `Deleted annotation "${annotationId}"`
+    };
+  }
 
   async batchCreateAnnotations(params) {
     const { annotations, chromosome } = params;

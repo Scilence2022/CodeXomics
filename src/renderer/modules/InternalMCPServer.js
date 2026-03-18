@@ -154,6 +154,14 @@ class InternalMCPServer {
       case 'genomeCodonUsageAnalysis':
         return await this.genomeCodonUsageAnalysis(parameters);
 
+      // Multi-window management (IPC-based)
+      case 'listGenomeWindows':
+        return await this.listGenomeWindowsViaIPC();
+
+      case 'focusGenomeWindow':
+      case 'switchActiveWindow':
+        return await this.focusGenomeWindowViaIPC(parameters);
+
       default:
         // If method is not found in fallback handlers, try snake_case version
         // This handles cases where the method name format doesn't match
@@ -665,6 +673,35 @@ class InternalMCPServer {
     }
   }
 
+  // Multi-window management via IPC
+  async listGenomeWindowsViaIPC() {
+    try {
+      const windows = await mcpServerIpc.invoke('list-genome-windows');
+      return {
+        success: true,
+        windowCount: windows.length,
+        windows: windows,
+      };
+    } catch (error) {
+      console.error('[InternalMCPServer] listGenomeWindowsViaIPC error:', error);
+      return { success: false, error: error.message, windowCount: 0, windows: [] };
+    }
+  }
+
+  async focusGenomeWindowViaIPC(parameters) {
+    const { windowId } = parameters;
+    if (!windowId) {
+      return { success: false, error: 'windowId parameter is required' };
+    }
+    try {
+      const result = await mcpServerIpc.invoke('focus-genome-window', windowId);
+      return result;
+    } catch (error) {
+      console.error('[InternalMCPServer] focusGenomeWindowViaIPC error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // Utility implementations
   ping() {
     return {
@@ -706,11 +743,11 @@ class InternalMCPServer {
       genomeStudioReady: !!this.genomeStudio,
       modules: this.genomeStudio
         ? {
-            navigationManager: !!this.genomeStudio.navigationManager,
-            fileManager: !!this.genomeStudio.fileManager,
-            trackRenderer: !!this.genomeStudio.trackRenderer,
-            sequenceUtils: !!this.genomeStudio.sequenceUtils,
-          }
+          navigationManager: !!this.genomeStudio.navigationManager,
+          fileManager: !!this.genomeStudio.fileManager,
+          trackRenderer: !!this.genomeStudio.trackRenderer,
+          sequenceUtils: !!this.genomeStudio.sequenceUtils,
+        }
         : {},
     };
   }

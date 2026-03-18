@@ -112,6 +112,7 @@ class ToolsIntegrator {
   }
 
   async executeTool(toolName, parameters, clientId) {
+    console.log(`[ToolsIntegrator] executeTool called for: ${toolName}`);
     const tool = this.allTools[toolName];
     if (!tool) {
       throw new Error(`Tool '${toolName}' not found`);
@@ -538,14 +539,21 @@ class ToolsIntegrator {
    * List all open genome browser windows (server-side, no client delegation)
    */
   executeListGenomeWindows() {
+    console.log(`[ToolsIntegrator] executeListGenomeWindows called`);
+    console.log(`[ToolsIntegrator] this.server: ${this.server ? 'exists' : 'null'}`);
+    console.log(`[ToolsIntegrator] this.server.listWindows: ${this.server?.listWindows ? 'exists' : 'null'}`);
+
     if (!this.server || !this.server.listWindows) {
+      console.log(`[ToolsIntegrator] Window registry not available`);
       return {
         success: false,
         error: 'Window registry not available. MCP server may not support multi-window mode.',
       };
     }
 
+    console.log(`[ToolsIntegrator] Calling this.server.listWindows()`);
     const windows = this.server.listWindows();
+    console.log(`[ToolsIntegrator] listWindows returned: ${windows.length} windows`);
     return {
       success: true,
       windowCount: windows.length,
@@ -562,13 +570,31 @@ class ToolsIntegrator {
       return { success: false, error: 'windowId parameter is required' };
     }
 
-    if (!this.server || !this.server.windowRegistry) {
+    const registry = this.server?.mainWindowRegistry || this.server?.windowRegistry;
+    if (!registry) {
       return { success: false, error: 'Window registry not available' };
     }
 
-    const entry = this.server.windowRegistry.get(windowId);
+    const entry = registry.get(windowId);
     if (!entry) {
-      const available = Array.from(this.server.windowRegistry.keys());
+      // Check if it's connected as internalClient standalone
+      if (this.server?.internalClients?.has(windowId)) {
+        // Set as default fallback client
+        this.server.internalClient = this.server.internalClients.get(windowId);
+        return {
+          success: true,
+          message: `Activated window '${windowId}' (Standalone mode)`,
+          windowId,
+          genomeName: 'Connected via CodeXomics',
+        };
+      }
+
+      const available = Array.from(registry.keys());
+      if (this.server?.internalClients) {
+        for (const key of this.server.internalClients.keys()) {
+          if (!available.includes(key)) available.push(key);
+        }
+      }
       return {
         success: false,
         error: `Window '${windowId}' not found. Available: [${available.join(', ')}]`,

@@ -1106,8 +1106,8 @@ class StandardClaudeMCPServer {
 
     throw new Error(
       `Tool '${toolName}' requires a connected CodeXomics client. ` +
-        `No local client, internal WebSocket client, or remote bridge available. ` +
-        `Please start CodeXomics application to enable this tool.`
+      `No local client, internal WebSocket client, or remote bridge available. ` +
+      `Please start CodeXomics application to enable this tool.`
     );
   }
 
@@ -1130,7 +1130,7 @@ class StandardClaudeMCPServer {
     if (!targetClient || targetClient.readyState !== 1) {
       throw new Error(
         `No active WebSocket client for window '${targetWindowId || 'focused'}'. ` +
-          `Available windows: [${Array.from(this.internalClients.keys()).join(', ')}]`
+        `Available windows: [${Array.from(this.internalClients.keys()).join(', ')}]`
       );
     }
 
@@ -1510,12 +1510,18 @@ class StandardClaudeMCPServer {
   setMainWindowRegistry(registry) {
     this.mainWindowRegistry = registry;
     console.log(`📋 [MCP Server] Linked to main window registry (${registry.size} windows)`);
+    // Log all windows in the registry
+    for (const [windowId, entry] of registry.entries()) {
+      const win = entry.window || entry;
+      console.log(`📋 [MCP Server] Registry entry: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`);
+    }
   }
 
   // Multi-window support: Register a BrowserWindow for IPC routing
   registerWindow(windowId, browserWindow) {
     this.windowRegistry.set(windowId, { window: browserWindow, genomeName: null });
     console.log(`📋 [MCP Server] Registered window: ${windowId} (total: ${this.windowRegistry.size})`);
+    console.log(`📋 [MCP Server] Window isDestroyed: ${browserWindow.isDestroyed()}, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}`);
   }
 
   // Multi-window support: Unregister a BrowserWindow
@@ -1548,9 +1554,12 @@ class StandardClaudeMCPServer {
   listWindows() {
     // Use the authoritative main.js registry if available, fall back to local copy
     const registry = this.mainWindowRegistry || this.windowRegistry;
+    console.log(`[MCP Server] listWindows called, mainWindowRegistry: ${this.mainWindowRegistry ? 'set' : 'not set'}, windowRegistry: ${this.windowRegistry.size} entries, using: ${this.mainWindowRegistry ? 'mainWindowRegistry' : 'windowRegistry'}`);
+    console.log(`[MCP Server] Registry size: ${registry.size}`);
     const windows = [];
     for (const [windowId, entry] of registry.entries()) {
       const win = entry.window || entry;
+      console.log(`[MCP Server] Checking window: ${windowId}, has window: ${!!win}, isDestroyed: ${win ? win.isDestroyed() : 'N/A'}`);
       if (!win || win.isDestroyed()) continue;
       windows.push({
         windowId,
@@ -1560,6 +1569,21 @@ class StandardClaudeMCPServer {
         isDestroyed: false,
       });
     }
+
+    // Fallback: If not linked to main process registry, or some internal clients aren't in registry yet
+    for (const [windowId, client] of this.internalClients.entries()) {
+      if (!windows.find(w => w.windowId === windowId)) {
+        windows.push({
+          windowId,
+          genomeName: 'Connected via CodeXomics',
+          isFocused: false, // Cannot accurately determine focus in standalone mode
+          hasWsClient: true,
+          isDestroyed: false,
+        });
+      }
+    }
+
+    console.log(`[MCP Server] Returning ${windows.length} windows`);
     return windows;
   }
 
