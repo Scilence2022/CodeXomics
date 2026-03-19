@@ -15769,14 +15769,14 @@ ${this.getPluginSystemInfo()}`;
     }
 
     // Refresh UI to show updated annotation
-    if (this.app.uiManager) {
-      try {
-        this.app.uiManager.refreshSVGTracks();
-        console.log('✅ UI refreshed after annotation update');
-      } catch (error) {
-        console.error('❌ Error refreshing UI after annotation update:', error);
-      }
-    }
+    // if (this.app.uiManager) {
+    //   try {
+    //     this.app.uiManager.refreshSVGTracks();
+    //     console.log('✅ UI refreshed after annotation update');
+    //   } catch (error) {
+    //     console.error('❌ Error refreshing UI after annotation update:', error);
+    //   }
+    // }
 
     return {
       success: true,

@@ -5962,7 +5962,7 @@ class GenomeBrowser {
 
     // Pattern for database cross-references - expanded to include many more databases
     const dbXrefPattern =
-      /\b(UniProt|SwissProt|TrEMBL|InterPro|Pfam|KEGG|COG|KO|PROSITE|SMART|SUPERFAMILY|PRINTS|PANTHER|TIGRFAM|HAMAP|PIR|PDB|RefSeq|GenBank|EMBL|DDBJ|CDD|OrthoDB|EggNOG|STRING|Reactome|BioCyc|MetaCyc|ENZYME|BRENDA|ExPASy|NCBI|ENSEMBL|FlyBase|WormBase|SGD|MGI|RGD|ZFIN|TAIR|MaizeGDB|Gramene|PlantGDB|Phytozome|JGI|DOI|PubChem|ChEBI|ChEMBL|DrugBank)[:=]\s*([A-Za-z0-9_\.-]+)\b/gi;
+      /\b(UniProt|SwissProt|TrEMBL|InterPro|Pfam|KEGG|COG|KO|PROSITE|SMART|SUPERFAMILY|PRINTS|PANTHER|TIGRFAM|HAMAP|PIR|PDB|RefSeq|GenBank|EMBL|DDBJ|CDD|OrthoDB|EggNOG|STRING|Reactome|BioCyc|MetaCyc|EcoCyc|ENZYME|BRENDA|ExPASy|NCBI|ENSEMBL|FlyBase|WormBase|SGD|MGI|RGD|ZFIN|TAIR|MaizeGDB|Gramene|PlantGDB|Phytozome|JGI|DOI|PubChem|ChEBI|ChEMBL|DrugBank)[:=]\s*([A-Za-z0-9_\.-:]+)\b/gi;
     enhancedValue = enhancedValue.replace(dbXrefPattern, (match, database, id) => {
       let url = '';
       let title = '';
@@ -5983,8 +5983,18 @@ class GenomeBrowser {
           title = 'View in Pfam';
           break;
         case 'kegg':
-          url = `https://www.genome.jp/kegg-bin/show_pathway?${id}`;
+          // Handle KEGG IDs like 'eco:b4024'
+          if (id.includes(':')) {
+            const [org, keggId] = id.split(':');
+            url = `https://www.genome.jp/dbget-bin/www_bget?${org}:${keggId}`;
+          } else {
+            url = `https://www.genome.jp/dbget-bin/www_bget?${id}`;
+          }
           title = 'View in KEGG';
+          break;
+        case 'ecocyc':
+          url = `https://ecocyc.org/gene?orgid=ECOLI&id=${id}`;
+          title = 'View in EcoCyc';
           break;
         case 'cog':
           url = `https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=${id}`;
