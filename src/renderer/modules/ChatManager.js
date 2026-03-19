@@ -15621,6 +15621,50 @@ ${this.getPluginSystemInfo()}`;
     };
   }
 
+  /**
+   * Find annotation by identifier (gene name, locus tag, or protein ID)
+   */
+  _findAnnotation(identifier, chromosome) {
+    console.log(`🔍 [DEBUG] Finding annotation for identifier: ${identifier}, chromosome: ${chromosome}`);
+    console.log(`🔍 [DEBUG] Current annotations structure:`, this.app.currentAnnotations);
+    
+    const chromosomes = chromosome 
+      ? [chromosome]
+      : Object.keys(this.app.currentAnnotations);
+    
+    console.log(`🔍 [DEBUG] Checking chromosomes:`, chromosomes);
+
+    for (const chr of chromosomes) {
+      const annotations = this.app.currentAnnotations[chr];
+      if (!annotations) {
+        console.log(`🔍 [DEBUG] No annotations for chromosome: ${chr}`);
+        continue;
+      }
+      
+      console.log(`🔍 [DEBUG] Checking ${annotations.length} annotations for chromosome: ${chr}`);
+
+      for (const annotation of annotations) {
+        const qualifiers = annotation.qualifiers || {};
+        const geneName = Array.isArray(qualifiers.gene) ? qualifiers.gene[0] : qualifiers.gene || '';
+        const locusTag = Array.isArray(qualifiers.locus_tag) ? qualifiers.locus_tag[0] : qualifiers.locus_tag || '';
+        const proteinId = Array.isArray(qualifiers.protein_id) ? qualifiers.protein_id[0] : qualifiers.protein_id || '';
+        
+        console.log(`🔍 [DEBUG] Checking annotation: id=${annotation.id}, gene=${geneName}, locus_tag=${locusTag}, protein_id=${proteinId}`);
+
+        if (identifier === annotation.id || identifier === geneName || identifier === locusTag || identifier === proteinId) {
+          console.log(`🔍 [DEBUG] Found annotation:`, annotation);
+          return {
+            chromosome: chr,
+            annotation: annotation
+          };
+        }
+      }
+    }
+
+    console.log(`🔍 [DEBUG] Annotation not found: ${identifier}`);
+    return null;
+  }
+
   async getAnnotation(params) {
     const { identifier, chromosome } = params;
 

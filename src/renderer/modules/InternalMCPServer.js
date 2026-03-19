@@ -85,7 +85,8 @@ class InternalMCPServer {
         }
       } catch (error) {
         console.warn(`⚠️ [InternalMCPServer] ChatManager execution failed for '${toolName}':`, error.message);
-        // Fall through to direct handlers
+        // Rethrow the original error instead of falling through
+        throw error;
       }
     }
 
