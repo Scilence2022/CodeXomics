@@ -15706,34 +15706,77 @@ ${this.getPluginSystemInfo()}`;
       throw new Error(`Annotation "${identifier}" not found`);
     }
 
-    const annotation = found.annotation;
-    const oldValues = {};
+    // Get the locus_tag and gene name from the found annotation to match other features
+    const targetLocusTag = Array.isArray(found.annotation.qualifiers?.locus_tag) 
+      ? found.annotation.qualifiers.locus_tag[0] 
+      : found.annotation.qualifiers?.locus_tag || '';
+    const targetGeneName = Array.isArray(found.annotation.qualifiers?.gene) 
+      ? found.annotation.qualifiers.gene[0] 
+      : found.annotation.qualifiers?.gene || '';
 
-    // Capture old values and apply updates
-    for (const [field, newValue] of Object.entries(updates)) {
-      if (field === 'start' || field === 'end' || field === 'strand' || field === 'type') {
-        // Top-level fields
-        oldValues[field] = annotation[field];
-        annotation[field] = newValue;
-      } else {
-        // Qualifier fields
-        if (!annotation.qualifiers) annotation.qualifiers = {};
-        oldValues[field] = annotation.qualifiers[field] || null;
-        annotation.qualifiers[field] = newValue;
+    // Find all annotations with the same locus_tag or gene name
+    const annotationsToUpdate = [];
+    const chromosomesToCheck = chromosome ? [chromosome] : Object.keys(this.app.currentAnnotations);
+
+    for (const chr of chromosomesToCheck) {
+      const annotations = this.app.currentAnnotations[chr];
+      if (!annotations) continue;
+
+      for (const annotation of annotations) {
+        const qualifiers = annotation.qualifiers || {};
+        const geneName = Array.isArray(qualifiers.gene) ? qualifiers.gene[0] : qualifiers.gene || '';
+        const locusTag = Array.isArray(qualifiers.locus_tag) ? qualifiers.locus_tag[0] : qualifiers.locus_tag || '';
+
+        // Match by locus_tag or gene name
+        if ((targetLocusTag && locusTag === targetLocusTag) || 
+            (targetGeneName && geneName === targetGeneName)) {
+          annotationsToUpdate.push({ chromosome: chr, annotation });
+        }
       }
     }
 
-    // Record changes
-    const tracker = this._getChangeTracker();
-    tracker.recordMultiFieldUpdate(
-      identifier,
-      found.chromosome,
-      updates,
-      oldValues,
-      agent,
-      'mcp',
-      evidence
-    );
+    console.log(`🔍 [DEBUG] Found ${annotationsToUpdate.length} annotations to update for identifier: ${identifier}`);
+
+    // Update all matching annotations
+    for (const { annotation } of annotationsToUpdate) {
+      const oldValues = {};
+
+      // Capture old values and apply updates
+      for (const [field, newValue] of Object.entries(updates)) {
+        if (field === 'start' || field === 'end' || field === 'strand' || field === 'type') {
+          // Top-level fields
+          oldValues[field] = annotation[field];
+          annotation[field] = newValue;
+        } else {
+          // Qualifier fields
+          if (!annotation.qualifiers) annotation.qualifiers = {};
+          oldValues[field] = annotation.qualifiers[field] || null;
+          annotation.qualifiers[field] = newValue;
+        }
+      }
+
+      // Record changes for each annotation
+      const tracker = this._getChangeTracker();
+      tracker.recordMultiFieldUpdate(
+        identifier,
+        found.chromosome,
+        updates,
+        oldValues,
+        agent,
+        'mcp',
+        evidence
+      );
+    }
+
+    // Refresh UI to show updated annotation
+    if (this.app.uiManager) {
+      try {
+        this.app.uiManager.refreshSVGTracks();
+        console.log('✅ UI refreshed after annotation update');
+      } catch (error) {
+        console.error('❌ Error refreshing UI after annotation update:', error);
+      }
+    }
 
     return {
       success: true,
@@ -15741,14 +15784,14 @@ ${this.getPluginSystemInfo()}`;
       chromosome: found.chromosome,
       updatedFields: Object.keys(updates),
       updatedAnnotation: {
-        id: annotation.id,
-        type: annotation.type,
-        start: annotation.start,
-        end: annotation.end,
-        strand: annotation.strand,
-        qualifiers: annotation.qualifiers,
+        id: found.annotation.id,
+        type: found.annotation.type,
+        start: found.annotation.start,
+        end: found.annotation.end,
+        strand: found.annotation.strand,
+        qualifiers: found.annotation.qualifiers,
       },
-      message: `Updated ${Object.keys(updates).length} field(s) on annotation "${identifier}"`,
+      message: `Updated ${Object.keys(updates).length} field(s) on ${annotationsToUpdate.length} annotation(s) for "${identifier}"`,
     };
   }
 
